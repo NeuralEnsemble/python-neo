@@ -448,7 +448,7 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
     def __init__(self, timeseries, nwb_group):
         self._timeseries = timeseries
         self.units = timeseries.unit
-        if timeseries.starting_time:
+        if timeseries.starting_time is not None:
             self.t_start = timeseries.starting_time * pq.s  # use timeseries.starting_time_units
         else:
             self.t_start = timeseries.timestamps[0] * pq.s
@@ -461,6 +461,8 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
         self.description = try_json_field(timeseries.description)
         if isinstance(self.description, dict):
             self.annotations.update(self.description)
+            if "name" in self.annotations:
+                self.annotations.pop("name")
             self.description = None
         self.shape = self._timeseries.data.shape
 
