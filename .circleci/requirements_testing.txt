@@ -10,3 +10,4 @@ https://github.com/nsdf/nsdf/archive/0.1.tar.gz
 coverage
 coveralls
 pillow
+pynwb

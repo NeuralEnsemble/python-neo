@@ -43,6 +43,7 @@ Classes:
 * :attr:`NeuroshareIO`
 * :attr:`NixIO`
 * :attr:`NSDFIO`
+* :attr:`NWBIO`
 * :attr:`OpenEphysIO`
 * :attr:`PickleIO`
 * :attr:`PlexonIO`
