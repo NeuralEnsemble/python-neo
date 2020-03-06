@@ -10,17 +10,22 @@ try:
     from urllib.request import urlretrieve
 except ImportError:
     from urllib import urlretrieve
-from neo.io.nwbio import NWBIO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import AnalogSignal, SpikeTrain, Event, Epoch, IrregularlySampledSignal, Segment, Unit, Block, ChannelIndex, ImageSequence
-import pynwb
-from pynwb import *
+try:
+    import pynwb
+    from neo.io.nwbio import NWBIO
+    HAVE_PYNWB = True
+except ImportError:
+    NWBIO = None
+    HAVE_PYNWB = False
 import quantities as pq
 import numpy as np
 from numpy.testing import assert_array_equal, assert_allclose
 from neo.test.rawiotest.tools import create_local_temp_dir
 
 
+@unittest.skipUnless(HAVE_PYNWB, "requires pynwb")
 class TestNWBIO(unittest.TestCase):
     ioclass = NWBIO
     files_to_download =  [
