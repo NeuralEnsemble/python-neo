@@ -28,9 +28,9 @@ from neo.test.rawiotest.tools import create_local_temp_dir
 @unittest.skipUnless(HAVE_PYNWB, "requires pynwb")
 class TestNWBIO(unittest.TestCase):
     ioclass = NWBIO
-    files_to_download =  [
-#        Files from Allen Institute :
-        #"http://download.alleninstitute.org/informatics-archive/prerelease/H19.28.012.11.05-2.nwb",  # 64 MB
+    files_to_download = [
+        #        Files from Allen Institute :
+        # "http://download.alleninstitute.org/informatics-archive/prerelease/H19.28.012.11.05-2.nwb",  # 64 MB
         "http://download.alleninstitute.org/informatics-archive/prerelease/H19.29.141.11.21.01.nwb",  # 7 MB
     ]
 
@@ -55,17 +55,17 @@ class TestNWBIO(unittest.TestCase):
         bl2 = Block(name='Third block')
         original_blocks = [bl0, bl1, bl2]
 
-        num_seg = 4 # number of segments
-        num_chan = 3 # number of channels
+        num_seg = 4  # number of segments
+        num_chan = 3  # number of channels
 
         for blk in original_blocks:
 
-            for ind in range(num_seg): # number of Segment
+            for ind in range(num_seg):  # number of Segment
                 seg = Segment(index=ind)
                 seg.block = blk
                 blk.segments.append(seg)
 
-            for seg in blk.segments: # AnalogSignal objects
+            for seg in blk.segments:  # AnalogSignal objects
 
                 # 3 Neo AnalogSignals
                 a = AnalogSignal(np.random.randn(44, num_chan) * pq.nA,

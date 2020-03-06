@@ -50,7 +50,8 @@ try:
     from pynwb.image import ImageSeries
     from pynwb.spec import NWBAttributeSpec, NWBDatasetSpec, NWBGroupSpec, NWBNamespace, NWBNamespaceBuilder
     from pynwb.device import Device
-    from pynwb.ophys import TwoPhotonSeries, OpticalChannel, ImageSegmentation, Fluorescence # For calcium imaging data
+    # For calcium imaging data
+    from pynwb.ophys import TwoPhotonSeries, OpticalChannel, ImageSegmentation, Fluorescence
     have_pynwb = True
 except ImportError:
     have_pynwb = False
@@ -59,8 +60,8 @@ except SyntaxError:  # pynwb doesn't support Python 2.7
 
 # hdmf imports
 try:
-    from hdmf.spec import LinkSpec, GroupSpec, DatasetSpec, SpecNamespace,\
-                          NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec
+    from hdmf.spec import (LinkSpec, GroupSpec, DatasetSpec, SpecNamespace,
+                           NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec)
     have_hdmf = True
 except ImportError:
     have_hdmf = False
@@ -93,7 +94,7 @@ class NWBIO(BaseIO):
     """
     supported_objects = [Block, Segment, AnalogSignal, IrregularlySampledSignal,
                          SpikeTrain, Epoch, Event, ImageSequence]
-    readable_objects  = supported_objects
+    readable_objects = supported_objects
     writeable_objects = supported_objects
 
     has_header = False
@@ -125,7 +126,7 @@ class NWBIO(BaseIO):
         """
 
         """
-        io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
+        io = pynwb.NWBHDF5IO(self.filename, mode='r')  # Open a file with NWBHDF5IO
         self._file = io.read()
 
         self.global_block_metadata = {}
@@ -226,7 +227,7 @@ class NWBIO(BaseIO):
                 block_name = hierarchy["block"]
                 segment_name = hierarchy["segment"]
             segment = self._get_segment(block_name, segment_name)
-            annotations = {"nwb_group" : group_name}
+            annotations = {"nwb_group": group_name}
             description = try_json_field(timeseries.description)
             if isinstance(description, dict):
                 annotations.update(description)
@@ -291,8 +292,10 @@ class NWBIO(BaseIO):
                         annotations[annotation_name].add(block.annotations[annotation_name])
                 if annotation_name in annotations:
                     if len(annotations[annotation_name]) > 1:
-                        raise NotImplementedError("We don't yet support multiple values for {}".format(annotation_name))
-                    annotations[annotation_name], = annotations[annotation_name]  # take single value from set
+                        raise NotImplementedError(
+                            "We don't yet support multiple values for {}".format(annotation_name))
+                    # take single value from set
+                    annotations[annotation_name], = annotations[annotation_name]
         if "identifier" not in annotations:
             annotations["identifier"] = self.filename
         if "session_description" not in annotations:
@@ -308,12 +311,15 @@ class NWBIO(BaseIO):
 
         nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
         #nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
-        nwbfile.add_unit_column('segment', 'the name of the Neo Segment to which the SpikeTrain belongs')
-        nwbfile.add_unit_column('block', 'the name of the Neo Block to which the SpikeTrain belongs')
+        nwbfile.add_unit_column(
+            'segment', 'the name of the Neo Segment to which the SpikeTrain belongs')
+        nwbfile.add_unit_column(
+            'block', 'the name of the Neo Block to which the SpikeTrain belongs')
 
         nwbfile.add_epoch_column('_name', 'the name attribute of the Epoch')
         #nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
-        nwbfile.add_epoch_column('segment', 'the name of the Neo Segment to which the Epoch belongs')
+        nwbfile.add_epoch_column(
+            'segment', 'the name of the Neo Segment to which the Epoch belongs')
         nwbfile.add_epoch_column('block', 'the name of the Neo Block to which the Epoch belongs')
 
         for i, block in enumerate(blocks):
@@ -379,7 +385,8 @@ class NWBIO(BaseIO):
                             timestamps=signal.times.rescale('second').magnitude,
                             comments=json.dumps(hierarchy))
         else:
-            raise TypeError("signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(signal.__class__.__name__))
+            raise TypeError("signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(
+                signal.__class__.__name__))
         nwbfile.add_acquisition(tS)
         return tS
 
@@ -388,7 +395,7 @@ class NWBIO(BaseIO):
                          obs_intervals=[[float(spiketrain.t_start.rescale('s')),
                                          float(spiketrain.t_stop.rescale('s'))]],
                          _name=spiketrain.name,
-                         #_description=spiketrain.description,
+                         # _description=spiketrain.description,
                          segment=spiketrain.segment.name,
                          block=spiketrain.segment.block.name)
         # todo: handle annotations (using add_unit_column()?)
@@ -426,6 +433,7 @@ def _decompose_unit(unit):
     assert isinstance(unit, pq.quantity.Quantity)
     assert unit.magnitude == 1
     conversion = 1.0
+
     def _decompose(unit):
         dim = unit.dimensionality
         if len(dim) != 1:
@@ -464,7 +472,7 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
         else:
             self.sampling_rate = None
         self.name = timeseries.name
-        self.annotations = {"nwb_group" : nwb_group}
+        self.annotations = {"nwb_group": nwb_group}
         self.description = try_json_field(timeseries.description)
         if isinstance(self.description, dict):
             self.annotations.update(self.description)
@@ -483,7 +491,8 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
                 (t_start or t_stop) is outside the real time range of the segment.
         """
         if time_slice:
-            i_start, i_stop, sig_t_start = self._time_slice_indices(time_slice, strict_slicing=strict_slicing)
+            i_start, i_stop, sig_t_start = self._time_slice_indices(time_slice,
+                                                                    strict_slicing=strict_slicing)
             signal = self._timeseries.data[i_start: i_stop]
         else:
             signal = self._timeseries.data[:]
@@ -517,7 +526,7 @@ class EventProxy(BaseEventProxy):
     def __init__(self, timeseries, nwb_group):
         self._timeseries = timeseries
         self.name = timeseries.name
-        self.annotations = {"nwb_group" : nwb_group}
+        self.annotations = {"nwb_group": nwb_group}
         self.description = try_json_field(timeseries.description)
         if isinstance(self.description, dict):
             self.annotations.update(self.description)

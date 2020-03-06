@@ -228,7 +228,8 @@ class AnalogSignalProxy(BaseProxy):
         if channel_indexes is None:
             channel_indexes = slice(None)
 
-        i_start, i_stop, sig_t_start = self._time_slice_indices(time_slice, strict_slicing=strict_slicing)
+        i_start, i_stop, sig_t_start = self._time_slice_indices(time_slice,
+                                                                strict_slicing=strict_slicing)
 
         raw_signal = self._rawio.get_analogsignal_chunk(block_index=self._block_index,
                     seg_index=self._seg_index, i_start=i_start, i_stop=i_stop,
