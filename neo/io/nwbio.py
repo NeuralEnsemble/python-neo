@@ -54,6 +54,8 @@ try:
     have_pynwb = True
 except ImportError:
     have_pynwb = False
+except SyntaxError:  # pynwb doesn't support Python 2.7
+    have_pynwb = False
 
 # hdmf imports
 try:
@@ -61,6 +63,8 @@ try:
                           NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec
     have_hdmf = True
 except ImportError:
+    have_hdmf = False
+except SyntaxError:
     have_hdmf = False
 
 

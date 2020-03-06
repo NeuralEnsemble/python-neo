@@ -16,7 +16,7 @@ try:
     import pynwb
     from neo.io.nwbio import NWBIO
     HAVE_PYNWB = True
-except ImportError:
+except (ImportError, SyntaxError):
     NWBIO = None
     HAVE_PYNWB = False
 import quantities as pq
