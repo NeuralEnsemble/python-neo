@@ -81,7 +81,8 @@ class OpenEphysRawIO(BaseRawIO):
         self._sig_length = {}
         self._sig_timestamp0 = {}
         sig_channels = []
-        for seg_index in range(nb_segment):
+        seg_indices = sorted(list(info['continuous'].keys()))
+        for ix, seg_index in enumerate(seg_indices):
             self._sigs_memmap[seg_index] = {}
 
             all_sigs_length = []
@@ -115,7 +116,7 @@ class OpenEphysRawIO(BaseRawIO):
                     'Not continuous timestamps for {}. ' \
                     'Maybe because recording was paused/stopped.'.format(continuous_filename)
 
-                if seg_index == 0:
+                if ix == 0:
                     # add in channel list
                     sig_channels.append((ch_name, chan_id, chan_info['sampleRate'],
                                 'int16', 'V', chan_info['bitVolts'], 0., int(processor_id)))
@@ -227,7 +228,7 @@ class OpenEphysRawIO(BaseRawIO):
         # and message.events (text based)      --> event 1 not implemented yet
         event_channels = []
         self._events_memmap = {}
-        for seg_index in range(nb_segment):
+        for seg_index in seg_indices:
             if seg_index == 0:
                 event_filename = 'all_channels.events'
             else:
@@ -255,7 +256,7 @@ class OpenEphysRawIO(BaseRawIO):
         # Annotate some objects from coninuous files
         self._generate_minimal_annotations()
         bl_ann = self.raw_annotations['blocks'][0]
-        for seg_index in range(nb_segment):
+        for seg_index in seg_indices:
             seg_ann = bl_ann['segments'][seg_index]
             if len(info['continuous']) > 0:
                 fullname = os.path.join(self.dirname, info['continuous'][seg_index][0])
