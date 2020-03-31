@@ -236,6 +236,12 @@ def _get_valid_ids(obj, annotation_key, annotation_value):
     if annotation_key in obj.annotations and obj.annotations[annotation_key] == annotation_value:
         valid_mask = np.ones(obj.shape)
 
+    elif annotation_key == 'labels':
+        # wrap annotation value to be list
+        if not type(annotation_value) in [list, np.ndarray]:
+            annotation_value = [annotation_value]
+        valid_mask = np.in1d(obj.labels, annotation_value)
+
     elif annotation_key in obj.array_annotations:
         # wrap annotation value to be list
         if not type(annotation_value) in [list, np.ndarray]:
