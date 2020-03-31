@@ -7,7 +7,6 @@ etc. of neo.core objects.
 import neo
 import copy
 import warnings
-import inspect
 import numpy as np
 import quantities as pq
 
