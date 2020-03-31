@@ -257,14 +257,14 @@ class OpenEphysRawIO(BaseRawIO):
         self._generate_minimal_annotations()
         bl_ann = self.raw_annotations['blocks'][0]
         for seg_index, oe_index in enumerate(oe_indices):
-            seg_ann = bl_ann['segments'][oe_index]
+            seg_ann = bl_ann['segments'][seg_index]
             if len(info['continuous']) > 0:
                 fullname = os.path.join(self.dirname, info['continuous'][oe_index][0])
                 chan_info = read_file_header(fullname)
                 seg_ann['openephys_version'] = chan_info['version']
                 bl_ann['openephys_version'] = chan_info['version']
                 seg_ann['date_created'] = chan_info['date_created']
-                seg_ann['segment_index'] = oe_index + 1
+                seg_ann['openephys_segment_index'] = oe_index + 1
 
     def _segment_t_start(self, block_index, seg_index):
         # segment start/stop are difine by  continuous channels
