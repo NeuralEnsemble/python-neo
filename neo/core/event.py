@@ -83,6 +83,8 @@ class Event(DataObject):
             times = np.array([]) * pq.s
         elif isinstance(times, (list, tuple)):
             times = np.array(times)
+        if len(times.shape) > 1:
+            times = times.reshape(-1)
         if labels is None:
             labels = np.array([], dtype='S')
         else:

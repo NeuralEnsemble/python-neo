@@ -142,6 +142,11 @@ class TestEvent(unittest.TestCase):
         assert_arrays_equal(evt.array_annotations['index'], np.arange(10, 13))
         self.assertIsInstance(evt.array_annotations, ArrayDict)
 
+    def test_Event_times_is_1d(self):
+        data2d = np.array([1, 2, 3, 4]).reshape((4, -1))
+        evt = Event(data2d * pq.s)
+        self.assertEqual(len(evt.shape), 1)
+
     def test_Event_creation_invalid_labels(self):
         self.assertRaises(ValueError, Event, [1.1, 1.5, 1.7] * pq.ms,
                           labels=["A", "B"])

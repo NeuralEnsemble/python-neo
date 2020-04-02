@@ -91,6 +91,8 @@ class Epoch(DataObject):
             times = np.array([]) * pq.s
         elif isinstance(times, (list, tuple)):
             times = np.array(times)
+        if len(times.shape) > 1:
+            times = times.reshape(-1)
         if isinstance(durations, (list, tuple)):
             durations = np.array(durations)
         if durations is None:
