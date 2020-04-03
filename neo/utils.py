@@ -7,7 +7,6 @@ etc. of neo.core objects.
 import neo
 import copy
 import warnings
-import inspect
 import numpy as np
 import quantities as pq
 
@@ -49,6 +48,9 @@ def get_events(container, **properties):
 
     Example:
     --------
+        >>> import neo
+        >>> from neo.utils import get_events
+        >>> import quantities as pq
         >>> event = neo.Event(times=[0.5, 10.0, 25.2] * pq.s)
         >>> event.annotate(event_type='trial start')
         >>> event.array_annotate(trial_id=[1, 2, 3])
@@ -56,16 +58,16 @@ def get_events(container, **properties):
         >>> seg.events = [event]
 
         # Will return a list with the complete event object
-        >>> get_events(seg, properties={'event_type': 'trial start'})
+        >>> get_events(seg, event_type='trial start')
 
         # Will return an empty list
-        >>> get_events(seg, properties={'event_type': 'trial stop'})
+        >>> get_events(seg, event_type='trial stop')
 
         # Will return a list with an Event object, but only with trial 2
-        >>> get_events(seg, properties={'trial_id': 2})
+        >>> get_events(seg, trial_id=2)
 
         # Will return a list with an Event object, but only with trials 1 and 2
-        >>> get_events(seg, properties={'trial_id': [1, 2]})
+        >>> get_events(seg, trial_id=[1, 2])
     """
     if isinstance(container, neo.Segment):
         return _get_from_list(container.events, prop=properties)
@@ -118,24 +120,27 @@ def get_epochs(container, **properties):
 
     Example:
     --------
+        >>> import neo
+        >>> from neo.utils import get_epochs
+        >>> import quantities as pq
         >>> epoch = neo.Epoch(times=[0.5, 10.0, 25.2] * pq.s,
-                              durations = [100, 100, 100] * pq.ms)
-        >>> epoch.annotate(event_type='complete trial',
-                           trial_id=[1, 2, 3])
+        ...                   durations=[100, 100, 100] * pq.ms,
+        ...                   epoch_type='complete trial')
+        >>> epoch.array_annotate(trial_id=[1, 2, 3])
         >>> seg = neo.Segment()
         >>> seg.epochs = [epoch]
 
         # Will return a list with the complete event object
-        >>> get_epochs(seg, prop={'epoch_type': 'complete trial'})
+        >>> get_epochs(seg, epoch_type='complete trial')
 
         # Will return an empty list
-        >>> get_epochs(seg, prop={'epoch_type': 'error trial'})
+        >>> get_epochs(seg, epoch_type='error trial')
 
         # Will return a list with an Event object, but only with trial 2
-        >>> get_epochs(seg, prop={'trial_id': 2})
+        >>> get_epochs(seg, trial_id=2)
 
         # Will return a list with an Event object, but only with trials 1 and 2
-        >>> get_epochs(seg, prop={'trial_id': [1, 2]})
+        >>> get_epochs(seg, trial_id=[1, 2])
     """
     if isinstance(container, neo.Segment):
         return _get_from_list(container.epochs, prop=properties)
@@ -235,6 +240,12 @@ def _get_valid_ids(obj, annotation_key, annotation_value):
 
     if annotation_key in obj.annotations and obj.annotations[annotation_key] == annotation_value:
         valid_mask = np.ones(obj.shape)
+
+    elif annotation_key == 'labels':
+        # wrap annotation value to be list
+        if not type(annotation_value) in [list, np.ndarray]:
+            annotation_value = [annotation_value]
+        valid_mask = np.in1d(obj.labels, annotation_value)
 
     elif annotation_key in obj.array_annotations:
         # wrap annotation value to be list

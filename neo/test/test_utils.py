@@ -32,8 +32,10 @@ class BaseProxyTest(unittest.TestCase):
 
 class TestUtilsWithoutProxyObjects(unittest.TestCase):
     def test__get_events(self):
-        starts_1 = Event(times=[0.5, 10.0, 25.2] * pq.s)
-        starts_1.annotate(event_type='trial start', pick='me')
+        starts_1 = Event(times=[0.5, 10.0, 25.2] * pq.s,
+                         labels=['label1', 'label2', 'label3'],
+                         name='pick_me')
+        starts_1.annotate(event_type='trial start')
         starts_1.array_annotate(trial_id=[1, 2, 3])
 
         stops_1 = Event(times=[5.5, 14.9, 30.1] * pq.s)
@@ -56,9 +58,9 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         block = Block()
         block.segments = [seg, seg2]
 
-        # test getting one whole event via annotation
+        # test getting one whole event via annotation or attribute
         extracted_starts1 = get_events(seg, event_type='trial start')
-        extracted_starts1b = get_events(block, pick='me')
+        extracted_starts1b = get_events(block, name='pick_me')
 
         self.assertEqual(len(extracted_starts1), 1)
         self.assertEqual(len(extracted_starts1b), 1)
@@ -116,6 +118,20 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
 
         # test getting more than one event time of one event
         trials_1_2 = get_events(block, trial_id=[1, 2], event_type='trial start')
+
+        self.assertEqual(len(trials_1_2), 1)
+
+        trials_1_2 = trials_1_2[0]
+
+        self.assertEqual(starts_1.name, trials_1_2.name)
+        self.assertEqual(starts_1.description, trials_1_2.description)
+        self.assertEqual(starts_1.file_origin, trials_1_2.file_origin)
+        self.assertEqual(starts_1.annotations['event_type'], trials_1_2.annotations['event_type'])
+        assert_arrays_equal(trials_1_2.array_annotations['trial_id'], np.array([1, 2]))
+        self.assertIsInstance(trials_1_2.array_annotations, ArrayDict)
+
+        # test selecting event times by label
+        trials_1_2 = get_events(block, labels=['label1', 'label2'])
 
         self.assertEqual(len(trials_1_2), 1)
 
