@@ -93,6 +93,7 @@ class NixIOTest(unittest.TestCase):
                 neochanpos = list(neochx.index).index(nixchanidx)
             except ValueError:
                 self.fail("Channel indexes do not match.")
+
             if len(neochx.channel_names):
                 neochanname = neochx.channel_names[neochanpos]
                 if ((not isinstance(neochanname, str)) and
@@ -100,6 +101,9 @@ class NixIOTest(unittest.TestCase):
                     neochanname = neochanname.decode()
                 nixchanname = nixchan.metadata["neo_name"]
                 self.assertEqual(neochanname, nixchanname)
+            else:
+                # Check if channel name exists but not loaded
+                self.assertNotIn("neo_name", nixchan.metadata)
             if len(neochx.channel_ids):
                 neochanid = neochx.channel_ids[neochanpos]
                 nixchanid = nixchan.metadata["channel_id"]
