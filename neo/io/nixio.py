@@ -511,7 +511,7 @@ class NixIO(BaseIO):
         del neo_attrs["spatial_scale"]
 
         neo_seq = ImageSequence(image_data=imgseq, sampling_rate=sampling_rate,
-                                spatial_scale=spatial_scale,units=unit,
+                                spatial_scale=spatial_scale, units=unit,
                                 **neo_attrs)
 
         self._neo_map[neo_attrs["nix_name"]] = neo_seq

@@ -142,8 +142,8 @@ class NixIOTest(unittest.TestCase):
             neoasigs = list(sig.annotations["nix_name"]
                             for sig in neochx.analogsignals)
             nixasigs = list({da.metadata.name for da in nixblock.data_arrays
-                             if da.type == "neo.analogsignal" and
-                             nixchx in da.sources})
+                             if da.type == "neo.analogsignal"
+                             and nixchx in da.sources})
 
             self.assertEqual(len(neoasigs), len(nixasigs))
             # IrregularlySampledSignals referencing CHX
@@ -151,8 +151,8 @@ class NixIOTest(unittest.TestCase):
                             neochx.irregularlysampledsignals)
             nixisigs = list(
                 {da.metadata.name for da in nixblock.data_arrays
-                 if da.type == "neo.irregularlysampledsignal" and
-                 nixchx in da.sources}
+                 if da.type == "neo.irregularlysampledsignal"
+                 and nixchx in da.sources}
             )
             self.assertEqual(len(neoisigs), len(nixisigs))
             # SpikeTrains referencing CHX and Units
@@ -248,13 +248,14 @@ class NixIOTest(unittest.TestCase):
                 self.assertEqual(timedim.unit,
                                  units_to_string(neosig.times.units))
             elif isinstance(neosig, ImageSequence):
-
-                sampling_rate = create_quantity(da.metadata["sampling_rate"],
-                                                da.metadata.props["sampling_rate"].unit)
+                rate = da.metadata["sampling_rate"]
+                unit = da.metadata.props["sampling_rate"].unit
+                sampling_rate = create_quantity(rate, unit)
                 neosr = neosig.sampling_rate
                 self.assertEqual(sampling_rate, neosr)
-                spatial_scale = create_quantity(da.metadata["spatial_scale"],
-                                                da.metadata.props["spatial_scale"].unit)
+                scale = da.metadata["spatial_scale"]
+                unit = da.metadata.props["spatial_scale"].unit
+                spatial_scale = create_quantity(scale, unit)
                 neosps = neosig.spatial_scale
                 self.assertEqual(spatial_scale, neosps)
 
@@ -377,8 +378,8 @@ class NixIOTest(unittest.TestCase):
                     if isinstance(v, np.ndarray):
                         self.assertTrue(np.all(v == nixmd[str(k)]))
                     else:
-                        self.assertEqual(nixmd[str(k)], v,
-                                         "Property value mismatch: {}".format(k))
+                        msg = "Property value mismatch: {}".format(k)
+                        self.assertEqual(nixmd[str(k)], v, msg)
 
     @classmethod
     def create_full_nix_file(cls, filename):
@@ -1125,10 +1126,10 @@ class NixIOWriteTest(NixIOTest):
                 # imagesequence
                 for imgseqdx in range(nimgseq):
                     imseq = ImageSequence(
-                         name="{}:imgs{}".format(seg.name, imgseqdx),
-                         image_data=np.random.rand(20, 10, 10), units=pq.mV,
-                         sampling_rate=pq.Hz, spatial_scale=pq.micrometer
-                     )
+                        name="{}:imgs{}".format(seg.name, imgseqdx),
+                        image_data=np.random.rand(20, 10, 10), units=pq.mV,
+                        sampling_rate=pq.Hz, spatial_scale=pq.micrometer
+                    )
                     seg.imagesequences.append(imseq)
                 for irridx in range(nirrseg):
                     isig = IrregularlySampledSignal(
