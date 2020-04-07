@@ -213,7 +213,7 @@ class Spike2RawIO(BaseRawIO):
                 elif chan_info['kind'] == 9:  # float32
                     gain = 1.
                     offset = 0.
-                    sig_dtype = 'int32'
+                    sig_dtype = 'float32'
                 group_id = 0
                 sig_channels.append((name, chan_id, sampling_rate, sig_dtype,
                                      units, gain, offset, group_id))

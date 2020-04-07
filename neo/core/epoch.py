@@ -40,7 +40,7 @@ class Epoch(DataObject):
         >>>
         >>> epc = Epoch(times=np.arange(0, 30, 10)*s,
         ...             durations=[10, 5, 7]*ms,
-        ...             labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
+        ...             labels=np.array(['btn0', 'btn1', 'btn2'], dtype='U'))
         >>>
         >>> epc.times
         array([  0.,  10.,  20.]) * s
@@ -48,7 +48,7 @@ class Epoch(DataObject):
         array([ 10.,   5.,   7.]) * ms
         >>> epc.labels
         array(['btn0', 'btn1', 'btn2'],
-              dtype='|S4')
+              dtype='<U4')
 
     *Required attributes/properties*:
         :times: (quantity array 1D, numpy array 1D or list) The start times
@@ -56,7 +56,7 @@ class Epoch(DataObject):
         :durations: (quantity array 1D, numpy array 1D, list, or quantity scalar)
            The length(s) of each time period.
            If a scalar, the same value is used for all time periods.
-        :labels: (numpy.array 1D dtype='S' or list) Names or labels for the time periods.
+        :labels: (numpy.array 1D dtype='U' or list) Names or labels for the time periods.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset,
@@ -76,7 +76,7 @@ class Epoch(DataObject):
     _single_parent_attrs = ('segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('durations', pq.Quantity, 1),
-                        ('labels', np.ndarray, 1, np.dtype('S')))
+                        ('labels', np.ndarray, 1, np.dtype('U')))
 
     def __new__(cls, times=None, durations=None, labels=None, units=None, name=None,
                 description=None, file_origin=None, array_annotations=None, **annotations):
@@ -94,7 +94,7 @@ class Epoch(DataObject):
             else:
                 raise ValueError("Durations array has different length to times")
         if labels is None:
-            labels = np.array([], dtype='S')
+            labels = np.array([], dtype='U')
         else:
             labels = np.array(labels)
             if labels.size != times.size and labels.size:
@@ -162,11 +162,9 @@ class Epoch(DataObject):
         '''
         Returns a string representing the :class:`Epoch`.
         '''
-        # need to convert labels to unicode or repr is messed up
-        labels = self.labels.astype('U')
 
-        objs = ['%s@%s for %s' % (label, time, dur) for label, time, dur in
-                zip(labels, self.times, self.durations)]
+        objs = ['%s@%s for %s' % (label, str(time), str(dur)) for label, time, dur in
+                zip(self.labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):

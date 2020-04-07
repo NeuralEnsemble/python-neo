@@ -1242,6 +1242,37 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
             np.testing.assert_allclose(desired.magnitude[3:-3], result.magnitude[3:-3], rtol=0.05,
                                        atol=0.1)
 
+    def test_rectify(self):
+        # generate signal long enough for testing the rectification
+        data = np.sin(np.arange(1500) / 30).reshape(500, 3)
+        target_data = np.abs(data)
+
+        array_anno = {'anno1': [0, 1, 2], 'anno2': ['C', 'P', 'F']}
+
+        signal = AnalogSignal(data * pq.mV,
+                              sampling_rate=30000 * pq.Hz,
+                              units=pq.mV,
+                              array_annotations=array_anno)
+
+        target_signal = AnalogSignal(target_data * pq.mV,
+                                     sampling_rate=30000 * pq.Hz,
+                                     units=pq.mV,
+                                     array_annotations=array_anno)
+
+        # Use the rectify method
+        rectified_signal = signal.rectify()
+
+        # Assert that nothing changed
+        assert_arrays_equal(rectified_signal.magnitude, target_signal.magnitude)
+        self.assertEqual(rectified_signal.sampling_rate,
+                         target_signal.sampling_rate)
+        self.assertEqual(rectified_signal.units, target_signal.units)
+        self.assertEqual(rectified_signal.annotations,
+                         target_signal.annotations)
+        assert_arrays_equal(rectified_signal.array_annotations['anno1'],
+                            target_signal.array_annotations['anno1'])
+        assert_arrays_equal(rectified_signal.array_annotations['anno2'],
+                            target_signal.array_annotations['anno2'])
 
 class TestAnalogSignalEquality(unittest.TestCase):
     def test__signals_with_different_data_complement_should_be_not_equal(self):

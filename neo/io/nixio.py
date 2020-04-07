@@ -388,16 +388,14 @@ class NixIO(BaseIO):
 
     def _nix_to_neo_channelindex(self, nix_source):
         neo_attrs = self._nix_attr_to_neo(nix_source)
-        channels = list(self._nix_attr_to_neo(c)
-                        for c in nix_source.sources
+        channels = list(self._nix_attr_to_neo(c) for c in nix_source.sources
                         if c.type == "neo.channelindex")
-        neo_attrs["index"] = np.array([c["index"]
-                                       for c in channels])
+        neo_attrs["index"] = np.array([c["index"] for c in channels])
         if len(channels):
-            chan_names = list(c["neo_name"]
-                              for c in channels if "neo_name" in c)
-            chan_ids = list(c["channel_id"]
-                            for c in channels if "channel_id" in c)
+            chan_names = list(c["name"] for c in channels
+                              if "name" in c and c["name"] is not None)
+            chan_ids = list(c["channel_id"] for c in channels
+                            if "channel_id" in c)
             if chan_names:
                 neo_attrs["channel_names"] = chan_names
             if chan_ids:
@@ -516,8 +514,7 @@ class NixIO(BaseIO):
         time_unit = nix_mtag.positions.unit
         times = create_quantity(nix_mtag.positions, time_unit)
         labels = np.array(nix_mtag.positions.dimensions[0].labels,
-                          dtype="S")
-
+                          dtype="U")
         neo_event = Event(times=times, labels=labels, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_event
         return neo_event
@@ -531,10 +528,11 @@ class NixIO(BaseIO):
 
         if len(nix_mtag.positions.dimensions[0].labels) > 0:
             labels = np.array(nix_mtag.positions.dimensions[0].labels,
-                              dtype="S")
+                              dtype="U")
         else:
             labels = None
-        neo_epoch = Epoch(times=times, durations=durations, labels=labels, **neo_attrs)
+        neo_epoch = Epoch(times=times, durations=durations, labels=labels,
+                          **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_epoch
         return neo_epoch
 

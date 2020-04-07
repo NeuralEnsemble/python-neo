@@ -631,3 +631,31 @@ class AnalogSignal(BaseSignal):
         resampled_signal.array_annotations = self.array_annotations.copy()
 
         return resampled_signal
+
+    def rectify(self, **kwargs):
+        """
+        Rectify the signal.
+        This method rectifies the signal by taking the absolute value.
+        This method is a wrapper of numpy.absolute() and accepts the same set of keyword
+        arguments.
+
+        Returns:
+        --------
+        resampled_signal: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object containing the rectified data points.
+            The original :class:`AnalogSignal` is not modified.
+
+        """
+
+        # Use numpy to get the absolute value of the signal
+        rectified_data = np.absolute(self.magnitude, **kwargs)
+
+        rectified_signal = self.duplicate_with_new_data(rectified_data)
+
+        # the sampling rate stays constant
+        rectified_signal.sampling_rate = self.sampling_rate
+
+        # since the number of channels stays the same, we can also copy array annotations here
+        rectified_signal.array_annotations = self.array_annotations.copy()
+
+        return rectified_signal

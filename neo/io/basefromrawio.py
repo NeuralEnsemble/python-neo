@@ -144,7 +144,8 @@ class BaseFromRaw(BaseIO):
                                                  channel_names=ch_names,
                                                  channel_ids=all_channels[ind_abs]['id'],
                                                  name='Channel group {}'.format(i),
-                                                 **chidx_annotations)
+                                                 )
+                neo_channel_index.annotations.update(chidx_annotations)
 
                 bl.channel_indexes.append(neo_channel_index)
 
