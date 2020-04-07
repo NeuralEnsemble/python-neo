@@ -15,7 +15,6 @@ import numpy as np
 import datetime
 import os
 import re
-import io
 
 
 class BrainVisionRawIO(BaseRawIO):

@@ -245,7 +245,6 @@ def parse_bci2000_header(filename):
             el_labels = [str(ix) for ix in range(num_els)]
         return num_els, el_labels
 
-    import io
     with open(filename, 'rb') as fid:
 
         # Parse the file header (plain text)
