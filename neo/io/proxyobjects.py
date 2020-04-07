@@ -432,9 +432,6 @@ class _EventOrEpoch(BaseProxy):
         if durations is not None:
             durations = self._rawio.rescale_epoch_duration(durations, dtype=dtype) * pq.s
 
-        # this should be remove when labesl will be unicode
-        labels = labels.astype('S')
-
         h = self._rawio.header['event_channels'][self._event_channel_index]
         if h['type'] == b'event':
             ret = Event(times=times, labels=labels, units='s',

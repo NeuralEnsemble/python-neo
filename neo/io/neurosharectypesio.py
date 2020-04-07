@@ -196,7 +196,7 @@ class NeurosharectypesIO(BaseIO):
                     times.append(pdTimeStamp.value)
                     labels.append(str(pData.value))
                 ea.times = times * pq.s
-                ea.labels = np.array(labels, dtype='S')
+                ea.labels = np.array(labels, dtype='U')
 
                 seg.events.append(ea)
 

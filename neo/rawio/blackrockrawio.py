@@ -750,15 +750,11 @@ class BlackrockRawIO(BaseRawIO):
             encoding = {0: 'latin_1', 1: 'utf_16', 255: 'latin_1'}
             labels = [data[ev_dict['field']].decode(
                 encoding[data['char_set']]) for data in events_data]
-            # Only ASCII can be allowed due to using numpy
-            # labels.astype('S') forces to use bytes in BaseFromRaw 401, in read_segment
-            # This is not recommended
-            # TODO: Maybe switch to astype('U')
-            labels = np.array([data.encode('ASCII', errors='ignore') for data in labels])
+            labels = np.array(labels, dtype='U')
         else:
             events_data, event_segment_ids = self.nev_data['NonNeural']
             ev_dict = self.__nonneural_evdicts[self.__nev_spec](events_data)[name]
-            labels = events_data[ev_dict['field']]
+            labels = events_data[ev_dict['field']].astype('U')
 
         mask = ev_dict['mask'] & (event_segment_ids == seg_index)
         timestamp = events_data[mask]['timestamp']

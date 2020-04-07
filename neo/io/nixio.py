@@ -516,8 +516,7 @@ class NixIO(BaseIO):
         time_unit = nix_mtag.positions.unit
         times = create_quantity(nix_mtag.positions, time_unit)
         labels = np.array(nix_mtag.positions.dimensions[0].labels,
-                          dtype="S")
-
+                          dtype="U")
         neo_event = Event(times=times, labels=labels, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_event
         return neo_event
@@ -531,10 +530,11 @@ class NixIO(BaseIO):
 
         if len(nix_mtag.positions.dimensions[0].labels) > 0:
             labels = np.array(nix_mtag.positions.dimensions[0].labels,
-                              dtype="S")
+                              dtype="U")
         else:
             labels = None
-        neo_epoch = Epoch(times=times, durations=durations, labels=labels, **neo_attrs)
+        neo_epoch = Epoch(times=times, durations=durations, labels=labels,
+                          **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_epoch
         return neo_epoch
 

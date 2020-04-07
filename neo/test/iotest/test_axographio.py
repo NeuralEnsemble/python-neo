@@ -160,13 +160,13 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(event.times, [5999, 5999, 23499, 23499,
                                    26499, 26499, 35999]
                      * blk.segments[0].analogsignals[0].sampling_period)
-        assert_equal(event.labels, [b'Stop', b'Start', b'Stop', b'Start',
-                                    b'Stop', b'Start', b'Stop'])
+        assert_equal(event.labels, ['Stop', 'Start', 'Stop', 'Start',
+                                    'Stop', 'Start', 'Stop'])
 
         epoch = blk.segments[0].epochs[0]
         assert_equal(epoch.times, np.array([0.1, 4]) * pq.s)
         assert_equal(epoch.durations, np.array([1.4, 2]) * pq.s)
-        assert_equal(epoch.labels, [b'test interval 1', b'test interval 2'])
+        assert_equal(epoch.labels, ['test interval 1', 'test interval 2'])
 
     def test_rec_datetime(self):
         """Test parsing the recording datetime from notes"""

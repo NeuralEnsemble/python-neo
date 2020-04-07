@@ -94,7 +94,7 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
             evt_size = rand() * np.diff(event_size_range)
             evt_size += event_size_range[0]
             evt_size = int(evt_size)
-            labels = np.array(labels, dtype='S')
+            labels = np.array(labels, dtype='U')
             labels = labels[(rand(evt_size) * len(labels)).astype('i')]
             evt = Event(times=rand(evt_size) * duration, labels=labels)
             # Randomly generate array_annotations from given options
@@ -114,7 +114,7 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
                 dur += epoch_duration_range[0]
                 durations.append(dur)
                 t = t + dur
-            labels = np.array(labels, dtype='S')
+            labels = np.array(labels, dtype='U')
             labels = labels[(rand(len(times)) * len(labels)).astype('i')]
             assert len(times) == len(durations)
             assert len(times) == len(labels)

@@ -384,7 +384,7 @@ class NeuroshareapiIO(BaseIO):
                 # append the time stamp to them empty list
                 tempTimeStamp.append(tempData)
                 # create an event array
-        eva = Event(labels=np.array(tempNames, dtype="S"),
+        eva = Event(labels=np.array(tempNames, dtype="U"),
                     times=np.array(tempTimeStamp) * pq.s,
                     file_origin=self.filename,
                     description="the trigger events (without durations)")
@@ -434,6 +434,6 @@ class NeuroshareapiIO(BaseIO):
         epa = Epoch(file_origin=self.filename,
                     times=np.array(tempTimeStamp) * pq.s,
                     durations=np.array(durations) * pq.s,
-                    labels=np.array(tempNames, dtype="S"),
+                    labels=np.array(tempNames, dtype="U"),
                     description="digital events with duration")
         return epa

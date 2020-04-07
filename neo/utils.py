@@ -341,10 +341,8 @@ def add_epoch(
     if 'name' not in kwargs:
         kwargs['name'] = 'epoch'
     if 'labels' not in kwargs:
-        # this needs to be changed to '%s_%i' % (kwargs['name'], i) for i in range(len(times))]
-        # when labels become unicode
-        kwargs['labels'] = [
-            ('%s_%i' % (kwargs['name'], i)).encode('ascii') for i in range(len(times))]
+        kwargs['labels'] = [u'{}_{}'.format(kwargs['name'], i)
+                            for i in range(len(times))]
 
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
 

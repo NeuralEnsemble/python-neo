@@ -507,7 +507,7 @@ class BrainwareSrcIO(BaseIO):
         """
         if not events:
             event = Event(times=pq.Quantity([], units=pq.s),
-                          labels=np.array([], dtype='S'),
+                          labels=np.array([], dtype='U'),
                           senders=np.array([], dtype='S'),
                           t_start=0)
             return event
@@ -529,7 +529,7 @@ class BrainwareSrcIO(BaseIO):
         t_start = times.min()
         times = pq.Quantity(times - t_start, units=pq.d).rescale(pq.s)
 
-        labels = np.array(labels)
+        labels = np.array(labels, dtype='U')
         senders = np.array(senders)
 
         event = Event(times=times, labels=labels,

@@ -205,7 +205,7 @@ class BCI2000RawIO(BaseRawIO):
                         # np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
                         vals = np.char.mod('%d', state_vec[st_ch_ix])  # event val, string'd
 
-                self._my_events.append([ev_times, durs, vals])
+                self._my_events.append([ev_times, durs, vals.astype('U')])
 
         return self._my_events
 
