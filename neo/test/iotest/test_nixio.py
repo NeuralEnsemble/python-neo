@@ -199,7 +199,7 @@ class NixIOTest(unittest.TestCase):
             for da in data_arrays:
                 if da.metadata.name == nixname:
                     dalist.append(da)
-                nsig = np.shape(sig)[-1]
+            nsig = np.shape(sig)[-1]
             totalsignals += nsig
             self.assertEqual(nsig, len(dalist))
             self.compare_signal_dalist(sig, dalist)
