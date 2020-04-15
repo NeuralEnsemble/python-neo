@@ -1486,6 +1486,24 @@ class NixIOWriteTest(NixIOTest):
 
         # TODO: multi dimensional value (GH Issue #501)
 
+    def test_empty_array_annotations(self):
+        wblock = Block("block with spiketrain")
+        wseg = Segment()
+        wseg.spiketrains = [SpikeTrain(times=[] * pq.s, t_stop=1 * pq.s,
+                                       array_annotations={'empty': []})]
+        wblock.segments = [wseg]
+        self.writer.write_block(wblock)
+        try:
+            rblock = self.writer.read_block(neoname="block with spiketrain")
+        except Exception as exc:
+            self.fail('The following exception was raised when'
+                      + ' reading the block with an empty array annotation:\n'
+                      + str(exc))
+        rst = rblock.segments[0].spiketrains[0]
+        self.assertEqual(len(rst.array_annotations), 1)
+        self.assertIn('empty', rst.array_annotations.keys())
+        self.assertEqual(len(rst.array_annotations['empty']), 0)
+
     def test_write_proxyobjects(self):
 
         def generate_complete_block():
