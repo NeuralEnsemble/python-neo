@@ -193,17 +193,8 @@ open a pull request on GitHub
 Python version
 --------------
 
-Neo core should work with Python 3.5 or newer. Neo IO modules should work with Python 3,
-but certain modules may only work with either Python 2 or 3 (see :doc:`install`).
-
-If in doubt, `Porting to Python 3`_ by Lennart Regebro is an excellent resource.
-
-The most important thing to remember is to run tests with at least one version
-of Python 3. There is generally no problem in having multiple versions of Python
-installed on your computer at once: e.g., on Ubuntu Python 2 is available as `python`and
-Python 3 as `python3`, while on Arch Linux Python 2 is `python2` and Python 3 `python`.
-See `PEP394`_ for more on this. Using virtual environments makes this very
-straightforward.
+Neo should work with Python 3.5 or newer. If you need support for Python 2.7,
+use Neo v0.8.0 or earlier.
 
 
 Coding standards and style
