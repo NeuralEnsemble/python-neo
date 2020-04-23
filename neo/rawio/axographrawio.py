@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AxographRawIO
 =============
@@ -154,9 +153,6 @@ Acquisition modes:
     interval bars into a single Neo Epoch channel with the name "AxoGraph
     Intervals".
 """
-
-from __future__ import (unicode_literals, print_function, division,
-                        absolute_import)
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
@@ -1339,7 +1335,7 @@ class StructFile(BufferedReader):
         else:
             # unspecified
             self.utf_16_decoder = 'utf-16'
-        super(StructFile, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def read_and_unpack(self, fmt):
         """

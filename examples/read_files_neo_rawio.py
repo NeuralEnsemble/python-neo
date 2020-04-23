@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This is an example for reading files with neo.rawio
 compare with read_files_neo_io.py

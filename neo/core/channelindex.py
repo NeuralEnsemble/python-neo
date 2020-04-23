@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`ChannelIndex`, a container for multiple
 data channels.
@@ -6,9 +5,6 @@ data channels.
 :class:`ChannelIndex` derives from :class:`Container`,
 from :module:`neo.core.container`.
 '''
-
-# needed for Python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import quantities as pq
@@ -170,10 +166,10 @@ class ChannelIndex(Container):
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
         # in annotations
-        super(ChannelIndex, self).__init__(name=name,
-                                           description=description,
-                                           file_origin=file_origin,
-                                           **annotations)
+        super().__init__(name=name,
+                         description=description,
+                         file_origin=file_origin,
+                         **annotations)
 
         # Defaults
         if channel_names is None:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.tdtrawio import TdtRawIO
 

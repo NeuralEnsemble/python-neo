@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading/writing data from micromed (.trc).
 Inspired by the Matlab code for EEGLAB from Rami K. Niazy.
@@ -7,7 +6,6 @@ Completed with matlab Guillaume BECQ code.
 
 Author: Samuel Garcia
 """
-from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 
@@ -41,7 +39,7 @@ class MicromedRawIO(BaseRawIO):
         self.filename = filename
 
     def _parse_header(self):
-        with io.open(self.filename, 'rb') as fid:
+        with open(self.filename, 'rb') as fid:
             f = StructFile(fid)
 
             # Name

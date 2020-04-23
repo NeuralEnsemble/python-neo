@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NeuroshareIO is a wrap with ctypes of neuroshare DLLs.
 Neuroshare is a C API for reading neural data.
@@ -20,14 +19,6 @@ Author: sgarcia
 import sys
 import ctypes
 import os
-
-# file no longer exists in Python3
-try:
-    file
-except NameError:
-    import io
-
-    file = io.BufferedReader
 
 import numpy as np
 import quantities as pq

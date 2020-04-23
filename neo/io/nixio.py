@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2016, German Neuroinformatics Node (G-Node)
 #                     Achilleas Koutsou <achilleas.k@gmail.com>
 #
@@ -20,7 +19,6 @@ behaviours specific to this IO, can be found on the wiki of the G-Node fork of
 Neo: https://github.com/G-Node/python-neo/wiki
 """
 
-from __future__ import absolute_import
 
 from datetime import date, time, datetime
 try:

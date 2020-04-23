@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from NeuroExplorer (.nex)
 
@@ -23,7 +22,6 @@ http://www.neuroexplorer.com/downloadspage/
 Author: Samuel Garcia, luc estebanez, mark hollenbeck
 
 """
-from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,

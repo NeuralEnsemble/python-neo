@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for reading data from files in the Blackrock in raw format.
 
@@ -57,7 +56,6 @@ TODO:
     (file spec 2.1 and 2.2)
 """
 
-from __future__ import absolute_import, division, print_function
 
 import datetime
 import os

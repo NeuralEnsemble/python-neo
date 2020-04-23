@@ -38,7 +38,7 @@ a GitHub account and then set to watch the repository at `GitHub Repository`_
 Requirements
 ------------
 
-    * Python_ 2.7, 3.5 or later
+    * Python_ 3.5 or later
     * numpy_ >= 1.10.0
     * quantities_ >= 0.12.1
     * nose_ >= 1.1.2 (for running tests)
@@ -50,7 +50,6 @@ Requirements
     * (optional) pillow (for TiffIO)
 
 We strongly recommend you develop within a virtual environment (from virtualenv, venv or conda).
-It is best to have at least one virtual environment with Python 2.7 and one with Python 3.x.
 
 Getting the source code
 -----------------------
@@ -69,7 +68,6 @@ Now you need to make sure that the ``neo`` package is on your PYTHONPATH.
 You can do this either by installing Neo::
 
     $ cd python-neo
-    $ python setup.py install
     $ python3 setup.py install
 
 (if you do this, you will have to re-run ``setup.py install`` any time you make
@@ -100,10 +98,6 @@ Before you make any changes, run the test suite to make sure all the tests pass
 on your system::
 
     $ cd neo/test
-
-With Python 2.7 or 3.x::
-
-    $ python -m unittest discover
     $ python3 -m unittest discover
 
 If you have nose installed::
@@ -116,7 +110,6 @@ otherwise it will report on tests that failed or produced errors.
 
 To run tests from an individual file::
 
-    $ python test_analogsignal.py
     $ python3 test_analogsignal.py
 
 
@@ -200,30 +193,15 @@ open a pull request on GitHub
 Python version
 --------------
 
-Neo core should work with both Python 2.7 and Python 3 (version 3.5 or newer).
-Neo IO modules should ideally work with both Python 2 and 3, but certain
-modules may only work with one or the other (see :doc:`install`).
-
-So far, we have managed to write code that works with both Python 2 and 3.
-Mainly this involves avoiding the ``print`` statement (use ``logging.info``
-instead), and putting ``from __future__ import division`` at the beginning of
-any file that uses division.
-
-If in doubt, `Porting to Python 3`_ by Lennart Regebro is an excellent resource.
-
-The most important thing to remember is to run tests with at least one version
-of Python 2 and at least one version of Python 3. There is generally no problem
-in having multiple versions of Python installed on your computer at once: e.g.,
-on Ubuntu Python 2 is available as `python` and Python 3 as `python3`, while
-on Arch Linux Python 2 is `python2` and Python 3 `python`. See `PEP394`_ for
-more on this. Using virtual environments makes this very straightforward.
+Neo should work with Python 3.5 or newer. If you need support for Python 2.7,
+use Neo v0.8.0 or earlier.
 
 
 Coding standards and style
 --------------------------
 
 All code should conform as much as possible to `PEP 8`_, and should run with
-Python 2.7, and 3.5 or newer.
+Python 3.5 or newer.
 
 You can use the `pep8`_ program to check the code for PEP 8 conformity.
 You can also use `flake8`_, which combines pep8 and pyflakes.

@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 from math import floor, ceil
 
 
-class RegionOfInterest(object):
+class RegionOfInterest:
     """Abstract base class"""
     pass
 

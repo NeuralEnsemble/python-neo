@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Here a list of proxy object that can be used when lazy=True at neo.io level.
 

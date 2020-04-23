@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests proxyobject mechanisms with ExampleRawIO
 """

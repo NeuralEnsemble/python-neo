@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This is an example demonstrate the lazy load and proxy objects.
 

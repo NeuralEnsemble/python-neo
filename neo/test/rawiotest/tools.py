@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Common tools that are useful for neo.io object tests
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
 import logging
 import os
-import shutil
 import tempfile
 
-try:
-    from urllib2 import urlopen
-except ImportError:
-    from urllib.request import urlopen
+from urllib.request import urlopen
 
 
 def can_use_network():

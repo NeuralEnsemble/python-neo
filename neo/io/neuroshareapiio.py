@@ -9,9 +9,6 @@ Supported: Read
 Author: Andre Maia Chagas
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
 # note neo.core needs only numpy and quantities
 import numpy as np
 import quantities as pq

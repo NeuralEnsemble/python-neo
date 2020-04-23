@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 '''
 Generate datasets for testing
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import
 
 from datetime import datetime
 

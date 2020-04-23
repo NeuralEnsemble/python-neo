@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 BaseFromRaw
 ======
@@ -14,13 +13,7 @@ of the lazy load with proxy objects.
 
 
 """
-# needed for python 3 compatibility
-from __future__ import print_function, division, absolute_import
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
-
-import warnings
 import collections
-import logging
 import numpy as np
 
 from neo import logging_handler

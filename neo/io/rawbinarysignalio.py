@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading/writing data in a raw binary interleaved compact file.
 Sampling rate, units, number of channel and dtype must be externally known.

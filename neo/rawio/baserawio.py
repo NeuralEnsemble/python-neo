@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 baserawio
 ======
@@ -41,7 +40,6 @@ or vector can be store somewhere (near the fiel, /tmp, any path)
 """
 
 # from __future__ import unicode_literals, print_function, division, absolute_import
-from __future__ import print_function, division, absolute_import
 
 import logging
 import numpy as np
@@ -92,7 +90,7 @@ _event_channel_dtype = [
 ]
 
 
-class BaseRawIO(object):
+class BaseRawIO:
     """
     Generic class to handle.
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`Segment`, a container for data sharing a common
 time basis.
@@ -6,9 +5,6 @@ time basis.
 :class:`Segment` derives from :class:`Container`,
 from :module:`neo.core.container`.
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
 
@@ -92,7 +88,7 @@ class Segment(Container):
         '''
         Initialize a new :class:`Segment` instance.
         '''
-        super(Segment, self).__init__(name=name, description=description,
+        super().__init__(name=name, description=description,
                                       file_origin=file_origin, **annotations)
 
         self.file_datetime = file_datetime

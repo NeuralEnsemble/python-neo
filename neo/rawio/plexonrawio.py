@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading the old data format from Plexon
 acquisition system (.plx)
@@ -22,7 +21,6 @@ If one day, somebody use it, consider to offer me a beer.
 Author: Samuel Garcia
 
 """
-from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,

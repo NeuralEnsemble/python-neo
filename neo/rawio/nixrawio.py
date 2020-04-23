@@ -7,7 +7,6 @@ It supports all kinds of NEO objects.
 Author: Chek Yin Choi
 """
 
-from __future__ import print_function, division, absolute_import
 from .baserawio import (BaseRawIO, _signal_channel_dtype,
                         _unit_channel_dtype, _event_channel_dtype)
 from ..io.nixio import NixIO

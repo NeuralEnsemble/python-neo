@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for reading data from files in the Blackrock format.
 
@@ -48,7 +47,6 @@ TODO:
     (file spec 2.1 and 2.2)
 """
 
-from __future__ import division
 import datetime
 import os
 import re

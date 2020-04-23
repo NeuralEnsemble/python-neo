@@ -8,7 +8,6 @@ workflows:
   test:
     jobs:
       - test-3.6
-      - test-2.7
 jobs:
   test-3.6:
     docker:
@@ -65,61 +64,6 @@ jobs:
           command: |
             . venv/bin/activate
             coveralls || true  # a coveralls failure shouldn't cause a build failure
-
-      - store_artifacts:
-          path: test-reports
-          destination: test-reports
-
-  test-2.7:
-    docker:
-      - image: circleci/python:2.7-stretch
-
-    environment:
-      - NEO_TEST_FILE_DIR: "/home/circleci/repo/files_for_testing_neo"
-
-    working_directory: ~/repo
-
-    steps:
-      - checkout
-
-      # Download and cache dependencies
-      #- restore_cache:
-      #    keys:
-      #    - v1-py2-dependencies-{{ checksum "requirements.txt" }}
-      #    # fallback to using the latest cache if no exact match is found
-      #    #- v1-py2-dependencies-
-
-      - restore-cache:
-          keys:
-            - test-files-f7905c85d1
-
-      - run:
-          name: install dependencies
-          command: |
-            virtualenv venv2
-            . venv2/bin/activate
-            pip install -r requirements.txt
-            pip install -r .circleci/requirements_testing.txt
-            pip install mock  # only needed for Python 2
-            pip install .
-            pip freeze
-
-      - save_cache:
-          paths:
-            - ./venv2
-          key: v1-py2-dependencies-{{ checksum "requirements.txt" }}
-
-      - save_cache:
-          paths:
-            - ./files_for_testing_neo
-          key: test-files-f7905c85d1
-
-      # run tests!
-      - run:
-          name: run tests
-          command: |
-            . venv2/bin/activate
-            nosetests -v --with-coverage --cover-package=neo
 
       - store_artifacts:
           path: test-reports

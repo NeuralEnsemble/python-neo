@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 README
 =====================================================================================
@@ -72,9 +71,6 @@ Author: Thierry Brizzi
         Domenico Guarino
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
 # python commons:
 from datetime import datetime
 from fractions import gcd
@@ -99,7 +95,7 @@ from neo.core import (Block, Segment, ChannelIndex,
 # OBJECTS
 
 
-class ElphyScaleFactor(object):
+class ElphyScaleFactor:
     """
     Useful to retrieve real values from integer
     ones that are stored in an Elphy file :
@@ -119,7 +115,7 @@ class ElphyScaleFactor(object):
         return value * self.delta + self.offset
 
 
-class BaseSignal(object):
+class BaseSignal:
     """
     A descriptor storing main signal properties :
 
@@ -181,7 +177,7 @@ class ElphySignal(BaseSignal):
 
     def __init__(self, layout, episode, channel, x_unit, y_unit, sampling_frequency, start, stop,
                  name=None):
-        super(ElphySignal, self).__init__(layout, episode, sampling_frequency, start, stop, name)
+        super().__init__(layout, episode, sampling_frequency, start, stop, name)
         self.channel = channel
         self.units = [x_unit, y_unit]
 
@@ -222,7 +218,7 @@ class ElphyTag(BaseSignal):
 
     def __init__(self, layout, episode, number, x_unit, sampling_frequency, start, stop,
                  name=None):
-        super(ElphyTag, self).__init__(layout, episode, sampling_frequency, start, stop, name)
+        super().__init__(layout, episode, sampling_frequency, start, stop, name)
         self.number = number
         self.units = [x_unit, None]
 
@@ -249,7 +245,7 @@ class ElphyTag(BaseSignal):
         return self.number
 
 
-class ElphyEvent(object):
+class ElphyEvent:
     """
     A descriptor that store a set of events properties :
 
@@ -323,7 +319,7 @@ class ElphySpikeTrain(ElphyEvent):
 
     def __init__(self, layout, episode, number, x_unit, n_events, wf_sampling_frequency,
                  wf_samples, unit_x_wf, unit_y_wf, t_start, name=None):
-        super(ElphySpikeTrain, self).__init__(layout, episode, number, x_unit, n_events, name)
+        super().__init__(layout, episode, number, x_unit, n_events, name)
         self.wf_samples = wf_samples
         self.wf_sampling_frequency = wf_sampling_frequency
         assert wf_sampling_frequency, "bad sampling frequency"
@@ -359,7 +355,7 @@ class ElphySpikeTrain(ElphyEvent):
 # BLOCKS
 
 
-class BaseBlock(object):
+class BaseBlock:
     """
     Represent a chunk of file storing metadata or
     raw data. A convenient class to break down the
@@ -413,7 +409,7 @@ class ElphyBlock(BaseBlock):
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="i",
                  parent_block=None):
-        super(ElphyBlock, self).__init__(layout, identifier, start, size)
+        super().__init__(layout, identifier, start, size)
         # a block may be a sub-block of another block
         self.parent_block = parent_block
         # pascal language store strings in 2 different ways
@@ -467,9 +463,9 @@ class FileInfoBlock(ElphyBlock):
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="i",
                  parent_block=None):
-        super(FileInfoBlock, self).__init__(layout, identifier, start,
-                                            size, fixed_length, size_format,
-                                            parent_block=parent_block)
+        super().__init__(layout, identifier, start,
+                         size, fixed_length, size_format,
+                         parent_block=parent_block)
         self.header = None
         self.file = self.layout.file
 
@@ -838,7 +834,7 @@ class Header(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, size, fixed_length=None, size_format="i"):
-        super(Header, self).__init__(layout, identifier, 0, size, fixed_length, size_format)
+        super().__init__(layout, identifier, 0, size, fixed_length, size_format)
 
 
 class Acquis1Header(Header):
@@ -895,7 +891,7 @@ class Acquis1Header(Header):
 
     def __init__(self, layout):
         fileobj = layout.file
-        super(Acquis1Header, self).__init__(layout, "ACQUIS1/GS/1991", 1024, 15, "h")
+        super().__init__(layout, "ACQUIS1/GS/1991", 1024, 15, "h")
 
         # parse the header to store interesting data about episodes and channels
         fileobj.seek(18)
@@ -1066,7 +1062,7 @@ class DAC2GSHeader(Header):
     """
 
     def __init__(self, layout):
-        super(DAC2GSHeader, self).__init__(layout, "DAC2/GS/2000", 20, 15, "i")
+        super().__init__(layout, "DAC2/GS/2000", 20, 15, "i")
 
 
 class DAC2Header(Header):
@@ -1081,7 +1077,7 @@ class DAC2Header(Header):
     """
 
     def __init__(self, layout):
-        super(DAC2Header, self).__init__(layout, "DAC2 objects", 18, 15, "h")
+        super().__init__(layout, "DAC2 objects", 18, 15, "h")
 
 
 class DAC2GSMainBlock(ElphyBlock):
@@ -1131,7 +1127,7 @@ class DAC2GSMainBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="i"):
-        super(DAC2GSMainBlock, self).__init__(
+        super().__init__(
             layout, identifier, start, size, fixed_length, size_format)
         # parse the file to retrieve episodes and channels properties
         n_channels, nbpt, tpData = struct.unpack('<BiB', layout.file.read(6))
@@ -1232,7 +1228,7 @@ class DAC2GSEpisodeBlock(ElphyBlock):
             dY_ar.append(dY)
             Y0_ar.append(Y0)
 
-        super(DAC2GSEpisodeBlock, self).__init__(layout, identifier,
+        super().__init__(layout, identifier,
                                                  start, layout.main_block.ep_size, fixed_length,
                                                  size_format)
 
@@ -1273,7 +1269,7 @@ class DAC2EpisodeBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super(DAC2EpisodeBlock, self).__init__(
+        super().__init__(
             layout, identifier, start, size, fixed_length, size_format)
         self.ep_block = None
         self.ch_block = None
@@ -1319,7 +1315,7 @@ class DAC2RDataBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super(DAC2RDataBlock, self).__init__(
+        super().__init__(
             layout, identifier, start, size, fixed_length, size_format)
         self.data_start = self.data_offset + read_from_char(layout.file, 'H')
 
@@ -1337,7 +1333,7 @@ class DAC2CyberTagBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super(DAC2CyberTagBlock, self).__init__(
+        super().__init__(
             layout, identifier, start, size, fixed_length, size_format)
         self.data_start = self.data_offset + read_from_char(layout.file, 'H')
 
@@ -1357,7 +1353,7 @@ class DAC2EventBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super(DAC2EventBlock, self).__init__(
+        super().__init__(
             layout, identifier, start, size, fixed_length, size_format)
         fileobj = self.layout.file
         jump = self.data_offset + read_from_char(fileobj, 'H')
@@ -1385,7 +1381,7 @@ class DAC2SpikeBlock(DAC2EventBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super(DAC2SpikeBlock, self).__init__(
+        super().__init__(
             layout, identifier, start, size, fixed_length, size_format)
         fileobj = self.layout.file
         jump = self.data_offset
@@ -1421,7 +1417,7 @@ class DAC2WaveFormBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super(DAC2WaveFormBlock, self).__init__(
+        super().__init__(
             layout, identifier, start, size, fixed_length, size_format)
         fileobj = self.layout.file
         jump = self.data_offset + read_from_char(fileobj, 'H')
@@ -1472,9 +1468,9 @@ class DAC2EpSubBlock(ElphyBlock):
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l",
                  parent_block=None):
-        super(DAC2EpSubBlock, self).__init__(layout, identifier, start,
-                                             size, fixed_length, size_format,
-                                             parent_block=parent_block)
+        super().__init__(layout, identifier, start,
+                         size, fixed_length, size_format,
+                         parent_block=parent_block)
         fileobj = self.layout.file
         n_channels, nbpt, tpData, l_xu, x_unit, dX, X0 = struct.unpack(
             '<BiBB10sdd', fileobj.read(33))
@@ -1522,9 +1518,9 @@ class DAC2AdcSubBlock(ElphyBlock):
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l",
                  parent_block=None):
-        super(DAC2AdcSubBlock, self).__init__(layout, identifier, start,
-                                              size, fixed_length, size_format,
-                                              parent_block=parent_block)
+        super().__init__(layout, identifier, start,
+                         size, fixed_length, size_format,
+                         parent_block=parent_block)
         fileobj = self.layout.file
         # fileobj.seek(start + len(identifier) + 1)
         ep_block, = [k for k in self.parent_block.sub_blocks if k.identifier.startswith('Ep')]
@@ -1552,9 +1548,9 @@ class DAC2KSampSubBlock(ElphyBlock):
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l",
                  parent_block=None):
-        super(DAC2KSampSubBlock, self).__init__(layout, identifier, start,
-                                                size, fixed_length, size_format,
-                                                parent_block=parent_block)
+        super().__init__(layout, identifier, start,
+                         size, fixed_length, size_format,
+                         parent_block=parent_block)
         fileobj = self.layout.file
         ep_block, = [k for k in self.parent_block.sub_blocks if k.identifier.startswith('Ep')]
         n_channels = ep_block.n_channels
@@ -1575,9 +1571,9 @@ class DAC2KTypeSubBlock(ElphyBlock):
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l",
                  parent_block=None):
-        super(DAC2KTypeSubBlock, self).__init__(layout, identifier, start,
-                                                size, fixed_length, size_format,
-                                                parent_block=parent_block)
+        super().__init__(layout, identifier, start,
+                         size, fixed_length, size_format,
+                         parent_block=parent_block)
         fileobj = self.layout.file
         ep_block, = [k for k in self.parent_block.sub_blocks if k.identifier.startswith('Ep')]
         n_channels = ep_block.n_channels
@@ -1698,7 +1694,7 @@ b_float = 'f8'
 b_int = 'i2'
 
 
-class ElphyLayout(object):
+class ElphyLayout:
     """
     A convenient class to know how data
     are organised into an Elphy file :
@@ -2098,7 +2094,7 @@ class Acquis1Layout(ElphyLayout):
     """
 
     def __init__(self, fileobj, data_offset):
-        super(Acquis1Layout, self).__init__(fileobj)
+        super().__init__(fileobj)
         self.data_offset = data_offset
         self.data_blocks = None
 
@@ -2219,7 +2215,7 @@ class DAC2GSLayout(ElphyLayout):
     """
 
     def __init__(self, fileobj, data_offset):
-        super(DAC2GSLayout, self).__init__(fileobj)
+        super().__init__(fileobj)
         self.data_offset = data_offset
         self.main_block = None
         self.episode_blocks = None
@@ -2281,7 +2277,7 @@ class DAC2GSLayout(ElphyLayout):
         return self.main_block.tpData
 
     def sample_size(self, ep, ch):
-        size = super(DAC2GSLayout, self).sample_size(ep, ch)
+        size = super().sample_size(ep, ch)
         assert size == 2, "sample size is always 2 bytes for DAC2/GS/2000 format"
         return size
 
@@ -2405,7 +2401,7 @@ class DAC2Layout(ElphyLayout):
     """
 
     def __init__(self, fileobj):
-        super(DAC2Layout, self).__init__(fileobj)
+        super().__init__(fileobj)
         self.episode_blocks = None
 
     def get_blocks_end(self):
@@ -2697,7 +2693,7 @@ class DAC2Layout(ElphyLayout):
         k_sampling = np.array(block.ks_block.k_sampling)
         evt_channels = np.where(k_sampling == 0)[0]
         if channel not in evt_channels:
-            return super(DAC2Layout, self).get_signal(episode, channel)
+            return super().get_signal(episode, channel)
         else:
             k_sampling[channel - 1] = -1
             return self.get_event(episode, channel, k_sampling)
@@ -2978,7 +2974,7 @@ class DAC2Layout(ElphyLayout):
 # ---------------------------------------------------------
 # factories.py
 
-class LayoutFactory(object):
+class LayoutFactory:
     """
     Generate base elements composing the layout of a file.
     """
@@ -3085,7 +3081,7 @@ class Acquis1Factory(LayoutFactory):
     """
 
     def __init__(self, elphy_file):
-        super(Acquis1Factory, self).__init__(elphy_file)
+        super().__init__(elphy_file)
         self.file.seek(16)
         self.data_offset = read_from_char(self.file, 'h')
         self.file.seek(0)
@@ -3121,7 +3117,7 @@ class DAC2GSFactory(LayoutFactory):
     """
 
     def __init__(self, elphy_file):
-        super(DAC2GSFactory, self).__init__(elphy_file)
+        super().__init__(elphy_file)
         self.file.seek(16)
         self.data_offset = read_from_char(self.file, 'i')
         self.file.seek(0)
@@ -3166,7 +3162,7 @@ class DAC2Factory(LayoutFactory):
     """
 
     def __init__(self, elphy_file):
-        super(DAC2Factory, self).__init__(elphy_file)
+        super().__init__(elphy_file)
 
         # the set of interesting blocks useful
         # to retrieve data stored in a file
@@ -3232,7 +3228,7 @@ NB : The reader is not able to read Acquis1 and DAC2/GS/2000 event channels.
 """
 
 
-class ElphyFile(object):
+class ElphyFile:
     """
     A convenient class useful to read Elphy files.
     It acts like a file reader that wraps up a python

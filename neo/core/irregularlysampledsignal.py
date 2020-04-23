@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module implements :class:`IrregularlySampledSignal`, an array of analog
 signals with samples taken at arbitrary time points.
@@ -19,9 +18,6 @@ This is where user-specified attributes are set.
 created by slicing. This is where attributes are copied over from
 the old object.
 '''
-
-# needed for Python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 from copy import deepcopy, copy
 
@@ -201,17 +197,17 @@ class IrregularlySampledSignal(BaseSignal):
         Returns a string representing the :class:`IrregularlySampledSignal`.
         '''
         return '<{}({} at times {})>'.format(
-            self.__class__.__name__, super(IrregularlySampledSignal, self).__repr__(), self.times)
+            self.__class__.__name__, super().__repr__(), self.times)
 
     def __getitem__(self, i):
         '''
         Get the item or slice :attr:`i`.
         '''
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
-            obj = super(IrregularlySampledSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
-            obj = super(IrregularlySampledSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             j, k = i
             if isinstance(j, (int, np.integer)):  # a single point in time across some channels
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
@@ -226,7 +222,7 @@ class IrregularlySampledSignal(BaseSignal):
                     obj = obj.reshape(-1, 1)  # add if channel_index
                 obj.array_annotations = deepcopy(self.array_annotations_at_index(k))
         elif isinstance(i, slice):
-            obj = super(IrregularlySampledSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             obj.times = self.times.__getitem__(i)
             obj.array_annotations = deepcopy(self.array_annotations)
         elif isinstance(i, np.ndarray):
@@ -279,7 +275,7 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         if (isinstance(other, IrregularlySampledSignal) and not (self.times == other.times).all()):
             return False
-        return super(IrregularlySampledSignal, self).__eq__(other)
+        return super().__eq__(other)
 
     def _check_consistency(self, other):
         '''

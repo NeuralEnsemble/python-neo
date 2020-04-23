@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.spiketrain.SpikeTrain class and related functions
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import
 
 import sys
 
@@ -1812,9 +1808,6 @@ class TestChanging(unittest.TestCase):
         data = [3, 4, 5] * pq.ms
         train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
-        if sys.version_info[0] == 2:
-            self.assertRaises(ValueError, train.__setslice__, 0, 3, [3, 4, 11] * pq.ms)
-            self.assertRaises(ValueError, train.__setslice__, 0, 3, [0, 4, 5] * pq.ms)
 
     def test__adding_time_scalar(self):
         data = [3, 4, 5] * pq.ms

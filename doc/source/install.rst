@@ -8,7 +8,7 @@ system.
 Dependencies
 ============
 
-    * Python_ >= 2.7
+    * Python_ >= 3.5
     * numpy_ >= 1.10.0
     * quantities_ >= 0.12.1
 

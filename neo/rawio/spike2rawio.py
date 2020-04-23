@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Classe for reading data in CED spike2 files (.smr).
 
@@ -18,7 +17,6 @@ This IO support old (<v6) and new files (>v7) of spike2
 Author: Samuel Garcia
 
 """
-from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,

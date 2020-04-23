@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module implements :class:`AnalogSignal`, an array of analog signals.
 
@@ -17,9 +16,6 @@ This is where user-specified attributes are set.
 created by slicing. This is where attributes are copied over from
 the old object.
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 import logging
 
@@ -245,7 +241,7 @@ class AnalogSignal(BaseSignal):
         Returns a string representing the :class:`AnalogSignal`.
         '''
         return ('<%s(%s, [%s, %s], sampling rate: %s)>' % (self.__class__.__name__,
-                                                           super(AnalogSignal, self).__repr__(),
+                                                           super().__repr__(),
                                                            self.t_start, self.t_stop,
                                                            self.sampling_rate))
 
@@ -262,10 +258,10 @@ class AnalogSignal(BaseSignal):
         Get the item or slice :attr:`i`.
         '''
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
-            obj = super(AnalogSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
-            obj = super(AnalogSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             j, k = i
             if isinstance(j, (int, np.integer)):  # extract a quantity array
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
@@ -287,7 +283,7 @@ class AnalogSignal(BaseSignal):
                     obj.channel_index = self.channel_index.__getitem__(k)
                 obj.array_annotate(**deepcopy(self.array_annotations_at_index(k)))
         elif isinstance(i, slice):
-            obj = super(AnalogSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
             obj.array_annotations = deepcopy(self.array_annotations)
@@ -319,7 +315,7 @@ class AnalogSignal(BaseSignal):
             j, k = i
             if isinstance(k, int):
                 i = (j, slice(k, k + 1))
-        return super(AnalogSignal, self).__setitem__(i, value)
+        return super().__setitem__(i, value)
 
     # sampling_rate attribute is handled as a property so type checking can
     # be done
@@ -415,7 +411,7 @@ class AnalogSignal(BaseSignal):
         if (isinstance(other, AnalogSignal) and (
                 self.t_start != other.t_start or self.sampling_rate != other.sampling_rate)):
             return False
-        return super(AnalogSignal, self).__eq__(other)
+        return super().__eq__(other)
 
     def _check_consistency(self, other):
         '''

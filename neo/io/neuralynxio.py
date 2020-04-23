@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from Neuralynx files.
 This IO supports NCS, NEV and NSE file formats.
@@ -9,9 +8,6 @@ Supported: Read
 
 Author: Julia Sprenger, Carlos Canova
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
 
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.neuralynxrawio import NeuralynxRawIO

@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of io.rawbinarysignal
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
 
 import unittest
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`Epoch`, an array of epochs.
 
@@ -6,10 +5,6 @@ This module defines :class:`Epoch`, an array of epochs.
 :module:`neo.core.baseneo`.
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
-import sys
 from copy import deepcopy, copy
 
 import numpy as np
@@ -17,8 +12,6 @@ import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
-
-PY_VER = sys.version_info[0]
 
 
 def _new_epoch(cls, times=None, durations=None, labels=None, units=None, name=None,
@@ -151,7 +144,7 @@ class Epoch(DataObject):
                             self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
-        super(Epoch, self).__array_finalize__(obj)
+        super().__array_finalize__(obj)
         self._durations = getattr(obj, 'durations', None)
         self._labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
@@ -175,7 +168,7 @@ class Epoch(DataObject):
         return '<Epoch: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
-        super(Epoch, self)._repr_pretty_(pp, cycle)
+        super()._repr_pretty_(pp, cycle)
 
     def rescale(self, units):
         '''
@@ -183,7 +176,7 @@ class Epoch(DataObject):
         units
         '''
 
-        obj = super(Epoch, self).rescale(units)
+        obj = super().rescale(units)
         obj._durations = obj.durations.rescale(units)
         obj.segment = self.segment  # not sure we should do this
         return obj
@@ -192,7 +185,7 @@ class Epoch(DataObject):
         '''
         Get the item or slice :attr:`i`.
         '''
-        obj = super(Epoch, self).__getitem__(i)
+        obj = super().__getitem__(i)
         obj._durations = self.durations[i]
         if self._labels is not None and self._labels.size > 0:
             obj._labels = self.labels[i]

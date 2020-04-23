@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 This module defines :class:`BaseNeo`, the abstract base class
 used by all :module:`neo.core` classes.
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 from datetime import datetime, date, time, timedelta
 from decimal import Decimal
@@ -26,11 +22,6 @@ try:
     ALLOWED_ANNOTATION_TYPES += (long, unicode)
 except NameError:
     pass
-
-try:
-    basestring
-except NameError:
-    basestring = str
 
 logger = logging.getLogger("Neo")
 
@@ -80,7 +71,7 @@ def merge_annotation(a, b):
         return np.append(a, b)
     elif isinstance(a, list):  # concatenate b to a
         return a + b
-    elif isinstance(a, basestring):
+    elif isinstance(a, str):
         if a == b:
             return a
         else:
@@ -148,7 +139,7 @@ def _container_name(class_name):
     return name_map.get(class_name, _reference_name(class_name) + 's')
 
 
-class BaseNeo(object):
+class BaseNeo:
     """
     This is the base class from which all Neo objects inherit.
 

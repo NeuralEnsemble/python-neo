@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for reading/writing Neo objects in MATLAB format (.mat) versions
 5 to 7.2.

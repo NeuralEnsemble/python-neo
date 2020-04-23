@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines multiple utility functions for filtering, creation, slicing,
 etc. of neo.core objects.

@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 This module implement OpenEphys format.
 
 Author: Samuel Garcia
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 import os
 import re
