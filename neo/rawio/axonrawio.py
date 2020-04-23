@@ -313,7 +313,7 @@ class AxonRawIO(BaseRawIO):
         info = self._axon_info
 
         if info['fFileVersionNumber'] < 2.:
-            raise OSError("Protocol section is only present in ABF2 files.")
+            raise IOError("Protocol section is only present in ABF2 files.")
 
         nADC = info['sections']['ADCSection'][
             'llNumEntries']  # Number of ADC channels

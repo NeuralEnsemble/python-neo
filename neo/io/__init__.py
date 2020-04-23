@@ -333,4 +333,4 @@ def get_io(filename, *args, **kwargs):
         if extension in io.extensions:
             return io(filename, *args, **kwargs)
 
-    raise OSError("File extension %s not registered" % extension)
+    raise IOError("File extension %s not registered" % extension)

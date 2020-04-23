@@ -797,7 +797,7 @@ class BlackrockRawIO(BaseRawIO):
             spec = '{}.{}'.format(
                 nsx_file_id['ver_major'], nsx_file_id['ver_minor'])
         else:
-            raise OSError('Unsupported NSX file type.')
+            raise IOError('Unsupported NSX file type.')
 
         return spec
 

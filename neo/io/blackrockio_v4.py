@@ -384,7 +384,7 @@ class BlackrockIO(BaseIO):
             spec = '{}.{}'.format(
                 nsx_file_id['ver_major'], nsx_file_id['ver_minor'])
         else:
-            raise OSError('Unsupported NSX file type.')
+            raise IOError('Unsupported NSX file type.')
 
         return spec
 
@@ -405,7 +405,7 @@ class BlackrockIO(BaseIO):
             spec = '{}.{}'.format(
                 nev_file_id['ver_major'], nev_file_id['ver_minor'])
         else:
-            raise OSError('NEV file type {} is not supported'.format(
+            raise IOError('NEV file type {} is not supported'.format(
                 nev_file_id['file_id']))
 
         return spec

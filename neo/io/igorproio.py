@@ -99,7 +99,7 @@ class IgorIO(BaseIO):
             data = bw.load(self.filename)
             version = data['version']
             if version > 5:
-                raise OSError("Igor binary wave file format version {} "
+                raise IOError("Igor binary wave file format version {} "
                                "is not supported.".format(version))
         elif self.extension == 'pxp':
             assert type(path) is str, \
