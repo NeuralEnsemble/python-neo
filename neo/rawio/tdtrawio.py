@@ -124,8 +124,6 @@ class TdtRawIO(BaseRawIO):
                             break
                 except OSError:
                     pass
-                except OSError:
-                    pass
 
         # Re-order segments according to their start times
         sort_inds = np.argsort(self._seg_t_starts)
