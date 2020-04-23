@@ -269,7 +269,7 @@ class BlackrockIO(BaseIO):
 
         # check if there are any files present
         if not any(list(self._avail_files.values())):
-            raise OSError(
+            raise IOError(
                 'No Blackrock files present at {}'.format(filename))
 
         # check if manually specified files were found

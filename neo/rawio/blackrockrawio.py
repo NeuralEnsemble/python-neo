@@ -171,7 +171,7 @@ class BlackrockRawIO(BaseRawIO):
                     self._avail_nsx.append(int(ext[-1]))
 
         if not self._avail_files['nev'] and not self._avail_nsx:
-            raise OSError("No Blackrock files found in specified path")
+            raise IOError("No Blackrock files found in specified path")
 
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
@@ -818,7 +818,7 @@ class BlackrockRawIO(BaseRawIO):
             spec = '{}.{}'.format(
                 nev_file_id['ver_major'], nev_file_id['ver_minor'])
         else:
-            raise OSError('NEV file type {} is not supported'.format(
+            raise IOError('NEV file type {} is not supported'.format(
                 nev_file_id['file_id']))
 
         return spec
