@@ -1,11 +1,33 @@
 language: python
-python:
-  - "3.5"
-  - "3.6"
-  - "3.7"
-  - "3.8"
+dist: xenial
+sudo: false
+
+matrix:
+  include:
+    - python: "3.5"
+      env: NUMPY_VERSION="1.10.4"
+    - python: "3.5"
+      env: NUMPY_VERSION="1.18.3"
+    - python: "3.6"
+      env: NUMPY_VERSION="1.12.1"
+    - python: "3.6"
+      env: NUMPY_VERSION="1.18.3"
+    - python: "3.7"
+      env: NUMPY_VERSION="1.14.5"
+    - python: "3.7"
+      env: NUMPY_VERSION="1.15.4"
+    - python: "3.7"
+      env: NUMPY_VERSION="1.16.6"
+    - python: "3.7"
+      env: NUMPY_VERSION="1.17.5"
+    - python: "3.7"
+      env: NUMPY_VERSION="1.18.3"
+    - python: "3.8"
+      env: NUMPY_VERSION="1.18.3"
 
 # command to install dependencies
+before_install:
+  - pip install "numpy==$NUMPY_VERSION"
 install:
   - pip install -r requirements.txt
   - pip install coveralls
