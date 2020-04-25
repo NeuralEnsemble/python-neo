@@ -7,11 +7,11 @@ workflows:
   version: 2
   test:
     jobs:
-      - test-3.6
+      - test-3.7
 jobs:
   test-3.6:
     docker:
-      - image: circleci/python:3.6.1
+      - image: circleci/python:3.7.7
 
     environment:
       - NEO_TEST_FILE_DIR: "/home/circleci/repo/files_for_testing_neo"
