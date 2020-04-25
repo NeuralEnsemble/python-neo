@@ -39,7 +39,7 @@ Requirements
 ------------
 
     * Python_ 3.5 or later
-    * numpy_ >= 1.10.0
+    * numpy_ >= 1.11.0
     * quantities_ >= 0.12.1
     * nose_ >= 1.1.2 (for running tests)
     * Sphinx_ (for building documentation)

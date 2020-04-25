@@ -5,7 +5,7 @@ sudo: false
 matrix:
   include:
     - python: "3.5"
-      env: NUMPY_VERSION="1.10.4"
+      env: NUMPY_VERSION="1.11.3"
     - python: "3.5"
       env: NUMPY_VERSION="1.18.3"
     - python: "3.6"

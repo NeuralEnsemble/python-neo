@@ -4,7 +4,7 @@ from setuptools import setup
 import os
 
 long_description = open("README.rst").read()
-install_requires = ['numpy>=1.10.0,!=1.16.0',
+install_requires = ['numpy>=1.11.0,!=1.16.0',
                     'quantities>=0.12.1']
 extras_require = {
     'hdf5io': ['h5py'],
