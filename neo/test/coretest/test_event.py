@@ -647,6 +647,27 @@ class TestEvent(unittest.TestCase):
         # todo: fix Epoch, as the following does not raise a ValueError  # self.assertRaises(
         # ValueError, event.to_epoch, durations=2.0)  # missing units
 
+    def test_rescale(self):
+        times = [2, 3, 4, 5]
+        labels = ["A", "B", "C", "D"]
+        arr_ann = {'index': np.arange(4), 'test': ['a', 'b', 'c', 'd']}
+        evt = Event(times * pq.ms, labels=labels,
+                    array_annotations=arr_ann)
+        result = evt.rescale(pq.us)
+
+        self.assertIsInstance(result, Event)
+        assert_neo_object_is_compliant(result)
+        assert_arrays_equal(result.array_annotations['index'], np.arange(4))
+        assert_arrays_equal(result.array_annotations['test'],
+                            np.array(['a', 'b', 'c', 'd']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
+
+        self.assertEqual(result.units, 1 * pq.us)
+        assert_array_equal(evt.labels, result.labels)
+        assert_arrays_almost_equal(result.times, [2000, 3000, 4000, 5000] * pq.us, 1e-9)
+        assert_arrays_almost_equal(result.times.magnitude,
+                                   np.array([2000, 3000, 4000, 5000]),
+                                   1e-9)
 
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):

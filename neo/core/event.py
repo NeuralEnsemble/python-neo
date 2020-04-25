@@ -152,8 +152,21 @@ class Event(DataObject):
         '''
         Return a copy of the :class:`Event` converted to the specified
         units
+        :return: Copy of self with specified units
         '''
-        obj = super().rescale(units)
+        # Use simpler functionality, if nothing will be changed
+        dim = pq.quantity.validate_dimensionality(units)
+        if self.dimensionality == dim:
+            return self.copy()
+
+        # Rescale the object into a new object
+        obj = self.duplicate_with_new_data(
+            times=self.view(pq.Quantity).rescale(dim),
+            labels=self.labels,
+            units=units)
+
+        # Expected behavior is deepcopy, so deepcopying array_annotations
+        obj.array_annotations = deepcopy(self.array_annotations)
         obj.segment = self.segment
         return obj
 
