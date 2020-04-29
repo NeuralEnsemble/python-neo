@@ -141,6 +141,11 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(epc.array_annotations['index'], np.arange(10, 13))
         self.assertIsInstance(epc.array_annotations, ArrayDict)
 
+    def test_Epoch_invalid_times_dimension(self):
+        data2d = np.array([1, 2, 3, 4]).reshape((4, -1))
+        durations = np.array([1, 1, 1, 1])
+        self.assertRaises(ValueError, Epoch, times=data2d * pq.s, durations=durations)
+
     def test_Epoch_creation_invalid_durations_labels(self):
         self.assertRaises(ValueError, Epoch, [1.1, 1.5, 1.7] * pq.ms,
                           durations=[20, 40, 60, 80] * pq.ns)

@@ -274,6 +274,10 @@ class SpikeTrain(DataObject):
         # Construct Quantity from data
         obj = pq.Quantity(times, units=units, dtype=dtype, copy=copy).view(cls)
 
+        # spiketrain times always need to be 1-dimensional
+        if len(obj.shape) > 1:
+            raise ValueError("Spiketrain times array has more than 1 dimension")
+
         # if the dtype and units match, just copy the values here instead
         # of doing the much more expensive creation of a new Quantity
         # using items() is orders of magnitude faster

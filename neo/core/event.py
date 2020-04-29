@@ -76,6 +76,8 @@ class Event(DataObject):
             times = np.array([]) * pq.s
         elif isinstance(times, (list, tuple)):
             times = np.array(times)
+        if len(times.shape) > 1:
+            raise ValueError("Times array has more than 1 dimension")
         if labels is None:
             labels = np.array([], dtype='U')
         else:

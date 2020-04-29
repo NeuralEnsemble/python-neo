@@ -84,6 +84,8 @@ class Epoch(DataObject):
             times = np.array([]) * pq.s
         elif isinstance(times, (list, tuple)):
             times = np.array(times)
+        if len(times.shape) > 1:
+            raise ValueError("Times array has more than 1 dimension")
         if isinstance(durations, (list, tuple)):
             durations = np.array(durations)
         if durations is None:
