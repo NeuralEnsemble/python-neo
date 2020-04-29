@@ -673,11 +673,9 @@ class TestConstructor(unittest.TestCase):
         self.assertRaises(ValueError, SpikeTrain, times=np.arange(10), units='s', t_stop=4,
                           waveforms=np.ones((10, 6, 50)))
 
-    def test__create_with_times_in_2d(self):
-        # assert that times are reshaped to be always 1d
+    def test__create_with_invalid_times_dimension(self):
         data2d = np.array([1, 2, 3, 4]).reshape((4, -1))
-        train = SpikeTrain(data2d * pq.s, t_stop=10 * pq.s)
-        self.assertEqual(len(train.shape), 1)
+        self.assertRaises(ValueError, SpikeTrain, times=data2d * pq.s, t_stop=10 * pq.s)
 
     def test_defaults(self):
         # default recommended attributes

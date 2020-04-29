@@ -84,7 +84,7 @@ class Event(DataObject):
         elif isinstance(times, (list, tuple)):
             times = np.array(times)
         if len(times.shape) > 1:
-            times = times.reshape(-1)
+            raise ValueError("Times array has more than 1 dimension")
         if labels is None:
             labels = np.array([], dtype='S')
         else:
