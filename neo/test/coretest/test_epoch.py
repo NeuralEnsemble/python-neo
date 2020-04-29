@@ -690,6 +690,32 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(single_epoch.array_annotations['test'], np.array(['b', 'c']))
         self.assertIsInstance(single_epoch.array_annotations, ArrayDict)
 
+    def test_rescale(self):
+        times = [2, 3, 4, 5]
+        durations = [0.1, 0.2, 0.3, 0.4]
+        labels = ["A", "B", "C", "D"]
+        arr_ann = {'index': np.arange(4), 'test': ['a', 'b', 'c', 'd']}
+        epc = Epoch(times * pq.ms, durations=durations * pq.ms, labels=labels,
+                    array_annotations=arr_ann)
+        result = epc.rescale(pq.us)
+
+        self.assertIsInstance(result, Epoch)
+        assert_neo_object_is_compliant(result)
+        assert_arrays_equal(result.array_annotations['index'], np.arange(4))
+        assert_arrays_equal(result.array_annotations['test'],
+                            np.array(['a', 'b', 'c', 'd']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
+
+        self.assertEqual(result.units, 1 * pq.us)
+        assert_array_equal(epc.labels, result.labels)
+        assert_arrays_almost_equal(result.times, [2000, 3000, 4000, 5000] * pq.us, 1e-9)
+        assert_arrays_almost_equal(result.times.magnitude,
+                                   np.array([2000, 3000, 4000, 5000]),
+                                   1e-9)
+        assert_arrays_almost_equal(result.durations.magnitude,
+                                   np.array([100, 200, 300, 400]),
+                                   1e-9)
+
 
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
