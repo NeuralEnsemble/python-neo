@@ -20,6 +20,7 @@ class TestAxonRawIO(BaseTestRawIO, unittest.TestCase, ):
         'File_axon_5.abf',  # V.20
         'File_axon_6.abf',  # V.20
         'File_axon_7.abf',  # V2.6
+        'test_file_edr3.abf',  # EDR3
     ]
     files_to_download = entities_to_test
 
