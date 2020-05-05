@@ -50,8 +50,9 @@ class NeuralynxRawIO(BaseRawIO):
     extensions = ['nse', 'ncs', 'nev', 'ntt']
     rawmode = 'one-dir'
 
-    def __init__(self, dirname='', **kargs):
+    def __init__(self, dirname='', keep_original_times=False, **kargs):
         self.dirname = dirname
+        self.keep_original_times = keep_original_times
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
@@ -239,7 +240,11 @@ class NeuralynxRawIO(BaseRawIO):
             self.global_t_start = self._sigs_t_start[0]
             self.global_t_stop = self._sigs_t_stop[-1]
 
-        # fille into header dict
+        if self.keep_original_times:
+            self.global_t_stop = self.global_t_stop - self.global_t_start
+            self.global_t_start = 0
+
+        # fill into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [self._nb_segment]
