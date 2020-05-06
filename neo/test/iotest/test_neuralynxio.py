@@ -288,7 +288,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
                 times = st.rescale(pq.microsecond).magnitude
                 overlap = min(len(plain_data), len(times))
-                np.testing.assert_allclose(plain_data[:overlap], times[:overlap], rtol=0.01)
+                np.testing.assert_allclose(plain_data[:overlap], times[:overlap], rtol=1e-10)
 
 
 class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
