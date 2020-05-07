@@ -267,6 +267,29 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                                            anasig.magnitude[:overlap, 0] * gain_factor_0,
                                            rtol=0.01)
 
+    def test_keep_original_spike_times(self):
+        for session in self.files_to_test:
+            dirname = self.get_filename_path(session)
+            nio = NeuralynxIO(dirname=dirname, keep_original_times=True)
+            block = nio.read_block()
+
+            for st in block.segments[0].spiketrains:
+                filename = st.file_origin.replace('original_data', 'plain_data')
+                if '.nse' in st.file_origin:
+                    filename = filename.replace('.nse', '.txt')
+                    times_column = 0
+                    plain_data = np.loadtxt(filename)[:, times_column]
+                elif '.ntt' in st.file_origin:
+                    filename = filename.replace('.ntt', '.txt')
+                    times_column = 2
+                    plain_data = np.loadtxt(filename)[:, times_column]
+                    # ntt files contain 4 rows per spike time
+                    plain_data = plain_data[::4]
+
+                times = st.rescale(pq.microsecond).magnitude
+                overlap = min(len(plain_data), len(times))
+                np.testing.assert_allclose(plain_data[:overlap], times[:overlap], rtol=1e-10)
+
 
 class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
     def test_incomplete_block_handling_v632(self):
