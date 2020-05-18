@@ -76,7 +76,7 @@ class IgorIO(BaseIO):
         self._filesystem = None
 
     def read_block(self, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, 'This IO does not support lazy mode'
 
         block = Block(file_origin=self.filename)
         block.segments.append(self.read_segment(lazy=lazy))
@@ -84,7 +84,7 @@ class IgorIO(BaseIO):
         return block
 
     def read_segment(self, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, 'This IO does not support lazy mode'
         segment = Segment(file_origin=self.filename)
 
         if self.extension == 'pxp':
@@ -93,7 +93,7 @@ class IgorIO(BaseIO):
 
             def callback(dirpath, key, value):
                 if isinstance(value, WaveRecord):
-                    signal = self._wave_to_analogsignal(value.wave['wave'])
+                    signal = self._wave_to_analogsignal(value.wave['wave'], dirpath)
                     signal.segment = segment
                     segment.analogsignals.append(signal)
 
@@ -105,7 +105,7 @@ class IgorIO(BaseIO):
         return segment
 
     def read_analogsignal(self, path=None, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, 'This IO does not support lazy mode'
 
         if not HAVE_IGOR:
             raise Exception("`igor` package not installed. "
@@ -130,7 +130,7 @@ class IgorIO(BaseIO):
 
         return self._wave_to_analogsignal(data['wave'])
 
-    def _wave_to_analogsignal(self, content):
+    def _wave_to_analogsignal(self, content, dirpath):
         if "padding" in content:
             assert content['padding'].size == 0, \
                 "Cannot handle non-empty padding"
@@ -160,6 +160,7 @@ class IgorIO(BaseIO):
                 annotations = {'note': note}
         else:
             annotations = {'note': note}
+        annotations["igor_path"] = ":".join(item.decode('utf-8') for item in dirpath)
 
         signal = AnalogSignal(signal, units=units, copy=False, t_start=t_start,
                               sampling_period=sampling_period, name=name,
