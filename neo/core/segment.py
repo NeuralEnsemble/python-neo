@@ -243,6 +243,8 @@ class Segment(Container):
             2
 
         '''
+        # todo: provide equivalent method using Group/View
+        #       add deprecation message (use decorator)?
         seg = Segment()
         seg.spiketrains = self.take_spiketrains_by_unit(unit_list)
         seg.analogsignals = \

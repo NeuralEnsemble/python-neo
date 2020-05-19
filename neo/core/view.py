@@ -13,20 +13,35 @@ from .dataobject import ArrayDict
 
 class View(BaseNeo):
     """
-    docstring goes here
+    A tool for indexing a subset of the channels within an :class:`AnalogSignal`
+    or :class:`IrregularlySampledSignal`\\s;
+
+    *Required attributes/properties*:
+        :obj: (AnalogSignal or IrregularlySampledSignal) The signal being indexed.
+        :index: (list/1D-array) boolean or integer mask to select the channels of interest.
+
+    *Recommended attributes/properties*:
+        :name: (str) A label for the view.
+        :description: (str) Text description.
+        :file_origin: (str) Filesystem path or URL of the original data file.
+        :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations
+                            for all data points
+
+    Note: Any other additional arguments are assumed to be user-specific
+            metadata and stored in :attr:`annotations`.
     """
     _single_parent_objects = ('Segment',)
     _single_parent_attrs = ('segment',)
     _necessary_attrs = (
         ('index', np.ndarray, 1, np.dtype('i')),
-        ('obj', BaseSignal, 1)
+        ('obj', ('AnalogSignal', 'IrregularlySampledSignal'), 1)
     )
     # "mask" would be an alternative name, proposing "index" for backwards-compatibility with ChannelIndex
 
     def __init__(self, obj, index, name=None, description=None, file_origin=None,
                  array_annotations=None, **annotations):
-        super(View, self).__init__(name=name, description=description,
-                                   file_origin=file_origin, **annotations)
+        super().__init__(name=name, description=description,
+                         file_origin=file_origin, **annotations)
         if not isinstance(obj, BaseSignal):
             raise ValueError("Can only take a View of an AnalogSignal "
                              "or an IrregularlySampledSignal")

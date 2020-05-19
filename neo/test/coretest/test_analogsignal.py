@@ -373,8 +373,9 @@ class TestAnalogSignalProperties(unittest.TestCase):
                      '' % (signal.shape[1], signal.shape[0],
                            signal.units.dimensionality.unicode, signal.dtype))
                     + ('annotations: %s\n' % signal.annotations)
-                    + ('sampling rate: {}\n'.format(signal.sampling_rate))
-                    + ('time: {} to {}'.format(signal.t_start, signal.t_stop)))
+                    + ('sampling rate: {} {}\n'.format(signal.sampling_rate,
+                                                       signal.sampling_rate.dimensionality.string))
+                    + ('time: {} ms to {} ms'.format(signal.t_start, signal.t_stop)))
             self.assertEqual(prepr, targ)
 
 

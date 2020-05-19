@@ -395,6 +395,8 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
         cascade = 'block'
     for i, childname in enumerate(getattr(obj, '_child_objects', [])):
         # we create a few of each class
+        if childname == 'Group':
+            continue  # avoid infinite recursion, since Groups can contain  Groups
         for j in range(n):
             if seed is not None:
                 iseed = 10 * seed + 100 * i + 1000 * j
