@@ -37,6 +37,8 @@ class NeuralynxRawIO(BaseRawIO):
     """"
     Class for reading dataset recorded by Neuralynx.
 
+    Data recorded with 'Invert' enabled is autmoatically stratified in 'read_ncs' <--- something like this
+
     Examples:
         >>> reader = NeuralynxRawIO(dirname='Cheetah_v5.5.1/original_data')
         >>> reader.parse_header()
@@ -672,23 +674,33 @@ def read_txt_header(filename):
     if old_date_format:
         datetime1_regex = r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         datetime2_regex = r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
-        filename_regex = r'## File Name (?P<filename>\S+)'
+        # filename_regex = r'## File Name (?P<filename>\S+)'  # not used
         datetimeformat = '%m/%d/%Y %H:%M:%S.%f'
     else:
         datetime1_regex = r'-TimeCreated (?P<date>\S+) (?P<time>\S+)'
         datetime2_regex = r'-TimeClosed (?P<date>\S+) (?P<time>\S+)'
-        filename_regex = r'-OriginalFileName "?(?P<filename>\S+)"?'
+        # filename_regex = r'-OriginalFileName "?(?P<filename>\S+)"?'  # not used
         datetimeformat = '%Y/%m/%d %H:%M:%S'
 
-    original_filename = re.search(filename_regex, txt_header).groupdict()['filename']
+    # original_filename = re.search(filename_regex, txt_header).groupdict()['filename']  Not used
 
-    dt1 = re.search(datetime1_regex, txt_header).groupdict()
-    dt2 = re.search(datetime2_regex, txt_header).groupdict()
+    dt1 = re.search(datetime1_regex, txt_header)  # cant call groupdict if re.search fails
+    dt2 = re.search(datetime2_regex, txt_header)
 
-    info['recording_opened'] = datetime.datetime.strptime(
-        dt1['date'] + ' ' + dt1['time'], datetimeformat)
-    info['recording_closed'] = datetime.datetime.strptime(
-        dt2['date'] + ' ' + dt2['time'], datetimeformat)
+    # Using this at least the code won't break if the regexp fails
+    if dt1 is not None:
+        dt1 = dt1.groupdict()
+        info['recording_opened'] = datetime.datetime.strptime(
+            dt1['date'] + ' ' + dt1['time'], datetimeformat)
+    else:
+        info['recording_opened'] = None
+
+    if dt2 is not None:
+        dt2 = dt2.groupdict()
+        info['recording_closed'] = datetime.datetime.strptime(
+            dt2['date'] + ' ' + dt2['time'], datetimeformat)
+    else:
+        info['recording_closed'] = None
 
     return info
 
