@@ -32,6 +32,7 @@ from collections import OrderedDict
 BLOCK_SIZE = 512  # nb sample per signal block
 HEADER_SIZE = 2 ** 14  # file have a txt header of 16kB
 
+
 class NeuralynxRawIO(BaseRawIO):
     """"
     Class for reading dataset recorded by Neuralynx.
@@ -66,7 +67,6 @@ class NeuralynxRawIO(BaseRawIO):
         event_channels = []
 
         self.ncs_filenames = OrderedDict()  # (chan_name, chan_id): filename
-        self._ncs_info = OrderedDict()  # (chan_name, chan_id): info
         self.nse_ntt_filenames = OrderedDict()  # (chan_name, chan_id): filename
         self.nev_filenames = OrderedDict()  # chan_id: filename
 
@@ -115,7 +115,30 @@ class NeuralynxRawIO(BaseRawIO):
                     sig_channels.append((chan_name, chan_id, info['sampling_rate'],
                                          'int16', units, gain, offset, group_id))
                     self.ncs_filenames[chan_uid] = filename
-                    signal_annotations.append(info)  # is there a reason to not append all information
+                    keys = [
+                        'DspFilterDelay_µs',
+                        'recording_opened',
+                        'FileType',
+                        'DspDelayCompensation',
+                        'recording_closed',
+                        'DspLowCutFilterType',
+                        'HardwareSubSystemName',
+                        'DspLowCutNumTaps',
+                        'DSPLowCutFilterEnabled',
+                        'HardwareSubSystemType',
+                        'DspHighCutNumTaps',
+                        'ADMaxValue',
+                        'DspLowCutFrequency',
+                        'DSPHighCutFilterEnabled',
+                        'RecordSize',
+                        'InputRange',
+                        'DspHighCutFrequency',
+                        'input_inverted',
+                        'NumADChannels',
+                        'DspHighCutFilterType',
+                    ]
+                    d = {k: info[k] for k in keys if k in info}
+                    signal_annotations.append(d)
 
                 elif ext in ('nse', 'ntt'):
                     # nse and ntt are pretty similar except for the wavform shape
@@ -181,7 +204,7 @@ class NeuralynxRawIO(BaseRawIO):
             self._sigs_sampling_rate = sampling_rate[0]
 
         # read ncs files for gaps detection and nb_segment computation
-        self.read_ncs_files(ncs_filenames=self.ncs_filenames)  # no need to pass class attributes to function
+        self.read_ncs_files(self.ncs_filenames)
 
         # timestamp limit in nev, nse
         # so need to scan all spike and event to
@@ -920,8 +943,7 @@ def read_txt_header(filename):
 
 ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
              ('nb_valid', 'uint32'), ('samples', 'int16', (BLOCK_SIZE,))]
-ncs_dtype2 = [('timestamp', 'uint64', (1,1)), ('channel_id', 'uint32', (1,1)), ('sample_rate', 'uint32', (1,1)),
-             ('nb_valid', 'uint32', (1,1)), ('samples', 'int16', (BLOCK_SIZE, 512))]
+
 nev_dtype = [
     ('reserved', '<i2'),
     ('system_id', '<i2'),
