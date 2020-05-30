@@ -147,7 +147,7 @@ class BaseRawIO:
 
         """
         self._parse_header()
-        self._group_signal_channel_characteristics()
+        # self._group_signal_channel_characteristics()
 
     def source_name(self):
         """Return fancy name of file source"""

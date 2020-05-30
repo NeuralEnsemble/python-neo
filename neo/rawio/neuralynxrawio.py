@@ -32,7 +32,6 @@ from collections import OrderedDict
 BLOCK_SIZE = 512  # nb sample per signal block
 HEADER_SIZE = 2 ** 14  # file have a txt header of 16kB
 
-
 class NeuralynxRawIO(BaseRawIO):
     """"
     Class for reading dataset recorded by Neuralynx.
@@ -182,83 +181,83 @@ class NeuralynxRawIO(BaseRawIO):
             self._sigs_sampling_rate = sampling_rate[0]
 
         # read ncs files for gaps detection and nb_segment computation
-        self.read_ncs_files()  # no need to pass class attributes to function
-        #
-        # # timestamp limit in nev, nse
-        # # so need to scan all spike and event to
-        # ts0, ts1 = None, None
-        # for _data_memmap in (self._spike_memmap, self._nev_memmap):
-        #     for _, data in _data_memmap.items():
-        #         ts = data['timestamp']
-        #         if ts.size == 0:
-        #             continue
-        #         if ts0 is None:
-        #             ts0 = ts[0]
-        #             ts1 = ts[-1]
-        #         ts0 = min(ts0, ts[0])
-        #         ts1 = max(ts1, ts[-1])  # TODO: shouldn't this be ts1
-        #
-        # if self._timestamp_limits is None:
-        #     # case  NO ncs but HAVE nev or nse
-        #     self._timestamp_limits = [(ts0, ts1)]
-        #     self._seg_t_starts = [ts0 / 1e6]
-        #     self._seg_t_stops = [ts1 / 1e6]
-        #     self.global_t_start = ts0 / 1e6
-        #     self.global_t_stop = ts1 / 1e6
-        # elif ts0 is not None:
-        #     # case  HAVE ncs AND HAVE nev or nse
-        #     self.global_t_start = min(ts0 / 1e6, self._sigs_t_start[0])
-        #     self.global_t_stop = max(ts1 / 1e6, self._sigs_t_stop[-1])
-        #     self._seg_t_starts = list(self._sigs_t_start)
-        #     self._seg_t_starts[0] = self.global_t_start
-        #     self._seg_t_stops = list(self._sigs_t_stop)
-        #     self._seg_t_stops[-1] = self.global_t_stop
-        # else:
-        #     # case HAVE ncs but  NO nev or nse
-        #     self._seg_t_starts = self._sigs_t_start
-        #     self._seg_t_stops = self._sigs_t_stop
-        #     self.global_t_start = self._sigs_t_start[0]
-        #     self.global_t_stop = self._sigs_t_stop[-1]
-        #
-        # if self.keep_original_times:
-        #     self.global_t_stop = self.global_t_stop - self.global_t_start
-        #     self.global_t_start = 0
-        #
-        # # fill into header dict
-        # self.header = {}
-        # self.header['nb_block'] = 1
-        # self.header['nb_segment'] = [self._nb_segment]
-        # self.header['signal_channels'] = sig_channels
-        # self.header['unit_channels'] = unit_channels
-        # self.header['event_channels'] = event_channels
-        #
-        # # Annotations
-        # self._generate_minimal_annotations()
-        # bl_annotations = self.raw_annotations['blocks'][0]
-        #
-        # for seg_index in range(self._nb_segment):
-        #     seg_annotations = bl_annotations['segments'][seg_index]
-        #
-        #     for c in range(sig_channels.size):
-        #         sig_ann = seg_annotations['signals'][c]
-        #         sig_ann.update(signal_annotations[c])
-        #
-        #     for c in range(unit_channels.size):
-        #         unit_ann = seg_annotations['units'][c]
-        #         unit_ann.update(unit_annotations[c])
-        #
-        #     for c in range(event_channels.size):
-        #         # annotations for channel events
-        #         event_id, ttl_input = self.internal_event_ids[c]
-        #         chan_id = event_channels[c]['id']
-        #
-        #         ev_ann = seg_annotations['events'][c]
-        #         ev_ann['file_origin'] = self.nev_filenames[chan_id]
-        #
-        #         # ~ ev_ann['marker_id'] =
-        #         # ~ ev_ann['nttl'] =
-        #         # ~ ev_ann['digital_marker'] =
-        #         # ~ ev_ann['analog_marker'] =
+        self.read_ncs_files(ncs_filenames=self.ncs_filenames)  # no need to pass class attributes to function
+
+        # timestamp limit in nev, nse
+        # so need to scan all spike and event to
+        ts0, ts1 = None, None
+        for _data_memmap in (self._spike_memmap, self._nev_memmap):
+            for _, data in _data_memmap.items():
+                ts = data['timestamp']
+                if ts.size == 0:
+                    continue
+                if ts0 is None:
+                    ts0 = ts[0]
+                    ts1 = ts[-1]
+                ts0 = min(ts0, ts[0])
+                ts1 = max(ts1, ts[-1])  # TODO: shouldn't this be ts1
+
+        if self._timestamp_limits is None:
+            # case  NO ncs but HAVE nev or nse
+            self._timestamp_limits = [(ts0, ts1)]
+            self._seg_t_starts = [ts0 / 1e6]
+            self._seg_t_stops = [ts1 / 1e6]
+            self.global_t_start = ts0 / 1e6
+            self.global_t_stop = ts1 / 1e6
+        elif ts0 is not None:
+            # case  HAVE ncs AND HAVE nev or nse
+            self.global_t_start = min(ts0 / 1e6, self._sigs_t_start[0])
+            self.global_t_stop = max(ts1 / 1e6, self._sigs_t_stop[-1])
+            self._seg_t_starts = list(self._sigs_t_start)
+            self._seg_t_starts[0] = self.global_t_start
+            self._seg_t_stops = list(self._sigs_t_stop)
+            self._seg_t_stops[-1] = self.global_t_stop
+        else:
+            # case HAVE ncs but  NO nev or nse
+            self._seg_t_starts = self._sigs_t_start
+            self._seg_t_stops = self._sigs_t_stop
+            self.global_t_start = self._sigs_t_start[0]
+            self.global_t_stop = self._sigs_t_stop[-1]
+
+        if self.keep_original_times:
+            self.global_t_stop = self.global_t_stop - self.global_t_start
+            self.global_t_start = 0
+
+        # fill into header dict
+        self.header = {}
+        self.header['nb_block'] = 1
+        self.header['nb_segment'] = [self._nb_segment]
+        self.header['signal_channels'] = sig_channels
+        self.header['unit_channels'] = unit_channels
+        self.header['event_channels'] = event_channels
+
+        # Annotations
+        self._generate_minimal_annotations()
+        bl_annotations = self.raw_annotations['blocks'][0]
+
+        for seg_index in range(self._nb_segment):
+            seg_annotations = bl_annotations['segments'][seg_index]
+
+            for c in range(sig_channels.size):
+                sig_ann = seg_annotations['signals'][c]
+                sig_ann.update(signal_annotations[c])
+
+            for c in range(unit_channels.size):
+                unit_ann = seg_annotations['units'][c]
+                unit_ann.update(unit_annotations[c])
+
+            for c in range(event_channels.size):
+                # annotations for channel events
+                event_id, ttl_input = self.internal_event_ids[c]
+                chan_id = event_channels[c]['id']
+
+                ev_ann = seg_annotations['events'][c]
+                ev_ann['file_origin'] = self.nev_filenames[chan_id]
+
+                # ~ ev_ann['marker_id'] =
+                # ~ ev_ann['nttl'] =
+                # ~ ev_ann['digital_marker'] =
+                # ~ ev_ann['analog_marker'] =
 
     def _segment_t_start(self, block_index, seg_index):
         return self._seg_t_starts[seg_index] - self.global_t_start
@@ -392,20 +391,41 @@ class NeuralynxRawIO(BaseRawIO):
         return event_times
 
     @staticmethod
-    def patch_ncs_files(dirname):
+    def patch_ncs_files(dirname, patchdir=None, interpolate=False, verbose=True, scan_only=False):
         """
-        Scan all ncs files in dir for broken/misaligned data and write the patched
-        data to patchdir.This directory can then be used by neuralynx io.
+        Scan a directory containing .ncs files, and detect misaligned data. Then patches the data
+        and saves the fixed .ncs files to another directory.
 
-        For now assumes the data should be 1 continous segment
+
+        Parameters
+        ----------
+        dirname: [str]
+            full path containing ncs files scan
+        patchdir: [str] (default: None)
+            when patching data, patched ncs files are written to patchdir
+        interpolate: [bool] (default: False)
+            doesn't do anything
+        verbose: [bool] (default=True)
+            if true, will print out some extra info
+        scan_only: [bool] (default=False)
+            if true, will only scan the data, and list faulty files (will not patch),
+            does not require 'patchdir'.
+
         """
 
-        # This should be callable without _parse_header (because it breaks), so
-        # I'll scan for ncs files here aswell
-        sampling_rate = 32000
-        verbose = True
+        time_margin = 1  # [ms] allow std of time_margin for time starts and stops across ncs files
+        max_gap_duration_to_fill = 60  # [s] maximum gap size in data to fill
+
+        # --------------------------- SCAN NCS FOR MISALIGNMENTS ------------------------------------
+        # Scan all files in directory and list:
+        #   -gaps due to ringbuffer errors
+        #   -lag by dsp filters
+        #   -dsp comensation
+
+        # Summarize in 'ncs_info' (dict with lists, one entry per file
         ncs_info = OrderedDict(
             filenames=[],
+            fullnames=[],
             chan_uids=[],
             chan_names=[],
             DspFilterDelay_us=[],
@@ -418,28 +438,28 @@ class NeuralynxRawIO(BaseRawIO):
             timestamp=[],  # only filled if not align_and_path
             sampling_rate=[],
         )
-        good_delta = int(BLOCK_SIZE * 1e6 / sampling_rate)
-        max_tolerance = 2
 
         if verbose:
             print('Scanning for ncs files in :\n ', dirname)
+            print('Detected files:')
 
-        # Scan directory for ncs files, read headers to find inconsistencies
-        # in data
+        found_missing_dsp_compensation = False
         for filename in sorted(os.listdir(dirname)):
 
             fullname = os.path.join(dirname, filename)
-            ncs_info['filenames'].append(fullname)
             if (os.path.getsize(fullname) <= HEADER_SIZE) or not filename.endswith('ncs'):
                 continue
 
+            ncs_info['filenames'].append(filename)
+            ncs_info['fullnames'].append(fullname)
+
             if verbose:
-                print(f'\t{filename}')
+                print(f'\t{filename}:')
 
             info = read_txt_header(fullname)
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
-            info['filename'] = fullname
+
             for idx, chan_id in enumerate(chan_ids):
                 chan_name = chan_names[idx]
                 chan_uid = (chan_name, chan_id)
@@ -458,35 +478,153 @@ class NeuralynxRawIO(BaseRawIO):
                 else:
                     ncs_info['DspDelayCompensation'].append(None)
 
-                data = get_ncs_memmap(fullname)
+                data = read_ncs_memmap(fullname)
                 ncs_info['t0'].append(data['timestamp'][0])
                 ncs_info['t1'].append(data['timestamp'][-1])
                 ncs_info['data_size'].append(data.size)
 
                 # check good_delta is indeed good delta for this channel
+
+                good_delta = int(BLOCK_SIZE * 1e6 / info['sampling_rate'])
                 assert good_delta in np.unique(np.diff(data['timestamp'])), 'good delta does not match for channel'
 
-        # assert len(np.unique(ncs_info['DspFilterDelay_us'])) == 1 or np.all([ddc == 'Enabled' for ])
-        if len(np.unique(ncs_info['DspFilterDelay_us'])) > 0 and not np.all([ddc == 'Enabled' for ddc in ncs_info['DspDelayCompensation']]):
-            raise ValueError('some channels have dsp filtering, but lag compensation is disabled')
-        elif len(np.unique(ncs_info['DspFilterDelay_us'])) > 0 and np.all(
-                [ddc == 'Enabled' for ddc in ncs_info['DspDelayCompensation']]):
-            print('Channels have different lengths due to Dsp filters, padding shorter channels')
+                if ncs_info['DspFilterDelay_us'][-1] is not None and int(ncs_info['DspFilterDelay_us'][-1]) > 0 and \
+                    ncs_info['DspDelayCompensation'] != 'Enabled':
+                    print(f'WARNING: {filename} has dsplag ({ncs_info["DspFilterDelay_us"][-1]}) and no delay compensation!')
+                    found_missing_dsp_compensation = True
 
-        assert len(np.unique(ncs_info['sampling_rate'])) == 1, f'some chans have different samplingrate: {ncs_info["sampling_rate"]}'
+                if verbose and scan_only:
+                    print(f'\t\tchan id: {chan_uid[1]}')
+                    print(f'\t\tdsp delay: {ncs_info["DspFilterDelay_us"][-1]}, dsp compensation: {ncs_info["DspDelayCompensation"][-1]}')
+                    print(f'\t\tt start: {ncs_info["t0"][-1]}, t stop: {ncs_info["t1"][-1]}')
+
+        # --------------------------- CHECK IF DATA NEEDS PATCHING ------------------------------------
 
         t0_all = np.min(ncs_info['t0'])
         t1_all = np.max(ncs_info['t1'])
-        rng = t1_all - t0_all
-        tsinterp = np.arange(0, rng, good_delta, dtype='uint64')
 
+        print('\nDetected errors:')
+
+        needs_patching = False
+        if np.any((ncs_info['t0'] - t0_all) > time_margin) or \
+                np.any((t1_all - ncs_info['t1'] > time_margin)):
+            print('\t-misalignment of timestamps')
+            needs_patching = True
+
+        if len(np.unique(ncs_info['data_size'])) > 1:
+            print('\t-Records do not have the same nr of samples')
+            needs_patching = True
+
+        if scan_only:
+            return
+
+        if not needs_patching and not found_missing_dsp_compensation:
+            print('\nNo errors found, no need to patch this data!')
+            return
+        elif not needs_patching and found_missing_dsp_compensation:
+            print('\nNo broken data, but some channels have no Dsp delay compensation')
+            return
+
+        # --------------------------- PATCH DATA ------------------------------------
+        assert patchdir is not None, 'To patch data, provide patchdir keyword'
+        if not os.path.isdir(patchdir):
+            print(f'Patchdir did not exist, making directory:\n{patchdir}')
+            os.makedirs(patchdir)
+
+        # Check if there is no misalginment due to dsp filters and no dsp compensation
+        assert len(np.unique(ncs_info['DspFilterDelay_us'])) == 1 or \
+               np.all([ddc == 'Enabled' for ddc in ncs_info['DspDelayCompensation']]), \
+            'some channels have dsp filtering, but lag compensation is disabled'
+
+        time_range = t1_all - t0_all
+
+        print(f'Saving patched data in: {patchdir}')
+        print('Patching:')
         for i, chan_uid in enumerate(ncs_info['chan_uids']):
-            data = get_ncs_memmap(ncs_info['filenames'][i])
-            gaps = np.where(np.diff(data['timestamp']) > good_delta)[0]
+            print(f'\t-{ncs_info["filenames"][i]}')
 
-            # TODO: open memmap to write patched data
-            # get offset
-            # fill gaps
+            # Infile and outfile
+            ncs_in_name = ncs_info['fullnames'][i]
+            ncs_out_name = os.path.join(patchdir, ncs_info['filenames'][i])
+
+            # Load broken data
+            data = read_ncs_memmap(ncs_info['fullnames'][i])
+
+            good_delta = int(BLOCK_SIZE * 1e6 / ncs_info['sampling_rate'][i])
+            ts_interpolated = np.arange(0, time_range, good_delta, dtype='uint64')
+            chan_id = np.ones(ts_interpolated.shape, dtype='uint32')  # read per ncs file
+            sample_rate = np.ones(ts_interpolated.shape, dtype='uint32')  # read per ncs file
+            nb_valid = np.ones(ts_interpolated.shape, dtype='uint32') * 512  # hardcode as we patch here
+
+            # Fil constants
+            chan_ids_in_ncs = np.unique(data['channel_id'])
+            assert len(chan_ids_in_ncs) == 1, f'found multiple channel ids in ncs: {chan_ids_in_ncs}'
+            chan_id[:] = chan_ids_in_ncs[0]
+
+            sample_rates_in_ncs = np.unique(data['sample_rate'])
+            assert len(sample_rates_in_ncs == 1), f'found multiple sample rates in ncs: {sample_rate}'
+            sample_rate[:] = sample_rates_in_ncs[0]
+
+            sample_dt = 1e6/sample_rates_in_ncs[0]  # [us] time between two sample points
+
+            # Patch data
+            # Make flat array of size (nsamples,) to fill data in (more convienent due to shifting of blocks)
+            # Have fill value default to signal mean
+            records = np.zeros((len(ts_interpolated) * 512), dtype='int16') * np.mean(data['samples'])
+
+            # Get times of ncs file, normalized to common t0
+            ts_norm = data['timestamp'] - t0_all
+
+            assert len(np.where(np.diff(data['timestamp']) < good_delta)[0]) == 0, 'this shouldnt happen'
+
+            # gap indices are detected by dt > good_delta (thus pointing to rows)
+            gap_indices = np.where(np.diff(data['timestamp']) > good_delta)[0]  # row (block) indices
+            for g in gap_indices:
+                assert (data['timestamp'][g+1] - data['timestamp'][g]) <= max_gap_duration_to_fill * 1e6, 'found a big gap, what should we do???'
+
+            # Get the intervals of continuous data (pointing to 'ts_norm' or the orignal (broken) data
+            data_starts = np.concatenate([np.zeros(1), gap_indices+1]).astype('int')
+            data_stops = np.concatenate([gap_indices, [data['timestamp'].size-1]]).astype('int')
+
+            # Construct bins for interpolated time axis
+            ts_bins = np.vstack([ts_interpolated, np.roll(ts_interpolated, -1)])
+            ts_bins[1, -1] = ts_bins[0, -1] + good_delta
+
+            for i0, i1 in zip(data_starts, data_stops):
+
+                # Find in which row of the interpolated time_axis the timepoint of the gap fits
+                i0_itp = np.where((ts_bins[0, :] <= ts_norm[i0]) & (ts_bins[1, :] > ts_norm[i0]))[0]
+                i1_itp = np.where((ts_bins[0, :] <= ts_norm[i1]) & (ts_bins[1, :] > ts_norm[i1]))[0]
+
+                # cant be sure enough
+                assert len(i0_itp) == 1 and len(i1_itp) == 1
+                i0_itp = i0_itp[0]
+                i1_itp = i1_itp[0]
+                assert ts_interpolated[i0_itp] <= ts_norm[i0] < ts_interpolated[i0_itp] + good_delta
+                assert ts_interpolated[i1_itp] <= ts_norm[i1] < ts_interpolated[i1_itp] + good_delta
+
+                # account for disalignment between interpolated time axis and OG time points
+                n_idx_in_block = int((ts_norm[i0] - ts_interpolated[i0_itp]) / sample_dt)
+                lin_i0_itp = sub2lin(i0_itp) + n_idx_in_block
+                lin_i1_itp = sub2lin(i1_itp) + n_idx_in_block
+
+                # write the data to the correct points!
+                records[lin_i0_itp:lin_i1_itp] = data['samples'].flatten()[sub2lin(i0): sub2lin(i1)]
+
+                # remark: I could mark the gap intervals, and interpolate the data in the gap
+
+            # Prepare the data for writing to ncs format
+            records = np.resize(records, (int(records.size/512), 512))
+            patched_data = np.core.records.fromarrays(
+                [ts_interpolated + t0_all, chan_id, sample_rate, nb_valid, records], dtype=np.dtype(ncs_dtype)
+            )
+
+            header = read_ncs_header(ncs_in_name)
+            with open(ncs_out_name, 'wb') as f:
+                f.write(header)
+                f.write(patched_data.tobytes())
+
+        print('Done!')
 
     def read_ncs_files(self, ncs_filenames):
         """
@@ -601,6 +739,7 @@ class NeuralynxRawIO(BaseRawIO):
                     self._sigs_t_stop.append(t_stop)
                     length = subdata.size * BLOCK_SIZE
                     self._sigs_length.append(length)
+
 
 # Keys funcitons
 def _to_bool(txt):
@@ -781,7 +920,8 @@ def read_txt_header(filename):
 
 ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
              ('nb_valid', 'uint32'), ('samples', 'int16', (BLOCK_SIZE,))]
-
+ncs_dtype2 = [('timestamp', 'uint64', (1,1)), ('channel_id', 'uint32', (1,1)), ('sample_rate', 'uint32', (1,1)),
+             ('nb_valid', 'uint32', (1,1)), ('samples', 'int16', (BLOCK_SIZE, 512))]
 nev_dtype = [
     ('reserved', '<i2'),
     ('system_id', '<i2'),
@@ -823,5 +963,16 @@ def get_nse_or_ntt_dtype(info, ext):
     return dtype
 
 
-def get_ncs_memmap(filename):
+def read_ncs_memmap(filename):
     return np.memmap(filename, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
+
+
+def read_ncs_header(filename):
+    with open(filename, 'rb') as f:
+        header = f.read(HEADER_SIZE)
+    return header
+
+
+def sub2lin(idx):
+    return int(float(idx) * BLOCK_SIZE)
+
