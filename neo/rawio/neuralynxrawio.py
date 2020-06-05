@@ -603,8 +603,8 @@ class NeuralynxRawIO(BaseRawIO):
             # gap indices are detected by dt > good_delta (thus pointing to rows)
             gap_indices = np.where(np.diff(data['timestamp']) > good_delta)[0]  # row (block) indices
             for g in gap_indices:
-                assert (data['timestamp'][g+1] - data['timestamp'][g]) <= max_gap_duration_to_fill * 1e6, 'found a big gap, what should we do???'
-
+                if data['timestamp'][g+1] - data['timestamp'][g] <= max_gap_duration_to_fill * 1e6:  #, 'found a big gap, what should we do???'
+                    print(f'WARNING - big gap filled {data["timestamp"][g+1] - data["timestamp"][g]} - {ncs_info["filenames"][i]}')
             # Get the intervals of continuous data (pointing to 'ts_norm' or the orignal (broken) data
             data_starts = np.concatenate([np.zeros(1), gap_indices+1]).astype('int')
             data_stops = np.concatenate([gap_indices, [data['timestamp'].size-1]]).astype('int')
