@@ -547,6 +547,8 @@ class AxographRawIO(BaseRawIO):
         for signals and collecting channel information and other metadata
         """
 
+        self.info = {}
+
         with open(self.filename, 'rb') as fid:
             f = StructFile(fid)
 
@@ -557,6 +559,7 @@ class AxographRawIO(BaseRawIO):
             # - for early versions of AxoGraph, this identifier was 'AxGr'
             # - starting with AxoGraph X, the identifier is 'axgx'
             header_id = f.read(4).decode('utf-8')
+            self.info['header_id'] = header_id
             assert header_id in ['AxGr', 'axgx'], \
                 'not an AxoGraph binary file! "{}"'.format(self.filename)
 
@@ -582,6 +585,8 @@ class AxographRawIO(BaseRawIO):
                 raise NotImplementedError(
                     'unimplemented file header identifier "{}"!'.format(
                         header_id))
+            self.info['format_ver'] = format_ver
+            self.info['n_cols'] = n_cols
 
             self.logger.debug('format_ver: {}'.format(format_ver))
             self.logger.debug('n_cols: {}'.format(n_cols))
@@ -702,6 +707,8 @@ class AxographRawIO(BaseRawIO):
 
                         # assume this is the time column
                         t_start, sampling_period = first_value, increment
+                        self.info['t_start'] = t_start
+                        self.info['sampling_period'] = sampling_period
 
                         self.logger.debug('')
 
@@ -729,6 +736,8 @@ class AxographRawIO(BaseRawIO):
 
                         # assume this is the time column
                         t_start, sampling_period = first_value, increment
+                        self.info['t_start'] = t_start
+                        self.info['sampling_period'] = sampling_period
 
                         self.logger.debug('')
 
@@ -770,6 +779,8 @@ class AxographRawIO(BaseRawIO):
 
                             # assume this is the time column
                             t_start, sampling_period = first_value, increment
+                            self.info['t_start'] = t_start
+                            self.info['sampling_period'] = sampling_period
 
                             self.logger.debug('')
 
@@ -881,6 +892,7 @@ class AxographRawIO(BaseRawIO):
                 self.logger.debug('== COMMENT ==')
 
                 comment = f.read_f('S')
+                self.info['comment'] = comment
 
                 self.logger.debug(comment if comment else 'no comment!')
                 self.logger.debug('')
@@ -891,6 +903,7 @@ class AxographRawIO(BaseRawIO):
                 self.logger.debug('== NOTES ==')
 
                 notes = f.read_f('S')
+                self.info['notes'] = notes
 
                 self.logger.debug(notes if notes else 'no notes!')
                 self.logger.debug('')
@@ -901,6 +914,7 @@ class AxographRawIO(BaseRawIO):
                 self.logger.debug('== TRACES ==')
 
                 n_traces = f.read_f('l')
+                self.info['n_traces'] = n_traces
 
                 self.logger.debug('n_traces: {}'.format(n_traces))
                 self.logger.debug('')
@@ -942,6 +956,7 @@ class AxographRawIO(BaseRawIO):
 
                     self.logger.debug(trace_header_info)
                     self.logger.debug('')
+                self.info['trace_header_info_list'] = trace_header_info_list
 
                 ##############################################
                 # GROUPS
@@ -949,6 +964,7 @@ class AxographRawIO(BaseRawIO):
                 self.logger.debug('== GROUPS ==')
 
                 n_groups = f.read_f('l')
+                self.info['n_groups'] = n_groups
                 group_ids = \
                     np.sort(list(set(group_ids)))  # remove duplicates and sort
                 assert n_groups == len(group_ids), \
@@ -991,6 +1007,7 @@ class AxographRawIO(BaseRawIO):
 
                     self.logger.debug(group_header_info)
                     self.logger.debug('')
+                self.info['group_header_info_list'] = group_header_info_list
 
                 ##############################################
                 # UNKNOWN
@@ -1013,10 +1030,12 @@ class AxographRawIO(BaseRawIO):
                 # those currently in review appear in this list
                 episodes_in_review = []
                 n_episodes = f.read_f('l')
+                self.info['n_episodes'] = n_episodes
                 for i in range(n_episodes):
                     episode_bool = f.read_f('Z')
                     if episode_bool:
                         episodes_in_review.append(i + 1)
+                self.info['episodes_in_review'] = episodes_in_review
 
                 self.logger.debug('n_episodes: {}'.format(n_episodes))
                 self.logger.debug('episodes_in_review: {}'.format(
@@ -1064,6 +1083,7 @@ class AxographRawIO(BaseRawIO):
                     episode_bool = f.read_f('Z')
                     if episode_bool:
                         masked_episodes.append(i + 1)
+                self.info['masked_episodes'] = masked_episodes
 
                 self.logger.debug('masked_episodes: {}'.format(
                     masked_episodes))
@@ -1131,6 +1151,7 @@ class AxographRawIO(BaseRawIO):
 
                     self.logger.debug(font_settings_info)
                     self.logger.debug('')
+                self.info['font_settings_info_list'] = font_settings_info_list
 
                 ##############################################
                 # X-AXIS SETTINGS
@@ -1140,6 +1161,7 @@ class AxographRawIO(BaseRawIO):
                 x_axis_settings_info = {}
                 for key, fmt in XAxisSettingsDescription:
                     x_axis_settings_info[key] = f.read_f(fmt)
+                self.info['x_axis_settings_info'] = x_axis_settings_info
 
                 self.logger.debug(x_axis_settings_info)
                 self.logger.debug('')
@@ -1161,6 +1183,7 @@ class AxographRawIO(BaseRawIO):
                 self.logger.debug('=== EVENTS / TAGS ===')
 
                 n_events, n_events_again = f.read_f('ll')
+                self.info['n_events'] = n_events
 
                 self.logger.debug('n_events: {}'.format(n_events))
 
@@ -1184,6 +1207,7 @@ class AxographRawIO(BaseRawIO):
                         'title': event_label,
                         'index': event_index,
                         'time': event_time})
+                self.info['event_list'] = event_list
                 for event in event_list:
                     self.logger.debug(event)
                 self.logger.debug('')
@@ -1205,6 +1229,7 @@ class AxographRawIO(BaseRawIO):
                 self.logger.debug('=== EPOCHS / INTERVAL BARS ===')
 
                 n_epochs = f.read_f('l')
+                self.info['n_epochs'] = n_epochs
 
                 self.logger.debug('n_epochs: {}'.format(n_epochs))
 
@@ -1214,6 +1239,7 @@ class AxographRawIO(BaseRawIO):
                     for key, fmt in EpochInfoDescription:
                         epoch_info[key] = f.read_f(fmt)
                     epoch_list.append(epoch_info)
+                self.info['epoch_list'] = epoch_list
 
                 # epoch / interval bar timing and duration are stored in
                 # seconds, so here they are converted to (possibly non-integer)
@@ -1278,40 +1304,6 @@ class AxographRawIO(BaseRawIO):
         self._event_epoch_labels = [
             np.array(event_labels, dtype='U'),
             np.array(epoch_labels, dtype='U')]
-
-        ##############################################
-        # EXTRA INFORMATION
-
-        # keep other details
-        self.info = {}
-
-        self.info['header_id'] = header_id
-        self.info['format_ver'] = format_ver
-
-        self.info['t_start'] = t_start
-        self.info['sampling_period'] = sampling_period
-
-        if format_ver >= 3:
-            self.info['n_cols'] = n_cols
-            self.info['n_traces'] = n_traces
-            self.info['n_groups'] = n_groups
-            self.info['n_episodes'] = n_episodes
-            self.info['n_events'] = n_events
-            self.info['n_epochs'] = n_epochs
-
-            self.info['comment'] = comment
-            self.info['notes'] = notes
-
-            self.info['trace_header_info_list'] = trace_header_info_list
-            self.info['group_header_info_list'] = group_header_info_list
-            self.info['event_list'] = event_list
-            self.info['epoch_list'] = epoch_list
-
-            self.info['episodes_in_review'] = episodes_in_review
-            self.info['masked_episodes'] = masked_episodes
-
-            self.info['font_settings_info_list'] = font_settings_info_list
-            self.info['x_axis_settings_info'] = x_axis_settings_info
 
 
 class StructFile(BufferedReader):
