@@ -1334,9 +1334,15 @@ class StructFile(BufferedReader):
         Calculate the number of bytes corresponding to the format string, read
         in that number of bytes, and unpack them according to the format string
         """
-        return unpack(
-            self.byte_order + fmt,
-            self.read(calcsize(self.byte_order + fmt)))
+        try:
+            return unpack(
+                self.byte_order + fmt,
+                self.read(calcsize(self.byte_order + fmt)))
+        except Exception as e:
+            if e.args[0].startswith('unpack requires a buffer of'):
+                raise EOFError(e)
+            else:
+                raise
 
     def read_string(self):
         """
