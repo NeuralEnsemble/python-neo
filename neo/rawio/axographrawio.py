@@ -242,10 +242,9 @@ class AxographRawIO(BaseRawIO):
         self._generate_minimal_annotations()
         blk_annotations = self.raw_annotations['blocks'][0]
         blk_annotations['format_ver'] = self.info['format_ver']
-        if self.info['format_ver'] >= 3:
-            blk_annotations['comment'] = self.info['comment']
-            blk_annotations['notes'] = self.info['notes']
-            blk_annotations['rec_datetime'] = self._get_rec_datetime()
+        blk_annotations['comment'] = self.info['comment'] if 'comment' in self.info else None
+        blk_annotations['notes'] = self.info['notes'] if 'notes' in self.info else None
+        blk_annotations['rec_datetime'] = self._get_rec_datetime()
 
         # modified time is not ideal but less prone to
         # cross-platform issues than created time (ctime)
@@ -415,6 +414,10 @@ class AxographRawIO(BaseRawIO):
 
         # Second check: If the file is episodic, it should report that it
         # contains more than 1 episode.
+        if 'n_episodes' not in self.info:
+            self.logger.debug('Cannot treat as episodic because episode '
+                              'metadata is missing or could not be parsed')
+            return False
         if self.info['n_episodes'] == 1:
             self.logger.debug('Cannot treat as episodic because file reports '
                               'one episode')
@@ -424,6 +427,15 @@ class AxographRawIO(BaseRawIO):
         # contain the same number of traces, one for each episode. This is
         # generally true of "continuous" (single-episode) recordings as well,
         # which normally have 1 trace per group.
+        if 'group_header_info_list' not in self.info:
+            self.logger.debug('Cannot treat as episodic because group '
+                              'metadata is missing or could not be parsed')
+            return False
+        if 'trace_header_info_list' not in self.info:
+            self.logger.debug('Cannot treat as episodic because trace '
+                              'metadata is missing or could not be parsed')
+            return False
+
         group_id_to_col_indexes = {}
         for group_id in self.info['group_header_info_list']:
             col_indexes = []
@@ -516,6 +528,9 @@ class AxographRawIO(BaseRawIO):
         date_string = ''
         time_string = ''
         datetime_string = ''
+
+        if 'notes' not in self.info:
+            return None
 
         for note_line in self.info['notes'].split('\n'):
 
@@ -866,25 +881,15 @@ class AxographRawIO(BaseRawIO):
             # END COLUMNS
             ##############################################
 
-            if format_ver == 1 or format_ver == 2:
+            # initialize lists for events and epochs
+            raw_event_timestamps = []
+            raw_epoch_timestamps = []
+            raw_epoch_durations = []
+            event_labels = []
+            epoch_labels = []
 
-                # for format versions 1 and 2, metadata like graph display
-                # information was stored separately in the "resource fork" of
-                # the file, so there is nothing more to do here, and the rest
-                # of the file is empty
-
-                rest_of_the_file = f.read()
-                assert rest_of_the_file == b''
-
-                raw_event_timestamps = []
-                raw_epoch_timestamps = []
-                raw_epoch_durations = []
-                event_labels = []
-                epoch_labels = []
-
-            elif format_ver >= 3:
-
-                # for format versions 3 and later, there is a lot more!
+            # the remainder of the file may contain metadata, events and epochs
+            try:
 
                 ##############################################
                 # COMMENT
@@ -1267,6 +1272,36 @@ class AxographRawIO(BaseRawIO):
                 rest_of_the_file = f.read()
 
                 self.logger.debug(rest_of_the_file)
+                self.logger.debug('')
+
+                self.logger.debug('End of file reached (expected)')
+
+            except EOFError as e:
+                if format_ver == 1 or format_ver == 2:
+                    # for format versions 1 and 2, metadata like graph display
+                    # information was stored separately in the "resource fork"
+                    # of the file, so reaching the end of the file before all
+                    # metadata is parsed is expected
+                    self.logger.debug('End of file reached (expected)')
+                    pass
+                else:
+                    # for format versions 3 and later, there should be metadata
+                    # stored at the end of the file, so warn that something may
+                    # have gone wrong, but try to continue anyway
+                    self.logger.warning('End of file reached unexpectedly '
+                                        'while parsing metadata, will attempt '
+                                        'to continue')
+                    self.logger.debug(e, exc_info=True)
+                    pass
+
+            except UnicodeDecodeError as e:
+                # warn that something went wrong with reading a string, but try
+                # to continue anyway
+                self.logger.warning('Problem decoding text while parsing '
+                                    'metadata, will ignore any remaining '
+                                    'metadata and attempt to continue')
+                self.logger.debug(e, exc_info=True)
+                pass
 
         self.logger.debug('')
 
