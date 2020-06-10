@@ -686,49 +686,6 @@ class AxographRawIO(BaseRawIO):
                     dtype = 'f'
                     gain, offset = 1, 0  # data is neither scaled nor off-set
 
-                    if i == 0:
-
-                        # there is no guarantee that this time column is
-                        # regularly sampled, and in fact the test file for
-                        # version 1 has slight variations in the intervals
-                        # between samples (due to numerical imprecision,
-                        # probably), so technically an IrregularlySampledSignal
-                        # is needed here, but I'm going to cheat by assuming
-                        # regularity
-
-                        # create a memory map that allows accessing parts of
-                        # the file without loading it all into memory
-                        array = np.memmap(
-                            self.filename,
-                            mode='r',
-                            dtype=f.byte_order + dtype,
-                            offset=f.tell(),
-                            shape=n_points)
-
-                        # advance the file position to after the data array
-                        f.seek(array.nbytes, 1)
-
-                        first_value, increment = \
-                            array[0], \
-                            np.median(np.diff(array))  # here's the cheat
-
-                        self.logger.debug(
-                            'interval: {}, freq: {}'.format(
-                                increment, 1 / increment))
-                        self.logger.debug(
-                            'start: {}, end: {}'.format(
-                                first_value,
-                                first_value + increment * (n_points - 1)))
-
-                        # assume this is the time column
-                        t_start, sampling_period = first_value, increment
-                        self.info['t_start'] = t_start
-                        self.info['sampling_period'] = sampling_period
-
-                        self.logger.debug('')
-
-                        continue  # skip saving memmap, chan info for time col
-
                 elif format_ver == 2:
 
                     # for format version 2, the first column is a "series" of
@@ -863,20 +820,58 @@ class AxographRawIO(BaseRawIO):
                 # advance the file position to after the data array
                 f.seek(array.nbytes, 1)
 
-                self.logger.debug('gain: {}, offset: {}'.format(gain, offset))
-                self.logger.debug('initial data: {}'.format(
-                    array[:5] * gain + offset))
+                if i == 0:
+                    # assume this is the time column containing n_points values
 
-                # channel_info will be cast to _signal_channel_dtype
-                channel_info = (
-                    name, i, 1 / sampling_period, f.byte_order + dtype,
-                    units, gain, offset, 0)
+                    # verify times are spaced regularly
+                    diffs = np.diff(array)
+                    increment = np.median(diffs)
+                    max_frac_step_deviation = np.max(np.abs(diffs/increment-1))
+                    tolerance = 1e-3
+                    if max_frac_step_deviation > tolerance:
+                        self.logger.debug('largest proportional deviation '
+                                          'from median step size in the first '
+                                          'column exceeds the tolerance of ' +
+                                          str(tolerance) + ': ' +
+                                          str(max_frac_step_deviation))
+                        raise ValueError('first data column (assumed to be '
+                                         'time) is not regularly spaced')
 
-                self.logger.debug('channel_info: {}'.format(channel_info))
-                self.logger.debug('')
+                    first_value = array[0]
 
-                sig_memmaps.append(array)
-                sig_channels.append(channel_info)
+                    self.logger.debug(
+                        'interval: {}, freq: {}'.format(
+                            increment, 1 / increment))
+                    self.logger.debug(
+                        'start: {}, end: {}'.format(
+                            first_value,
+                            first_value + increment * (n_points - 1)))
+
+                    t_start, sampling_period = first_value, increment
+                    self.info['t_start'] = t_start
+                    self.info['sampling_period'] = sampling_period
+
+                    self.logger.debug('')
+
+                    continue  # skip saving memmap, chan info for time col
+
+                else:
+                    # not a time column
+
+                    self.logger.debug('gain: {}, offset: {}'.format(gain, offset))
+                    self.logger.debug('initial data: {}'.format(
+                        array[:5] * gain + offset))
+
+                    # channel_info will be cast to _signal_channel_dtype
+                    channel_info = (
+                        name, i, 1 / sampling_period, f.byte_order + dtype,
+                        units, gain, offset, 0)
+
+                    self.logger.debug('channel_info: {}'.format(channel_info))
+                    self.logger.debug('')
+
+                    sig_memmaps.append(array)
+                    sig_channels.append(channel_info)
 
             # END COLUMNS
             ##############################################
