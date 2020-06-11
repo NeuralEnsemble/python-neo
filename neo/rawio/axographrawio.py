@@ -826,14 +826,15 @@ class AxographRawIO(BaseRawIO):
                     # verify times are spaced regularly
                     diffs = np.diff(array)
                     increment = np.median(diffs)
-                    max_frac_step_deviation = np.max(np.abs(diffs/increment-1))
+                    max_frac_step_deviation = np.max(np.abs(
+                        diffs / increment - 1))
                     tolerance = 1e-3
                     if max_frac_step_deviation > tolerance:
                         self.logger.debug('largest proportional deviation '
                                           'from median step size in the first '
-                                          'column exceeds the tolerance of ' +
-                                          str(tolerance) + ': ' +
-                                          str(max_frac_step_deviation))
+                                          'column exceeds the tolerance '
+                                          'of ' + str(tolerance) + ':'
+                                          ' ' + str(max_frac_step_deviation))
                         raise ValueError('first data column (assumed to be '
                                          'time) is not regularly spaced')
 

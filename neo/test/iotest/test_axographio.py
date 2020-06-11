@@ -143,8 +143,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         sig = blk.segments[0].analogsignals[0][:5]
         arr = sig.as_array('mV')
-        target = np.array([[ 0.000000],
-                           [ 9.999833],
+        target = np.array([[0.000000],
+                           [9.999833],
                            [19.998667],
                            [29.995500],
                            [39.989334]], dtype=np.float32)
@@ -167,8 +167,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         sig = blk.segments[0].analogsignals[0][:5]
         arr = sig.as_array('mV')
-        target = np.array([[ 0.000000],
-                           [ 9.999833],
+        target = np.array([[0.000000],
+                           [9.999833],
                            [19.998667],
                            [29.995500],
                            [39.989334]], dtype=np.float32)
@@ -191,8 +191,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         sig = blk.segments[0].analogsignals[0][:5]
         arr = sig.as_array('mV')
-        target = np.array([[ 0.000000],
-                           [ 9.999833],
+        target = np.array([[0.000000],
+                           [9.999833],
                            [19.998667],
                            [29.995500],
                            [39.989334]], dtype=np.float32)
