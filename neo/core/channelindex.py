@@ -178,7 +178,7 @@ class ChannelIndex(Container):
             channel_ids = np.array([], dtype='i')
 
         # Store recommended attributes
-        self.channel_names = np.array(channel_names)
+        self.channel_names = np.array(channel_names, dtype='S')
         self.channel_ids = np.array(channel_ids)
         self.index = np.array(index)
         self.coordinates = coordinates
