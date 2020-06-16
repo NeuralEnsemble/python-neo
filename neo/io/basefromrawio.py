@@ -139,7 +139,7 @@ class BaseFromRaw(BaseIO):
                     chidx_annotations.pop('name')
                 chidx_annotations = check_annotations(chidx_annotations)
                 # this should be done with array_annotation soon:
-                ch_names = all_channels[ind_abs]['name'].astype('S')
+                ch_names = all_channels[ind_abs]['name'].astype('U')
                 neo_channel_index = ChannelIndex(index=ind_within,
                                                  channel_names=ch_names,
                                                  channel_ids=all_channels[ind_abs]['id'],

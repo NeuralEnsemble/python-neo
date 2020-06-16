@@ -152,7 +152,7 @@ class ChannelIndex(Container):
     _data_child_objects = ('AnalogSignal', 'IrregularlySampledSignal')
     _single_parent_objects = ('Block',)
     _necessary_attrs = (('index', np.ndarray, 1, np.dtype('i')),)
-    _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('S')),
+    _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('U')),
                            ('channel_ids', np.ndarray, 1, np.dtype('i')),
                            ('coordinates', pq.Quantity, 2)) +
                           Container._recommended_attrs)
@@ -173,7 +173,7 @@ class ChannelIndex(Container):
 
         # Defaults
         if channel_names is None:
-            channel_names = np.array([], dtype='S')
+            channel_names = np.array([], dtype='U')
         if channel_ids is None:
             channel_ids = np.array([], dtype='i')
 
