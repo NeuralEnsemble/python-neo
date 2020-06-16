@@ -121,7 +121,8 @@ class Spike2RawIO(BaseRawIO):
                 data_blocks = self._all_data_blocks[chan_id]
                 sig_size = np.sum(self._all_data_blocks[chan_id]['size'])
                 if sig_size > 0:
-                    interval = get_sample_interval(info, chan_info) / self._time_factor
+                    interval = int(np.round(get_sample_interval(info,
+                                            chan_info) / self._time_factor))
                     # detect gaps
                     inter_block_sizes = data_blocks['start_time'][1:] - \
                         data_blocks['end_time'][:-1]
@@ -372,8 +373,8 @@ class Spike2RawIO(BaseRawIO):
             data_blocks = self._by_seg_data_blocks[chan_id][seg_index]
 
             # loop over data blocks and get chunks
-            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
-            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
+            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='right') - 1
+            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='right')
             ind = 0
             for bl in range(bl0, bl1):
                 ind0 = data_blocks[bl]['pos']
