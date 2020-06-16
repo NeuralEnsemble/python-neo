@@ -256,7 +256,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 chid = anasig.channel_index.channel_ids[anasig_id]
 
                 # need to decode, unless keyerror
-                chname = anasig.channel_index.channel_names[anasig_id].decode('UTF-8')
+                chname = anasig.channel_index.channel_names[anasig_id]
                 chuid = (chname, chid)
                 filename = nio.ncs_filenames[chuid][:-3] + 'txt'
                 filename = filename.replace('original_data', 'plain_data')

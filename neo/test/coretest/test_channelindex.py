@@ -36,7 +36,7 @@ class Test__generate_datasets(unittest.TestCase):
     #     channel_indexes = get_fake_value('channel_indexes', np.ndarray, seed=0,
     #                                      dim=1, dtype='i')
     #     channel_names = get_fake_value('channel_names', np.ndarray, seed=1,
-    #                                    dim=1, dtype=np.dtype('S'))
+    #                                    dim=1, dtype=np.dtype('U'))
     #     name = get_fake_value('name', str, seed=3, obj=ChannelIndex)
     #     description = get_fake_value('description', str, seed=4,
     #                                  obj='ChannelIndex')
@@ -148,7 +148,7 @@ class TestChannelIndex(unittest.TestCase):
         self.assertEqual(chx.name, None)
         self.assertEqual(chx.file_origin, None)
         self.assertEqual(chx.analogsignals, [])
-        assert_arrays_equal(chx.channel_names, np.array([], dtype='S'))
+        assert_arrays_equal(chx.channel_names, np.array([], dtype='U'))
         assert_arrays_equal(chx.index, np.array([1]))
 
     def test_channelindex__init(self):
@@ -158,7 +158,7 @@ class TestChannelIndex(unittest.TestCase):
         self.assertEqual(chx.file_origin, 'temp.dat')
         self.assertEqual(chx.name, None)
         self.assertEqual(chx.analogsignals, [])
-        assert_arrays_equal(chx.channel_names, np.array([], dtype='S'))
+        assert_arrays_equal(chx.channel_names, np.array([], dtype='U'))
         assert_arrays_equal(chx.index, np.array([1]))
 
     def check_creation(self, chx):

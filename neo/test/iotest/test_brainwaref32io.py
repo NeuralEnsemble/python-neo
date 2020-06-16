@@ -43,7 +43,7 @@ def proc_f32(filename):
     block = Block(file_origin=filenameorig)
     chx = ChannelIndex(file_origin=filenameorig,
                        index=np.array([], dtype=np.int),
-                       channel_names=np.array([], dtype='S'))
+                       channel_names=np.array([], dtype='U'))
     unit = Unit(file_origin=filenameorig)
 
     # load objects into their containers

@@ -78,7 +78,7 @@ def proc_src(filename):
     chan_nums = np.arange(NChannels, dtype='int')
     chan_names = ['Chan{}'.format(i) for i in range(NChannels)]
     chx.index = chan_nums
-    chx.channel_names = np.array(chan_names, dtype='string_')
+    chx.channel_names = np.array(chan_names, dtype='U')
     block.channel_indexes.append(chx)
 
     for rep in srcfile['sets'][0, 0].flatten():

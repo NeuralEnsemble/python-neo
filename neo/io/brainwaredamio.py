@@ -138,7 +138,7 @@ class BrainwareDamIO(BaseIO):
         chx = ChannelIndex(file_origin=self._filename,
                            channel_ids=np.array([1]),
                            index=np.array([0]),
-                           channel_names=np.array(['Chan1'], dtype='S'))
+                           channel_names=np.array(['Chan1'], dtype='U'))
 
         # load objects into their containers
         block.channel_indexes.append(chx)
