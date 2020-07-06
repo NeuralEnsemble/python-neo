@@ -213,7 +213,7 @@ def generate_diagram_simple():
                 'IrregularlySampledSignal': (.5 + rw * bf * 3, 0.5),
                 'AnalogSignal': (.5 + rw * bf * 3, 4.9),
                 }
-                # todo: add ImageSequence, RegionOfInterest
+    # todo: add ImageSequence, RegionOfInterest
     generate_diagram('simple_generated_diagram.svg',
                      rect_pos, rect_width, figsize)
     generate_diagram('simple_generated_diagram.png',

@@ -36,7 +36,8 @@ class View(BaseNeo):
         ('index', np.ndarray, 1, np.dtype('i')),
         ('obj', ('AnalogSignal', 'IrregularlySampledSignal'), 1)
     )
-    # "mask" would be an alternative name, proposing "index" for backwards-compatibility with ChannelIndex
+    # "mask" would be an alternative name, proposing "index" for
+    # backwards-compatibility with ChannelIndex
 
     def __init__(self, obj, index, name=None, description=None, file_origin=None,
                  array_annotations=None, **annotations):
@@ -52,7 +53,7 @@ class View(BaseNeo):
         self.index = np.array(index)
         if len(self.index.shape) != 1:
             raise ValueError("index must be a 1D array")
-        if self.index.dtype == np.bool: # convert boolean mask to integer index
+        if self.index.dtype == np.bool:  # convert boolean mask to integer index
             if self.index.size != self.obj.shape[-1]:
                 raise ValueError("index size does not match number of channels in signal")
             self.index = np.arange(self.obj.shape[-1])[self.index]

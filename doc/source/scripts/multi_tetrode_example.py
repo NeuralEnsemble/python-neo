@@ -39,8 +39,10 @@ for segment in block.segments:
 
     # create two 4-channel AnalogSignals with dummy data
     signals = {
-        "Tetrode #1": AnalogSignal(np.random.rand(1000, 4) * mV, sampling_rate=10 * kHz, tetrode_id="Tetrode #1"),
-        "Tetrode #2": AnalogSignal(np.random.rand(1000, 4) * mV, sampling_rate=10 * kHz, tetrode_id="Tetrode #2")
+        "Tetrode #1": AnalogSignal(np.random.rand(1000, 4) * mV,
+                                   sampling_rate=10 * kHz, tetrode_id="Tetrode #1"),
+        "Tetrode #2": AnalogSignal(np.random.rand(1000, 4) * mV,
+                                   sampling_rate=10 * kHz, tetrode_id="Tetrode #2")
     }
     if store_signals:
         segment.analogsignals.extend(signals.values())

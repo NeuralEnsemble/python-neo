@@ -17,10 +17,10 @@ from neo.core.view import View
 from neo.core.group import Group
 
 
-class TestView(unittest.TestCase):
+class TestGroup(unittest.TestCase):
 
     def setUp(self):
-        test_data = np.random.rand(100, 8) *  pq.mV
+        test_data = np.random.rand(100, 8) * pq.mV
         channel_names = np.array(["a", "b", "c", "d", "e", "f", "g", "h"])
         self.test_signal = AnalogSignal(test_data,
                                         sampling_period=0.1 * pq.ms,

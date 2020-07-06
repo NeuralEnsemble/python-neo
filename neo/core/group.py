@@ -9,7 +9,6 @@ and :class:`Unit`.
 from neo.core.container import Container
 
 
-
 class Group(Container):
     """
     Can contain any of the data objects, views, or other groups,

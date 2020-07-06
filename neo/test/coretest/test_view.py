@@ -17,7 +17,7 @@ from neo.core.view import View
 class TestView(unittest.TestCase):
 
     def setUp(self):
-        self.test_data = np.random.rand(100, 8) *  pq.mV
+        self.test_data = np.random.rand(100, 8) * pq.mV
         channel_names = np.array(["a", "b", "c", "d", "e", "f", "g", "h"])
         self.test_signal = AnalogSignal(self.test_data,
                                         sampling_period=0.1 * pq.ms,
@@ -56,5 +56,6 @@ class TestView(unittest.TestCase):
         self.assertEqual(signal2.shape, (100, 4))
         for attr in ('name', 'description', 'sampling_period', 'units'):
             self.assertEqual(getattr(self.test_signal, attr), getattr(signal2, attr))
-        assert_array_equal(signal2.array_annotations["channel_names"], np.array(["b", "c", "f", "h"]))
+        assert_array_equal(signal2.array_annotations["channel_names"],
+                           np.array(["b", "c", "f", "h"]))
         assert_array_equal(self.test_data[:, [1, 2, 5, 7]], signal2.magnitude)
