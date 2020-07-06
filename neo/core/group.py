@@ -25,6 +25,10 @@ class Group(Container):
         :description: (str) Text description.
         :file_origin: (str) Filesystem path or URL of the original data file.
 
+    *Optional arguments*:
+        :allowed_types: (list or tuple) Types of Neo object that are allowed to be
+          added to the Group. If not specified, any Neo object can be added.
+
     Note: Any other additional arguments are assumed to be user-specific
             metadata and stored in :attr:`annotations`.
 
@@ -38,10 +42,16 @@ class Group(Container):
     _container_child_objects = ('Segment', 'Group')
     _single_parent_objects = ('Block',)
 
-    def __init__(self, *objects, name=None, description=None, file_origin=None, **annotations):
+    def __init__(self, objects=None, name=None, description=None, file_origin=None,
+                 allowed_types=None, **annotations):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
-        self.add(*objects)
+        if allowed_types is None:
+            self.allowed_types = None
+        else:
+            self.allowed_types = tuple(allowed_types)
+        if objects:
+            self.add(*objects)
 
     @property
     def _container_lookup(self):
@@ -53,5 +63,7 @@ class Group(Container):
     def add(self, *objects):
         """Add a new Neo object to the Group"""
         for obj in objects:
+            if self.allowed_types and not isinstance(obj, self.allowed_types):
+                raise TypeError("This Group can only contain {}".format(self.allowed_types))
             container = self._container_lookup[obj.__class__.__name__]
             container.append(obj)

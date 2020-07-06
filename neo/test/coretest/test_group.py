@@ -40,7 +40,9 @@ class TestGroup(unittest.TestCase):
         self.test_segment.spiketrains.extend(self.test_spiketrains)
 
     def test_create_group(self):
-        group = Group(*self.test_spiketrains, self.test_view, self.test_signal, self.test_segment)
+        objects = [self.test_view, self.test_signal, self.test_segment]
+        objects.extend(self.test_spiketrains)
+        group = Group(objects)
 
         assert group.analogsignals[0] is self.test_signal
         assert group.spiketrains[0] is self.test_spiketrains[0]
@@ -49,8 +51,12 @@ class TestGroup(unittest.TestCase):
         assert len(group.irregularlysampledsignals) == 0
         assert group.segments[0].analogsignals[0] is self.test_signal
 
+    def test_create_empty_group(self):
+        group = Group()
+
     def test_children(self):
-        group = Group(*self.test_spiketrains, self.test_view, self.test_signal, self.test_segment)
+        group = Group(self.test_spiketrains + [self.test_view]
+                      + [self.test_signal] + [self.test_segment])
 
         # note: ordering is by class name for data children (AnalogSignal, SpikeTrain),
         #       then container children (Segment)
@@ -58,3 +64,11 @@ class TestGroup(unittest.TestCase):
                                   *self.test_spiketrains,
                                   self.test_view,
                                   self.test_segment)
+
+    def test_with_allowed_types(self):
+        objects = [self.test_signal] + self.test_spiketrains
+        group = Group(objects, allowed_types=(AnalogSignal, SpikeTrain))
+        assert group.analogsignals[0] is self.test_signal
+        assert group.spiketrains[0] is self.test_spiketrains[0]
+        assert group.spiketrains[1] is self.test_spiketrains[1]
+        self.assertRaises(TypeError, group.add, self.test_view)

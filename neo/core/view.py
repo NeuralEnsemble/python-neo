@@ -56,7 +56,7 @@ class View(BaseNeo):
         if self.index.dtype == np.bool:  # convert boolean mask to integer index
             if self.index.size != self.obj.shape[-1]:
                 raise ValueError("index size does not match number of channels in signal")
-            self.index = np.arange(self.obj.shape[-1])[self.index]
+            self.index, = np.nonzero(self.index)
         elif self.index.dtype != np.integer:
             raise ValueError("index must be a boolean or integer list or array")
 
