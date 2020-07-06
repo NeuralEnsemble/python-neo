@@ -154,14 +154,12 @@ class AxonRawIO(BaseRawIO):
         for chan_index, chan_id in enumerate(channel_ids):
             if version < 2.:
                 name = info['sADCChannelName'][chan_id].replace(b' ', b'')
-                units = info['sADCUnits'][chan_id].replace(b'\xb5', b'u'). \
-                    replace(b' ', b'').decode('utf-8')  # \xb5 is µ
+                units = safe_decode_units(info['sADCUnits'][chan_id])
                 adc_num = info['nADCPtoLChannelMap'][chan_id]
             elif version >= 2.:
                 ADCInfo = info['listADCInfo'][chan_id]
                 name = ADCInfo['ADCChNames'].replace(b' ', b'')
-                units = ADCInfo['ADCChUnits'].replace(b'\xb5', b'u'). \
-                    replace(b' ', b'').decode('utf-8')
+                units = safe_decode_units(ADCInfo['ADCChUnits'])
                 adc_num = ADCInfo['nADCNum']
             adc_nums.append(adc_num)
 
@@ -355,8 +353,7 @@ class AxonRawIO(BaseRawIO):
         sig_units = []
         for DACNum in range(nDAC):
             name = info['listDACInfo'][DACNum]['DACChNames'].decode("utf-8")
-            units = info['listDACInfo'][DACNum]['DACChUnits']. \
-                replace(b'\xb5', b'u').decode('utf-8')  # \xb5 is µ
+            units = safe_decode_units(info['listDACInfo'][DACNum]['DACChUnits'])
             sig_names.append(name)
             sig_units.append(units)
 
@@ -610,6 +607,13 @@ def clean_string(s):
     s = s.rstrip(b' ')
     return s
 
+
+def safe_decode_units(s):
+    s = s.replace(b' ', b'')
+    s = s.replace(b'\xb5', b'u')  # \xb5 is µ
+    s = s.replace(b'\xb0', b'\xc2\xb0')  # \xb0 is °
+    s = s.decode('utf-8')
+    return s
 
 BLOCKSIZE = 512
 
