@@ -18,6 +18,7 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         'File_spike2_3.smr',
         '130322-1LY.smr',  # this is for bug 182
         'multi_sampling.smr',  # this is for bug 466
+        'Two-mice-bigfile-test000.smr',  # SONv9 file
     ]
     files_to_download = files_to_test
 
