@@ -79,14 +79,15 @@ class OpenEphysRawIO(BaseRawIO):
         self._sig_length = {}
         self._sig_timestamp0 = {}
         sig_channels = []
-        for seg_index in range(nb_segment):
+        oe_indices = sorted(list(info['continuous'].keys()))
+        for seg_index, oe_index in enumerate(oe_indices):
             self._sigs_memmap[seg_index] = {}
 
             all_sigs_length = []
             all_first_timestamps = []
             all_last_timestamps = []
             all_samplerate = []
-            for chan_index, continuous_filename in enumerate(info['continuous'][seg_index]):
+            for chan_index, continuous_filename in enumerate(info['continuous'][oe_index]):
                 fullname = os.path.join(self.dirname, continuous_filename)
                 chan_info = read_file_header(fullname)
 
@@ -99,7 +100,7 @@ class OpenEphysRawIO(BaseRawIO):
                 filesize = os.stat(fullname).st_size
                 size = (filesize - HEADER_SIZE) // np.dtype(continuous_dtype).itemsize
                 data_chan = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
-                                        dtype=continuous_dtype, shape=(size, ))
+                                      dtype=continuous_dtype, shape=(size, ))
                 self._sigs_memmap[seg_index][chan_index] = data_chan
 
                 all_sigs_length.append(data_chan.size * RECORD_SIZE)
@@ -167,9 +168,9 @@ class OpenEphysRawIO(BaseRawIO):
         if len(info['spikes']) > 0:
 
             self._spikes_memmap = {}
-            for seg_index in range(nb_segment):
+            for seg_index, oe_index in enumerate(oe_indices):
                 self._spikes_memmap[seg_index] = {}
-                for spike_filename in info['spikes'][seg_index]:
+                for spike_filename in info['spikes'][oe_index]:
                     fullname = os.path.join(self.dirname, spike_filename)
                     spike_info = read_file_header(fullname)
                     spikes_dtype = make_spikes_dtype(fullname)
@@ -225,11 +226,11 @@ class OpenEphysRawIO(BaseRawIO):
         # and message.events (text based)      --> event 1 not implemented yet
         event_channels = []
         self._events_memmap = {}
-        for seg_index in range(nb_segment):
-            if seg_index == 0:
+        for seg_index, oe_index in enumerate(oe_indices):
+            if oe_index == 0:
                 event_filename = 'all_channels.events'
             else:
-                event_filename = 'all_channels_{}.events'.format(seg_index + 1)
+                event_filename = 'all_channels_{}.events'.format(oe_index + 1)
 
             fullname = os.path.join(self.dirname, event_filename)
             event_info = read_file_header(fullname)
@@ -253,14 +254,15 @@ class OpenEphysRawIO(BaseRawIO):
         # Annotate some objects from coninuous files
         self._generate_minimal_annotations()
         bl_ann = self.raw_annotations['blocks'][0]
-        for seg_index in range(nb_segment):
+        for seg_index, oe_index in enumerate(oe_indices):
             seg_ann = bl_ann['segments'][seg_index]
             if len(info['continuous']) > 0:
-                fullname = os.path.join(self.dirname, info['continuous'][seg_index][0])
+                fullname = os.path.join(self.dirname, info['continuous'][oe_index][0])
                 chan_info = read_file_header(fullname)
                 seg_ann['openephys_version'] = chan_info['version']
                 bl_ann['openephys_version'] = chan_info['version']
                 seg_ann['date_created'] = chan_info['date_created']
+                seg_ann['openephys_segment_index'] = oe_index + 1
 
     def _segment_t_start(self, block_index, seg_index):
         # segment start/stop are difine by  continuous channels

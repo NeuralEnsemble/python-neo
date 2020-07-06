@@ -951,7 +951,7 @@ class BrainwareSrcIO(BaseIO):
         # create a channel_index for the numchannels
         self._chx.index = np.arange(numchannels)
         self._chx.channel_names = np.array(['Chan{}'.format(i)
-                                            for i in range(numchannels)], dtype='S')
+                                            for i in range(numchannels)], dtype='U')
 
         # store what side of the head we are dealing with
         for segment in segments:
