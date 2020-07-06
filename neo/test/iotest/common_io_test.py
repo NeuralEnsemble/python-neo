@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Common tests for IOs:
  * check presence of all necessary attr
@@ -16,18 +15,11 @@ data repo.
 
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
 __test__ = False
 
 import os
 from copy import copy
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from neo.core import Block, Segment
 from neo.test.tools import (assert_same_sub_schema,
@@ -35,7 +27,7 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_sub_schema_is_lazy_loaded,
                             assert_children_empty)
 
-from neo.rawio.tests.tools import (can_use_network, make_all_directories,
+from neo.test.rawiotest.tools import (can_use_network, make_all_directories,
                                    download_test_file, create_local_temp_dir)
 
 from neo.test.iotest.tools import (cleanup_test_file,
@@ -53,7 +45,7 @@ from neo.test.generate_datasets import generate_from_supported_objects
 url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
-class BaseTestIO(object):
+class BaseTestIO:
     '''
     This class make common tests for all IOs.
 
@@ -129,7 +121,7 @@ class BaseTestIO(object):
             make_all_directories(self.files_to_download, self.local_test_dir)
             download_test_file(self.files_to_download,
                                self.local_test_dir, url)
-        except IOError as exc:
+        except OSError as exc:
             raise unittest.TestCase.failureException(exc)
 
     download_test_files_if_not_present.__test__ = False
@@ -500,7 +492,7 @@ class BaseTestIO(object):
                 assert_neo_object_is_compliant(obj)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from %s' % os.path.basename(path))
+                exc.args += ('from %s' % os.path.basename(path), )
                 raise
 
     def test_readed_with_lazy_is_compliant(self):

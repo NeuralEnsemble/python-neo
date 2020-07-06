@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 baseio
 ======
@@ -12,7 +11,10 @@ BaseIO        - abstract class which should be overridden, managing how a
 If you want a model for developing a new IO start from exampleIO.
 """
 
-import collections
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 import logging
 
 from neo import logging_handler
@@ -20,13 +22,15 @@ from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
                       ChannelIndex,
-                      Segment, SpikeTrain, Unit)
+                      Segment, SpikeTrain, Unit, ImageSequence,
+                      RectangularRegionOfInterest, CircularRegionOfInterest,
+                      PolygonRegionOfInterest)
 
 read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
 
 
-class BaseIO(object):
+class BaseIO:
     """
     Generic class to handle all the file read/write methods for the key objects
     of the core class. This template is file-reading/writing oriented but it
@@ -126,7 +130,7 @@ class BaseIO(object):
 
     def write(self, bl, **kargs):
         if Block in self.writeable_objects:
-            if isinstance(bl, collections.Sequence):
+            if isinstance(bl, Sequence):
                 assert hasattr(self, 'write_all_blocks'), \
                     '%s does not offer to store a sequence of blocks' % \
                     self.__class__.__name__
@@ -157,6 +161,18 @@ class BaseIO(object):
     def read_analogsignal(self, **kargs):
         assert (AnalogSignal in self.readable_objects), read_error
 
+    def read_imagesequence(self, **kargs):
+        assert (ImageSequence in self.readable_objects), read_error
+
+    def read_rectangularregionofinterest(self, **kargs):
+        assert (RectangularRegionOfInterest in self.readable_objects), read_error
+
+    def read_circularregionofinterest(self, **kargs):
+        assert (CircularRegionOfInterest in self.readable_objects), read_error
+
+    def read_polygonregionofinterest(self, **kargs):
+        assert (PolygonRegionOfInterest in self.readable_objects), read_error
+
     def read_irregularlysampledsignal(self, **kargs):
         assert (IrregularlySampledSignal in self.readable_objects), read_error
 
@@ -184,6 +200,18 @@ class BaseIO(object):
 
     def write_analogsignal(self, anasig, **kargs):
         assert (AnalogSignal in self.writeable_objects), write_error
+
+    def write_imagesequence(self, imseq, **kargs):
+        assert (ImageSequence in self.writeable_objects), write_error
+
+    def write_rectangularregionofinterest(self, rectroi, **kargs):
+        assert (RectangularRegionOfInterest in self.writeable_objects), read_error
+
+    def write_circularregionofinterest(self, circroi, **kargs):
+        assert (CircularRegionOfInterest in self.writeable_objects), read_error
+
+    def write_polygonregionofinterest(self, polyroi, **kargs):
+        assert (PolygonRegionOfInterest in self.writeable_objects), read_error
 
     def write_irregularlysampledsignal(self, irsig, **kargs):
         assert (IrregularlySampledSignal in self.writeable_objects), write_error

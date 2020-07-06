@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.blackrockio
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import
 
 import time
 import warnings
@@ -29,7 +25,8 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
-    ]
+        'Pegasus_v2.1.1',
+        'Cheetah_v6.3.2/incomplete_blocks']
     files_to_download = [
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
@@ -70,7 +67,11 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v5.7.4/plain_data/CSC4.txt',
         'Cheetah_v5.7.4/plain_data/CSC5.txt',
         'Cheetah_v5.7.4/plain_data/Events.txt',
-        'Cheetah_v5.7.4/README.txt']
+        'Cheetah_v5.7.4/README.txt',
+        'Pegasus_v2.1.1/Events_0008.nev',
+        'Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs',
+        'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
+        'Cheetah_v6.3.2/incomplete_blocks/README.txt']
 
 
 class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
@@ -216,6 +217,34 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.channel_indexes), 1)
 
 
+class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
+    pegasus_version = '2.1.1'
+    files_to_test = []
+
+    def test_read_block(self):
+        dirname = self.get_filename_path('Pegasus_v2.1.1')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+
+        block = nio.read_block()
+
+        # Everything put in one segment
+        seg = block.segments[0]
+        self.assertEqual(len(seg.analogsignals), 0)  # no ncs file available
+        self.assertGreater(len(block.segments[0].events), 1)  # single nev file available
+        self.assertEqual(len(seg.spiketrains), 0)  # no nse files available
+
+        # Testing different parameter combinations
+        block = nio.read_block(load_waveforms=True)
+        self.assertEqual(len(block.segments[0].spiketrains), 0)
+        self.assertGreater(len(block.segments[0].events), 1)
+
+        block = nio.read_block(signal_group_mode='split-all')
+        self.assertEqual(len(block.channel_indexes), 0)
+
+        block = nio.read_block(signal_group_mode='group-by-same-units')
+        self.assertEqual(len(block.channel_indexes), 0)
+
+
 class TestData(CommonNeuralynxIOTest, unittest.TestCase):
     def test_ncs(self):
         for session in self.files_to_test[1:2]:  # in the long run this should include all files
@@ -225,7 +254,9 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
             for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
                 chid = anasig.channel_index.channel_ids[anasig_id]
-                chname = anasig.channel_index.channel_names[anasig_id].decode('UTF-8') # need to decode, unless keyerror
+
+                # need to decode, unless keyerror
+                chname = anasig.channel_index.channel_names[anasig_id]
                 chuid = (chname, chid)
                 filename = nio.ncs_filenames[chuid][:-3] + 'txt'
                 filename = filename.replace('original_data', 'plain_data')
@@ -235,6 +266,48 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 np.testing.assert_allclose(plain_data[:overlap],
                                            anasig.magnitude[:overlap, 0] * gain_factor_0,
                                            rtol=0.01)
+
+    def test_keep_original_spike_times(self):
+        for session in self.files_to_test:
+            dirname = self.get_filename_path(session)
+            nio = NeuralynxIO(dirname=dirname, keep_original_times=True)
+            block = nio.read_block()
+
+            for st in block.segments[0].spiketrains:
+                filename = st.file_origin.replace('original_data', 'plain_data')
+                if '.nse' in st.file_origin:
+                    filename = filename.replace('.nse', '.txt')
+                    times_column = 0
+                    plain_data = np.loadtxt(filename)[:, times_column]
+                elif '.ntt' in st.file_origin:
+                    filename = filename.replace('.ntt', '.txt')
+                    times_column = 2
+                    plain_data = np.loadtxt(filename)[:, times_column]
+                    # ntt files contain 4 rows per spike time
+                    plain_data = plain_data[::4]
+
+                times = st.rescale(pq.microsecond).magnitude
+                overlap = min(len(plain_data), len(times))
+                np.testing.assert_allclose(plain_data[:overlap], times[:overlap], rtol=1e-10)
+
+
+class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
+    def test_incomplete_block_handling_v632(self):
+        dirname = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+
+        block = nio.read_block()
+
+        # known gap values
+        n_gaps = 2
+        # so 3 segments, 3 anasigs by Channelindex
+        self.assertEqual(len(block.segments), n_gaps + 1)
+        self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
+
+        for t, gt in zip(nio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561]):
+            self.assertEqual(np.round(t, 4), np.round(gt, 4))
+        for t, gt in zip(nio._sigs_t_stop, [8427.830803, 8487.768029, 8515.816549]):
+            self.assertEqual(np.round(t, 4), np.round(gt, 4))
 
 
 class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from WinEdr, a software tool written by
 John Dempster.
@@ -9,7 +8,6 @@ http://spider.science.strath.ac.uk/sipbs/software.htm
 Author: Samuel Garcia
 
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)

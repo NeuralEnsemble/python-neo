@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading from Brainware SRC files
 
@@ -31,15 +30,11 @@ The code is implemented with the permission of Dr. Jan Schnupp
 Author: Todd Jennings
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 # import needed core python modules
 from datetime import datetime, timedelta
 from itertools import chain
 import logging
 import os.path
-import sys
 
 # numpy and quantities are already required by neo
 import numpy as np
@@ -53,8 +48,6 @@ from neo.core import (Block, Event,
 from neo.io.baseio import BaseIO
 
 LOGHANDLER = logging.StreamHandler()
-
-PY_VER = sys.version_info[0]
 
 
 class BrainwareSrcIO(BaseIO):
@@ -507,7 +500,7 @@ class BrainwareSrcIO(BaseIO):
         """
         if not events:
             event = Event(times=pq.Quantity([], units=pq.s),
-                          labels=np.array([], dtype='S'),
+                          labels=np.array([], dtype='U'),
                           senders=np.array([], dtype='S'),
                           t_start=0)
             return event
@@ -529,7 +522,7 @@ class BrainwareSrcIO(BaseIO):
         t_start = times.min()
         times = pq.Quantity(times - t_start, units=pq.d).rescale(pq.s)
 
-        labels = np.array(labels)
+        labels = np.array(labels, dtype='U')
         senders = np.array(senders)
 
         event = Event(times=times, labels=labels,
@@ -649,14 +642,10 @@ class BrainwareSrcIO(BaseIO):
     def __read_str(self, numchars=1, utf=None):
         """
         Read a string of a specific length.
-
-        This is compatible with python 2 and python 3.
         """
         rawstr = np.asscalar(np.fromfile(self._fsrc,
                                          dtype='S%s' % numchars, count=1))
-        if utf or (utf is None and PY_VER == 3):
-            return rawstr.decode('utf-8')
-        return rawstr
+        return rawstr.decode('utf-8')
 
     def __read_annotations(self):
         """
@@ -962,7 +951,7 @@ class BrainwareSrcIO(BaseIO):
         # create a channel_index for the numchannels
         self._chx.index = np.arange(numchannels)
         self._chx.channel_names = np.array(['Chan{}'.format(i)
-                                            for i in range(numchannels)], dtype='S')
+                                            for i in range(numchannels)], dtype='U')
 
         # store what side of the head we are dealing with
         for segment in segments:

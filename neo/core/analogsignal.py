@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module implements :class:`AnalogSignal`, an array of analog signals.
 
@@ -18,10 +17,14 @@ created by slicing. This is where attributes are copied over from
 the old object.
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import logging
+
+try:
+    import scipy.signal
+except ImportError as err:
+    HAVE_SCIPY = False
+else:
+    HAVE_SCIPY = True
 
 import numpy as np
 import quantities as pq
@@ -238,7 +241,7 @@ class AnalogSignal(BaseSignal):
         Returns a string representing the :class:`AnalogSignal`.
         '''
         return ('<%s(%s, [%s, %s], sampling rate: %s)>' % (self.__class__.__name__,
-                                                           super(AnalogSignal, self).__repr__(),
+                                                           super().__repr__(),
                                                            self.t_start, self.t_stop,
                                                            self.sampling_rate))
 
@@ -255,10 +258,10 @@ class AnalogSignal(BaseSignal):
         Get the item or slice :attr:`i`.
         '''
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
-            obj = super(AnalogSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
-            obj = super(AnalogSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             j, k = i
             if isinstance(j, (int, np.integer)):  # extract a quantity array
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
@@ -280,7 +283,7 @@ class AnalogSignal(BaseSignal):
                     obj.channel_index = self.channel_index.__getitem__(k)
                 obj.array_annotate(**deepcopy(self.array_annotations_at_index(k)))
         elif isinstance(i, slice):
-            obj = super(AnalogSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
             obj.array_annotations = deepcopy(self.array_annotations)
@@ -312,7 +315,7 @@ class AnalogSignal(BaseSignal):
             j, k = i
             if isinstance(k, int):
                 i = (j, slice(k, k + 1))
-        return super(AnalogSignal, self).__setitem__(i, value)
+        return super().__setitem__(i, value)
 
     # sampling_rate attribute is handled as a property so type checking can
     # be done
@@ -408,7 +411,7 @@ class AnalogSignal(BaseSignal):
         if (isinstance(other, AnalogSignal) and (
                 self.t_start != other.t_start or self.sampling_rate != other.sampling_rate)):
             return False
-        return super(AnalogSignal, self).__eq__(other)
+        return super().__eq__(other)
 
     def _check_consistency(self, other):
         '''
@@ -440,29 +443,32 @@ class AnalogSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sampling rate: {0}".format(self.sampling_rate),
-                     "time: {0} to {1}".format(self.t_start, self.t_stop)]:
+        for line in ["sampling rate: {}".format(self.sampling_rate),
+                     "time: {} to {}".format(self.t_start, self.t_stop)]:
             _pp(line)
 
     def time_index(self, t):
         """Return the array index corresponding to the time `t`"""
-        t = t.rescale(self.sampling_period.units)
-        i = (t - self.t_start) / self.sampling_period
-        i = int(np.rint(i.magnitude))
+        i = (t - self.t_start) * self.sampling_rate
+        i = int(np.rint(i.simplified.magnitude))
         return i
 
     def time_slice(self, t_start, t_stop):
         '''
         Creates a new AnalogSignal corresponding to the time slice of the
         original AnalogSignal between times t_start, t_stop. Note, that for
-        numerical stability reasons if t_start, t_stop do not fall exactly on
-        the time bins defined by the sampling_period they will be rounded to
-        the nearest sampling bins.
+        numerical stability reasons if t_start does not fall exactly on
+        the time bins defined by the sampling_period it will be rounded to
+        the nearest sampling bin. The time bin for t_stop will be chosen to
+        make the duration of the resultant signal as close as possible to
+        t_stop - t_start. This means that for a given duration, the size
+        of the slice will always be the same.
         '''
 
         # checking start time and transforming to start index
         if t_start is None:
             i = 0
+            t_start = 0 * pq.s
         else:
             i = self.time_index(t_start)
 
@@ -470,10 +476,11 @@ class AnalogSignal(BaseSignal):
         if t_stop is None:
             j = len(self)
         else:
-            j = self.time_index(t_stop)
+            delta = (t_stop - t_start) * self.sampling_rate
+            j = i + int(np.rint(delta.simplified.magnitude))
 
         if (i < 0) or (j > len(self)):
-            raise ValueError('t_start, t_stop have to be withing the analog \
+            raise ValueError('t_start, t_stop have to be within the analog \
                               signal duration')
 
         # Time slicing should create a deep copy of the object
@@ -482,6 +489,26 @@ class AnalogSignal(BaseSignal):
         obj.t_start = self.t_start + i * self.sampling_period
 
         return obj
+
+    def time_shift(self, t_shift):
+        """
+        Shifts a :class:`AnalogSignal` to start at a new time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`AnalogSignal`.
+
+        Returns:
+        --------
+        new_sig: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object starting at t_shift later than the
+            original :class:`AnalogSignal` (the original :class:`AnalogSignal` is not modified).
+        """
+        new_sig = deepcopy(self)
+        new_sig.t_start = new_sig.t_start + t_shift
+
+        return new_sig
 
     def splice(self, signal, copy=False):
         """
@@ -515,3 +542,120 @@ class AnalogSignal(BaseSignal):
         else:
             self[i:j, :] = signal
             return self
+
+    def downsample(self, downsampling_factor, **kwargs):
+        """
+        Downsample the data of a signal.
+        This method reduces the number of samples of the AnalogSignal to a fraction of the
+        original number of samples, defined by `downsampling_factor`.
+        This method is a wrapper of scipy.signal.decimate and accepts the same set of keyword
+        arguments, except for specifying the axis of resampling, which is fixed to the first axis
+        here.
+
+        Parameters:
+        -----------
+        downsampling_factor: integer
+            Factor used for decimation of samples. Scipy recommends to call decimate multiple times
+            for downsampling factors higher than 13 when using IIR downsampling (default).
+
+        Returns:
+        --------
+        downsampled_signal: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object containing the resampled data points.
+            The original :class:`AnalogSignal` is not modified.
+
+        Note:
+        -----
+        For resampling the signal with a fixed number of samples, see `resample` method.
+        """
+
+        if not HAVE_SCIPY:
+            raise ImportError('Decimating requires availability of scipy.signal')
+
+        # Resampling is only permitted along the time axis (axis=0)
+        if 'axis' in kwargs:
+            kwargs.pop('axis')
+
+        downsampled_data = scipy.signal.decimate(self.magnitude, downsampling_factor, axis=0,
+                                                 **kwargs)
+        downsampled_signal = self.duplicate_with_new_data(downsampled_data)
+
+        # since the number of channels stays the same, we can also copy array annotations here
+        downsampled_signal.array_annotations = self.array_annotations.copy()
+        downsampled_signal.sampling_rate = self.sampling_rate / downsampling_factor
+
+        return downsampled_signal
+
+    def resample(self, sample_count, **kwargs):
+        """
+        Resample the data points of the signal.
+        This method interpolates the signal and returns a new signal with a fixed number of
+        samples defined by `sample_count`.
+        This method is a wrapper of scipy.signal.resample and accepts the same set of keyword
+        arguments, except for specifying the axis of resampling which is fixed to the first axis
+        here, and the sample positions. .
+
+        Parameters:
+        -----------
+        sample_count: integer
+            Number of desired samples. The resulting signal starts at the same sample as the
+            original and is sampled regularly.
+
+        Returns:
+        --------
+        resampled_signal: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object containing the resampled data points.
+            The original :class:`AnalogSignal` is not modified.
+
+        Note:
+        -----
+        For reducing the number of samples to a fraction of the original, see `downsample` method
+        """
+
+        if not HAVE_SCIPY:
+            raise ImportError('Resampling requires availability of scipy.signal')
+
+        # Resampling is only permitted along the time axis (axis=0)
+        if 'axis' in kwargs:
+            kwargs.pop('axis')
+        if 't' in kwargs:
+            kwargs.pop('t')
+
+        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count,
+                                                                t=self.times, axis=0, **kwargs)
+
+        resampled_signal = self.duplicate_with_new_data(resampled_data)
+        resampled_signal.sampling_rate = (sample_count / self.shape[0]) * self.sampling_rate
+
+        # since the number of channels stays the same, we can also copy array annotations here
+        resampled_signal.array_annotations = self.array_annotations.copy()
+
+        return resampled_signal
+
+    def rectify(self, **kwargs):
+        """
+        Rectify the signal.
+        This method rectifies the signal by taking the absolute value.
+        This method is a wrapper of numpy.absolute() and accepts the same set of keyword
+        arguments.
+
+        Returns:
+        --------
+        resampled_signal: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object containing the rectified data points.
+            The original :class:`AnalogSignal` is not modified.
+
+        """
+
+        # Use numpy to get the absolute value of the signal
+        rectified_data = np.absolute(self.magnitude, **kwargs)
+
+        rectified_signal = self.duplicate_with_new_data(rectified_data)
+
+        # the sampling rate stays constant
+        rectified_signal.sampling_rate = self.sampling_rate
+
+        # since the number of channels stays the same, we can also copy array annotations here
+        rectified_signal.array_annotations = self.array_annotations.copy()
+
+        return rectified_signal

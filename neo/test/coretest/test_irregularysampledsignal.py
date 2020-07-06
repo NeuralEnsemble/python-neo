@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.irregularlysampledsignal.IrregularySampledSignal class
 """
@@ -23,11 +22,20 @@ except ImportError as err:
 else:
     HAVE_IPYTHON = True
 
+try:
+    import scipy
+except ImportError:
+    HAVE_SCIPY = False
+else:
+    HAVE_SCIPY = True
+
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.core import Segment, ChannelIndex
 from neo.core.baseneo import MergeError
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
-                            assert_neo_object_is_compliant, assert_same_sub_schema)
+                            assert_neo_object_is_compliant, assert_same_sub_schema,
+                            assert_same_attributes, assert_same_annotations,
+                            assert_same_array_annotations)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
                                         TEST_ANNOTATIONS)
 
@@ -35,8 +43,8 @@ from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_ne
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict(
-            [(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
+        self.annotations = {
+            str(x): TEST_ANNOTATIONS[x] for x in range(len(TEST_ANNOTATIONS))}
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
@@ -350,9 +358,6 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
     def test_mean_interpolation_NotImplementedError(self):
         self.assertRaises(NotImplementedError, self.signal1.mean, True)
 
-    def test_resample_NotImplementedError(self):
-        self.assertRaises(NotImplementedError, self.signal1.resample, True)
-
     def test__rescale_same(self):
         result = self.signal1.copy()
         result = result.rescale(pq.mV)
@@ -454,27 +459,35 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
 
     def test__time_slice_deepcopy_array_annotations(self):
         length = self.signal1.shape[-1]
-        params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
+        params1 = {'test0': ['y{}'.format(i) for i in range(length)],
+                   'test1': ['deeptest' for i in range(length)],
                    'test2': [(-1)**i > 0 for i in range(length)]}
         self.signal1.array_annotate(**params1)
         result = self.signal1.time_slice(None, None)
 
         # Change annotations of original
-        params2 = {'test0': ['x{}'.format(i) for i in range(length)], 'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+        params2 = {'test0': ['x{}'.format(i) for i in range(length)],
+                   'test2': [(-1) ** (i + 1) > 0 for i in range(length)]}
         self.signal1.array_annotate(**params2)
         self.signal1.array_annotations['test1'][0] = 'shallowtest'
 
-        self.assertFalse(all(self.signal1.array_annotations['test0'] == result.array_annotations['test0']))
-        self.assertFalse(all(self.signal1.array_annotations['test1'] == result.array_annotations['test1']))
-        self.assertFalse(all(self.signal1.array_annotations['test2'] == result.array_annotations['test2']))
+        self.assertFalse(all(self.signal1.array_annotations['test0']
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.signal1.array_annotations['test1']
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.signal1.array_annotations['test2']
+                             == result.array_annotations['test2']))
 
         # Change annotations of result
         params3 = {'test0': ['z{}'.format(i) for i in range(1, result.shape[-1]+1)]}
         result.array_annotate(**params3)
         result.array_annotations['test1'][0] = 'shallow2'
-        self.assertFalse(all(self.signal1.array_annotations['test0'] == result.array_annotations['test0']))
-        self.assertFalse(all(self.signal1.array_annotations['test1'] == result.array_annotations['test1']))
-        self.assertFalse(all(self.signal1.array_annotations['test2'] == result.array_annotations['test2']))
+        self.assertFalse(all(self.signal1.array_annotations['test0']
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.signal1.array_annotations['test1']
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.signal1.array_annotations['test2']
+                             == result.array_annotations['test2']))
 
     def test__time_slice_deepcopy_data(self):
         result = self.signal1.time_slice(None, None)
@@ -650,9 +663,40 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
 
     def test__deepcopy_should_set_parents_objects_to_None(self):
         # Deepcopy should destroy references to parents
-         result = deepcopy(self.signal1)
-         self.assertEqual(result.segment, None)
-         self.assertEqual(result.channel_index, None)
+        result = deepcopy(self.signal1)
+        self.assertEqual(result.segment, None)
+        self.assertEqual(result.channel_index, None)
+
+    def test__time_shift_same_attributes(self):
+        result = self.signal1.time_shift(1 * pq.ms)
+        assert_same_attributes(result, self.signal1, exclude=['times', 't_start', 't_stop'])
+
+    def test__time_shift_same_annotations(self):
+        result = self.signal1.time_shift(1 * pq.ms)
+        assert_same_annotations(result, self.signal1)
+
+    def test__time_shift_same_array_annotations(self):
+        result = self.signal1.time_shift(1 * pq.ms)
+        assert_same_array_annotations(result, self.signal1)
+
+    def test__time_shift_should_set_parents_to_None(self):
+        # When time-shifting, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.signal1.time_shift(1 * pq.ms)
+        self.assertEqual(result.segment, None)
+        self.assertEqual(result.channel_index, None)
+
+    def test__time_shift_by_zero(self):
+        shifted = self.signal1.time_shift(0 * pq.ms)
+        assert_arrays_equal(shifted.times, self.signal1.times)
+
+    def test__time_shift_same_units(self):
+        shifted = self.signal1.time_shift(10 * pq.ms)
+        assert_arrays_equal(shifted.times, self.signal1.times + 10 * pq.ms)
+
+    def test__time_shift_different_units(self):
+        shifted = self.signal1.time_shift(1 * pq.s)
+        assert_arrays_equal(shifted.times, self.signal1.times + 1000 * pq.ms)
 
     def test_as_array(self):
         sig_as_arr = self.signal1.as_array()
@@ -668,6 +712,14 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         result = self.signal1.copy()
         self.assertIs(result.segment, self.signal1.segment)
         self.assertIs(result.channel_index, self.signal1.channel_index)
+
+    @unittest.skipUnless(HAVE_SCIPY, "requires Scipy")
+    def test_resample(self):
+        factors = [1, 2, 10]
+        for factor in factors:
+            result = self.signal1.resample(self.signal1.shape[0] * factor)
+            np.testing.assert_allclose(self.signal1.magnitude, result.magnitude[::factor],
+                                       rtol=1e-7, atol=0)
 
 
 class TestIrregularlySampledSignalCombination(unittest.TestCase):
@@ -840,9 +892,9 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         targ = (("IrregularlySampledSignal with %d channels of length %d; units %s; datatype %s \n"
                  "" % (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode,
                        signal.dtype))
-                + ("name: '%s'\ndescription: '%s'\n" % (signal.name, signal.description))
+                + ("name: '{}'\ndescription: '{}'\n".format(signal.name, signal.description))
                 + ("annotations: %s\n" % str(signal.annotations))
-                + ("sample times: %s" % (signal.times[:10],)))
+                + ("sample times: {}".format(signal.times[:10])))
         self.assertEqual(res, targ)
 
     def test__merge(self):

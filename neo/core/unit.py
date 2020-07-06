@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`Unit`, a container of :class:`SpikeTrain` objects
 from a unit.
@@ -6,11 +5,6 @@ from a unit.
 :class:`Unit` derives from :class:`Container`,
 from :module:`neo.core.container`.
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
-import numpy as np
 
 from neo.core.container import Container
 
@@ -68,7 +62,7 @@ class Unit(Container):
         '''
         Initialize a new :clas:`Unit` instance (spike source)
         '''
-        super(Unit, self).__init__(name=name, description=description,
+        super().__init__(name=name, description=description,
                                    file_origin=file_origin, **annotations)
         self.channel_index = None
 

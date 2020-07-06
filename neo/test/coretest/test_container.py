@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.container.Container class
 """
@@ -26,7 +25,7 @@ class Test_unique_objs(unittest.TestCase):
         a = 1
         b = np.array([3.14159265, 3.1415])
         c = [1, '1', 2.3, '5 8']
-        d = set([1, '2', 'spam'])
+        d = {1, '2', 'spam'}
 
         objs = [a, b, b, b, c, b, a, d, b, b, a, d, d, d, c, d, b, d, c, a]
         targ = [a, b, c, d]
@@ -175,7 +174,7 @@ class Test_pprint(unittest.TestCase):
         description = 'this is a test'
         obj = Container(name=name, description=description)
         res = pretty(obj)
-        targ = "Container with  name: '%s' description: '%s'" % (name,
+        targ = "Container with  name: '{}' description: '{}'".format(name,
                                                                  description)
         self.assertEqual(res, targ)
 

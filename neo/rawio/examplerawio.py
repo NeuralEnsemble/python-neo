@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ExampleRawIO is a class of a  fake example.
 This is to be used when coding a new RawIO.
@@ -37,7 +36,6 @@ Rules for creating a new class:
 
 
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
@@ -56,8 +54,8 @@ class ExampleRawIO(BaseRawIO):
     to develop a new IO module.
 
     Two rules for developers:
-      * Respect the Neo RawIO API (:ref:`_neo_rawio_API`)
-      * Follow :ref:`_io_guiline`
+      * Respect the :ref:`neo_rawio_API`
+      * Follow the :ref:`io_guiline`
 
     This fake IO:
         * have 2 blocks

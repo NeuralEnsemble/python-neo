@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Reading and writing from KlustaKwik-format files.
 Ref: http://klusters.sourceforge.net/UserManual/data-files.html
@@ -448,7 +447,7 @@ class FilenameParser:
         for v in all_filenames:
             # Test whether matches format, ie ends with digits
             split_fn = os.path.split(v)[1]
-            m = glob.re.search(('^(\w+)\.%s\.(\d+)$' % typestring), split_fn)
+            m = glob.re.search((r'^(\w+)\.%s\.(\d+)$' % typestring), split_fn)
             if m is not None:
                 # get basename from first hit if not specified
                 if self.basename is None:

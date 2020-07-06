@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.utils module
 """
@@ -12,7 +11,7 @@ from neo.io.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy,
                 EventProxy, EpochProxy)
 
 from neo.core.dataobject import ArrayDict
-from neo.core import (Block, Segment, AnalogSignal,
+from neo.core import (Block, Segment, AnalogSignal, IrregularlySampledSignal,
                       Epoch, Event, SpikeTrain)
 
 from neo.test.tools import (assert_arrays_almost_equal,
@@ -32,8 +31,10 @@ class BaseProxyTest(unittest.TestCase):
 
 class TestUtilsWithoutProxyObjects(unittest.TestCase):
     def test__get_events(self):
-        starts_1 = Event(times=[0.5, 10.0, 25.2] * pq.s)
-        starts_1.annotate(event_type='trial start', pick='me')
+        starts_1 = Event(times=[0.5, 10.0, 25.2] * pq.s,
+                         labels=['label1', 'label2', 'label3'],
+                         name='pick_me')
+        starts_1.annotate(event_type='trial start')
         starts_1.array_annotate(trial_id=[1, 2, 3])
 
         stops_1 = Event(times=[5.5, 14.9, 30.1] * pq.s)
@@ -56,9 +57,9 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         block = Block()
         block.segments = [seg, seg2]
 
-        # test getting one whole event via annotation
+        # test getting one whole event via annotation or attribute
         extracted_starts1 = get_events(seg, event_type='trial start')
-        extracted_starts1b = get_events(block, pick='me')
+        extracted_starts1b = get_events(block, name='pick_me')
 
         self.assertEqual(len(extracted_starts1), 1)
         self.assertEqual(len(extracted_starts1b), 1)
@@ -116,6 +117,20 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
 
         # test getting more than one event time of one event
         trials_1_2 = get_events(block, trial_id=[1, 2], event_type='trial start')
+
+        self.assertEqual(len(trials_1_2), 1)
+
+        trials_1_2 = trials_1_2[0]
+
+        self.assertEqual(starts_1.name, trials_1_2.name)
+        self.assertEqual(starts_1.description, trials_1_2.description)
+        self.assertEqual(starts_1.file_origin, trials_1_2.file_origin)
+        self.assertEqual(starts_1.annotations['event_type'], trials_1_2.annotations['event_type'])
+        assert_arrays_equal(trials_1_2.array_annotations['trial_id'], np.array([1, 2]))
+        self.assertIsInstance(trials_1_2.array_annotations, ArrayDict)
+
+        # test selecting event times by label
+        trials_1_2 = get_events(block, labels=['label1', 'label2'])
 
         self.assertEqual(len(trials_1_2), 1)
 
@@ -284,7 +299,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         assert_arrays_almost_equal(ep_starts.times, starts.times - 300 * pq.ms, 1e-12)
         assert_arrays_almost_equal(ep_starts.durations,
                                    (550 * pq.ms).rescale(ep_starts.durations.units)
-                                   * np.ones((len(starts))), 1e-12)
+                                   * np.ones(len(starts)), 1e-12)
 
         # test cutting with two events
         ep_trials = add_epoch(seg, starts, stops)
@@ -336,6 +351,8 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
 
         anasig = AnalogSignal(np.arange(50.0) * pq.mV, t_start=.1 * pq.s,
                               sampling_rate=1.0 * pq.Hz)
+        irrsig = IrregularlySampledSignal(signal=np.arange(50.0) * pq.mV,
+                                          times=anasig.times, t_start=.1 * pq.s)
         st = SpikeTrain(np.arange(0.5, 50, 7) * pq.s, t_start=.1 * pq.s, t_stop=50.0 * pq.s,
                         waveforms=np.array([[[0., 1.], [0.1, 1.1]], [[2., 3.], [2.1, 3.1]],
                                             [[4., 5.], [4.1, 5.1]], [[6., 7.], [6.1, 7.1]],
@@ -349,6 +366,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         seg.epochs = [epoch, epoch2]
         seg.events = [event]
         seg.analogsignals = [anasig]
+        seg.irregularlysampledsignals = [irrsig]
         seg.spiketrains = [st]
 
         block = Block()
@@ -365,11 +383,12 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
             self.assertEqual(len(block.segments[epoch_idx].events), 1)
             self.assertEqual(len(block.segments[epoch_idx].spiketrains), 1)
             self.assertEqual(len(block.segments[epoch_idx].analogsignals), 1)
+            self.assertEqual(len(block.segments[epoch_idx].irregularlysampledsignals), 1)
 
             if epoch_idx != 0:
-                self.assertEqual(len(block.segments[epoch_idx].epochs), 0)
-            else:
                 self.assertEqual(len(block.segments[epoch_idx].epochs), 1)
+            else:
+                self.assertEqual(len(block.segments[epoch_idx].epochs), 2)
 
             assert_same_attributes(block.segments[epoch_idx].spiketrains[0],
                                    st.time_slice(t_start=epoch.times[epoch_idx],
@@ -379,11 +398,18 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
                                    anasig.time_slice(t_start=epoch.times[epoch_idx],
                                                      t_stop=epoch.times[epoch_idx]
                                                             + epoch.durations[epoch_idx]))
+            assert_same_attributes(block.segments[epoch_idx].irregularlysampledsignals[0],
+                                   irrsig.time_slice(t_start=epoch.times[epoch_idx],
+                                                     t_stop=epoch.times[epoch_idx]
+                                                            + epoch.durations[epoch_idx]))
             assert_same_attributes(block.segments[epoch_idx].events[0],
                                    event.time_slice(t_start=epoch.times[epoch_idx],
                                                     t_stop=epoch.times[epoch_idx]
                                                            + epoch.durations[epoch_idx]))
         assert_same_attributes(block.segments[0].epochs[0],
+                               epoch.time_slice(t_start=epoch.times[0],
+                                                 t_stop=epoch.times[0] + epoch.durations[0]))
+        assert_same_attributes(block.segments[0].epochs[1],
                                epoch2.time_slice(t_start=epoch.times[0],
                                                 t_stop=epoch.times[0] + epoch.durations[0]))
 
@@ -392,6 +418,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         seg.epochs = [epoch, epoch2]
         seg.events = [event]
         seg.analogsignals = [anasig]
+        seg.irregularlysampledsignals = [irrsig]
         seg.spiketrains = [st]
 
         block = Block()
@@ -408,34 +435,35 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
             self.assertEqual(len(block.segments[epoch_idx].events), 1)
             self.assertEqual(len(block.segments[epoch_idx].spiketrains), 1)
             self.assertEqual(len(block.segments[epoch_idx].analogsignals), 1)
+            self.assertEqual(len(block.segments[epoch_idx].irregularlysampledsignals), 1)
             if epoch_idx != 0:
-                self.assertEqual(len(block.segments[epoch_idx].epochs), 0)
-            else:
                 self.assertEqual(len(block.segments[epoch_idx].epochs), 1)
+            else:
+                self.assertEqual(len(block.segments[epoch_idx].epochs), 2)
 
             assert_same_attributes(block.segments[epoch_idx].spiketrains[0],
-                                   st.duplicate_with_new_data(st.times - epoch.times[epoch_idx],
-                                                              t_start=st.t_start - epoch.times[
-                                                                  epoch_idx]).time_slice(
+                                   st.time_shift(- epoch.times[epoch_idx]).time_slice(
                                        t_start=0 * pq.s, t_stop=epoch.durations[epoch_idx]))
 
-            anasig_target = anasig.copy()
-            anasig_target.t_start = st.t_start - epoch.times[epoch_idx]
+            anasig_target = anasig.time_shift(- epoch.times[epoch_idx])
             anasig_target = anasig_target.time_slice(t_start=0 * pq.s,
                                                      t_stop=epoch.durations[epoch_idx])
             assert_same_attributes(block.segments[epoch_idx].analogsignals[0], anasig_target)
+            irrsig_target = irrsig.time_shift(- epoch.times[epoch_idx])
+            irrsig_target = irrsig_target.time_slice(t_start=0 * pq.s,
+                                                     t_stop=epoch.durations[epoch_idx])
+            assert_same_attributes(block.segments[epoch_idx].irregularlysampledsignals[0],
+                                   irrsig_target)
             assert_same_attributes(block.segments[epoch_idx].events[0],
-                                   event.duplicate_with_new_data(
-                                       event.times - epoch.times[epoch_idx],
-                                       event.labels
-                                    ).time_slice(t_start=0 * pq.s,
-                                                 t_stop=epoch.durations[epoch_idx]))
+                                   event.time_shift(- epoch.times[epoch_idx]).time_slice(
+                                       t_start=0 * pq.s, t_stop=epoch.durations[epoch_idx]))
 
         assert_same_attributes(block.segments[0].epochs[0],
-                               epoch2.duplicate_with_new_data(epoch2.times - epoch.times[0],
-                                                              epoch2.durations,
-                                                              epoch2.labels)
-                                        .time_slice(t_start=0 * pq.s, t_stop=epoch.durations[0]))
+                               epoch.time_shift(- epoch.times[0]).time_slice(t_start=0 * pq.s,
+                                                                    t_stop=epoch.durations[0]))
+        assert_same_attributes(block.segments[0].epochs[1],
+                               epoch2.time_shift(- epoch.times[0]).time_slice(t_start=0 * pq.s,
+                                                                    t_stop=epoch.durations[0]))
 
 
 class TestUtilsWithProxyObjects(BaseProxyTest):
@@ -600,7 +628,7 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
 
         block2 = Block()
         seg2 = Segment()
-        epoch = Epoch(np.arange(10) * pq.s, durations=np.ones((10)) * pq.s)
+        epoch = Epoch(np.arange(10) * pq.s, durations=np.ones(10) * pq.s)
         epoch.annotate(pick='me instead')
         seg2.epochs = [proxy_epoch, epoch]
         block2.segments = [seg2]

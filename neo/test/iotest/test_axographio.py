@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.axographio
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import
 
 from datetime import datetime
 import unittest
@@ -25,6 +21,9 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         'File_axograph.axgd',       # version 6 file
         'episodic.axgd',
         'events_and_epochs.axgx',
+        'written-by-axographio-with-linearsequence.axgx',
+        'written-by-axographio-without-linearsequence.axgx',
+        'corrupt-comment.axgx',
     ]
     files_to_download = files_to_test
     ioclass = AxographIO
@@ -131,6 +130,78 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         assert_equal(sig.sampling_period, 0.00002 * pq.s)
 
+    def test_file_written_by_axographio_package_with_linearsequence(self):
+        """Test reading file written by axographio package with linearsequence time column"""
+
+        filename = self.get_filename_path('written-by-axographio-with-linearsequence.axgx')
+        reader = AxographIO(filename=filename)
+        blk = reader.read_block()
+        assert_equal(blk.annotations['format_ver'], 6)
+
+        names = [sig.name for sig in blk.segments[0].analogsignals]
+        assert_equal(names, ['Data 1', 'Data 2'])
+
+        sig = blk.segments[0].analogsignals[0][:5]
+        arr = sig.as_array('mV')
+        target = np.array([[0.000000],
+                           [9.999833],
+                           [19.998667],
+                           [29.995500],
+                           [39.989334]], dtype=np.float32)
+        assert_equal(arr, target)
+
+        assert_equal(sig.t_start, 0 * pq.s)
+
+        assert_equal(sig.sampling_period, 0.01 * pq.s)
+
+    def test_file_written_by_axographio_package_without_linearsequence(self):
+        """Test reading file written by axographio package without linearsequence time column"""
+
+        filename = self.get_filename_path('written-by-axographio-without-linearsequence.axgx')
+        reader = AxographIO(filename=filename)
+        blk = reader.read_block()
+        assert_equal(blk.annotations['format_ver'], 6)
+
+        names = [sig.name for sig in blk.segments[0].analogsignals]
+        assert_equal(names, ['Data 1', 'Data 2'])
+
+        sig = blk.segments[0].analogsignals[0][:5]
+        arr = sig.as_array('mV')
+        target = np.array([[0.000000],
+                           [9.999833],
+                           [19.998667],
+                           [29.995500],
+                           [39.989334]], dtype=np.float32)
+        assert_equal(arr, target)
+
+        assert_equal(sig.t_start, 0 * pq.s)
+
+        assert_equal(sig.sampling_period, 0.009999999999999787 * pq.s)
+
+    def test_file_with_corrupt_comment(self):
+        """Test reading a file with a corrupt comment"""
+
+        filename = self.get_filename_path('corrupt-comment.axgx')
+        reader = AxographIO(filename=filename)
+        blk = reader.read_block()
+        assert_equal(blk.annotations['format_ver'], 6)
+
+        names = [sig.name for sig in blk.segments[0].analogsignals]
+        assert_equal(names, ['Data 1', 'Data 2'])
+
+        sig = blk.segments[0].analogsignals[0][:5]
+        arr = sig.as_array('mV')
+        target = np.array([[0.000000],
+                           [9.999833],
+                           [19.998667],
+                           [29.995500],
+                           [39.989334]], dtype=np.float32)
+        assert_equal(arr, target)
+
+        assert_equal(sig.t_start, 0 * pq.s)
+
+        assert_equal(sig.sampling_period, 0.01 * pq.s)
+
     def test_multi_segment(self):
         """Test reading an episodic file into multiple Segments"""
 
@@ -160,13 +231,13 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(event.times, [5999, 5999, 23499, 23499,
                                    26499, 26499, 35999]
                      * blk.segments[0].analogsignals[0].sampling_period)
-        assert_equal(event.labels, [b'Stop', b'Start', b'Stop', b'Start',
-                                    b'Stop', b'Start', b'Stop'])
+        assert_equal(event.labels, ['Stop', 'Start', 'Stop', 'Start',
+                                    'Stop', 'Start', 'Stop'])
 
         epoch = blk.segments[0].epochs[0]
         assert_equal(epoch.times, np.array([0.1, 4]) * pq.s)
         assert_equal(epoch.durations, np.array([1.4, 2]) * pq.s)
-        assert_equal(epoch.labels, [b'test interval 1', b'test interval 2'])
+        assert_equal(epoch.labels, ['test interval 1', 'test interval 2'])
 
     def test_rec_datetime(self):
         """Test parsing the recording datetime from notes"""

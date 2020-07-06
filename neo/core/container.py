@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 This module implements generic container base class that all neo container
 object inherit from.  It provides shared methods for all container types.
 
 :class:`Container` is derived from :class:`BaseNeo`
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-try:
-    basestring
-except NameError:
-    basestring = str
 
 from copy import deepcopy
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
@@ -232,8 +224,8 @@ class Container(BaseNeo):
         """
         Initalize a new :class:`Container` instance.
         """
-        super(Container, self).__init__(name=name, description=description,
-                                        file_origin=file_origin, **annotations)
+        super().__init__(name=name, description=description,
+                         file_origin=file_origin, **annotations)
 
         # initialize containers
         for container in self._child_containers:
@@ -374,8 +366,8 @@ class Container(BaseNeo):
         Get dictionary containing the names of child containers in the current
         object as keys and the number of children of that type as values.
         """
-        return dict((name, len(getattr(self, name)))
-                    for name in self._child_containers)
+        return {name: len(getattr(self, name))
+                    for name in self._child_containers}
 
     def filter(self, targdict=None, data=True, container=False, recursive=True,
                objects=None, **kwargs):
@@ -410,7 +402,7 @@ class Container(BaseNeo):
             >>> obj.filter(targdict={'myannotation':3})
         """
 
-        if isinstance(targdict, basestring):
+        if isinstance(targdict, str):
             raise TypeError("filtering is based on key-value pairs."
                             " Only a single string was provided.")
 
@@ -562,11 +554,14 @@ class Container(BaseNeo):
 
         Annotations are merged such that only items not present in the current
         annotations are added.
+
+        Note that the other object will be linked inconsistently to other Neo objects
+        after the merge operation and should not be used further.
         """
         # merge containers with the same name
         for container in (self._container_child_containers +
                               self._multi_child_containers):
-            lookup = dict((obj.name, obj) for obj in getattr(self, container))
+            lookup = {obj.name: obj for obj in getattr(self, container)}
             ids = [id(obj) for obj in getattr(self, container)]
             for obj in getattr(other, container):
                 if id(obj) in ids:
@@ -581,12 +576,12 @@ class Container(BaseNeo):
         # for data objects, ignore the name and just add them
         for container in self._data_child_containers:
             objs = getattr(self, container)
-            lookup = dict((obj.name, i) for i, obj in enumerate(objs))
+            lookup = {obj.name: i for i, obj in enumerate(objs)}
             ids = [id(obj) for obj in objs]
             for obj in getattr(other, container):
                 if id(obj) in ids:
-                    continue
-                if hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
+                    pass
+                elif hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
                     ind = lookup[obj.name]
                     try:
                         newobj = getattr(self, container)[ind].merge(obj)
@@ -598,9 +593,10 @@ class Container(BaseNeo):
                     lookup[obj.name] = obj
                     ids.append(id(obj))
                     getattr(self, container).append(obj)
+                obj.set_parent(self)
 
         # use the BaseNeo merge as well
-        super(Container, self).merge(other)
+        super().merge(other)
 
     def _repr_pretty_(self, pp, cycle):
         """
@@ -613,7 +609,7 @@ class Container(BaseNeo):
         for container in self._child_containers:
             objs = getattr(self, container)
             if objs:
-                vals.append('%s %s' % (len(objs), container))
+                vals.append('{} {}'.format(len(objs), container))
         pp.text(', '.join(vals))
 
         if self._has_repr_pretty_attrs_():
@@ -623,7 +619,7 @@ class Container(BaseNeo):
         for container in self._repr_pretty_containers:
             pp.breakable()
             objs = getattr(self, container)
-            pp.text("# %s (N=%s)" % (container, len(objs)))
+            pp.text("# {} (N={})".format(container, len(objs)))
             for (i, obj) in enumerate(objs):
                 pp.breakable()
                 pp.text("%s: " % i)

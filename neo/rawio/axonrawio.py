@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from pCLAMP and AxoScope
 files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
@@ -34,9 +33,6 @@ Note: j.s.nowacki@gmail.com has a C++ library with SWIG bindings which also
 reads abf files - would be good to cross-check
 
 """
-from __future__ import print_function, division, absolute_import
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
-
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
 
@@ -346,7 +342,7 @@ class AxonRawIO(BaseRawIO):
                         i_end = i_last + epoch['lEpochInitDuration'] + \
                             epoch['lEpochDurationInc'] * epiNum
                         dif = i_end - i_begin
-                        sig[i_begin:i_end] = np.ones((dif)) * \
+                        sig[i_begin:i_end] = np.ones(dif) * \
                             (epoch['fEpochInitLevel'] + epoch['fEpochLevelInc'] * epiNum)
                         i_last += epoch['lEpochInitDuration'] + \
                             epoch['lEpochDurationInc'] * epiNum
@@ -455,7 +451,7 @@ def parse_axon_soup(filename):
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
-            for key in [b'AXENGN', b'clampex', b'Clampex',
+            for key in [b'AXENGN', b'clampex', b'Clampex', b'EDR3',
                         b'CLAMPEX', b'axoscope', b'AxoScope', b'Clampfit']:
                 # goodstart = big_string.lower().find(key)
                 goodstart = big_string.find(b'\x00' + key)

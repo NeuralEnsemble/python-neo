@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.unit.Unit class
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 import unittest
 from copy import deepcopy
@@ -32,8 +28,8 @@ from neo.test.generate_datasets import (fake_neo, get_fake_value,
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
-                                 range(len(TEST_ANNOTATIONS))])
+        self.annotations = {str(x): TEST_ANNOTATIONS[x] for x in
+                                 range(len(TEST_ANNOTATIONS))}
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
@@ -135,7 +131,6 @@ class TestUnit(unittest.TestCase):
         unit1a.annotate(seed=self.seed2)
         unit1a.spiketrains.append(self.trains2[0])
         unit1a.merge(self.unit2)
-        self.check_creation(self.unit2)
 
         assert_same_sub_schema(self.trains1a + self.trains2,
                                unit1a.spiketrains)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests proxyobject mechanisms with ExampleRawIO
 """
@@ -83,6 +82,12 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig_int.units == pq.CompoundUnit('0.0152587890625*uV')
 
         assert_arrays_almost_equal(anasig_float, anasig_int.rescale('uV'), 1e-9)
+
+        # test array_annotations
+        assert 'info' in proxy_anasig.array_annotations
+        assert proxy_anasig.array_annotations['info'].size == 16
+        assert 'info' in anasig_float.array_annotations
+        assert anasig_float.array_annotations['info'].size == 16
 
     def test_global_local_channel_indexes(self):
         proxy_anasig = AnalogSignalProxy(rawio=self.reader,

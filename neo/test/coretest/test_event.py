@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.event.Event class
 """
@@ -25,7 +24,9 @@ from neo.core.event import Event
 from neo.core.epoch import Epoch
 from neo.core import Segment
 from neo.test.tools import (assert_neo_object_is_compliant, assert_arrays_equal,
-                            assert_arrays_almost_equal, assert_same_sub_schema)
+                            assert_arrays_almost_equal, assert_same_sub_schema,
+                            assert_same_attributes, assert_same_annotations,
+                            assert_same_array_annotations)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
                                         TEST_ANNOTATIONS)
 
@@ -35,13 +36,13 @@ warnings.simplefilter("always")
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict(
-            [(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
+        self.annotations = {
+            str(x): TEST_ANNOTATIONS[x] for x in range(len(TEST_ANNOTATIONS))}
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
         times = get_fake_value('times', pq.Quantity, seed=0, dim=1)
-        labels = get_fake_value('labels', np.ndarray, seed=1, dim=1, dtype='S')
+        labels = get_fake_value('labels', np.ndarray, seed=1, dim=1, dtype='U')
         name = get_fake_value('name', str, seed=2, obj=Event)
         description = get_fake_value('description', str, seed=3, obj='Event')
         file_origin = get_fake_value('file_origin', str)
@@ -106,10 +107,12 @@ class TestEvent(unittest.TestCase):
     def setUp(self):
         self.params = {'test2': 'y1', 'test3': True}
         self.arr_ann = {'index': np.arange(10), 'test': np.arange(100, 110)}
+        self.seg = Segment()
         self.evt = Event([0.1, 0.5, 1.1, 1.5, 1.7, 2.2, 2.9, 3.0, 3.1, 3.3] * pq.ms, name='test',
                     description='tester', file_origin='test.file', test1=1,
                     array_annotations=self.arr_ann, **self.params)
         self.evt.annotate(test1=1.1, test0=[1, 2])
+        self.evt.segment = self.seg
 
     def test_setup_compliant(self):
         assert_neo_object_is_compliant(self.evt)
@@ -118,7 +121,7 @@ class TestEvent(unittest.TestCase):
         params = {'test2': 'y1', 'test3': True}
         arr_ann = {'names': ['a', 'b', 'c'], 'index': np.arange(10, 13)}
         evt = Event([1.1, 1.5, 1.7] * pq.ms,
-                    labels=np.array(['test event 1', 'test event 2', 'test event 3'], dtype='S'),
+                    labels=np.array(['test event 1', 'test event 2', 'test event 3'], dtype='U'),
                     name='test', description='tester', file_origin='test.file', test1=1,
                     array_annotations=arr_ann, **params)
         evt.annotate(test1=1.1, test0=[1, 2])
@@ -126,7 +129,7 @@ class TestEvent(unittest.TestCase):
 
         assert_arrays_equal(evt.times, [1.1, 1.5, 1.7] * pq.ms)
         assert_arrays_equal(evt.labels,
-                            np.array(['test event 1', 'test event 2', 'test event 3'], dtype='S'))
+                            np.array(['test event 1', 'test event 2', 'test event 3'], dtype='U'))
         self.assertEqual(evt.name, 'test')
         self.assertEqual(evt.description, 'tester')
         self.assertEqual(evt.file_origin, 'test.file')
@@ -138,15 +141,21 @@ class TestEvent(unittest.TestCase):
         assert_arrays_equal(evt.array_annotations['index'], np.arange(10, 13))
         self.assertIsInstance(evt.array_annotations, ArrayDict)
 
+    def test_Event_invalid_times_dimension(self):
+        data2d = np.array([1, 2, 3, 4]).reshape((4, -1))
+        self.assertRaises(ValueError, Event, times=data2d * pq.s)
+
     def test_Event_creation_invalid_labels(self):
         self.assertRaises(ValueError, Event, [1.1, 1.5, 1.7] * pq.ms,
                           labels=["A", "B"])
 
-    def test_Epoch_creation_scalar_duration(self):
-        # test with scalar for durations
-        epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=20 * pq.ns,
-                    labels=np.array(['test epoch 1', 'test epoch 2', 'test epoch 3'], dtype='S'))
-        assert_neo_object_is_compliant(epc)
+    def test_Event_creation_from_lists(self):
+        evt = Event([1.1, 1.5, 1.7],
+                    ['test event 1', 'test event 2', 'test event 3'],
+                    units=pq.ms)
+        assert_arrays_equal(evt.times, [1.1, 1.5, 1.7] * pq.ms)
+        assert_arrays_equal(evt.labels,
+                            np.array(['test event 1', 'test event 2', 'test event 3']))
 
     def tests_time_slice(self):
 
@@ -207,7 +216,8 @@ class TestEvent(unittest.TestCase):
 
     def test__time_slice_deepcopy_array_annotations(self):
         length = self.evt.shape[-1]
-        params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
+        params1 = {'test0': ['y{}'.format(i) for i in range(length)],
+                   'test1': ['deeptest' for i in range(length)],
                    'test2': [(-1)**i > 0 for i in range(length)]}
         self.evt.array_annotate(**params1)
         # time_slice spike train, keep sliced spike times
@@ -216,22 +226,29 @@ class TestEvent(unittest.TestCase):
         result = self.evt.time_slice(t_start, t_stop)
 
         # Change annotations of original
-        params2 = {'test0': ['x{}'.format(i) for i in range(length)], 'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+        params2 = {'test0': ['x{}'.format(i) for i in range(length)],
+                   'test2': [(-1) ** (i + 1) > 0 for i in range(length)]}
         self.evt.array_annotate(**params2)
         self.evt.array_annotations['test1'][6] = 'shallowtest'
 
-        self.assertFalse(all(self.evt.array_annotations['test0'][5:8] == result.array_annotations['test0']))
-        self.assertFalse(all(self.evt.array_annotations['test1'][5:8] == result.array_annotations['test1']))
-        self.assertFalse(all(self.evt.array_annotations['test2'][5:8] == result.array_annotations['test2']))
+        self.assertFalse(all(self.evt.array_annotations['test0'][5:8]
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.evt.array_annotations['test1'][5:8]
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.evt.array_annotations['test2'][5:8]
+                             == result.array_annotations['test2']))
 
         # Change annotations of result
         params3 = {'test0': ['z{}'.format(i) for i in range(5, 8)]}
         result.array_annotate(**params3)
         result.array_annotations['test1'][1] = 'shallow2'
 
-        self.assertFalse(all(self.evt.array_annotations['test0'][5:8] == result.array_annotations['test0']))
-        self.assertFalse(all(self.evt.array_annotations['test1'][5:8] == result.array_annotations['test1']))
-        self.assertFalse(all(self.evt.array_annotations['test2'][5:8] == result.array_annotations['test2']))
+        self.assertFalse(all(self.evt.array_annotations['test0'][5:8]
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.evt.array_annotations['test1'][5:8]
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.evt.array_annotations['test2'][5:8]
+                             == result.array_annotations['test2']))
 
     def test__time_slice_deepcopy_data(self):
         result = self.evt.time_slice(None, None)
@@ -430,7 +447,7 @@ class TestEvent(unittest.TestCase):
     def test_Event_repr(self):
         params = {'test2': 'y1', 'test3': True}
         evt = Event([1.1, 1.5, 1.7] * pq.ms,
-                    labels=np.array(['test event 1', 'test event 2', 'test event 3'], dtype='S'),
+                    labels=np.array(['test event 1', 'test event 2', 'test event 3'], dtype='U'),
                     name='test', description='tester', file_origin='test.file', test1=1, **params)
         evt.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(evt)
@@ -450,16 +467,16 @@ class TestEvent(unittest.TestCase):
         arr_ann2 = {'index': np.arange(3), 'test': ['a', 'b', 'c']}
         evt1 = Event([1.1, 1.5, 1.7] * pq.ms,
                      labels=np.array(['test event 1 1', 'test event 1 2', 'test event 1 3'],
-                                     dtype='S'), name='test', description='tester 1',
+                                     dtype='U'), name='test', description='tester 1',
                      file_origin='test.file', array_annotations=arr_ann1, test1=1, **params1)
         evt2 = Event([2.1, 2.5, 2.7] * pq.us,
                      labels=np.array(['test event 2 1', 'test event 2 2', 'test event 2 3'],
-                                     dtype='S'), name='test', description='tester 2',
+                                     dtype='U'), name='test', description='tester 2',
                      file_origin='test.file', array_annotations=arr_ann2, test1=1, **params2)
         evttarg = Event([1.1, 1.5, 1.7, .0021, .0025, .0027] * pq.ms,
                         labels=np.array(['test event 1 1', 'test event 1 2', 'test event 1 3',
                                          'test event 2 1', 'test event 2 2', 'test event 2 3'],
-                                        dtype='S'),
+                                        dtype='U'),
                         name='test',
                         description='merge(tester 1, tester 2)', file_origin='test.file',
                         array_annotations={'index': [10, 11, 12, 0, 1, 2]}, test1=1, **paramstarg)
@@ -497,7 +514,7 @@ class TestEvent(unittest.TestCase):
     def test__children(self):
         params = {'test2': 'y1', 'test3': True}
         evt = Event([1.1, 1.5, 1.7] * pq.ms,
-                    labels=np.array(['test event 1', 'test event 2', 'test event 3'], dtype='S'),
+                    labels=np.array(['test event 1', 'test event 2', 'test event 3'], dtype='U'),
                     name='test', description='tester', file_origin='test.file', test1=1, **params)
         evt.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(evt)
@@ -523,7 +540,7 @@ class TestEvent(unittest.TestCase):
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
     def test__pretty(self):
         evt = Event([1.1, 1.5, 1.7] * pq.ms,
-                    labels=np.array(['test event 1', 'test event 2', 'test event 3'], dtype='S'),
+                    labels=np.array(['test event 1', 'test event 2', 'test event 3'], dtype='U'),
                     name='test', description='tester', file_origin='test.file')
         evt.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(evt)
@@ -547,6 +564,36 @@ class TestEvent(unittest.TestCase):
 
         evt3 = evt.time_slice(2.2 * pq.ms, None)
         assert_arrays_equal(evt3.times, [3, 4, 5] * pq.ms)
+
+    def test__time_shift_same_attributes(self):
+        result = self.evt.time_shift(1 * pq.ms)
+        assert_same_attributes(result, self.evt, exclude=['times'])
+
+    def test__time_shift_same_annotations(self):
+        result = self.evt.time_shift(1 * pq.ms)
+        assert_same_annotations(result, self.evt)
+
+    def test__time_shift_same_array_annotations(self):
+        result = self.evt.time_shift(1 * pq.ms)
+        assert_same_array_annotations(result, self.evt)
+
+    def test__time_shift_should_set_parents_to_None(self):
+        # When time-shifting, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.evt.time_shift(1 * pq.ms)
+        self.assertEqual(result.segment, None)
+
+    def test__time_shift_by_zero(self):
+        shifted = self.evt.time_shift(0 * pq.ms)
+        assert_arrays_equal(shifted.times, self.evt.times)
+
+    def test__time_shift_same_units(self):
+        shifted = self.evt.time_shift(10 * pq.ms)
+        assert_arrays_equal(shifted.times, self.evt.times + 10 * pq.ms)
+
+    def test__time_shift_different_units(self):
+        shifted = self.evt.time_shift(1 * pq.s)
+        assert_arrays_equal(shifted.times, self.evt.times + 1000 * pq.ms)
 
     def test_as_array(self):
         data = [2, 3, 4, 5]
@@ -604,6 +651,27 @@ class TestEvent(unittest.TestCase):
         # todo: fix Epoch, as the following does not raise a ValueError  # self.assertRaises(
         # ValueError, event.to_epoch, durations=2.0)  # missing units
 
+    def test_rescale(self):
+        times = [2, 3, 4, 5]
+        labels = ["A", "B", "C", "D"]
+        arr_ann = {'index': np.arange(4), 'test': ['a', 'b', 'c', 'd']}
+        evt = Event(times * pq.ms, labels=labels,
+                    array_annotations=arr_ann)
+        result = evt.rescale(pq.us)
+
+        self.assertIsInstance(result, Event)
+        assert_neo_object_is_compliant(result)
+        assert_arrays_equal(result.array_annotations['index'], np.arange(4))
+        assert_arrays_equal(result.array_annotations['test'],
+                            np.array(['a', 'b', 'c', 'd']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
+
+        self.assertEqual(result.units, 1 * pq.us)
+        assert_array_equal(evt.labels, result.labels)
+        assert_arrays_almost_equal(result.times, [2000, 3000, 4000, 5000] * pq.us, 1e-9)
+        assert_arrays_almost_equal(result.times.magnitude,
+                                   np.array([2000, 3000, 4000, 5000]),
+                                   1e-9)
 
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
@@ -630,7 +698,7 @@ class TestDuplicateWithNewData(unittest.TestCase):
 class TestEventFunctions(unittest.TestCase):
     def test__pickle(self):
         arr_ann = {'index': np.arange(3), 'test': ['a', 'b', 'c']}
-        event1 = Event(np.arange(0, 30, 10) * pq.s, labels=np.array(['t0', 't1', 't2'], dtype='S'),
+        event1 = Event(np.arange(0, 30, 10) * pq.s, labels=np.array(['t0', 't1', 't2'], dtype='U'),
                        units='s', annotation1="foo", annotation2="bar", array_annotations=arr_ann)
         fobj = open('./pickle', 'wb')
         pickle.dump(event1, fobj)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Tools for use with neo tests.
 '''
@@ -25,22 +24,23 @@ def assert_arrays_equal(a, b, dtype=False):
     '''
     assert isinstance(a, np.ndarray), "a is a %s" % type(a)
     assert isinstance(b, np.ndarray), "b is a %s" % type(b)
-    assert a.shape == b.shape, "%s != %s" % (a, b)
+    assert a.shape == b.shape, "{} != {}".format(a, b)
     # assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b,
     #                                                               a.dtype,
     #                                                               b.dtype)
     try:
-        assert (a.flatten() == b.flatten()).all(), "%s != %s" % (a, b)
+        assert (a.flatten() == b.flatten()).all(), "{} != {}".format(a, b)
     except (AttributeError, ValueError):
         try:
             ar = np.array(a)
             br = np.array(b)
-            assert (ar.flatten() == br.flatten()).all(), "%s != %s" % (ar, br)
+            assert (ar.flatten() == br.flatten()).all(), "{} != {}".format(ar, br)
         except (AttributeError, ValueError):
-            assert np.all(a.flatten() == b.flatten()), "%s != %s" % (a, b)
+            assert np.all(a.flatten() == b.flatten()), "{} != {}".format(a, b)
 
     if dtype:
-        assert a.dtype == b.dtype, "%s and %s not same dtype %s and %s" % (a, b, a.dtype, b.dtype)
+        assert a.dtype == b.dtype, "{} and {} not same dtype {} and {}".format(
+            a, b, a.dtype, b.dtype)
 
 
 def assert_arrays_almost_equal(a, b, threshold, dtype=False):
@@ -56,7 +56,7 @@ def assert_arrays_almost_equal(a, b, threshold, dtype=False):
 
     assert isinstance(a, np.ndarray), "a is a %s" % type(a)
     assert isinstance(b, np.ndarray), "b is a %s" % type(b)
-    assert a.shape == b.shape, "%s != %s" % (a, b)
+    assert a.shape == b.shape, "{} != {}".format(a, b)
     # assert a.dtype == b.dtype, "%s and %b not same dtype %s %s" % (a, b,
     #                                                               a.dtype,
     #                                                               b.dtype)
@@ -66,7 +66,8 @@ def assert_arrays_almost_equal(a, b, threshold, dtype=False):
                                        "" % (a, b, (abs(a - b)).max(), threshold)
 
     if dtype:
-        assert a.dtype == b.dtype, "%s and %s not same dtype %s and %s" % (a, b, a.dtype, b.dtype)
+        assert a.dtype == b.dtype, "{} and {} not same dtype {} and {}".format(
+            a, b, a.dtype, b.dtype)
 
 
 def file_digest(filename):
@@ -116,7 +117,8 @@ def assert_neo_object_is_compliant(ob, check_type=True):
         attrname, attrtype = ioattr[0], ioattr[1]
         # ~ if attrname != '':
         if not hasattr(ob, '_quantity_attr'):
-            assert hasattr(ob, attrname), '%s neo obect does not have %s' % (classname, attrname)
+            assert hasattr(ob, attrname), '{} neo obect does not have {}'.format(
+                classname, attrname)
 
     # test attributes types
     for ioattr in ob._all_attrs:
@@ -156,7 +158,7 @@ def assert_neo_object_is_compliant(ob, check_type=True):
                              '' % (container, _reference_name(classname))
             if hasattr(child, _reference_name(classname)):
                 parent = getattr(child, _reference_name(classname))
-                assert parent == ob, '%s.%s %s is not symetric with %s.%s' \
+                assert parent == ob, '%s.%s %s is not symmetric with %s.%s' \
                                      '' % (container, _reference_name(classname), i, classname,
                                            container)
 
@@ -166,7 +168,7 @@ def assert_neo_object_is_compliant(ob, check_type=True):
             assert_neo_object_is_compliant(child)
         # intercept exceptions and add more information
         except BaseException as exc:
-            exc.args += ('from %s %s of %s' % (child.__class__.__name__, i, classname),)
+            exc.args += ('from {} {} of {}'.format(child.__class__.__name__, i, classname),)
             raise
 
 
@@ -184,7 +186,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                  the comparison
 
     '''
-    assert type(ob1) == type(ob2), 'type(%s) != type(%s)' % (type(ob1), type(ob2))
+    assert type(ob1) == type(ob2), 'type({}) != type({})'.format(type(ob1), type(ob2))
     classname = ob1.__class__.__name__
 
     if exclude is None:
@@ -199,7 +201,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                                        exclude=exclude)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('%s[%s]' % (classname, i),)
+                exc.args += ('{}[{}]'.format(classname, i),)
                 raise
         return
 
@@ -212,7 +214,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                                                 '' % (classname, container, classname)
             continue
         else:
-            assert hasattr(ob2, container), '%s 1 has %s but not %s 2' % (classname, container,
+            assert hasattr(ob2, container), '{} 1 has {} but not {} 2'.format(classname, container,
                                                                           classname)
 
         sub1 = getattr(ob1, container)
@@ -228,7 +230,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                                        threshold=threshold, exclude=exclude)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from %s[%s] of %s' % (container, i, classname),)
+                exc.args += ('from {}[{}] of {}'.format(container, i, classname),)
                 raise
 
     assert_same_attributes(ob1, ob2, equal_almost=equal_almost, threshold=threshold,
@@ -269,7 +271,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                                            dtype=dtype)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from %s %s' % (classname, attrname),)
+                exc.args += ('from {} {}'.format(classname, attrname),)
                 raise
             assert ob1.dimensionality.string == ob2.dimensionality.string,\
                 'Units of %s %s are not the same: %s and %s' \
@@ -307,7 +309,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                 assert_arrays_almost_equal(mag1, mag2, threshold=threshold, dtype=dtype)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from %s of %s' % (attrname, classname),)
+                exc.args += ('from {} of {}'.format(attrname, classname),)
                 raise
             # Compare dimensionalities
             dim1 = getattr(ob1, attrname).dimensionality.simplified
@@ -322,7 +324,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                                            threshold=threshold, dtype=dtype)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from %s of %s' % (attrname, classname),)
+                exc.args += ('from {} of {}'.format(attrname, classname),)
                 raise
         else:
             # ~ print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
@@ -421,7 +423,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
                     assert_sub_schema_is_lazy_loaded(child)
                 # intercept exceptions and add more information
                 except BaseException as exc:
-                    exc.args += ('from %s %s of %s' % (container, i, classname),)
+                    exc.args += ('from {} {} of {}'.format(container, i, classname),)
                     raise
     else:
         assert ob.__class__ in proxyobjectlist, 'Data object must lazy %' % classname

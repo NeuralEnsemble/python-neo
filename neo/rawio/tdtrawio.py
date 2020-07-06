@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from from Tucker Davis TTank format.
 Terminology:
@@ -23,9 +22,6 @@ Units in this IO are not guaranteed.
 Author: Samuel Garcia, SummitKwan, Chadwick Boulay
 
 """
-from __future__ import print_function, division, absolute_import
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
-
 from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
 
 import numpy as np
@@ -114,7 +110,7 @@ class TdtRawIO(BaseRawIO):
 
             # If there exists an external sortcode in ./sort/[sortname]/*.SortResult
             #  (generated after offline sorting)
-            if self.sortname is not '':
+            if self.sortname != '':
                 try:
                     for file in os.listdir(os.path.join(path, 'sort', sortname)):
                         if file.endswith(".SortResult"):
@@ -127,8 +123,6 @@ class TdtRawIO(BaseRawIO):
                             # print('sortcode updated')
                             break
                 except OSError:
-                    pass
-                except IOError:
                     pass
 
         # Re-order segments according to their start times

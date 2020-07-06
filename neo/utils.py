@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines multiple utility functions for filtering, creation, slicing,
 etc. of neo.core objects.
@@ -7,7 +6,6 @@ etc. of neo.core objects.
 import neo
 import copy
 import warnings
-import inspect
 import numpy as np
 import quantities as pq
 
@@ -49,25 +47,26 @@ def get_events(container, **properties):
 
     Example:
     --------
-        >>> event = neo.Event(
-                times = [0.5, 10.0, 25.2] * pq.s)
-        >>> event.annotate(
-                event_type = 'trial start',
-                trial_id = [1, 2, 3])
+        >>> import neo
+        >>> from neo.utils import get_events
+        >>> import quantities as pq
+        >>> event = neo.Event(times=[0.5, 10.0, 25.2] * pq.s)
+        >>> event.annotate(event_type='trial start')
+        >>> event.array_annotate(trial_id=[1, 2, 3])
         >>> seg = neo.Segment()
         >>> seg.events = [event]
 
         # Will return a list with the complete event object
-        >>> get_events(seg, properties={'event_type': 'trial start'})
+        >>> get_events(seg, event_type='trial start')
 
         # Will return an empty list
-        >>> get_events(seg, properties={'event_type': 'trial stop'})
+        >>> get_events(seg, event_type='trial stop')
 
         # Will return a list with an Event object, but only with trial 2
-        >>> get_events(seg, properties={'trial_id': 2})
+        >>> get_events(seg, trial_id=2)
 
         # Will return a list with an Event object, but only with trials 1 and 2
-        >>> get_events(seg, properties={'trial_id': [1, 2]})
+        >>> get_events(seg, trial_id=[1, 2])
     """
     if isinstance(container, neo.Segment):
         return _get_from_list(container.events, prop=properties)
@@ -120,26 +119,27 @@ def get_epochs(container, **properties):
 
     Example:
     --------
-        >>> epoch = neo.Epoch(
-                times = [0.5, 10.0, 25.2] * pq.s,
-                durations = [100, 100, 100] * pq.ms)
-        >>> epoch.annotate(
-                event_type = 'complete trial',
-                trial_id = [1, 2, 3]
+        >>> import neo
+        >>> from neo.utils import get_epochs
+        >>> import quantities as pq
+        >>> epoch = neo.Epoch(times=[0.5, 10.0, 25.2] * pq.s,
+        ...                   durations=[100, 100, 100] * pq.ms,
+        ...                   epoch_type='complete trial')
+        >>> epoch.array_annotate(trial_id=[1, 2, 3])
         >>> seg = neo.Segment()
         >>> seg.epochs = [epoch]
 
         # Will return a list with the complete event object
-        >>> get_epochs(seg, prop={'epoch_type': 'complete trial'})
+        >>> get_epochs(seg, epoch_type='complete trial')
 
         # Will return an empty list
-        >>> get_epochs(seg, prop={'epoch_type': 'error trial'})
+        >>> get_epochs(seg, epoch_type='error trial')
 
         # Will return a list with an Event object, but only with trial 2
-        >>> get_epochs(seg, prop={'trial_id': 2})
+        >>> get_epochs(seg, trial_id=2)
 
         # Will return a list with an Event object, but only with trials 1 and 2
-        >>> get_epochs(seg, prop={'trial_id': [1, 2]})
+        >>> get_epochs(seg, trial_id=[1, 2])
     """
     if isinstance(container, neo.Segment):
         return _get_from_list(container.epochs, prop=properties)
@@ -222,38 +222,8 @@ def _event_epoch_slice_by_valid_ids(obj, valid_ids):
     """
     Internal function
     """
-    # modify annotations
-    sparse_annotations = _get_valid_annotations(obj, valid_ids)
-
-    # modify array annotations
-    sparse_array_annotations = {key: value[valid_ids]
-                                for key, value in obj.array_annotations.items() if len(value)}
-
-    if obj.labels is not None and obj.labels.size > 0:
-        labels = obj.labels[valid_ids]
-    else:
-        labels = obj.labels
-    if type(obj) is neo.Event:
-        sparse_obj = neo.Event(
-            times=copy.deepcopy(obj.times[valid_ids]),
-            labels=copy.deepcopy(labels),
-            units=copy.deepcopy(obj.units),
-            name=copy.deepcopy(obj.name),
-            description=copy.deepcopy(obj.description),
-            file_origin=copy.deepcopy(obj.file_origin),
-            array_annotations=sparse_array_annotations,
-            **sparse_annotations)
-    elif type(obj) is neo.Epoch:
-        sparse_obj = neo.Epoch(
-            times=copy.deepcopy(obj.times[valid_ids]),
-            durations=copy.deepcopy(obj.durations[valid_ids]),
-            labels=copy.deepcopy(labels),
-            units=copy.deepcopy(obj.units),
-            name=copy.deepcopy(obj.name),
-            description=copy.deepcopy(obj.description),
-            file_origin=copy.deepcopy(obj.file_origin),
-            array_annotations=sparse_array_annotations,
-            **sparse_annotations)
+    if type(obj) is neo.Event or type(obj) is neo.Epoch:
+        sparse_obj = copy.deepcopy(obj[valid_ids])
     else:
         raise TypeError('Can only slice Event and Epoch objects by valid IDs.')
 
@@ -264,77 +234,30 @@ def _get_valid_ids(obj, annotation_key, annotation_value):
     """
     Internal function
     """
-    # wrap annotation value to be list
-    if not type(annotation_value) in [list, np.ndarray]:
-        annotation_value = [annotation_value]
 
-    # get all real attributes of object
-    attributes = inspect.getmembers(obj)
-    attributes_names = [t[0] for t in attributes if not(
-        t[0].startswith('__') and t[0].endswith('__'))]
-    attributes_ids = [i for i, t in enumerate(attributes) if not(
-        t[0].startswith('__') and t[0].endswith('__'))]
+    valid_mask = np.zeros(obj.shape)
 
-    # check if annotation is present
-    value_avail = False
-    if annotation_key in obj.annotations:
-        check_value = obj.annotations[annotation_key]
-        value_avail = True
+    if annotation_key in obj.annotations and obj.annotations[annotation_key] == annotation_value:
+        valid_mask = np.ones(obj.shape)
+
+    elif annotation_key == 'labels':
+        # wrap annotation value to be list
+        if not type(annotation_value) in [list, np.ndarray]:
+            annotation_value = [annotation_value]
+        valid_mask = np.in1d(obj.labels, annotation_value)
+
     elif annotation_key in obj.array_annotations:
-        check_value = obj.array_annotations[annotation_key]
-        value_avail = True
-    elif annotation_key in attributes_names:
-        check_value = attributes[attributes_ids[
-            attributes_names.index(annotation_key)]][1]
-        value_avail = True
+        # wrap annotation value to be list
+        if not type(annotation_value) in [list, np.ndarray]:
+            annotation_value = [annotation_value]
+        valid_mask = np.in1d(obj.array_annotations[annotation_key], annotation_value)
 
-    if value_avail:
-        # check if annotation is list and fits to length of object list
-        if not _is_annotation_list(check_value, len(obj)):
-            # check if annotation is single value and fits to requested value
-            if check_value in annotation_value:
-                valid_mask = np.ones(obj.shape)
-            else:
-                valid_mask = np.zeros(obj.shape)
-                if type(check_value) != str:
-                    warnings.warn(
-                        'Length of annotation "%s" (%s) does not fit '
-                        'to length of object list (%s)' % (
-                            annotation_key, len(check_value), len(obj)))
-
-        # extract object entries, which match requested annotation
-        else:
-            valid_mask = np.zeros(obj.shape)
-            for obj_id in range(len(obj)):
-                if check_value[obj_id] in annotation_value:
-                    valid_mask[obj_id] = True
-    else:
-        valid_mask = np.zeros(obj.shape)
+    elif hasattr(obj, annotation_key) and getattr(obj, annotation_key) == annotation_value:
+        valid_mask = np.ones(obj.shape)
 
     valid_ids = np.where(valid_mask)[0]
 
     return valid_ids
-
-
-def _get_valid_annotations(obj, valid_ids):
-    """
-    Internal function
-    """
-    sparse_annotations = copy.deepcopy(obj.annotations)
-    for key in sparse_annotations:
-        if _is_annotation_list(sparse_annotations[key], len(obj)):
-            sparse_annotations[key] = list(np.array(sparse_annotations[key])[
-                valid_ids])
-    return sparse_annotations
-
-
-def _is_annotation_list(value, exp_length):
-    """
-    Internal function
-    """
-    return (
-        (isinstance(value, list) or (
-            isinstance(value, np.ndarray) and value.ndim > 0)) and (len(value) == exp_length))
 
 
 def add_epoch(
@@ -417,14 +340,13 @@ def add_epoch(
     if 'name' not in kwargs:
         kwargs['name'] = 'epoch'
     if 'labels' not in kwargs:
-        # this needs to be changed to '%s_%i' % (kwargs['name'], i) for i in range(len(times))]
-        # when labels become unicode
-        kwargs['labels'] = [
-            ('%s_%i' % (kwargs['name'], i)).encode('ascii') for i in range(len(times))]
+        kwargs['labels'] = [u'{}_{}'.format(kwargs['name'], i)
+                            for i in range(len(times))]
 
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
 
     ep.annotate(**event1.annotations)
+    ep.array_annotate(**event1.array_annotations)
 
     if attach_result:
         segment.epochs.append(ep)
@@ -520,10 +442,10 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         Contains the Segments to cut according to the Epoch criteria provided
     properties: dictionary
         A dictionary that contains the Epoch keys and values to filter for.
-        Each key of the dictionary is matched to an attribute or an an
-        annotation of the Event. The value of each dictionary entry corresponds
-        to a valid entry or a list of valid entries of the attribute or
-        annotation.
+        Each key of the dictionary is matched to an attribute or an
+        annotation or an array_annotation of the Event.
+        The value of each dictionary entry corresponds to a valid entry or a
+        list of valid entries of the attribute or (array) annotation.
 
         If the value belonging to the key is a list of entries of the same
         length as the number of epochs in the Epoch object, the list entries
@@ -619,18 +541,11 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
 
     segments = []
     for ep_id in range(len(epoch)):
-        subseg = seg_time_slice(seg,
-                                epoch.times[ep_id],
+        subseg = seg.time_slice(epoch.times[ep_id],
                                 epoch.times[ep_id] + epoch.durations[ep_id],
                                 reset_time=reset_time)
 
-        # Add annotations of Epoch
-        for a in epoch.annotations:
-            if type(epoch.annotations[a]) is list \
-                    and len(epoch.annotations[a]) == len(epoch):
-                subseg.annotations[a] = copy.copy(epoch.annotations[a][ep_id])
-            else:
-                subseg.annotations[a] = copy.copy(epoch.annotations[a])
+        subseg.annotate(**copy.copy(epoch.annotations))
 
         # Add array-annotations of Epoch
         for key, val in epoch.array_annotations.items():
@@ -640,234 +555,3 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
         segments.append(subseg)
 
     return segments
-
-
-def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
-    """
-    Creates a time slice of a Segment containing slices of all child
-    objects.
-
-    Parameters:
-    -----------
-    seg: Segment
-        The Segment object to slice.
-    t_start: Quantity
-        Starting time of the sliced time window.
-    t_stop: Quantity
-        Stop time of the sliced time window.
-    reset_time: bool
-        If True the time stamps of all sliced objects are set to fall
-        in the range from t_start to t_stop.
-        If False, original time stamps are retained.
-        Default is False.
-
-    Keyword Arguments:
-    ------------------
-        Additional keyword arguments used for initialization of the sliced
-        Segment object.
-
-    Returns:
-    --------
-    seg: Segment
-        Temporal slice of the original Segment from t_start to t_stop.
-    """
-    subseg = neo.Segment(**kwargs)
-
-    for attr in [
-            'file_datetime', 'rec_datetime', 'index',
-            'name', 'description', 'file_origin']:
-        setattr(subseg, attr, getattr(seg, attr))
-
-    subseg.annotations = copy.deepcopy(seg.annotations)
-
-    t_shift = - t_start
-
-    # cut analogsignals and analogsignalarrays
-    for ana_id in range(len(seg.analogsignals)):
-        if isinstance(seg.analogsignals[ana_id], neo.AnalogSignal):
-            ana_time_slice = seg.analogsignals[ana_id].time_slice(t_start, t_stop)
-        elif isinstance(seg.analogsignals[ana_id], neo.io.proxyobjects.AnalogSignalProxy):
-            ana_time_slice = seg.analogsignals[ana_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            ana_time_slice.t_start = ana_time_slice.t_start + t_shift
-        subseg.analogsignals.append(ana_time_slice)
-
-    # cut spiketrains
-    for st_id in range(len(seg.spiketrains)):
-        if isinstance(seg.spiketrains[st_id], neo.SpikeTrain):
-            st_time_slice = seg.spiketrains[st_id].time_slice(t_start, t_stop)
-        elif isinstance(seg.spiketrains[st_id], neo.io.proxyobjects.SpikeTrainProxy):
-            st_time_slice = seg.spiketrains[st_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            st_time_slice = shift_spiketrain(st_time_slice, t_shift)
-        subseg.spiketrains.append(st_time_slice)
-
-    # cut events
-    for ev_id in range(len(seg.events)):
-        if isinstance(seg.events[ev_id], neo.Event):
-            ev_time_slice = event_time_slice(seg.events[ev_id], t_start, t_stop)
-        elif isinstance(seg.events[ev_id], neo.io.proxyobjects.EventProxy):
-            ev_time_slice = seg.events[ev_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            ev_time_slice = shift_event(ev_time_slice, t_shift)
-        # appending only non-empty events
-        if len(ev_time_slice):
-            subseg.events.append(ev_time_slice)
-
-    # cut epochs
-    for ep_id in range(len(seg.epochs)):
-        if isinstance(seg.epochs[ep_id], neo.Epoch):
-            ep_time_slice = epoch_time_slice(seg.epochs[ep_id], t_start, t_stop)
-        elif isinstance(seg.epochs[ep_id], neo.io.proxyobjects.EpochProxy):
-            ep_time_slice = seg.epochs[ep_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            ep_time_slice = shift_epoch(ep_time_slice, t_shift)
-        # appending only non-empty epochs
-        if len(ep_time_slice):
-            subseg.epochs.append(ep_time_slice)
-
-    return subseg
-
-
-def shift_spiketrain(spiketrain, t_shift):
-    """
-    Shifts a spike train to start at a new time.
-
-    Parameters:
-    -----------
-    spiketrain: SpikeTrain
-        Spiketrain of which a copy will be generated with shifted spikes and
-        starting and stopping times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the SpikeTrain.
-
-    Returns:
-    --------
-    spiketrain: SpikeTrain
-        New instance of a SpikeTrain object starting at t_start (the original
-        SpikeTrain is not modified).
-    """
-    new_st = spiketrain.duplicate_with_new_data(
-        signal=spiketrain.times.view(pq.Quantity) + t_shift,
-        t_start=spiketrain.t_start + t_shift,
-        t_stop=spiketrain.t_stop + t_shift)
-    return new_st
-
-
-def event_time_slice(event, t_start=None, t_stop=None):
-    """
-    Slices an Event object to retain only those events that fall in a certain
-    time window.
-
-    Parameters:
-    -----------
-    event: Event
-        The Event to slice.
-    t_start, t_stop: Quantity (time)
-        Time window in which to retain events. An event at time t is retained
-        if t_start <= t < t_stop.
-
-    Returns:
-    --------
-    event: Event
-        New instance of an Event object containing only the events in the time
-        range.
-    """
-    if t_start is None:
-        t_start = -np.inf
-    if t_stop is None:
-        t_stop = np.inf
-
-    valid_ids = np.where(np.logical_and(
-        event.times >= t_start, event.times < t_stop))[0]
-
-    new_event = _event_epoch_slice_by_valid_ids(event, valid_ids=valid_ids)
-
-    return new_event
-
-
-def epoch_time_slice(epoch, t_start=None, t_stop=None):
-    """
-    Slices an Epoch object to retain only those epochs that fall in a certain
-    time window.
-
-    Parameters:
-    -----------
-    epoch: Epoch
-        The Epoch to slice.
-    t_start, t_stop: Quantity (time)
-        Time window in which to retain epochs. An epoch at time t and
-        duration d is retained if t_start <= t < t_stop - d.
-
-    Returns:
-    --------
-    epoch: Epoch
-        New instance of an Epoch object containing only the epochs in the time
-        range.
-    """
-    if t_start is None:
-        t_start = -np.inf
-    if t_stop is None:
-        t_stop = np.inf
-
-    valid_ids = np.where(np.logical_and(
-        epoch.times >= t_start, epoch.times + epoch.durations < t_stop))[0]
-
-    new_epoch = _event_epoch_slice_by_valid_ids(epoch, valid_ids=valid_ids)
-
-    return new_epoch
-
-
-def shift_event(ev, t_shift):
-    """
-    Shifts an event by an amount of time.
-
-    Parameters:
-    -----------
-    event: Event
-        Event of which a copy will be generated with shifted times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the Event.
-
-    Returns:
-    --------
-    epoch: Event
-        New instance of an Event object starting at t_shift later than the
-        original Event (the original Event is not modified).
-    """
-    return ev.duplicate_with_new_data(times=ev.times + t_shift,
-                                      labels=ev.labels)
-
-
-def shift_epoch(epoch, t_shift):
-    """
-    Shifts an epoch by an amount of time.
-
-    Parameters:
-    -----------
-    epoch: Epoch
-        Epoch of which a copy will be generated with shifted times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the Epoch.
-
-    Returns:
-    --------
-    epoch: Epoch
-        New instance of an Epoch object starting at t_shift later than the
-        original Epoch (the original Epoch is not modified).
-    """
-    return epoch.duplicate_with_new_data(times=epoch.times + t_shift,
-                                         durations=epoch.durations,
-                                         labels=epoch.labels)
-
-
-def _shift_time_signal(sig, t_shift):
-    """
-    Internal function.
-    """
-    if not hasattr(sig, 'times'):
-        raise AttributeError(
-            'Can only shift signals, which have an attribute'
-            ' "times", not %s' % type(sig))
-    new_sig = sig.duplicate_with_new_data(times=sig.times + t_shift)
-    return new_sig

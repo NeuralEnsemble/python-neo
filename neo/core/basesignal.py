@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module implements :class:`BaseSignal`, an array of signals.
 This is a parent class from which all signal objects inherit:
@@ -14,9 +13,6 @@ In brief:
 Only child objects :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
 can be created.
 '''
-
-# needed for Python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 import copy
 import logging
@@ -66,7 +62,7 @@ class BaseSignal(DataObject):
         and :class:`IrregularlySampledSignal`) are set in
         :meth:`_array_finalize_spec`
         '''
-        super(BaseSignal, self).__array_finalize__(obj)
+        super().__array_finalize__(obj)
         self._array_finalize_spec(obj)
 
         # The additional arguments
@@ -105,7 +101,7 @@ class BaseSignal(DataObject):
         return signal
 
     def rescale(self, units):
-        obj = super(BaseSignal, self).rescale(units)
+        obj = super().rescale(units)
         obj.channel_index = self.channel_index
         return obj
 
@@ -129,7 +125,7 @@ class BaseSignal(DataObject):
         after a mathematical operation.
         '''
         self._check_consistency(other)
-        f = getattr(super(BaseSignal, self), op)
+        f = getattr(super(), op)
         new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
         # _copy_data_complement can't always copy array annotations,
@@ -264,7 +260,7 @@ class BaseSignal(DataObject):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 

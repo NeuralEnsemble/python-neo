@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading the old data format from Plexon
 acquisition system (.plx)
@@ -22,7 +21,6 @@ If one day, somebody use it, consider to offer me a beer.
 Author: Samuel Garcia
 
 """
-from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
@@ -273,8 +271,8 @@ class PlexonRawIO(BaseRawIO):
             data_blocks = self._data_blocks[5][chan_id]
 
             # loop over data blocks and get chunks
-            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
-            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
+            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='right') - 1
+            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='right')
             ind = 0
             for bl in range(bl0, bl1):
                 ind0 = data_blocks[bl]['pos']

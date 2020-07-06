@@ -13,7 +13,7 @@ Guidelines for IO implementation
 There are two ways to add a new IO module:
   * By directly adding a new IO class in a module within :mod:`neo.io`: the reader/writer will deal directly with Neo objects
   * By adding a RawIO class in a module within :mod:`neo.rawio`: the reader should work with raw buffers from the file and provide
-    some internal headers for the scale/units/name/... 
+    some internal headers for the scale/units/name/...
     You can then generate an IO module simply by inheriting from your RawIO class and from :class:`neo.io.BaseFromRaw`
 
 For read only classes, we encourage you to write a :class:`RawIO` class because it allows slice reading,
@@ -22,7 +22,7 @@ For read/write classes you can mix the two levels neo.rawio for reading and neo.
 
 Recipe to develop an IO module for a new data format:
     1. Fully understand the object model. See :doc:`core`. If in doubt ask the `mailing list`_.
-    2. Fully understand :mod:`neo.io.examplerawio`, It is a fake IO to explain the API. If in doubt ask the list.
+    2. Fully understand :mod:`neo.rawio.examplerawio`, It is a fake IO to explain the API. If in doubt ask the list.
     3. Copy/paste ``examplerawio.py`` and choose clear file and class names for your IO.
     4. implement all methods that **raise(NotImplementedError)** in :mod:`neo.rawio.baserawio`. Return None when the object is not supported (spike/waveform)
     5. Write good docstrings. List dependencies, including minimum version numbers.
@@ -64,7 +64,7 @@ Each test must have at least one class that inherits ``BaseTestRawIO`` and that 
 
 Here is an example test script taken from the distribution: :file:`test_axonrawio.py`:
 
-.. literalinclude:: ../../neo/rawio/tests/test_axonrawio.py
+.. literalinclude:: ../../neo/test/rawiotest/test_axonrawio.py
 
 
 Logging
@@ -98,12 +98,12 @@ ExampleIO
 
 .. autoclass:: neo.io.ExampleIO
 
-Here is the entire file:
+Here are the entire files:
 
 .. literalinclude:: ../../neo/rawio/examplerawio.py
 
 .. literalinclude:: ../../neo/io/exampleio.py
 
 
-.. _`mailing list`: http://groups.google.com/group/neuralensemble
-.. _gin-gnode: https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data
+.. _`mailing list`: https://groups.google.com/forum/#!forum/neuralensemble
+.. _gin-gnode: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data

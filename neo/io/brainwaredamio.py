@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Class for reading from Brainware DAM files
 
@@ -25,9 +24,6 @@ The code is implemented with the permission of Dr. Jan Schnupp
 
 Author: Todd Jennings
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 # import needed core python modules
 import os
@@ -142,7 +138,7 @@ class BrainwareDamIO(BaseIO):
         chx = ChannelIndex(file_origin=self._filename,
                            channel_ids=np.array([1]),
                            index=np.array([0]),
-                           channel_names=np.array(['Chan1'], dtype='S'))
+                           channel_names=np.array(['Chan1'], dtype='U'))
 
         # load objects into their containers
         block.channel_indexes.append(chx)

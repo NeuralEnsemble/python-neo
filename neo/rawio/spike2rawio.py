@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Classe for reading data in CED spike2 files (.smr).
 
@@ -18,7 +17,6 @@ This IO support old (<v6) and new files (>v7) of spike2
 Author: Samuel Garcia
 
 """
-from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
@@ -35,12 +33,14 @@ class Spike2RawIO(BaseRawIO):
     extensions = ['smr']
     rawmode = 'one-file'
 
-    def __init__(self, filename='', take_ideal_sampling_rate=False, ced_units=True):
+    def __init__(self, filename='', take_ideal_sampling_rate=False, ced_units=True,
+                            try_signal_grouping=True):
         BaseRawIO.__init__(self)
         self.filename = filename
 
         self.take_ideal_sampling_rate = take_ideal_sampling_rate
         self.ced_units = ced_units
+        self.try_signal_grouping = try_signal_grouping
 
     def _parse_header(self):
 
@@ -121,7 +121,8 @@ class Spike2RawIO(BaseRawIO):
                 data_blocks = self._all_data_blocks[chan_id]
                 sig_size = np.sum(self._all_data_blocks[chan_id]['size'])
                 if sig_size > 0:
-                    interval = get_sample_interval(info, chan_info) / self._time_factor
+                    interval = int(np.round(get_sample_interval(info,
+                                            chan_info) / self._time_factor))
                     # detect gaps
                     inter_block_sizes = data_blocks['start_time'][1:] - \
                         data_blocks['end_time'][:-1]
@@ -213,7 +214,7 @@ class Spike2RawIO(BaseRawIO):
                 elif chan_info['kind'] == 9:  # float32
                     gain = 1.
                     offset = 0.
-                    sig_dtype = 'int32'
+                    sig_dtype = 'float32'
                 group_id = 0
                 sig_channels.append((name, chan_id, sampling_rate, sig_dtype,
                                      units, gain, offset, group_id))
@@ -261,11 +262,34 @@ class Spike2RawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         if len(sig_channels) > 0:
-            # signal channel can different sampling_rate/dtype/t_start/signal_length...
-            # grouping them is difficults, so each channe = one group
+            if self.try_signal_grouping:
+                # try to group signals channel if same sampling_rate/dtype/...
+                # it can raise error for some files (when they do not have signal length)
+                common_keys = ['sampling_rate', 'dtype', 'units', 'gain', 'offset']
+                characteristics = sig_channels[common_keys]
+                unique_characteristics = np.unique(characteristics)
+                self._sig_dtypes = {}
+                for group_id, charact in enumerate(unique_characteristics):
+                    chan_grp_indexes, = np.nonzero(characteristics == charact)
+                    sig_channels['group_id'][chan_grp_indexes] = group_id
 
-            sig_channels['group_id'] = np.arange(sig_channels.size)
-            self._sig_dtypes = {s['group_id']: np.dtype(s['dtype']) for s in sig_channels}
+                    # check same size for channel in groups
+                    for seg_index in range(nb_segment):
+                        sig_sizes = []
+                        for ind in chan_grp_indexes:
+                            chan_id = sig_channels[ind]['id']
+                            sig_size = np.sum(self._by_seg_data_blocks[chan_id][seg_index]['size'])
+                            sig_sizes.append(sig_size)
+                        sig_sizes = np.array(sig_sizes)
+                        assert np.all(sig_sizes == sig_sizes[0]),\
+                                    'Signal channel in groups do not have same size'\
+                                    ', use try_signal_grouping=False'
+                    self._sig_dtypes[group_id] = np.dtype(charact['dtype'])
+            else:
+                # if try_signal_grouping fail the user can try to split each channel in
+                # separate group
+                sig_channels['group_id'] = np.arange(sig_channels.size)
+                self._sig_dtypes = {s['group_id']: np.dtype(s['dtype']) for s in sig_channels}
 
         # fille into header dict
         self.header = {}
@@ -313,7 +337,6 @@ class Spike2RawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(None)
         channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
-        assert len(channel_indexes) == 1
         return channel_indexes
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
@@ -350,8 +373,8 @@ class Spike2RawIO(BaseRawIO):
             data_blocks = self._by_seg_data_blocks[chan_id][seg_index]
 
             # loop over data blocks and get chunks
-            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
-            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
+            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='right') - 1
+            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='right')
             ind = 0
             for bl in range(bl0, bl1):
                 ind0 = data_blocks[bl]['pos']

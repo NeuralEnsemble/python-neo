@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module implements :class:`IrregularlySampledSignal`, an array of analog
 signals with samples taken at arbitrary time points.
@@ -20,15 +19,21 @@ created by slicing. This is where attributes are copied over from
 the old object.
 '''
 
-# needed for Python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 from copy import deepcopy, copy
+
+try:
+    import scipy.signal
+except ImportError as err:
+    HAVE_SCIPY = False
+else:
+    HAVE_SCIPY = True
+
 import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.basesignal import BaseSignal
+from neo.core.analogsignal import AnalogSignal
 from neo.core.channelindex import ChannelIndex
 from neo.core.dataobject import DataObject
 
@@ -191,18 +196,18 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         Returns a string representing the :class:`IrregularlySampledSignal`.
         '''
-        return '<%s(%s at times %s)>' % (
-            self.__class__.__name__, super(IrregularlySampledSignal, self).__repr__(), self.times)
+        return '<{}({} at times {})>'.format(
+            self.__class__.__name__, super().__repr__(), self.times)
 
     def __getitem__(self, i):
         '''
         Get the item or slice :attr:`i`.
         '''
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
-            obj = super(IrregularlySampledSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
-            obj = super(IrregularlySampledSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             j, k = i
             if isinstance(j, (int, np.integer)):  # a single point in time across some channels
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
@@ -217,7 +222,7 @@ class IrregularlySampledSignal(BaseSignal):
                     obj = obj.reshape(-1, 1)  # add if channel_index
                 obj.array_annotations = deepcopy(self.array_annotations_at_index(k))
         elif isinstance(i, slice):
-            obj = super(IrregularlySampledSignal, self).__getitem__(i)
+            obj = super().__getitem__(i)
             obj.times = self.times.__getitem__(i)
             obj.array_annotations = deepcopy(self.array_annotations)
         elif isinstance(i, np.ndarray):
@@ -270,7 +275,7 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         if (isinstance(other, IrregularlySampledSignal) and not (self.times == other.times).all()):
             return False
-        return super(IrregularlySampledSignal, self).__eq__(other)
+        return super().__eq__(other)
 
     def _check_consistency(self, other):
         '''
@@ -285,7 +290,8 @@ class IrregularlySampledSignal(BaseSignal):
             return
         # dimensionality should match
         if self.ndim != other.ndim:
-            raise ValueError('Dimensionality does not match: %s vs %s' % (self.ndim, other.ndim))
+            raise ValueError('Dimensionality does not match: {} vs {}'.format(
+                self.ndim, other.ndim))
         # if if the other array does not have a times property,
         # then it should be okay to add it directly
         if not hasattr(other, 'times'):
@@ -293,7 +299,7 @@ class IrregularlySampledSignal(BaseSignal):
 
         # if there is a times property, the times need to be the same
         if not (self.times == other.times).all():
-            raise ValueError('Times do not match: %s vs %s' % (self.times, other.times))
+            raise ValueError('Times do not match: {} vs {}'.format(self.times, other.times))
 
     def __rsub__(self, other, *args):
         '''
@@ -320,7 +326,7 @@ class IrregularlySampledSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sample times: {0}".format(self.times)]:
+        for line in ["sample times: {}".format(self.times)]:
             _pp(line)
 
     @property
@@ -345,21 +351,51 @@ class IrregularlySampledSignal(BaseSignal):
         else:
             raise NotImplementedError
 
-    def resample(self, at=None, interpolation=None):
-        '''
-        Resample the signal, returning either an :class:`AnalogSignal` object
-        or another :class:`IrregularlySampledSignal` object.
+    def resample(self, sample_count, **kwargs):
+        """
+        Resample the data points of the signal.
+        This method interpolates the signal and returns a new signal with a fixed number of
+        samples defined by `sample_count`.
+        This function is a wrapper of scipy.signal.resample and accepts the same set of keyword
+        arguments, except for specifying the axis of resampling which is fixed to the first axis
+        here, and the sample positions. .
 
-        Arguments:
-            :at: either a :class:`Quantity` array containing the times at
-                 which samples should be created (times must be within the
-                 signal duration, there is no extrapolation), a sampling rate
-                 with dimensions (1/Time) or a sampling interval
-                 with dimensions (Time).
-            :interpolation: one of: None, 'linear'
-        '''
-        # further interpolation methods could be added
-        raise NotImplementedError
+        Parameters:
+        -----------
+        sample_count: integer
+            Number of desired samples. The resulting signal starts at the same sample as the
+            original and is sampled regularly.
+
+        Returns:
+        --------
+        resampled_signal: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object containing the resampled data points.
+            The original :class:`AnalogSignal` is not modified.
+        """
+
+        if not HAVE_SCIPY:
+            raise ImportError('Resampling requires availability of scipy.signal')
+
+        # Resampling is only permitted along the time axis (axis=0)
+        if 'axis' in kwargs:
+            kwargs.pop('axis')
+        if 't' in kwargs:
+            kwargs.pop('t')
+
+        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count,
+                                                                t=self.times.magnitude,
+                                                                axis=0, **kwargs)
+
+        new_sampling_rate = (sample_count - 1) / self.duration
+        resampled_signal = AnalogSignal(resampled_data, units=self.units, dtype=self.dtype,
+                                        t_start=self.t_start,
+                                        sampling_rate=new_sampling_rate,
+                                        array_annotations=self.array_annotations.copy(),
+                                        **self.annotations.copy())
+
+        # since the number of channels stays the same, we can also copy array annotations here
+        resampled_signal.array_annotations = self.array_annotations.copy()
+        return resampled_signal
 
     def time_slice(self, t_start, t_stop):
         '''
@@ -394,6 +430,28 @@ class IrregularlySampledSignal(BaseSignal):
         new_st = deepcopy(self[id_start:id_stop])
 
         return new_st
+
+    def time_shift(self, t_shift):
+        """
+        Shifts a :class:`IrregularlySampledSignal` to start at a new time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`IrregularlySampledSignal`.
+
+        Returns:
+        --------
+        new_sig: :class:`SpikeTrain`
+            New instance of a :class:`IrregularlySampledSignal` object
+            starting at t_shift later than the original :class:`IrregularlySampledSignal`
+            (the original :class:`IrregularlySampledSignal` is not modified).
+        """
+        new_sig = deepcopy(self)
+
+        new_sig.times += t_shift
+
+        return new_sig
 
     def merge(self, other):
         '''
@@ -431,7 +489,7 @@ class IrregularlySampledSignal(BaseSignal):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
