@@ -610,8 +610,8 @@ def clean_string(s):
 
 def safe_decode_units(s):
     s = s.replace(b' ', b'')
-    s = s.replace(b'\xb5', b'u') # \xb5 is µ
-    s = s.replace(b'\xb0', b'\xc2\xb0') # \xb0 is °
+    s = s.replace(b'\xb5', b'u')  # \xb5 is µ
+    s = s.replace(b'\xb0', b'\xc2\xb0')  # \xb0 is °
     s = s.decode('utf-8')
     return s
 
