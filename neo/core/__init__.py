@@ -16,7 +16,7 @@ Classes:
 .. autoclass:: AnalogSignal
 .. autoclass:: IrregularlySampledSignal
 
-.. autoclass:: View
+.. autoclass:: ChannelView
 
 .. autoclass:: Event
 .. autoclass:: Epoch
@@ -51,7 +51,7 @@ from neo.core.spiketrain import SpikeTrain
 from neo.core.imagesequence import ImageSequence
 from neo.core.regionofinterest import RectangularRegionOfInterest, CircularRegionOfInterest, PolygonRegionOfInterest
 
-from neo.core.view import View
+from neo.core.view import ChannelView
 from neo.core.group import Group
 
 # Block should always be first in this list
@@ -59,7 +59,7 @@ objectlist = [Block, Segment, ChannelIndex,
               AnalogSignal, IrregularlySampledSignal,
               Event, Epoch, Unit, SpikeTrain, ImageSequence,
               RectangularRegionOfInterest, CircularRegionOfInterest,
-              PolygonRegionOfInterest, View, Group]
+              PolygonRegionOfInterest, ChannelView, Group]
 
 objectnames = [ob.__name__ for ob in objectlist]
 class_by_name = dict(zip(objectnames, objectlist))

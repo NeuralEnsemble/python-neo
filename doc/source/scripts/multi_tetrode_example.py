@@ -6,7 +6,7 @@ from itertools import cycle
 import numpy as np
 from quantities import ms, mV, kHz
 import matplotlib.pyplot as plt
-from neo import Block, Segment, View, Group, SpikeTrain, AnalogSignal
+from neo import Block, Segment, ChannelView, Group, SpikeTrain, AnalogSignal
 
 store_signals = False
 

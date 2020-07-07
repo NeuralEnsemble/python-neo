@@ -34,10 +34,10 @@ class Group(Container):
 
     *Container of*:
         :class:`AnalogSignal`, :class:`IrregularlySampledSignal`, :class:`SpikeTrain`,
-        :class:`Event`, :class:`Epoch`, :class:`View`, :class:`Group
+        :class:`Event`, :class:`Epoch`, :class:`ChannelView`, :class:`Group
     """
     _data_child_objects = (
-        'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain', 'Event', 'Epoch', 'View'
+        'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain', 'Event', 'Epoch', 'ChannelView'
     )
     _container_child_objects = ('Segment', 'Group')
     _single_parent_objects = ('Block',)

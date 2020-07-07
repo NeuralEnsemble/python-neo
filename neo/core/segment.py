@@ -243,7 +243,7 @@ class Segment(Container):
             2
 
         '''
-        # todo: provide equivalent method using Group/View
+        # todo: provide equivalent method using Group/ChannelView
         #       add deprecation message (use decorator)?
         seg = Segment()
         seg.spiketrains = self.take_spiketrains_by_unit(unit_list)

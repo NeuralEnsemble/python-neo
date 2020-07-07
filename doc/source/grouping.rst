@@ -8,7 +8,7 @@ Grouping and linking data
 
 
 
-Migrating from ChannelIndex/Unit to View/Group
+Migrating from ChannelIndex/Unit to ChannelView/Group
 ==============================================
 
 
@@ -103,11 +103,11 @@ Each :class:`ChannelIndex` also contains the list of channels on which that neur
     block.channel_indexes.extend((chx0, chx1))
 
 
-Using :class:`View` and :class`Group`::
+Using :class:`ChannelView` and :class`Group`::
 
     import numpy as np
     from quantities import ms, mV, kHz
-    from neo import Block, Segment, View, Group, SpikeTrain, AnalogSignal
+    from neo import Block, Segment, ChannelView, Group, SpikeTrain, AnalogSignal
 
     block = Block(name="probe data")
     segment = Segment()
@@ -131,11 +131,11 @@ Using :class:`View` and :class`Group`::
         unit = Group(spiketrain, name=f"Neuron #{i + 1}")
         units.append(unit)
 
-    # create a View of the signal for each unit, to show which channels the spikes come from
+    # create a ChannelView of the signal for each unit, to show which channels the spikes come from
     # and add it to the relevant Group
-    view0 = View(signal, index=[0, 1, 2], name="Channel Group 1")
+    view0 = ChannelView(signal, index=[0, 1, 2], name="Channel Group 1")
     units[0].add(view0)
-    view1 = View(signal, index=[1, 2, 3], name="Channel Group 2")
+    view1 = ChannelView(signal, index=[1, 2, 3], name="Channel Group 2")
     units[1].add(view1)
 
     block.groups.extend(units)

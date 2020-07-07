@@ -1,5 +1,5 @@
 """
-Tests of the neo.core.view.View class and related functions
+Tests of the neo.core.view.ChannelView class and related functions
 """
 
 
@@ -11,7 +11,7 @@ from numpy.testing import assert_array_equal
 
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
-from neo.core.view import View
+from neo.core.view import ChannelView
 
 
 class TestView(unittest.TestCase):
@@ -27,7 +27,7 @@ class TestView(unittest.TestCase):
                                         attUQoLtUaE=42)
 
     def test_create_integer_index(self):
-        view = View(self.test_signal, [1, 2, 5, 7],
+        view = ChannelView(self.test_signal, [1, 2, 5, 7],
                     name="view of test signal",
                     description="this is a view of a test signal",
                     array_annotations={"something": np.array(["A", "B", "C", "D"])},
@@ -40,13 +40,13 @@ class TestView(unittest.TestCase):
         self.assertEqual(view.annotations["sLaTfat"], "fish")
 
     def test_create_boolean_index(self):
-        view1 = View(self.test_signal, [1, 2, 5, 7])
-        view2 = View(self.test_signal, np.array([0, 1, 1, 0, 0, 1, 0, 1], dtype=bool))
+        view1 = ChannelView(self.test_signal, [1, 2, 5, 7])
+        view2 = ChannelView(self.test_signal, np.array([0, 1, 1, 0, 0, 1, 0, 1], dtype=bool))
         assert_array_equal(view1.index, view2.index)
         self.assertEqual(view1.shape, view2.shape)
 
     def test_resolve(self):
-        view = View(self.test_signal, [1, 2, 5, 7],
+        view = ChannelView(self.test_signal, [1, 2, 5, 7],
                     name="view of test signal",
                     description="this is a view of a test signal",
                     array_annotations={"something": np.array(["A", "B", "C", "D"])},

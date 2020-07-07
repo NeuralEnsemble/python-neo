@@ -49,10 +49,10 @@ were recorded on which electrodes, which spike trains were obtained from which
 membrane potential signals, etc. They contain references to data objects that
 cut across the simple container hierarchy.
 
-  * :py:class:`View`: A set of indices into :py:class:`AnalogSignal` objects,
+  * :py:class:`ChannelView`: A set of indices into :py:class:`AnalogSignal` objects,
     representing logical and/or physical recording channels.
     For spike sorting of extracellular signals, where spikes may be recorded on more than one
-    recording channel, the :py:class:`View` can be used to reference the group of recording channels
+    recording channel, the :py:class:`ChannelView` can be used to reference the group of recording channels
     from which the spikes were obtained.
 
   * :py:class:`Group`: Can contain any of the data objects, views, or other groups,
@@ -149,11 +149,11 @@ the channels on which that neuron spiked::
     bl = Block(name='probe data')
 
     # one group for each neuron
-    view0 = View(recorded_signals, index=[0, 1, 2])
+    view0 = ChannelView(recorded_signals, index=[0, 1, 2])
     unit0 = Group(view0, name='Group 0')
     bl.groups.append(unit0)
 
-    view1 = View(recorded_signals, index=[1, 2, 3])
+    view1 = ChannelView(recorded_signals, index=[1, 2, 3])
     unit1 = Group(view1, name='Group 1')
     bl.groups.append(unit1)
 

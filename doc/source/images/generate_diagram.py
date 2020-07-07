@@ -208,7 +208,7 @@ def generate_diagram_simple():
                 'Event': (.5 + rw * bf * 4, 3.0),
                 'Epoch': (.5 + rw * bf * 4, 1.0),
                 'Group': (.5 + rw * bf * 1, 7.5),
-                'View': (.5 + rw * bf * 2., 9.9),
+                'ChannelView': (.5 + rw * bf * 2., 9.9),
                 'SpikeTrain': (.5 + rw * bf * 3, 7.5),
                 'IrregularlySampledSignal': (.5 + rw * bf * 3, 0.5),
                 'AnalogSignal': (.5 + rw * bf * 3, 4.9),

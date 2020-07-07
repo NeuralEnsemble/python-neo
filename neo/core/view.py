@@ -1,5 +1,5 @@
 """
-This module implements :class:`View`, which represents a subset of the
+This module implements :class:`ChannelView`, which represents a subset of the
 channels in an :class:`AnalogSignal` or :class:`IrregularlySampledSignal`.
 
 It replaces the indexing function of the former :class:`ChannelIndex`.
@@ -11,7 +11,7 @@ from .basesignal import BaseSignal
 from .dataobject import ArrayDict
 
 
-class View(BaseNeo):
+class ChannelView(BaseNeo):
     """
     A tool for indexing a subset of the channels within an :class:`AnalogSignal`
     or :class:`IrregularlySampledSignal`\\s;
@@ -44,7 +44,7 @@ class View(BaseNeo):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
         if not isinstance(obj, BaseSignal):
-            raise ValueError("Can only take a View of an AnalogSignal "
+            raise ValueError("Can only take a ChannelView of an AnalogSignal "
                              "or an IrregularlySampledSignal")
         self.obj = obj
 

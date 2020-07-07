@@ -13,7 +13,7 @@ from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.core.spiketrain import SpikeTrain
 from neo.core.segment import Segment
-from neo.core.view import View
+from neo.core.view import ChannelView
 from neo.core.group import Group
 
 
@@ -28,7 +28,7 @@ class TestGroup(unittest.TestCase):
                                         description="this is a test signal",
                                         array_annotations={"channel_names": channel_names},
                                         attUQoLtUaE=42)
-        self.test_view = View(self.test_signal, [1, 2, 5, 7],
+        self.test_view = ChannelView(self.test_signal, [1, 2, 5, 7],
                               name="view of test signal",
                               description="this is a view of a test signal",
                               array_annotations={"something": np.array(["A", "B", "C", "D"])},
@@ -47,7 +47,7 @@ class TestGroup(unittest.TestCase):
         assert group.analogsignals[0] is self.test_signal
         assert group.spiketrains[0] is self.test_spiketrains[0]
         assert group.spiketrains[1] is self.test_spiketrains[1]
-        assert group.views[0] is self.test_view
+        assert group.channelviews[0] is self.test_view
         assert len(group.irregularlysampledsignals) == 0
         assert group.segments[0].analogsignals[0] is self.test_signal
 

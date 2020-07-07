@@ -14,7 +14,7 @@ import numpy as np
 from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
-                      ChannelIndex, Group, View,
+                      ChannelIndex, Group, ChannelView,
                       Segment, SpikeTrain, Unit)
 
 
@@ -90,7 +90,7 @@ class LazyList(MutableSequence):
     _container_objects = {
         Block, Segment, ChannelIndex, Unit, Group}
     _neo_objects = _container_objects.union(
-        [AnalogSignal, Epoch, Event, View,
+        [AnalogSignal, Epoch, Event, ChannelView,
          IrregularlySampledSignal, SpikeTrain])
 
     def __init__(self, io, lazy, items=None):

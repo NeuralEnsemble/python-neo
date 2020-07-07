@@ -3,7 +3,7 @@ Example for usecases.rst
 """
 
 import numpy as np
-from neo import Segment, AnalogSignal, SpikeTrain, Group, View
+from neo import Segment, AnalogSignal, SpikeTrain, Group, ChannelView
 from quantities import Hz
 
 # generate some fake data
