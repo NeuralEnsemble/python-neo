@@ -21,7 +21,7 @@ from copy import deepcopy
 import numpy as np
 import quantities as pq
 
-from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.baseneo import MergeError, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
 from neo.core.channelindex import ChannelIndex
 
@@ -290,3 +290,47 @@ class BaseSignal(DataObject):
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 
         return signal
+
+    def time_slice(self, t_start, t_stop):
+        '''
+        Creates a new AnalogSignal corresponding to the time slice of the
+        original Signal between times t_start, t_stop.
+        '''
+        NotImplementedError('Needs to be implemented for subclasses.')
+
+
+    def patch(self, other):
+        '''
+        Patch another signal to this one.
+
+        The signal objects are concatenated vertically
+        (row-wise, :func:`np.vstack`). Patching can be
+        used to combine signals across segments.
+        Note: Only array annotations common to
+        both signals are attached to the patched signal.
+
+        If the attributes of the two signal are not
+        compatible, an Exception is raised.
+
+        Required attributes of the signal are used.
+
+        Parameters
+        ----------
+        other : neo.BaseSignal
+            The object that is merged into this one.
+
+        Returns
+        -------
+        signal : neo.BaseSignal
+            Signal containing all non-overlapping samples of
+            both source signals.
+
+        Raises
+        ------
+        MergeError
+            If `other` object has incompatible attributes.
+        '''
+
+        NotImplementedError('Patching need to be implemented in sublcasses')
+
+

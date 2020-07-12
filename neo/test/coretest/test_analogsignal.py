@@ -28,6 +28,7 @@ else:
     HAVE_SCIPY = True
 
 from numpy.testing import assert_array_equal
+from neo.core.baseneo import MergeError
 from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
 from neo.core.channelindex import ChannelIndex
 from neo.core import Segment
@@ -1572,6 +1573,87 @@ class TestAnalogSignalCombination(unittest.TestCase):
         assert_arrays_equal(mergeddata23, targdata23)
         assert_arrays_equal(mergeddata24, targdata24)
 
+    def test_patch_simple(self):
+        signal1 = AnalogSignal([0,1,2,3]*pq.s, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.s, sampling_rate=1*pq.Hz,
+                               t_start=signal1.t_stop + signal1.sampling_period)
+
+        result = signal1.patch(signal2)
+        assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
+        for attr in signal1._necessary_attrs:
+            self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
+
+    def test_patch_no_overlap(self):
+        signal1 = AnalogSignal([0,1,2,3]*pq.s, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.s, sampling_rate=1*pq.Hz,
+                               t_start=10*pq.s + signal1.sampling_period)
+
+        with self.assertRaises(MergeError):
+            signal1.patch(signal2)
+
+    def test_patch_multi_trace(self):
+        data1 = np.arange(4).reshape(2,2)
+        data2 = np.arange(4,8).reshape(2,2)
+        signal1 = AnalogSignal(data1*pq.s, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal(data2*pq.s, sampling_rate=1*pq.Hz,
+                               t_start=signal1.t_stop + signal1.sampling_period)
+
+        result = signal1.patch(signal2)
+        data_expected = np.array([[0,1],[2,3],[4,5],[6,7]])
+        assert_array_equal(data_expected, result.magnitude)
+        for attr in signal1._necessary_attrs:
+            self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
+
+    def test_patch_overwrite_true(self):
+        signal1 = AnalogSignal([0,1,2,3]*pq.s, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.s, sampling_rate=1*pq.Hz,
+                               t_start=signal1.t_stop)
+
+        result = signal1.patch(signal2, overwrite=True)
+        assert_array_equal(np.array([0,1,2,4,5,6]).reshape((-1, 1)), result.magnitude)
+
+    def test_patch_overwrite_false(self):
+        signal1 = AnalogSignal([0,1,2,3]*pq.s, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.s, sampling_rate=1*pq.Hz,
+                               t_start=signal1.t_stop)
+
+        result = signal1.patch(signal2, overwrite=False)
+        assert_array_equal(np.array([0,1,2,3,5,6]).reshape((-1, 1)), result.magnitude)
+
+    def test_patch_array_annotations(self):
+        array_anno1 = {'first': ['a','b']}
+        array_anno2 = {'first': ['a','b'],
+                       'second': ['c','d']}
+        data1 = np.arange(4).reshape(2,2)
+        data2 = np.arange(4,8).reshape(2,2)
+        signal1 = AnalogSignal(data1*pq.s, sampling_rate=1*pq.Hz,
+                               array_annotations=array_anno1)
+        signal2 = AnalogSignal(data2*pq.s, sampling_rate=1*pq.Hz,
+                               t_start=signal1.t_stop + signal1.sampling_period,
+                               array_annotations=array_anno2)
+
+        result = signal1.patch(signal2)
+        assert_array_equal(array_anno1.keys(), result.array_annotations.keys())
+
+        for k in array_anno1.keys():
+            assert_array_equal(np.asarray(array_anno1[k]), result.array_annotations[k])
+
+    def test_patch_complex(self):
+        signal1 = self.signal1
+        assert_neo_object_is_compliant(self.signal1)
+
+        signal2 = AnalogSignal(self.data1quant, sampling_rate=1 * pq.kHz, name='signal2',
+                               description='test signal', file_origin='testfile.txt',
+                               array_annotations=self.arr_ann1,
+                               t_start=signal1.t_stop + signal1.sampling_period)
+
+        patched12 = self.signal1.patch(signal2)
+
+        for attr in signal1._necessary_attrs:
+            self.assertEqual(getattr(signal1, attr[0], None), getattr(patched12, attr[0], None))
+
+        assert_array_equal(np.vstack((signal1.magnitude, signal2.magnitude)),
+                           patched12.magnitude)
 
 class TestAnalogSignalFunctions(unittest.TestCase):
     def test__pickle_1d(self):

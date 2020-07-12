@@ -946,6 +946,58 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertRaises(MergeError, signal1.merge, signal3)
 
 
+    def test_patch_simple(self):
+        signal1 = IrregularlySampledSignal(signal=[0,1,2,3]*pq.s, times=[1,10,11,20]*pq.s)
+        signal2 = IrregularlySampledSignal(signal=[4,5,6]*pq.s, times=[15,16,21]*pq.s)
+
+        result = signal1.patch(signal2)
+        assert_array_equal(np.array([0,1,2,4,5,3,6]).reshape((-1, 1)), result.magnitude)
+        assert_array_equal(np.array([1,10,11,15,16,20,21]), result.times)
+        for attr in signal1._necessary_attrs:
+            if attr[0] == 'times':
+                continue
+            self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
+
+    def test_patch_no_overlap(self):
+        signal1 = IrregularlySampledSignal(signal=[0,1,2,3]*pq.s, times=range(4)*pq.s)
+        signal2 = IrregularlySampledSignal(signal=[4,5,6]*pq.s, times=range(4,7)*pq.s)
+
+        result = signal1.patch(signal2)
+        assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
+        assert_array_equal(np.arange(7), result.times)
+
+    def test_patch_multi_trace(self):
+        data1 = np.arange(4).reshape(2,2)
+        data2 = np.arange(4,8).reshape(2,2)
+        n1 = len(data1)
+        n2 = len(data2)
+        signal1 = IrregularlySampledSignal(signal=data1*pq.s, times=range(n1)*pq.s)
+        signal2 = IrregularlySampledSignal(signal=data2*pq.s, times=range(n1, n1+n2)*pq.s)
+
+        result = signal1.patch(signal2)
+        data_expected = np.array([[0,1],[2,3],[4,5],[6,7]])
+        assert_array_equal(data_expected, result.magnitude)
+
+    def test_patch_array_annotations(self):
+        array_anno1 = {'first': ['a','b']}
+        array_anno2 = {'first': ['a','b'],
+                       'second': ['c','d']}
+        data1 = np.arange(4).reshape(2,2)
+        data2 = np.arange(4,8).reshape(2,2)
+        n1 = len(data1)
+        n2 = len(data2)
+        signal1 = IrregularlySampledSignal(signal=data1*pq.s, times=range(n1)*pq.s,
+                                           array_annotations=array_anno1)
+        signal2 = IrregularlySampledSignal(signal=data2*pq.s, times=range(n1, n1+n2)*pq.s,
+                                           array_annotations=array_anno2)
+
+        result = signal1.patch(signal2)
+        assert_array_equal(array_anno1.keys(), result.array_annotations.keys())
+
+        for k in array_anno1.keys():
+            assert_array_equal(np.asarray(array_anno1[k]), result.array_annotations[k])
+
+
 class TestAnalogSignalFunctions(unittest.TestCase):
     def test__pickle(self):
         signal1 = IrregularlySampledSignal(np.arange(10.0) / 100 * pq.s, np.arange(10.0),

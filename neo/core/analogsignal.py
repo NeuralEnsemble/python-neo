@@ -29,7 +29,7 @@ else:
 import numpy as np
 import quantities as pq
 
-from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.baseneo import BaseNeo, MergeError, merge_annotations, intersect_annotations
 from neo.core.dataobject import DataObject
 from copy import copy, deepcopy
 
@@ -657,3 +657,99 @@ class AnalogSignal(BaseSignal):
         rectified_signal.array_annotations = self.array_annotations.copy()
 
         return rectified_signal
+
+    def patch(self, other, overwrite=True):
+        '''
+        Patch another signal to this one.
+
+        The signal objects are concatenated vertically
+        (row-wise, :func:`np.vstack`). Patching can be
+        used to combine signals across segments. Signals
+        have to overlap by one sample in time, i.e.
+        self.t_stop == other.t_start
+        Note: Only common array annotations common to
+        both signals are attached to the patched signal.
+
+        If the attributes of the two signal are not
+        compatible, an Exception is raised.
+
+        Required attributes of the signal are used.
+
+        Parameters
+        ----------
+        other : neo.BaseSignal
+            The object that is merged into this one.
+        overwrite : bool
+            If False, samples of this signal are overwritten
+            by other signal. If True, samples of other signal
+            are overwritten by this signal. Default: True
+
+        Returns
+        -------
+        signal : neo.BaseSignal
+            Signal containing all non-overlapping samples of
+            both source signals.
+
+        Raises
+        ------
+        MergeError
+            If `other` object has incompatible attributes.
+        '''
+
+        for attr in self._necessary_attrs:
+            if 'signal' != attr[0]:
+                if getattr(self, attr[0], None) != getattr(other, attr[0], None):
+                    if attr[0] in ['t_start','t_stop']:
+                        continue
+                    raise MergeError("Cannot patch these two signals as the %s differ." % attr[0])
+
+        if hasattr(self, "lazy_shape"):
+            if hasattr(other, "lazy_shape"):
+                if self.lazy_shape[-1] != other.lazy_shape[-1]:
+                    raise MergeError("Cannot patch signals as they contain"
+                                     " different numbers of traces.")
+                merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0], self.lazy_shape[-1])
+            else:
+                raise MergeError("Cannot patch a lazy object with a real object.")
+        if other.units != self.units:
+            other = other.rescale(self.units)
+
+        if self.t_start > other.t_stop:
+            raise MergeError('Signals do not overlap.')
+
+        # adjust overlapping signals
+        if self.t_stop + self.sampling_period >= other.t_start:
+            if not overwrite:  # removing samples of other signal
+                slice_t_start = self.t_stop + self.sampling_period
+                sliced_other = other.time_slice(slice_t_start, None)
+                stack = np.vstack((self.magnitude, sliced_other.magnitude))
+            else:  # removing samples of this signal
+                slice_t_stop = other.t_start - other.sampling_period
+                sliced_self = self.time_slice(None, slice_t_stop)
+                stack = np.vstack((sliced_self.magnitude, other.magnitude))
+        else:
+            raise MergeError("Cannot patch signals with non-overlapping times")
+
+        kwargs = {}
+        for name in ("name", "description", "file_origin"):
+            attr_self = getattr(self, name)
+            attr_other = getattr(other, name)
+            if attr_self == attr_other:
+                kwargs[name] = attr_self
+            else:
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
+        kwargs.update(merged_annotations)
+
+        kwargs['array_annotations'] = intersect_annotations(self.array_annotations,
+                                                            other.array_annotations)
+
+        signal = self.__class__(stack, units=self.units, dtype=self.dtype, copy=False,
+                                t_start=self.t_start, sampling_rate=self.sampling_rate, **kwargs)
+        signal.segment = None
+        signal.channel_index = None
+
+        if hasattr(self, "lazy_shape"):
+            signal.lazy_shape = merged_lazy_shape
+
+        return signal
