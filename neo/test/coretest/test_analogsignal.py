@@ -1574,8 +1574,8 @@ class TestAnalogSignalCombination(unittest.TestCase):
         assert_arrays_equal(mergeddata24, targdata24)
 
     def test_patch_simple(self):
-        signal1 = AnalogSignal([0,1,2,3]*pq.s, sampling_rate=1*pq.Hz)
-        signal2 = AnalogSignal([4,5,6]*pq.s, sampling_rate=1*pq.Hz,
+        signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop + signal1.sampling_period)
 
         result = signal1.patch(signal2)
@@ -1583,9 +1583,19 @@ class TestAnalogSignalCombination(unittest.TestCase):
         for attr in signal1._necessary_attrs:
             self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
 
+    def test_patch_inverse_signals(self):
+        signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
+                               t_start=signal1.t_stop + signal1.sampling_period)
+
+        result = signal2.patch(signal1)
+        assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
+        for attr in signal1._necessary_attrs:
+            self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
+
     def test_patch_no_overlap(self):
-        signal1 = AnalogSignal([0,1,2,3]*pq.s, sampling_rate=1*pq.Hz)
-        signal2 = AnalogSignal([4,5,6]*pq.s, sampling_rate=1*pq.Hz,
+        signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=10*pq.s + signal1.sampling_period)
 
         with self.assertRaises(MergeError):
@@ -1594,8 +1604,8 @@ class TestAnalogSignalCombination(unittest.TestCase):
     def test_patch_multi_trace(self):
         data1 = np.arange(4).reshape(2,2)
         data2 = np.arange(4,8).reshape(2,2)
-        signal1 = AnalogSignal(data1*pq.s, sampling_rate=1*pq.Hz)
-        signal2 = AnalogSignal(data2*pq.s, sampling_rate=1*pq.Hz,
+        signal1 = AnalogSignal(data1*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal(data2*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop + signal1.sampling_period)
 
         result = signal1.patch(signal2)
@@ -1605,20 +1615,60 @@ class TestAnalogSignalCombination(unittest.TestCase):
             self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
 
     def test_patch_overwrite_true(self):
-        signal1 = AnalogSignal([0,1,2,3]*pq.s, sampling_rate=1*pq.Hz)
-        signal2 = AnalogSignal([4,5,6]*pq.s, sampling_rate=1*pq.Hz,
+        signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop)
 
         result = signal1.patch(signal2, overwrite=True)
         assert_array_equal(np.array([0,1,2,4,5,6]).reshape((-1, 1)), result.magnitude)
 
     def test_patch_overwrite_false(self):
-        signal1 = AnalogSignal([0,1,2,3]*pq.s, sampling_rate=1*pq.Hz)
-        signal2 = AnalogSignal([4,5,6]*pq.s, sampling_rate=1*pq.Hz,
+        signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop)
 
         result = signal1.patch(signal2, overwrite=False)
         assert_array_equal(np.array([0,1,2,3,5,6]).reshape((-1, 1)), result.magnitude)
+
+    def test_patch_padding_False(self):
+        signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
+                               t_start=10*pq.s)
+
+        with self.assertRaises(MergeError):
+            result = signal1.patch(signal2, overwrite=False, padding=False)
+
+    def test_patch_padding_True(self):
+        signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
+                               t_start=signal1.t_stop + 3 * signal1.sampling_period)
+
+        result = signal1.patch(signal2, overwrite=False, padding=True)
+        assert_array_equal(np.array([0,1,2,3,np.NaN,np.NaN,np.NaN,4,5,6]).reshape((-1, 1)),
+                           result.magnitude)
+
+    def test_patch_padding_quantity(self):
+        signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
+                               t_start=signal1.t_stop + 3 * signal1.sampling_period)
+
+        result = signal1.patch(signal2, overwrite=False, padding=-1*pq.mV)
+        assert_array_equal(np.array([0,1,2,3,-1e-3,-1e-3,-1e-3,4,5,6]).reshape((-1, 1)),
+                           result.magnitude)
+
+    def test_patch_padding_invalid(self):
+        signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
+        signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
+                               t_start=signal1.t_stop + 3 * signal1.sampling_period)
+
+        with self.assertRaises(ValueError):
+            result = signal1.patch(signal2, overwrite=False, padding=1)
+        with self.assertRaises(ValueError):
+            result = signal1.patch(signal2, overwrite=False, padding=[1])
+        with self.assertRaises(ValueError):
+            result = signal1.patch(signal2, overwrite=False, padding='a')
+        with self.assertRaises(ValueError):
+            result = signal1.patch(signal2, overwrite=False, padding=np.array([1,2,3]))
 
     def test_patch_array_annotations(self):
         array_anno1 = {'first': ['a','b']}
@@ -1626,9 +1676,9 @@ class TestAnalogSignalCombination(unittest.TestCase):
                        'second': ['c','d']}
         data1 = np.arange(4).reshape(2,2)
         data2 = np.arange(4,8).reshape(2,2)
-        signal1 = AnalogSignal(data1*pq.s, sampling_rate=1*pq.Hz,
+        signal1 = AnalogSignal(data1*pq.V, sampling_rate=1*pq.Hz,
                                array_annotations=array_anno1)
-        signal2 = AnalogSignal(data2*pq.s, sampling_rate=1*pq.Hz,
+        signal2 = AnalogSignal(data2*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop + signal1.sampling_period,
                                array_annotations=array_anno2)
 

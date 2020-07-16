@@ -658,7 +658,7 @@ class AnalogSignal(BaseSignal):
 
         return rectified_signal
 
-    def patch(self, other, overwrite=True):
+    def patch(self, other, overwrite=True, padding=False):
         '''
         Patch another signal to this one.
 
@@ -679,10 +679,24 @@ class AnalogSignal(BaseSignal):
         ----------
         other : neo.BaseSignal
             The object that is merged into this one.
+            The other signal needs cover a later time period than
+            this one, i.e. self.t_start < other.t_start
         overwrite : bool
-            If False, samples of this signal are overwritten
-            by other signal. If True, samples of other signal
-            are overwritten by this signal. Default: True
+            If True, samples of the earlier (smaller t_start)
+            signal are overwritten by the later signal.
+            If False, samples of the later (higher t_start)
+            are overwritten by earlier signal.
+            Default: False
+        padding : bool, scalar quantity
+            Sampling values to use as padding in case signals
+            do not overlap.
+            If False, do not apply padding. Signals have to align or
+            overlap. If True, signals will be padded using
+            np.NaN as pad values. If a scalar quantity is provided, this
+            will be used for padding. The other signal is moved
+            forward in time by maximum one sampling period to
+            align the sampling times of both signals.
+            Default: False
 
         Returns
         -------
@@ -696,11 +710,21 @@ class AnalogSignal(BaseSignal):
             If `other` object has incompatible attributes.
         '''
 
+        if other.units != self.units:
+            other = other.rescale(self.units)
+
+        if self.t_start > other.t_start:
+            signal1, signal2 = other, self
+        else:
+            signal1, signal2 = self, other
+            # raise MergeError('Inconsistent timing of signals. Other signal needs to be later than'
+            #                  ' this signal')
+
         for attr in self._necessary_attrs:
-            if 'signal' != attr[0]:
+            if attr[0] not in ['signal', 't_start', 't_stop']:
                 if getattr(self, attr[0], None) != getattr(other, attr[0], None):
-                    if attr[0] in ['t_start','t_stop']:
-                        continue
+                    # if attr[0] in ['t_start','t_stop']:
+                    #     continue
                     raise MergeError("Cannot patch these two signals as the %s differ." % attr[0])
 
         if hasattr(self, "lazy_shape"):
@@ -711,24 +735,45 @@ class AnalogSignal(BaseSignal):
                 merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0], self.lazy_shape[-1])
             else:
                 raise MergeError("Cannot patch a lazy object with a real object.")
-        if other.units != self.units:
-            other = other.rescale(self.units)
 
-        if self.t_start > other.t_stop:
-            raise MergeError('Signals do not overlap.')
+        #  in case of non-overlapping signals consider padding
+        if signal2.t_start > signal1.t_stop + signal1.sampling_period:
+            if padding != False:
+                logger.warning('Signals will be padded using {}.'.format(padding))
+                pad_time = signal2.t_start-signal1.t_stop
+                n_pad_samples = int(((pad_time)*self.sampling_rate).rescale('dimensionless'))
+                if padding is True:
+                    padding = np.NaN * self.units
+                if isinstance(padding, pq.Quantity):
+                    padding = padding.rescale(self.units).magnitude
+                else:
+                    raise ValueError('Invalid type of padding value. Please provide a bool value '
+                                     'or a quantities object.')
+                pad_data = np.full((n_pad_samples,) + signal1.shape[1:], padding)
 
-        # adjust overlapping signals
-        if self.t_stop + self.sampling_period >= other.t_start:
-            if not overwrite:  # removing samples of other signal
-                slice_t_start = self.t_stop + self.sampling_period
-                sliced_other = other.time_slice(slice_t_start, None)
-                stack = np.vstack((self.magnitude, sliced_other.magnitude))
-            else:  # removing samples of this signal
-                slice_t_stop = other.t_start - other.sampling_period
-                sliced_self = self.time_slice(None, slice_t_stop)
-                stack = np.vstack((sliced_self.magnitude, other.magnitude))
+                # create new signal 1 with extended data, but keep array_annotations
+                signal_tmp = signal1.duplicate_with_new_data(np.vstack((signal1.magnitude, pad_data)))
+                signal_tmp.array_annotations = signal1.array_annotations
+                signal1 = signal_tmp
+            else:
+                raise MergeError('Signals do not overlap, but no padding is provided.'
+                                 'Please provide a padding mode.')
+
+        #  in case of overlapping signals slice according to overwrite parameter
+        elif signal2.t_start < signal1.t_stop + signal1.sampling_period:
+            n_samples = int(((signal1.t_stop - signal2.t_start)*signal1.sampling_rate).simplified)
+            logger.warning('Overwriting {} samples while patching signals.'.format(n_samples))
+            if not overwrite:  # removing samples second signal
+                slice_t_start = signal1.t_stop + signal1.sampling_period
+                signal2 = signal2.time_slice(slice_t_start, None)
+            else:  # removing samples of the first signal
+                slice_t_stop = signal2.t_start - signal2.sampling_period
+                signal1 = signal1.time_slice(None, slice_t_stop)
         else:
-            raise MergeError("Cannot patch signals with non-overlapping times")
+            assert signal2.t_start == signal1.t_stop + signal1.sampling_period, \
+                "Cannot patch signals with non-overlapping times"
+
+        stack = np.vstack((signal1.magnitude, signal2.magnitude))
 
         kwargs = {}
         for name in ("name", "description", "file_origin"):
@@ -745,7 +790,7 @@ class AnalogSignal(BaseSignal):
                                                             other.array_annotations)
 
         signal = self.__class__(stack, units=self.units, dtype=self.dtype, copy=False,
-                                t_start=self.t_start, sampling_rate=self.sampling_rate, **kwargs)
+                                t_start=signal1.t_start, sampling_rate=self.sampling_rate, **kwargs)
         signal.segment = None
         signal.channel_index = None
 
