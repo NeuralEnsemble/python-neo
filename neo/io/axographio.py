@@ -48,7 +48,7 @@ class AxographIO(AxographRawIO, BaseFromRaw):
     name = 'AxographIO'
     description = 'This IO reads .axgd/.axgx files created with AxoGraph'
 
-    _prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'group-by-same-units'
 
     def __init__(self, filename='', force_single_segment=False):
         AxographRawIO.__init__(self, filename, force_single_segment)

@@ -40,7 +40,7 @@ class RawBinarySignalIO(RawBinarySignalRawIO, BaseFromRaw):
 
     """
 
-    _prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'group-by-same-units'
 
     is_readable = True
     is_writable = True

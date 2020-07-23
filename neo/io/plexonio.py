@@ -13,7 +13,7 @@ class PlexonIO(PlexonRawIO, BaseFromRaw):
     Compatible with versions 100 to 106.
     Other versions have not been tested.
     """
-    _prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'group-by-same-units'
 
     def __init__(self, filename):
         PlexonRawIO.__init__(self, filename=filename)
