@@ -183,7 +183,7 @@ class NeuralynxRawIO(BaseRawIO):
 
                     if (os.path.getsize(filename) <= HEADER_SIZE):
                         self._empty_nev.append(filename)
-                        data = np.zeros((0,), dtype=dtype)
+                        data = np.zeros((0,), dtype=nev_dtype)
                         internal_ids = []
                     else:
                         data = np.memmap(filename, dtype=nev_dtype, mode='r', offset=HEADER_SIZE)
