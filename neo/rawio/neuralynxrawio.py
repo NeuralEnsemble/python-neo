@@ -73,6 +73,7 @@ class NeuralynxRawIO(BaseRawIO):
         self.internal_unit_ids = []  # channel_index > ((channel_name, channel_id), unit_id)
         self.internal_event_ids = []
         self._empty_ncs = []  # this list contains filenames of empty records
+        self._empty_nev = []
         self._empty_nse_ntt = []
 
         # explore the directory looking for ncs, nev, nse and ntt
@@ -178,10 +179,14 @@ class NeuralynxRawIO(BaseRawIO):
                     # an event channel
                     # each ('event_id',  'ttl_input') give a new event channel
                     self.nev_filenames[chan_id] = filename
-                    data = np.memmap(
-                        filename, dtype=nev_dtype, mode='r', offset=HEADER_SIZE)
-                    internal_ids = np.unique(
-                        data[['event_id', 'ttl_input']]).tolist()
+
+                    if (os.path.getsize(filename) <= HEADER_SIZE):
+                        self._empty_nev.append(filename)
+                        data = np.zeros((0,), dtype=nev_dtype)
+                        internal_ids = []
+                    else:
+                        data = np.memmap(filename, dtype=nev_dtype, mode='r', offset=HEADER_SIZE)
+                        internal_ids = np.unique(data[['event_id', 'ttl_input']]).tolist()
                     for internal_event_id in internal_ids:
                         if internal_event_id not in self.internal_event_ids:
                             event_id, ttl_input = internal_event_id
