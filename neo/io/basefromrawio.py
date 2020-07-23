@@ -228,7 +228,11 @@ class BaseFromRaw(BaseIO):
         """
 
         if lazy:
-            assert time_slice is None, 'For lazy=true you must specify time_slice when loading'
+            assert time_slice is None,\
+                'For lazy=True you must specify time_slice when doing LazyObject.load(time_slice=...)'
+
+            assert not load_waveforms,\
+                'For lazy=True you must specify load_waveforms when doing SpikeTrain.load(load_waveforms=...)'
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
