@@ -473,8 +473,9 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         raise TypeError(
             'block needs to be a Block, not %s' % type(block))
 
-    old_segments = copy.copy(block.segments)
-    for seg in old_segments:
+    new_block = neo.Block()
+
+    for seg in block.segments:
         epochs = _get_from_list(seg.epochs, prop=properties)
         if len(epochs) > 1:
             warnings.warn(
@@ -490,10 +491,11 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         for epoch in epochs:
             new_segments = cut_segment_by_epoch(
                 seg, epoch=epoch, reset_time=reset_time)
-            block.segments += new_segments
+            new_block.segments.extend(new_segments)
 
-        block.segments.remove(seg)
-    block.create_many_to_one_relationship(force=True)
+    new_block.create_many_to_one_relationship(force=True)
+
+    return new_block
 
 
 def cut_segment_by_epoch(seg, epoch, reset_time=False):
@@ -530,10 +532,6 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
     if not isinstance(seg, neo.Segment):
         raise TypeError(
             'Seg needs to be of type Segment, not %s' % type(seg))
-
-    if type(seg.parents[0]) != neo.Block:
-        raise ValueError(
-            'Segment has no block as parent. Can not cut segment.')
 
     if not isinstance(epoch, neo.Epoch):
         raise TypeError(
