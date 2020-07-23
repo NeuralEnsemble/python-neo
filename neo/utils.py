@@ -555,3 +555,75 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
         segments.append(subseg)
 
     return segments
+
+
+def is_block_rawio_compatible(block, return_problems=False):
+    """
+    The neo.rawio layer have some restriction compared to neo.io layer:
+      * consistent channels across segments
+      * array annotations can only be basic
+      * consistent linking between objects
+      * no IrregularlySampledSignal
+
+    This function test if a neo.Block that could be written in a nix file could be read
+    back with the NIXRawIO.
+
+    Parameters
+    ----------
+    block: Block
+        A blck
+    return_problems: bool (False by default)
+        Control if a list a str that desribe problems is also provided as return value
+
+    Returns:
+    --------
+    is_rawio_compatible: bool
+        Compatible or not. 
+    problems: list of txt
+        Optional returned with `return_problems`.
+        A list that describe problems for rawio compatibility.
+    """
+    assert len(block.segments) > 0, "This block don't have segments"
+
+    problems = []
+
+    # check that all Segments have the same number of object.
+    n_sig = len(block.segments[0].analogsignals)
+    n_st = len(block.segments[0].spiketrains)
+    n_ev = len(block.segments[0].events)
+    n_ep = len(block.segments[0].epochs)
+    sig_count_consistent = True
+    for seg in block.segments:
+        if len(seg.analogsignals) != n_sig:
+            problems.append('Number of AnalogSignal is not consitent across segments')
+            sig_count_consistent = False
+        if len(seg.spiketrains) != n_st:
+            problems.append('Number of SpikeTrain is not consitent across segments')
+        if len(seg.events) != n_ev:
+            problems.append('Number of Event is not consitent across segments')
+        if len(seg.epochs) != n_ep:
+            problems.append('Number of Epoch is not consitent across segments')
+
+    # check for AnalogSigal that sampling_rate/units/number of channel is consistent across segments.
+    if sig_count_consistent:
+        seg0 = block.segments[0]
+        for i in range(n_sig):
+            for seg in block.segments:
+                if seg.analogsignals[i].sampling_rate != seg0.analogsignals[i].sampling_rate:
+                    problems.append('AnalogSignal have inconstitent sampling rate across segment')
+                if seg.analogsignals[i].shape[1] != seg0.analogsignals[i].shape[1]:
+                    problems.append('AnalogSignal have inconstitent channel count across segment')
+                if seg.analogsignals[i].units != seg0.analogsignals[i].units:
+                    problems.append('AnalogSignal have inconstitent units across segment')
+
+    # check no IrregularlySampledSignal
+    for seg in block.segments:
+        if len(seg.irregularlysampledsignals) > 0:
+            problems.append('IrregularlySampledSignal are not raw compatible')
+    
+    # returns
+    is_rawio_compatible = (len(problems) == 0)    
+    if return_problems:
+        return is_rawio_compatible, problems
+    else:
+        return is_rawio_compatible
