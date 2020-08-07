@@ -577,23 +577,51 @@ txt_header_keys = [
     (r'Feature \w+ \d+', '', None),
     ('SessionUUID', '', None),
     ('FileUUID', '', None),
-    ('CheetahRev', '', None),  # only for old version
+    ('CheetahRev', '', None),  # only for older versions of Cheetah
     ('ProbeName', '', None),
     ('OriginalFileName', '', None),
     ('TimeCreated', '', None),
     ('TimeClosed', '', None),
-    ('ApplicationName', '', None),  # also include version number
+    ('ApplicationName', '', None),  # also include version number when present
     ('AcquisitionSystem', '', None),
     ('ReferenceChannel', '', None),
 ]
 
 
+# Filename and datetime may appear in header lines starting with # at
+# beginning of header or in later versions as a property. The exact format
+# used depends on the application name and its version as well as the
+# -FileVersion property.
+#
+# There are 3 styles understood by this code and the patterns used for parsing
+# the items within each are stored in a dictionary. Each dictionary is then
+# stored in main dictionary keyed by an abbreviation for the style.
+header_pattern_dicts = {
+    # Cheetah before version 5 and BML
+    'bv5': dict(
+        datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)  At Time: (?P<time>\S+)',
+        filename_regex = r'## File Name: (?P<filename>\S+)',
+        datetimeformat = '%m/%d/%Y %H:%M:%S.%f'),
+    # Cheetah version 5 before and including v 5.6.4
+    'bv5.6.4': dict(
+        datetime1_regex = r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)',
+        datetime2_regex = r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)',
+        filename_regex = r'## File Name (?P<filename>\S+)',
+        datetimeformat = '%m/%d/%Y %H:%M:%S.%f'),
+    # Cheetah after v 5.6.4 and default for others such as Pegasus
+    'def': dict(
+        datetime1_regex=r'-TimeCreated (?P<date>\S+) (?P<time>\S+)',
+        datetime2_regex = r'-TimeClosed (?P<date>\S+) (?P<time>\S+)',
+        filename_regex = r'-OriginalFileName "?(?P<filename>\S+)"?',
+        datetimeformat = '%Y/%m/%d %H:%M:%S')
+    }
+
+
 def read_txt_header(filename):
     """
-    All file in neuralynx contains a 16kB hedaer in txt
-    format.
-    This function parse it to create info dict.
-    This include datetime
+    All file in neuralynx contains a 16kB header in txt format.
+    This function parses it to create info dict.
+    This includes datetime.
     """
     with open(filename, 'rb') as f:
         txt_header = f.read(HEADER_SIZE)
@@ -635,16 +663,22 @@ def read_txt_header(filename):
         info['channel_names'] = [name] * len(info['channel_ids'])
 
     # version and application name
+    # older Cheetah versions with CheetahRev property
     if 'CheetahRev' in info:
         assert 'ApplicationName' not in info
         info['ApplicationName'] = 'Cheetah'
         app_version = info['CheetahRev']
-    else:
-        assert 'ApplicationName' in info
+    # new file version 3.4 does not contain CheetahRev property, but ApplicationName instead
+    elif 'ApplicationName' in info:
         pattern = r'(\S*) "([\S ]*)"'
         match = re.findall(pattern, info['ApplicationName'])
         assert len(match) == 1, 'impossible to find application name and version'
         info['ApplicationName'], app_version = match[0]
+    # BML Ncs file writing contained neither property, assume BML version 2
+    else:
+        info['ApplicationName'] = 'BML'
+        app_version = "2.0"
+
     info['ApplicationVersion'] = distutils.version.LooseVersion(app_version)
 
     # convert bit_to_microvolt
@@ -665,36 +699,33 @@ def read_txt_header(filename):
         assert len(info['InputRange']) == len(chid_entries), \
             'Number of channel ids does not match input range values.'
 
-    # filename and datetime depend on app name and its version
-    if info['ApplicationName'] == 'Cheetah':
-        if info['ApplicationVersion'] <= '5.6.4':
-            old_date_format = True
+    # Filename and datetime depend on app name, app version, and -FileVersion
+    an = info['ApplicationName']
+    if an == 'Cheetah':
+        av = info['ApplicationVersion']
+        if av < '5':
+            hpd = header_pattern_dicts['bv5']
+        elif av <= '5.6.4':
+            hpd = header_pattern_dicts['bv5.6.4']
         else:
-            old_date_format = False
+            hpd = header_pattern_dicts['def']
+    elif an == 'BML':
+        hpd = header_pattern_dicts['bv5']
     else:
-        # for other version (pegasus, ..) I don't known the rules
-        old_date_format = (r'## Time Opened' in txt_header)
+        hpd = header_pattern_dicts['def']
 
-    if old_date_format:
-        datetime1_regex = r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
-        datetime2_regex = r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
-        filename_regex = r'## File Name (?P<filename>\S+)'
-        datetimeformat = '%m/%d/%Y %H:%M:%S.%f'
-    else:
-        datetime1_regex = r'-TimeCreated (?P<date>\S+) (?P<time>\S+)'
-        datetime2_regex = r'-TimeClosed (?P<date>\S+) (?P<time>\S+)'
-        filename_regex = r'-OriginalFileName "?(?P<filename>\S+)"?'
-        datetimeformat = '%Y/%m/%d %H:%M:%S'
+    original_filename = re.search(hpd['filename_regex'], txt_header).groupdict()['filename']
 
-    original_filename = re.search(filename_regex, txt_header).groupdict()['filename']
-
-    dt1 = re.search(datetime1_regex, txt_header).groupdict()
-    dt2 = re.search(datetime2_regex, txt_header).groupdict()
-
+    # opening time
+    dt1 = re.search(hpd['datetime1_regex'], txt_header).groupdict()
     info['recording_opened'] = datetime.datetime.strptime(
-        dt1['date'] + ' ' + dt1['time'], datetimeformat)
-    info['recording_closed'] = datetime.datetime.strptime(
-        dt2['date'] + ' ' + dt2['time'], datetimeformat)
+        dt1['date'] + ' ' + dt1['time'], hpd['datetimeformat'])
+
+    # close time, if available
+    if 'datetime2_regex' in hpd:
+        dt2 = re.search(hpd['datetime2_regex'], txt_header).groupdict()
+        info['recording_closed'] = datetime.datetime.strptime(
+            dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
 
     return info
 
