@@ -599,7 +599,7 @@ txt_header_keys = [
 header_pattern_dicts = {
     # Cheetah before version 5 and BML
     'bv5': dict(
-        datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)  At Time: (?P<time>\S+)',
+        datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)  At Time: (?P<time>\S+)',
         filename_regex = r'## File Name: (?P<filename>\S+)',
         datetimeformat = '%m/%d/%Y %H:%M:%S.%f'),
     # Cheetah version 5 before and including v 5.6.4
