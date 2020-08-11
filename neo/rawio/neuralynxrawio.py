@@ -11,7 +11,7 @@ NTT contains spikes and waveforms for tetrodes
 
 NCS can contains gaps that can be detected in inregularity
 in timestamps of data blocks. Each gap lead to one new segment.
-NCS files need to be read entirely to detect that gaps.... too bad....
+NCS files need to be read entirely to detect those gaps.... too bad....
 
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia
@@ -419,7 +419,7 @@ class NeuralynxRawIO(BaseRawIO):
 
     def read_ncs_files(self, ncs_filenames):
         """
-        Given a list of ncs files contrsuct:
+        Given a list of ncs files construct:
             * self._sigs_memmap = [ {} for seg_index in range(self._nb_segment) ]
             * self._sigs_t_start = []
             * self._sigs_t_stop = []
@@ -437,6 +437,7 @@ class NeuralynxRawIO(BaseRawIO):
         gap_indexes can be given (when cached) to avoid full read.
 
         """
+        # :TODO: Needs to account for gaps being different in different blocks of channels.
         if len(ncs_filenames) == 0:
             self._nb_segment = 1
             self._timestamp_limits = None
@@ -462,6 +463,9 @@ class NeuralynxRawIO(BaseRawIO):
             timestamps0 = data0['timestamp']
             deltas0 = np.diff(timestamps0)
 
+            # :TODO: This algorithm needs to account for older style files which had a rounded
+            # :TODO: off sampling rate in the header.
+            #
             # It should be that:
             # gap_indexes, = np.nonzero(deltas0!=good_delta)
             # but for a file I have found many deltas0==15999, 16000, 16001 (for sampling at 32000)
