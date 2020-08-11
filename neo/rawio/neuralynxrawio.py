@@ -630,7 +630,7 @@ def read_txt_header(filename):
     # find keys
     info = OrderedDict()
     for k1, k2, type_ in txt_header_keys:
-        pattern = r'-(?P<name>' + k1 + r') (?P<value>[\S ]*)'
+        pattern = r'-(?P<name>' + k1 + r')\s+(?P<value>[\S ]*)'
         matches = re.findall(pattern, txt_header)
         for match in matches:
             if k2 == '':
