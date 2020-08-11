@@ -108,7 +108,7 @@ class NeuralynxRawIO(BaseRawIO):
                     # a signal channels
                     units = 'uV'
                     gain = info['bit_to_microVolt'][idx]
-                    if info['input_inverted']:
+                    if info.get('input_inverted', False):
                         gain *= -1
                     offset = 0.
                     group_id = 0
@@ -166,7 +166,7 @@ class NeuralynxRawIO(BaseRawIO):
                         unit_id = '{}'.format(unit_id)
                         wf_units = 'uV'
                         wf_gain = info['bit_to_microVolt'][idx]
-                        if info['input_inverted']:
+                        if info.get('input_inverted',False):
                             wf_gain *= -1
                         wf_offset = 0.
                         wf_left_sweep = -1  # NOT KNOWN
