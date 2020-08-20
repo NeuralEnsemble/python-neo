@@ -645,6 +645,9 @@ class NlxHeader(OrderedDict):
             txt_header = f.read(NlxHeader.HEADER_SIZE)
         txt_header = txt_header.strip(b'\x00').decode('latin-1')
 
+        # must start with 8 # characters
+        assert txt_header.startswith("########"),'Neuralynx files must start with 8 # characters.'
+
         # find keys
         info = NlxHeader()
         for k1, k2, type_ in NlxHeader.txt_header_keys:
