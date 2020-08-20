@@ -30,7 +30,6 @@ import datetime
 from collections import OrderedDict
 
 BLOCK_SIZE = 512  # nb sample per signal block
-HEADER_SIZE = 2 ** 14  # file have a txt header of 16kB
 
 
 class NeuralynxRawIO(BaseRawIO):
@@ -91,12 +90,12 @@ class NeuralynxRawIO(BaseRawIO):
             if ext not in self.extensions:
                 continue
 
-            if (os.path.getsize(filename) <= HEADER_SIZE) and (ext in ['ncs']):
+            if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE) and (ext in ['ncs']):
                 self._empty_ncs.append(filename)
                 continue
 
             # All file have more or less the same header structure
-            info = read_txt_header(filename)
+            info = NlxHeader.buildForFile(filename)
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
@@ -149,11 +148,11 @@ class NeuralynxRawIO(BaseRawIO):
 
                     dtype = get_nse_or_ntt_dtype(info, ext)
 
-                    if (os.path.getsize(filename) <= HEADER_SIZE):
+                    if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE):
                         self._empty_nse_ntt.append(filename)
                         data = np.zeros((0,), dtype=dtype)
                     else:
-                        data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
+                        data = np.memmap(filename, dtype=dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
 
                     self._spike_memmap[chan_uid] = data
 
@@ -181,12 +180,12 @@ class NeuralynxRawIO(BaseRawIO):
                     # each ('event_id',  'ttl_input') give a new event channel
                     self.nev_filenames[chan_id] = filename
 
-                    if (os.path.getsize(filename) <= HEADER_SIZE):
+                    if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE):
                         self._empty_nev.append(filename)
                         data = np.zeros((0,), dtype=nev_dtype)
                         internal_ids = []
                     else:
-                        data = np.memmap(filename, dtype=nev_dtype, mode='r', offset=HEADER_SIZE)
+                        data = np.memmap(filename, dtype=nev_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
                         internal_ids = np.unique(data[['event_id', 'ttl_input']]).tolist()
                     for internal_event_id in internal_ids:
                         if internal_event_id not in self.internal_event_ids:
@@ -447,7 +446,7 @@ class NeuralynxRawIO(BaseRawIO):
         chan_uid0 = list(ncs_filenames.keys())[0]
         filename0 = ncs_filenames[chan_uid0]
 
-        data0 = np.memmap(filename0, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
+        data0 = np.memmap(filename0, dtype=ncs_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
 
         gap_indexes = None
         lost_indexes = None
@@ -510,7 +509,7 @@ class NeuralynxRawIO(BaseRawIO):
         # create segment with subdata block/t_start/t_stop/length
         for chan_uid, ncs_filename in self.ncs_filenames.items():
 
-            data = np.memmap(ncs_filename, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
+            data = np.memmap(ncs_filename, dtype=ncs_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
             assert data.size == data0.size, 'ncs files do not have the same data length'
 
             for seg_index, (i0, i1) in enumerate(gap_pairs):
@@ -535,204 +534,225 @@ class NeuralynxRawIO(BaseRawIO):
                     length = subdata.size * BLOCK_SIZE
                     self._sigs_length.append(length)
 
+class NcsBlocks():
+    """
+    Contains information regarding the blocks of records in an Ncs file.
+    Factory methods perform parsing of this information from an Ncs file or
+    confirmation that file agrees with block structure.
+    """
 
-# Keys funcitons
-def _to_bool(txt):
-    if txt == 'True':
-        return True
-    elif txt == 'False':
-        return False
-    else:
-        raise Exception('Can not convert %s to bool' % (txt))
+    startBlocks = []
+    endBlocks = []
+    sampFreqUsed = 0
+    microsPerSampUsed = 0
 
+class NlxHeader(OrderedDict):
+    """
+    Representation of basic information in all 16 kbytes Neuralynx file headers,
+    including dates opened and closed if given.
+    """
 
-# keys in
-txt_header_keys = [
-    ('AcqEntName', 'channel_names', None),  # used
-    ('FileType', '', None),
-    ('FileVersion', '', None),
-    ('RecordSize', '', None),
-    ('HardwareSubSystemName', '', None),
-    ('HardwareSubSystemType', '', None),
-    ('SamplingFrequency', 'sampling_rate', float),  # used
-    ('ADMaxValue', '', None),
-    ('ADBitVolts', 'bit_to_microVolt', None),  # used
-    ('NumADChannels', '', None),
-    ('ADChannel', 'channel_ids', None),  # used
-    ('InputRange', '', None),
-    ('InputInverted', 'input_inverted', _to_bool),  # used
-    ('DSPLowCutFilterEnabled', '', None),
-    ('DspLowCutFrequency', '', None),
-    ('DspLowCutNumTaps', '', None),
-    ('DspLowCutFilterType', '', None),
-    ('DSPHighCutFilterEnabled', '', None),
-    ('DspHighCutFrequency', '', None),
-    ('DspHighCutNumTaps', '', None),
-    ('DspHighCutFilterType', '', None),
-    ('DspDelayCompensation', '', None),
-    ('DspFilterDelay_µs', '', None),
-    ('DisabledSubChannels', '', None),
-    ('WaveformLength', '', int),
-    ('AlignmentPt', '', None),
-    ('ThreshVal', '', None),
-    ('MinRetriggerSamples', '', None),
-    ('SpikeRetriggerTime', '', None),
-    ('DualThresholding', '', None),
-    (r'Feature \w+ \d+', '', None),
-    ('SessionUUID', '', None),
-    ('FileUUID', '', None),
-    ('CheetahRev', '', None),  # only for older versions of Cheetah
-    ('ProbeName', '', None),
-    ('OriginalFileName', '', None),
-    ('TimeCreated', '', None),
-    ('TimeClosed', '', None),
-    ('ApplicationName', '', None),  # also include version number when present
-    ('AcquisitionSystem', '', None),
-    ('ReferenceChannel', '', None),
-]
+    HEADER_SIZE = 2 ** 14  # Neuralynx files have a txt header of 16kB
 
+    # helper function to interpret boolean keys
+    def _to_bool(txt):
+        if txt == 'True':
+            return True
+        elif txt == 'False':
+            return False
+        else:
+            raise Exception('Can not convert %s to bool' % (txt))
 
-# Filename and datetime may appear in header lines starting with # at
-# beginning of header or in later versions as a property. The exact format
-# used depends on the application name and its version as well as the
-# -FileVersion property.
-#
-# There are 3 styles understood by this code and the patterns used for parsing
-# the items within each are stored in a dictionary. Each dictionary is then
-# stored in main dictionary keyed by an abbreviation for the style.
-header_pattern_dicts = {
-    # Cheetah before version 5 and BML
-    'bv5': dict(
-        datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)  At Time: (?P<time>\S+)',
-        filename_regex = r'## File Name: (?P<filename>\S+)',
-        datetimeformat = '%m/%d/%Y %H:%M:%S.%f'),
-    # Cheetah version 5 before and including v 5.6.4
-    'bv5.6.4': dict(
-        datetime1_regex = r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)',
-        datetime2_regex = r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)',
-        filename_regex = r'## File Name (?P<filename>\S+)',
-        datetimeformat = '%m/%d/%Y %H:%M:%S.%f'),
-    # Cheetah after v 5.6.4 and default for others such as Pegasus
-    'def': dict(
-        datetime1_regex=r'-TimeCreated (?P<date>\S+) (?P<time>\S+)',
-        datetime2_regex = r'-TimeClosed (?P<date>\S+) (?P<time>\S+)',
-        filename_regex = r'-OriginalFileName "?(?P<filename>\S+)"?',
-        datetimeformat = '%Y/%m/%d %H:%M:%S')
+    # keys that may be present in header which we parse
+    txt_header_keys = [
+        ('AcqEntName', 'channel_names', None),  # used
+        ('FileType', '', None),
+        ('FileVersion', '', None),
+        ('RecordSize', '', None),
+        ('HardwareSubSystemName', '', None),
+        ('HardwareSubSystemType', '', None),
+        ('SamplingFrequency', 'sampling_rate', float),  # used
+        ('ADMaxValue', '', None),
+        ('ADBitVolts', 'bit_to_microVolt', None),  # used
+        ('NumADChannels', '', None),
+        ('ADChannel', 'channel_ids', None),  # used
+        ('InputRange', '', None),
+        ('InputInverted', 'input_inverted', _to_bool),  # used
+        ('DSPLowCutFilterEnabled', '', None),
+        ('DspLowCutFrequency', '', None),
+        ('DspLowCutNumTaps', '', None),
+        ('DspLowCutFilterType', '', None),
+        ('DSPHighCutFilterEnabled', '', None),
+        ('DspHighCutFrequency', '', None),
+        ('DspHighCutNumTaps', '', None),
+        ('DspHighCutFilterType', '', None),
+        ('DspDelayCompensation', '', None),
+        ('DspFilterDelay_µs', '', None),
+        ('DisabledSubChannels', '', None),
+        ('WaveformLength', '', int),
+        ('AlignmentPt', '', None),
+        ('ThreshVal', '', None),
+        ('MinRetriggerSamples', '', None),
+        ('SpikeRetriggerTime', '', None),
+        ('DualThresholding', '', None),
+        (r'Feature \w+ \d+', '', None),
+        ('SessionUUID', '', None),
+        ('FileUUID', '', None),
+        ('CheetahRev', '', None),  # only for older versions of Cheetah
+        ('ProbeName', '', None),
+        ('OriginalFileName', '', None),
+        ('TimeCreated', '', None),
+        ('TimeClosed', '', None),
+        ('ApplicationName', '', None),  # also include version number when present
+        ('AcquisitionSystem', '', None),
+        ('ReferenceChannel', '', None),
+    ]
+
+    # Filename and datetime may appear in header lines starting with # at
+    # beginning of header or in later versions as a property. The exact format
+    # used depends on the application name and its version as well as the
+    # -FileVersion property.
+    #
+    # There are 3 styles understood by this code and the patterns used for parsing
+    # the items within each are stored in a dictionary. Each dictionary is then
+    # stored in main dictionary keyed by an abbreviation for the style.
+    header_pattern_dicts = {
+        # Cheetah before version 5 and BML
+        'bv5': dict(
+            datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)  At Time: (?P<time>\S+)',
+            filename_regex=r'## File Name: (?P<filename>\S+)',
+            datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
+        # Cheetah version 5 before and including v 5.6.4
+        'bv5.6.4': dict(
+            datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)',
+            datetime2_regex=r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)',
+            filename_regex=r'## File Name (?P<filename>\S+)',
+            datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
+        # Cheetah after v 5.6.4 and default for others such as Pegasus
+        'def': dict(
+            datetime1_regex=r'-TimeCreated (?P<date>\S+) (?P<time>\S+)',
+            datetime2_regex=r'-TimeClosed (?P<date>\S+) (?P<time>\S+)',
+            filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
+            datetimeformat='%Y/%m/%d %H:%M:%S')
     }
 
+    def buildForFile(filename):
+        """
+        Factory function to build NlxHeader for a given file.
+        """
 
-def read_txt_header(filename):
-    """
-    All file in neuralynx contains a 16kB header in txt format.
-    This function parses it to create info dict.
-    This includes datetime.
-    """
-    with open(filename, 'rb') as f:
-        txt_header = f.read(HEADER_SIZE)
-    txt_header = txt_header.strip(b'\x00').decode('latin-1')
+        with open(filename, 'rb') as f:
+            txt_header = f.read(NlxHeader.HEADER_SIZE)
+        txt_header = txt_header.strip(b'\x00').decode('latin-1')
 
-    # find keys
-    info = OrderedDict()
-    for k1, k2, type_ in txt_header_keys:
-        pattern = r'-(?P<name>' + k1 + r')\s+(?P<value>[\S ]*)'
-        matches = re.findall(pattern, txt_header)
-        for match in matches:
-            if k2 == '':
-                name = match[0]
+        # find keys
+        info = NlxHeader()
+        for k1, k2, type_ in NlxHeader.txt_header_keys:
+            pattern = r'-(?P<name>' + k1 + r')\s+(?P<value>[\S ]*)'
+            matches = re.findall(pattern, txt_header)
+            for match in matches:
+                if k2 == '':
+                    name = match[0]
+                else:
+                    name = k2
+                value = match[1].rstrip(' ')
+                if type_ is not None:
+                    value = type_(value)
+                info[name] = value
+
+        # if channel_ids or s not in info then the filename is used
+        name = os.path.splitext(os.path.basename(filename))[0]
+
+        # convert channel ids
+        if 'channel_ids' in info:
+            chid_entries = re.findall(r'\w+', info['channel_ids'])
+            info['channel_ids'] = [int(c) for c in chid_entries]
+        else:
+            info['channel_ids'] = [name]
+
+        # convert channel names
+        if 'channel_names' in info:
+            name_entries = re.findall(r'\w+', info['channel_names'])
+            if len(name_entries) == 1:
+                info['channel_names'] = name_entries * len(info['channel_ids'])
+            assert len(info['channel_names']) == len(info['channel_ids']), \
+                'Number of channel ids does not match channel names.'
+        else:
+            info['channel_names'] = [name] * len(info['channel_ids'])
+
+        # version and application name
+        # older Cheetah versions with CheetahRev property
+        if 'CheetahRev' in info:
+            assert 'ApplicationName' not in info
+            info['ApplicationName'] = 'Cheetah'
+            app_version = info['CheetahRev']
+        # new file version 3.4 does not contain CheetahRev property, but ApplicationName instead
+        elif 'ApplicationName' in info:
+            pattern = r'(\S*) "([\S ]*)"'
+            match = re.findall(pattern, info['ApplicationName'])
+            assert len(match) == 1, 'impossible to find application name and version'
+            info['ApplicationName'], app_version = match[0]
+        # BML Ncs file writing contained neither property, assume BML version 2
+        else:
+            info['ApplicationName'] = 'BML'
+            app_version = "2.0"
+
+        info['ApplicationVersion'] = distutils.version.LooseVersion(app_version)
+
+        # convert bit_to_microvolt
+        if 'bit_to_microVolt' in info:
+            btm_entries = re.findall(r'\S+', info['bit_to_microVolt'])
+            if len(btm_entries) == 1:
+                btm_entries = btm_entries * len(info['channel_ids'])
+            info['bit_to_microVolt'] = [float(e) * 1e6 for e in btm_entries]
+            assert len(info['bit_to_microVolt']) == len(info['channel_ids']), \
+                'Number of channel ids does not match bit_to_microVolt conversion factors.'
+
+        if 'InputRange' in info:
+            ir_entries = re.findall(r'\w+', info['InputRange'])
+            if len(ir_entries) == 1:
+                info['InputRange'] = [int(ir_entries[0])] * len(chid_entries)
             else:
-                name = k2
-            value = match[1].rstrip(' ')
-            if type_ is not None:
-                value = type_(value)
-            info[name] = value
+                info['InputRange'] = [int(e) for e in ir_entries]
+            assert len(info['InputRange']) == len(chid_entries), \
+                'Number of channel ids does not match input range values.'
 
-    # if channel_ids or s not in info then the filename is used
-    name = os.path.splitext(os.path.basename(filename))[0]
-
-    # convert channel ids
-    if 'channel_ids' in info:
-        chid_entries = re.findall(r'\w+', info['channel_ids'])
-        info['channel_ids'] = [int(c) for c in chid_entries]
-    else:
-        info['channel_ids'] = [name]
-
-    # convert channel names
-    if 'channel_names' in info:
-        name_entries = re.findall(r'\w+', info['channel_names'])
-        if len(name_entries) == 1:
-            info['channel_names'] = name_entries * len(info['channel_ids'])
-        assert len(info['channel_names']) == len(info['channel_ids']), \
-            'Number of channel ids does not match channel names.'
-    else:
-        info['channel_names'] = [name] * len(info['channel_ids'])
-
-    # version and application name
-    # older Cheetah versions with CheetahRev property
-    if 'CheetahRev' in info:
-        assert 'ApplicationName' not in info
-        info['ApplicationName'] = 'Cheetah'
-        app_version = info['CheetahRev']
-    # new file version 3.4 does not contain CheetahRev property, but ApplicationName instead
-    elif 'ApplicationName' in info:
-        pattern = r'(\S*) "([\S ]*)"'
-        match = re.findall(pattern, info['ApplicationName'])
-        assert len(match) == 1, 'impossible to find application name and version'
-        info['ApplicationName'], app_version = match[0]
-    # BML Ncs file writing contained neither property, assume BML version 2
-    else:
-        info['ApplicationName'] = 'BML'
-        app_version = "2.0"
-
-    info['ApplicationVersion'] = distutils.version.LooseVersion(app_version)
-
-    # convert bit_to_microvolt
-    if 'bit_to_microVolt' in info:
-        btm_entries = re.findall(r'\S+', info['bit_to_microVolt'])
-        if len(btm_entries) == 1:
-            btm_entries = btm_entries * len(info['channel_ids'])
-        info['bit_to_microVolt'] = [float(e) * 1e6 for e in btm_entries]
-        assert len(info['bit_to_microVolt']) == len(info['channel_ids']), \
-            'Number of channel ids does not match bit_to_microVolt conversion factors.'
-
-    if 'InputRange' in info:
-        ir_entries = re.findall(r'\w+', info['InputRange'])
-        if len(ir_entries) == 1:
-            info['InputRange'] = [int(ir_entries[0])] * len(chid_entries)
+        # Filename and datetime depend on app name, app version, and -FileVersion
+        an = info['ApplicationName']
+        if an == 'Cheetah':
+            av = info['ApplicationVersion']
+            if av < '5':
+                hpd = NlxHeader.header_pattern_dicts['bv5']
+            elif av <= '5.6.4':
+                hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
+            else:
+                hpd = NlxHeader.header_pattern_dicts['def']
+        elif an == 'BML':
+            hpd = NlxHeader.header_pattern_dicts['bv5']
         else:
-            info['InputRange'] = [int(e) for e in ir_entries]
-        assert len(info['InputRange']) == len(chid_entries), \
-            'Number of channel ids does not match input range values.'
+            hpd = NlxHeader.header_pattern_dicts['def']
 
-    # Filename and datetime depend on app name, app version, and -FileVersion
-    an = info['ApplicationName']
-    if an == 'Cheetah':
-        av = info['ApplicationVersion']
-        if av < '5':
-            hpd = header_pattern_dicts['bv5']
-        elif av <= '5.6.4':
-            hpd = header_pattern_dicts['bv5.6.4']
-        else:
-            hpd = header_pattern_dicts['def']
-    elif an == 'BML':
-        hpd = header_pattern_dicts['bv5']
-    else:
-        hpd = header_pattern_dicts['def']
+        original_filename = re.search(hpd['filename_regex'], txt_header).groupdict()['filename']
 
-    original_filename = re.search(hpd['filename_regex'], txt_header).groupdict()['filename']
+        # opening time
+        dt1 = re.search(hpd['datetime1_regex'], txt_header).groupdict()
+        info['recording_opened'] = datetime.datetime.strptime(
+            dt1['date'] + ' ' + dt1['time'], hpd['datetimeformat'])
 
-    # opening time
-    dt1 = re.search(hpd['datetime1_regex'], txt_header).groupdict()
-    info['recording_opened'] = datetime.datetime.strptime(
-        dt1['date'] + ' ' + dt1['time'], hpd['datetimeformat'])
+        # close time, if available
+        if 'datetime2_regex' in hpd:
+            dt2 = re.search(hpd['datetime2_regex'], txt_header).groupdict()
+            info['recording_closed'] = datetime.datetime.strptime(
+                dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
 
-    # close time, if available
-    if 'datetime2_regex' in hpd:
-        dt2 = re.search(hpd['datetime2_regex'], txt_header).groupdict()
-        info['recording_closed'] = datetime.datetime.strptime(
-            dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
+        return info
 
-    return info
 
+class NcsHeader():
+    """
+    Representation of information in Ncs file headers, including exact
+    recording type.
+    """
 
 ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
              ('nb_valid', 'uint32'), ('samples', 'int16', (BLOCK_SIZE,))]
