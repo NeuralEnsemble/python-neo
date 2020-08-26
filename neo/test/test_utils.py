@@ -496,7 +496,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
 
         # Different t_start
         wrongstart = AnalogSignal(np.arange(55.0).reshape((11, 5)),
-                                  t_start=10*pq.s,
+                                  t_start=10 * pq.s,
                                   units="mV",
                                   sampling_rate=1 * pq.kHz)
         analist = baselist + [wrongstart]
