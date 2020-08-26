@@ -8,7 +8,7 @@ import numpy as np
 import quantities as pq
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.io.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy,
-                EventProxy, EpochProxy)
+                                 EventProxy, EpochProxy)
 
 from neo.core.dataobject import ArrayDict
 from neo.core import (Block, Segment, AnalogSignal, IrregularlySampledSignal,
@@ -20,7 +20,10 @@ from neo.test.tools import (assert_arrays_almost_equal,
                             assert_same_attributes,
                             assert_same_annotations)
 
-from neo.utils import (get_events, get_epochs, add_epoch, match_events, cut_block_by_epochs)
+from neo.utils import (get_events, get_epochs, add_epoch, match_events,
+                       cut_block_by_epochs, merge_anasiglist)
+
+from copy import copy
 
 
 class BaseProxyTest(unittest.TestCase):
@@ -464,6 +467,65 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         assert_same_attributes(block.segments[0].epochs[1],
                                epoch2.time_shift(- epoch.times[0]).time_slice(t_start=0 * pq.s,
                                                                     t_stop=epoch.durations[0]))
+
+    def test_merge_anasiglist(self):
+        baselist = [AnalogSignal(np.arange(55.0).reshape((11, 5)),
+                                 units="mV",
+                                 sampling_rate=1*pq.kHz)]*2
+
+        # Sanity of inputs
+        self.assertRaises(TypeError, merge_anasiglist, baselist[0])
+        self.assertRaises(TypeError, merge_anasiglist, baselist, axis=1.0)
+        self.assertRaises(TypeError, merge_anasiglist, baselist, axis=9)
+        self.assertRaises(ValueError, merge_anasiglist, [])
+        self.assertRaises(ValueError, merge_anasiglist, [baselist[0]])
+
+        # Different units
+        wrongunits = AnalogSignal(np.arange(55.0).reshape((11, 5)),
+                                  units="uV",
+                                  sampling_rate=1*pq.kHz)
+        analist = baselist + [wrongunits]
+        self.assertRaises(ValueError, merge_anasiglist, analist)
+
+        # Different sampling rate
+        wrongsampl = AnalogSignal(np.arange(55.0).reshape((11, 5)),
+                                  units="mV",
+                                  sampling_rate=100 * pq.kHz)
+        analist = baselist + [wrongsampl]
+        self.assertRaises(ValueError, merge_anasiglist, analist)
+
+        # Different t_start
+        wrongstart = AnalogSignal(np.arange(55.0).reshape((11, 5)),
+                                  t_start=10*pq.s,
+                                  units="mV",
+                                  sampling_rate=1*pq.kHz)
+        analist = baselist + [wrongstart]
+        self.assertRaises(ValueError, merge_anasiglist, analist)
+
+        # Different shape
+        wrongshape = AnalogSignal(np.arange(50.0).reshape((10, 5)),
+                                  units="mV",
+                                  sampling_rate=1*pq.kHz)
+        analist = baselist + [wrongshape]
+        self.assertRaises(ValueError, merge_anasiglist, analist)
+
+        # Different shape
+        wrongshape = AnalogSignal(np.arange(50.0).reshape((5, 10)),
+                                  units="mV",
+                                  sampling_rate=1*pq.kHz)
+        analist = baselist + [wrongshape]
+        self.assertRaises(ValueError, merge_anasiglist, analist, axis=0)
+
+        # Check that the generated analogsignals are the corresponding ones
+        for axis in [0, 1]:
+            ana = np.concatenate((np.arange(55.0).reshape((11, 5)),
+                                  np.arange(55.0).reshape((11, 5))),
+                                 axis=axis)
+            signal1 = AnalogSignal(ana, units="mV", sampling_rate=1*pq.kHz)
+            signal2 = merge_anasiglist(copy(baselist), axis=axis)
+            assert_arrays_equal(signal1.magnitude, signal2.magnitude)
+            assert_same_attributes(signal1, signal2)
+            assert_same_annotations(signal1, signal2)
 
 
 class TestUtilsWithProxyObjects(BaseProxyTest):

@@ -10,6 +10,86 @@ import numpy as np
 import quantities as pq
 
 
+def merge_anasiglist(anasiglist, axis=1):
+    """
+    Merges neo.AnalogSignal objects into a single object.
+
+    Units, sampling_rate, t_start, t_stop and signals shape must be the same
+    for all signals. Otherwise a ValueError is raised.
+
+    Parameters
+    ----------
+    anasiglist: list of neo.AnalogSignal
+        list of analogsignals that will be merged
+    axis: int
+        axis along which to perform the merging
+        `axis = 1` corresponds to stacking the analogsignals
+        `axis = 0` corresponds to concatenating the analogsignals
+        Default: 1
+
+    Returns
+    -------
+    merged_anasig: neo.AnalogSignal
+        merged output signal
+    """
+
+    # Sanity of inputs
+    if not isinstance(anasiglist, list):
+        raise TypeError('anasiglist must be a list')
+    if not isinstance(axis, int) or axis not in [0, 1]:
+        raise TypeError('axis must be 0 or 1')
+    if len(anasiglist) == 0:
+        raise ValueError('Empty list! nothing to be merged')
+    if len(anasiglist) == 1:
+        raise ValueError('Passed list of length 1, nothing to be merged')
+
+    # Check units, sampling_rate, t_start, t_stop and signal shape
+    for anasig in anasiglist:
+        if not anasiglist[0].units == anasig.units:
+            raise ValueError('Units must be the same for all signals')
+        if not anasiglist[0].sampling_rate == anasig.sampling_rate:
+            raise ValueError('Sampling rate must be the same for all signals')
+        if not anasiglist[0].t_start == anasig.t_start:
+            raise ValueError('t_start must be the same for all signals')
+        if axis == 0:
+            if not anasiglist[0].magnitude.shape[1] == \
+                   anasig.magnitude.shape[1]:
+                raise ValueError('Analogsignals appear to contain different '
+                                 'number of channels!')
+        if axis == 1:
+            if not anasiglist[0].magnitude.shape[0] == \
+                   anasig.magnitude.shape[0]:
+                raise ValueError('Cannot merge signals of different length.')
+
+    # Initialize the arrays
+    anasig0 = anasiglist.pop(0)
+    data_array = anasig0.magnitude
+    sr = anasig0.sampling_rate
+    t_start = anasig0.t_start
+    units = anasig0.units
+
+    # Get the full array annotations
+    for anasig in anasiglist:
+        anasig0.array_annotations = anasig0._merge_array_annotations(anasig)
+
+    array_annot = anasig0.array_annotations
+    del anasig0
+
+    while len(anasiglist) != 0:
+        anasig = anasiglist.pop(0)
+        data_array = np.concatenate((data_array, anasig.magnitude),
+                                    axis=axis)
+        del anasig
+
+    # Create new analogsignal object to contain the analogsignals
+    merged_anasig = neo.AnalogSignal(data_array,
+                                     sampling_rate=sr,
+                                     t_start=t_start,
+                                     units=units,
+                                     array_annotations=array_annot)
+    return merged_anasig
+
+
 def get_events(container, **properties):
     """
     This function returns a list of Event objects, corresponding to given
