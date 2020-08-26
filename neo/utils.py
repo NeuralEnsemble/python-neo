@@ -53,12 +53,12 @@ def merge_anasiglist(anasiglist, axis=1):
             raise ValueError('t_start must be the same for all signals')
         if axis == 0:
             if not anasiglist[0].magnitude.shape[1] == \
-                   anasig.magnitude.shape[1]:
+              anasig.magnitude.shape[1]:
                 raise ValueError('Analogsignals appear to contain different '
                                  'number of channels!')
         if axis == 1:
             if not anasiglist[0].magnitude.shape[0] == \
-                   anasig.magnitude.shape[0]:
+              anasig.magnitude.shape[0]:
                 raise ValueError('Cannot merge signals of different length.')
 
     # Initialize the arrays

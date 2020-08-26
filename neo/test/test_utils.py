@@ -471,7 +471,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
     def test_merge_anasiglist(self):
         baselist = [AnalogSignal(np.arange(55.0).reshape((11, 5)),
                                  units="mV",
-                                 sampling_rate=1*pq.kHz)]*2
+                                 sampling_rate=1 * pq.kHz)] * 2
 
         # Sanity of inputs
         self.assertRaises(TypeError, merge_anasiglist, baselist[0])
@@ -483,7 +483,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         # Different units
         wrongunits = AnalogSignal(np.arange(55.0).reshape((11, 5)),
                                   units="uV",
-                                  sampling_rate=1*pq.kHz)
+                                  sampling_rate=1 * pq.kHz)
         analist = baselist + [wrongunits]
         self.assertRaises(ValueError, merge_anasiglist, analist)
 
@@ -498,21 +498,21 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         wrongstart = AnalogSignal(np.arange(55.0).reshape((11, 5)),
                                   t_start=10*pq.s,
                                   units="mV",
-                                  sampling_rate=1*pq.kHz)
+                                  sampling_rate=1 * pq.kHz)
         analist = baselist + [wrongstart]
         self.assertRaises(ValueError, merge_anasiglist, analist)
 
         # Different shape
         wrongshape = AnalogSignal(np.arange(50.0).reshape((10, 5)),
                                   units="mV",
-                                  sampling_rate=1*pq.kHz)
+                                  sampling_rate=1 * pq.kHz)
         analist = baselist + [wrongshape]
         self.assertRaises(ValueError, merge_anasiglist, analist)
 
         # Different shape
         wrongshape = AnalogSignal(np.arange(50.0).reshape((5, 10)),
                                   units="mV",
-                                  sampling_rate=1*pq.kHz)
+                                  sampling_rate=1 * pq.kHz)
         analist = baselist + [wrongshape]
         self.assertRaises(ValueError, merge_anasiglist, analist, axis=0)
 
@@ -521,7 +521,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
             ana = np.concatenate((np.arange(55.0).reshape((11, 5)),
                                   np.arange(55.0).reshape((11, 5))),
                                  axis=axis)
-            signal1 = AnalogSignal(ana, units="mV", sampling_rate=1*pq.kHz)
+            signal1 = AnalogSignal(ana, units="mV", sampling_rate=1 * pq.kHz)
             signal2 = merge_anasiglist(copy(baselist), axis=axis)
             assert_arrays_equal(signal1.magnitude, signal2.magnitude)
             assert_same_attributes(signal1, signal2)
