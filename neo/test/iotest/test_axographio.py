@@ -33,7 +33,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('AxoGraph_Graph_File')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 1)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]
@@ -57,7 +57,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('AxoGraph_Digitized_File')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 2)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]
@@ -87,7 +87,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('AxoGraph_X_File.axgx')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 5)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]
@@ -135,7 +135,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('written-by-axographio-with-linearsequence.axgx')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 6)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]
@@ -159,7 +159,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('written-by-axographio-without-linearsequence.axgx')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 6)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]
@@ -183,7 +183,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('corrupt-comment.axgx')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 6)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]
@@ -207,7 +207,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('episodic.axgd')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(len(blk.segments), 30)
         assert_equal(len(blk.channel_indexes), 2)
 
@@ -216,7 +216,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('episodic.axgd')
         reader = AxographIO(filename=filename, force_single_segment=True)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(len(blk.segments), 1)
         assert_equal(len(blk.channel_indexes), 60)
 
