@@ -651,5 +651,6 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
                 assert_same_attributes(block3.segments[epoch_idx].epochs[0],
                                        sliced_epoch)
 
+
 if __name__ == "__main__":
     unittest.main()
