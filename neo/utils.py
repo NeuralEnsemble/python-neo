@@ -561,9 +561,8 @@ def is_block_rawio_compatible(block, return_problems=False):
     """
     The neo.rawio layer have some restriction compared to neo.io layer:
       * consistent channels across segments
-      * array annotations can only be basic
-      * consistent linking between objects
       * no IrregularlySampledSignal
+      * consistent sampling rate accross segments
 
     This function test if a neo.Block that could be written in a nix file could be read
     back with the NIXRawIO.
@@ -578,7 +577,7 @@ def is_block_rawio_compatible(block, return_problems=False):
     Returns:
     --------
     is_rawio_compatible: bool
-        Compatible or not. 
+        Compatible or not.
     problems: list of txt
         Optional returned with `return_problems`.
         A list that describe problems for rawio compatibility.
@@ -604,7 +603,8 @@ def is_block_rawio_compatible(block, return_problems=False):
         if len(seg.epochs) != n_ep:
             problems.append('Number of Epoch is not consitent across segments')
 
-    # check for AnalogSigal that sampling_rate/units/number of channel is consistent across segments.
+    # check for AnalogSigal that sampling_rate/units/number of channel
+    # is consistent across segments.
     if sig_count_consistent:
         seg0 = block.segments[0]
         for i in range(n_sig):
@@ -620,9 +620,9 @@ def is_block_rawio_compatible(block, return_problems=False):
     for seg in block.segments:
         if len(seg.irregularlysampledsignals) > 0:
             problems.append('IrregularlySampledSignal are not raw compatible')
-    
+
     # returns
-    is_rawio_compatible = (len(problems) == 0)    
+    is_rawio_compatible = (len(problems) == 0)
     if return_problems:
         return is_rawio_compatible, problems
     else:
