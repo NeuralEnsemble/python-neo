@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.channelindex.ChannelIndex class
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import unittest
+from copy import deepcopy
 
 import numpy as np
 
@@ -31,15 +28,15 @@ from neo.test.generate_datasets import (fake_neo, get_fake_value,
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
-                                 range(len(TEST_ANNOTATIONS))])
+        self.annotations = {str(x): TEST_ANNOTATIONS[x] for x in
+                                 range(len(TEST_ANNOTATIONS))}
 
     # def test__get_fake_values(self):
     #     self.annotations['seed'] = 0
     #     channel_indexes = get_fake_value('channel_indexes', np.ndarray, seed=0,
     #                                      dim=1, dtype='i')
     #     channel_names = get_fake_value('channel_names', np.ndarray, seed=1,
-    #                                    dim=1, dtype=np.dtype('S'))
+    #                                    dim=1, dtype=np.dtype('U'))
     #     name = get_fake_value('name', str, seed=3, obj=ChannelIndex)
     #     description = get_fake_value('description', str, seed=4,
     #                                  obj='ChannelIndex')
@@ -151,7 +148,7 @@ class TestChannelIndex(unittest.TestCase):
         self.assertEqual(chx.name, None)
         self.assertEqual(chx.file_origin, None)
         self.assertEqual(chx.analogsignals, [])
-        assert_arrays_equal(chx.channel_names, np.array([], dtype='S'))
+        assert_arrays_equal(chx.channel_names, np.array([], dtype='U'))
         assert_arrays_equal(chx.index, np.array([1]))
 
     def test_channelindex__init(self):
@@ -161,7 +158,7 @@ class TestChannelIndex(unittest.TestCase):
         self.assertEqual(chx.file_origin, 'temp.dat')
         self.assertEqual(chx.name, None)
         self.assertEqual(chx.analogsignals, [])
-        assert_arrays_equal(chx.channel_names, np.array([], dtype='S'))
+        assert_arrays_equal(chx.channel_names, np.array([], dtype='U'))
         assert_arrays_equal(chx.index, np.array([1]))
 
     def check_creation(self, chx):
@@ -206,7 +203,6 @@ class TestChannelIndex(unittest.TestCase):
         chx1a.annotate(seed=self.seed2)
         chx1a.analogsignals.append(self.sigarrs2[0])
         chx1a.merge(self.chx2)
-        self.check_creation(self.chx2)
 
         assert_same_sub_schema(self.sigarrs1a + self.sigarrs2,
                                chx1a.analogsignals,
@@ -681,6 +677,25 @@ class TestChannelIndex(unittest.TestCase):
         #
         #     self.assertEqual(res, targ)
 
+    def test__deepcopy(self):
+        leaf_childconts = ('analogsignals',
+                      'irregularlysampledsignals')
+
+        chx1_copy = deepcopy(self.chx1)
+
+        # Same structure top-down, i.e. links from parents to children are correct
+        assert_same_sub_schema(chx1_copy, self.chx1)
+
+        # Correct structure bottom-up, i.e. links from children to parents are correct
+        for childtype in leaf_childconts:
+            for child in getattr(chx1_copy, childtype, []):
+                self.assertEqual(id(child.channel_index), id(chx1_copy))
+
+        for unit in chx1_copy.units:
+            self.assertEqual(id(unit.channel_index), id(chx1_copy))
+            # Cascade to leaves
+            for sptr in unit.spiketrains:
+                self.assertEqual(id(sptr.unit), id(unit))
 
 if __name__ == '__main__':
     unittest.main()

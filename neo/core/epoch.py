@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`Epoch`, an array of epochs.
 
@@ -6,19 +5,13 @@ This module defines :class:`Epoch`, an array of epochs.
 :module:`neo.core.baseneo`.
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
-import sys
-from copy import deepcopy
+from copy import deepcopy, copy
 
 import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
-
-PY_VER = sys.version_info[0]
 
 
 def _new_epoch(cls, times=None, durations=None, labels=None, units=None, name=None,
@@ -47,7 +40,7 @@ class Epoch(DataObject):
         >>>
         >>> epc = Epoch(times=np.arange(0, 30, 10)*s,
         ...             durations=[10, 5, 7]*ms,
-        ...             labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
+        ...             labels=np.array(['btn0', 'btn1', 'btn2'], dtype='U'))
         >>>
         >>> epc.times
         array([  0.,  10.,  20.]) * s
@@ -55,13 +48,15 @@ class Epoch(DataObject):
         array([ 10.,   5.,   7.]) * ms
         >>> epc.labels
         array(['btn0', 'btn1', 'btn2'],
-              dtype='|S4')
+              dtype='<U4')
 
     *Required attributes/properties*:
-        :times: (quantity array 1D) The start times of each time period.
-        :durations: (quantity array 1D or quantity scalar) The length(s) of each time period.
+        :times: (quantity array 1D, numpy array 1D or list) The start times
+           of each time period.
+        :durations: (quantity array 1D, numpy array 1D, list, or quantity scalar)
+           The length(s) of each time period.
            If a scalar, the same value is used for all time periods.
-        :labels: (numpy.array 1D dtype='S') Names or labels for the time periods.
+        :labels: (numpy.array 1D dtype='U' or list) Names or labels for the time periods.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset,
@@ -78,14 +73,21 @@ class Epoch(DataObject):
     '''
 
     _single_parent_objects = ('Segment',)
+    _single_parent_attrs = ('segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('durations', pq.Quantity, 1),
-                        ('labels', np.ndarray, 1, np.dtype('S')))
+                        ('labels', np.ndarray, 1, np.dtype('U')))
 
     def __new__(cls, times=None, durations=None, labels=None, units=None, name=None,
                 description=None, file_origin=None, array_annotations=None, **annotations):
         if times is None:
             times = np.array([]) * pq.s
+        elif isinstance(times, (list, tuple)):
+            times = np.array(times)
+        if len(times.shape) > 1:
+            raise ValueError("Times array has more than 1 dimension")
+        if isinstance(durations, (list, tuple)):
+            durations = np.array(durations)
         if durations is None:
             durations = np.array([]) * pq.s
         elif durations.size != times.size:
@@ -94,9 +96,11 @@ class Epoch(DataObject):
             else:
                 raise ValueError("Durations array has different length to times")
         if labels is None:
-            labels = np.array([], dtype='S')
-        elif len(labels) != times.size:
-            raise ValueError("Labels array has different length to times")
+            labels = np.array([], dtype='U')
+        else:
+            labels = np.array(labels)
+            if labels.size != times.size and labels.size:
+                raise ValueError("Labels array has different length to times")
         if units is None:
             # No keyword units, so get from `times`
             try:
@@ -109,6 +113,8 @@ class Epoch(DataObject):
                 dim = units.dimensionality
             else:
                 dim = pq.quantity.validate_dimensionality(units)
+        if not hasattr(durations, "dimensionality"):
+            durations = pq.Quantity(durations, dim)
         # check to make sure the units are time
         # this approach is much faster than comparing the
         # reference dimensionality
@@ -117,8 +123,8 @@ class Epoch(DataObject):
             ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
-        obj.labels = labels
-        obj.durations = durations
+        obj._labels = labels
+        obj._durations = durations
         obj.segment = None
         return obj
 
@@ -140,7 +146,9 @@ class Epoch(DataObject):
                             self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
-        super(Epoch, self).__array_finalize__(obj)
+        super().__array_finalize__(obj)
+        self._durations = getattr(obj, 'durations', None)
+        self._labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
@@ -156,41 +164,55 @@ class Epoch(DataObject):
         '''
         Returns a string representing the :class:`Epoch`.
         '''
-        # need to convert labels to unicode for python 3 or repr is messed up
-        if PY_VER == 3:
-            labels = self.labels.astype('U')
-        else:
-            labels = self.labels
 
-        objs = ['%s@%s for %s' % (label, time, dur) for label, time, dur in
-                zip(labels, self.times, self.durations)]
+        objs = ['%s@%s for %s' % (label, str(time), str(dur)) for label, time, dur in
+                zip(self.labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
-        super(Epoch, self)._repr_pretty_(pp, cycle)
+        super()._repr_pretty_(pp, cycle)
 
     def rescale(self, units):
         '''
         Return a copy of the :class:`Epoch` converted to the specified
         units
+        :return: Copy of self with specified units
         '''
+        # Use simpler functionality, if nothing will be changed
+        dim = pq.quantity.validate_dimensionality(units)
+        if self.dimensionality == dim:
+            return self.copy()
 
-        obj = super(Epoch, self).rescale(units)
+        # Rescale the object into a new object
+        obj = self.duplicate_with_new_data(
+            times=self.view(pq.Quantity).rescale(dim),
+            durations=self.durations.rescale(dim),
+            labels=self.labels,
+            units=units)
+
+        # Expected behavior is deepcopy, so deepcopying array_annotations
+        obj.array_annotations = deepcopy(self.array_annotations)
         obj.segment = self.segment
-
         return obj
 
     def __getitem__(self, i):
         '''
         Get the item or slice :attr:`i`.
         '''
-        obj = Epoch(times=super(Epoch, self).__getitem__(i))
-        obj._copy_data_complement(self)
+        obj = super().__getitem__(i)
+        obj._durations = self.durations[i]
+        if self._labels is not None and self._labels.size > 0:
+            obj._labels = self.labels[i]
+        else:
+            obj._labels = self.labels
         try:
             # Array annotations need to be sliced accordingly
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
+            obj._copy_data_complement(self)
         except AttributeError:  # If Quantity was returned, not Epoch
-            pass
+            obj.times = obj
+            obj.durations = obj._durations
+            obj.labels = obj._labels
         return obj
 
     def __getslice__(self, i, j):
@@ -216,7 +238,11 @@ class Epoch(DataObject):
         compatible, and Exception is raised.
         '''
         othertimes = other.times.rescale(self.times.units)
+        otherdurations = other.durations.rescale(self.durations.units)
         times = np.hstack([self.times, othertimes]) * self.times.units
+        durations = np.hstack([self.durations,
+                               otherdurations]) * self.durations.units
+        labels = np.hstack([self.labels, other.labels])
         kwargs = {}
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -224,14 +250,12 @@ class Epoch(DataObject):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
 
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
         kwargs['array_annotations'] = self._merge_array_annotations(other)
-        labels = kwargs['array_annotations']['labels']
-        durations = kwargs['array_annotations']['durations']
 
         return Epoch(times=times, durations=durations, labels=labels, **kwargs)
 
@@ -242,24 +266,14 @@ class Epoch(DataObject):
         '''
         # Note: Array annotations cannot be copied because length of data could be changed
         # here which would cause inconsistencies. This is instead done locally.
-        for attr in ("name", "file_origin", "description", "annotations"):
-            setattr(self, attr, getattr(other, attr, None))
+        for attr in ("name", "file_origin", "description"):
+            setattr(self, attr, deepcopy(getattr(other, attr, None)))
+        self._copy_annotations(other)
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_ep = cls(times=self.times, durations=self.durations, labels=self.labels,
-                     units=self.units, name=self.name, description=self.description,
-                     file_origin=self.file_origin)
-        new_ep.__dict__.update(self.__dict__)
-        memo[id(self)] = new_ep
-        for k, v in self.__dict__.items():
-            try:
-                setattr(new_ep, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_ep, k, v)
-        return new_ep
+    def _copy_annotations(self, other):
+        self.annotations = deepcopy(other.annotations)
 
-    def duplicate_with_new_data(self, signal, units=None):
+    def duplicate_with_new_data(self, times, durations, labels, units=None):
         '''
         Create a new :class:`Epoch` with the same metadata
         but different data (times, durations)
@@ -272,8 +286,10 @@ class Epoch(DataObject):
         else:
             units = pq.quantity.validate_dimensionality(units)
 
-        new = self.__class__(times=signal, units=units)
+        new = self.__class__(times=times, durations=durations, labels=labels, units=units)
         new._copy_data_complement(self)
+        new._labels = labels
+        new._durations = durations
         # Note: Array annotations can not be copied here because length of data can change
         return new
 
@@ -292,22 +308,55 @@ class Epoch(DataObject):
             _t_stop = np.inf
 
         indices = (self >= _t_start) & (self <= _t_stop)
-        new_epc = self[indices]
+
+        # Time slicing should create a deep copy of the object
+        new_epc = deepcopy(self[indices])
+
+        return new_epc
+
+    def time_shift(self, t_shift):
+        """
+        Shifts an :class:`Epoch` by an amount of time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`Epoch`.
+
+        Returns:
+        --------
+        epoch: :class:`Epoch`
+            New instance of an :class:`Epoch` object starting at t_shift later than the
+            original :class:`Epoch` (the original :class:`Epoch` is not modified).
+        """
+        new_epc = self.duplicate_with_new_data(times=self.times + t_shift,
+                                               durations=self.durations,
+                                               labels=self.labels)
+
+        # Here we can safely copy the array annotations since we know that
+        # the length of the Epoch does not change.
+        new_epc.array_annotate(**self.array_annotations)
 
         return new_epc
 
     def set_labels(self, labels):
-        self.array_annotate(labels=labels)
+        if self.labels is not None and self.labels.size > 0 and len(labels) != self.size:
+            raise ValueError("Labels array has different length to times ({} != {})"
+                             .format(len(labels), self.size))
+        self._labels = np.array(labels)
 
     def get_labels(self):
-        return self.array_annotations['labels']
+        return self._labels
 
     labels = property(get_labels, set_labels)
 
     def set_durations(self, durations):
-        self.array_annotate(durations=durations)
+        if self.durations is not None and self.durations.size > 0 and len(durations) != self.size:
+            raise ValueError("Durations array has different length to times ({} != {})"
+                             .format(len(durations), self.size))
+        self._durations = durations
 
     def get_durations(self):
-        return self.array_annotations['durations']
+        return self._durations
 
     durations = property(get_durations, set_durations)

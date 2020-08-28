@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for reading data from files in the Blackrock in raw format.
 
@@ -57,7 +56,6 @@ TODO:
     (file spec 2.1 and 2.2)
 """
 
-from __future__ import absolute_import, division, print_function
 
 import datetime
 import os
@@ -104,13 +102,12 @@ class BlackrockRawIO(BaseRawIO):
             File name of the .nev file (without extension). If None,
             filename is used.
             Default: None.
-        nsx_to_load (int):
-            ID of nsX file from which to load data, e.g., if set to
-            5 only data from the ns5 file are loaded. If None, the Io
-            will take the maximum if file is present.
-            Contrary to previsous version of the IO:
-              * nsx_to_load is not a list
-              * must be set at the init before parse_header()
+        nsx_to_load (int, list, 'max', 'all' (=None)) default None:
+            IDs of nsX file from which to load data, e.g., if set to
+            5 only data from the ns5 file are loaded.
+            If 'all', then all nsX will be loaded.
+            Contrary to previsous version of the IO  (<0.7), nsx_to_load
+            must be set at the init before parse_header().
 
     Examples:
         >>> reader = BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
@@ -320,7 +317,8 @@ class BlackrockRawIO(BaseRawIO):
         all_spec = [self.__nsx_spec[nsx_nb] for nsx in self.nsx_to_load]
         if self._avail_files['nev']:
             all_spec.append(self.__nev_spec)
-        assert all(all_spec[0] == spec for spec in all_spec), "Files don't have the same internal version"
+        assert all(all_spec[0] == spec for spec in all_spec), \
+            "Files don't have the same internal version"
 
         if len(self.nsx_to_load) > 0 and \
                 self.__nsx_spec[self.nsx_to_load[0]] == '2.1' and \
@@ -509,9 +507,11 @@ class BlackrockRawIO(BaseRawIO):
                     chidx_ann['connector_pinID'] = neuevwav['connector_pin'][get_idx]
                     chidx_ann['nev_dig_factor'] = neuevwav['digitization_factor'][get_idx]
                     chidx_ann['nev_energy_threshold'] = neuevwav['energy_threshold'][
-                        get_idx] * pq.uV
-                    chidx_ann['nev_hi_threshold'] = neuevwav['hi_threshold'][get_idx] * pq.uV
-                    chidx_ann['nev_lo_threshold'] = neuevwav['lo_threshold'][get_idx] * pq.uV
+                        get_idx] * chidx_ann['nev_dig_factor'] / 1000 * pq.uV
+                    chidx_ann['nev_hi_threshold'] = neuevwav['hi_threshold'][get_idx] * chidx_ann[
+                        'nev_dig_factor'] / 1000 * pq.uV
+                    chidx_ann['nev_lo_threshold'] = neuevwav['lo_threshold'][get_idx] * chidx_ann[
+                        'nev_dig_factor'] / 1000 * pq.uV
                     chidx_ann['nb_sorted_units'] = neuevwav['nb_sorted_units'][get_idx]
                     chidx_ann['waveform_size'] = self.__waveform_size[self.__nev_spec](
                     )[sig_channels[c]['id']] * self.__nev_params('waveform_time_unit')
@@ -748,15 +748,11 @@ class BlackrockRawIO(BaseRawIO):
             encoding = {0: 'latin_1', 1: 'utf_16', 255: 'latin_1'}
             labels = [data[ev_dict['field']].decode(
                 encoding[data['char_set']]) for data in events_data]
-            # Only ASCII can be allowed due to using numpy
-            # labels.astype('S') forces to use bytes in BaseFromRaw 401, in read_segment
-            # This is not recommended
-            # TODO: Maybe switch to astype('U')
-            labels = np.array([data.encode('ASCII', errors='ignore') for data in labels])
+            labels = np.array(labels, dtype='U')
         else:
             events_data, event_segment_ids = self.nev_data['NonNeural']
             ev_dict = self.__nonneural_evdicts[self.__nev_spec](events_data)[name]
-            labels = events_data[ev_dict['field']]
+            labels = events_data[ev_dict['field']].astype('U')
 
         mask = ev_dict['mask'] & (event_segment_ids == seg_index)
         timestamp = events_data[mask]['timestamp']
@@ -798,7 +794,7 @@ class BlackrockRawIO(BaseRawIO):
         if nsx_file_id['file_id'].decode() == 'NEURALSG':
             spec = '2.1'
         elif nsx_file_id['file_id'].decode() == 'NEURALCD':
-            spec = '{0}.{1}'.format(
+            spec = '{}.{}'.format(
                 nsx_file_id['ver_major'], nsx_file_id['ver_minor'])
         else:
             raise IOError('Unsupported NSX file type.')
@@ -819,10 +815,10 @@ class BlackrockRawIO(BaseRawIO):
 
         nev_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
         if nev_file_id['file_id'].decode() == 'NEURALEV':
-            spec = '{0}.{1}'.format(
+            spec = '{}.{}'.format(
                 nev_file_id['ver_major'], nev_file_id['ver_minor'])
         else:
-            raise IOError('NEV file type {0} is not supported'.format(
+            raise IOError('NEV file type {} is not supported'.format(
                 nev_file_id['file_id']))
 
         return spec
@@ -1147,7 +1143,7 @@ class BlackrockRawIO(BaseRawIO):
         dt0 = [
             ('timestamp', 'uint32'),
             ('packet_id', 'uint16'),
-            ('value', 'S{0}'.format(data_size - 6))]
+            ('value', 'S{}'.format(data_size - 6))]
 
         raw_data = np.memmap(filename, offset=header_size, dtype=dt0, mode='r')
 
@@ -1509,7 +1505,7 @@ class BlackrockRawIO(BaseRawIO):
                     ('analog_input_channel_3', 'int16'),
                     ('analog_input_channel_4', 'int16'),
                     ('analog_input_channel_5', 'int16'),
-                    ('unused', 'S{0}'.format(data_size - 20))],
+                    ('unused', 'S{}'.format(data_size - 20))],
                 # Version>=2.3
                 'b': [
                     ('timestamp', 'uint32'),
@@ -1517,14 +1513,14 @@ class BlackrockRawIO(BaseRawIO):
                     ('packet_insertion_reason', 'uint8'),
                     ('reserved', 'uint8'),
                     ('digital_input', 'uint16'),
-                    ('unused', 'S{0}'.format(data_size - 10))]},
+                    ('unused', 'S{}'.format(data_size - 10))]},
             'Spikes': {
                 'a': [
                     ('timestamp', 'uint32'),
                     ('packet_id', 'uint16'),
                     ('unit_class_nb', 'uint8'),
                     ('reserved', 'uint8'),
-                    ('waveform', 'S{0}'.format(data_size - 8))]},
+                    ('waveform', 'S{}'.format(data_size - 8))]},
             'Comments': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -1532,7 +1528,7 @@ class BlackrockRawIO(BaseRawIO):
                     ('char_set', 'uint8'),
                     ('flag', 'uint8'),
                     ('color', 'uint32'),
-                    ('comment', 'S{0}'.format(data_size - 12))]},
+                    ('comment', 'S{}'.format(data_size - 12))]},
             'VideoSync': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -1562,7 +1558,7 @@ class BlackrockRawIO(BaseRawIO):
                     ('timestamp', 'uint32'),
                     ('packet_id', 'uint16'),
                     ('config_change_type', 'uint16'),
-                    ('config_changed', 'S{0}'.format(data_size - 8))]}}
+                    ('config_changed', 'S{}'.format(data_size - 8))]}}
 
         return __nev_data_types
 
@@ -1584,7 +1580,7 @@ class BlackrockRawIO(BaseRawIO):
             'max_res': self.__nev_basic_header['timestamp_resolution'],
             'channel_ids': self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
             'channel_labels': self.__channel_labels[self.__nev_spec](),
-            'event_unit': pq.CompoundUnit("1.0/{0} * s".format(
+            'event_unit': pq.CompoundUnit("1.0/{} * s".format(
                 self.__nev_basic_header['timestamp_resolution'])),
             'nb_units': dict(zip(
                 self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
@@ -1597,7 +1593,7 @@ class BlackrockRawIO(BaseRawIO):
             'waveform_dtypes': self.__get_waveforms_dtype(),
             'waveform_sampling_rate':
                 self.__nev_basic_header['sample_resolution'] * pq.Hz,
-            'waveform_time_unit': pq.CompoundUnit("1.0/{0} * s".format(
+            'waveform_time_unit': pq.CompoundUnit("1.0/{} * s".format(
                 self.__nev_basic_header['sample_resolution'])),
             'waveform_unit': pq.uV}
 
@@ -1671,7 +1667,7 @@ class BlackrockRawIO(BaseRawIO):
         # get the dtype of waveform (this is stupidly complicated)
         if self.__is_set(
                 np.array(self.__nev_basic_header['additionnal_flags']), 0):
-            dtype_waveforms = dict((k, 'int16') for k in all_el_ids)
+            dtype_waveforms = {k: 'int16' for k in all_el_ids}
         else:
             # extract bytes per waveform
             waveform_bytes = \
@@ -1712,9 +1708,9 @@ class BlackrockRawIO(BaseRawIO):
         wf_dtypes = self.__get_waveforms_dtype()
         nb_bytes_wf = self.__nev_basic_header['bytes_in_data_packets'] - 8
 
-        wf_sizes = dict([
-            (ch, int(nb_bytes_wf / np.dtype(dt).itemsize)) for ch, dt in
-            wf_dtypes.items()])
+        wf_sizes = {
+            ch: int(nb_bytes_wf / np.dtype(dt).itemsize) for ch, dt in
+            wf_dtypes.items()}
 
         return wf_sizes
 
@@ -1739,7 +1735,7 @@ class BlackrockRawIO(BaseRawIO):
 
         # TODO: Double check if this is the correct assumption (10 samples)
         # default value: threshold crossing after 10 samples of waveform
-        wf_left_sweep = dict([(ch, 10 * wf_t_unit) for ch in all_ch])
+        wf_left_sweep = {ch: 10 * wf_t_unit for ch in all_ch}
 
         # non-default: threshold crossing at center of waveform
         # wf_size = self.__nev_params('waveform_size')
@@ -1806,7 +1802,7 @@ class BlackrockRawIO(BaseRawIO):
             'timestamp_resolution': 30000,
             'bytes_in_headers': bytes_in_headers,
             'sampling_rate': 30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
-            'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
+            'time_unit': pq.CompoundUnit("1.0/{}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
         # Returns complete dictionary because then it does not need to be called so often
@@ -1837,7 +1833,7 @@ class BlackrockRawIO(BaseRawIO):
             'sampling_rate':
                 self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
                 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
-            'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
+            'time_unit': pq.CompoundUnit("1.0/{}*s".format(
                 self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
                 / self.__nsx_basic_header[nsx_nb]['period']))}
 
@@ -1855,26 +1851,23 @@ class BlackrockRawIO(BaseRawIO):
             'digital_input_port': {
                 'name': 'digital_input_port',
                 'field': 'digital_input',
-                'mask': self.__is_set(data['packet_insertion_reason'], 0)
-                        & ~self.__is_set(data['packet_insertion_reason'], 7),
+                'mask': data['packet_insertion_reason'] == 1,
                 'desc': "Events of the digital input port"},
             'serial_input_port': {
                 'name': 'serial_input_port',
                 'field': 'digital_input',
-                'mask':
-                    self.__is_set(data['packet_insertion_reason'], 0)
-                    & self.__is_set(data['packet_insertion_reason'], 7),
+                'mask': data['packet_insertion_reason'] == 129,
                 'desc': "Events of the serial input port"}}
 
         # analog input events via threshold crossings
         for ch in range(5):
             event_types.update({
-                'analog_input_channel_{0}'.format(ch + 1): {
-                    'name': 'analog_input_channel_{0}'.format(ch + 1),
-                    'field': 'analog_input_channel_{0}'.format(ch + 1),
+                'analog_input_channel_{}'.format(ch + 1): {
+                    'name': 'analog_input_channel_{}'.format(ch + 1),
+                    'field': 'analog_input_channel_{}'.format(ch + 1),
                     'mask': self.__is_set(
                         data['packet_insertion_reason'], ch + 1),
-                    'desc': "Values of analog input channel {0} in mV "
+                    'desc': "Values of analog input channel {} in mV "
                             "(+/- 5000)".format(ch + 1)}})
 
         # TODO: define field and desc
@@ -1917,7 +1910,7 @@ class BlackrockRawIO(BaseRawIO):
                 # remap nsx seg index
                 for nsx_nb in self.nsx_to_load:
                     data = self.nsx_datas[nsx_nb].pop(j)
-                    self.nsx_datas[nsx_nb][j-1] = data
+                    self.nsx_datas[nsx_nb][j - 1] = data
 
                     data_header = self.__nsx_data_header[nsx_nb].pop(j)
                     self.__nsx_data_header[nsx_nb][j - 1] = data_header

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 This generate diagram in .png and .svg from neo.core
 

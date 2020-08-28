@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.brainwaresrcio
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import logging
 import os.path
-import sys
 
 import unittest
 
@@ -22,8 +17,6 @@ from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant)
 from neo.test.iotest.tools import create_generic_reader
-
-PY_VER = sys.version_info[0]
 
 FILES_TO_TEST = ['block_300ms_4rep_1clust_part_ch1.src',
                  'block_500ms_5rep_empty_fullclust_ch1.src',
@@ -67,7 +60,7 @@ def proc_src(filename):
     example: filename = 'file1_src_py2.npz'
              src file name = 'file1.src'
     '''
-    with np.load(filename) as srcobj:
+    with np.load(filename, allow_pickle=True) as srcobj:
         srcfile = list(srcobj.items())[0][1]
 
     filename = os.path.basename(filename[:-12] + '.src')
@@ -85,7 +78,7 @@ def proc_src(filename):
     chan_nums = np.arange(NChannels, dtype='int')
     chan_names = ['Chan{}'.format(i) for i in range(NChannels)]
     chx.index = chan_nums
-    chx.channel_names = np.array(chan_names, dtype='string_')
+    chx.channel_names = np.array(chan_names, dtype='U')
     block.channel_indexes.append(chx)
 
     for rep in srcfile['sets'][0, 0].flatten():
@@ -109,7 +102,7 @@ def proc_src_comments(srcfile, filename):
     timeStamps = np.array(timeStamps, dtype=np.float32)
     t_start = timeStamps.min()
     timeStamps = pq.Quantity(timeStamps - t_start, units=pq.d).rescale(pq.s)
-    texts = np.array(texts, dtype='S')
+    texts = np.array(texts, dtype='U')
     senders = np.array(senders, dtype='S')
     t_start = brainwaresrcio.convert_brainwaresrc_timestamp(t_start.tolist())
 
@@ -283,17 +276,17 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
     # these are reference files to compare to
     files_to_compare = FILES_TO_COMPARE
 
-    # add the appropriate suffix depending on the python version
+    # add the suffix
     for i, fname in enumerate(files_to_compare):
         if fname:
-            files_to_compare[i] += '_src_py%s.npz' % PY_VER
+            files_to_compare[i] += '_src_py3.npz'
 
     # Will fetch from g-node if they don't already exist locally
     # How does it know to do this before any of the other tests?
     files_to_download = files_to_test + files_to_compare
 
     def setUp(self):
-        super(BrainwareSrcIOTestCase, self).setUp()
+        super().setUp()
 
     def test_reading_same(self):
         for ioobj, path in self.iter_io_objects(return_path=True):

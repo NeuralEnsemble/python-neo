@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`Block`, the main container gathering all the data,
 whether discrete or continous, for a given recording session. base class
@@ -7,9 +6,6 @@ used by all :module:`neo.core` classes.
 :class:`Block` derives from :class:`Container`,
 from :module:`neo.core.container`.
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
 
@@ -92,12 +88,15 @@ class Block(Container):
         '''
         Initalize a new :class:`Block` instance.
         '''
-        super(Block, self).__init__(name=name, description=description,
+        super().__init__(name=name, description=description,
                                     file_origin=file_origin, **annotations)
 
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
+        self.regionsofinterest = []   # temporary workaround.
+        # the goal is to store all sub-classes of RegionOfInterest in a single list
+        # but this will need substantial changes to container handling
 
     @property
     def data_children_recur(self):
@@ -109,7 +108,7 @@ class Block(Container):
         # objects in both Segment and Unit
         # Only Block can have duplicate items right now, so implement
         # this here for performance reasons.
-        return tuple(unique_objs(super(Block, self).data_children_recur))
+        return tuple(unique_objs(super().data_children_recur))
 
     def list_children_by_class(self, cls):
         '''
@@ -122,7 +121,7 @@ class Block(Container):
         # objects in both Segment and Unit
         # Only Block can have duplicate items right now, so implement
         # this here for performance reasons.
-        return unique_objs(super(Block, self).list_children_by_class(cls))
+        return unique_objs(super().list_children_by_class(cls))
 
     @property
     def list_units(self):

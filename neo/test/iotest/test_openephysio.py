@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
 
 import unittest
 
@@ -12,7 +8,7 @@ import quantities as pq
 
 from neo.io import OpenEphysIO
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.rawio.tests.test_openephysrawio import TestOpenEphysRawIO
+from neo.test.rawiotest.test_openephysrawio import TestOpenEphysRawIO
 
 
 class TestOpenEphysIO(BaseTestIO, unittest.TestCase, ):

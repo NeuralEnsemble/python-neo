@@ -59,7 +59,7 @@ you can replace :class:`MyFormatIO` by any implemented class, see :ref:`list_of_
 Modes
 ======
 
-IO can be based on a single file, a directory containing files, or a database.
+An IO module can be based on a single file, a directory containing files, or a database.
 This is described in the :attr:`mode` attribute of the IO class.
 
     >>> from neo.io import MyFormatIO
@@ -109,26 +109,84 @@ All IOs have a read() method that returns a list of :class:`Block` objects (repr
     neo.core.Segment
 
 
-Lazy option (deprecated)
-========================
+Read a time slice of Segment
+============================
+
+Some objects support the ``time_slice`` argument in ``read_segment()``.
+This is useful to read only a subset of a dataset clipped in time.
+By default  ``time_slice=None`` meaning load eveything.
+
+This reads everything::
+
+    seg = reader.read_segment(time_slice=None)
+
+This reads only the first 5 seconds::
+
+    seg = reader.read_segment(time_slice=(0*pq.s, 5.*pq.s))
+
+
+.. _section-lazy:
+
+Lazy option and proxy objects
+=============================
 
 In some cases you may not want to load everything in memory because it could be too big.
-For this scenario, some IOs implement ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero,
-but all the metadata will be loaded. The *lazy_shape* attribute is added to all array-like objects
-(AnalogSignal, IrregularlySampledSignal, SpikeTrain, Epoch, Event).
-In this case, *lazy_shape* is a tuple that has the same value as *shape* with ``lazy=False``.
+For this scenario, some IOs implement ``lazy=True/False``.
+Since neo 0.7, a new lazy sytem have been added for some IO modules (all IO classes that inherit from rawio).
 To know if a class supports lazy mode use ``ClassIO.support_lazy``.
+
+With ``lazy=True`` all data objects (AnalogSignal/SpikeTrain/Event/Epoch) are replaced by
+proxy objects (AnalogSignalProxy/SpikeTrainProxy/EventProxy/EpochProxy).
+
 By default (if not specified), ``lazy=False``, i.e. all data is loaded.
-The lazy option will be removed in future Neo versions. Similar functionality will be
-implemented using proxy objects.
 
-Example of lazy loading::
+These proxy objects contain metadata (name, sampling_rate, id, ...) so they can be inspected
+but they do not contain any array-like data.
+All proxy objects contain a ``load()`` method to postpone the real load of array like data.
 
-    >>> seg = reader.read_segment(lazy=False)
-    >>> print(seg.analogsignals[0].shape)  # this is (N, M)
-    >>> seg = reader.read_segment(lazy=True)
-    >>> print(seg.analogsignals[0].shape)  # this is 0, the AnalogSignal is empty
-    >>> print(seg.analogsignals[0].lazy_shape)  # this is (N, M)
+Further more the  ``load()`` method has a ``time_slice`` argument to load only a slice
+from the file. In this way the consumption of memory can be finely controlled.
+
+
+Here are two examples that read a dataset, extract sections of the signal based on recorded events,
+and averages the sections.
+
+The first example is without lazy mode, so it consumes more memory::
+
+    lim0, lim1 = -500 * pq.ms, +1500 * pq.ms
+    seg = reader.read_segment(lazy=False)
+    triggers = seg.events[0]
+    sig = seg.analogsignals[0]  # here sig contain the whole recording in memory
+    all_sig_chunks = []
+    for t in triggers.times:
+        t0, t1 = (t + lim0), (t + lim1)
+        sig_chunk = sig.time_slice(t0, t1)
+        all_sig_chunks.append(sig_chunk)
+    apply_my_fancy_average(all_sig_chunks)
+
+The second example uses lazy mode, so it consumes less memory::
+
+    lim0, lim1 = -500*pq.ms, +1500*pq.ms
+    seg = reader.read_segment(lazy=True)
+    triggers = seg.events[0].load(time_slice=None)  # this loads all triggers in memory
+    sigproxy = seg.analogsignals[0]  # this is a proxy
+    all_sig_chunks = []
+    for t in triggers.times:
+        t0, t1 = (t + lim0), (t + lim1)
+        sig_chunk = sigproxy.load(time_slice=(t0, t1))  # here real data are loaded
+        all_sig_chunks.append(sig_chunk)
+    apply_my_fancy_average(all_sig_chunks)
+
+In addition to ``time_slice``, AnalogSignalProxy supports the ``channel_indexes`` argument.
+This allows loading only a subset of channels. This is useful where the channel count is very high.
+
+ .. TODO: add something about magnitude mode when implemented for all objects.
+
+In this example, we read only three selected channels::
+
+    seg = reader.read_segment(lazy=True)
+    anasig = seg.analogsignals[0].load(time_slice=None, channel_indexes=[0, 2, 18])
+
 
 .. _neo_io_API:
 
@@ -142,7 +200,7 @@ The :mod:`neo.io` API is designed to be simple and intuitive:
     - each IO class supports part of the :mod:`neo.core` hierachy, though not necessarily all of it (see :attr:`supported_objects`).
     - each IO class has a :meth:`read()` method that returns a list of :class:`Block` objects. If the IO only supports :class:`Segment` reading, the list will contain one block with all segments from the file.
     - each IO class that supports writing has a :meth:`write()` method that takes as a parameter a list of blocks, a single block or a single segment, depending on the IO's :attr:`writable_objects`.
-    - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data. lazy_shape attribute is added to provide information on real size.
+    - some IO are able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data.
     - each IO is able to save and load all required attributes (metadata) of the objects it supports.
     - each IO can freely add user-defined or manufacturer-defined metadata to the :attr:`annotations` attribute of an object.
 
@@ -240,4 +298,4 @@ For more complex logging, please see the documentation for the logging_ module.
           Further, the handler is only attached if there are no handlers already attached to the root logger or the :mod:`neo` logger, so adding your own logger will override the default one.
           Additional functions and/or classes may get logging during bugfix releases, so code relying on particular modules not having logging may break at any time without warning.
 
-.. _`logging`: http://docs.python.org/library/logging.html
+.. _`logging`: https://docs.python.org/3/library/logging.html

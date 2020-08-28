@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.brainwaref32io
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import os.path
-import sys
 
 import unittest
 
@@ -20,8 +15,6 @@ from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant)
 from neo.test.iotest.tools import create_generic_reader
-
-PY_VER = sys.version_info[0]
 
 
 def proc_f32(filename):
@@ -50,7 +43,7 @@ def proc_f32(filename):
     block = Block(file_origin=filenameorig)
     chx = ChannelIndex(file_origin=filenameorig,
                        index=np.array([], dtype=np.int),
-                       channel_names=np.array([], dtype='S'))
+                       channel_names=np.array([], dtype='U'))
     unit = Unit(file_origin=filenameorig)
 
     # load objects into their containers
@@ -58,9 +51,9 @@ def proc_f32(filename):
     chx.units.append(unit)
 
     try:
-        with np.load(filename) as f32obj:
+        with np.load(filename, allow_pickle=True) as f32obj:
             f32file = list(f32obj.items())[0][1].flatten()
-    except IOError as exc:
+    except OSError as exc:
         if 'as a pickle' in exc.message:
             block.create_many_to_one_relationship()
             return block
@@ -113,8 +106,8 @@ class BrainwareF32IOTestCase(BaseTestIO, unittest.TestCase):
                      'random_500ms_12rep_noclust_part_ch2.f32',
                      'sequence_500ms_5rep_ch2.f32']
 
-    # add the appropriate suffix depending on the python version
-    suffix = '_f32_py%s.npz' % PY_VER
+    # add the appropriate suffix
+    suffix = '_f32_py3.npz'
     files_to_download = files_to_test[:]
 
     # add the reference files to the list of files to download

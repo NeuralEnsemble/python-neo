@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 This module implement OpenEphys format.
 
 Author: Samuel Garcia
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 import os
+import re
 
 import numpy as np
 
@@ -43,7 +42,7 @@ class OpenEphysRawIO(BaseRawIO):
     In contrast to previous code for reading this format, here all data use memmap so it should
     be super fast and light compared to legacy code.
 
-    When the acquisition is stopped and restarted then files are named *_2, *_3.
+    When the acquisition is stopped and restarted then files are named ``*_2``, ``*_3``.
     In that case this class creates a new Segment. Note that timestamps are reset in this
     situation.
 
@@ -80,26 +79,29 @@ class OpenEphysRawIO(BaseRawIO):
         self._sig_length = {}
         self._sig_timestamp0 = {}
         sig_channels = []
-        for seg_index in range(nb_segment):
+        oe_indices = sorted(list(info['continuous'].keys()))
+        for seg_index, oe_index in enumerate(oe_indices):
             self._sigs_memmap[seg_index] = {}
 
             all_sigs_length = []
             all_first_timestamps = []
             all_last_timestamps = []
             all_samplerate = []
-            for continuous_filename in info['continuous'][seg_index]:
+            for chan_index, continuous_filename in enumerate(info['continuous'][oe_index]):
                 fullname = os.path.join(self.dirname, continuous_filename)
                 chan_info = read_file_header(fullname)
 
                 s = continuous_filename.replace('.continuous', '').split('_')
                 processor_id, ch_name = s[0], s[1]
-                chan_id = int(ch_name.replace('CH', ''))
+                chan_str = re.split(r'(\d+)', s[1])[0]
+                # note that chan_id is not unique in case of CH + AUX
+                chan_id = int(ch_name.replace(chan_str, ''))
 
                 filesize = os.stat(fullname).st_size
                 size = (filesize - HEADER_SIZE) // np.dtype(continuous_dtype).itemsize
                 data_chan = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
-                                        dtype=continuous_dtype, shape=(size, ))
-                self._sigs_memmap[seg_index][chan_id] = data_chan
+                                      dtype=continuous_dtype, shape=(size, ))
+                self._sigs_memmap[seg_index][chan_index] = data_chan
 
                 all_sigs_length.append(data_chan.size * RECORD_SIZE)
                 all_first_timestamps.append(data_chan[0]['timestamp'])
@@ -127,8 +129,8 @@ class OpenEphysRawIO(BaseRawIO):
                                     'clipping to make them aligned.')
 
                 first, last = -np.inf, np.inf
-                for chan_id in self._sigs_memmap[seg_index]:
-                    data_chan = self._sigs_memmap[seg_index][chan_id]
+                for chan_index in self._sigs_memmap[seg_index]:
+                    data_chan = self._sigs_memmap[seg_index][chan_index]
                     if data_chan[0]['timestamp'] > first:
                         first = data_chan[0]['timestamp']
                     if data_chan[-1]['timestamp'] < last:
@@ -137,11 +139,11 @@ class OpenEphysRawIO(BaseRawIO):
                 all_sigs_length = []
                 all_first_timestamps = []
                 all_last_timestamps = []
-                for chan_id in self._sigs_memmap[seg_index]:
-                    data_chan = self._sigs_memmap[seg_index][chan_id]
+                for chan_index in self._sigs_memmap[seg_index]:
+                    data_chan = self._sigs_memmap[seg_index][chan_index]
                     keep = (data_chan['timestamp'] >= first) & (data_chan['timestamp'] <= last)
                     data_chan = data_chan[keep]
-                    self._sigs_memmap[seg_index][chan_id] = data_chan
+                    self._sigs_memmap[seg_index][chan_index] = data_chan
                     all_sigs_length.append(data_chan.size * RECORD_SIZE)
                     all_first_timestamps.append(data_chan[0]['timestamp'])
                     all_last_timestamps.append(data_chan[-1]['timestamp'])
@@ -166,9 +168,9 @@ class OpenEphysRawIO(BaseRawIO):
         if len(info['spikes']) > 0:
 
             self._spikes_memmap = {}
-            for seg_index in range(nb_segment):
+            for seg_index, oe_index in enumerate(oe_indices):
                 self._spikes_memmap[seg_index] = {}
-                for spike_filename in info['spikes'][seg_index]:
+                for spike_filename in info['spikes'][oe_index]:
                     fullname = os.path.join(self.dirname, spike_filename)
                     spike_info = read_file_header(fullname)
                     spikes_dtype = make_spikes_dtype(fullname)
@@ -224,11 +226,11 @@ class OpenEphysRawIO(BaseRawIO):
         # and message.events (text based)      --> event 1 not implemented yet
         event_channels = []
         self._events_memmap = {}
-        for seg_index in range(nb_segment):
-            if seg_index == 0:
+        for seg_index, oe_index in enumerate(oe_indices):
+            if oe_index == 0:
                 event_filename = 'all_channels.events'
             else:
-                event_filename = 'all_channels_{}.events'.format(seg_index + 1)
+                event_filename = 'all_channels_{}.events'.format(oe_index + 1)
 
             fullname = os.path.join(self.dirname, event_filename)
             event_info = read_file_header(fullname)
@@ -252,14 +254,15 @@ class OpenEphysRawIO(BaseRawIO):
         # Annotate some objects from coninuous files
         self._generate_minimal_annotations()
         bl_ann = self.raw_annotations['blocks'][0]
-        for seg_index in range(nb_segment):
+        for seg_index, oe_index in enumerate(oe_indices):
             seg_ann = bl_ann['segments'][seg_index]
             if len(info['continuous']) > 0:
-                fullname = os.path.join(self.dirname, info['continuous'][seg_index][0])
+                fullname = os.path.join(self.dirname, info['continuous'][oe_index][0])
                 chan_info = read_file_header(fullname)
                 seg_ann['openephys_version'] = chan_info['version']
                 bl_ann['openephys_version'] = chan_info['version']
                 seg_ann['date_created'] = chan_info['date_created']
+                seg_ann['openephys_segment_index'] = oe_index + 1
 
     def _segment_t_start(self, block_index, seg_index):
         # segment start/stop are difine by  continuous channels
@@ -288,11 +291,11 @@ class OpenEphysRawIO(BaseRawIO):
 
         if channel_indexes is None:
             channel_indexes = slice(None)
-        channel_ids = self.header['signal_channels'][channel_indexes]['id']
+        channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
 
-        sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
-        for i, chan_id in enumerate(channel_ids):
-            data = self._sigs_memmap[seg_index][chan_id]
+        sigs_chunk = np.zeros((i_stop - i_start, len(channel_indexes)), dtype='int16')
+        for i, chan_index in enumerate(channel_indexes):
+            data = self._sigs_memmap[seg_index][chan_index]
             sub = data[block_start:block_stop]
             sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
 
@@ -355,7 +358,10 @@ class OpenEphysRawIO(BaseRawIO):
         # question what is the label????
         # here I put a combinaison
         labels = np.array(['{}#{}#{}'.format(int(d['event_type']),
-                                int(d['processor_id']), int(d['chan_id'])) for d in subdata])
+                                             int(d['processor_id']),
+                                             int(d['chan_id']))
+                           for d in subdata],
+                          dtype='U')
         durations = None
 
         return timestamps, durations, labels
@@ -369,7 +375,7 @@ class OpenEphysRawIO(BaseRawIO):
 
 
 continuous_dtype = [('timestamp', 'int64'), ('nb_sample', 'uint16'),
-    ('rec_num', 'uint16'), ('samples', 'int16', RECORD_SIZE),
+    ('rec_num', 'uint16'), ('samples', '>i2', RECORD_SIZE),
     ('markers', 'uint8', 10)]
 
 events_dtype = [('timestamp', 'int64'), ('sample_pos', 'int16'),
@@ -436,6 +442,7 @@ def explore_folder(dirname):
     "100_CH0_N.continuous" ---> seg_index N-1
     """
     filenames = os.listdir(dirname)
+    filenames.sort()
 
     info = {}
     info['nb_segment'] = 0
@@ -467,13 +474,24 @@ def explore_folder(dirname):
 
     # order continuous file by channel number within segment
     for seg_index, continuous_filenames in info['continuous'].items():
-        channel_ids = []
+        chan_ids = {}
         for continuous_filename in continuous_filenames:
             s = continuous_filename.replace('.continuous', '').split('_')
             processor_id, ch_name = s[0], s[1]
-            chan_id = int(ch_name.replace('CH', ''))
-            channel_ids.append(chan_id)
-        order = np.argsort(channel_ids)
+            chan_str = re.split(r'(\d+)', s[1])[0]
+            chan_id = int(ch_name.replace(chan_str, ''))
+            if chan_str in chan_ids.keys():
+                chan_ids[chan_str].append(chan_id)
+            else:
+                chan_ids[chan_str] = [chan_id]
+        order = []
+        for type in chan_ids.keys():
+            order.append(np.argsort(chan_ids[type]))
+        order = [list.tolist() for list in order]
+        for i, sublist in enumerate(order):
+            if i > 0:
+                order[i] = [x + max(order[i - 1]) + 1 for x in order[i]]
+        order = [item for sublist in order for item in sublist]
         continuous_filenames = [continuous_filenames[i] for i in order]
         info['continuous'][seg_index] = continuous_filenames
 

@@ -1,7 +1,5 @@
 To run all tests:
 
-With Python 2.7 or 3.3:
-
     $ python -m unittest discover
 
 If you have nose installed:

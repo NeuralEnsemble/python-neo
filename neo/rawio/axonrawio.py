@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from pCLAMP and AxoScope
 files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
@@ -34,9 +33,6 @@ Note: j.s.nowacki@gmail.com has a C++ library with SWIG bindings which also
 reads abf files - would be good to cross-check
 
 """
-from __future__ import print_function, division, absolute_import
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
-
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
 
@@ -158,14 +154,12 @@ class AxonRawIO(BaseRawIO):
         for chan_index, chan_id in enumerate(channel_ids):
             if version < 2.:
                 name = info['sADCChannelName'][chan_id].replace(b' ', b'')
-                units = info['sADCUnits'][chan_id].replace(b'\xb5', b'u'). \
-                    replace(b' ', b'').decode('utf-8')  # \xb5 is µ
+                units = safe_decode_units(info['sADCUnits'][chan_id])
                 adc_num = info['nADCPtoLChannelMap'][chan_id]
             elif version >= 2.:
                 ADCInfo = info['listADCInfo'][chan_id]
                 name = ADCInfo['ADCChNames'].replace(b' ', b'')
-                units = ADCInfo['ADCChUnits'].replace(b'\xb5', b'u'). \
-                    replace(b' ', b'').decode('utf-8')
+                units = safe_decode_units(ADCInfo['ADCChUnits'])
                 adc_num = ADCInfo['nADCNum']
             adc_nums.append(adc_num)
 
@@ -182,7 +176,7 @@ class AxonRawIO(BaseRawIO):
                     elif info['nTelegraphEnable'][chan_id] == 1:
                         gain /= info['fTelegraphAdditGain'][chan_id]
                     else:
-                        logger.warning('ignoring buggy nTelegraphEnable')
+                        self.logger.warning('ignoring buggy nTelegraphEnable')
                     offset = info['fInstrumentOffset'][chan_id]
                     offset -= info['fSignalOffset'][chan_id]
                 elif version >= 2.:
@@ -348,7 +342,7 @@ class AxonRawIO(BaseRawIO):
                         i_end = i_last + epoch['lEpochInitDuration'] + \
                             epoch['lEpochDurationInc'] * epiNum
                         dif = i_end - i_begin
-                        sig[i_begin:i_end] = np.ones((dif)) * \
+                        sig[i_begin:i_end] = np.ones(dif) * \
                             (epoch['fEpochInitLevel'] + epoch['fEpochLevelInc'] * epiNum)
                         i_last += epoch['lEpochInitDuration'] + \
                             epoch['lEpochDurationInc'] * epiNum
@@ -359,8 +353,7 @@ class AxonRawIO(BaseRawIO):
         sig_units = []
         for DACNum in range(nDAC):
             name = info['listDACInfo'][DACNum]['DACChNames'].decode("utf-8")
-            units = info['listDACInfo'][DACNum]['DACChUnits']. \
-                replace(b'\xb5', b'u').decode('utf-8')  # \xb5 is µ
+            units = safe_decode_units(info['listDACInfo'][DACNum]['DACChUnits'])
             sig_names.append(name)
             sig_units.append(units)
 
@@ -458,7 +451,7 @@ def parse_axon_soup(filename):
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
-            for key in [b'AXENGN', b'clampex', b'Clampex',
+            for key in [b'AXENGN', b'clampex', b'Clampex', b'EDR3',
                         b'CLAMPEX', b'axoscope', b'AxoScope', b'Clampfit']:
                 # goodstart = big_string.lower().find(key)
                 goodstart = big_string.find(b'\x00' + key)
@@ -614,6 +607,13 @@ def clean_string(s):
     s = s.rstrip(b' ')
     return s
 
+
+def safe_decode_units(s):
+    s = s.replace(b' ', b'')
+    s = s.replace(b'\xb5', b'u')  # \xb5 is µ
+    s = s.replace(b'\xb0', b'\xc2\xb0')  # \xb0 is °
+    s = s.decode('utf-8')
+    return s
 
 BLOCKSIZE = 512
 

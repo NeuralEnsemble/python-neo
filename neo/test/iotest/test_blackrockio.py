@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.blackrockio
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import
 
 import unittest
 import warnings
@@ -94,8 +90,11 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * pq.s
         buggy_slice = (-100 * pq.ms, too_large_tstop)
 
-        # this is valid in read_segment because seg_index is specified
-        seg = reader.read_segment(seg_index=0, time_slice=buggy_slice)
+        # this is valid in read_segment
+        seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=False)
+        # this raise an error
+        with self.assertRaises(AssertionError):
+            seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=True)
 
         lenb = len(seg.analogsignals[0])
         numspb = len(seg.spiketrains[0])
@@ -145,8 +144,11 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * pq.s
         buggy_slice = (-100 * pq.ms, too_large_tstop)
 
-        # This is valid in read_segment because seg_index is specified
-        seg = reader.read_segment(seg_index=0, time_slice=buggy_slice)
+        # This is valid in read_segment
+        seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=False)
+        # this raise error
+        with self.assertRaises(AssertionError):
+            seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=True)
 
         lenb = len(seg.analogsignals[0])
         numspb = len(seg.spiketrains[0])
@@ -308,7 +310,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                 matlab_spikes = ts_ml[np.nonzero(
                     np.logical_and(elec_ml == channelid, unit_ml == unitid))]
                 # Going sure that unit is really seconds and not 1/30000 seconds
-                if (not st_i.units == pq.CompoundUnit("1.0/{0} * s".format(30000))) and \
+                if (not st_i.units == pq.CompoundUnit("1.0/{} * s".format(30000))) and \
                         st_i.units == pq.s:
                     st_i = np.round(st_i.base * 30000).astype(int)
                 assert_equal(st_i, matlab_spikes)

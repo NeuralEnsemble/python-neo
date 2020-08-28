@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from "Raw" Multi Channel System (MCS) format.
 This format is NOT the native MCS format (*.mcd).
@@ -14,7 +13,6 @@ could be written instead of this ersatz.
 
 Author: Samuel Garcia
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
@@ -146,7 +144,7 @@ def parse_mcs_raw_header(filename):
                             break
                     assert split_pos is not None, 'Impossible to find units and scaling'
                     info['signal_gain'] = float(v[:split_pos])
-                    info['signal_units'] = v[split_pos:].replace(u'µ', u'u')
+                    info['signal_units'] = v[split_pos:].replace('µ', 'u')
                     info['signal_offset'] = -info['signal_gain'] * info['adc_zero']
 
                 elif key == b'Streams':

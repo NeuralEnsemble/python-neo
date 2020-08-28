@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 BCI2000RawIO is a class to read BCI2000 .dat files.
 https://www.bci2000.org/mediawiki/index.php/Technical_Reference:BCI2000_File_Format
 """
-from __future__ import print_function, division, absolute_import  # unicode_literals
 
 from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
 
@@ -41,13 +39,25 @@ class BCI2000RawIO(BaseRawIO):
         sig_channels = []
         for chan_ix in range(file_info['SourceCh']):
             ch_name = param_defs['ChannelNames']['value'][chan_ix] \
-                if 'ChannelNames' in param_defs else 'ch' + str(chan_ix)
+                if 'ChannelNames' in param_defs and param_defs['ChannelNames']['value'] is not np.nan else 'ch' + str(chan_ix)
             chan_id = chan_ix + 1
             sr = param_defs['SamplingRate']['value']  # Hz
             dtype = file_info['DataFormat']
             units = 'uV'
             gain = param_defs['SourceChGain']['value'][chan_ix]
+
+            if isinstance(gain, str):
+                r = re.findall(r'(\d+)(\D+)', gain)
+                # some files have strange units attached to gain
+                # in that case it is ignored
+                if len(r) == 1:
+                    gain = r[0][0]
+                gain = float(gain)
+
             offset = param_defs['SourceChOffset']['value'][chan_ix]
+            if isinstance(offset, str):
+                offset = float(offset)
+
             group_id = 0
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
         self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -205,7 +215,7 @@ class BCI2000RawIO(BaseRawIO):
                         # np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
                         vals = np.char.mod('%d', state_vec[st_ch_ix])  # event val, string'd
 
-                self._my_events.append([ev_times, durs, vals])
+                self._my_events.append([ev_times, durs, vals.astype('U')])
 
         return self._my_events
 
@@ -247,8 +257,7 @@ def parse_bci2000_header(filename):
             el_labels = [str(ix) for ix in range(num_els)]
         return num_els, el_labels
 
-    import io
-    with io.open(filename, 'rb') as fid:
+    with open(filename, 'rb') as fid:
 
         # Parse the file header (plain text)
 

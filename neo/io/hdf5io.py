@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 
 
 """
 
-from __future__ import absolute_import
 
-import sys
 import logging
 import pickle
 import numpy as np
@@ -216,7 +213,7 @@ class NeoHdf5IO(BaseIO):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
         durations = self._get_quantity(node["durations"])
-        labels = node["labels"].value
+        labels = node["labels"].value.astype('U')
         epoch = Epoch(times=times, durations=durations, labels=labels, **attributes)
         epoch.segment = parent
         return epoch
@@ -227,7 +224,7 @@ class NeoHdf5IO(BaseIO):
     def _read_eventarray(self, node, parent):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
-        labels = node["labels"].value
+        labels = node["labels"].value.astype('U')
         event = Event(times=times, labels=labels, **attributes)
         event.segment = parent
         return event
@@ -324,24 +321,17 @@ class NeoHdf5IO(BaseIO):
                 attributes[name] = node.attrs[name]
         for name in ('rec_datetime', 'file_datetime'):
             if name in node.attrs:
-                if sys.version_info.major > 2:
-                    attributes[name] = pickle.loads(node.attrs[name], encoding='bytes')
-                else:  # Python 2 doesn't have the encoding argument
-                    attributes[name] = pickle.loads(node.attrs[name])
-        if sys.version_info.major > 2:
-            annotations = pickle.loads(node.attrs['annotations'], encoding='bytes')
-        else:
-            annotations = pickle.loads(node.attrs['annotations'])
+                attributes[name] = pickle.loads(node.attrs[name], encoding='bytes')
+        annotations = pickle.loads(node.attrs['annotations'], encoding='bytes')
         attributes.update(annotations)
         # avoid "dictionary changed size during iteration" error
         attribute_names = list(attributes.keys())
-        if sys.version_info.major > 2:
-            for name in attribute_names:
-                if isinstance(attributes[name], (bytes, np.bytes_)):
-                    attributes[name] = attributes[name].decode('utf-8')
-                if isinstance(name, bytes):
-                    attributes[name.decode('utf-8')] = attributes[name]
-                    attributes.pop(name)
+        for name in attribute_names:
+            if isinstance(attributes[name], (bytes, np.bytes_)):
+                attributes[name] = attributes[name].decode('utf-8')
+            if isinstance(name, bytes):
+                attributes[name.decode('utf-8')] = attributes[name]
+                attributes.pop(name)
         return attributes
 
     def _resolve_channel_indexes(self, block):
@@ -350,9 +340,9 @@ class NeoHdf5IO(BaseIO):
             channel_indexes = channel_indexes[:]
             for ci1 in channel_indexes:
                 # this works only on analogsignals
-                signal_group1 = set(tuple(x[1]) for x in ci1._channels)
+                signal_group1 = {tuple(x[1]) for x in ci1._channels}
                 for ci2 in channel_indexes:  # need to take irregularly sampled signals
-                    signal_group2 = set(tuple(x[1]) for x in ci2._channels)  # into account too
+                    signal_group2 = {tuple(x[1]) for x in ci2._channels}  # into account too
                     if signal_group1 != signal_group2:
                         if signal_group2.issubset(signal_group1):
                             channel_indexes.remove(ci2)

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Classe for reading/writing SpikeTrains in a text file.
 It is the simple case where different spiketrains are written line by line.
@@ -131,6 +129,6 @@ class AsciiSpikeTrainIO(BaseIO):
         f = open(self.filename, 'w')
         for s, sptr in enumerate(segment.spiketrains):
             for ts in sptr:
-                f.write('%f%s' % (ts, delimiter))
+                f.write('{:f}{}'.format(ts, delimiter))
             f.write('\n')
         f.close()

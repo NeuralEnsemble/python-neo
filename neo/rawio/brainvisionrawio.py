@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from BrainVision product.
 
@@ -7,7 +6,6 @@ S. More.
 
 Author: Samuel Garcia
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
@@ -17,7 +15,6 @@ import numpy as np
 import datetime
 import os
 import re
-import io
 
 
 class BrainVisionRawIO(BaseRawIO):
@@ -61,9 +58,13 @@ class BrainVisionRawIO(BaseRawIO):
         self._raw_signals = sigs.reshape(-1, nb_channel)
 
         sig_channels = []
+        channel_infos = vhdr_header['Channel Infos']
         for c in range(nb_channel):
-            name, ref, res, units = vhdr_header['Channel Infos'][
-                'Ch%d' % (c + 1,)].split(',')
+            try:
+                channel_desc = channel_infos['Ch%d' % (c + 1,)]
+            except KeyError:
+                channel_desc = channel_infos['ch%d' % (c + 1,)]
+            name, ref, res, units = channel_desc.split(',')
             units = units.replace('µ', 'u')
             chan_id = c + 1
             if sig_dtype == np.int16 or sig_dtype == np.int32:
@@ -116,12 +117,13 @@ class BrainVisionRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
-        for c in range(sig_channels.size):
-            coords = vhdr_header['Coordinates']['Ch{}'.format(c + 1)]
-            coords = [float(v) for v in coords.split(',')]
-            if coords[0] > 0.:
-                # if radius is 0 we do not have coordinates.
-                self.raw_annotations['signal_channels'][c]['coordinates'] = coords
+        if 'Coordinates' in vhdr_header:
+            for c in range(sig_channels.size):
+                coords = vhdr_header['Coordinates']['Ch{}'.format(c + 1)]
+                coords = [float(v) for v in coords.split(',')]
+                if coords[0] > 0.:
+                    # if radius is 0 we do not have coordinates.
+                    self.raw_annotations['signal_channels'][c]['coordinates'] = coords
 
     def _source_name(self):
         return self.filename
@@ -181,7 +183,7 @@ class BrainVisionRawIO(BaseRawIO):
 
 
 def read_brainvsion_soup(filename):
-    with io.open(filename, 'r', encoding='utf8') as f:
+    with open(filename, 'r', encoding='utf8') as f:
         section = None
         all_info = {}
         for line in f:

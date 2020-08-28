@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from Elan.
 
@@ -16,7 +15,6 @@ An Elan dataset is separated into 3 files :
 Author: Samuel Garcia
 
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
@@ -39,7 +37,7 @@ class ElanRawIO(BaseRawIO):
 
     def _parse_header(self):
 
-        with io.open(self.filename + '.ent', mode='rt', encoding='ascii', newline=None) as f:
+        with open(self.filename + '.ent', mode='rt', encoding='ascii', newline=None) as f:
 
             # version
             version = f.readline()[:-1]
@@ -141,7 +139,7 @@ class ElanRawIO(BaseRawIO):
         self._raw_signals = self._raw_signals[:, :-2]
 
         # triggers
-        with io.open(self.filename + '.pos', mode='rt', encoding='ascii', newline=None) as f:
+        with open(self.filename + '.pos', mode='rt', encoding='ascii', newline=None) as f:
             self._raw_event_timestamps = []
             self._event_labels = []
             self._reject_codes = []

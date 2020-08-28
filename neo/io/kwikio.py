@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from a .kwik dataset
 
@@ -11,10 +10,6 @@ Author: Mikkel E. Lepperød @CINPLA
 
 """
 # TODO: writing to file
-
-# needed for python 3 compatibility
-from __future__ import absolute_import
-from __future__ import division
 
 import numpy as np
 import quantities as pq
@@ -189,7 +184,7 @@ class KwikIO(BaseIO):
             A KwikModel object obtained by klusta.kwik.KwikModel(fname)
         """
         try:
-            if ((not (cluster_id in model.cluster_ids))):
+            if (not (cluster_id in model.cluster_ids)):
                 raise ValueError
         except ValueError:
             print("Exception: cluster_id (%d) not found !! " % cluster_id)

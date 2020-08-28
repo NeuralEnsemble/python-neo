@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.io.pickleio.PickleIO class
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
 
 import os
 
@@ -60,7 +56,7 @@ class TestPickleIO(unittest.TestCase):
         # Epoch
         epoch = Epoch(times=np.arange(0, 30, 10) * pq.s,
                       durations=[10, 5, 7] * pq.ms,
-                      labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
+                      labels=np.array(['btn0', 'btn1', 'btn2'], dtype='U'))
         epoch.segment = Segment()
         blk = Block()
         seg = Segment()
@@ -78,7 +74,7 @@ class TestPickleIO(unittest.TestCase):
 
         # Event
         event = Event(np.arange(0, 30, 10) * pq.s,
-                      labels=np.array(['trig0', 'trig1', 'trig2'], dtype='S'))
+                      labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
         event.segment = Segment()
 
         blk = Block()

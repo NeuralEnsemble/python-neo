@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 This module defines :class:`DataObject`, the abstract base class
 used by all :module:`neo.core` classes that can contain data (i.e. are not container classes).
 It contains basic functionality that is shared among all those data objects.
 
 """
-import copy
+from copy import deepcopy
 import warnings
 
 import quantities as pq
@@ -36,6 +35,7 @@ def _normalize_array_annotations(value, length):
         for key in value.keys():
             if isinstance(value[key], dict):
                 raise ValueError("Nested dicts are not allowed as array annotations")
+
             value[key] = _normalize_array_annotations(value[key], length)
 
     elif value is None:
@@ -235,8 +235,8 @@ class DataObject(BaseNeo, pq.Quantity):
         # Concatenating arrays for each key
         for key in self.array_annotations:
             try:
-                value = copy.deepcopy(self.array_annotations[key])
-                other_value = copy.deepcopy(other.array_annotations[key])
+                value = deepcopy(self.array_annotations[key])
+                other_value = deepcopy(other.array_annotations[key])
                 # Quantities need to be rescaled to common unit
                 if isinstance(value, pq.Quantity):
                     try:
@@ -281,7 +281,7 @@ class DataObject(BaseNeo, pq.Quantity):
         obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=units)
 
         # Expected behavior is deepcopy, so deepcopying array_annotations
-        obj.array_annotations = copy.deepcopy(self.array_annotations)
+        obj.array_annotations = deepcopy(self.array_annotations)
 
         obj.segment = self.segment
 
@@ -290,11 +290,11 @@ class DataObject(BaseNeo, pq.Quantity):
     # Needed to implement this so array annotations are copied as well, ONLY WHEN copying 1:1
     def copy(self, **kwargs):
         '''
-        Returns a copy of the object
+        Returns a shallow copy of the object
         :return: Copy of self
         '''
 
-        obj = super(DataObject, self).copy(**kwargs)
+        obj = super().copy(**kwargs)
         obj.array_annotations = self.array_annotations
         return obj
 
@@ -337,6 +337,42 @@ class DataObject(BaseNeo, pq.Quantity):
                       DeprecationWarning)
         return self.duplicate_with_new_data(signal, units=units)
 
+    def __deepcopy__(self, memo):
+        """
+            Create a deep copy of the data object.
+            All attributes and annotations are also deep copied.
+            References to parent objects are not kept, they are set to None.
+
+
+            :param memo: (dict) Objects that have been deep copied already
+            :return: (DataObject) Deep copy of the input DataObject
+        """
+        cls = self.__class__
+        necessary_attrs = {}
+        # Units need to be specified explicitly for analogsignals/irregularlysampledsignals
+        for k in self._necessary_attrs + (('units',),):
+            necessary_attrs[k[0]] = getattr(self, k[0], self)
+        # Create object using constructor with necessary attributes
+        new_obj = cls(**necessary_attrs)
+        # Add all attributes
+        new_obj.__dict__.update(self.__dict__)
+        memo[id(self)] = new_obj
+        for k, v in self.__dict__.items():
+            # Single parent objects should not be deepcopied, because this is not expected behavior
+            # and leads to a lot of stuff being copied (e.g. all other children of the parent as well),
+            # thus creating a lot of overhead
+            # But keeping the reference to the same parent is not desired either, because this would be unidirectional
+            # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
+            if k in self._single_parent_attrs:
+                setattr(new_obj, k, None)
+                continue
+            try:
+                setattr(new_obj, k, deepcopy(v, memo))
+            except TypeError:
+                setattr(new_obj, k, v)
+
+        return new_obj
+
 
 class ArrayDict(dict):
     """Dictionary subclass to handle array annotations
@@ -348,7 +384,7 @@ class ArrayDict(dict):
     """
 
     def __init__(self, length, check_function=_normalize_array_annotations, *args, **kwargs):
-        super(ArrayDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.check_function = check_function
         self.length = length
 
@@ -357,7 +393,7 @@ class ArrayDict(dict):
         # Need to wrap key and value in a dict in order to make sure
         # that nested dicts are detected
         value = self.check_function({key: value}, self.length)[key]
-        super(ArrayDict, self).__setitem__(key, value)
+        super().__setitem__(key, value)
 
     # Updating the dict also needs to perform checks, so rerouting this to __setitem__
     def update(self, *args, **kwargs):
@@ -372,4 +408,4 @@ class ArrayDict(dict):
             self[key] = kwargs[key]
 
     def __reduce__(self):
-        return super(ArrayDict, self).__reduce__()
+        return super().__reduce__()

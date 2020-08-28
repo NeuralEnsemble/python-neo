@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for reading/writing Neo objects in MATLAB format (.mat) versions
 5 to 7.2.
@@ -387,6 +386,7 @@ class NeoMatlabIO(BaseIO):
             attributes = cl._necessary_attrs + cl._recommended_attrs \
                                              + (('annotations', dict),)
             dict_attributes = dict([(a[0], a[1:]) for a in attributes])
+
             if attrname in dict_attributes:
                 attrtype = dict_attributes[attrname][0]
                 if attrtype == datetime:

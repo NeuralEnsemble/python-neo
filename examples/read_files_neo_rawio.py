@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This is an example for reading files with neo.rawio
 compare with read_files_neo_io.py
@@ -7,8 +6,10 @@ compare with read_files_neo_io.py
 import urllib
 from neo.rawio import PlexonRawIO
 
+url_repo = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/'
+
 # Get Plexon files
-distantfile = 'https://portal.g-node.org/neo/plexon/File_plexon_3.plx'
+distantfile = url_repo + 'plexon/File_plexon_3.plx'
 localfile = './File_plexon_3.plx'
 urllib.request.urlretrieve(distantfile, localfile)
 
@@ -52,7 +53,7 @@ float_waveforms = reader.rescale_waveforms_to_float(raw_waveforms, dtype='float3
 print(float_waveforms.shape, float_waveforms.dtype, float_waveforms[0, 0, :4])
 
 # Read event timestamps and times (take anotehr file)
-distantfile = 'https://portal.g-node.org/neo/plexon/File_plexon_2.plx'
+distantfile = url_repo + 'plexon/File_plexon_2.plx'
 localfile = './File_plexon_2.plx'
 urllib.request.urlretrieve(distantfile, localfile)
 

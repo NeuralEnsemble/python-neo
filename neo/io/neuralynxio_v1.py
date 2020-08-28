@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from Neuralynx files.
 This IO supports NCS, NEV and NSE file formats.
@@ -14,9 +13,6 @@ Supported: Read
 Author: Julia Sprenger, Carlos Canova
 Adapted from the exampleIO of python-neo
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
 
 import sys
 import os
@@ -1198,7 +1194,7 @@ class NeuralynxIO(BaseIO):
 
         # If already associated, disassociate first
         if self.associated:
-            raise IOError(
+            raise OSError(
                 "Trying to associate an already associated NeuralynxIO "
                 "object.")
 
@@ -1287,7 +1283,7 @@ class NeuralynxIO(BaseIO):
                 if os.path.exists(parameterfile):
                     parameters_read = pickle.load(open(parameterfile, 'rb'))
                 else:
-                    raise IOError('Inconsistent cache files.')
+                    raise OSError('Inconsistent cache files.')
 
                 for IOdict, dictname in [(self.parameters_global, 'global'),
                                          (self.parameters_ncs, 'ncs'),
@@ -1785,10 +1781,6 @@ class NeuralynxIO(BaseIO):
         text_header = codecs.open(self.sessiondir + sep + filename, 'r',
                                   'latin-1').read(16384)
 
-        # necessary text encoding depends on Python version
-        if sys.version_info.major < 3:
-            text_header = text_header.encode('latin-1')
-
         parameter_dict['cheetah_version'] = \
             self.__get_cheetah_version_from_txt_header(text_header, filename)
 
@@ -1876,7 +1868,7 @@ class NeuralynxIO(BaseIO):
 
                 if matching_key in parameter_dict:
                     warnings.warn(
-                        'Multiple entries for %s in text header of %s' % (
+                        'Multiple entries for {} in text header of {}'.format(
                             matching_key, filename))
                 else:
                     parameter_dict[matching_key] = minor_value
@@ -2133,10 +2125,10 @@ class NeuralynxIO(BaseIO):
             for d in event_types:
                 d.pop('timestamp')
             self.parameters_nev[filename]['event_types'] = [dict(y) for y in
-                                                            set(tuple(
+                                                            {tuple(
                                                                 x.items())
                                                                 for x in
-                                                                event_types)]
+                                                                event_types}]
 
     # ________________ File Checks __________________________________
 
