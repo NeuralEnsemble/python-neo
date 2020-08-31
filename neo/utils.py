@@ -572,7 +572,7 @@ def is_block_rawio_compatible(block, return_problems=False):
     block: Block
         A blck
     return_problems: bool (False by default)
-        Control if a list a str that desribe problems is also provided as return value
+        Control if a list a str that describe problems is also provided as return value
 
     Returns:
     --------
@@ -594,14 +594,14 @@ def is_block_rawio_compatible(block, return_problems=False):
     sig_count_consistent = True
     for seg in block.segments:
         if len(seg.analogsignals) != n_sig:
-            problems.append('Number of AnalogSignal is not consitent across segments')
+            problems.append('Number of AnalogSignal is not consistent across segments')
             sig_count_consistent = False
         if len(seg.spiketrains) != n_st:
-            problems.append('Number of SpikeTrain is not consitent across segments')
+            problems.append('Number of SpikeTrain is not consistent across segments')
         if len(seg.events) != n_ev:
-            problems.append('Number of Event is not consitent across segments')
+            problems.append('Number of Event is not consistent across segments')
         if len(seg.epochs) != n_ep:
-            problems.append('Number of Epoch is not consitent across segments')
+            problems.append('Number of Epoch is not consistent across segments')
 
     # check for AnalogSigal that sampling_rate/units/number of channel
     # is consistent across segments.
@@ -610,11 +610,11 @@ def is_block_rawio_compatible(block, return_problems=False):
         for i in range(n_sig):
             for seg in block.segments:
                 if seg.analogsignals[i].sampling_rate != seg0.analogsignals[i].sampling_rate:
-                    problems.append('AnalogSignal have inconstitent sampling rate across segment')
+                    problems.append('AnalogSignal have inconsistent sampling rate across segment')
                 if seg.analogsignals[i].shape[1] != seg0.analogsignals[i].shape[1]:
-                    problems.append('AnalogSignal have inconstitent channel count across segment')
+                    problems.append('AnalogSignal have inconsistent channel count across segment')
                 if seg.analogsignals[i].units != seg0.analogsignals[i].units:
-                    problems.append('AnalogSignal have inconstitent units across segment')
+                    problems.append('AnalogSignal have inconsistent units across segment')
 
     # check no IrregularlySampledSignal
     for seg in block.segments:
