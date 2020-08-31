@@ -562,27 +562,27 @@ def is_block_rawio_compatible(block, return_problems=False):
     The neo.rawio layer have some restriction compared to neo.io layer:
       * consistent channels across segments
       * no IrregularlySampledSignal
-      * consistent sampling rate accross segments
+      * consistent sampling rate across segments
 
-    This function test if a neo.Block that could be written in a nix file could be read
+    This function tests if a neo.Block that could be written in a nix file could be read
     back with the NIXRawIO.
 
     Parameters
     ----------
     block: Block
-        A blck
+        A block
     return_problems: bool (False by default)
-        Control if a list a str that describe problems is also provided as return value
+        Controls whether a list of str that describe problems is also provided as return value
 
     Returns:
     --------
     is_rawio_compatible: bool
         Compatible or not.
-    problems: list of txt
-        Optional returned with `return_problems`.
+    problems: list of str
+        Optional, depending on value of `return_problems`.
         A list that describe problems for rawio compatibility.
     """
-    assert len(block.segments) > 0, "This block don't have segments"
+    assert len(block.segments) > 0, "This block doesn't have segments"
 
     problems = []
 
@@ -594,14 +594,14 @@ def is_block_rawio_compatible(block, return_problems=False):
     sig_count_consistent = True
     for seg in block.segments:
         if len(seg.analogsignals) != n_sig:
-            problems.append('Number of AnalogSignal is not consistent across segments')
+            problems.append('Number of AnalogSignals is not consistent across segments')
             sig_count_consistent = False
         if len(seg.spiketrains) != n_st:
-            problems.append('Number of SpikeTrain is not consistent across segments')
+            problems.append('Number of SpikeTrains is not consistent across segments')
         if len(seg.events) != n_ev:
-            problems.append('Number of Event is not consistent across segments')
+            problems.append('Number of Events is not consistent across segments')
         if len(seg.epochs) != n_ep:
-            problems.append('Number of Epoch is not consistent across segments')
+            problems.append('Number of Epochs is not consistent across segments')
 
     # check for AnalogSigal that sampling_rate/units/number of channel
     # is consistent across segments.
@@ -610,16 +610,16 @@ def is_block_rawio_compatible(block, return_problems=False):
         for i in range(n_sig):
             for seg in block.segments:
                 if seg.analogsignals[i].sampling_rate != seg0.analogsignals[i].sampling_rate:
-                    problems.append('AnalogSignal have inconsistent sampling rate across segment')
+                    problems.append('AnalogSignals have inconsistent sampling rate across segments')
                 if seg.analogsignals[i].shape[1] != seg0.analogsignals[i].shape[1]:
-                    problems.append('AnalogSignal have inconsistent channel count across segment')
+                    problems.append('AnalogSignals have inconsistent channel count across segments')
                 if seg.analogsignals[i].units != seg0.analogsignals[i].units:
-                    problems.append('AnalogSignal have inconsistent units across segment')
+                    problems.append('AnalogSignals have inconsistent units across segments')
 
     # check no IrregularlySampledSignal
     for seg in block.segments:
         if len(seg.irregularlysampledsignals) > 0:
-            problems.append('IrregularlySampledSignal are not raw compatible')
+            problems.append('IrregularlySampledSignals are not raw compatible')
 
     # returns
     is_rawio_compatible = (len(problems) == 0)
