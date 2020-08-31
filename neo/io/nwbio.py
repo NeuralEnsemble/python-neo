@@ -292,7 +292,14 @@ class NWBIO(BaseIO):
             else:
                 for block in blocks:
                     if annotation_name in block.annotations:
-                        annotations[annotation_name].add(block.annotations[annotation_name])
+                        try:
+                            annotations[annotation_name].add(block.annotations[annotation_name])
+                        except TypeError:
+                            if annotation_name in POSSIBLE_JSON_FIELDS:
+                                encoded = json.dumps(block.annotations[annotation_name])
+                                annotations[annotation_name].add(encoded)
+                            else:
+                                raise
                 if annotation_name in annotations:
                     if len(annotations[annotation_name]) > 1:
                         raise NotImplementedError(
