@@ -400,7 +400,16 @@ class NWBIO(BaseIO):
         else:
             raise TypeError("signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(
                 signal.__class__.__name__))
-        nwbfile.add_acquisition(tS)
+        nwb_group = signal.annotations.get("nwb_group", "acquisition")
+        add_method_map = {
+            "acquisition": nwbfile.add_acquisition,
+            "stimulus": nwbfile.add_stimulus
+        }
+        if nwb_group in add_method_map:
+            add_time_series = add_method_map[nwb_group]
+        else:
+            raise NotImplementedError("NWB group '{}' not yet supported".format(nwb_group))
+        add_time_series(tS)
         return tS
 
     def _write_spiketrain(self, nwbfile, spiketrain):
