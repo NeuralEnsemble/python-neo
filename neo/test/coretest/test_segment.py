@@ -962,6 +962,33 @@ class TestSegment(unittest.TestCase):
             assert_same_attributes(sliced.events[0],
                                    sliced_event)
 
+    def test_time_slice_None(self):
+        time_slices = [(None, 5.0 * pq.s), (5.0 * pq.s, None), (None, None)]
+
+        anasig = AnalogSignal(np.arange(50.0) * pq.mV, sampling_rate=1.0 * pq.Hz)
+        seg = Segment()
+        seg.analogsignals = [anasig]
+
+        block = Block()
+        block.segments = [seg]
+        block.create_many_to_one_relationship()
+
+        # test without resetting the time
+        for t_start, t_stop in time_slices:
+            sliced = seg.time_slice(t_start, t_stop)
+
+            assert_neo_object_is_compliant(sliced)
+            self.assertEqual(len(sliced.analogsignals), 1)
+
+            exp_t_start, exp_t_stop = t_start, t_stop
+            if exp_t_start is None:
+                exp_t_start = seg.t_start
+            if exp_t_stop is None:
+                exp_t_stop = seg.t_stop
+
+            self.assertEqual(exp_t_start, sliced.t_start)
+            self.assertEqual(exp_t_stop, sliced.t_stop)
+
     # to remove
     # def test_segment_take_analogsignal_by_unit(self):
     #     result1 = self.seg1.take_analogsignal_by_unit()

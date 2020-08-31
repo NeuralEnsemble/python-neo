@@ -285,6 +285,11 @@ class Segment(Container):
 
         subseg.annotations = deepcopy(self.annotations)
 
+        if t_start is None:
+            t_start = self.t_start
+        if t_stop is None:
+            t_stop = self.t_stop
+
         t_shift = - t_start
 
         # cut analogsignals and analogsignalarrays
