@@ -17,6 +17,7 @@ Sample datasets from Allen Institute - http://alleninstitute.github.io/AllenSDK/
 
 from __future__ import absolute_import, division
 
+import os
 from itertools import chain
 from datetime import datetime
 import json
@@ -121,12 +122,14 @@ class NWBIO(BaseIO):
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
         self.blocks_written = 0
+        self.nwb_file_mode = mode
 
     def read_all_blocks(self, lazy=False, **kwargs):
         """
 
         """
-        io = pynwb.NWBHDF5IO(self.filename, mode='r')  # Open a file with NWBHDF5IO
+        assert self.nwb_file_mode in ('r',)
+        io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode)  # Open a file with NWBHDF5IO
         self._file = io.read()
 
         self.global_block_metadata = {}
@@ -307,7 +310,10 @@ class NWBIO(BaseIO):
         # todo: store additional Neo annotations somewhere in NWB file
         nwbfile = NWBFile(**annotations)
 
-        io_nwb = pynwb.NWBHDF5IO(self.filename, manager=get_manager(), mode='w')
+        assert self.nwb_file_mode in ('w',)  # possibly expand to 'a'ppend later
+        if self.nwb_file_mode == "w" and os.path.exists(self.filename):
+            os.remove(self.filename)
+        io_nwb = pynwb.NWBHDF5IO(self.filename, manager=get_manager(), mode=self.nwb_file_mode)
 
         nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
         #nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
