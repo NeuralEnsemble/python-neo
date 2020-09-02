@@ -607,7 +607,8 @@ class BaseRawIO:
                 'cache_path do not exists use "home" or "same_as_resource" to make this auto'
 
         # the hash of the resource (dir of file) is done with filename+datetime
-        # TODO make something more sophisticated when rawmode='one-dir' that use all filename and datetime
+        # TODO make something more sophisticated when rawmode='one-dir' that use all
+        #  filename and datetime
         d = dict(ressource_name=resource_name, mtime=os.path.getmtime(resource_name))
         hash = joblib.hash(d, hash_name='md5')
 
