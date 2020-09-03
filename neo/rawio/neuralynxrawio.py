@@ -214,10 +214,16 @@ class NeuralynxRawIO(BaseRawIO):
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
+        # require all sampled signals, ncs files, to have same sampling rate
         if sig_channels.size > 0:
             sampling_rate = np.unique(sig_channels['sampling_rate'])
             assert sampling_rate.size == 1
             self._sigs_sampling_rate = sampling_rate[0]
+
+        # set 2 attributes needed later for header in case there are no ncs files in dataset,
+        #   e.g. Pegasus
+        self._timestamp_limits = None
+        self._nb_segment = 1
 
         # Read ncs files for gaps detection and nb_segment computation.
         # :TODO: current algorithm depends on side-effect of read_ncs_files on
@@ -238,6 +244,7 @@ class NeuralynxRawIO(BaseRawIO):
                 ts0 = min(ts0, ts[0])
                 ts1 = max(ts0, ts[-1]) # :FIXME: possible error, should be ts1
 
+        # decide on segment and global start and stop times based on files available
         if self._timestamp_limits is None:
             # case  NO ncs but HAVE nev or nse
             self._timestamp_limits = [(ts0, ts1)]
