@@ -97,7 +97,7 @@ class NeuralynxRawIO(BaseRawIO):
 
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot
-            ext = ext.lower() # make lower case for comparisons
+            ext = ext.lower()  # make lower case for comparisons
             if ext not in self.extensions:
                 continue
 
@@ -165,7 +165,8 @@ class NeuralynxRawIO(BaseRawIO):
                         self._empty_nse_ntt.append(filename)
                         data = np.zeros((0,), dtype=dtype)
                     else:
-                        data = np.memmap(filename, dtype=dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
+                        data = np.memmap(filename, dtype=dtype, mode='r',
+                                         offset=NlxHeader.HEADER_SIZE)
 
                     self._spike_memmap[chan_uid] = data
 
@@ -178,7 +179,7 @@ class NeuralynxRawIO(BaseRawIO):
                         unit_id = '{}'.format(unit_id)
                         wf_units = 'uV'
                         wf_gain = info['bit_to_microVolt'][idx]
-                        if info.get('input_inverted',False):
+                        if info.get('input_inverted', False):
                             wf_gain *= -1
                         wf_offset = 0.
                         wf_left_sweep = -1  # NOT KNOWN
@@ -198,7 +199,8 @@ class NeuralynxRawIO(BaseRawIO):
                         data = np.zeros((0,), dtype=nev_dtype)
                         internal_ids = []
                     else:
-                        data = np.memmap(filename, dtype=nev_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
+                        data = np.memmap(filename, dtype=nev_dtype, mode='r',
+                                         offset=NlxHeader.HEADER_SIZE)
                         internal_ids = np.unique(data[['event_id', 'ttl_input']]).tolist()
                     for internal_event_id in internal_ids:
                         if internal_event_id not in self.internal_event_ids:
@@ -242,7 +244,7 @@ class NeuralynxRawIO(BaseRawIO):
                     ts0 = ts[0]
                     ts1 = ts[-1]
                 ts0 = min(ts0, ts[0])
-                ts1 = max(ts0, ts[-1]) # :FIXME: possible error, should be ts1
+                ts1 = max(ts0, ts[-1])  # :FIXME: possible error, should be ts1
 
         # decide on segment and global start and stop times based on files available
         if self._timestamp_limits is None:
@@ -575,8 +577,8 @@ class NeuralynxRawIO(BaseRawIO):
 
                 if chan_uid == chan_uid0:
                     ts0 = subdata[0]['timestamp']
-                    ts1 = subdata[-1]['timestamp'] \
-                            + np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                    ts1 = subdata[-1]['timestamp'] +\
+                        np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
@@ -584,6 +586,7 @@ class NeuralynxRawIO(BaseRawIO):
                     self._sigs_t_stop.append(t_stop)
                     length = subdata.size * BLOCK_SIZE
                     self._sigs_length.append(length)
+
 
 class NcsBlocks():
     """
@@ -596,6 +599,7 @@ class NcsBlocks():
     endBlocks = []
     sampFreqUsed = 0
     microsPerSampUsed = 0
+
 
 class NlxHeader(OrderedDict):
     """
@@ -670,13 +674,16 @@ class NlxHeader(OrderedDict):
     header_pattern_dicts = {
         # Cheetah before version 5 and BML
         'bv5': dict(
-            datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)  At Time: (?P<time>\S+)',
+            datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)'
+                            r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
             datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
         # Cheetah version 5 before and including v 5.6.4
         'bv5.6.4': dict(
-            datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)',
-            datetime2_regex=r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)',
+            datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)'
+                            r'  \(h:m:s\.ms\) (?P<time>\S+)',
+            datetime2_regex=r'## Time Closed \(m/d/y\): (?P<date>\S+)'
+                            r'  \(h:m:s\.ms\) (?P<time>\S+)',
             filename_regex=r'## File Name (?P<filename>\S+)',
             datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
         # Cheetah after v 5.6.4 and default for others such as Pegasus
@@ -697,7 +704,8 @@ class NlxHeader(OrderedDict):
         txt_header = txt_header.strip(b'\x00').decode('latin-1')
 
         # must start with 8 # characters
-        assert txt_header.startswith("########"),'Neuralynx files must start with 8 # characters.'
+        assert txt_header.startswith("########"),\
+            'Neuralynx files must start with 8 # characters.'
 
         # find keys
         info = NlxHeader()
@@ -807,6 +815,7 @@ class NcsHeader():
     Representation of information in Ncs file headers, including exact
     recording type.
     """
+
 
 ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
              ('nb_valid', 'uint32'), ('samples', 'int16', (BLOCK_SIZE,))]
