@@ -10,8 +10,8 @@ NTT contains spikes and waveforms for tetrodes
 
 
 NCS can contains gaps that can be detected in inregularity
-in timestamps of data blocks. Each gap lead to one new segment.
-NCS files need to be read entirely to detect those gaps.... too bad....
+in timestamps of data blocks. Each gap leads to one new segment.
+Some NCS files may need to be read entirely to detect those gaps which can be slow.
 
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia
@@ -34,17 +34,17 @@ BLOCK_SIZE = 512  # nb sample per signal block
 
 class NeuralynxRawIO(BaseRawIO):
     """"
-    Class for reading dataset recorded by Neuralynx.
+    Class for reading datasets recorded by Neuralynx.
 
     Examples:
         >>> reader = NeuralynxRawIO(dirname='Cheetah_v5.5.1/original_data')
         >>> reader.parse_header()
 
-            Inspect all file in the directory.
+            Inspect all files in the directory.
 
         >>> print(reader)
 
-            Display all informations about signal channels, units, segment size....
+            Display all information about signal channels, units, segment size....
     """
     extensions = ['nse', 'ncs', 'nev', 'ntt']
     rawmode = 'one-dir'
@@ -75,8 +75,8 @@ class NeuralynxRawIO(BaseRawIO):
         self._empty_nev = []
         self._empty_nse_ntt = []
 
-        # explore the directory looking for ncs, nev, nse and ntt
-        # And construct channels headers
+        # Explore the directory looking for ncs, nev, nse and ntt
+        # and construct channels headers.
         signal_annotations = []
         unit_annotations = []
         event_annotations = []
@@ -104,7 +104,7 @@ class NeuralynxRawIO(BaseRawIO):
 
                 chan_uid = (chan_name, chan_id)
                 if ext == 'ncs':
-                    # a signal channels
+                    # a signal channel
                     units = 'uV'
                     gain = info['bit_to_microVolt'][idx]
                     if info.get('input_inverted', False):
@@ -207,7 +207,7 @@ class NeuralynxRawIO(BaseRawIO):
             self._sigs_sampling_rate = sampling_rate[0]
 
         # read ncs files for gaps detection and nb_segment computation
-        self.read_ncs_files(self.ncs_filenames)
+        ncsBlocks = self.read_ncs_files(self.ncs_filenames)
 
         # timestamp limit in nev, nse
         # so need to scan all spike and event to
@@ -418,7 +418,13 @@ class NeuralynxRawIO(BaseRawIO):
 
     def read_ncs_files(self, ncs_filenames):
         """
-        Given a list of ncs files construct:
+<<<<<<< Updated upstream
+        Given a list of ncs files contrsuct:
+=======
+        Given a list of ncs files, return a dictionary of NcsBlocks indexed by channel uid.
+
+        :
+>>>>>>> Stashed changes
             * self._sigs_memmap = [ {} for seg_index in range(self._nb_segment) ]
             * self._sigs_t_start = []
             * self._sigs_t_stop = []
@@ -438,9 +444,9 @@ class NeuralynxRawIO(BaseRawIO):
         """
         # :TODO: Needs to account for gaps being different in different blocks of channels.
         if len(ncs_filenames) == 0:
-            self._nb_segment = 1
-            self._timestamp_limits = None
-            return
+            return NcsBlocks()
+
+
 
         good_delta = int(BLOCK_SIZE * 1e6 / self._sigs_sampling_rate)
         chan_uid0 = list(ncs_filenames.keys())[0]
