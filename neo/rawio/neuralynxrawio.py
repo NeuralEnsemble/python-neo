@@ -3,13 +3,13 @@ Class for reading data from Neuralynx files.
 This IO supports NCS, NEV, NSE and NTT file formats.
 
 
-NCS contains signals for one channel
+NCS contains sampled signal for one channel
 NEV contains events
 NSE contains spikes and waveforms for mono electrodes
 NTT contains spikes and waveforms for tetrodes
 
 
-NCS can contains gaps that can be detected in inregularity
+NCS can contains gaps that can be detected in irregularity
 in timestamps of data blocks. Each gap leads to one new segment.
 Some NCS files may need to be read entirely to detect those gaps which can be slow.
 
@@ -36,6 +36,8 @@ class NeuralynxRawIO(BaseRawIO):
     """"
     Class for reading datasets recorded by Neuralynx.
 
+    This version only works with rawmode of one-dir for a single directory.
+
     Examples:
         >>> reader = NeuralynxRawIO(dirname='Cheetah_v5.5.1/original_data')
         >>> reader.parse_header()
@@ -50,6 +52,15 @@ class NeuralynxRawIO(BaseRawIO):
     rawmode = 'one-dir'
 
     def __init__(self, dirname='', keep_original_times=False, **kargs):
+        """
+        Parameters
+        ----------
+        dirname: str
+            name of directory containing all files for dataset
+        keep_original_times:
+            if True, keep original start time as in files,
+            otherwise set 0 of time to first time in dataset
+        """
         self.dirname = dirname
         self.keep_original_times = keep_original_times
         BaseRawIO.__init__(self, **kargs)
@@ -71,7 +82,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._spike_memmap = {}
         self.internal_unit_ids = []  # channel_index > ((channel_name, channel_id), unit_id)
         self.internal_event_ids = []
-        self._empty_ncs = []  # this list contains filenames of empty records
+        self._empty_ncs = []  # this list contains filenames of empty files
         self._empty_nev = []
         self._empty_nse_ntt = []
 
@@ -90,7 +101,9 @@ class NeuralynxRawIO(BaseRawIO):
             if ext not in self.extensions:
                 continue
 
-            if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE) and (ext in ['ncs']):
+            # Skip Ncs files with only header. Other empty file types
+            # will have an empty dataset constructed later.
+            if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE) and ext in ['ncs']:
                 self._empty_ncs.append(filename)
                 continue
 
@@ -104,7 +117,7 @@ class NeuralynxRawIO(BaseRawIO):
 
                 chan_uid = (chan_name, chan_id)
                 if ext == 'ncs':
-                    # a signal channel
+                    # a sampled signal channel
                     units = 'uV'
                     gain = info['bit_to_microVolt'][idx]
                     if info.get('input_inverted', False):
@@ -140,8 +153,8 @@ class NeuralynxRawIO(BaseRawIO):
                     signal_annotations.append(d)
 
                 elif ext in ('nse', 'ntt'):
-                    # nse and ntt are pretty similar except for the wavform shape
-                    # a file can contain several unit_id (so several unit channel)
+                    # nse and ntt are pretty similar except for the waveform shape.
+                    # A file can contain several unit_id (so several unit channel).
                     assert chan_id not in self.nse_ntt_filenames, \
                         'Several nse or ntt files have the same unit_id!!!'
                     self.nse_ntt_filenames[chan_uid] = filename
@@ -206,11 +219,13 @@ class NeuralynxRawIO(BaseRawIO):
             assert sampling_rate.size == 1
             self._sigs_sampling_rate = sampling_rate[0]
 
-        # read ncs files for gaps detection and nb_segment computation
+        # Read ncs files for gaps detection and nb_segment computation.
+        # :TODO: current algorithm depends on side-effect of read_ncs_files on
+        #   self._sigs_memmap, self._sigs_t_start, self._sigs_t_stop,
+        #   self._sigs_length, self._nb_segment, self._timestamp_limits
         ncsBlocks = self.read_ncs_files(self.ncs_filenames)
 
-        # timestamp limit in nev, nse
-        # so need to scan all spike and event to
+        # Determine timestamp limits in nev, nse file by scanning them.
         ts0, ts1 = None, None
         for _data_memmap in (self._spike_memmap, self._nev_memmap):
             for _, data in _data_memmap.items():
@@ -221,7 +236,7 @@ class NeuralynxRawIO(BaseRawIO):
                     ts0 = ts[0]
                     ts1 = ts[-1]
                 ts0 = min(ts0, ts[0])
-                ts1 = max(ts0, ts[-1])
+                ts1 = max(ts0, ts[-1]) # :FIXME: possible error, should be ts1
 
         if self._timestamp_limits is None:
             # case  NO ncs but HAVE nev or nse
@@ -249,7 +264,7 @@ class NeuralynxRawIO(BaseRawIO):
             self.global_t_stop = self.global_t_stop - self.global_t_start
             self.global_t_start = 0
 
-        # fill into header dict
+        # fill header dictionary
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [self._nb_segment]
@@ -285,6 +300,7 @@ class NeuralynxRawIO(BaseRawIO):
                 # ~ ev_ann['digital_marker'] =
                 # ~ ev_ann['analog_marker'] =
 
+    # Accessors for segment times which are offset by appropriate global start time
     def _segment_t_start(self, block_index, seg_index):
         return self._seg_t_starts[seg_index] - self.global_t_start
 
@@ -297,7 +313,27 @@ class NeuralynxRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return self._sigs_t_start[seg_index] - self.global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indices):
+        """
+        Retrieve chunk of analog signal, a chunk being a set of contiguous samples.
+
+        PARAMETERS
+        ----------
+        block_index:
+            index of block in dataset, ignored as only 1 block in this implementation
+        seg_index:
+            index of segment to use
+        i_start:
+            sample index of first sample within segment to retrieve
+        i_stop:
+            sample index of last sample within segment to retrieve
+        channel_indices:
+            list of channel indices to return data for
+
+        RETURNS
+        -------
+            array of samples, with each requested channel in a column
+        """
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -308,13 +344,15 @@ class NeuralynxRawIO(BaseRawIO):
         sl0 = i_start % 512
         sl1 = sl0 + (i_stop - i_start)
 
-        if channel_indexes is None:
-            channel_indexes = slice(None)
+        if channel_indices is None:
+            channel_indices = slice(None)
 
-        channel_ids = self.header['signal_channels'][channel_indexes]['id']
-        channel_names = self.header['signal_channels'][channel_indexes]['name']
+        channel_ids = self.header['signal_channels'][channel_indices]['id']
+        channel_names = self.header['signal_channels'][channel_indices]['name']
 
+        # create buffer for samples
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
+
         for i, chan_uid in enumerate(zip(channel_names, channel_ids)):
             data = self._sigs_memmap[seg_index][chan_uid]
             sub = data[block_start:block_stop]
@@ -329,6 +367,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         ts0, ts1 = self._timestamp_limits[seg_index]
 
+        # only count spikes inside the timestamp limits, inclusive, and for the specified unit
         keep = (ts >= ts0) & (ts <= ts1) & (unit_id == data['unit_id'])
         nb_spike = int(data[keep].size)
         return nb_spike
@@ -418,13 +457,9 @@ class NeuralynxRawIO(BaseRawIO):
 
     def read_ncs_files(self, ncs_filenames):
         """
-<<<<<<< Updated upstream
-        Given a list of ncs files contrsuct:
-=======
         Given a list of ncs files, return a dictionary of NcsBlocks indexed by channel uid.
 
-        :
->>>>>>> Stashed changes
+        :TODO: Current algorithm has side effects on following attributes:
             * self._sigs_memmap = [ {} for seg_index in range(self._nb_segment) ]
             * self._sigs_t_start = []
             * self._sigs_t_stop = []
@@ -442,11 +477,11 @@ class NeuralynxRawIO(BaseRawIO):
         gap_indexes can be given (when cached) to avoid full read.
 
         """
-        # :TODO: Needs to account for gaps being different in different blocks of channels.
+        # :TODO: Needs to account for gaps and start and end times potentially
+        #    being different in different groups of channels. These groups typically
+        #    correspond to the channels collected by a single ADC card.
         if len(ncs_filenames) == 0:
-            return NcsBlocks()
-
-
+            return None
 
         good_delta = int(BLOCK_SIZE * 1e6 / self._sigs_sampling_rate)
         chan_uid0 = list(ncs_filenames.keys())[0]
@@ -469,7 +504,7 @@ class NeuralynxRawIO(BaseRawIO):
             deltas0 = np.diff(timestamps0)
 
             # :TODO: This algorithm needs to account for older style files which had a rounded
-            # :TODO: off sampling rate in the header.
+            #   off sampling rate in the header.
             #
             # It should be that:
             # gap_indexes, = np.nonzero(deltas0!=good_delta)
@@ -487,6 +522,9 @@ class NeuralynxRawIO(BaseRawIO):
             # update for lost_indexes
             # Sometimes NLX writes a faulty block, but it then validates how much samples it wrote
             # the validation field is in delta0['nb_valid'], it should be equal to BLOCK_SIZE
+            # :TODO: this algorithm ignores samples in partially filled blocks, which
+            #   is not strictly necessary as all channels might have same partially filled
+            #   blocks at the end.
 
             lost_indexes, = np.nonzero(data0['nb_valid'] < BLOCK_SIZE)
 
