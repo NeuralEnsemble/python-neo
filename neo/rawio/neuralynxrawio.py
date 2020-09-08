@@ -661,6 +661,7 @@ class NlxHeader(OrderedDict):
         ('ApplicationName', '', None),  # also include version number when present
         ('AcquisitionSystem', '', None),
         ('ReferenceChannel', '', None),
+        ('NLX_Base_Class_Type','',None) # in version 4 and earlier versions of Cheetah
     ]
 
     # Filename and datetime may appear in header lines starting with # at
@@ -808,6 +809,37 @@ class NlxHeader(OrderedDict):
                 dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
 
         return info
+
+    def typeOfRecording(self):
+        """
+        Determines type of recording in Ncs file with this header.
+
+        RETURN:
+            one of 'PRE4','BML','DIGITALLYNX','DIGITALLYNXSX','UNKNOWN'
+        """
+
+        if 'NLX_Base_Class_Type' in self:
+
+            # older style standard neuralynx acquisition with rounded sampling frequency
+            if self['NLX_Base_Class_Type'] == 'CscAcqEnt':
+                return 'PRE4'
+
+            # BML style with fractional frequency and microsPerSamp
+            elif self['NLX_Base_Class_Type'] == 'BmlAcq':
+                return 'BML'
+
+        elif 'HardwareSubsystemType' in self:
+
+            # DigitalLynx
+            if self['HardwareSubsystemType'] == 'DigitalLynx':
+                return 'DIGITALLYNX'
+
+            # DigitalLynxSX
+            elif self['HardwareSubsystemType'] == 'DigitalLynxSX':
+                return 'DIGITALLYNXSX'
+
+        else:
+            return 'UNKNOWN'
 
 
 class NcsHeader():
