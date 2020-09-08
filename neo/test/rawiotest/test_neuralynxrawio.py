@@ -2,6 +2,7 @@ import unittest
 
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
+from neo.rawio.neuralynxrawio import NlxHeader
 
 import logging
 
@@ -14,7 +15,8 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
-        'Cheetah_v6.3.2/incomplete_blocks'
+        'Cheetah_v6.3.2/incomplete_blocks',
+        'Cheetah_v4.0.2/original_data'
     ]
     files_to_download = [
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
@@ -58,7 +60,20 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v5.7.4/README.txt',
         'Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs',
         'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
-        'Cheetah_v6.3.2/incomplete_blocks/README.txt']
+        'Cheetah_v6.3.2/incomplete_blocks/README.txt',
+        'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs']
+
+class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
+    """
+    Test of decoding of NlxHeader for type of recording.
+    """
+
+    def test_recording_types(self):
+
+        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        hdr = NlxHeader.buildForFile(filename)
+        self.assertEqual(hdr.typeOfRecording(),'PRE4')
+
 
 
 if __name__ == "__main__":
