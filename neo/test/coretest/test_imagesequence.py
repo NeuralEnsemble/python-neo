@@ -42,10 +42,11 @@ class TestImageSequence(unittest.TestCase):
             ImageSequence(self.data, sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um)
 
     def test_wrong_dimensions(self):
-        l = ImageSequence(self.data, sampling_rate=500 * pq.Hz, units="V", spatial_scale=1 * pq.um)
+        seq = ImageSequence(self.data, sampling_rate=500 * pq.Hz,
+                            units="V", spatial_scale=1 * pq.um)
 
-        self.assertEqual(l.sampling_rate, 500 * pq.Hz)
-        self.assertEqual(l.spatial_scale, 1 * pq.um)
+        self.assertEqual(seq.sampling_rate, 500 * pq.Hz)
+        self.assertEqual(seq.spatial_scale, 1 * pq.um)
         # giving wrong dimension test if it give an error
         with self.assertRaises(ValueError):
             ImageSequence(

@@ -41,7 +41,8 @@ class ImageSequence(BaseSignal):
         >>> img_sequence_array = [[[column for column in range(20)]for row in range(20)]
         ...                         for frame in range(10)]
         >>> image_sequence = ImageSequence(img_sequence_array, units='V',
-        ...                                sampling_rate=1 * pq.Hz, spatial_scale=1 * pq.micrometer)
+        ...                                sampling_rate=1 * pq.Hz,
+        ...                                spatial_scale=1 * pq.micrometer)
         >>> image_sequence
         ImageSequence 10 frames with width 20 px and height 20 px; units V; datatype int64
         sampling rate: 1.0
