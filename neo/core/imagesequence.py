@@ -53,12 +53,13 @@ class ImageSequence(BaseSignal):
         :image_data: (3D NumPy array, or a list of 2D arrays)
             The data itself
         :units: (quantity units)
-        :sampling_rate: *or* **sampling_period** (quantity scalar) Number of
+        :sampling_rate: *or* **frame_duration** (quantity scalar) Number of
                                                 samples per unit time or
-                                                interval beween to samples.
+                                                duration of a single image frame.
                                                 If both are specified, they are
                                                 checked for consistency.
         :spatial_scale: (quantity scalar) size for a pixel.
+        :t_start: (quantity scalar) Time when sequence begins. Default 0.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset.
@@ -74,20 +75,26 @@ class ImageSequence(BaseSignal):
 
     *Properties available on this object*:
         :sampling_rate: (quantity scalar) Number of samples per unit time.
-            (1/:attr:`sampling_period`)
-        :sampling_period: (quantity scalar) Interval between two samples.
-            (1/:attr:`quantity scalar`)
+            (1/:attr:`frame_duration`)
+        :frame_duration: (quantity scalar) .
+            (1/:attr:`sampling_rate`)
         :spatial_scale: size of a pixel
+        :duration: (Quantity) Sequence duration, read-only.
+            (size * :attr:`frame_duration`)
+        :t_stop: (quantity scalar) Time when sequence ends, read-only.
+            (:attr:`t_start` + :attr:`duration`)
      """
     _single_parent_objects = ('Segment',)
     _single_parent_attrs = ('segment',)
     _quantity_attr = 'image_data'
     _necessary_attrs = (('image_data', pq.Quantity, 3),
                         ('sampling_rate', pq.Quantity, 0),
-                        ('spatial_scale', pq.Quantity, 0))
+                        ('spatial_scale', pq.Quantity, 0),
+                        ('t_start', pq.Quantity, 0))
     _recommended_attrs = BaseNeo._recommended_attrs
 
-    def __new__(cls, image_data, units=None, dtype=None, copy=True, spatial_scale=None, sampling_period=None,
+    def __new__(cls, image_data, units=None, dtype=None, copy=True, t_start=0 * pq.s,
+                spatial_scale=None, frame_duration=None,
                 sampling_rate=None, name=None, description=None, file_origin=None,
                 **annotations):
         """
@@ -108,12 +115,16 @@ class ImageSequence(BaseSignal):
         obj = pq.Quantity(image_data, units=units, dtype=dtype, copy=copy).view(cls)
         obj.segment = None
         # function from analogsignal.py in neo/core directory
-        obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
+        obj.sampling_rate = _get_sampling_rate(sampling_rate, frame_duration)
         obj.spatial_scale = spatial_scale
+        if t_start is None:
+            raise ValueError('t_start cannot be None')
+        obj._t_start = t_start
 
         return obj
 
-    def __init__(self, image_data, units=None, dtype=None, copy=True, spatial_scale=None, sampling_period=None,
+    def __init__(self, image_data, units=None, dtype=None, copy=True, t_start=0 * pq.s,
+                 spatial_scale=None, frame_duration=None,
                  sampling_rate=None, name=None, description=None, file_origin=None,
                  **annotations):
         '''
@@ -127,6 +138,7 @@ class ImageSequence(BaseSignal):
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
         self.spatial_scale = getattr(obj, 'spatial_scale', None)
         self.units = getattr(obj, 'units', None)
+        self._t_start = getattr(obj, '_t_start', 0 * pq.s)
 
         return obj
 
@@ -159,6 +171,7 @@ class ImageSequence(BaseSignal):
                     average += picture_data[b]
                 data.append((average * 1.0) / len(i))
             analogsignal_list.append(AnalogSignal(data, units=self.units,
+                                                  t_start=self.t_start,
                                                   sampling_rate=self.sampling_rate))
 
         return analogsignal_list
@@ -193,3 +206,67 @@ class ImageSequence(BaseSignal):
             for attr in ("sampling_rate", "spatial_scale"):
                 if getattr(self, attr) != getattr(other, attr):
                     raise ValueError("Inconsistent values of %s" % attr)
+
+    # t_start attribute is handled as a property so type checking can be done
+    @property
+    def t_start(self):
+        '''
+        Time when sequence begins.
+        '''
+        return self._t_start
+
+    @t_start.setter
+    def t_start(self, start):
+        '''
+        Setter for :attr:`t_start`
+        '''
+        if start is None:
+            raise ValueError('t_start cannot be None')
+        self._t_start = start
+
+    @property
+    def duration(self):
+        '''
+        Sequence duration
+
+        (:attr:`size` * :attr:`frame_duration`)
+        '''
+        return self.shape[0] / self.sampling_rate
+
+    @property
+    def t_stop(self):
+        '''
+        Time when Sequence ends.
+
+        (:attr:`t_start` + :attr:`duration`)
+        '''
+        return self.t_start + self.duration
+
+    @property
+    def times(self):
+        '''
+        The time points of each frame in the sequence
+
+        (:attr:`t_start` + arange(:attr:`shape`)/:attr:`sampling_rate`)
+        '''
+        return self.t_start + np.arange(self.shape[0]) / self.sampling_rate
+
+    @property
+    def frame_duration(self):
+        '''
+        Duration of a single image frame in the sequence.
+
+        (1/:attr:`sampling_rate`)
+        '''
+        return 1.0 / self.sampling_rate
+
+    @frame_duration.setter
+    def frame_duration(self, duration):
+        '''
+        Setter for :attr:`frame_duration`
+        '''
+        if duration is None:
+            raise ValueError('frame_duration cannot be None')
+        elif not hasattr(duration, 'units'):
+            raise ValueError('frame_duration must have units')
+        self.sampling_rate = 1.0 / duration
