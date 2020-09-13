@@ -117,7 +117,7 @@ class ImageSequence(BaseSignal):
                  sampling_rate=None, name=None, description=None, file_origin=None,
                  **annotations):
         '''
-               Initializes a newly constructed :class:`ImageSequence` instance.
+        Initializes a newly constructed :class:`ImageSequence` instance.
         '''
         DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
                             **annotations)
@@ -165,14 +165,14 @@ class ImageSequence(BaseSignal):
 
     def _repr_pretty_(self, pp, cycle):
         '''
-               Handle pretty-printing the :class:`ImageSequence`.
+        Handle pretty-printing the :class:`ImageSequence`.
         '''
         pp.text("{cls} {frame} frame with {width} px of width and {height} px of height; "
                 "units {units}; datatype {dtype} ".format(cls=self.__class__.__name__,
                                                           frame=self.shape[0],
-                                                          height=self.shape[1],
-                                                          width=self.shape[2],
-                                                          units=self.units.dimensionality.string,
+                height=self.shape[1],
+                width=self.shape[2],
+                units=self.units.dimensionality.string,
                                                           dtype=self.dtype))
 
         def _pp(line):
@@ -180,8 +180,10 @@ class ImageSequence(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sampling rate: {}".format(self.sampling_rate),
-                     "spatial_scale: {}".format(self.spatial_scale)]:
+        for line in [
+            "sampling rate: {!s}".format(self.sampling_rate),
+            "spatial_scale: {!s}".format(self.spatial_scale),
+        ]:
             _pp(line)
 
     def _check_consistency(self, other):
