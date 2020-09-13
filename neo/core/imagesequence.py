@@ -168,12 +168,13 @@ class ImageSequence(BaseSignal):
         Handle pretty-printing the :class:`ImageSequence`.
         '''
         pp.text("{cls} {frame} frame with {width} px of width and {height} px of height; "
-                "units {units}; datatype {dtype} ".format(cls=self.__class__.__name__,
-                                                          frame=self.shape[0],
-                height=self.shape[1],
-                width=self.shape[2],
-                units=self.units.dimensionality.string,
-                                                          dtype=self.dtype))
+                "units {units}; datatype {dtype} ".format(
+                    cls=self.__class__.__name__,
+                    frame=self.shape[0],
+                    height=self.shape[1],
+                    width=self.shape[2],
+                    units=self.units.dimensionality.string,
+                    dtype=self.dtype))
 
         def _pp(line):
             pp.breakable()
