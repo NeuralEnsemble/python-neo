@@ -216,7 +216,7 @@ class ImageSequence(BaseSignal):
         are compatible with this one.
         """
         if isinstance(other, ImageSequence):
-            for attr in ("sampling_rate", "spatial_scale"):
+            for attr in ("sampling_rate", "spatial_scale", "t_start"):
                 if getattr(self, attr) != getattr(other, attr):
                     raise ValueError("Inconsistent values of %s" % attr)
 
