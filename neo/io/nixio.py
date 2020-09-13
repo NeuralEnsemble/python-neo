@@ -507,10 +507,15 @@ class NixIO(BaseIO):
         del neo_attrs["sampling_rate"]
         spatial_scale = neo_attrs["spatial_scale"]
         del neo_attrs["spatial_scale"]
+        if "t_start" in neo_attrs:
+            t_start = neo_attrs["t_start"]
+            del neo_attrs["t_start"]
+        else:
+            t_start = 0.0 * pq.ms
 
         neo_seq = ImageSequence(image_data=imgseq, sampling_rate=sampling_rate,
                                 spatial_scale=spatial_scale, units=unit,
-                                **neo_attrs)
+                                t_start=t_start, **neo_attrs)
 
         self._neo_map[neo_attrs["nix_name"]] = neo_seq
         # all DAs reference the same sources
@@ -911,6 +916,9 @@ class NixIO(BaseIO):
             metadata["spatial_scale"] = imgseq.spatial_scale.magnitude.item()
             units = imgseq.spatial_scale.units
             metadata.props["spatial_scale"].unit = units_to_string(units)
+            metadata["t_start"] = imgseq.t_start.magnitude.item()
+            units = imgseq.t_start.units
+            metadata.props["t_start"].unit = units_to_string(units)
 
             nixdas.append(da)
             if nixgroup:
