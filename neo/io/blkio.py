@@ -61,6 +61,9 @@ class BlkIO(BaseIO):
         self.spatial_scale = spatial_scale
 
     def read(self, lazy=False, **kwargs):
+        """
+        Return all data from the file as a list of Blocks
+        """
         if lazy:
             raise ValueError('This IO module does not support lazy loadign')
         return [self.read_block(lazy=lazy, units=self.units, sampling_rate=self.sampling_rate,

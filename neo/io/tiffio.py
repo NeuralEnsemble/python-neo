@@ -82,6 +82,9 @@ class TiffIO(BaseIO):
         self.spatial_scale = spatial_scale
 
     def read(self, lazy=False, **kwargs):
+        """
+        Return all data from the file as a list of Blocks
+        """
         if lazy:
             raise ValueError('This IO module does not support lazy loading')
         return [self.read_block(lazy=lazy, **kwargs)]

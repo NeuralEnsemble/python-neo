@@ -128,7 +128,7 @@ class BrainwareF32IO(BaseIO):
         '''
         Reads simple spike data file "fname" generated with BrainWare
         '''
-        return self.read_block(lazy=lazy, )
+        return [self.read_block(lazy=lazy, )]
 
     def read_block(self, lazy=False, **kargs):
         '''

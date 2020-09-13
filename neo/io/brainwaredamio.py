@@ -115,7 +115,7 @@ class BrainwareDamIO(BaseIO):
         Reads raw data file "fname" generated with BrainWare
         '''
         assert not lazy, 'Do not support lazy'
-        return self.read_block(lazy=lazy)
+        return [self.read_block(lazy=lazy)]
 
     def read_block(self, lazy=False, **kargs):
         '''

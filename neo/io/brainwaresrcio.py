@@ -222,7 +222,7 @@ class BrainwareSrcIO(BaseIO):
 
         If you wish to read more than one Block, please use read_all_blocks.
         """
-        return self.read_block(lazy=lazy, **kargs)
+        return [self.read_block(lazy=lazy, **kargs)]
 
     def read_block(self, lazy=False, **kargs):
         """

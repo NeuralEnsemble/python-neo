@@ -112,6 +112,9 @@ class BaseIO:
 
     ######## General read/write methods #######################
     def read(self, lazy=False, **kargs):
+        """
+        Return all data from the file as a list of Blocks
+        """
         if lazy:
             assert self.support_lazy, 'This IO do not support lazy loading'
         if Block in self.readable_objects:
