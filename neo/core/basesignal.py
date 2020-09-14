@@ -142,7 +142,7 @@ class BaseSignal(DataObject):
             if attr[0] == "signal":
                 required_attributes["signal"] = signal
             elif attr[0] == "t_start":
-                required_attributes["t_start"] = getattr(self, attr[0], 0.0 * pq.ms)
+                required_attributes["t_start"] = getattr(self, "t_start", 0.0 * pq.ms)
             else:
                 required_attributes[str(attr[0])] = getattr(self, attr[0], None)
         required_attributes['units'] = units
