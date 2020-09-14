@@ -115,8 +115,8 @@ class BaseIO:
         """
         Return all data from the file as a list of Blocks
         """
-        if lazy:
-            assert self.support_lazy, 'This IO do not support lazy loading'
+        if lazy and not self.support_lazy:
+            raise ValueError("This IO module does not support lazy loading")
         if Block in self.readable_objects:
             if (hasattr(self, 'read_all_blocks') and
                     callable(getattr(self, 'read_all_blocks'))):

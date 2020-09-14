@@ -56,14 +56,6 @@ class AsciiImageIO(BaseIO):
         self.sampling_rate = sampling_rate
         self.spatial_scale = spatial_scale
 
-    def read(self, lazy=False, **kwargs):
-        """
-        Return all data from the file as a list of Blocks
-        """
-        if lazy:
-            raise ValueError('This IO module does not support lazy loading')
-        return [self.read_block(lazy=lazy, **kwargs)]
-
     def read_block(self, lazy=False, **kwargs):
 
         file = open(self.filename, 'r')

@@ -215,15 +215,6 @@ class BrainwareSrcIO(BaseIO):
         self._lazy = False
         self._default_spiketrain = None
 
-    def read(self, lazy=False, **kargs):
-        """
-        Reads the first Block from the Spike ReCording file "filename"
-        generated with BrainWare.
-
-        If you wish to read more than one Block, please use read_all_blocks.
-        """
-        return [self.read_block(lazy=lazy, **kargs)]
-
     def read_block(self, lazy=False, **kargs):
         """
         Reads the first Block from the Spike ReCording file "filename"
