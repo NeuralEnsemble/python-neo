@@ -14,6 +14,7 @@ of the lazy load with proxy objects.
 
 """
 import collections
+import warnings
 import numpy as np
 
 from neo import logging_handler
@@ -68,7 +69,8 @@ class BaseFromRaw(BaseIO):
 
     _prefered_signal_group_mode = 'group-by-same-units'  # 'split-all'
     _prefered_units_group_mode = 'all-in-one'  # 'split-all'
-
+    _default_group_mode_have_change_in_0_9 = False
+    
     def __init__(self, *args, **kargs):
         BaseIO.__init__(self, *args, **kargs)
         self.parse_header()
@@ -100,6 +102,9 @@ class BaseFromRaw(BaseIO):
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
+            if self._default_group_mode_have_change_in_0_9:
+                warnings.warn('default "signal_group_mode" have change in version 0.9:'
+                        'now all channels are group together in AnalogSignal')
 
         if units_group_mode is None:
             units_group_mode = self._prefered_units_group_mode
