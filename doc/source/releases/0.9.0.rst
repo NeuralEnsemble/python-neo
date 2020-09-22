@@ -1,0 +1,61 @@
+=======================
+Neo 0.9.0 release notes
+=======================
+
+[TODO] th October 2020
+
+
+Group and ChannelView replace Unit and ChannelIndex
+---------------------------------------------------
+
+
+
+Python 3 only
+-------------
+
+We have now dropped support for Python 2.7 and Python 3.5, and for versions of NumPy older than 1.13.
+In future, we plan to follow NEP29_ + one year, i.e. we will support Python and NumPy versions
+for one year longer than recommended in NEP29. This was `discussed here`_.
+
+Change in default behaviour for grouping channels in IO modules
+---------------------------------------------------------------
+
+Previously, when reading multiple related signals (same length, same units) from a file,
+some IO classes would by default create a separate, single-channel :class:`AnalogSignal` per signal,
+others would combine all related signals into one multi-channel :class:`AnalogSignal`.
+
+From Neo 0.9.0, the default for all IO classes is to create a one multi-channel :class:`AnalogSignal`.
+To get the "multiple single-channel signals" behaviour, use::
+
+    io.read(signal_group_mode="split-all")
+
+Other new or modified features
+------------------------------
+
+  * added methods :func:`rectify()`, :func:`downsample` and :func:`resample` to :class:`AnalogSignal`
+  * :func:`SpikeTrain.merge()` can now merge multiple spiketrains
+  * the utility function :func:`cut_block_by_epochs()` gives a new :class:`Block` now
+    rather than modifying the block in place.
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+  * NeoMatlabIO (support for signal annotations)
+  * NeuralynxIO (fix handling of empty .nev files)
+  * AxonIO (support EDR3 header, fix channel events bug)
+  * Spike2IO (fix rounding problem, fix for v9 SON files)
+
+Acknowledgements
+----------------
+
+Thanks to Julia Sprenger, Samuel Garcia, Andrew Davison, Alexander Kleinjohann, Hugo van Kemenade,
+ Achilleas Koutsou, Jeffrey Gill, Corentin Fragnaud, Aitor Morales-Gregorio, Rémi Proville,
+ Robin Gutzen, Marin Manuel, Simon Danner, Michael Denker, Peter N. Steinmetz, Diziet Asahi and
+ Lucien Krapp for their contributions to this release.
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.9.0+is%3Aclosed
+.. _`pull requests`: https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+merged%3A%3E2019-09-30+milestone%3A0.9.0
+.. _NEP29: https://numpy.org/neps/nep-0029-deprecation_policy.html
+.. _`discussed here`: https://github.com/NeuralEnsemble/python-neo/issues/788
