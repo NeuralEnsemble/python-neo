@@ -21,10 +21,7 @@ Neo: https://github.com/G-Node/python-neo/wiki
 
 
 from datetime import date, time, datetime
-try:
-    from collections.abc import Iterable
-except ImportError:
-    from collections import Iterable
+from collections.abc import Iterable
 from collections import OrderedDict
 import itertools
 from uuid import uuid4
@@ -48,10 +45,6 @@ try:
 except ImportError:
     HAVE_NIX = False
 
-try:
-    string_types = basestring
-except NameError:
-    string_types = str
 
 datetime_types = (date, time, datetime)
 
@@ -1320,7 +1313,7 @@ class NixIO(BaseIO):
             value, annotype = dt_to_nix(v)
             prop = section.create_property(name, value)
             prop.definition = annotype
-        elif isinstance(v, string_types):
+        elif isinstance(v, str):
             if len(v):
                 section.create_property(name, v)
             else:
@@ -1343,7 +1336,7 @@ class NixIO(BaseIO):
                     unit = str(v.dimensionality)
             else:
                 for item in v:
-                    if isinstance(item, string_types):
+                    if isinstance(item, str):
                         item = item
                     elif isinstance(item, pq.Quantity):
                         unit = str(item.dimensionality)
