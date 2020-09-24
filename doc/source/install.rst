@@ -5,21 +5,19 @@ Installation
 Neo is a pure Python package, so it should be easy to get it running on any
 system.
 
+Installing from the Python Package Index
+========================================
+
 Dependencies
-============
+------------
 
     * Python_ >= 3.6
     * numpy_ >= 1.13.0
     * quantities_ >= 0.12.1
 
-For Debian/Ubuntu, you can install these using::
+You can install the latest published version of Neo and its dependencies using::
 
-    $ apt-get install python-numpy python-pip
-    $ pip install quantities
-
-You may need to run these as root. For other operating systems, you can
-download installers from the links above, or use a scientific Python distribution
-such as Anaconda_.
+    $ pip install neo
 
 Certain IO modules have additional dependencies. If these are not satisfied,
 Neo will still install but the IO module that uses them will fail on loading:
@@ -32,21 +30,27 @@ Neo will still install but the IO module that uses them will fail on loading:
    * stfio for StimfitIO
    * pillow for TiffIO
 
+These dependencies can be installed by specifying a comma seperated list on the
+``pip install`` command::
 
-Installing from the Python Package Index
-========================================
+    $ pip install neo[hdf5io,tiffio]
 
-.. warning:: alpha and beta releases cannot be installed from PyPI.
+Or when installing a specific version of neo::
 
-If you have pip_ installed::
+    $ pip install neo[hdf5io,tiffio]==0.8.0
 
-    $ pip install neo
+These additional dependencies for IO modules are available::
 
-This will automatically download and install the latest release (again
-you may need to have administrator privileges on the machine you are installing
-on).
+  * hdf5io
+  * igorproio
+  * kwikio
+  * neomatlabio
+  * nixio
+  * stimfitio
+  * tiffio
 
-To download and install manually, download:
+
+To download and install the package manually, download:
 
     |neo_github_url|
 
@@ -58,14 +62,6 @@ Then:
     $ unzip neo-|release|.zip
     $ cd neo-|release|
     $ python setup.py install
-
-
-
-or::
-
-    $ python3 setup.py install
-
-depending on which version of Python you are using.
 
 
 Installing from source
