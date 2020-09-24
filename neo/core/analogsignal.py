@@ -725,7 +725,8 @@ class AnalogSignal(BaseSignal):
                 if getattr(self, attr[0], None) != getattr(other, attr[0], None):
                     # if attr[0] in ['t_start','t_stop']:
                     #     continue
-                    raise MergeError("Cannot concatenate these two signals as the %s differ." % attr[0])
+                    raise MergeError(
+                        "Cannot concatenate these two signals as the %s differ." % attr[0])
 
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
@@ -740,8 +741,8 @@ class AnalogSignal(BaseSignal):
         if signal2.t_start > signal1.t_stop + signal1.sampling_period:
             if padding != False:
                 logger.warning('Signals will be padded using {}.'.format(padding))
-                pad_time = signal2.t_start-signal1.t_stop
-                n_pad_samples = int(((pad_time)*self.sampling_rate).rescale('dimensionless'))
+                pad_time = signal2.t_start - signal1.t_stop
+                n_pad_samples = int(((pad_time) * self.sampling_rate).rescale('dimensionless'))
                 if padding is True:
                     padding = np.NaN * self.units
                 if isinstance(padding, pq.Quantity):
@@ -752,7 +753,8 @@ class AnalogSignal(BaseSignal):
                 pad_data = np.full((n_pad_samples,) + signal1.shape[1:], padding)
 
                 # create new signal 1 with extended data, but keep array_annotations
-                signal_tmp = signal1.duplicate_with_new_data(np.vstack((signal1.magnitude, pad_data)))
+                signal_tmp = signal1.duplicate_with_new_data(
+                    np.vstack((signal1.magnitude, pad_data)))
                 signal_tmp.array_annotations = signal1.array_annotations
                 signal1 = signal_tmp
             else:
@@ -761,7 +763,7 @@ class AnalogSignal(BaseSignal):
 
         #  in case of overlapping signals slice according to overwrite parameter
         elif signal2.t_start < signal1.t_stop + signal1.sampling_period:
-            n_samples = int(((signal1.t_stop - signal2.t_start)*signal1.sampling_rate).simplified)
+            n_samples = int(((signal1.t_stop - signal2.t_start) * signal1.sampling_rate).simplified)
             logger.warning('Overwriting {} samples while concatenating signals.'.format(n_samples))
             if not overwrite:  # removing samples second signal
                 slice_t_start = signal1.t_stop + signal1.sampling_period

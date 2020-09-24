@@ -282,10 +282,12 @@ class BaseSignal(DataObject):
         # merge channel_index (move to ChannelIndex.merge()?)
         if self.channel_index and other.channel_index:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]),
-                channel_ids=np.hstack(
-                    [self.channel_index.channel_ids, other.channel_index.channel_ids]),
-                channel_names=np.hstack(
-                    [self.channel_index.channel_names, other.channel_index.channel_names]))
+                                                channel_ids=np.hstack(
+                                                    [self.channel_index.channel_ids,
+                                                     other.channel_index.channel_ids]),
+                                                channel_names=np.hstack(
+                                                    [self.channel_index.channel_names,
+                                                     other.channel_index.channel_names]))
         else:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 
@@ -297,7 +299,6 @@ class BaseSignal(DataObject):
         original Signal between times t_start, t_stop.
         '''
         NotImplementedError('Needs to be implemented for subclasses.')
-
 
     def concatenate(self, other):
         '''
@@ -332,5 +333,3 @@ class BaseSignal(DataObject):
         '''
 
         NotImplementedError('Patching need to be implemented in sublcasses')
-
-

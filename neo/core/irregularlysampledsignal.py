@@ -550,7 +550,8 @@ class IrregularlySampledSignal(BaseSignal):
         for attr in self._necessary_attrs:
             if not (attr[0] in ['signal', 'times', 't_start', 't_stop', 'times']):
                 if getattr(self, attr[0], None) != getattr(other, attr[0], None):
-                    raise MergeError("Cannot concatenate these two signals as the %s differ." % attr[0])
+                    raise MergeError(
+                        "Cannot concatenate these two signals as the %s differ." % attr[0])
 
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
