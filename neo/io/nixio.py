@@ -32,9 +32,8 @@ import quantities as pq
 import numpy as np
 
 from .baseio import BaseIO
-from ..core import (Block, Segment, ChannelIndex, AnalogSignal,
-                    IrregularlySampledSignal, Epoch, Event, SpikeTrain,
-                    ImageSequence, Unit)
+from ..core import (Block, Segment, ChannelIndex, AnalogSignal, IrregularlySampledSignal, Epoch,
+                    Event, SpikeTrain, ImageSequence, Unit)
 from ..io.proxyobjects import BaseProxy
 from ..version import version as neover
 
@@ -156,8 +155,7 @@ class NixIO(BaseIO):
     is_readable = True
     is_writable = True
 
-    supported_objects = [Block, Segment, ChannelIndex,
-                         AnalogSignal, IrregularlySampledSignal,
+    supported_objects = [Block, Segment, ChannelIndex, AnalogSignal, IrregularlySampledSignal,
                          Epoch, Event, SpikeTrain, Unit]
     readable_objects = [Block]
     writeable_objects = [Block]
@@ -288,9 +286,7 @@ class NixIO(BaseIO):
     def _nix_to_neo_block(self, nix_block):
         neo_attrs = self._nix_attr_to_neo(nix_block)
         neo_block = Block(**neo_attrs)
-        neo_block.rec_datetime = datetime.fromtimestamp(
-            nix_block.created_at
-        )
+        neo_block.rec_datetime = datetime.fromtimestamp(nix_block.created_at)
 
         # descend into Groups
         for grp in nix_block.groups:
@@ -333,9 +329,7 @@ class NixIO(BaseIO):
     def _nix_to_neo_segment(self, nix_group):
         neo_attrs = self._nix_attr_to_neo(nix_group)
         neo_segment = Segment(**neo_attrs)
-        neo_segment.rec_datetime = datetime.fromtimestamp(
-            nix_group.created_at
-        )
+        neo_segment.rec_datetime = datetime.fromtimestamp(nix_group.created_at)
         self._neo_map[nix_group.name] = neo_segment
 
         # this will probably get all the DAs anyway, but if we change any part
@@ -393,15 +387,13 @@ class NixIO(BaseIO):
         if len(channels):
             chan_names = list(c["name"] for c in channels
                               if "name" in c and c["name"] is not None)
-            chan_ids = list(c["channel_id"] for c in channels
-                            if "channel_id" in c)
+            chan_ids = list(c["channel_id"] for c in channels if "channel_id" in c)
             if chan_names:
                 neo_attrs["channel_names"] = chan_names
             if chan_ids:
                 neo_attrs["channel_ids"] = chan_ids
             if "coordinates" in channels[0]:
-                neo_attrs["coordinates"] = list(c["coordinates"]
-                                                for c in channels)
+                neo_attrs["coordinates"] = list(c["coordinates"] for c in channels)
 
         neo_chx = ChannelIndex(**neo_attrs)
         self._neo_map[nix_source.name] = neo_chx
@@ -451,8 +443,7 @@ class NixIO(BaseIO):
         signaldata = np.array([d[:] for d in nix_da_group]).transpose()
         signaldata = create_quantity(signaldata, unit)
         timedim = self._get_time_dimension(nix_da_group[0])
-        sampling_period = create_quantity(timedim.sampling_interval,
-                                          timedim.unit)
+        sampling_period = create_quantity(timedim.sampling_interval, timedim.unit)
         # t_start should have been added to neo_attrs via the NIX
         # object's metadata. This may not be present since in older
         # versions, we didn't store t_start in the metadata when it
@@ -464,10 +455,8 @@ class NixIO(BaseIO):
         else:
             t_start = create_quantity(timedim.offset, timedim.unit)
 
-        neo_signal = AnalogSignal(
-            signal=signaldata, sampling_period=sampling_period,
-            t_start=t_start, **neo_attrs
-        )
+        neo_signal = AnalogSignal(signal=signaldata, sampling_period=sampling_period,
+                                  t_start=t_start, **neo_attrs)
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
         # all DAs reference the same sources
         srcnames = list(src.name for src in nix_da_group[0].sources)
@@ -535,9 +524,7 @@ class NixIO(BaseIO):
         timedim = self._get_time_dimension(nix_da_group[0])
         times = create_quantity(timedim.ticks, timedim.unit)
 
-        neo_signal = IrregularlySampledSignal(
-            signal=signaldata, times=times, **neo_attrs
-        )
+        neo_signal = IrregularlySampledSignal(signal=signaldata, times=times, **neo_attrs)
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
         # all DAs reference the same sources
         srcnames = list(src.name for src in nix_da_group[0].sources)
@@ -551,8 +538,7 @@ class NixIO(BaseIO):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
         time_unit = nix_mtag.positions.unit
         times = create_quantity(nix_mtag.positions, time_unit)
-        labels = np.array(nix_mtag.positions.dimensions[0].labels,
-                          dtype="U")
+        labels = np.array(nix_mtag.positions.dimensions[0].labels, dtype="U")
         neo_event = Event(times=times, labels=labels, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_event
         return neo_event
@@ -561,16 +547,13 @@ class NixIO(BaseIO):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
         time_unit = nix_mtag.positions.unit
         times = create_quantity(nix_mtag.positions, time_unit)
-        durations = create_quantity(nix_mtag.extents,
-                                    nix_mtag.extents.unit)
+        durations = create_quantity(nix_mtag.extents, nix_mtag.extents.unit)
 
         if len(nix_mtag.positions.dimensions[0].labels) > 0:
-            labels = np.array(nix_mtag.positions.dimensions[0].labels,
-                              dtype="U")
+            labels = np.array(nix_mtag.positions.dimensions[0].labels, dtype="U")
         else:
             labels = None
-        neo_epoch = Epoch(times=times, durations=durations, labels=labels,
-                          **neo_attrs)
+        neo_epoch = Epoch(times=times, durations=durations, labels=labels, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_epoch
         return neo_epoch
 
@@ -585,14 +568,12 @@ class NixIO(BaseIO):
             wftime = self._get_time_dimension(wfda)
             neo_spiketrain.waveforms = create_quantity(wfda, wfda.unit)
             interval_units = wftime.unit
-            neo_spiketrain.sampling_period = create_quantity(
-                wftime.sampling_interval, interval_units
-            )
+            neo_spiketrain.sampling_period = create_quantity(wftime.sampling_interval,
+                                                             interval_units)
             left_sweep_units = wftime.unit
             if "left_sweep" in wfda.metadata:
-                neo_spiketrain.left_sweep = create_quantity(
-                    wfda.metadata["left_sweep"], left_sweep_units
-                )
+                neo_spiketrain.left_sweep = create_quantity(wfda.metadata["left_sweep"],
+                                                            left_sweep_units)
         self._neo_map[nix_mtag.name] = neo_spiketrain
 
         srcnames = list(src.name for src in nix_mtag.sources)
@@ -645,9 +626,7 @@ class NixIO(BaseIO):
             del self.nix_file.sections[nix_name]
 
         nixblock = self.nix_file.create_block(nix_name, "neo.block")
-        nixblock.metadata = self.nix_file.create_section(
-            nix_name, "neo.block.metadata"
-        )
+        nixblock.metadata = self.nix_file.create_section(nix_name, "neo.block.metadata")
         metadata = nixblock.metadata
         neoname = block.name if block.name is not None else ""
         metadata["neo_name"] = neoname
@@ -688,9 +667,8 @@ class NixIO(BaseIO):
             nix_name = f"neo.channelindex.{self._generate_nix_name()}"
             chx.annotate(nix_name=nix_name)
         nixsource = nixblock.create_source(nix_name, "neo.channelindex")
-        nixsource.metadata = nixblock.metadata.create_section(
-            nix_name, "neo.channelindex.metadata"
-        )
+        nixsource.metadata = nixblock.metadata.create_section(nix_name,
+                                                              "neo.channelindex.metadata")
 
         metadata = nixsource.metadata
         neoname = chx.name if chx.name is not None else ""
@@ -708,9 +686,8 @@ class NixIO(BaseIO):
         for idx, channel in enumerate(chx.index):
             channame = f"{nix_name}.ChannelIndex{idx}"
             nixchan = nixsource.create_source(channame, "neo.channelindex")
-            nixchan.metadata = nixsource.metadata.create_section(
-                nixchan.name, "neo.channelindex.metadata"
-            )
+            nixchan.metadata = nixsource.metadata.create_section(nixchan.name,
+                                                                 "neo.channelindex.metadata")
             nixchan.definition = nixsource.definition
             chanmd = nixchan.metadata
             chanmd["index"] = int(channel)
@@ -746,9 +723,8 @@ class NixIO(BaseIO):
             segment.annotate(nix_name=nix_name)
 
         nixgroup = nixblock.create_group(nix_name, "neo.segment")
-        nixgroup.metadata = nixblock.metadata.create_section(
-            nix_name, "neo.segment.metadata"
-        )
+        nixgroup.metadata = nixblock.metadata.create_section(nix_name,
+                                                             "neo.segment.metadata")
         metadata = nixgroup.metadata
         neoname = segment.name if segment.name is not None else ""
         metadata["neo_name"] = neoname
@@ -815,13 +791,11 @@ class NixIO(BaseIO):
             data = np.transpose(anasig[:].magnitude)
 
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
-        metadata = parentmd.create_section(nix_name,
-                                           "neo.analogsignal.metadata")
+        metadata = parentmd.create_section(nix_name, "neo.analogsignal.metadata")
         nixdas = list()
         for idx, row in enumerate(data):
             daname = f"{nix_name}.{idx}"
-            da = nixblock.create_data_array(daname, "neo.analogsignal",
-                                            data=row)
+            da = nixblock.create_data_array(daname, "neo.analogsignal", data=row)
             da.metadata = metadata
             da.definition = anasig.description
             da.unit = units_to_string(anasig.units)
@@ -887,14 +861,12 @@ class NixIO(BaseIO):
             data = np.transpose(imgseq[:].magnitude)
 
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
-        metadata = parentmd.create_section(nix_name,
-                                           "neo.imagesequence.metadata")
+        metadata = parentmd.create_section(nix_name, "neo.imagesequence.metadata")
 
         nixdas = list()
         for idx, row in enumerate(data):
             daname = f"{nix_name}.{idx}"
-            da = nixblock.create_data_array(daname, "neo.imagesequence",
-                                            data=row)
+            da = nixblock.create_data_array(daname, "neo.imagesequence", data=row)
 
             da.metadata = metadata
             da.definition = imgseq.description
@@ -957,15 +929,11 @@ class NixIO(BaseIO):
             data = np.transpose(irsig[:].magnitude)
 
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
-        metadata = parentmd.create_section(
-            nix_name, "neo.irregularlysampledsignal.metadata"
-        )
+        metadata = parentmd.create_section(nix_name, "neo.irregularlysampledsignal.metadata")
         nixdas = list()
         for idx, row in enumerate(data):
             daname = f"{nix_name}.{idx}"
-            da = nixblock.create_data_array(
-                daname, "neo.irregularlysampledsignal", data=row
-            )
+            da = nixblock.create_data_array(daname, "neo.irregularlysampledsignal", data=row)
             da.metadata = metadata
             da.definition = irsig.description
             da.unit = units_to_string(irsig.units)
@@ -1017,16 +985,11 @@ class NixIO(BaseIO):
         times = event.times.magnitude
         units = units_to_string(event.times.units)
         labels = event.labels
-        timesda = nixblock.create_data_array(
-            f"{nix_name}.times", "neo.event.times", data=times
-        )
+        timesda = nixblock.create_data_array(f"{nix_name}.times", "neo.event.times", data=times)
         timesda.unit = units
-        nixmt = nixblock.create_multi_tag(nix_name, "neo.event",
-                                          positions=timesda)
+        nixmt = nixblock.create_multi_tag(nix_name, "neo.event", positions=timesda)
 
-        nixmt.metadata = nixgroup.metadata.create_section(
-            nix_name, "neo.event.metadata"
-        )
+        nixmt.metadata = nixgroup.metadata.create_section(nix_name, "neo.event.metadata")
         metadata = nixmt.metadata
 
         labeldim = timesda.append_set_dimension()
@@ -1078,23 +1041,16 @@ class NixIO(BaseIO):
         durations = epoch.durations.magnitude
         dunits = units_to_string(epoch.durations.units)
 
-        timesda = nixblock.create_data_array(
-            f"{nix_name}.times", "neo.epoch.times", data=times
-        )
+        timesda = nixblock.create_data_array(f"{nix_name}.times", "neo.epoch.times", data=times)
         timesda.unit = tunits
-        nixmt = nixblock.create_multi_tag(nix_name, "neo.epoch",
-                                          positions=timesda)
+        nixmt = nixblock.create_multi_tag(nix_name, "neo.epoch", positions=timesda)
 
-        durada = nixblock.create_data_array(
-            f"{nix_name}.durations", "neo.epoch.durations",
-            data=durations
-        )
+        durada = nixblock.create_data_array(f"{nix_name}.durations", "neo.epoch.durations",
+                                            data=durations)
         durada.unit = dunits
         nixmt.extents = durada
 
-        nixmt.metadata = nixgroup.metadata.create_section(
-            nix_name, "neo.epoch.metadata"
-        )
+        nixmt.metadata = nixgroup.metadata.create_section(nix_name, "neo.epoch.metadata")
         metadata = nixmt.metadata
 
         labeldim = timesda.append_set_dimension()
@@ -1146,16 +1102,13 @@ class NixIO(BaseIO):
         tunits = units_to_string(spiketrain.times.units)
         waveforms = spiketrain.waveforms
 
-        timesda = nixblock.create_data_array(f"{nix_name}.times",
-                                             "neo.spiketrain.times",
+        timesda = nixblock.create_data_array(f"{nix_name}.times", "neo.spiketrain.times",
                                              data=times)
         timesda.unit = tunits
-        nixmt = nixblock.create_multi_tag(nix_name, "neo.spiketrain",
-                                          positions=timesda)
+        nixmt = nixblock.create_multi_tag(nix_name, "neo.spiketrain", positions=timesda)
 
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
-        nixmt.metadata = parentmd.create_section(nix_name,
-                                                 "neo.spiketrain.metadata")
+        nixmt.metadata = parentmd.create_section(nix_name, "neo.spiketrain.metadata")
         metadata = nixmt.metadata
 
         neoname = spiketrain.name if spiketrain.name is not None else ""
@@ -1178,31 +1131,23 @@ class NixIO(BaseIO):
 
         if waveforms is not None:
             wfdata = list(wf.magnitude for wf in
-                          list(wfgroup for wfgroup in
-                               spiketrain.waveforms))
+                          list(wfgroup for wfgroup in spiketrain.waveforms))
             wfunits = units_to_string(spiketrain.waveforms.units)
-            wfda = nixblock.create_data_array(
-                f"{nix_name}.waveforms", "neo.waveforms",
-                data=wfdata
-            )
+            wfda = nixblock.create_data_array(f"{nix_name}.waveforms", "neo.waveforms",
+                                              data=wfdata)
             wfda.unit = wfunits
-            wfda.metadata = nixmt.metadata.create_section(
-                wfda.name, "neo.waveforms.metadata"
-            )
+            wfda.metadata = nixmt.metadata.create_section(wfda.name, "neo.waveforms.metadata")
             nixmt.create_feature(wfda, nix.LinkType.Indexed)
             # TODO: Move time dimension first for PR #457
             # https://github.com/NeuralEnsemble/python-neo/pull/457
             wfda.append_set_dimension()
             wfda.append_set_dimension()
-            wftime = wfda.append_sampled_dimension(
-                spiketrain.sampling_period.magnitude.item()
-            )
+            wftime = wfda.append_sampled_dimension(spiketrain.sampling_period.magnitude.item())
             wftime.unit = units_to_string(spiketrain.sampling_period.units)
             wftime.label = "time"
 
             if spiketrain.left_sweep is not None:
-                self._write_property(wfda.metadata, "left_sweep",
-                                     spiketrain.left_sweep)
+                self._write_property(wfda.metadata, "left_sweep", spiketrain.left_sweep)
 
     def _write_unit(self, neounit, nixchxsource):
         """
@@ -1218,11 +1163,9 @@ class NixIO(BaseIO):
         else:
             nix_name = f"neo.unit.{self._generate_nix_name()}"
             neounit.annotate(nix_name=nix_name)
-        nixunitsource = nixchxsource.create_source(nix_name,
-                                                   "neo.unit")
-        nixunitsource.metadata = nixchxsource.metadata.create_section(
-            nix_name, "neo.unit.metadata"
-        )
+        nixunitsource = nixchxsource.create_source(nix_name, "neo.unit")
+        nixunitsource.metadata = nixchxsource.metadata.create_section(nix_name,
+                                                                      "neo.unit.metadata")
         metadata = nixunitsource.metadata
         neoname = neounit.name if neounit.name is not None else ""
         metadata["neo_name"] = neoname
@@ -1381,8 +1324,7 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
-                if prop.definition in (DATEANNOTATION, TIMEANNOTATION,
-                                       DATETIMEANNOTATION):
+                if prop.definition in (DATEANNOTATION, TIMEANNOTATION, DATETIMEANNOTATION):
                     values = dt_from_nix(values, prop.definition)
                 if prop.definition == ARRAYANNOTATION:
                     if 'array_annotations' in neo_attrs:
@@ -1498,8 +1440,7 @@ class NixIO(BaseIO):
         """
         Closes the open nix file and resets maps.
         """
-        if (hasattr(self, "nix_file")
-                and self.nix_file and self.nix_file.is_open()):
+        if (hasattr(self, "nix_file") and self.nix_file and self.nix_file.is_open()):
             self.nix_file.close()
             self.nix_file = None
             self._neo_map = None
