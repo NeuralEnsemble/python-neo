@@ -8,8 +8,8 @@ system.
 Dependencies
 ============
 
-    * Python_ >= 3.5
-    * numpy_ >= 1.11.0
+    * Python_ >= 3.6
+    * numpy_ >= 1.13.0
     * quantities_ >= 0.12.1
 
 For Debian/Ubuntu, you can install these using::
@@ -24,7 +24,7 @@ such as Anaconda_.
 Certain IO modules have additional dependencies. If these are not satisfied,
 Neo will still install but the IO module that uses them will fail on loading:
 
-   * scipy >= 0.12.0 for NeoMatlabIO
+   * scipy >= 1.0.0 for NeoMatlabIO
    * h5py >= 2.5 for Hdf5IO, KwikIO
    * klusta for KwikIO
    * igor >= 0.2 for IgorIO
