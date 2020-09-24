@@ -472,7 +472,7 @@ class EventProxy(_EventOrEpoch):
 
     '''
     _necessary_attrs = (('times', pq.Quantity, 1),
-                        ('labels', np.ndarray, 1, np.dtype('S')))
+                        ('labels', np.ndarray, 1, np.dtype('U')))
 
 
 class EpochProxy(_EventOrEpoch):
@@ -500,7 +500,7 @@ class EpochProxy(_EventOrEpoch):
     '''
     _necessary_attrs = (('times', pq.Quantity, 1),
                         ('durations', pq.Quantity, 1),
-                        ('labels', np.ndarray, 1, np.dtype('S')))
+                        ('labels', np.ndarray, 1, np.dtype('U')))
 
 
 proxyobjectlist = [AnalogSignalProxy, SpikeTrainProxy, EventProxy,
