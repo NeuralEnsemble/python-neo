@@ -1058,7 +1058,7 @@ class TestTimeSlice(unittest.TestCase):
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
-    def test_time_slice_out_of_boundries(self):
+    def test_time_slice_out_of_boundaries(self):
         self.train1.t_start = 0.1 * pq.ms
         assert_neo_object_is_compliant(self.train1)
 
@@ -1085,6 +1085,12 @@ class TestTimeSlice(unittest.TestCase):
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
         self.assertIsInstance(result.array_annotations, ArrayDict)
+
+    def test_time_slice_completely_out_of_boundaries(self):
+        # issue 831
+        t_start = 20.0 * pq.ms
+        t_stop = 70.0 * pq.ms
+        self.assertRaises(ValueError, self.train1.time_slice, t_start, t_stop)
 
     def test_time_slice_empty(self):
         waveforms = np.array([[[]]]) * pq.mV

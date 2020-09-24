@@ -303,7 +303,7 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
                 obj_next.append(obj_reader_next())
 
             try:
-                assert_same_sub_schema(obj_all[0], obj_base)
+                assert_same_sub_schema(obj_all, obj_base)
                 assert_same_sub_schema(obj_all[0], obj_single)
                 assert_same_sub_schema(obj_all, obj_next)
             except BaseException as exc:

@@ -20,7 +20,9 @@ from neo.core import (AnalogSignal,
                       Epoch, Event, SpikeTrain)
 from neo.core.dataobject import ArrayDict
 
-import logging
+
+logger = logging.getLogger("Neo")
+
 
 class BaseProxy(BaseNeo):
     def __init__(self, array_annotations=None, **annotations):
@@ -70,9 +72,9 @@ class AnalogSignalProxy(BaseProxy):
 
     Usage:
     >>> proxy_anasig = AnalogSignalProxy(rawio=self.reader,
-                                                                global_channel_indexes=None,
-                                                                block_index=0,
-                                                                seg_index=0)
+                                         global_channel_indexes=None,
+                                         block_index=0,
+                                         seg_index=0)
     >>> anasig = proxy_anasig.load()
     >>> slice_of_anasig = proxy_anasig.load(time_slice=(1.*pq.s, 2.*pq.s))
     >>> some_channel_of_anasig = proxy_anasig.load(channel_indexes=[0,5,10])
@@ -506,7 +508,10 @@ proxyobjectlist = [AnalogSignalProxy, SpikeTrainProxy, EventProxy,
 
 
 unit_convert = {'Volts': 'V', 'volts': 'V', 'Volt': 'V',
-                'volt': 'V', ' Volt': 'V', 'microV': 'uV', 'µV': 'uV'}
+                'volt': 'V', ' Volt': 'V', 'microV': 'uV',
+                # note that "micro" and "mu" are two different characters in Unicode
+                # although they mostly look the same. Here we accept both.
+                'µV': 'uV', 'μV': 'uV'}
 
 
 def ensure_signal_units(units):
@@ -517,8 +522,8 @@ def ensure_signal_units(units):
     try:
         units = pq.Quantity(1, units)
     except:
-        logging.warning('Units "{}" can not be converted to a quantity. Using dimensionless '
-                        'instead'.format(units))
+        logger.warning('Units "{}" can not be converted to a quantity. Using dimensionless '
+                       'instead'.format(units))
         units = ''
         units = pq.Quantity(1, units)
     return units

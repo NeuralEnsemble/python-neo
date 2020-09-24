@@ -205,8 +205,8 @@ class ImageSequence(BaseSignal):
                 pp.text(line)
 
         for line in [
-            "sampling rate: {}".format(self.sampling_rate),
-            "spatial_scale: {}".format(self.spatial_scale),
+            "sampling rate: {!s}".format(self.sampling_rate),
+            "spatial_scale: {!s}".format(self.spatial_scale),
         ]:
             _pp(line)
 
