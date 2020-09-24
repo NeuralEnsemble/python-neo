@@ -1441,15 +1441,15 @@ class NixIO(BaseIO):
 
         try:
             check_unique(blocks)
-        except ValueError as ve:
-            raise ValueError(f"{errmsg} in Blocks {ve}")
+        except ValueError as exc:
+            raise ValueError(f"{errmsg} in Blocks") from exc
 
         for blk in blocks:
             try:
                 # Segments
                 check_unique(blk.segments)
-            except ValueError as ve:
-                raise ValueError(f"{errmsg} at Block '{blk.name}' > segments > {ve}")
+            except ValueError as exc:
+                raise ValueError(f"{errmsg} at Block '{blk.name}' > segments") from exc
 
             # collect all signals in all segments
             signals = []
@@ -1466,33 +1466,29 @@ class NixIO(BaseIO):
             try:
                 # AnalogSignals and IrregularlySampledSignals
                 check_unique(signals)
-            except ValueError as ve:
-                raise ValueError(f"{errmsg} in Signal names of Block '{blk.name}' {ve}")
+            except ValueError as exc:
+                raise ValueError(f"{errmsg} in Signal names of Block '{blk.name}'") from exc
 
             try:
                 # Events, Epochs, and SpikeTrains
                 check_unique(eests)
-            except ValueError as ve:
+            except ValueError as exc:
                 raise ValueError(
-                    f"{errmsg} in Event, Epoch, and Spiketrain names of Block '{blk.name}' {ve}"
-                )
+                    f"{errmsg} in Event, Epoch, and Spiketrain names of Block '{blk.name}'"
+                ) from exc
 
             try:
                 # ChannelIndexes
                 check_unique(blk.channel_indexes)
-            except ValueError as ve:
-                raise ValueError(
-                    f"{errmsg} in ChannelIndex names of Block '{blk.name}' {ve}"
-                )
+            except ValueError as exc:
+                raise ValueError(f"{errmsg} in ChannelIndex names of Block '{blk.name}'") from exc
 
             for chx in blk.channel_indexes:
                 try:
                     check_unique(chx.units)
-                except ValueError as ve:
-                    raise ValueError(
-                        f"{errmsg} in Unit names of Block '{blk.name}' > "
-                        f"ChannelIndex '{chx.name}' {ve}"
-                    )
+                except ValueError as exc:
+                    raise ValueError(f"{errmsg} in Unit names of Block '{blk.name}' > "
+                                     f"ChannelIndex '{chx.name}'") from exc
 
         # names are OK: assign annotations
         for o in allobjs:
