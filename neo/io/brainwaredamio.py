@@ -110,13 +110,6 @@ class BrainwareDamIO(BaseIO):
         self._filename = os.path.basename(filename)
         self._fsrc = None
 
-    def read(self, lazy=False, **kargs):
-        '''
-        Reads raw data file "fname" generated with BrainWare
-        '''
-        assert not lazy, 'Do not support lazy'
-        return self.read_block(lazy=lazy)
-
     def read_block(self, lazy=False, **kargs):
         '''
         Reads a block from the raw data file "fname" generated

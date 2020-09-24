@@ -124,12 +124,6 @@ class BrainwareF32IO(BaseIO):
         self.__seg = None
         self.__spiketimes = None
 
-    def read(self, lazy=False, **kargs):
-        '''
-        Reads simple spike data file "fname" generated with BrainWare
-        '''
-        return self.read_block(lazy=lazy, )
-
     def read_block(self, lazy=False, **kargs):
         '''
         Reads a block from the simple spike data file "fname" generated
