@@ -369,12 +369,18 @@ class TestAnalogSignalProperties(unittest.TestCase):
     def test__pretty(self):
         for i, signal in enumerate(self.signals):
             prepr = pretty(signal)
-            targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n'
-                     '' % (signal.shape[1], signal.shape[0],
-                           signal.units.dimensionality.unicode, signal.dtype))
-                    + ('annotations: %s\n' % signal.annotations)
-                    + ('sampling rate: {}\n'.format(signal.sampling_rate))
-                    + ('time: {} to {}'.format(signal.t_start, signal.t_stop)))
+            targ = (
+                ('AnalogSignal with %d channels of length %d; units %s; datatype %s \n'
+                 '' % (signal.shape[1], signal.shape[0],
+                       signal.units.dimensionality.unicode, signal.dtype))
+                + ('annotations: %s\n' % signal.annotations)
+                + ('sampling rate: {} {}\n'.format(float(signal.sampling_rate),
+                                                   signal.sampling_rate.dimensionality.unicode))
+                + ('time: {} {} to {} {}'.format(float(signal.t_start),
+                                                 signal.t_start.dimensionality.unicode,
+                                                 float(signal.t_stop),
+                                                 signal.t_stop.dimensionality.unicode))
+            )
             self.assertEqual(prepr, targ)
 
 
