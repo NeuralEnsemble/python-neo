@@ -599,6 +599,13 @@ class SpikeTrain(DataObject):
             _t_start = -np.inf
         if t_stop is None:
             _t_stop = np.inf
+
+        if _t_start > self.t_stop or _t_stop < self.t_start:
+            # the alternative to raising an exception would be to return
+            # a zero-duration spike train set at self.t_stop or self.t_start
+            raise ValueError("A time slice completely outside the "
+                             "boundaries of the spike train is not defined.")
+
         indices = (self >= _t_start) & (self <= _t_stop)
 
         # Time slicing should create a deep copy of the object
