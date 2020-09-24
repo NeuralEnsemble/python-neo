@@ -134,18 +134,17 @@ def check_nix_version():
         nixver = Version(nixverstr)
     except ValueError:
         warnings.warn(
-            "Could not understand NIX Python version {}. "
-            "The NixIO requires version {} of the Python package for NIX. "
-            "The IO may not work correctly.".format(nixverstr,
-                                                    str(MIN_NIX_VER))
+            f"Could not understand NIX Python version {nixverstr}. "
+            f"The NixIO requires version {MIN_NIX_VER} of the Python package for NIX. "
+            "The IO may not work correctly."
         )
         return
 
     if nixver < MIN_NIX_VER:
         raise Exception(
             "NIX version not supported. "
-            "The NixIO requires version {} or higher of the Python package "
-            "for NIX. Found version {}".format(str(MIN_NIX_VER), nixverstr)
+            f"The NixIO requires version {MIN_NIX_VER} or higher of the Python package "
+            f"for NIX. Found version {nixverstr}"
         )
 
 
@@ -183,9 +182,9 @@ class NixIO(BaseIO):
         elif mode == "ow":
             filemode = nix.FileMode.Overwrite
         else:
-            raise ValueError("Invalid mode specified '{}'. "
+            raise ValueError(f"Invalid mode specified '{mode}'. "
                              "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
-                             " 'ow' (Overwrite).".format(mode))
+                             " 'ow' (Overwrite).")
         self.nix_file = nix.File.open(self.filename, filemode)
 
         if self.nix_file.mode == nix.FileMode.ReadOnly:
@@ -268,9 +267,7 @@ class NixIO(BaseIO):
                     nix_block = blk
                     break
             else:
-                raise KeyError(
-                    "Block with Neo name '{}' does not exist".format(neoname)
-                )
+                raise KeyError(f"Block with Neo name '{neoname}' does not exist")
         else:
             index = self._block_read_counter
             if index >= len(self.nix_file.blocks):
@@ -639,7 +636,7 @@ class NixIO(BaseIO):
         if "nix_name" in block.annotations:
             nix_name = block.annotations["nix_name"]
         else:
-            nix_name = "neo.block.{}".format(self._generate_nix_name())
+            nix_name = f"neo.block.{self._generate_nix_name()}"
             block.annotate(nix_name=nix_name)
 
         if nix_name in self.nix_file.blocks:
@@ -688,7 +685,7 @@ class NixIO(BaseIO):
         if "nix_name" in chx.annotations:
             nix_name = chx.annotations["nix_name"]
         else:
-            nix_name = "neo.channelindex.{}".format(self._generate_nix_name())
+            nix_name = f"neo.channelindex.{self._generate_nix_name()}"
             chx.annotate(nix_name=nix_name)
         nixsource = nixblock.create_source(nix_name, "neo.channelindex")
         nixsource.metadata = nixblock.metadata.create_section(
@@ -709,7 +706,7 @@ class NixIO(BaseIO):
             coordinates = [coordinates]
 
         for idx, channel in enumerate(chx.index):
-            channame = "{}.ChannelIndex{}".format(nix_name, idx)
+            channame = f"{nix_name}.ChannelIndex{idx}"
             nixchan = nixsource.create_source(channame, "neo.channelindex")
             nixchan.metadata = nixsource.metadata.create_section(
                 nixchan.name, "neo.channelindex.metadata"
@@ -745,7 +742,7 @@ class NixIO(BaseIO):
         if "nix_name" in segment.annotations:
             nix_name = segment.annotations["nix_name"]
         else:
-            nix_name = "neo.segment.{}".format(self._generate_nix_name())
+            nix_name = f"neo.segment.{self._generate_nix_name()}"
             segment.annotate(nix_name=nix_name)
 
         nixgroup = nixblock.create_group(nix_name, "neo.segment")
@@ -796,15 +793,15 @@ class NixIO(BaseIO):
         if "nix_name" in anasig.annotations:
             nix_name = anasig.annotations["nix_name"]
         else:
-            nix_name = "neo.analogsignal.{}".format(self._generate_nix_name())
+            nix_name = f"neo.analogsignal.{self._generate_nix_name()}"
             anasig.annotate(nix_name=nix_name)
 
-        if "{}.0".format(nix_name) in nixblock.data_arrays and nixgroup:
+        if f"{nix_name}.0" in nixblock.data_arrays and nixgroup:
             # AnalogSignal is in multiple Segments.
             # Append DataArrays to Group and return.
             dalist = list()
             for idx in itertools.count():
-                daname = "{}.{}".format(nix_name, idx)
+                daname = f"{nix_name}.{idx}"
                 if daname in nixblock.data_arrays:
                     dalist.append(nixblock.data_arrays[daname])
                 else:
@@ -822,7 +819,7 @@ class NixIO(BaseIO):
                                            "neo.analogsignal.metadata")
         nixdas = list()
         for idx, row in enumerate(data):
-            daname = "{}.{}".format(nix_name, idx)
+            daname = f"{nix_name}.{idx}"
             da = nixblock.create_data_array(daname, "neo.analogsignal",
                                             data=row)
             da.metadata = metadata
@@ -869,14 +866,14 @@ class NixIO(BaseIO):
         if "nix_name" in imgseq.annotations:
             nix_name = imgseq.annotations["nix_name"]
         else:
-            nix_name = "neo.imagesequence.{}".format(self._generate_nix_name())
+            nix_name = f"neo.imagesequence.{self._generate_nix_name()}"
             imgseq.annotate(nix_name=nix_name)
 
-        if "{}.0".format(nix_name) in nixblock.data_arrays and nixgroup:
+        if f"{nix_name}.0" in nixblock.data_arrays and nixgroup:
 
             dalist = list()
             for idx in itertools.count():
-                daname = "{}.{}".format(nix_name, idx)
+                daname = f"{nix_name}.{idx}"
                 if daname in nixblock.data_arrays:
                     dalist.append(nixblock.data_arrays[daname])
                 else:
@@ -895,7 +892,7 @@ class NixIO(BaseIO):
 
         nixdas = list()
         for idx, row in enumerate(data):
-            daname = "{}.{}".format(nix_name, idx)
+            daname = f"{nix_name}.{idx}"
             da = nixblock.create_data_array(daname, "neo.imagesequence",
                                             data=row)
 
@@ -938,17 +935,15 @@ class NixIO(BaseIO):
         if "nix_name" in irsig.annotations:
             nix_name = irsig.annotations["nix_name"]
         else:
-            nix_name = "neo.irregularlysampledsignal.{}".format(
-                self._generate_nix_name()
-            )
+            nix_name = f"neo.irregularlysampledsignal.{self._generate_nix_name()}"
             irsig.annotate(nix_name=nix_name)
 
-        if "{}.0".format(nix_name) in nixblock.data_arrays and nixgroup:
+        if f"{nix_name}.0" in nixblock.data_arrays and nixgroup:
             # IrregularlySampledSignal is in multiple Segments.
             # Append DataArrays to Group and return.
             dalist = list()
             for idx in itertools.count():
-                daname = "{}.{}".format(nix_name, idx)
+                daname = f"{nix_name}.{idx}"
                 if daname in nixblock.data_arrays:
                     dalist.append(nixblock.data_arrays[daname])
                 else:
@@ -967,7 +962,7 @@ class NixIO(BaseIO):
         )
         nixdas = list()
         for idx, row in enumerate(data):
-            daname = "{}.{}".format(nix_name, idx)
+            daname = f"{nix_name}.{idx}"
             da = nixblock.create_data_array(
                 daname, "neo.irregularlysampledsignal", data=row
             )
@@ -1007,7 +1002,7 @@ class NixIO(BaseIO):
         if "nix_name" in event.annotations:
             nix_name = event.annotations["nix_name"]
         else:
-            nix_name = "neo.event.{}".format(self._generate_nix_name())
+            nix_name = f"neo.event.{self._generate_nix_name()}"
             event.annotate(nix_name=nix_name)
 
         if nix_name in nixblock.multi_tags:
@@ -1023,7 +1018,7 @@ class NixIO(BaseIO):
         units = units_to_string(event.times.units)
         labels = event.labels
         timesda = nixblock.create_data_array(
-            "{}.times".format(nix_name), "neo.event.times", data=times
+            f"{nix_name}.times", "neo.event.times", data=times
         )
         timesda.unit = units
         nixmt = nixblock.create_multi_tag(nix_name, "neo.event",
@@ -1067,7 +1062,7 @@ class NixIO(BaseIO):
         if "nix_name" in epoch.annotations:
             nix_name = epoch.annotations["nix_name"]
         else:
-            nix_name = "neo.epoch.{}".format(self._generate_nix_name())
+            nix_name = f"neo.epoch.{self._generate_nix_name()}"
             epoch.annotate(nix_name=nix_name)
 
         if nix_name in nixblock.multi_tags:
@@ -1084,14 +1079,14 @@ class NixIO(BaseIO):
         dunits = units_to_string(epoch.durations.units)
 
         timesda = nixblock.create_data_array(
-            "{}.times".format(nix_name), "neo.epoch.times", data=times
+            f"{nix_name}.times", "neo.epoch.times", data=times
         )
         timesda.unit = tunits
         nixmt = nixblock.create_multi_tag(nix_name, "neo.epoch",
                                           positions=timesda)
 
         durada = nixblock.create_data_array(
-            "{}.durations".format(nix_name), "neo.epoch.durations",
+            f"{nix_name}.durations", "neo.epoch.durations",
             data=durations
         )
         durada.unit = dunits
@@ -1135,7 +1130,7 @@ class NixIO(BaseIO):
         if "nix_name" in spiketrain.annotations:
             nix_name = spiketrain.annotations["nix_name"]
         else:
-            nix_name = "neo.spiketrain.{}".format(self._generate_nix_name())
+            nix_name = f"neo.spiketrain.{self._generate_nix_name()}"
             spiketrain.annotate(nix_name=nix_name)
 
         if nix_name in nixblock.multi_tags and nixgroup:
@@ -1151,7 +1146,7 @@ class NixIO(BaseIO):
         tunits = units_to_string(spiketrain.times.units)
         waveforms = spiketrain.waveforms
 
-        timesda = nixblock.create_data_array("{}.times".format(nix_name),
+        timesda = nixblock.create_data_array(f"{nix_name}.times",
                                              "neo.spiketrain.times",
                                              data=times)
         timesda.unit = tunits
@@ -1187,7 +1182,7 @@ class NixIO(BaseIO):
                                spiketrain.waveforms))
             wfunits = units_to_string(spiketrain.waveforms.units)
             wfda = nixblock.create_data_array(
-                "{}.waveforms".format(nix_name), "neo.waveforms",
+                f"{nix_name}.waveforms", "neo.waveforms",
                 data=wfdata
             )
             wfda.unit = wfunits
@@ -1221,7 +1216,7 @@ class NixIO(BaseIO):
         if "nix_name" in neounit.annotations:
             nix_name = neounit.annotations["nix_name"]
         else:
-            nix_name = "neo.unit.{}".format(self._generate_nix_name())
+            nix_name = f"neo.unit.{self._generate_nix_name()}"
             neounit.annotate(nix_name=nix_name)
         nixunitsource = nixchxsource.create_source(nix_name,
                                                    "neo.unit")
@@ -1447,15 +1442,14 @@ class NixIO(BaseIO):
         try:
             check_unique(blocks)
         except ValueError as ve:
-            raise ValueError("{} in Blocks {}".format(errmsg, ve))
+            raise ValueError(f"{errmsg} in Blocks {ve}")
 
         for blk in blocks:
             try:
                 # Segments
                 check_unique(blk.segments)
             except ValueError as ve:
-                raise ValueError("{} at Block '{}' > segments > "
-                                 "{}".format(errmsg, blk.name, ve))
+                raise ValueError(f"{errmsg} at Block '{blk.name}' > segments > {ve}")
 
             # collect all signals in all segments
             signals = []
@@ -1473,18 +1467,14 @@ class NixIO(BaseIO):
                 # AnalogSignals and IrregularlySampledSignals
                 check_unique(signals)
             except ValueError as ve:
-                raise ValueError(
-                    "{} in Signal names "
-                    "of Block '{}' {}".format(errmsg, blk.name, ve)
-                )
+                raise ValueError(f"{errmsg} in Signal names of Block '{blk.name}' {ve}")
 
             try:
                 # Events, Epochs, and SpikeTrains
                 check_unique(eests)
             except ValueError as ve:
                 raise ValueError(
-                    "{} in Event, Epoch, and Spiketrain names "
-                    "of Block '{}' {}".format(errmsg, blk.name, ve)
+                    f"{errmsg} in Event, Epoch, and Spiketrain names of Block '{blk.name}' {ve}"
                 )
 
             try:
@@ -1492,8 +1482,7 @@ class NixIO(BaseIO):
                 check_unique(blk.channel_indexes)
             except ValueError as ve:
                 raise ValueError(
-                    "{} in ChannelIndex names "
-                    "of Block '{}' {}".format(errmsg, blk.name, ve)
+                    f"{errmsg} in ChannelIndex names of Block '{blk.name}' {ve}"
                 )
 
             for chx in blk.channel_indexes:
@@ -1501,9 +1490,8 @@ class NixIO(BaseIO):
                     check_unique(chx.units)
                 except ValueError as ve:
                     raise ValueError(
-                        "{} in Unit names of Block "
-                        "'{}' > ChannelIndex '{}' {}".format(errmsg, blk.name,
-                                                             chx.name, ve)
+                        f"{errmsg} in Unit names of Block '{blk.name}' > "
+                        f"ChannelIndex '{chx.name}' {ve}"
                     )
 
         # names are OK: assign annotations
