@@ -139,8 +139,10 @@ class BaseSignal(DataObject):
         '''
         required_attributes = {}
         for attr in self._necessary_attrs:
-            if 'signal' == attr[0]:
-                required_attributes[str(attr[0])] = signal
+            if attr[0] == "signal":
+                required_attributes["signal"] = signal
+            elif attr[0] == "t_start":
+                required_attributes["t_start"] = getattr(self, "t_start", 0.0 * pq.ms)
             else:
                 required_attributes[str(attr[0])] = getattr(self, attr[0], None)
         required_attributes['units'] = units
@@ -176,7 +178,9 @@ class BaseSignal(DataObject):
         all_attr = {self._recommended_attrs, self._necessary_attrs}
         for sub_at in all_attr:
             for attr in sub_at:
-                if attr[0] != 'signal':
+                if attr[0] == "t_start":
+                    setattr(self, attr[0], deepcopy(getattr(other, attr[0], 0.0 * pq.ms)))
+                elif attr[0] != 'signal':
                     setattr(self, attr[0], deepcopy(getattr(other, attr[0], None)))
         setattr(self, 'annotations', deepcopy(getattr(other, 'annotations', None)))
 

@@ -220,7 +220,7 @@ class NixIOTest(unittest.TestCase):
         for sig, da in zip(np.transpose(neosig), nixdalist):
             self.compare_attr(neosig, da)
             daquant = create_quantity(da[:], da.unit)
-            np.testing.assert_almost_equal(sig, daquant)
+            np.testing.assert_almost_equal(sig.view(pq.Quantity), daquant)
             nixunit = create_quantity(1, da.unit)
             self.assertEqual(neounit, nixunit)
 
@@ -1269,7 +1269,7 @@ class NixIOWriteTest(NixIOTest):
                                                units="mV", times=[1, 2, 3],
                                                time_units="ms")
         imgseq = ImageSequence(name="img1", image_data=self.rquant((10, 20, 10), pq.mV),
-                               sampling_period=pq.Quantity(1, "ms"),
+                               frame_duration=pq.Quantity(1, "ms"),
                                spatial_scale=pq.meter)
         event = Event(name="Evee", times=[0.3, 0.42], units="year")
         epoch = Epoch(name="epoche", times=[0.1, 0.2] * pq.min,
@@ -1503,7 +1503,7 @@ class NixIOWriteTest(NixIOTest):
             # add imagesequence
             imgseq = ImageSequence(name="img1",
                                    image_data=self.rquant((10, 20, 10), pq.mV),
-                                   sampling_period=pq.Quantity(1, "ms"),
+                                   frame_duration=pq.Quantity(1, "ms"),
                                    spatial_scale=pq.meter)
 
             seg.imagesequences.append(imgseq)
