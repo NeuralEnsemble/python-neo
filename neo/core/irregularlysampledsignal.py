@@ -515,7 +515,7 @@ class IrregularlySampledSignal(BaseSignal):
 
         return signal
 
-    def patch(self, other):
+    def concatenate(self, other):
         '''
         Patch another signal to this one.
 
@@ -523,7 +523,7 @@ class IrregularlySampledSignal(BaseSignal):
         (row-wise, :func:`np.vstack`). Patching can be
         used to combine signals across segments.
         Note: Only array annotations common to
-        both signals are attached to the patched signal.
+        both signals are attached to the concatenated signal.
 
         If the attributes of the two signal are not
         compatible, an Exception is raised.
@@ -550,16 +550,16 @@ class IrregularlySampledSignal(BaseSignal):
         for attr in self._necessary_attrs:
             if not (attr[0] in ['signal', 'times', 't_start', 't_stop', 'times']):
                 if getattr(self, attr[0], None) != getattr(other, attr[0], None):
-                    raise MergeError("Cannot patch these two signals as the %s differ." % attr[0])
+                    raise MergeError("Cannot concatenate these two signals as the %s differ." % attr[0])
 
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
                 if self.lazy_shape[-1] != other.lazy_shape[-1]:
-                    raise MergeError("Cannot patch signals as they contain"
+                    raise MergeError("Cannot concatenate signals as they contain"
                                      " different numbers of traces.")
                 merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0], self.lazy_shape[-1])
             else:
-                raise MergeError("Cannot patch a lazy object with a real object.")
+                raise MergeError("Cannot concatenate a lazy object with a real object.")
         if other.units != self.units:
             other = other.rescale(self.units)
 

@@ -1573,104 +1573,104 @@ class TestAnalogSignalCombination(unittest.TestCase):
         assert_arrays_equal(mergeddata23, targdata23)
         assert_arrays_equal(mergeddata24, targdata24)
 
-    def test_patch_simple(self):
+    def test_concatenate_simple(self):
         signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop + signal1.sampling_period)
 
-        result = signal1.patch(signal2)
+        result = signal1.concatenate(signal2)
         assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
         for attr in signal1._necessary_attrs:
             self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
 
-    def test_patch_inverse_signals(self):
+    def test_concatenate_inverse_signals(self):
         signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop + signal1.sampling_period)
 
-        result = signal2.patch(signal1)
+        result = signal2.concatenate(signal1)
         assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
         for attr in signal1._necessary_attrs:
             self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
 
-    def test_patch_no_overlap(self):
+    def test_concatenate_no_overlap(self):
         signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=10*pq.s + signal1.sampling_period)
 
         with self.assertRaises(MergeError):
-            signal1.patch(signal2)
+            signal1.concatenate(signal2)
 
-    def test_patch_multi_trace(self):
+    def test_concatenate_multi_trace(self):
         data1 = np.arange(4).reshape(2,2)
         data2 = np.arange(4,8).reshape(2,2)
         signal1 = AnalogSignal(data1*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal(data2*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop + signal1.sampling_period)
 
-        result = signal1.patch(signal2)
+        result = signal1.concatenate(signal2)
         data_expected = np.array([[0,1],[2,3],[4,5],[6,7]])
         assert_array_equal(data_expected, result.magnitude)
         for attr in signal1._necessary_attrs:
             self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
 
-    def test_patch_overwrite_true(self):
+    def test_concatenate_overwrite_true(self):
         signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop)
 
-        result = signal1.patch(signal2, overwrite=True)
+        result = signal1.concatenate(signal2, overwrite=True)
         assert_array_equal(np.array([0,1,2,4,5,6]).reshape((-1, 1)), result.magnitude)
 
-    def test_patch_overwrite_false(self):
+    def test_concatenate_overwrite_false(self):
         signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop)
 
-        result = signal1.patch(signal2, overwrite=False)
+        result = signal1.concatenate(signal2, overwrite=False)
         assert_array_equal(np.array([0,1,2,3,5,6]).reshape((-1, 1)), result.magnitude)
 
-    def test_patch_padding_False(self):
+    def test_concatenate_padding_False(self):
         signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=10*pq.s)
 
         with self.assertRaises(MergeError):
-            result = signal1.patch(signal2, overwrite=False, padding=False)
+            result = signal1.concatenate(signal2, overwrite=False, padding=False)
 
-    def test_patch_padding_True(self):
+    def test_concatenate_padding_True(self):
         signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop + 3 * signal1.sampling_period)
 
-        result = signal1.patch(signal2, overwrite=False, padding=True)
+        result = signal1.concatenate(signal2, overwrite=False, padding=True)
         assert_array_equal(np.array([0,1,2,3,np.NaN,np.NaN,np.NaN,4,5,6]).reshape((-1, 1)),
                            result.magnitude)
 
-    def test_patch_padding_quantity(self):
+    def test_concatenate_padding_quantity(self):
         signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop + 3 * signal1.sampling_period)
 
-        result = signal1.patch(signal2, overwrite=False, padding=-1*pq.mV)
+        result = signal1.concatenate(signal2, overwrite=False, padding=-1 * pq.mV)
         assert_array_equal(np.array([0,1,2,3,-1e-3,-1e-3,-1e-3,4,5,6]).reshape((-1, 1)),
                            result.magnitude)
 
-    def test_patch_padding_invalid(self):
+    def test_concatenate_padding_invalid(self):
         signal1 = AnalogSignal([0,1,2,3]*pq.V, sampling_rate=1*pq.Hz)
         signal2 = AnalogSignal([4,5,6]*pq.V, sampling_rate=1*pq.Hz,
                                t_start=signal1.t_stop + 3 * signal1.sampling_period)
 
         with self.assertRaises(ValueError):
-            result = signal1.patch(signal2, overwrite=False, padding=1)
+            result = signal1.concatenate(signal2, overwrite=False, padding=1)
         with self.assertRaises(ValueError):
-            result = signal1.patch(signal2, overwrite=False, padding=[1])
+            result = signal1.concatenate(signal2, overwrite=False, padding=[1])
         with self.assertRaises(ValueError):
-            result = signal1.patch(signal2, overwrite=False, padding='a')
+            result = signal1.concatenate(signal2, overwrite=False, padding='a')
         with self.assertRaises(ValueError):
-            result = signal1.patch(signal2, overwrite=False, padding=np.array([1,2,3]))
+            result = signal1.concatenate(signal2, overwrite=False, padding=np.array([1, 2, 3]))
 
-    def test_patch_array_annotations(self):
+    def test_concatenate_array_annotations(self):
         array_anno1 = {'first': ['a','b']}
         array_anno2 = {'first': ['a','b'],
                        'second': ['c','d']}
@@ -1682,13 +1682,13 @@ class TestAnalogSignalCombination(unittest.TestCase):
                                t_start=signal1.t_stop + signal1.sampling_period,
                                array_annotations=array_anno2)
 
-        result = signal1.patch(signal2)
+        result = signal1.concatenate(signal2)
         assert_array_equal(array_anno1.keys(), result.array_annotations.keys())
 
         for k in array_anno1.keys():
             assert_array_equal(np.asarray(array_anno1[k]), result.array_annotations[k])
 
-    def test_patch_complex(self):
+    def test_concatenate_complex(self):
         signal1 = self.signal1
         assert_neo_object_is_compliant(self.signal1)
 
@@ -1697,13 +1697,13 @@ class TestAnalogSignalCombination(unittest.TestCase):
                                array_annotations=self.arr_ann1,
                                t_start=signal1.t_stop + signal1.sampling_period)
 
-        patched12 = self.signal1.patch(signal2)
+        concatenated12 = self.signal1.concatenate(signal2)
 
         for attr in signal1._necessary_attrs:
-            self.assertEqual(getattr(signal1, attr[0], None), getattr(patched12, attr[0], None))
+            self.assertEqual(getattr(signal1, attr[0], None), getattr(concatenated12, attr[0], None))
 
         assert_array_equal(np.vstack((signal1.magnitude, signal2.magnitude)),
-                           patched12.magnitude)
+                           concatenated12.magnitude)
 
 class TestAnalogSignalFunctions(unittest.TestCase):
     def test__pickle_1d(self):

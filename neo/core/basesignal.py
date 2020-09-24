@@ -299,7 +299,7 @@ class BaseSignal(DataObject):
         NotImplementedError('Needs to be implemented for subclasses.')
 
 
-    def patch(self, other):
+    def concatenate(self, other):
         '''
         Patch another signal to this one.
 
@@ -307,7 +307,7 @@ class BaseSignal(DataObject):
         (row-wise, :func:`np.vstack`). Patching can be
         used to combine signals across segments.
         Note: Only array annotations common to
-        both signals are attached to the patched signal.
+        both signals are attached to the concatenated signal.
 
         If the attributes of the two signal are not
         compatible, an Exception is raised.

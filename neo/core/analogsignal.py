@@ -658,7 +658,7 @@ class AnalogSignal(BaseSignal):
 
         return rectified_signal
 
-    def patch(self, other, overwrite=True, padding=False):
+    def concatenate(self, other, overwrite=True, padding=False):
         '''
         Patch another signal to this one.
 
@@ -668,7 +668,7 @@ class AnalogSignal(BaseSignal):
         have to overlap by one sample in time, i.e.
         self.t_stop == other.t_start
         Note: Only common array annotations common to
-        both signals are attached to the patched signal.
+        both signals are attached to the concatenated signal.
 
         If the attributes of the two signal are not
         compatible, an Exception is raised.
@@ -725,16 +725,16 @@ class AnalogSignal(BaseSignal):
                 if getattr(self, attr[0], None) != getattr(other, attr[0], None):
                     # if attr[0] in ['t_start','t_stop']:
                     #     continue
-                    raise MergeError("Cannot patch these two signals as the %s differ." % attr[0])
+                    raise MergeError("Cannot concatenate these two signals as the %s differ." % attr[0])
 
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
                 if self.lazy_shape[-1] != other.lazy_shape[-1]:
-                    raise MergeError("Cannot patch signals as they contain"
+                    raise MergeError("Cannot concatenate signals as they contain"
                                      " different numbers of traces.")
                 merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0], self.lazy_shape[-1])
             else:
-                raise MergeError("Cannot patch a lazy object with a real object.")
+                raise MergeError("Cannot concatenate a lazy object with a real object.")
 
         #  in case of non-overlapping signals consider padding
         if signal2.t_start > signal1.t_stop + signal1.sampling_period:
@@ -762,7 +762,7 @@ class AnalogSignal(BaseSignal):
         #  in case of overlapping signals slice according to overwrite parameter
         elif signal2.t_start < signal1.t_stop + signal1.sampling_period:
             n_samples = int(((signal1.t_stop - signal2.t_start)*signal1.sampling_rate).simplified)
-            logger.warning('Overwriting {} samples while patching signals.'.format(n_samples))
+            logger.warning('Overwriting {} samples while concatenating signals.'.format(n_samples))
             if not overwrite:  # removing samples second signal
                 slice_t_start = signal1.t_stop + signal1.sampling_period
                 signal2 = signal2.time_slice(slice_t_start, None)
@@ -771,7 +771,7 @@ class AnalogSignal(BaseSignal):
                 signal1 = signal1.time_slice(None, slice_t_stop)
         else:
             assert signal2.t_start == signal1.t_stop + signal1.sampling_period, \
-                "Cannot patch signals with non-overlapping times"
+                "Cannot concatenate signals with non-overlapping times"
 
         stack = np.vstack((signal1.magnitude, signal2.magnitude))
 
