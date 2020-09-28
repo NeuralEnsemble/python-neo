@@ -60,7 +60,7 @@ class TestNWBIO(unittest.TestCase):
 
         for blk in original_blocks:
 
-            for ind in range(num_seg):  # number of Segment
+            for ind in range(num_seg):  # number of Segments
                 seg = Segment(index=ind)
                 seg.block = blk
                 blk.segments.append(seg)
@@ -180,8 +180,78 @@ class TestNWBIO(unittest.TestCase):
         assert_allclose(retrieved_epoch_11.durations.rescale('ms').magnitude,
                         original_epoch_11.durations.rescale('ms').magnitude)
         assert_array_equal(retrieved_epoch_11.labels, original_epoch_11.labels)
+        os.remove(test_file_name)
+
+    def test_roundtrip_with_annotations(self):
+        # test with NWB-specific annotations
+
+        original_block = Block(name="experiment")
+        segment = Segment(name="session 1")
+        original_block.segments.append(segment)
+        segment.block = original_block
+
+        electrode_annotations = {
+            "name": "electrode #1",
+            "description": "intracellular electrode",
+            "device": {
+                "name": "electrode #1"
+            }
+        }
+        stimulus_annotations = {
+            "nwb_group": "stimulus",
+            "nwb_type": ("pynwb.icephys", "CurrentClampStimulusSeries"),
+            "nwb_electrode": electrode_annotations,
+            "nwb:sweep_number": 1,
+            "nwb:gain": 1.0
+        }
+        response_annotations = {
+            "nwb_group": "acquisition",
+            "nwb_type": ("pynwb.icephys", "CurrentClampSeries"),
+            "nwb_electrode": electrode_annotations,
+            "nwb:sweep_number": 1,
+            "nwb:gain": 1.0,
+            "nwb:bias_current": 1e-12,
+            "nwb:bridge_balance": 70e6,
+            "nwb:capacitance_compensation": 1e-12
+        }
+        stimulus = AnalogSignal(np.random.randn(100, 1) * pq.nA,
+                                sampling_rate=5 * pq.kHz,
+                                t_start=50 * pq.ms,
+                                name="stimulus",
+                                **stimulus_annotations)
+        response = AnalogSignal(np.random.randn(100, 1) * pq.mV,
+                                sampling_rate=5 * pq.kHz,
+                                t_start=50 * pq.ms,
+                                name="response",
+                                **response_annotations)
+        segment.analogsignals = [stimulus, response]
+        stimulus.segment = response.segment = segment
+
+        test_file_name = "test_round_trip_with_annotations.nwb"
+        iow = NWBIO(filename=test_file_name, mode='w')
+        iow.write_all_blocks([original_block])
+
+        nwbfile = pynwb.NWBHDF5IO(test_file_name, mode="r").read()
+
+        self.assertIsInstance(nwbfile.acquisition["response"], pynwb.icephys.CurrentClampSeries)
+        self.assertIsInstance(nwbfile.stimulus["stimulus"], pynwb.icephys.CurrentClampStimulusSeries)
+        self.assertEqual(nwbfile.acquisition["response"].bridge_balance, response_annotations["nwb:bridge_balance"])
+
+        ior = NWBIO(filename=test_file_name, mode='r')
+        retrieved_block = ior.read_all_blocks()[0]
+
+        original_response = original_block.segments[0].filter(name="response")[0]
+        retrieved_response = retrieved_block.segments[0].filter(name="response")[0]
+        for attr_name in ("name", "units", "sampling_rate", "t_start"):
+            retrieved_attribute = getattr(retrieved_response, attr_name)
+            original_attribute = getattr(original_response, attr_name)
+            self.assertEqual(retrieved_attribute, original_attribute)
+        assert_array_equal(retrieved_response.magnitude, original_response.magnitude)
+
+        os.remove(test_file_name)
 
 
 if __name__ == "__main__":
-    print("pynwb.__version__ = ", pynwb.__version__)
+    if HAVE_PYNWB:
+        print("pynwb.__version__ = ", pynwb.__version__)
     unittest.main()

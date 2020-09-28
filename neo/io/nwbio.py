@@ -16,6 +16,7 @@ Sample datasets from Allen Institute - http://alleninstitute.github.io/AllenSDK/
 """
 
 from __future__ import absolute_import, division
+from neo.core import baseneo
 
 import os
 from itertools import chain
@@ -77,16 +78,130 @@ GLOBAL_ANNOTATIONS = (
     "source_script_file_name", "data_collection", "surgery", "virus", "stimulus_notes",
     "lab", "session_description"
 )
+
 POSSIBLE_JSON_FIELDS = (
     "source_script", "description"
 )
 
+prefix_map = {
+    1e9: 'giga',
+    1e6: 'mega',
+    1e3: 'kilo',
+    1: '',
+    1e-3: 'milli',
+    1e-6: 'micro',
+    1e-9: 'nano',
+    1e-12: 'pico'
+}
 
 def try_json_field(content):
+    """
+    Try to interpret a string as JSON data.
+
+    If successful, return the JSON data (dict or list)
+    If unsuccessful, return the original string
+    """
     try:
         return json.loads(content)
     except JSONDecodeError:
         return content
+
+
+def get_class(module, name):
+    """
+    Given a module path and a class name, return the class object
+    """
+    module_path = module.split(".")
+    assert len(module_path) == 2  # todo: handle the general case where this isn't 2
+    return getattr(getattr(pynwb, module_path[1]), name)
+
+
+def statistics(block):  # todo: move this to be a property of Block
+    """
+    Return simple statistics about a Neo Block.
+    """
+    stats = {
+        "SpikeTrain": {"count": 0},
+        "AnalogSignal": {"count": 0},
+        "IrregularlySampledSignal": {"count": 0},
+        "Epoch": {"count": 0},
+        "Event": {"count": 0},
+    }
+    for segment in block.segments:
+        stats["SpikeTrain"]["count"] += len(segment.spiketrains)
+        stats["AnalogSignal"]["count"] += len(segment.analogsignals)
+        stats["IrregularlySampledSignal"]["count"] += len(segment.irregularlysampledsignals)
+        stats["Epoch"]["count"] += len(segment.epochs)
+        stats["Event"]["count"] += len(segment.events)
+    return stats
+
+
+def get_units_conversion(signal, timeseries_class):
+    """
+    Given a quantity array and a TimeSeries subclass, return
+    the conversion factor and the expected units
+    """
+    # it would be nice if the expected units was an attribute of the PyNWB class
+    if "CurrentClamp" in timeseries_class.__name__:
+        expected_units = pq.volt
+    elif "VoltageClamp" in timeseries_class.__name__:
+        expected_units = pq.ampere
+    else:
+        # todo: warn that we don't handle this subclass yet
+        expected_units = signal.units
+    return float((signal.units/expected_units).simplified.magnitude), expected_units
+
+
+def time_in_seconds(t):
+    return float(t.rescale("second"))
+
+
+def _decompose_unit(unit):
+    """
+    Given a quantities unit object, return a base unit name and a conversion factor.
+
+    Example:
+
+    >>> _decompose_unit(pq.mV)
+    ('volt', 0.001)
+    """
+    assert isinstance(unit, pq.quantity.Quantity)
+    assert unit.magnitude == 1
+    conversion = 1.0
+
+    def _decompose(unit):
+        dim = unit.dimensionality
+        if len(dim) != 1:
+            raise NotImplementedError("Compound units not yet supported")  # e.g. volt-metre
+        uq, n = list(dim.items())[0]
+        if n != 1:
+            raise NotImplementedError("Compound units not yet supported")  # e.g. volt^2
+        uq_def = uq.definition
+        return float(uq_def.magnitude), uq_def
+    conv, unit2 = _decompose(unit)
+    while conv != 1:
+        conversion *= conv
+        unit = unit2
+        conv, unit2 = _decompose(unit)
+    return list(unit.dimensionality.keys())[0].name, conversion
+
+
+def _recompose_unit(base_unit_name, conversion):
+    """
+    Given a base unit name and a conversion factor, return a quantities unit object
+
+    Example:
+
+    >>> _recompose_unit("ampere", 1e-9)
+    UnitCurrent('nanoampere', 0.001 * uA, 'nA')
+
+    """
+    if conversion not in prefix_map:
+        raise ValueError(f"Can't handle this conversion factor: {conversion}")
+    unit_name = prefix_map[conversion] + base_unit_name
+    if unit_name[-1] == "s":  # strip trailing 's', e.g. "volts" --> "volt"
+        unit_name = unit_name[:-1]
+    return getattr(pq, unit_name)
 
 
 class NWBIO(BaseIO):
@@ -230,11 +345,6 @@ class NWBIO(BaseIO):
                 block_name = hierarchy["block"]
                 segment_name = hierarchy["segment"]
             segment = self._get_segment(block_name, segment_name)
-            annotations = {"nwb_group": group_name}
-            description = try_json_field(timeseries.description)
-            if isinstance(description, dict):
-                annotations.update(description)
-                description = None
             if isinstance(timeseries, AnnotationSeries):
                 event = EventProxy(timeseries, group_name)
                 if not lazy:
@@ -322,18 +432,20 @@ class NWBIO(BaseIO):
             os.remove(self.filename)
         io_nwb = pynwb.NWBHDF5IO(self.filename, manager=get_manager(), mode=self.nwb_file_mode)
 
-        nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
-        #nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
-        nwbfile.add_unit_column(
-            'segment', 'the name of the Neo Segment to which the SpikeTrain belongs')
-        nwbfile.add_unit_column(
-            'block', 'the name of the Neo Block to which the SpikeTrain belongs')
+        if sum(statistics(block)["SpikeTrain"]["count"] for block in blocks) > 0:
+            nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
+            #nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
+            nwbfile.add_unit_column(
+                'segment', 'the name of the Neo Segment to which the SpikeTrain belongs')
+            nwbfile.add_unit_column(
+                'block', 'the name of the Neo Block to which the SpikeTrain belongs')
 
-        nwbfile.add_epoch_column('_name', 'the name attribute of the Epoch')
-        #nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
-        nwbfile.add_epoch_column(
-            'segment', 'the name of the Neo Segment to which the Epoch belongs')
-        nwbfile.add_epoch_column('block', 'the name of the Neo Block to which the Epoch belongs')
+        if sum(statistics(block)["Epoch"]["count"] for block in blocks) > 0:
+            nwbfile.add_epoch_column('_name', 'the name attribute of the Epoch')
+            #nwbfile.add_epoch_column('_description', 'the description attribute of the Epoch')
+            nwbfile.add_epoch_column(
+                'segment', 'the name of the Neo Segment to which the Epoch belongs')
+            nwbfile.add_epoch_column('block', 'the name of the Neo Block to which the Epoch belongs')
 
         for i, block in enumerate(blocks):
             self.write_block(nwbfile, block)
@@ -345,23 +457,44 @@ class NWBIO(BaseIO):
         Write a Block to the file
             :param block: Block to be written
         """
+        electrodes = self._write_electrodes(nwbfile, block)
         if not block.name:
             block.name = "block%d" % self.blocks_written
         for i, segment in enumerate(block.segments):
             assert segment.block is block
             if not segment.name:
                 segment.name = "%s : segment%d" % (block.name, i)
-            self._write_segment(nwbfile, segment)
+            self._write_segment(nwbfile, segment, electrodes)
         self.blocks_written += 1
 
-    def _write_segment(self, nwbfile, segment):
-        # maybe use NWB trials to store Segment metadata?
+    def _write_electrodes(self, nwbfile, block):
+        # this handles only icephys_electrode for now
+        electrodes = {}
+        devices = {}
+        for segment in block.segments:
+            for signal in chain(segment.analogsignals, segment.irregularlysampledsignals):
+                if "nwb_electrode" in signal.annotations:
+                    elec_meta = signal.annotations["nwb_electrode"].copy()
+                    if elec_meta["name"] not in electrodes:
+                        # todo: check for consistency if the name is already there
+                        if elec_meta["device"]["name"] in devices:
+                            device = devices[elec_meta["device"]["name"]]
+                        else:
+                            device = nwbfile.create_device(**elec_meta["device"])
+                            devices[elec_meta["device"]["name"]] = device
+                        elec_meta.pop("device")
+                        electrodes[elec_meta["name"]] = nwbfile.create_icephys_electrode(
+                            device=device, **elec_meta
+                        )
+        return electrodes
 
+    def _write_segment(self, nwbfile, segment, electrodes):
+        # maybe use NWB trials to store Segment metadata?
         for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
             assert signal.segment is segment
             if not signal.name:
                 signal.name = "%s : analogsignal%d" % (segment.name, i)
-            self._write_signal(nwbfile, signal)
+            self._write_signal(nwbfile, signal, electrodes)
 
         for i, train in enumerate(segment.spiketrains):
             assert train.segment is segment
@@ -380,23 +513,42 @@ class NWBIO(BaseIO):
                 epoch.name = "%s : epoch%d" % (segment.name, i)
             self._write_epoch(nwbfile, epoch)
 
-    def _write_signal(self, nwbfile, signal):
+    def _write_signal(self, nwbfile, signal, electrodes):
         hierarchy = {'block': signal.segment.block.name, 'segment': signal.segment.name}
+        if "nwb_type" in signal.annotations:
+            timeseries_class = get_class(*signal.annotations["nwb_type"])
+        else:
+            timeseries_class = TimeSeries  # default
+        additional_metadata = {name[4:]: value
+                               for name, value in signal.annotations.items()
+                               if name.startswith("nwb:")}
+        if "nwb_electrode" in signal.annotations:
+            electrode_name = signal.annotations["nwb_electrode"]["name"]
+            additional_metadata["electrode"] = electrodes[electrode_name]
+        if timeseries_class != TimeSeries:
+            conversion, units = get_units_conversion(signal, timeseries_class)
+            additional_metadata["conversion"] = conversion
+        else:
+            units = signal.units
         if isinstance(signal, AnalogSignal):
             sampling_rate = signal.sampling_rate.rescale("Hz")
-            tS = TimeSeries(name=signal.name,
-                            starting_time=time_in_seconds(signal.t_start),
-                            data=signal,
-                            unit=signal.units.dimensionality.string,
-                            rate=float(sampling_rate),
-                            comments=json.dumps(hierarchy))
-                            # todo: try to add array_annotations via "control" attribute
+            tS = timeseries_class(
+                name=signal.name,
+                starting_time=time_in_seconds(signal.t_start),
+                data=signal,
+                unit=units.dimensionality.string,
+                rate=float(sampling_rate),
+                comments=json.dumps(hierarchy),
+                **additional_metadata)
+                # todo: try to add array_annotations via "control" attribute
         elif isinstance(signal, IrregularlySampledSignal):
-            tS = TimeSeries(name=signal.name,
-                            data=signal,
-                            unit=signal.units.dimensionality.string,
-                            timestamps=signal.times.rescale('second').magnitude,
-                            comments=json.dumps(hierarchy))
+            tS = timeseries_class(
+                name=signal.name,
+                data=signal,
+                unit=units.dimensionality.string,
+                timestamps=signal.times.rescale('second').magnitude,
+                comments=json.dumps(hierarchy),
+                **additional_metadata)
         else:
             raise TypeError("signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(
                 signal.__class__.__name__))
@@ -447,48 +599,22 @@ class NWBIO(BaseIO):
         return nwbfile.epochs
 
 
-def time_in_seconds(t):
-    return float(t.rescale("second"))
-
-
-def _decompose_unit(unit):
-    assert isinstance(unit, pq.quantity.Quantity)
-    assert unit.magnitude == 1
-    conversion = 1.0
-
-    def _decompose(unit):
-        dim = unit.dimensionality
-        if len(dim) != 1:
-            raise NotImplementedError("Compound units not yet supported")  # e.g. volt-metre
-        uq, n = dim.items()[0]
-        if n != 1:
-            raise NotImplementedError("Compound units not yet supported")  # e.g. volt^2
-        uq_def = uq.definition
-        return float(uq_def.magnitude), uq_def
-    conv, unit2 = _decompose(unit)
-    while conv != 1:
-        conversion *= conv
-        unit = unit2
-        conv, unit2 = _decompose(unit)
-    return conversion, unit.dimensionality.keys()[0].name
-
-
-prefix_map = {
-    1e-3: 'milli',
-    1e-6: 'micro',
-    1e-9: 'nano'
-}
-
-
 class AnalogSignalProxy(BaseAnalogSignalProxy):
+    common_metadata_fields = (
+        # fields that are the same for all TimeSeries subclasses
+        "comments", "description", "unit", "starting_time", "timestamps", "rate",
+        "data", "starting_time_unit", "timestamps_unit", "electrode"
+    )
 
     def __init__(self, timeseries, nwb_group):
         self._timeseries = timeseries
         self.units = timeseries.unit
+        if timeseries.conversion:
+            self.units = _recompose_unit(timeseries.unit, timeseries.conversion)
         if timeseries.starting_time is not None:
-            self.t_start = timeseries.starting_time * pq.s  # use timeseries.starting_time_units
+            self.t_start = timeseries.starting_time * pq.s  # todo: use timeseries.starting_time_unit
         else:
-            self.t_start = timeseries.timestamps[0] * pq.s
+            self.t_start = timeseries.timestamps[0] * pq.s  # todo: use timeseries.timestamps.unit
         if timeseries.rate:
             self.sampling_rate = timeseries.rate * pq.Hz
         else:
@@ -497,11 +623,42 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
         self.annotations = {"nwb_group": nwb_group}
         self.description = try_json_field(timeseries.description)
         if isinstance(self.description, dict):
-            self.annotations.update(self.description)
+            self.annotations["notes"] = self.description
             if "name" in self.annotations:
                 self.annotations.pop("name")
             self.description = None
         self.shape = self._timeseries.data.shape
+        metadata_fields = list(timeseries.__nwbfields__)
+        for field_name in self.__class__.common_metadata_fields:  # already handled
+            try:
+                metadata_fields.remove(field_name)
+            except ValueError:
+                pass
+        for field_name in metadata_fields:
+            value = getattr(timeseries, field_name)
+            if value is not None:
+                self.annotations[f"nwb:{field_name}"] = value
+        self.annotations["nwb_type"] = (
+            timeseries.__class__.__module__,
+            timeseries.__class__.__name__
+        )
+        if hasattr(timeseries, "electrode"):
+            # todo: once the Group class is available, we could add electrode metadata
+            #       to a Group containing all signals that share that electrode
+            #       This would reduce the amount of redundancy (repeated metadata in every signal)
+            electrode_metadata = {"device": {}}
+            metadata_fields = list(timeseries.electrode.__class__.__nwbfields__) + ["name"]
+            metadata_fields.remove("device")  # needs special handling
+            for field_name in metadata_fields:
+                value = getattr(timeseries.electrode, field_name)
+                if value is not None:
+                    electrode_metadata[field_name] = value
+            for field_name in timeseries.electrode.device.__class__.__nwbfields__:
+                value = getattr(timeseries.electrode.device, field_name)
+                if value is not None:
+                    electrode_metadata["device"][field_name] = value
+            self.annotations["nwb_electrode"] = electrode_metadata
+
 
     def load(self, time_slice=None, strict_slicing=True):
         """
