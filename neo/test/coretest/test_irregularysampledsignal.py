@@ -946,12 +946,12 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertRaises(MergeError, signal1.merge, signal3)
 
     def test_concatenate_simple(self):
-        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=[1, 10, 11, 20] * pq.s)
+        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=[1, 10, 11, 14] * pq.s)
         signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=[15, 16, 21] * pq.s)
 
         result = signal1.concatenate(signal2)
-        assert_array_equal(np.array([0, 1, 2, 4, 5, 3, 6]).reshape((-1, 1)), result.magnitude)
-        assert_array_equal(np.array([1, 10, 11, 15, 16, 20, 21]), result.times)
+        assert_array_equal(np.array([0, 1, 2, 3, 4, 5, 6]).reshape((-1, 1)), result.magnitude)
+        assert_array_equal(np.array([1, 10, 11, 14, 15, 16, 21]), result.times)
         for attr in signal1._necessary_attrs:
             if attr[0] == 'times':
                 continue
@@ -961,9 +961,24 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=range(4) * pq.s)
         signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=range(4, 7) * pq.s)
 
-        result = signal1.concatenate(signal2)
-        assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
-        assert_array_equal(np.arange(7), result.times)
+        for allow_overlap in [True, False]:
+            result = signal1.concatenate(signal2, allow_overlap=allow_overlap)
+            assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
+            assert_array_equal(np.arange(7), result.times)
+
+    def test_concatenate_overlap_exception(self):
+        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=range(4) * pq.s)
+        signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=range(2, 5) * pq.s)
+
+        self.assertRaises(ValueError, signal1.concatenate, signal2, allow_overlap=False)
+
+    def test_concatenate_overlap(self):
+        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=range(4) * pq.s)
+        signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=range(2, 5) * pq.s)
+
+        result = signal1.concatenate(signal2, allow_overlap=True)
+        assert_array_equal(np.array([0,1,2,4,3,5,6]).reshape((-1, 1)), result.magnitude)
+        assert_array_equal(np.array([0,1,2,2,3,3,4]), result.times)
 
     def test_concatenate_multi_trace(self):
         data1 = np.arange(4).reshape(2, 2)

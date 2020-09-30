@@ -515,9 +515,9 @@ class IrregularlySampledSignal(BaseSignal):
 
         return signal
 
-    def concatenate(self, other):
+    def concatenate(self, other, allow_overlap=False):
         '''
-        Patch another signal to this one.
+        Combine this and another signal along the time axis.
 
         The signal objects are concatenated vertically
         (row-wise, :func:`np.vstack`). Patching can be
@@ -534,6 +534,11 @@ class IrregularlySampledSignal(BaseSignal):
         ----------
         other : neo.BaseSignal
             The object that is merged into this one.
+        allow_overlap : bool
+            If false, overlapping samples between the two
+            signals are not permitted and an ValueError is raised.
+            If true, no check for overlapping samples is
+            performed and all samples are combined.
 
         Returns
         -------
@@ -581,6 +586,12 @@ class IrregularlySampledSignal(BaseSignal):
 
         kwargs['array_annotations'] = intersect_annotations(self.array_annotations,
                                                             other.array_annotations)
+
+        if not allow_overlap:
+            if max(self.t_start, other.t_start) <= min(self.t_stop, other.t_stop):
+                raise ValueError('Can not combine signals that overlap in time. Allow for '
+                                 'overlapping samples using the "no_overlap" parameter.')
+
         t_start = min(self.t_start, other.t_start)
         t_stop = max(self.t_start, other.t_start)
 

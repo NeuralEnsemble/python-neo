@@ -660,7 +660,7 @@ class AnalogSignal(BaseSignal):
 
     def concatenate(self, other, overwrite=True, padding=False):
         '''
-        Patch another signal to this one.
+        Combine this and another signal along the time axis.
 
         The signal objects are concatenated vertically
         (row-wise, :func:`np.vstack`). Patching can be
