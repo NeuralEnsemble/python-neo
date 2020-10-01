@@ -141,6 +141,8 @@ class BaseSignal(DataObject):
         for attr in self._necessary_attrs:
             if attr[0] == "signal":
                 required_attributes["signal"] = signal
+            elif attr[0] == "image_data":
+                required_attributes["image_data"] = signal
             elif attr[0] == "t_start":
                 required_attributes["t_start"] = getattr(self, "t_start", 0.0 * pq.ms)
             else:
