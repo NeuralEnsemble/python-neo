@@ -111,7 +111,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('File_axograph.axgd')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 6)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]
@@ -225,7 +225,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         filename = self.get_filename_path('events_and_epochs.axgx')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
 
         event = blk.segments[0].events[0]
         assert_equal(event.times, [5999, 5999, 23499, 23499,
@@ -248,14 +248,14 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         # separate lines of notes
         filename = self.get_filename_path('episodic.axgd')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.rec_datetime, datetime(2018, 6, 7, 15, 11, 36))
 
         # file obtained in continuous acquisition mode has date and time in
         # single line of notes
         filename = self.get_filename_path('events_and_epochs.axgx')
         reader = AxographIO(filename=filename)
-        blk = reader.read_block()
+        blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.rec_datetime, datetime(2019, 5, 25, 20, 16, 25))
 
 
