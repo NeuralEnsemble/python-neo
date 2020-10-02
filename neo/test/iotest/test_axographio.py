@@ -208,8 +208,22 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         filename = self.get_filename_path('episodic.axgd')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
+
         assert_equal(len(blk.segments), 30)
         assert_equal(len(blk.channel_indexes), 2)
+        assert_equal(len(blk.segments[0].analogsignals), 2)
+
+        names = [sig.name for sig in blk.segments[0].analogsignals]
+        assert_equal(names, ['CAP', 'STIM'])
+
+        sig = blk.segments[0].analogsignals[0][:5]
+        arr = sig.as_array('V')
+        target = np.array([[1.37500e-06],
+                           [1.53125e-06],
+                           [1.34375e-06],
+                           [1.09375e-06],
+                           [1.21875e-06]], dtype=np.float32)
+        assert_equal(arr, target)
 
     def test_force_single_segment(self):
         """Test reading an episodic file into one Segment"""
@@ -217,8 +231,45 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         filename = self.get_filename_path('episodic.axgd')
         reader = AxographIO(filename=filename, force_single_segment=True)
         blk = reader.read_block(signal_group_mode='split-all')
+
         assert_equal(len(blk.segments), 1)
         assert_equal(len(blk.channel_indexes), 60)
+        assert_equal(len(blk.segments[0].analogsignals), 60)
+
+        names = [sig.name for sig in blk.segments[0].analogsignals]
+        assert_equal(names, ['CAP', 'STIM'] * 30)
+
+        sig = blk.segments[0].analogsignals[0][:5]
+        arr = sig.as_array('V')
+        target = np.array([[1.37500e-06],
+                           [1.53125e-06],
+                           [1.34375e-06],
+                           [1.09375e-06],
+                           [1.21875e-06]], dtype=np.float32)
+        assert_equal(arr, target)
+
+    def test_group_by_same_units(self):
+        """Test reading with group-by-same-units"""
+
+        filename = self.get_filename_path('episodic.axgd')
+        reader = AxographIO(filename=filename)
+        blk = reader.read_block(signal_group_mode='group-by-same-units')
+
+        assert_equal(len(blk.segments), 30)
+        assert_equal(len(blk.channel_indexes), 1)
+        assert_equal(len(blk.segments[0].analogsignals), 1)
+
+        names = [sig.name for sig in blk.segments[0].analogsignals]
+        assert_equal(names, ['Channel bundle (CAP,STIM) '])
+
+        sig = blk.segments[0].analogsignals[0][:5]
+        arr = sig.as_array('V')
+        target = np.array([[1.37500e-06, 3.43750e-03],
+                           [1.53125e-06, 2.81250e-03],
+                           [1.34375e-06, 1.87500e-03],
+                           [1.09375e-06, 1.56250e-03],
+                           [1.21875e-06, 1.56250e-03]], dtype=np.float32)
+        assert_equal(arr, target)
 
     def test_events_and_epochs(self):
         """Test loading events and epochs"""
