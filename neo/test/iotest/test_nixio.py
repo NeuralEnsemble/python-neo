@@ -20,7 +20,7 @@ except ImportError:
 from datetime import date, time, datetime
 
 from tempfile import mkdtemp
-
+from itertools import chain
 import unittest
 import string
 import numpy as np
@@ -28,7 +28,7 @@ import quantities as pq
 
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain,
-                      Event, Epoch, ImageSequence)
+                      Event, Epoch, ImageSequence, Group)
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io.nixio import (NixIO, create_quantity, units_to_string, neover,
                           dt_from_nix, dt_to_nix, DATETIMEANNOTATION)
@@ -60,7 +60,10 @@ class NixIOTest(unittest.TestCase):
     def compare_blocks(self, neoblocks, nixblocks):
         for neoblock, nixblock in zip(neoblocks, nixblocks):
             self.compare_attr(neoblock, nixblock)
-            self.assertEqual(len(neoblock.segments), len(nixblock.groups))
+            self.assertEqual(len(neoblock.segments),
+                             len([grp for grp in nixblock.groups if grp.type == "neo.segment"]))
+            self.assertEqual(len(neoblock.groups),
+                             len([grp for grp in nixblock.groups if grp.type == "neo.group"]))
             for idx, neoseg in enumerate(neoblock.segments):
                 nixgrp = nixblock.groups[neoseg.annotations["nix_name"]]
                 self.compare_segment_group(neoseg, nixgrp)
@@ -999,6 +1002,45 @@ class NixIOWriteTest(NixIOTest):
         self.write_and_compare([block])
 
         spiketrain.left_sweep = pq.Quantity(-10, "ms")
+        self.write_and_compare([block])
+
+    def test_group_write(self):
+        signals = [
+            AnalogSignal(np.random.random(size=(1000, 5)) * pq.mV,
+                         sampling_period=1 * pq.ms, name="sig1"),
+            AnalogSignal(np.random.random(size=(1000, 3)) * pq.mV,
+                         sampling_period=1 * pq.ms, name="sig2"),
+        ]
+        spiketrains = [
+            SpikeTrain([0.1, 54.3, 76.6, 464.2], units=pq.ms,
+                       t_stop=1000.0 * pq.ms, t_start=0.0 * pq.ms),
+            SpikeTrain([30.1, 154.3, 276.6, 864.2], units=pq.ms,
+                       t_stop=1000.0 * pq.ms, t_start=0.0 * pq.ms),
+            SpikeTrain([120.1, 454.3, 576.6, 764.2], units=pq.ms,
+                       t_stop=1000.0 * pq.ms, t_start=0.0 * pq.ms),
+        ]
+        epochs =  [
+            Epoch(times=[0, 500], durations=[100, 100], units=pq.ms, labels=["A", "B"])
+        ]
+
+        seg = Segment(name="seg1")
+        seg.analogsignals.extend(signals)
+        seg.spiketrains.extend(spiketrains)
+        seg.epochs.extend(epochs)
+        for obj in chain(signals, spiketrains, epochs):
+            obj.segment = seg
+
+        groups = [
+            Group(objects=(signals[0:1] + spiketrains[0:2] + epochs), name="group1"),
+            Group(objects=(signals[1:2] + spiketrains[1:] + epochs), name="group2")
+        ]
+
+        block = Block(name="block1")
+        block.segments.append(seg)
+        block.groups.extend(groups)
+        for obj in chain([seg], groups):
+            obj.block = block
+
         self.write_and_compare([block])
 
     def test_metadata_structure_write(self):

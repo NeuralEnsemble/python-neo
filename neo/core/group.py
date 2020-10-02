@@ -37,7 +37,8 @@ class Group(Container):
         :class:`Event`, :class:`Epoch`, :class:`ChannelView`, :class:`Group
     """
     _data_child_objects = (
-        'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain', 'Event', 'Epoch', 'ChannelView'
+        'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain',
+        'Event', 'Epoch', 'ChannelView', 'ImageSequence'
     )
     _container_child_objects = ('Segment', 'Group')
     _single_parent_objects = ('Block',)
