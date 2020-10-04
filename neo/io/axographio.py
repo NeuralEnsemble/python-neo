@@ -24,7 +24,7 @@ class AxographIO(AxographRawIO, BaseFromRaw):
     Example:
         >>> import neo
         >>> r = neo.io.AxographIO(filename=filename)
-        >>> blk = r.read_block()
+        >>> blk = r.read_block(signal_group_mode='split-all')
         >>> display(blk)
 
         >>> # get signals
