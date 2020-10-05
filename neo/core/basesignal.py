@@ -300,31 +300,29 @@ class BaseSignal(DataObject):
         '''
         NotImplementedError('Needs to be implemented for subclasses.')
 
-    def concatenate(self, other):
+    def concatenate(self, *signals):
         '''
-        Patch another signal to this one.
+        Concatenate multiple signals across time.
 
         The signal objects are concatenated vertically
-        (row-wise, :func:`np.vstack`). Patching can be
+        (row-wise, :func:`np.vstack`). Concatenation can be
         used to combine signals across segments.
-        Note: Only array annotations common to
+        Note: Only (array) annotations common to
         both signals are attached to the concatenated signal.
 
-        If the attributes of the two signal are not
+        If the attributes of the signals are not
         compatible, an Exception is raised.
-
-        Required attributes of the signal are used.
 
         Parameters
         ----------
-        other : neo.BaseSignal
-            The object that is merged into this one.
+        signals : multiple neo.BaseSignal objects
+            The objects that is concatenated with this one.
 
         Returns
         -------
         signal : neo.BaseSignal
             Signal containing all non-overlapping samples of
-            both source signals.
+            the source signals.
 
         Raises
         ------
