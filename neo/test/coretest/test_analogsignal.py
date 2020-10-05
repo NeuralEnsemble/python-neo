@@ -1577,17 +1577,21 @@ class TestAnalogSignalCombination(unittest.TestCase):
     def test_concatenate_simple(self):
         signal1 = AnalogSignal([0, 1, 2, 3] * pq.V, sampling_rate=1 * pq.Hz)
         signal2 = AnalogSignal([4, 5, 6] * pq.V, sampling_rate=1 * pq.Hz,
-                               t_start=signal1.t_stop + signal1.sampling_period)
+                               t_start=signal1.t_stop)
 
         result = signal1.concatenate(signal2)
         assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
         for attr in signal1._necessary_attrs:
             self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
 
-    def test_concatenate_inverse_signals(self):
+    def test_concatenate_no_signals(self):
+        signal1 = AnalogSignal([0, 1, 2, 3] * pq.V, sampling_rate=1 * pq.Hz)
+        self.assertIs(signal1, signal1.concatenate())
+
+    def test_concatenate_reverted_order(self):
         signal1 = AnalogSignal([0, 1, 2, 3] * pq.V, sampling_rate=1 * pq.Hz)
         signal2 = AnalogSignal([4, 5, 6] * pq.V, sampling_rate=1 * pq.Hz,
-                               t_start=signal1.t_stop + signal1.sampling_period)
+                               t_start=signal1.t_stop)
 
         result = signal2.concatenate(signal1)
         assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
@@ -1596,8 +1600,7 @@ class TestAnalogSignalCombination(unittest.TestCase):
 
     def test_concatenate_no_overlap(self):
         signal1 = AnalogSignal([0, 1, 2, 3] * pq.V, sampling_rate=1 * pq.Hz)
-        signal2 = AnalogSignal([4, 5, 6] * pq.V, sampling_rate=1 * pq.Hz,
-                               t_start=10 * pq.s + signal1.sampling_period)
+        signal2 = AnalogSignal([4, 5, 6] * pq.V, sampling_rate=1 * pq.Hz, t_start=10 * pq.s)
 
         with self.assertRaises(MergeError):
             signal1.concatenate(signal2)
@@ -1607,7 +1610,7 @@ class TestAnalogSignalCombination(unittest.TestCase):
         data2 = np.arange(4, 8).reshape(2, 2)
         signal1 = AnalogSignal(data1 * pq.V, sampling_rate=1 * pq.Hz)
         signal2 = AnalogSignal(data2 * pq.V, sampling_rate=1 * pq.Hz,
-                               t_start=signal1.t_stop + signal1.sampling_period)
+                               t_start=signal1.t_stop)
 
         result = signal1.concatenate(signal2)
         data_expected = np.array([[0, 1], [2, 3], [4, 5], [6, 7]])
@@ -1618,7 +1621,7 @@ class TestAnalogSignalCombination(unittest.TestCase):
     def test_concatenate_overwrite_true(self):
         signal1 = AnalogSignal([0, 1, 2, 3] * pq.V, sampling_rate=1 * pq.Hz)
         signal2 = AnalogSignal([4, 5, 6] * pq.V, sampling_rate=1 * pq.Hz,
-                               t_start=signal1.t_stop)
+                               t_start=signal1.t_stop - signal1.sampling_period)
 
         result = signal1.concatenate(signal2, overwrite=True)
         assert_array_equal(np.array([0, 1, 2, 4, 5, 6]).reshape((-1, 1)), result.magnitude)
@@ -1626,7 +1629,7 @@ class TestAnalogSignalCombination(unittest.TestCase):
     def test_concatenate_overwrite_false(self):
         signal1 = AnalogSignal([0, 1, 2, 3] * pq.V, sampling_rate=1 * pq.Hz)
         signal2 = AnalogSignal([4, 5, 6] * pq.V, sampling_rate=1 * pq.Hz,
-                               t_start=signal1.t_stop)
+                               t_start=signal1.t_stop - signal1.sampling_period)
 
         result = signal1.concatenate(signal2, overwrite=False)
         assert_array_equal(np.array([0, 1, 2, 3, 5, 6]).reshape((-1, 1)), result.magnitude)
@@ -1662,13 +1665,13 @@ class TestAnalogSignalCombination(unittest.TestCase):
         signal2 = AnalogSignal([4, 5, 6] * pq.V, sampling_rate=1 * pq.Hz,
                                t_start=signal1.t_stop + 3 * signal1.sampling_period)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(MergeError):
             result = signal1.concatenate(signal2, overwrite=False, padding=1)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(MergeError):
             result = signal1.concatenate(signal2, overwrite=False, padding=[1])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(MergeError):
             result = signal1.concatenate(signal2, overwrite=False, padding='a')
-        with self.assertRaises(ValueError):
+        with self.assertRaises(MergeError):
             result = signal1.concatenate(signal2, overwrite=False, padding=np.array([1, 2, 3]))
 
     def test_concatenate_array_annotations(self):
@@ -1680,7 +1683,7 @@ class TestAnalogSignalCombination(unittest.TestCase):
         signal1 = AnalogSignal(data1 * pq.V, sampling_rate=1 * pq.Hz,
                                array_annotations=array_anno1)
         signal2 = AnalogSignal(data2 * pq.V, sampling_rate=1 * pq.Hz,
-                               t_start=signal1.t_stop + signal1.sampling_period,
+                               t_start=signal1.t_stop,
                                array_annotations=array_anno2)
 
         result = signal1.concatenate(signal2)
@@ -1696,7 +1699,7 @@ class TestAnalogSignalCombination(unittest.TestCase):
         signal2 = AnalogSignal(self.data1quant, sampling_rate=1 * pq.kHz, name='signal2',
                                description='test signal', file_origin='testfile.txt',
                                array_annotations=self.arr_ann1,
-                               t_start=signal1.t_stop + signal1.sampling_period)
+                               t_start=signal1.t_stop)
 
         concatenated12 = self.signal1.concatenate(signal2)
 
@@ -1706,6 +1709,23 @@ class TestAnalogSignalCombination(unittest.TestCase):
 
         assert_array_equal(np.vstack((signal1.magnitude, signal2.magnitude)),
                            concatenated12.magnitude)
+
+    def test_concatenate_multi_signal(self):
+        signal1 = AnalogSignal([0, 1, 2, 3] * pq.V, sampling_rate=1 * pq.Hz)
+        signal2 = AnalogSignal([4, 5, 6] * pq.V, sampling_rate=1 * pq.Hz,
+                               t_start=signal1.t_stop + 3 * signal1.sampling_period)
+        signal3 = AnalogSignal([40] * pq.V, sampling_rate=1 * pq.Hz,
+                               t_start=signal1.t_stop + 3 * signal1.sampling_period)
+        signal4 = AnalogSignal([30, 35] * pq.V, sampling_rate=1 * pq.Hz,
+                               t_start=signal1.t_stop - signal1.sampling_period)
+
+        concatenated = signal1.concatenate(signal2, signal3, signal4, padding=-1 * pq.V,
+                                           overwrite=True)
+        for attr in signal1._necessary_attrs:
+            self.assertEqual(getattr(signal1, attr[0], None),
+                             getattr(concatenated, attr[0], None))
+        assert_arrays_equal(np.array([0, 1, 2, 30, 35, -1, -1, 40, 5, 6]).reshape((-1, 1)),
+                            concatenated.magnitude)
 
 
 class TestAnalogSignalFunctions(unittest.TestCase):
