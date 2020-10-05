@@ -28,7 +28,7 @@ import quantities as pq
 
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain,
-                      Event, Epoch, ImageSequence, Group)
+                      Event, Epoch, ImageSequence, Group, ChannelView)
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io.nixio import (NixIO, create_quantity, units_to_string, neover,
                           dt_from_nix, dt_to_nix, DATETIMEANNOTATION)
@@ -1030,8 +1030,9 @@ class NixIOWriteTest(NixIOTest):
         for obj in chain(signals, spiketrains, epochs):
             obj.segment = seg
 
+        views = [ChannelView(index=np.array([0, 3, 4]), obj=signals[0], name="view_of_sig1")]
         groups = [
-            Group(objects=(signals[0:1] + spiketrains[0:2] + epochs), name="group1"),
+            Group(objects=(signals[0:1] + spiketrains[0:2] + epochs + views), name="group1"),
             Group(objects=(signals[1:2] + spiketrains[1:] + epochs), name="group2")
         ]
 

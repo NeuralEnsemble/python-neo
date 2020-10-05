@@ -420,8 +420,11 @@ class NixIO(BaseIO):
             neo_group.add(obj)
         # descend into MultiTags
         for mtag in nix_group.multi_tags:
+            if mtag.type == "neo.channelview" and mtag.name not in self._neo_map:
+                self._nix_to_neo_channelview(mtag)
             obj = self._neo_map[mtag.name]
             neo_group.add(obj)
+
         # todo: handle sub-groups, once we implement writing those
         return neo_group
 
@@ -464,6 +467,15 @@ class NixIO(BaseIO):
                 newunit.channel_index = neo_chx
 
         return neo_chx
+
+    def _nix_to_neo_channelview(self, nix_mtag):
+        neo_attrs = self._nix_attr_to_neo(nix_mtag)
+        index = nix_mtag.positions
+        nix_name, = self._group_signals(nix_mtag.references).keys()
+        obj = self._neo_map[nix_name]
+        neo_chview = ChannelView(obj, index, **neo_attrs)
+        self._neo_map[nix_mtag.name] = neo_chview
+        return neo_chview
 
     def _nix_to_neo_unit(self, nix_source):
         neo_attrs = self._nix_attr_to_neo(nix_source)
@@ -770,6 +782,49 @@ class NixIO(BaseIO):
         for unit in chx.units:
             self._write_unit(unit, nixsource)
 
+    def _write_channelview(self, chview, nixblock, nixgroup):
+        """
+        Convert the provided Neo ChannelView to a NIX MultiTag and write it to
+        the NIX file.
+
+        :param chx: The Neo ChannelView to be written
+        :param nixblock: NIX Block where the MultiTag will be created
+        """
+        if "nix_name" in chview.annotations:
+            nix_name = chview.annotations["nix_name"]
+        else:
+            nix_name = "neo.channelview.{}".format(self._generate_nix_name())
+            chview.annotate(nix_name=nix_name)
+
+        channels = nixblock.create_data_array(
+            "{}.index".format(nix_name), "neo.channelview.index", data=chview.index
+        )
+
+        nixmt = nixblock.create_multi_tag(nix_name, "neo.channelview",
+                                          positions=channels)
+
+        nixmt.metadata = nixgroup.metadata.create_section(
+            nix_name, "neo.channelview.metadata"
+        )
+        metadata = nixmt.metadata
+        neoname = chview.name if chview.name is not None else ""
+        metadata["neo_name"] = neoname
+        nixmt.definition = chview.description
+        if chview.annotations:
+            for k, v in chview.annotations.items():
+                self._write_property(metadata, k, v)
+
+        # link tag to the data array for the ChannelView's signal
+        if not ("nix_name" in chview.obj.annotations
+                and chview.obj.annotations["nix_name"] in self._signal_map):
+            # the following restriction could be relaxed later
+            # but for a first pass this simplifies my mental model
+            raise Exception("Need to save signals before saving views")
+        nix_name = chview.obj.annotations["nix_name"]
+        nixmt.references.extend(self._signal_map[nix_name])
+
+        nixgroup.multi_tags.append(nixmt)
+
     def _write_segment(self, segment, nixblock):
         """
         Convert the provided Neo Segment to a NIX Group and write it to the
@@ -877,6 +932,10 @@ class NixIO(BaseIO):
         for name in objnames:
             mt = nixblock.multi_tags[name]
             nixgroup.multi_tags.append(mt)
+
+        # save channel views
+        for chview in neo_group.channelviews:
+            self._write_channelview(chview, nixblock, nixgroup)
 
         if len(neo_group.groups) > 0:
             # todo

@@ -34,7 +34,7 @@ class Group(Container):
 
     *Container of*:
         :class:`AnalogSignal`, :class:`IrregularlySampledSignal`, :class:`SpikeTrain`,
-        :class:`Event`, :class:`Epoch`, :class:`ChannelView`, :class:`Group
+        :class:`Event`, :class:`Epoch`, :class:`ChannelView`, :class:`Group`
     """
     _data_child_objects = (
         'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain',
