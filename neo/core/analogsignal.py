@@ -658,38 +658,25 @@ class AnalogSignal(BaseSignal):
 
         return rectified_signal
 
-    def concatenate(self, other, overwrite=True, padding=False):
-        '''
-        Combine this and another signal along the time axis.
+    def concatenate(self, *signals, overwrite=False, padding=False):
+        """
+        Concatenate multiple neo.AnalogSignal objects across time.
 
-        The signal objects are concatenated vertically
-        (row-wise, :func:`np.vstack`). Patching can be
-        used to combine signals across segments. Signals
-        have to overlap by one sample in time, i.e.
-        self.t_stop == other.t_start
-        Note: Only common array annotations common to
-        both signals are attached to the concatenated signal.
-
-        If the attributes of the two signal are not
-        compatible, an Exception is raised.
-
-        Required attributes of the signal are used.
+        Units, sampling_rate and number of signal traces must be the same
+        for all signals. Otherwise a ValueError is raised.
 
         Parameters
         ----------
-        other : neo.BaseSignal
-            The object that is merged into this one.
-            The other signal needs cover a later time period than
-            this one, i.e. self.t_start < other.t_start
+        signals: neo.AnalogSignal objects
+            AnalogSignals that will be concatenated
         overwrite : bool
-            If True, samples of the earlier (smaller t_start)
-            signal are overwritten by the later signal.
-            If False, samples of the later (higher t_start)
-            are overwritten by earlier signal.
+            If True, samples of the earlier (lower index in `signals`)
+            signals are overwritten by that of later (higher index in `signals`)
+            signals.
+            If False, samples of the later are overwritten by earlier signal.
             Default: False
         padding : bool, scalar quantity
-            Sampling values to use as padding in case signals
-            do not overlap.
+            Sampling values to use as padding in case signals do not overlap.
             If False, do not apply padding. Signals have to align or
             overlap. If True, signals will be padded using
             np.NaN as pad values. If a scalar quantity is provided, this
@@ -700,103 +687,106 @@ class AnalogSignal(BaseSignal):
 
         Returns
         -------
-        signal : neo.BaseSignal
-            Signal containing all non-overlapping samples of
-            both source signals.
+        signal: neo.AnalogSignal
+            concatenated output signal
+        """
 
-        Raises
-        ------
-        MergeError
-            If `other` object has incompatible attributes.
-        '''
+        # Sanity of inputs
+        if not hasattr(signals, '__iter__'):
+            raise TypeError('signals must be iterable')
+        if not all([isinstance(a, AnalogSignal) for a in signals]):
+            raise TypeError('Entries of anasiglist have to be of type neo.AnalogSignal')
+        if len(signals) == 0:
+            return self
 
-        if other.units != self.units:
-            other = other.rescale(self.units)
+        signals = [self] + list(signals)
 
-        if self.t_start > other.t_start:
-            signal1, signal2 = other, self
+        # Check required common attributes: units, sampling_rate and shape[-1]
+        shared_attributes = ['units', 'sampling_rate']
+        attribute_values = [tuple((getattr(anasig, attr) for attr in shared_attributes))
+                            for anasig in signals]
+        # add shape dimensions that do not relate to time
+        attribute_values = [(attribute_values[i] + (signals[i].shape[1:],))
+                            for i in range(len(signals))]
+        if not all([attrs == attribute_values[0] for attrs in attribute_values]):
+            raise MergeError(
+                f'AnalogSignals have to share {shared_attributes} attributes to be concatenated.')
+        units, sr, shape = attribute_values[0]
+
+        # find gaps between Analogsignals
+        combined_time_ranges = self._concatenate_time_ranges([(s.t_start, s.t_stop) for s in signals])
+        missing_time_ranges = self._invert_time_ranges(combined_time_ranges)
+        if len(missing_time_ranges):
+            diffs = np.diff(np.asarray(missing_time_ranges), axis=1)
         else:
-            signal1, signal2 = self, other
-            # raise MergeError('Inconsistent timing of signals. Other signal needs to be later than'
-            #                  ' this signal')
+            diffs = []
 
-        for attr in self._necessary_attrs:
-            if attr[0] not in ['signal', 't_start', 't_stop']:
-                if getattr(self, attr[0], None) != getattr(other, attr[0], None):
-                    # if attr[0] in ['t_start','t_stop']:
-                    #     continue
-                    raise MergeError(
-                        "Cannot concatenate these two signals as the %s differ." % attr[0])
-
-        if hasattr(self, "lazy_shape"):
-            if hasattr(other, "lazy_shape"):
-                if self.lazy_shape[-1] != other.lazy_shape[-1]:
-                    raise MergeError("Cannot concatenate signals as they contain"
-                                     " different numbers of traces.")
-                merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0], self.lazy_shape[-1])
+        if padding is False and any(diffs > signals[0].sampling_period):
+            raise MergeError(f'Signals are not continuous. Can not concatenate signals with gaps. '
+                             f'Please provide a padding value.')
+        if padding is not False:
+            logger.warning('Signals will be padded using {}.'.format(padding))
+            if padding is True:
+                padding = np.NaN * units
+            if isinstance(padding, pq.Quantity):
+                padding = padding.rescale(units).magnitude
             else:
-                raise MergeError("Cannot concatenate a lazy object with a real object.")
+                raise MergeError('Invalid type of padding value. Please provide a bool value '
+                                 'or a quantities object.')
 
-        #  in case of non-overlapping signals consider padding
-        if signal2.t_start > signal1.t_stop + signal1.sampling_period:
-            if padding != False:
-                logger.warning('Signals will be padded using {}.'.format(padding))
-                pad_time = signal2.t_start - signal1.t_stop
-                n_pad_samples = int(((pad_time) * self.sampling_rate).rescale('dimensionless'))
-                if padding is True:
-                    padding = np.NaN * self.units
-                if isinstance(padding, pq.Quantity):
-                    padding = padding.rescale(self.units).magnitude
-                else:
-                    raise ValueError('Invalid type of padding value. Please provide a bool value '
-                                     'or a quantities object.')
-                pad_data = np.full((n_pad_samples,) + signal1.shape[1:], padding)
+        t_start = min([a.t_start for a in signals])
+        t_stop = max([a.t_stop for a in signals])
+        n_samples = int(np.rint(((t_stop - t_start) * sr).rescale('dimensionless').magnitude))
+        shape = (n_samples,) + shape
 
-                # create new signal 1 with extended data, but keep array_annotations
-                signal_tmp = signal1.duplicate_with_new_data(
-                    np.vstack((signal1.magnitude, pad_data)))
-                signal_tmp.array_annotations = signal1.array_annotations
-                signal1 = signal_tmp
-            else:
-                raise MergeError('Signals do not overlap, but no padding is provided.'
-                                 'Please provide a padding mode.')
-
-        #  in case of overlapping signals slice according to overwrite parameter
-        elif signal2.t_start < signal1.t_stop + signal1.sampling_period:
-            n_samples = int(((signal1.t_stop - signal2.t_start) * signal1.sampling_rate).simplified)
-            logger.warning('Overwriting {} samples while concatenating signals.'.format(n_samples))
-            if not overwrite:  # removing samples second signal
-                slice_t_start = signal1.t_stop + signal1.sampling_period
-                signal2 = signal2.time_slice(slice_t_start, None)
-            else:  # removing samples of the first signal
-                slice_t_stop = signal2.t_start - signal2.sampling_period
-                signal1 = signal1.time_slice(None, slice_t_stop)
-        else:
-            assert signal2.t_start == signal1.t_stop + signal1.sampling_period, \
-                "Cannot concatenate signals with non-overlapping times"
-
-        stack = np.vstack((signal1.magnitude, signal2.magnitude))
-
+        # Collect attributes and annotations across all concatenated signals
         kwargs = {}
+        common_annotations = signals[0].annotations
+        common_array_annotations = signals[0].array_annotations
+        for anasig in signals[1:]:
+            common_annotations = intersect_annotations(common_annotations, anasig.annotations)
+            common_array_annotations = intersect_annotations(common_array_annotations,
+                                                             anasig.array_annotations)
+
+        kwargs['annotations'] = common_annotations
+        kwargs['array_annotations'] = common_array_annotations
+
         for name in ("name", "description", "file_origin"):
-            attr_self = getattr(self, name)
-            attr_other = getattr(other, name)
-            if attr_self == attr_other:
-                kwargs[name] = attr_self
+            attr = [getattr(s, name) for s in signals]
+            if all([a == attr[0] for a in attr]):
+                kwargs[name] = attr[0]
             else:
-                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
-        merged_annotations = merge_annotations(self.annotations, other.annotations)
-        kwargs.update(merged_annotations)
+                kwargs[name] = f'concatenation ({attr})'
 
-        kwargs['array_annotations'] = intersect_annotations(self.array_annotations,
-                                                            other.array_annotations)
+        conc_signal = AnalogSignal(np.full(shape=shape, fill_value=padding, dtype=signals[0].dtype),
+                                   sampling_rate=sr,  t_start=t_start,  units=units, **kwargs)
 
-        signal = self.__class__(stack, units=self.units, dtype=self.dtype, copy=False,
-                                t_start=signal1.t_start, sampling_rate=self.sampling_rate, **kwargs)
-        signal.segment = None
-        signal.channel_index = None
+        if not overwrite:
+            signals = signals[::-1]
+        while len(signals) > 0:
+            conc_signal.splice(signals.pop(0), copy=False)
 
-        if hasattr(self, "lazy_shape"):
-            signal.lazy_shape = merged_lazy_shape
+        return conc_signal
 
-        return signal
+    def _concatenate_time_ranges(self, time_ranges):
+        time_ranges = sorted(time_ranges)
+        new_ranges = time_ranges[:1]
+        for t_start, t_stop in time_ranges[1:]:
+            # time range are non continuous -> define new range
+            if t_start > new_ranges[-1][1]:
+                new_ranges.append((t_start, t_stop))
+            # time range is continuous -> extend time range
+            elif t_stop > new_ranges[-1][1]:
+                new_ranges[-1] = (new_ranges[-1][0], t_stop)
+        return new_ranges
+
+    def _invert_time_ranges(self, time_ranges):
+        i = 0
+        new_ranges = []
+        while i < len(time_ranges)-1:
+            new_ranges.append((time_ranges[i][1], time_ranges[i+1][0]))
+            i += 1
+        return new_ranges
+
+
+
