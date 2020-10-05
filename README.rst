@@ -59,6 +59,15 @@ To cite Neo in publications, see CITATION.txt
 :copyright: Copyright 2010-2019 by the Neo team, see doc/source/authors.rst.
 :license: 3-Clause Revised BSD License, see LICENSE.txt for details.
 
+Funding
+-------
+
+Development of PyNN has been partially funded by the European Union Sixth Framework Program (FP6) under
+grant agreement FETPI-015879 (FACETS), by the European Union Seventh Framework Program (FP7/2007­-2013)
+under grant agreements no. 269921 (BrainScaleS) and no. 604102 (HBP),
+and by the European Union’s Horizon 2020 Framework Programme for
+Research and Innovation under the Specific Grant Agreements No. 720270 (Human Brain Project SGA1), 
+No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3).
 
 .. _OpenElectrophy: https://github.com/OpenElectrophy/OpenElectrophy
 .. _Elephant: http://neuralensemble.org/elephant
