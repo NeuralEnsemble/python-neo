@@ -210,6 +210,8 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, 
         data = np.arange(n)
     elif n and name == 'channel_names':
         data = np.array(["ch%d" % i for i in range(n)])
+    elif n and name == 'index':  # ChannelIndex.index
+        data = np.random.randint(0, n, np.random.randint(n)+1)
     elif n and obj == 'AnalogSignal':
         if name == 'signal':
             size = []
@@ -274,8 +276,7 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
     If annotate is True (default), also add annotations to the values.
     """
 
-    if hasattr(cls,
-               'lower'):  # is this a test that cls is a string? better to use isinstance(cls,
+    if hasattr(cls, 'lower'):  # is this a test that cls is a string? better to use isinstance(cls,
         # basestring), no?
         cls = class_by_name[cls]
     # iseed is needed below for generation of array annotations
