@@ -206,12 +206,14 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, 
         data = np.array(0.0)
     elif name == 't_stop':
         data = np.array(1.0)
-    elif n and name == 'channel_indexes':
+    elif n and name in ['channel_indexes', 'channel_ids']:
         data = np.arange(n)
+    elif n and name == 'coordinates':
+        data = np.arange(0, 2*n).reshape((n, 2))
     elif n and name == 'channel_names':
         data = np.array(["ch%d" % i for i in range(n)])
     elif n and name == 'index':  # ChannelIndex.index
-        data = np.random.randint(0, n, np.random.randint(n)+1)
+        data = np.random.randint(0, n, n)
     elif n and obj == 'AnalogSignal':
         if name == 'signal':
             size = []
