@@ -828,15 +828,24 @@ class NlxHeader(OrderedDict):
             elif self['NLX_Base_Class_Type'] == 'BmlAcq':
                 return 'BML'
 
-        elif 'HardwareSubsystemType' in self:
+            else: return 'UNKNOWN'
+
+        elif 'HardwareSubSystemType' in self:
 
             # DigitalLynx
-            if self['HardwareSubsystemType'] == 'DigitalLynx':
+            if self['HardwareSubSystemType'] == 'DigitalLynx':
                 return 'DIGITALLYNX'
 
             # DigitalLynxSX
-            elif self['HardwareSubsystemType'] == 'DigitalLynxSX':
+            elif self['HardwareSubSystemType'] == 'DigitalLynxSX':
                 return 'DIGITALLYNXSX'
+
+        elif 'FileType' in self:
+
+            if self['FileVersion'] in ['3.3','3.4']:
+                return self['AcquisitionSystem'].split()[1].upper()
+
+            else: return 'UNKNOWN'
 
         else:
             return 'UNKNOWN'
