@@ -12,7 +12,7 @@ logging.getLogger().setLevel(logging.INFO)
 class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
-        'Cheetah_v4.0.2/original_data',
+        # 'Cheetah_v4.0.2/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
