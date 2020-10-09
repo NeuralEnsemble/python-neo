@@ -83,7 +83,7 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
 
             filename = self.get_filename_path(typeTest[0])
             hdr = NlxHeader.buildForFile(filename)
-            self.assertEqual(hdr.typeOfRecording(),typeTest[1])
+            self.assertEqual(hdr.typeOfRecording(), typeTest[1])
 
 
 if __name__ == "__main__":
