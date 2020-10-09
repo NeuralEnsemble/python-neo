@@ -73,8 +73,7 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Pegasus_v2.1.1/Events_0008.nev',
         'Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs',
         'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
-        'Cheetah_v6.3.2/incomplete_blocks/README.txt'
-        ]
+        'Cheetah_v6.3.2/incomplete_blocks/README.txt']
 
 
 class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):

@@ -661,7 +661,7 @@ class NlxHeader(OrderedDict):
         ('ApplicationName', '', None),  # also include version number when present
         ('AcquisitionSystem', '', None),
         ('ReferenceChannel', '', None),
-        ('NLX_Base_Class_Type','',None) # in version 4 and earlier versions of Cheetah
+        ('NLX_Base_Class_Type', '', None)  # in version 4 and earlier versions of Cheetah
     ]
 
     # Filename and datetime may appear in header lines starting with # at
@@ -828,7 +828,8 @@ class NlxHeader(OrderedDict):
             elif self['NLX_Base_Class_Type'] == 'BmlAcq':
                 return 'BML'
 
-            else: return 'UNKNOWN'
+            else:
+                return 'UNKNOWN'
 
         elif 'HardwareSubSystemType' in self:
 
@@ -842,10 +843,11 @@ class NlxHeader(OrderedDict):
 
         elif 'FileType' in self:
 
-            if self['FileVersion'] in ['3.3','3.4']:
+            if self['FileVersion'] in ['3.3', '3.4']:
                 return self['AcquisitionSystem'].split()[1].upper()
 
-            else: return 'UNKNOWN'
+            else:
+                return 'UNKNOWN'
 
         else:
             return 'UNKNOWN'
