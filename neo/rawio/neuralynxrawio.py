@@ -305,7 +305,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         block_start = i_start // BLOCK_SIZE
         block_stop = i_stop // BLOCK_SIZE + 1
-        sl0 = i_start % 512
+        sl0 = i_start % BLOCK_SIZE
         sl1 = sl0 + (i_stop - i_start)
 
         if channel_indexes is None:
@@ -485,15 +485,9 @@ class NeuralynxRawIO(BaseRawIO):
 
         gap_candidates = np.unique([0]
                                    + [data0.size]
-                                   + (gap_indexes + 1).tolist()
-                                   + lost_indexes.tolist())  # linear
+                                   + (lost_indexes + 1).tolist()) # linear
 
         gap_pairs = np.vstack([gap_candidates[:-1], gap_candidates[1:]]).T  # 2D (n_segments, 2)
-
-        # construct proper gap ranges free of lost samples artifacts
-        minimal_segment_length = 1  # in blocks
-        goodpairs = np.diff(gap_pairs, 1).reshape(-1) > minimal_segment_length
-        gap_pairs = gap_pairs[goodpairs]  # ensures a segment is at least a block wide
 
         self._nb_segment = len(gap_pairs)
         self._sigs_memmap = [{} for seg_index in range(self._nb_segment)]
@@ -521,13 +515,13 @@ class NeuralynxRawIO(BaseRawIO):
                 if chan_uid == chan_uid0:
                     ts0 = subdata[0]['timestamp']
                     ts1 = subdata[-1]['timestamp'] \
-                            + np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                            + np.uint64(subdata[-1]['nb_valid'] / self._sigs_sampling_rate * 1e6)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
                     t_stop = ts1 / 1e6
                     self._sigs_t_stop.append(t_stop)
-                    length = subdata.size * BLOCK_SIZE
+                    length = (subdata[:-1].size * BLOCK_SIZE) + int(subdata[-1]['nb_valid'])
                     self._sigs_length.append(length)
 
 
