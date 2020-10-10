@@ -485,7 +485,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         gap_candidates = np.unique([0]
                                    + [data0.size]
-                                   + (lost_indexes + 1).tolist()) # linear
+                                   + (lost_indexes + 1).tolist())  # linear
 
         gap_pairs = np.vstack([gap_candidates[:-1], gap_candidates[1:]]).T  # 2D (n_segments, 2)
 
