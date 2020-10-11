@@ -483,7 +483,7 @@ class NeuralynxRawIO(BaseRawIO):
             if self.use_cache:
                 self.add_in_cache(lost_indexes=lost_indexes)
 
-	gap_and_lost_indexes = np.unique(np.concatenate((gap_indexes, lost_indexes)))
+        gap_and_lost_indexes = np.unique(np.concatenate((gap_indexes, lost_indexes)))
 
         gap_candidates = np.unique([0]
                                    + [data0.size]
