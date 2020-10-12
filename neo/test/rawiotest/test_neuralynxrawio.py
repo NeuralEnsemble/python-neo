@@ -1,8 +1,10 @@
 import unittest
 
+import numpy as np
+
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
-from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 from neo.rawio.neuralynxrawio import NlxHeader
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 import logging
 
@@ -85,6 +87,17 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
             hdr = NlxHeader.buildForFile(filename)
             self.assertEqual(hdr.typeOfRecording(), typeTest[1])
 
+class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
+    """
+    Test building NcsBlocks for files of different revisions.
+    """
+
+    def test_ncsblocks_partial(self):
+        filename = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                           offset=NlxHeader.HEADER_SIZE)
+        self.assertEqual(data0.shape[0],6690)
+        self.assertEqual(data0['timestamp'][6689],8515800549) # timestamp of last record
 
 if __name__ == "__main__":
     unittest.main()
