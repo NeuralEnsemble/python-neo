@@ -4,6 +4,8 @@ import numpy as np
 
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuralynxrawio import NlxHeader
+from neo.rawio.neuralynxrawio import NcsBlocksFactory
+from neo.rawio.neuralynxrawio import NcsBlocks
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 import logging
@@ -98,6 +100,22 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
                            offset=NlxHeader.HEADER_SIZE)
         self.assertEqual(data0.shape[0],6690)
         self.assertEqual(data0['timestamp'][6689],8515800549) # timestamp of last record
+
+    def testBuildGivenActualFrequency(self):
+
+        # Test early files where the frequency listed in the header is
+        # floor(1e6/(actual number of microseconds between samples)
+        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                           offset=NlxHeader.HEADER_SIZE)
+        ncsBlocks = NcsBlocks()
+        ncsBlocks.sampFreqUsed = 1/(35e-6)
+        ncsBlocks.microsPerSampUsed = 35
+        ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks, 27789)
+        self.assertEqual(len(ncsBlocks.startBlocks), 1)
+        self.assertEqual(ncsBlocks.startBlocks[0], 0)
+        self.assertEqual(len(ncsBlocks.endBlocks), 1)
+        self.assertEqual(ncsBlocks.endBlocks[0], 9)
 
 if __name__ == "__main__":
     unittest.main()
