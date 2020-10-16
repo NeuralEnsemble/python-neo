@@ -111,7 +111,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         ncsBlocks = NcsBlocks()
         ncsBlocks.sampFreqUsed = 1/(35e-6)
         ncsBlocks.microsPerSampUsed = 35
-        ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks, 27789)
+        ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed, 27789)
         self.assertEqual(len(ncsBlocks.startBlocks), 1)
         self.assertEqual(ncsBlocks.startBlocks[0], 0)
         self.assertEqual(len(ncsBlocks.endBlocks), 1)
