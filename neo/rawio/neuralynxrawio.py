@@ -609,11 +609,18 @@ class WholeMicrosTimePositionBlock():
     _microsPerSamp = 0
 
     @staticmethod
-    def getMicrosPerSampForFreq(sampFreq):
+    def getFreqForMicrosPerSamp(micros):
         """
-        Compute fractional microseconds per sample.
+        Compute fractional sampling frequency, given microseconds per sample.
         """
-        return 1e6 / sampFreq
+        return 1e6 / micros
+
+    @staticmethod
+    def getMicrosPerSampForFreq(sampFr):
+        """
+        Calculate fractional microseconds per sample, given the sampling frequency (Hz).
+        """
+        return 1e6 / sampFr
 
     @staticmethod
     def calcSampleTime(sampFr, startTime, posn):
@@ -811,7 +818,7 @@ class NcsBlocksFactory():
                 blkLen = hdr.nb_valid
             else:
                 blkLen += hdr.nb_valid
-        ncsBlocks.append(ncsMemMap.shape[0] - 1)
+        ncsBlocks.endBlocks.append(ncsMemMap.shape[0] - 1)
 
         ncsBlocks.sampFreqUsed = maxBlkFreqEstimate
         ncsBlocks.setMicrosPerSamp = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(maxBlkFreqEstimate)
@@ -851,7 +858,7 @@ class NcsBlocksFactory():
         predLastBlockStartTime = WholeMicrosTimePositionBlock.calcSampleTime(nomFreq,rh0.timestamp,
                                                                              numSampsForPred)
         freqInFile = math.floor(nomFreq)
-        if abs(rhl.timestamp - predLastBlockStartTime) / rhl.timestamp < NcsBlocks._tolerance and \
+        if abs(rhl.timestamp - predLastBlockStartTime) / rhl.timestamp < NcsBlocksFactory._tolerance and \
             rhl.channel_id == chanNum and rhl.sample_rate == freqInFile:
             nb.endBlocks.append(lastBlkI)
             nb.sampFreqUsed = numSampsForPred / (rhl.timestamp - rh0.timestamp) / 1e6
@@ -860,7 +867,8 @@ class NcsBlocksFactory():
         # otherwise parse records to determine blocks using default maximum gap length
         else:
            nb.sampFreqUsed = nomFreq
-           nb = NcsBlocks._parseForMaxGap(ncsMemMap, nb, NcsBlocks._maxGapLength)
+           nb.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(nb.sampFreqUsed)
+           nb = NcsBlocksFactory._parseForMaxGap(ncsMemMap, nb, NcsBlocksFactory._maxGapLength)
 
         return nb
 
@@ -880,23 +888,28 @@ class NcsBlocksFactory():
 
         # old Neuralynx style with rounded whole microseconds for the samples
         if acqType == "PRE4":
-            freq = nlxHdr['SamplingFrequency']
+            freq = nlxHdr['sampling_rate']
+            microsPerSampUsed = math.floor(WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(freq))
             sampFreqUsed = WholeMicrosTimePositionBlock.getFreqForMicrosPerSamp(microsPerSampUsed)
-            nb = NcsBlocks._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(freq))
-            nb.microsPerSampUsed = math.floor(WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(freq))
+            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(freq))
+            nb.sampFreqUsed = sampFreqUsed
+            nb.microsPerSampUsed = microsPerSampUsed
 
         # digital lynx style with fractional frequency and micros per samp determined from block times
         elif acqType == "DIGITALLYNX" or acqType == "DIGITALLYNXSX":
-            nomFreq = nlxHdr['SamplingFrequency']
-            nb = NcsBlocks._buildForToleranceAndMaxGap(ncsMemMap, nomFreq)
+            nomFreq = nlxHdr['sampling_rate']
+            nb = NcsBlocksFactory._buildForToleranceAndMaxGap(ncsMemMap, nomFreq)
 
         # BML style with fractional frequency and micros per samp
         elif acqType == "BML":
-            sampFreqUsed = nlxHdr['SamplingFrequency']
-            nb = NcsBlocks._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(sampFreqUsed))
+            sampFreqUsed = nlxHdr['sampling_rate']
+            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(sampFreqUsed))
 
         else:
             raise TypeError("Unknown Ncs file type from header.")
+
+        return nb
+
 
 class NlxHeader(OrderedDict):
     """

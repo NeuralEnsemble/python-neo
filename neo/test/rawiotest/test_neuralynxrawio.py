@@ -109,13 +109,42 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                            offset=NlxHeader.HEADER_SIZE)
         ncsBlocks = NcsBlocks()
-        ncsBlocks.sampFreqUsed = 1/(35e-6)
+        ncsBlocks.sampFreqUsed = 1/35e-6
         ncsBlocks.microsPerSampUsed = 35
         ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed, 27789)
         self.assertEqual(len(ncsBlocks.startBlocks), 1)
         self.assertEqual(ncsBlocks.startBlocks[0], 0)
         self.assertEqual(len(ncsBlocks.endBlocks), 1)
         self.assertEqual(ncsBlocks.endBlocks[0], 9)
+
+
+    def testBuildUsingHeaderAndScanning(self):
+
+        # Test early files where the frequency listed in the header is
+        # floor(1e6/(actual number of microseconds between samples)
+        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        hdr = NlxHeader.buildForFile(filename)
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                           offset=NlxHeader.HEADER_SIZE)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+
+        self.assertEqual(nb.sampFreqUsed, 1/35e-6)
+        self.assertEqual(nb.microsPerSampUsed, 35)
+        self.assertEqual(len(nb.startBlocks), 1)
+        self.assertEqual(nb.startBlocks[0], 0)
+        self.assertEqual(len(nb.endBlocks), 1)
+        self.assertEqual(nb.endBlocks[0], 9)
+
+        # test Cheetah 5.5.1, which is DigitalLynxSX
+        filename = self.get_filename_path('Cheetah_v5.5.1/original_data/Tet3a.ncs')
+        hdr = NlxHeader.buildForFile(filename)
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                           offset=NlxHeader.HEADER_SIZE)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(nb.sampFreqUsed, 32000)
+        self.assertEqual(nb.microsPerSampUsed, 31.25)
+
+
 
 if __name__ == "__main__":
     unittest.main()
