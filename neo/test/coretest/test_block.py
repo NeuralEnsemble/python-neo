@@ -243,8 +243,8 @@ class TestBlock(unittest.TestCase):
         blk1a.segments.append(self.segs2[0])
         blk1a.merge(self.blk2)
 
-        segs1a = clone_object(self.blk1).segments
-        chxs1a = clone_object(self.chxs1)
+        segs1a = deepcopy(self.blk1.segments)
+        chxs1a = deepcopy(self.chxs1)
 
         assert_same_sub_schema(chxs1a + self.chxs2,
                                blk1a.channel_indexes)
@@ -252,8 +252,8 @@ class TestBlock(unittest.TestCase):
                                blk1a.segments)
 
     def test__children(self):
-        segs1a = clone_object(self.blk1).segments
-        chxs1a = clone_object(self.chxs1)
+        segs1a = deepcopy(self.blk1.segments)
+        chxs1a = deepcopy(self.chxs1)
 
         self.assertEqual(self.blk1._container_child_objects,
                          ('Segment', 'ChannelIndex', 'Group'))

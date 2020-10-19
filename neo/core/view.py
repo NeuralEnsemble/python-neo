@@ -57,8 +57,9 @@ class ChannelView(BaseNeo):
             if self.index.size != self.obj.shape[-1]:
                 raise ValueError("index size does not match number of channels in signal")
             self.index, = np.nonzero(self.index)
-        elif self.index.dtype != np.integer:
-            raise ValueError("index must be a boolean or integer list or array")
+        # allow any type of integer representation
+        elif self.index.dtype.char not in np.typecodes['AllInteger']:
+            raise ValueError("index must be of a list or array of data type boolean or integer")
 
         if not hasattr(self, 'array_annotations') or not self.array_annotations:
             self.array_annotations = ArrayDict(self._get_arr_ann_length())

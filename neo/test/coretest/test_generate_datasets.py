@@ -592,7 +592,7 @@ class Test__generate_datasets(unittest.TestCase):
         resattr = get_fake_values(cls, annotate=False, seed=0)
         if seed is not None:
             for name, value in resattr.items():
-                if name in ['channel_names', 'channel_indexes', 'channel_index', 'coordinates']:
+                if name in ['channel_names', 'channel_ids', 'index', 'coordinates']:
                     continue
                 try:
                     try:
