@@ -6,6 +6,7 @@ It replaces and extends the grouping function of the former :class:`ChannelIndex
 and :class:`Unit`.
 """
 
+from os import close
 from neo.core.container import Container
 
 
@@ -61,10 +62,15 @@ class Group(Container):
             for cls_name, container_name in zip(self._child_objects, self._child_containers)
         }
 
+    def _get_container(self, cls):
+        if hasattr(cls, "proxy_for"):
+            cls = cls.proxy_for
+        return self._container_lookup[cls.__name__]
+
     def add(self, *objects):
         """Add a new Neo object to the Group"""
         for obj in objects:
             if self.allowed_types and not isinstance(obj, self.allowed_types):
                 raise TypeError("This Group can only contain {}".format(self.allowed_types))
-            container = self._container_lookup[obj.__class__.__name__]
+            container = self._get_container(obj.__class__)
             container.append(obj)
