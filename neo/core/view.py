@@ -43,7 +43,9 @@ class ChannelView(BaseNeo):
                  array_annotations=None, **annotations):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
-        if not isinstance(obj, BaseSignal):
+
+        if not (isinstance(obj, BaseSignal) or (
+                hasattr(obj, "proxy_for") and issubclass(obj.proxy_for, BaseSignal))):
             raise ValueError("Can only take a ChannelView of an AnalogSignal "
                              "or an IrregularlySampledSignal")
         self.obj = obj
