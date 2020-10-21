@@ -608,10 +608,10 @@ def get_sample_interval(info, chan_info):
     Get sample interval for one channel
     """
     if info['system_id'] in [1, 2, 3, 4, 5]:  # Before version 5
-        sample_interval = (chan_info['divide'] * info['us_per_time'] *
+        sample_interval = (int(chan_info['divide']) * info['us_per_time'] *
                            info['time_per_adc']) * 1e-6
     else:
-        sample_interval = (chan_info['l_chan_dvd'] *
+        sample_interval = (int(chan_info['l_chan_dvd']) *
                            info['us_per_time'] * info['dtime_base'])
     return sample_interval
 
