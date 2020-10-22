@@ -219,6 +219,7 @@ class NixIO(BaseIO):
         self._neo_map = dict()
         self._ref_map = dict()
         self._signal_map = dict()
+        self._view_map = dict()
 
         # _names_ok is used to guard against name check duplication
         self._names_ok = False
@@ -346,6 +347,7 @@ class NixIO(BaseIO):
         self._neo_map = dict()
         self._ref_map = dict()
         self._signal_map = dict()
+        self._view_map = dict()
 
         return neo_block
 
@@ -796,32 +798,38 @@ class NixIO(BaseIO):
             nix_name = "neo.channelview.{}".format(self._generate_nix_name())
             chview.annotate(nix_name=nix_name)
 
-        channels = nixblock.create_data_array(
-            "{}.index".format(nix_name), "neo.channelview.index", data=chview.index
-        )
+        # create a new data array if this channelview was not saved yet
+        if not nix_name in self._view_map:
+            channels = nixblock.create_data_array(
+                "{}.index".format(nix_name), "neo.channelview.index", data=chview.index
+            )
 
-        nixmt = nixblock.create_multi_tag(nix_name, "neo.channelview",
-                                          positions=channels)
+            nixmt = nixblock.create_multi_tag(nix_name, "neo.channelview",
+                                              positions=channels)
 
-        nixmt.metadata = nixgroup.metadata.create_section(
-            nix_name, "neo.channelview.metadata"
-        )
-        metadata = nixmt.metadata
-        neoname = chview.name if chview.name is not None else ""
-        metadata["neo_name"] = neoname
-        nixmt.definition = chview.description
-        if chview.annotations:
-            for k, v in chview.annotations.items():
-                self._write_property(metadata, k, v)
+            nixmt.metadata = nixgroup.metadata.create_section(
+                nix_name, "neo.channelview.metadata"
+            )
+            metadata = nixmt.metadata
+            neoname = chview.name if chview.name is not None else ""
+            metadata["neo_name"] = neoname
+            nixmt.definition = chview.description
+            if chview.annotations:
+                for k, v in chview.annotations.items():
+                    self._write_property(metadata, k, v)
+            print(nix_name)
+            self._view_map[nix_name] = nixmt
 
-        # link tag to the data array for the ChannelView's signal
-        if not ("nix_name" in chview.obj.annotations
-                and chview.obj.annotations["nix_name"] in self._signal_map):
-            # the following restriction could be relaxed later
-            # but for a first pass this simplifies my mental model
-            raise Exception("Need to save signals before saving views")
-        nix_name = chview.obj.annotations["nix_name"]
-        nixmt.references.extend(self._signal_map[nix_name])
+            # link tag to the data array for the ChannelView's signal
+            if not ("nix_name" in chview.obj.annotations
+                    and chview.obj.annotations["nix_name"] in self._signal_map):
+                # the following restriction could be relaxed later
+                # but for a first pass this simplifies my mental model
+                raise Exception("Need to save signals before saving views")
+            nix_name = chview.obj.annotations["nix_name"]
+            nixmt.references.extend(self._signal_map[nix_name])
+        else:
+            nixmt = self._view_map[nix_name]
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -1677,6 +1685,7 @@ class NixIO(BaseIO):
             self._neo_map = None
             self._ref_map = None
             self._signal_map = None
+            self._view_map = None
             self._block_read_counter = None
 
     def __del__(self):
