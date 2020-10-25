@@ -742,6 +742,16 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertTrue(hasattr(self.signal1[9, 3], 'units'))
         self.assertRaises(IndexError, self.signal1.__getitem__, (99, 73))
 
+    def test__time_index(self):
+        # scalar arguments
+        self.assertEqual(self.signal2.time_index(2.0 * pq.s), 2)
+        self.assertEqual(self.signal2.time_index(1.99 * pq.s), 2)
+        self.assertEqual(self.signal2.time_index(2.01 * pq.s), 2)
+
+        # vector arguments
+        assert_array_equal(self.signal2.time_index([2.0, 0.99, 3.01] * pq.s), [2, 1, 3])
+        assert_array_equal(self.signal2.time_index([2.0] * pq.s), [2])
+
     def test__time_slice(self):
         t_start = 2 * pq.s
         t_stop = 4 * pq.s
