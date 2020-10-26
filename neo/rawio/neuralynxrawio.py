@@ -652,13 +652,14 @@ class CscRecordHeader():
 class NcsBlocks():
     """
     Contains information regarding the contiguous blocks of records in an Ncs file.
-    Factory methods perform parsing of this information from an Ncs file.
+    Methods of NcsBlocksFactory perform parsing of this information from an Ncs file.
     """
 
-    startBlocks = []
-    endBlocks = []
-    sampFreqUsed = 0  # actual sampling frequency of samples
-    microsPerSampUsed = 0 # microseconds per sample
+    def __init__(self):
+        self.startBlocks = []
+        self.endBlocks = []
+        self.sampFreqUsed = 0  # actual sampling frequency of samples
+        self.microsPerSampUsed = 0 # microseconds per sample
 
 
 class NcsBlocksFactory():
@@ -818,6 +819,9 @@ class NcsBlocksFactory():
                 blkLen = hdr.nb_valid
             else:
                 blkLen += hdr.nb_valid
+            lastRecTime = hdr.timestamp
+            lastRecNumSamps = hdr.nb_valid
+
         ncsBlocks.endBlocks.append(ncsMemMap.shape[0] - 1)
 
         ncsBlocks.sampFreqUsed = maxBlkFreqEstimate
@@ -858,7 +862,7 @@ class NcsBlocksFactory():
         predLastBlockStartTime = WholeMicrosTimePositionBlock.calcSampleTime(nomFreq,rh0.timestamp,
                                                                              numSampsForPred)
         freqInFile = math.floor(nomFreq)
-        if abs(rhl.timestamp - predLastBlockStartTime) / rhl.timestamp < NcsBlocksFactory._tolerance and \
+        if abs(rhl.timestamp - predLastBlockStartTime) / (rhl.timestamp - rh0.timestamp) < NcsBlocksFactory._tolerance and \
             rhl.channel_id == chanNum and rhl.sample_rate == freqInFile:
             nb.endBlocks.append(lastBlkI)
             nb.sampFreqUsed = numSampsForPred / (rhl.timestamp - rh0.timestamp) / 1e6
