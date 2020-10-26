@@ -101,6 +101,15 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(data0.shape[0],6690)
         self.assertEqual(data0['timestamp'][6689],8515800549) # timestamp of last record
 
+        hdr = NlxHeader.buildForFile(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(nb.sampFreqUsed, 32009.05084744305)
+        self.assertEqual(nb.microsPerSampUsed, 31.241163781021083)
+        self.assertEqual(len(nb.startBlocks), 1)
+        self.assertEqual(nb.startBlocks[0], 0)
+        self.assertEqual(len(nb.endBlocks), 1)
+        self.assertEqual(nb.endBlocks[0], 6689)
+
     def testBuildGivenActualFrequency(self):
 
         # Test early files where the frequency listed in the header is
