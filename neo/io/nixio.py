@@ -817,7 +817,6 @@ class NixIO(BaseIO):
             if chview.annotations:
                 for k, v in chview.annotations.items():
                     self._write_property(metadata, k, v)
-            print(nix_name)
             self._view_map[nix_name] = nixmt
 
             # link tag to the data array for the ChannelView's signal
