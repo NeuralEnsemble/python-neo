@@ -71,6 +71,7 @@ class Group(Container):
         """Add a new Neo object to the Group"""
         for obj in objects:
             if self.allowed_types and not isinstance(obj, self.allowed_types):
-                raise TypeError("This Group can only contain {}".format(self.allowed_types))
+                raise TypeError("This Group can only contain {}, but not {}"
+                                "".format(self.allowed_types, type(obj)))
             container = self._get_container(obj.__class__)
             container.append(obj)
