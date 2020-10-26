@@ -135,7 +135,8 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(len(nb.endBlocks), 1)
         self.assertEqual(nb.endBlocks[0], 9)
 
-        # test Cheetah 5.5.1, which is DigitalLynxSX
+        # test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
+        # with a fairly large gap
         filename = self.get_filename_path('Cheetah_v5.5.1/original_data/Tet3a.ncs')
         hdr = NlxHeader.buildForFile(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
@@ -143,6 +144,12 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
         self.assertEqual(nb.sampFreqUsed, 32000)
         self.assertEqual(nb.microsPerSampUsed, 31.25)
+        self.assertEqual(len(nb.startBlocks), 2)
+        self.assertEqual(nb.startBlocks[0], 0)
+        self.assertEqual(nb.startBlocks[1], 2498)
+        self.assertEqual(len(nb.endBlocks), 2)
+        self.assertEqual(nb.endBlocks[0], 2497)
+        self.assertEqual(nb.endBlocks[1], 3331)
 
 
 
