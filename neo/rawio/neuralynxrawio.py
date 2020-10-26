@@ -864,8 +864,9 @@ class NcsBlocksFactory():
         freqInFile = math.floor(nomFreq)
         if abs(rhl.timestamp - predLastBlockStartTime) / (rhl.timestamp - rh0.timestamp) < NcsBlocksFactory._tolerance and \
             rhl.channel_id == chanNum and rhl.sample_rate == freqInFile:
+            nb.startBlocks.append(0)
             nb.endBlocks.append(lastBlkI)
-            nb.sampFreqUsed = numSampsForPred / (rhl.timestamp - rh0.timestamp) / 1e6
+            nb.sampFreqUsed = numSampsForPred / (rhl.timestamp - rh0.timestamp) * 1e6
             nb.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(nb.sampFreqUsed)
 
         # otherwise parse records to determine blocks using default maximum gap length
