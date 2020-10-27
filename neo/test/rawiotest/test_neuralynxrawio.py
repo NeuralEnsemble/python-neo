@@ -66,6 +66,21 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
         'Cheetah_v6.3.2/incomplete_blocks/README.txt']
 
+    def test_read_ncs_files_sideeffects(self):
+
+        # Test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
+        # with a fairly large gap.
+        rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v5.5.1/original_data'))
+        rawio.parse_header()
+        self.assertEqual(rawio._nb_segment, 2)
+        self.assertListEqual(rawio._timestamp_limits,[(26122557633, 26162525633),
+                                                      (26366360633, 26379704633)])
+        self.assertListEqual(rawio._sigs_length,[1278976, 427008])
+        self.assertListEqual(rawio._sigs_t_stop,[26162.525633, 26379.704633])
+        self.assertListEqual(rawio._sigs_t_start,[26122.557633, 26366.360633])
+        self.assertEqual(len(rawio._sigs_memmap),2)  # check only that there are 2 memmaps
+
+
 
 class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
     """
