@@ -479,116 +479,85 @@ class NeuralynxRawIO(BaseRawIO):
             * self._nb_segment
             * self._timestamp_limits
 
-        The first file is read entirely to detect gaps in timestamp.
-        each gap lead to a new segment.
-
-        Other files are not read entirely but we check than gaps
-        are at the same place.
-
-
-        gap_indexes can be given (when cached) to avoid full read.
-
+        Files will be scanned to determine the blocks of records. If file is a single block of records,
+        this scan is brief, otherwise it will check each record which may take some time.
         """
+
         # :TODO: Needs to account for gaps and start and end times potentially
         #    being different in different groups of channels. These groups typically
         #    correspond to the channels collected by a single ADC card.
         if len(ncs_filenames) == 0:
             return None
 
-        good_delta = int(self._BLOCK_SIZE * 1e6 / self._sigs_sampling_rate)
         chan_uid0 = list(ncs_filenames.keys())[0]
         filename0 = ncs_filenames[chan_uid0]
 
+        # parse the structure of the first file
         data0 = np.memmap(filename0, dtype=self._ncs_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
-
-        gap_indexes = None
-        lost_indexes = None
-
-        if self.use_cache:
-            gap_indexes = self._cache.get('gap_indexes')
-            lost_indexes = self._cache.get('lost_indexes')
-
-        # detect gaps on first file
-        if (gap_indexes is None) or (lost_indexes is None):
-
-            # this can be long!!!!
-            timestamps0 = data0['timestamp']
-            deltas0 = np.diff(timestamps0)
-
-            # :TODO: This algorithm needs to account for older style files which had a rounded
-            #   off sampling rate in the header.
-            #
-            # It should be that:
-            # gap_indexes, = np.nonzero(deltas0!=good_delta)
-            # but for a file I have found many deltas0==15999, 16000, 16001 (for sampling at 32000)
-            # I guess this is a round problem
-            # So this is the same with a tolerance of 1 or 2 ticks
-            max_tolerance = 2
-            mask = np.abs((deltas0 - good_delta).astype('int64')) > max_tolerance
-
-            gap_indexes, = np.nonzero(mask)
-
-            if self.use_cache:
-                self.add_in_cache(gap_indexes=gap_indexes)
-
-            # update for lost_indexes
-            # Sometimes NLX writes a faulty block, but it then validates how much samples it wrote
-            # the validation field is in delta0['nb_valid'], it should be equal to BLOCK_SIZE
-            # :TODO: this algorithm ignores samples in partially filled blocks, which
-            #   is not strictly necessary as all channels might have same partially filled
-            #   blocks at the end.
-
-            lost_indexes, = np.nonzero(data0['nb_valid'] < self._BLOCK_SIZE)
-
-            if self.use_cache:
-                self.add_in_cache(lost_indexes=lost_indexes)
-
-        gap_candidates = np.unique([0]
-                                   + [data0.size]
-                                   + (gap_indexes + 1).tolist()
-                                   + lost_indexes.tolist())  # linear
-
-        gap_pairs = np.vstack([gap_candidates[:-1], gap_candidates[1:]]).T  # 2D (n_segments, 2)
+        hdr0 = NlxHeader.buildForFile(filename0)
+        nb0 = NcsBlocksFactory.buildForNcsFile(data0,hdr0)
 
         # construct proper gap ranges free of lost samples artifacts
         minimal_segment_length = 1  # in blocks
-        goodpairs = np.diff(gap_pairs, 1).reshape(-1) > minimal_segment_length
-        gap_pairs = gap_pairs[goodpairs]  # ensures a segment is at least a block wide
 
-        self._nb_segment = len(gap_pairs)
+        self._nb_segment = len(nb0.startBlocks)
         self._sigs_memmap = [{} for seg_index in range(self._nb_segment)]
         self._sigs_t_start = []
         self._sigs_t_stop = []
         self._sigs_length = []
         self._timestamp_limits = []
 
-        # create segment with subdata block/t_start/t_stop/length
+        # create segment with subdata block/t_start/t_stop/length for each channel
         for chan_uid, ncs_filename in self.ncs_filenames.items():
 
-            data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
-                             offset=NlxHeader.HEADER_SIZE)
-            assert data.size == data0.size, 'ncs files do not have the same data length'
+            if chan_uid == chan_uid0:
+                data = data0
+                hdr = hdr0
+                nb = nb0
+            else:
+                data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
+                                 offset=NlxHeader.HEADER_SIZE)
+                hdr = NlxHeader.buildForFile(ncs_filename)
+                nb = NcsBlocksFactory.buildForNcsFile(data, hdr)
 
-            for seg_index, (i0, i1) in enumerate(gap_pairs):
+                # Check that record block structure of each file is identical to the first.
+                if len(nb.startBlocks) != len(nb0.startBlocks) or len(nb.endBlocks) != len(nb0.endBlocks):
+                    raise IOError('ncs files have different numbers of blocks of records')
 
-                assert data[i0]['timestamp'] == data0[i0][
-                    'timestamp'], 'ncs files do not have the same gaps'
-                assert data[i1 - 1]['timestamp'] == data0[i1 - 1][
-                    'timestamp'], 'ncs files do not have the same gaps'
+                for i, sbi in enumerate(nb.startBlocks):
+                    if (sbi != nb0.startBlocks[i]):
+                        raise IOError('ncs files have different start block structure')
 
-                subdata = data[i0:i1]
+                for i, ebi in enumerate(nb.endBlocks):
+                    if (ebi != nb0.endBlocks[i]):
+                        raise IOError('ncs files have different end block structure')
+
+            # create a memmap for each record block
+            for seg_index in range(len(nb.startBlocks)):
+
+                if (data[nb.startBlocks[seg_index]]['timestamp'] !=
+                        data0[nb0.startBlocks[seg_index]]['timestamp'] or
+                        data[nb.endBlocks[seg_index]]['timestamp'] !=
+                        data0[nb0.endBlocks[seg_index]]['timestamp']) :
+                    raise IOError('ncs files have different timestamp structure')
+
+                subdata = data[nb.startBlocks[seg_index]:nb.endBlocks[seg_index]]
                 self._sigs_memmap[seg_index][chan_uid] = subdata
 
                 if chan_uid == chan_uid0:
+                    numSampsLastBlock = subdata[-1]['nb_valid']
                     ts0 = subdata[0]['timestamp']
-                    ts1 = subdata[-1]['timestamp'] +\
-                        np.uint64(self._BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                    ts1 = WholeMicrosTimePositionBlock.calcSampleTime(nb0.sampFreqUsed,
+                                                                      subdata[-1]['timestamp'],
+                                                                      numSampsLastBlock)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
                     t_stop = ts1 / 1e6
                     self._sigs_t_stop.append(t_stop)
-                    length = subdata.size * self._BLOCK_SIZE
+                    # :TODO: this should really be the total of block lengths, but this allows
+                    #  the last block to be shorter, the most common case
+                    length = (subdata.size - 1) * self._BLOCK_SIZE + numSampsLastBlock
                     self._sigs_length.append(length)
 
 
@@ -794,7 +763,7 @@ class NcsBlocksFactory:
         ncsBlocks.startBlocks.append(0)
         for recn in range(1, ncsMemMap.shape[0]):
             hdr = CscRecordHeader(ncsMemMap, recn)
-            if hdr.channel_id != chanNum | hdr.sample_rate != recFreq:
+            if hdr.channel_id != chanNum or hdr.sample_rate != recFreq:
                 raise IOError('Channel number or sampling frequency changed in records within file')
             predTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed, lastRecTime,
                                                                    lastRecNumSamps)
