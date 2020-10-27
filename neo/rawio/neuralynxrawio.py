@@ -499,7 +499,7 @@ class NeuralynxRawIO(BaseRawIO):
         chan_uid0 = list(ncs_filenames.keys())[0]
         filename0 = ncs_filenames[chan_uid0]
 
-        data0 = np.memmap(filename0, dtype=self.ncs_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
+        data0 = np.memmap(filename0, dtype=self._ncs_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
 
         gap_indexes = None
         lost_indexes = None
@@ -565,7 +565,7 @@ class NeuralynxRawIO(BaseRawIO):
         # create segment with subdata block/t_start/t_stop/length
         for chan_uid, ncs_filename in self.ncs_filenames.items():
 
-            data = np.memmap(ncs_filename, dtype=self.ncs_dtype, mode='r',
+            data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
                              offset=NlxHeader.HEADER_SIZE)
             assert data.size == data0.size, 'ncs files do not have the same data length'
 
