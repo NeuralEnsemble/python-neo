@@ -64,3 +64,5 @@ Thumbs.db
 ###################################
 neo/test/io/neurosharemergeio.py
 files_for_testing_neo
+/venv
+/neo/test/resources
