@@ -73,6 +73,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v5.5.1/original_data'))
         rawio.parse_header()
         self.assertEqual(rawio._nb_segment, 2)
+        # test values here from direct inspection of .ncs files
         self.assertListEqual(rawio._timestamp_limits,[(26122557633, 26162525633),
                                                       (26366360633, 26379704633)])
         self.assertListEqual(rawio._sigs_length,[1278976, 427008])

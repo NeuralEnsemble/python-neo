@@ -541,22 +541,24 @@ class NeuralynxRawIO(BaseRawIO):
                         data0[nb0.endBlocks[seg_index]]['timestamp']) :
                     raise IOError('ncs files have different timestamp structure')
 
-                subdata = data[nb.startBlocks[seg_index]:nb.endBlocks[seg_index]]
+                subdata = data[nb.startBlocks[seg_index]:(nb.endBlocks[seg_index]+1)]
                 self._sigs_memmap[seg_index][chan_uid] = subdata
 
                 if chan_uid == chan_uid0:
                     numSampsLastBlock = subdata[-1]['nb_valid']
                     ts0 = subdata[0]['timestamp']
-                    ts1 = WholeMicrosTimePositionBlock.calcSampleTime(nb0.sampFreqUsed,
-                                                                      subdata[-1]['timestamp'],
-                                                                      numSampsLastBlock)
+                    ts1 = subdata[-1]['timestamp'] +\
+                            np.uint64(self._BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                    # ts1 = WholeMicrosTimePositionBlock.calcSampleTime(nb0.sampFreqUsed,
+                    #                                                 subdata[-1]['timestamp'],
+                    #                                                  numSampsLastBlock)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
                     t_stop = ts1 / 1e6
                     self._sigs_t_stop.append(t_stop)
-                    # :TODO: this should really be the total of block lengths, but this allows
-                    #  the last block to be shorter, the most common case
+                    # :TODO: this should really be the total of nb_valid in records, but this allows
+                    #  the last record of a block to be shorter, the most common case
                     length = (subdata.size - 1) * self._BLOCK_SIZE + numSampsLastBlock
                     self._sigs_length.append(length)
 
@@ -617,8 +619,8 @@ class NcsBlocks():
     """
 
     def __init__(self):
-        self.startBlocks = []
-        self.endBlocks = []
+        self.startBlocks = []  # index of starting record for each block
+        self.endBlocks = []  # index of last record (inclusive) for each block
         self.sampFreqUsed = 0  # actual sampling frequency of samples
         self.microsPerSampUsed = 0  # microseconds per sample
 
