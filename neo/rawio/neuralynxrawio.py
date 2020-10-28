@@ -558,18 +558,17 @@ class NeuralynxRawIO(BaseRawIO):
                 if chan_uid == chan_uid0:
                     numSampsLastBlock = subdata[-1]['nb_valid']
                     ts0 = subdata[0]['timestamp']
-                    ts1 = subdata[-1]['timestamp'] +\
-                            np.uint64(self._BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
-                    # ts1 = WholeMicrosTimePositionBlock.calcSampleTime(nb0.sampFreqUsed,
-                    #                                                 subdata[-1]['timestamp'],
-                    #                                                  numSampsLastBlock)
+                    ts1 = WholeMicrosTimePositionBlock.calcSampleTime(nb0.sampFreqUsed,
+                                                                     subdata[-1]['timestamp'],
+                                                                      numSampsLastBlock)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
                     t_stop = ts1 / 1e6
                     self._sigs_t_stop.append(t_stop)
-                    # :TODO: this should really be the total of nb_valid in records, but this allows
-                    #  the last record of a block to be shorter, the most common case
+                    # :TODO: This should really be the total of nb_valid in records, but this allows
+                    #  the last record of a block to be shorter, the most common case. Have never
+                    #  seen a block of records with not full records before the last. 
                     length = (subdata.size - 1) * self._BLOCK_SIZE + numSampsLastBlock
                     self._sigs_length.append(length)
 
