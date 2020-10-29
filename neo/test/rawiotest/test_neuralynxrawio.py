@@ -16,13 +16,15 @@ logging.getLogger().setLevel(logging.INFO)
 class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
-        # 'Cheetah_v4.0.2/original_data',
+        'Cheetah_v4.0.2/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
         'Cheetah_v6.3.2/incomplete_blocks']
     files_to_download = [
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
+        'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
+        'Cheetah_v4.0.2/README.txt',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
         'Cheetah_v5.5.1/original_data/Events.nev',
@@ -67,6 +69,19 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v6.3.2/incomplete_blocks/README.txt']
 
     def test_read_ncs_files_sideeffects(self):
+
+        # Test Cheetah 4.0.2, which is PRE4 type with frequency in header and
+        # no microsPerSamp. Number of microseconds per sample in file is inverse of
+        # sampling frequency in header trucated to microseconds.
+        rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v4.0.2/original_data'))
+        rawio.parse_header()
+        # test values here from direct inspection of .ncs files
+        self.assertEqual(rawio._nb_segment, 1)
+        self.assertListEqual(rawio._timestamp_limits, [(266982936, 267162136)])
+        self.assertEqual(rawio._sigs_length[0], 5120)
+        self.assertEqual(rawio._sigs_t_start[0], 266.982936)
+        self.assertEqual(rawio._sigs_t_stop[0], 267.162136)
+        self.assertEqual(len(rawio._sigs_memmap), 1)
 
         # Test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap.
