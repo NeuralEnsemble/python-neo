@@ -479,8 +479,9 @@ class NeuralynxRawIO(BaseRawIO):
             * self._nb_segment
             * self._timestamp_limits
 
-        Files will be scanned to determine the blocks of records. If file is a single block of records,
-        this scan is brief, otherwise it will check each record which may take some time.
+        Files will be scanned to determine the blocks of records. If file is a single
+        block of records, this scan is brief, otherwise it will check each record which may
+        take some time.
         """
 
         # :TODO: Needs to account for gaps and start and end times potentially
@@ -521,7 +522,8 @@ class NeuralynxRawIO(BaseRawIO):
                 nb = NcsBlocksFactory.buildForNcsFile(data, hdr)
 
                 # Check that record block structure of each file is identical to the first.
-                if len(nb.startBlocks) != len(nb0.startBlocks) or len(nb.endBlocks) != len(nb0.endBlocks):
+                if len(nb.startBlocks) != len(nb0.startBlocks) or len(nb.endBlocks) != \
+                        len(nb0.endBlocks):
                     raise IOError('ncs files have different numbers of blocks of records')
 
                 for i, sbi in enumerate(nb.startBlocks):
@@ -555,9 +557,9 @@ class NeuralynxRawIO(BaseRawIO):
                     self._sigs_t_start.append(t_start)
                     t_stop = ts1 / 1e6
                     self._sigs_t_stop.append(t_stop)
-                    # :TODO: This should really be the total of nb_valid in records, but this allows
-                    #  the last record of a block to be shorter, the most common case. Have never
-                    #  seen a block of records with not full records before the last. 
+                    # :TODO: This should really be the total of nb_valid in records, but this
+                    #  allows the last record of a block to be shorter, the most common case.
+                    #  Have never seen a block of records with not full records before the last.
                     length = (subdata.size - 1) * self._BLOCK_SIZE + numSampsLastBlock
                     self._sigs_length.append(length)
 
@@ -633,7 +635,8 @@ class NcsBlocksFactory:
     more complicated. Copied from Java code on Sept 7, 2020.
     """
 
-    _maxGapLength = 5  # maximum gap between predicted and actual block timestamps still considered within one NcsBlock
+    _maxGapLength = 5  # maximum gap between predicted and actual block timestamps still
+                       # considered within one NcsBlock
 
     @staticmethod
     def _parseGivenActualFrequency(ncsMemMap, ncsBlocks, chanNum, reqFreq, blkOnePredTime):
@@ -661,16 +664,18 @@ class NcsBlocksFactory:
         for recn in range(1, ncsMemMap.shape[0]):
             hdr = CscRecordHeader(ncsMemMap, recn)
             if hdr.channel_id != chanNum | hdr.sample_rate != reqFreq:
-                raise IOError('Channel number or sampling frequency changed in records within file')
+                raise IOError('Channel number or sampling frequency changed in ' +
+                                'records within file')
             predTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
                                                                    startBlockPredTime, blkLen)
             nValidSamps = hdr.nb_valid
             if hdr.timestamp != predTime:
                 ncsBlocks.endBlocks.append(recn-1)
                 ncsBlocks.startBlocks.append(recn)
-                startBlockPredTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
-                                                                                 hdr.timestamp,
-                                                                                 nValidSamps)
+                startBlockPredTime = WholeMicrosTimePositionBlock.calcSampleTime(
+                    ncsBlocks.sampFreqUsed,
+                    hdr.timestamp,
+                    nValidSamps)
                 blklen = 0
             else:
                 blkLen += nValidSamps
@@ -713,9 +718,11 @@ class NcsBlocksFactory:
         # check if file is one block of records, which is often the case, and avoid full parse
         lastBlkI = ncsMemMap.shape[0] - 1
         rhl = CscRecordHeader(ncsMemMap, lastBlkI)
-        predLastBlockStartTime = WholeMicrosTimePositionBlock.calcSampleTime(actualSampFreq, rh0.timestamp,
-                                                                             NeuralynxRawIO._BLOCK_SIZE * lastBlkI)
-        if rhl.channel_id == chanNum and rhl.sample_rate == reqFreq and rhl.timestamp == predLastBlockStartTime:
+        predLastBlockStartTime = WholeMicrosTimePositionBlock.calcSampleTime(actualSampFreq,
+                                                                             rh0.timestamp,
+                                                        NeuralynxRawIO._BLOCK_SIZE * lastBlkI)
+        if rhl.channel_id == chanNum and rhl.sample_rate == reqFreq and \
+                rhl.timestamp == predLastBlockStartTime:
             nb = NcsBlocks()
             nb.startBlocks.append(0)
             nb.endBlocks.append(lastBlkI)
@@ -723,9 +730,11 @@ class NcsBlocksFactory:
 
         # otherwise need to scan looking for breaks
         else:
-            blkOnePredTime = WholeMicrosTimePositionBlock.calcSampleTime(actualSampFreq, rh0.timestamp,
+            blkOnePredTime = WholeMicrosTimePositionBlock.calcSampleTime(actualSampFreq,
+                                                                         rh0.timestamp,
                                                                          rh0.nb_valid)
-            return NcsBlocksFactory._parseGivenActualFrequency(ncsMemMap, nb, chanNum, reqFreq, blkOnePredTime)
+            return NcsBlocksFactory._parseGivenActualFrequency(ncsMemMap, nb, chanNum, reqFreq,
+                                                               blkOnePredTime)
 
     @staticmethod
     def _parseForMaxGap(ncsMemMap, ncsBlocks, maxGapLen):
@@ -737,20 +746,23 @@ class NcsBlocksFactory:
         ncsMemMap:
             memmap of Ncs file
         ncsBlocks:
-            NcsBlocks object with sampFreqUsed set to nominal frequency to use in computing time for samples (Hz)
+            NcsBlocks object with sampFreqUsed set to nominal frequency to use in computing time
+            for samples (Hz)
         maxGapLen:
-            maximum difference within a block between predicted time of start of record and recorded time
+            maximum difference within a block between predicted time of start of record and
+            recorded time
 
         RETURN:
-            NcsBlocks object with sampFreqUsed and microsPerSamp set based on estimate from largest block
+            NcsBlocks object with sampFreqUsed and microsPerSamp set based on estimate from
+            largest block
         """
 
         # track frequency of each block and use estimate with longest block
         maxBlkLen = 0
         maxBlkFreqEstimate = 0
 
-        # Parse the record sequence, finding blocks of continuous time with no more than maxGapLength
-        # and same channel number
+        # Parse the record sequence, finding blocks of continuous time with no more than
+        # maxGapLength and same channel number
         rh0 = CscRecordHeader(ncsMemMap, 0)
         chanNum = rh0.channel_id
 
@@ -764,15 +776,17 @@ class NcsBlocksFactory:
         for recn in range(1, ncsMemMap.shape[0]):
             hdr = CscRecordHeader(ncsMemMap, recn)
             if hdr.channel_id != chanNum or hdr.sample_rate != recFreq:
-                raise IOError('Channel number or sampling frequency changed in records within file')
-            predTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed, lastRecTime,
-                                                                   lastRecNumSamps)
+                raise IOError('Channel number or sampling frequency changed in ' +
+                                'records within file')
+            predTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
+                                                                   lastRecTime, lastRecNumSamps)
             if abs(hdr.timestamp - predTime) > maxGapLen:
                 ncsBlocks.endBlocks.append(recn-1)
                 ncsBlocks.startBlocks.append(recn)
                 if blkLen > maxBlkLen:
                     maxBlkLen = blkLen
-                    maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / (lastRecTime - startBlockTime)
+                    maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
+                                          (lastRecTime - startBlockTime)
                 startBlockTime = hdr.timestamp
                 blkLen = hdr.nb_valid
             else:
@@ -783,15 +797,16 @@ class NcsBlocksFactory:
         ncsBlocks.endBlocks.append(ncsMemMap.shape[0] - 1)
 
         ncsBlocks.sampFreqUsed = maxBlkFreqEstimate
-        ncsBlocks.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(maxBlkFreqEstimate)
+        ncsBlocks.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
+                                            maxBlkFreqEstimate)
 
         return ncsBlocks
 
     @staticmethod
     def _buildForMaxGap(ncsMemMap, nomFreq):
         """
-        Determine blocks of records in memory mapped Ncs file given a nominal frequency of the file,
-        using the default values of frequency tolerance and maximum gap between blocks.
+        Determine blocks of records in memory mapped Ncs file given a nominal frequency of
+        the file, using the default values of frequency tolerance and maximum gap between blocks.
 
         PARAMETERS
         ncsMemMap:
@@ -816,7 +831,8 @@ class NcsBlocksFactory:
 
         # check if file is one block of records, with exact timestamp match, which may be the case
         numSampsForPred = NeuralynxRawIO._BLOCK_SIZE * lastBlkI
-        predLastBlockStartTime = WholeMicrosTimePositionBlock.calcSampleTime(nomFreq, rh0.timestamp,
+        predLastBlockStartTime = WholeMicrosTimePositionBlock.calcSampleTime(nomFreq,
+                                                                             rh0.timestamp,
                                                                              numSampsForPred)
         freqInFile = math.floor(nomFreq)
         if abs(rhl.timestamp - predLastBlockStartTime) == 0 and \
@@ -824,12 +840,14 @@ class NcsBlocksFactory:
             nb.startBlocks.append(0)
             nb.endBlocks.append(lastBlkI)
             nb.sampFreqUsed = numSampsForPred / (rhl.timestamp - rh0.timestamp) * 1e6
-            nb.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(nb.sampFreqUsed)
+            nb.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
+                                        nb.sampFreqUsed)
 
         # otherwise parse records to determine blocks using default maximum gap length
         else:
             nb.sampFreqUsed = nomFreq
-            nb.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(nb.sampFreqUsed)
+            nb.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
+                                        nb.sampFreqUsed)
             nb = NcsBlocksFactory._parseForMaxGap(ncsMemMap, nb, NcsBlocksFactory._maxGapLength)
 
         return nb
@@ -844,16 +862,19 @@ class NcsBlocksFactory:
         ncsMemMap:
             memory map of file
         acqType:
-            string specifying type of data acquisition used, one of types returned by NlxHeader.typeOfRecording()
+            string specifying type of data acquisition used, one of types returned by
+            NlxHeader.typeOfRecording()
         """
         acqType = nlxHdr.typeOfRecording()
 
         # old Neuralynx style with rounded whole microseconds for the samples
         if acqType == "PRE4":
             freq = nlxHdr['sampling_rate']
-            microsPerSampUsed = math.floor(WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(freq))
+            microsPerSampUsed = math.floor(WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
+                                            freq))
             sampFreqUsed = WholeMicrosTimePositionBlock.getFreqForMicrosPerSamp(microsPerSampUsed)
-            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(freq))
+            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed,
+                                                             math.floor(freq))
             nb.sampFreqUsed = sampFreqUsed
             nb.microsPerSampUsed = microsPerSampUsed
 
@@ -865,7 +886,8 @@ class NcsBlocksFactory:
         # BML style with fractional frequency and micros per samp
         elif acqType == "BML":
             sampFreqUsed = nlxHdr['sampling_rate']
-            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(sampFreqUsed))
+            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed,
+                                                             math.floor(sampFreqUsed))
 
         else:
             raise TypeError("Unknown Ncs file type from header.")
