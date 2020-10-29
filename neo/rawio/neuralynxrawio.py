@@ -164,7 +164,7 @@ class NeuralynxRawIO(BaseRawIO):
 
                     dtype = get_nse_or_ntt_dtype(info, ext)
 
-                    if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE):
+                    if os.path.getsize(filename) <= NlxHeader.HEADER_SIZE:
                         self._empty_nse_ntt.append(filename)
                         data = np.zeros((0,), dtype=dtype)
                     else:
@@ -197,7 +197,7 @@ class NeuralynxRawIO(BaseRawIO):
                     # each ('event_id',  'ttl_input') give a new event channel
                     self.nev_filenames[chan_id] = filename
 
-                    if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE):
+                    if os.path.getsize(filename) <= NlxHeader.HEADER_SIZE:
                         self._empty_nev.append(filename)
                         data = np.zeros((0,), dtype=nev_dtype)
                         internal_ids = []
@@ -495,7 +495,7 @@ class NeuralynxRawIO(BaseRawIO):
         # parse the structure of the first file
         data0 = np.memmap(filename0, dtype=self._ncs_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
         hdr0 = NlxHeader.buildForFile(filename0)
-        nb0 = NcsBlocksFactory.buildForNcsFile(data0,hdr0)
+        nb0 = NcsBlocksFactory.buildForNcsFile(data0, hdr0)
 
         # construct proper gap ranges free of lost samples artifacts
         minimal_segment_length = 1  # in blocks
@@ -525,11 +525,11 @@ class NeuralynxRawIO(BaseRawIO):
                     raise IOError('ncs files have different numbers of blocks of records')
 
                 for i, sbi in enumerate(nb.startBlocks):
-                    if (sbi != nb0.startBlocks[i]):
+                    if sbi != nb0.startBlocks[i]:
                         raise IOError('ncs files have different start block structure')
 
                 for i, ebi in enumerate(nb.endBlocks):
-                    if (ebi != nb0.endBlocks[i]):
+                    if ebi != nb0.endBlocks[i]:
                         raise IOError('ncs files have different end block structure')
 
             # create a memmap for each record block
@@ -538,7 +538,7 @@ class NeuralynxRawIO(BaseRawIO):
                 if (data[nb.startBlocks[seg_index]]['timestamp'] !=
                         data0[nb0.startBlocks[seg_index]]['timestamp'] or
                         data[nb.endBlocks[seg_index]]['timestamp'] !=
-                        data0[nb0.endBlocks[seg_index]]['timestamp']) :
+                        data0[nb0.endBlocks[seg_index]]['timestamp']):
                     raise IOError('ncs files have different timestamp structure')
 
                 subdata = data[nb.startBlocks[seg_index]:(nb.endBlocks[seg_index]+1)]
@@ -548,7 +548,7 @@ class NeuralynxRawIO(BaseRawIO):
                     numSampsLastBlock = subdata[-1]['nb_valid']
                     ts0 = subdata[0]['timestamp']
                     ts1 = WholeMicrosTimePositionBlock.calcSampleTime(nb0.sampFreqUsed,
-                                                                     subdata[-1]['timestamp'],
+                                                                      subdata[-1]['timestamp'],
                                                                       numSampsLastBlock)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
@@ -562,7 +562,7 @@ class NeuralynxRawIO(BaseRawIO):
                     self._sigs_length.append(length)
 
 
-class WholeMicrosTimePositionBlock():
+class WholeMicrosTimePositionBlock:
     """
     Wrapper of static calculations of time to sample positions.
 
@@ -596,7 +596,7 @@ class WholeMicrosTimePositionBlock():
                      WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(sampFr)*posn)
 
 
-class CscRecordHeader():
+class CscRecordHeader:
     """
     Information in header of each Ncs record, excluding sample values themselves.
     """
@@ -611,7 +611,7 @@ class CscRecordHeader():
         self.nb_valid = ncsMemMap['nb_valid'][recn]
 
 
-class NcsBlocks():
+class NcsBlocks:
     """
     Contains information regarding the contiguous blocks of records in an Ncs file.
     Methods of NcsBlocksFactory perform parsing of this information from an Ncs file.

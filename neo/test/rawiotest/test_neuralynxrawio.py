@@ -74,26 +74,26 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 2)
-        self.assertListEqual(rawio._timestamp_limits,[(26122557633, 26162525633),
-                                                      (26366360633, 26379704633)])
-        self.assertListEqual(rawio._sigs_length,[1278976, 427008])
-        self.assertListEqual(rawio._sigs_t_stop,[26162.525633, 26379.704633])
-        self.assertListEqual(rawio._sigs_t_start,[26122.557633, 26366.360633])
-        self.assertEqual(len(rawio._sigs_memmap),2)  # check only that there are 2 memmaps
+        self.assertListEqual(rawio._timestamp_limits, [(26122557633, 26162525633),
+                                                       (26366360633, 26379704633)])
+        self.assertListEqual(rawio._sigs_length, [1278976, 427008])
+        self.assertListEqual(rawio._sigs_t_stop, [26162.525633, 26379.704633])
+        self.assertListEqual(rawio._sigs_t_start, [26122.557633, 26366.360633])
+        self.assertEqual(len(rawio._sigs_memmap), 2)  # check only that there are 2 memmaps
 
         # Test Cheetah 6.3.2, the incomplete_blocks test. This is a DigitalLynxSX with
-        # three blocks of records. Gaps are on the order of 16 ms or so.
+        # three blocks of records. Gaps are on the order of 60 microseconds or so.
         rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks'))
         rawio.parse_header()
         # test values here from direct inspection of .ncs file
         self.assertEqual(rawio._nb_segment, 3)
-        self.assertListEqual(rawio._timestamp_limits,[(8408806811, 8427831990),
-                                                      (8427832053, 8487768498),
-                                                      (8487768561, 8515816549)])
-        self.assertListEqual(rawio._sigs_length,[608806, 1917967, 897536])
-        self.assertListEqual(rawio._sigs_t_stop,[8427.831990, 8487.768498, 8515.816549])
-        self.assertListEqual(rawio._sigs_t_start,[8408.806811, 8427.832053, 8487.768561])
-        self.assertEqual(len(rawio._sigs_memmap),3)  # check only that there are 3 memmaps
+        self.assertListEqual(rawio._timestamp_limits, [(8408806811, 8427831990),
+                                                       (8427832053, 8487768498),
+                                                       (8487768561, 8515816549)])
+        self.assertListEqual(rawio._sigs_length, [608806, 1917967, 897536])
+        self.assertListEqual(rawio._sigs_t_stop, [8427.831990, 8487.768498, 8515.816549])
+        self.assertListEqual(rawio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561])
+        self.assertEqual(len(rawio._sigs_memmap), 3)  # check only that there are 3 memmaps
 
 
 class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
@@ -127,9 +127,9 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
     def test_ncsblocks_partial(self):
         filename = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
-                           offset=NlxHeader.HEADER_SIZE)
-        self.assertEqual(data0.shape[0],6690)
-        self.assertEqual(data0['timestamp'][6689],8515800549) # timestamp of last record
+                          offset=NlxHeader.HEADER_SIZE)
+        self.assertEqual(data0.shape[0], 6690)
+        self.assertEqual(data0['timestamp'][6689], 8515800549)  # timestamp of last record
 
         hdr = NlxHeader.buildForFile(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
@@ -144,7 +144,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         # floor(1e6/(actual number of microseconds between samples)
         filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
-                           offset=NlxHeader.HEADER_SIZE)
+                          offset=NlxHeader.HEADER_SIZE)
         ncsBlocks = NcsBlocks()
         ncsBlocks.sampFreqUsed = 1/35e-6
         ncsBlocks.microsPerSampUsed = 35
@@ -154,7 +154,6 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(len(ncsBlocks.endBlocks), 1)
         self.assertEqual(ncsBlocks.endBlocks[0], 9)
 
-
     def testBuildUsingHeaderAndScanning(self):
 
         # Test early files where the frequency listed in the header is
@@ -162,7 +161,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
         hdr = NlxHeader.buildForFile(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
-                           offset=NlxHeader.HEADER_SIZE)
+                          offset=NlxHeader.HEADER_SIZE)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
 
         self.assertEqual(nb.sampFreqUsed, 1/35e-6)
@@ -177,7 +176,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         filename = self.get_filename_path('Cheetah_v5.5.1/original_data/Tet3a.ncs')
         hdr = NlxHeader.buildForFile(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
-                           offset=NlxHeader.HEADER_SIZE)
+                          offset=NlxHeader.HEADER_SIZE)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
         self.assertEqual(nb.sampFreqUsed, 32000)
         self.assertEqual(nb.microsPerSampUsed, 31.25)
@@ -187,7 +186,6 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(len(nb.endBlocks), 2)
         self.assertEqual(nb.endBlocks[0], 2497)
         self.assertEqual(nb.endBlocks[1], 3331)
-
 
 
 if __name__ == "__main__":
