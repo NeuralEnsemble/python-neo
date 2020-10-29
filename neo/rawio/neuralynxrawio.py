@@ -670,7 +670,7 @@ class NcsBlocksFactory:
             hdr = CscRecordHeader(ncsMemMap, recn)
             if hdr.channel_id != chanNum | hdr.sample_rate != reqFreq:
                 raise IOError('Channel number or sampling frequency changed in ' +
-                                'records within file')
+                              'records within file')
             predTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
                                                                    startBlockPredTime, blkLen)
             nValidSamps = hdr.nb_valid
@@ -783,7 +783,7 @@ class NcsBlocksFactory:
             hdr = CscRecordHeader(ncsMemMap, recn)
             if hdr.channel_id != chanNum or hdr.sample_rate != recFreq:
                 raise IOError('Channel number or sampling frequency changed in ' +
-                                'records within file')
+                              'records within file')
             predTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
                                                                    lastRecTime, lastRecNumSamps)
             if abs(hdr.timestamp - predTime) > maxGapLen:
@@ -792,7 +792,7 @@ class NcsBlocksFactory:
                 if blkLen > maxBlkLen:
                     maxBlkLen = blkLen
                     maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
-                                          (lastRecTime - startBlockTime)
+                                         (lastRecTime - startBlockTime)
                 startBlockTime = hdr.timestamp
                 blkLen = hdr.nb_valid
             else:
