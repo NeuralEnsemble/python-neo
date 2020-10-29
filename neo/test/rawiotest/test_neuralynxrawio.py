@@ -72,8 +72,8 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         # with a fairly large gap.
         rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v5.5.1/original_data'))
         rawio.parse_header()
-        self.assertEqual(rawio._nb_segment, 2)
         # test values here from direct inspection of .ncs files
+        self.assertEqual(rawio._nb_segment, 2)
         self.assertListEqual(rawio._timestamp_limits,[(26122557633, 26162525633),
                                                       (26366360633, 26379704633)])
         self.assertListEqual(rawio._sigs_length,[1278976, 427008])
@@ -81,6 +81,19 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertListEqual(rawio._sigs_t_start,[26122.557633, 26366.360633])
         self.assertEqual(len(rawio._sigs_memmap),2)  # check only that there are 2 memmaps
 
+        # Test Cheetah 6.3.2, the incomplete_blocks test. This is a DigitalLynxSX with
+        # three blocks of records. Gaps are on the order of 16 ms or so.
+        rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks'))
+        rawio.parse_header()
+        # test values here from direct inspection of .ncs file
+        self.assertEqual(rawio._nb_segment, 3)
+        self.assertListEqual(rawio._timestamp_limits,[(8408806811, 8427831990),
+                                                      (8427832053, 8487768498),
+                                                      (8487768561, 8515816549)])
+        self.assertListEqual(rawio._sigs_length,[608806, 1917967, 897536])
+        self.assertListEqual(rawio._sigs_t_stop,[8427.831990, 8487.768498, 8515.816549])
+        self.assertListEqual(rawio._sigs_t_start,[8408.806811, 8427.832053, 8487.768561])
+        self.assertEqual(len(rawio._sigs_memmap),3)  # check only that there are 3 memmaps
 
 
 class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
@@ -105,6 +118,7 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
             hdr = NlxHeader.buildForFile(filename)
             self.assertEqual(hdr.typeOfRecording(), typeTest[1])
 
+
 class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
     """
     Test building NcsBlocks for files of different revisions.
@@ -119,12 +133,10 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
 
         hdr = NlxHeader.buildForFile(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
-        self.assertEqual(nb.sampFreqUsed, 32009.05084744305)
-        self.assertEqual(nb.microsPerSampUsed, 31.241163781021083)
-        self.assertEqual(len(nb.startBlocks), 1)
-        self.assertEqual(nb.startBlocks[0], 0)
-        self.assertEqual(len(nb.endBlocks), 1)
-        self.assertEqual(nb.endBlocks[0], 6689)
+        self.assertEqual(nb.sampFreqUsed, 32000.012813673042)
+        self.assertEqual(nb.microsPerSampUsed, 31.249987486652431)
+        self.assertListEqual(nb.startBlocks, [0, 1190, 4937])
+        self.assertListEqual(nb.endBlocks, [1189, 4936, 6689])
 
     def testBuildGivenActualFrequency(self):
 
