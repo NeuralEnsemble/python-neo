@@ -262,7 +262,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 chuid = (chname, chid)
                 filename = nio.ncs_filenames[chuid][:-3] + 'txt'
                 filename = filename.replace('original_data', 'plain_data')
-                plain_data = np.loadtxt(filename)[:, 5:].flatten()  # first columns are meta info
+                plain_data = np.loadtxt(filename)[:, 4:].flatten()  # first 4 columns are meta info
                 overlap = 512 * 500
                 gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
                 np.testing.assert_allclose(plain_data[:overlap],
