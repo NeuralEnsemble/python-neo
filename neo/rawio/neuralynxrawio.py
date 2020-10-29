@@ -691,8 +691,9 @@ class NcsBlocksFactory:
         Requires that frequency in each record agrees with requested frequency. This is
         normally obtained by rounding the header frequency; however, this value may be different
         from the rounded actual frequency used in the recording, since the underlying
-        requirement in older Ncs files was that the rounded number of whole microseconds
-        per sample be the same for all records in a block.
+        requirement in older Ncs files was that the number of microseconds per sample in the
+        records is the inverse of the sampling frequency stated in the header truncated to
+        whole microseconds.
 
         PARAMETERS
         ncsMemMap:
@@ -867,7 +868,8 @@ class NcsBlocksFactory:
         """
         acqType = nlxHdr.typeOfRecording()
 
-        # old Neuralynx style with rounded whole microseconds for the samples
+        # Old Neuralynx style with truncated whole microseconds for actual sampling. This
+        # restriction arose from the sampling being based on a master 1 MHz clock.
         if acqType == "PRE4":
             freq = nlxHdr['sampling_rate']
             microsPerSampUsed = math.floor(WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
