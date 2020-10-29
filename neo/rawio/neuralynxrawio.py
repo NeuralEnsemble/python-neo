@@ -244,7 +244,7 @@ class NeuralynxRawIO(BaseRawIO):
                     ts0 = ts[0]
                     ts1 = ts[-1]
                 ts0 = min(ts0, ts[0])
-                ts1 = max(ts0, ts[-1])  # :FIXME: possible error, should be ts1
+                ts1 = max(ts1, ts[-1])
 
         # decide on segment and global start and stop times based on files available
         if self._timestamp_limits is None:
@@ -322,7 +322,7 @@ class NeuralynxRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return self._sigs_t_start[seg_index] - self.global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indices):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         """
         Retrieve chunk of analog signal, a chunk being a set of contiguous samples.
 
@@ -336,7 +336,7 @@ class NeuralynxRawIO(BaseRawIO):
             sample index of first sample within segment to retrieve
         i_stop:
             sample index of last sample within segment to retrieve
-        channel_indices:
+        channel_indexes:
             list of channel indices to return data for
 
         RETURNS
@@ -353,11 +353,11 @@ class NeuralynxRawIO(BaseRawIO):
         sl0 = i_start % 512
         sl1 = sl0 + (i_stop - i_start)
 
-        if channel_indices is None:
-            channel_indices = slice(None)
+        if channel_indexes is None:
+            channel_indexes = slice(None)
 
-        channel_ids = self.header['signal_channels'][channel_indices]['id']
-        channel_names = self.header['signal_channels'][channel_indices]['name']
+        channel_ids = self.header['signal_channels'][channel_indexes]['id']
+        channel_names = self.header['signal_channels'][channel_indexes]['name']
 
         # create buffer for samples
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
