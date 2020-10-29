@@ -675,7 +675,7 @@ class NcsBlocksFactory:
                                                                    startBlockPredTime, blkLen)
             nValidSamps = hdr.nb_valid
             if hdr.timestamp != predTime:
-                ncsBlocks.endBlocks.append(recn-1)
+                ncsBlocks.endBlocks.append(recn - 1)
                 ncsBlocks.startBlocks.append(recn)
                 startBlockPredTime = WholeMicrosTimePositionBlock.calcSampleTime(
                     ncsBlocks.sampFreqUsed,
