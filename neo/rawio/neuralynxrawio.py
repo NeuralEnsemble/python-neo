@@ -633,7 +633,6 @@ class NcsBlocksFactory:
     more complicated. Copied from Java code on Sept 7, 2020.
     """
 
-    _tolerance = 0.001  # tolerance for drift of timestamps within one NcsBlock
     _maxGapLength = 5  # maximum gap between predicted and actual block timestamps still considered within one NcsBlock
 
     @staticmethod
@@ -784,12 +783,12 @@ class NcsBlocksFactory:
         ncsBlocks.endBlocks.append(ncsMemMap.shape[0] - 1)
 
         ncsBlocks.sampFreqUsed = maxBlkFreqEstimate
-        ncsBlocks.setMicrosPerSamp = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(maxBlkFreqEstimate)
+        ncsBlocks.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(maxBlkFreqEstimate)
 
         return ncsBlocks
 
     @staticmethod
-    def _buildForToleranceAndMaxGap(ncsMemMap, nomFreq):
+    def _buildForMaxGap(ncsMemMap, nomFreq):
         """
         Determine blocks of records in memory mapped Ncs file given a nominal frequency of the file,
         using the default values of frequency tolerance and maximum gap between blocks.
@@ -815,13 +814,12 @@ class NcsBlocksFactory:
         lastBlkI = numRecs - 1
         rhl = CscRecordHeader(ncsMemMap, lastBlkI)
 
-        # check if file is one block of records, to within tolerance, which is often the case
+        # check if file is one block of records, with exact timestamp match, which may be the case
         numSampsForPred = NeuralynxRawIO._BLOCK_SIZE * lastBlkI
         predLastBlockStartTime = WholeMicrosTimePositionBlock.calcSampleTime(nomFreq, rh0.timestamp,
                                                                              numSampsForPred)
         freqInFile = math.floor(nomFreq)
-        if abs(rhl.timestamp - predLastBlockStartTime) / \
-                (rhl.timestamp - rh0.timestamp) < NcsBlocksFactory._tolerance and \
+        if abs(rhl.timestamp - predLastBlockStartTime) == 0 and \
                 rhl.channel_id == chanNum and rhl.sample_rate == freqInFile:
             nb.startBlocks.append(0)
             nb.endBlocks.append(lastBlkI)
@@ -862,7 +860,7 @@ class NcsBlocksFactory:
         # digital lynx style with fractional frequency and micros per samp determined from block times
         elif acqType == "DIGITALLYNX" or acqType == "DIGITALLYNXSX":
             nomFreq = nlxHdr['sampling_rate']
-            nb = NcsBlocksFactory._buildForToleranceAndMaxGap(ncsMemMap, nomFreq)
+            nb = NcsBlocksFactory._buildForMaxGap(ncsMemMap, nomFreq)
 
         # BML style with fractional frequency and micros per samp
         elif acqType == "BML":
