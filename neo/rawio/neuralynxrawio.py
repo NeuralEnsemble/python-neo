@@ -626,7 +626,9 @@ class NcsBlocks:
 
     def __init__(self):
         self.startBlocks = []  # index of starting record for each block
+        self.startTimes = []  # starttime of first record for each block
         self.endBlocks = []  # index of last record (inclusive) for each block
+        self.endTimes = [] # endtime of last record for each block
         self.sampFreqUsed = 0  # actual sampling frequency of samples
         self.microsPerSampUsed = 0  # microseconds per sample
 
@@ -653,13 +655,14 @@ class NcsBlocksFactory:
         ncsMemMap:
             memmap of Ncs file
         ncsBlocks:
-            NcsBlocks with actual sampFreqUsed correct
+            NcsBlocks with actual sampFreqUsed correct, first element of startBlocks and
+            startTimes already added
         chanNum:
             channel number that should be present in all records
         reqFreq:
             rounded frequency that all records should contain
         blkOnePredTime:
-            predicted starting time of first block
+            predicted starting time of second record in block
 
         RETURN
         NcsBlocks object with block locations marked
@@ -676,7 +679,9 @@ class NcsBlocksFactory:
             nValidSamps = hdr.nb_valid
             if hdr.timestamp != predTime:
                 ncsBlocks.endBlocks.append(recn - 1)
+                ncsBlocks.endTimes.append(predTime)
                 ncsBlocks.startBlocks.append(recn)
+                ncsBlocks.startTimes.append(hdr.timestamp)
                 startBlockPredTime = WholeMicrosTimePositionBlock.calcSampleTime(
                     ncsBlocks.sampFreqUsed,
                     hdr.timestamp,
@@ -684,7 +689,12 @@ class NcsBlocksFactory:
                 blklen = 0
             else:
                 blkLen += nValidSamps
+
         ncsBlocks.endBlocks.append(ncsMemMap.shape[0] - 1)
+        endTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
+                                                              startBlockPredTime,
+                                                              blkLen)
+        ncsBlocks.endBlockStartTimes.append(endTime)
 
         return ncsBlocks
 
@@ -730,7 +740,12 @@ class NcsBlocksFactory:
         if rhl.channel_id == chanNum and rhl.sample_rate == reqFreq and \
                 rhl.timestamp == predLastBlockStartTime:
             nb.startBlocks.append(0)
+            nb.startTimes.append(rh0.timestamp)
             nb.endBlocks.append(lastBlkI)
+            lastBlkEndTime = WholeMicrosTimePositionBlock.calcSampleTime(actualSampFreq,
+                                                                         rhl.timestamp,
+                                                                         rhl.nb_valid)
+            nb.endTimes.append(lastBlkEndTime)
             return nb
 
         # otherwise need to scan looking for breaks
@@ -738,6 +753,7 @@ class NcsBlocksFactory:
             blkOnePredTime = WholeMicrosTimePositionBlock.calcSampleTime(actualSampFreq,
                                                                          rh0.timestamp,
                                                                          rh0.nb_valid)
+            nb.startTimes.append(rh0.timestamp)
             return NcsBlocksFactory._parseGivenActualFrequency(ncsMemMap, nb, chanNum, reqFreq,
                                                                blkOnePredTime)
 
@@ -778,6 +794,7 @@ class NcsBlocksFactory:
         recFreq = rh0.sample_rate
 
         ncsBlocks.startBlocks.append(0)
+        ncsBlocks.startTimes.append(rh0.timestamp)
         for recn in range(1, ncsMemMap.shape[0]):
             hdr = CscRecordHeader(ncsMemMap, recn)
             if hdr.channel_id != chanNum or hdr.sample_rate != recFreq:
@@ -787,7 +804,9 @@ class NcsBlocksFactory:
                                                                    lastRecTime, lastRecNumSamps)
             if abs(hdr.timestamp - predTime) > maxGapLen:
                 ncsBlocks.endBlocks.append(recn - 1)
+                ncsBlocks.endTimes.append(predTime)
                 ncsBlocks.startBlocks.append(recn)
+                ncsBlocks.startTimes.append(hdr.timestamp)
                 if blkLen > maxBlkLen:
                     maxBlkLen = blkLen
                     maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
@@ -800,6 +819,9 @@ class NcsBlocksFactory:
             lastRecNumSamps = hdr.nb_valid
 
         ncsBlocks.endBlocks.append(ncsMemMap.shape[0] - 1)
+        endTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
+                                                              lastRecTime, lastRecNumSamps)
+        ncsBlocks.endTimes.append(endTime)
 
         ncsBlocks.sampFreqUsed = maxBlkFreqEstimate
         ncsBlocks.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
@@ -843,7 +865,11 @@ class NcsBlocksFactory:
         if abs(rhl.timestamp - predLastBlockStartTime) == 0 and \
                 rhl.channel_id == chanNum and rhl.sample_rate == freqInFile:
             nb.startBlocks.append(0)
+            nb.startTimes.append(rh0.timestamp)
             nb.endBlocks.append(lastBlkI)
+            endTime = WholeMicrosTimePositionBlock.calcSampleTime(nomFreq, rhl.timestamp,
+                                                                  rhl.nb_valid)
+            nb.endTimes.append(endTime)
             nb.sampFreqUsed = numSampsForPred / (rhl.timestamp - rh0.timestamp) * 1e6
             nb.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
                                         nb.sampFreqUsed)
