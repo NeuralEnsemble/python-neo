@@ -995,7 +995,7 @@ class NlxHeader(OrderedDict):
     # used depends on the application name and its version as well as the
     # -FileVersion property.
     #
-    # There are 3 styles understood by this code and the patterns used for parsing
+    # There are 4 styles understood by this code and the patterns used for parsing
     # the items within each are stored in a dictionary. Each dictionary is then
     # stored in main dictionary keyed by an abbreviation for the style.
     header_pattern_dicts = {
@@ -1005,13 +1005,13 @@ class NlxHeader(OrderedDict):
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
             datetimeformat='%m/%d/%y %H:%M:%S.%f'),
-        # Cheetah before version 5 and BML
+        # Cheetah after version 1 and before version 5
         'bv5': dict(
             datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)'
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
             datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
-        # Cheetah version 5 before and including v 5.6.4
+        # Cheetah version 5 before and including v 5.6.4 as well as version 1
         'bv5.6.4': dict(
             datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)'
                             r'  \(h:m:s\.ms\) (?P<time>\S+)',
@@ -1112,11 +1112,16 @@ class NlxHeader(OrderedDict):
             assert len(info['InputRange']) == len(chid_entries), \
                 'Number of channel ids does not match input range values.'
 
-        # Filename and datetime depend on app name, app version, and -FileVersion
+        # Format of datetime depends on app name, app version
+        # :TODO: this works for current examples but is not likely actually related
+        # to app version in this manner.
         an = info['ApplicationName']
         if an == 'Cheetah':
             av = info['ApplicationVersion']
-            if av < '5':
+            mv = av.version[0]
+            if av <= '2': # version 1 uses same as older versions
+                hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
+            elif av < '5':
                 hpd = NlxHeader.header_pattern_dicts['bv5']
             elif av <= '5.6.4':
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']

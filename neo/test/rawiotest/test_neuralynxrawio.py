@@ -17,6 +17,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
         'BML/original_data',
+        'Cheetah_v1.1.0/original_data',
         'Cheetah_v4.0.2/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
@@ -26,6 +27,9 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'BML/original_data/CSC1_trunc.Ncs',
         'BML/plain_data/CSC1_trunc.txt',
         'BML/README.txt',
+        'Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs',
+        'Cheetah_v1.1.0/README.txt',
+        'Cheetah_v1.1.0/plain_data/CSC67_trunc.txt',
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
         'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
         'Cheetah_v4.0.2/README.txt',
@@ -229,6 +233,16 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
         self.assertListEqual(nb.startTimes, [8408806811, 8427832053, 8487768561])
         self.assertListEqual(nb.endTimes, [8427831990, 8487768498, 8515816549])
+
+        # digitallynxsx with single block of records to exercise path in _buildForMaxGap
+        filename = self.get_filename_path('Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr = NlxHeader.buildForFile(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(len(nb.startBlocks), 1)
+        self.assertEqual(nb.startTimes[0], 253293161778)
+        self.assertEqual(nb.endTimes[0], 253293349278)
 
 
 class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
