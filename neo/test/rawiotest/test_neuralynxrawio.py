@@ -220,6 +220,16 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(nb.endBlocks[0], 2497)
         self.assertEqual(nb.endBlocks[1], 3331)
 
+    def testBlockStartAndEndTimes(self):
+        # digitallynxsx version to exercise the _parseForMaxGap function with multiple blocks
+        filename = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr = NlxHeader.buildForFile(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertListEqual(nb.startTimes, [8408806811, 8427832053, 8487768561])
+        self.assertListEqual(nb.endTimes, [8427831990, 8487768498, 8515816549])
+
 
 if __name__ == "__main__":
     unittest.main()
