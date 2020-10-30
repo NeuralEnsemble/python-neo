@@ -698,8 +698,8 @@ class NcsBlocksFactory:
         PARAMETERS
         ncsMemMap:
             memmap of Ncs file
-        ncsBlocks:
-            containing the actual sampling frequency used and microsPerSamp for the result
+        actualSampFreq:
+            actual sampling frequency used
         reqFreq:
             frequency to require in records
 
@@ -724,7 +724,6 @@ class NcsBlocksFactory:
                                                         NeuralynxRawIO._BLOCK_SIZE * lastBlkI)
         if rhl.channel_id == chanNum and rhl.sample_rate == reqFreq and \
                 rhl.timestamp == predLastBlockStartTime:
-            nb = NcsBlocks()
             nb.startBlocks.append(0)
             nb.endBlocks.append(lastBlkI)
             return nb
@@ -970,6 +969,12 @@ class NlxHeader(OrderedDict):
     # the items within each are stored in a dictionary. Each dictionary is then
     # stored in main dictionary keyed by an abbreviation for the style.
     header_pattern_dicts = {
+        # BML
+        'bml': dict(
+            datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)'
+                            r'  At Time: (?P<time>\S+)',
+            filename_regex=r'## File Name: (?P<filename>\S+)',
+            datetimeformat='%m/%d/%y %H:%M:%S.%f'),
         # Cheetah before version 5 and BML
         'bv5': dict(
             datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)'
@@ -1088,7 +1093,7 @@ class NlxHeader(OrderedDict):
             else:
                 hpd = NlxHeader.header_pattern_dicts['def']
         elif an == 'BML':
-            hpd = NlxHeader.header_pattern_dicts['bv5']
+            hpd = NlxHeader.header_pattern_dicts['bml']
         else:
             hpd = NlxHeader.header_pattern_dicts['def']
 
