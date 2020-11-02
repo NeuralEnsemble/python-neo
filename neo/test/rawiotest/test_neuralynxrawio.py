@@ -17,6 +17,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
         'BML/original_data',
+        'BML_unfilledsplit/original_data',
         'Cheetah_v1.1.0/original_data',
         'Cheetah_v4.0.2/original_data',
         'Cheetah_v5.5.1/original_data',
@@ -27,6 +28,9 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'BML/original_data/CSC1_trunc.Ncs',
         'BML/plain_data/CSC1_trunc.txt',
         'BML/README.txt',
+        'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs',
+        'BML_unfilledsplit/plain_data/unfilledSplitRecords.txt',
+        'BML_unfilledsplit/README.txt',
         'Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs',
         'Cheetah_v1.1.0/README.txt',
         'Cheetah_v1.1.0/plain_data/CSC67_trunc.txt',
@@ -243,6 +247,27 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(len(nb.startBlocks), 1)
         self.assertEqual(nb.startTimes[0], 253293161778)
         self.assertEqual(nb.endTimes[0], 253293349278)
+
+        # PRE4 version with single block of records to exercise path in _buildGivenActualFrequency
+        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr = NlxHeader.buildForFile(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(len(nb.startBlocks), 1)
+        self.assertEqual(nb.startTimes[0], 266982936)
+        self.assertEqual(nb.endTimes[0], 267162136)
+
+        # BML style with two blocks of records and one partially filled record to exercise
+        # _parseGivenActualFrequency
+        filename = self.get_filename_path('BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr = NlxHeader.buildForFile(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(len(nb.startBlocks),2)
+        self.assertListEqual(nb.startTimes, [1837623129, 6132625241])
+        self.assertListEqual(nb.endTimes, [1837651009, 6132642649])
 
 
 class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
