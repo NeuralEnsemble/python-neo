@@ -681,7 +681,7 @@ class NcsBlocksFactory:
                     ncsBlocks.sampFreqUsed,
                     hdr.timestamp,
                     nValidSamps)
-                blklen = 0
+                blkLen = 0
             else:
                 blkLen += nValidSamps
 
@@ -689,7 +689,7 @@ class NcsBlocksFactory:
         endTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
                                                               startBlockPredTime,
                                                               blkLen)
-        ncsBlocks.endBlockStartTimes.append(endTime)
+        ncsBlocks.endTimes.append(endTime)
 
         return ncsBlocks
 
@@ -748,6 +748,7 @@ class NcsBlocksFactory:
             blkOnePredTime = WholeMicrosTimePositionBlock.calcSampleTime(actualSampFreq,
                                                                          rh0.timestamp,
                                                                          rh0.nb_valid)
+            nb.startBlocks.append(0)
             nb.startTimes.append(rh0.timestamp)
             return NcsBlocksFactory._parseGivenActualFrequency(ncsMemMap, nb, chanNum, reqFreq,
                                                                blkOnePredTime)
