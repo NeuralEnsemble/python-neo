@@ -308,7 +308,7 @@ class NeoHdf5IO(BaseIO):
             return objects
 
     def _get_quantity(self, node):
-        value = node.value
+        value = node[()]
         unit_str = [x for x in node.attrs.keys() if "unit" in x][0].split("__")[1]
         units = getattr(pq, unit_str)
         return value * units
