@@ -213,7 +213,7 @@ class NeoHdf5IO(BaseIO):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
         durations = self._get_quantity(node["durations"])
-        labels = node["labels"].value.astype('U')
+        labels = node["labels"][()].astype('U')
         epoch = Epoch(times=times, durations=durations, labels=labels, **attributes)
         epoch.segment = parent
         return epoch
@@ -224,7 +224,7 @@ class NeoHdf5IO(BaseIO):
     def _read_eventarray(self, node, parent):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
-        labels = node["labels"].value.astype('U')
+        labels = node["labels"][()].astype('U')
         event = Event(times=times, labels=labels, **attributes)
         event.segment = parent
         return event
@@ -235,8 +235,8 @@ class NeoHdf5IO(BaseIO):
     def _read_recordingchannelgroup(self, node, parent):
         # todo: handle Units
         attributes = self._get_standard_attributes(node)
-        channel_indexes = node["channel_indexes"].value
-        channel_names = node["channel_names"].value
+        channel_indexes = node["channel_indexes"][()]
+        channel_names = node["channel_names"][()]
 
         if channel_indexes.size:
             if len(node['recordingchannels']):
