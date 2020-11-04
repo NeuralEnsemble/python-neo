@@ -5,6 +5,7 @@
 
 
 import logging
+from distutils.version import LooseVersion
 import pickle
 import numpy as np
 import quantities as pq
@@ -23,7 +24,7 @@ from neo.io.baseio import BaseIO
 from neo.core.baseneo import MergeError
 
 logger = logging.getLogger('Neo')
-
+min_h5py_version = LooseVersion('2.6.0')
 
 def disjoint_groups(groups):
     """`groups` should be a list of sets"""
@@ -55,6 +56,10 @@ class NeoHdf5IO(BaseIO):
     def __init__(self, filename):
         if not HAVE_H5PY:
             raise ImportError("h5py is not available")
+        if HAVE_H5PY:
+            if LooseVersion(h5py.__version__) < min_h5py_version:
+                raise ImportError('h5py version {} is too old. Minimal required version is {}'
+                                  ''.format(h5py.__version__, min_h5py_version))
         BaseIO.__init__(self, filename=filename)
         self._data = h5py.File(filename, 'r')
         self.object_refs = {}
@@ -213,7 +218,7 @@ class NeoHdf5IO(BaseIO):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
         durations = self._get_quantity(node["durations"])
-        labels = node["labels"].value.astype('U')
+        labels = node["labels"][()].astype('U')
         epoch = Epoch(times=times, durations=durations, labels=labels, **attributes)
         epoch.segment = parent
         return epoch
@@ -224,7 +229,7 @@ class NeoHdf5IO(BaseIO):
     def _read_eventarray(self, node, parent):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
-        labels = node["labels"].value.astype('U')
+        labels = node["labels"][()].astype('U')
         event = Event(times=times, labels=labels, **attributes)
         event.segment = parent
         return event
@@ -235,8 +240,8 @@ class NeoHdf5IO(BaseIO):
     def _read_recordingchannelgroup(self, node, parent):
         # todo: handle Units
         attributes = self._get_standard_attributes(node)
-        channel_indexes = node["channel_indexes"].value
-        channel_names = node["channel_names"].value
+        channel_indexes = node["channel_indexes"][()]
+        channel_names = node["channel_names"][()]
 
         if channel_indexes.size:
             if len(node['recordingchannels']):
