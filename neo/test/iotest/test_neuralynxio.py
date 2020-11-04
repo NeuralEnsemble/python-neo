@@ -269,10 +269,10 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
         res = []
         with open(filename) as f:
             for line in f:
-                vals = list(map(int,line.split()))
-                numSampsThisLine = len(vals)-4
+                vals = list(map(int, line.split()))
+                numSampsThisLine = len(vals) - 4
                 if numSampsThisLine < 0 or numSampsThisLine != vals[3]:
-                    raise IOError('plain data file improperly formatted')
+                    raise IOError('plain data file "' + filename + ' improperly formatted')
                 if numSampsThisLine < numSamps - len(res):
                     res.append(vals[4:])
                 else:
@@ -300,7 +300,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 overlap = 512 * 500
                 plain_data = self.load_plaindata(filename, overlap)
                 gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
-                numToTest = min(len(plain_data),len(anasig.magnitude[:,0]))
+                numToTest = min(len(plain_data), len(anasig.magnitude[:, 0]))
                 np.testing.assert_allclose(plain_data[:numToTest],
                                            anasig.magnitude[:numToTest, 0] * gain_factor_0,
                                            rtol=0.01)
