@@ -394,8 +394,7 @@ class BrainwareSrcIO(BaseIO):
 
         try:
             # uint16 -- the ID code of the next sequence
-            seqid = np.asscalar(np.fromfile(self._fsrc,
-                                            dtype=np.uint16, count=1))
+            seqid = np.fromfile(self._fsrc, dtype=np.uint16, count=1).item()
         except ValueError:
             # return a None if at EOF.  Other methods use None to recognize
             # an EOF
@@ -638,8 +637,7 @@ class BrainwareSrcIO(BaseIO):
         """
         Read a string of a specific length.
         """
-        rawstr = np.asscalar(np.fromfile(self._fsrc,
-                                         dtype='S%s' % numchars, count=1))
+        rawstr = np.fromfile(self._fsrc, dtype='S%s' % numchars, count=1).item()
         return rawstr.decode('utf-8')
 
     def __read_annotations(self):
@@ -667,8 +665,7 @@ class BrainwareSrcIO(BaseIO):
             self._fsrc.seek(1, 1)
 
             # uint8 -- length of next string
-            numchars = np.asscalar(np.fromfile(self._fsrc,
-                                               dtype=np.uint8, count=1))
+            numchars = np.fromfile(self._fsrc, dtype=np.uint8, count=1).item()
 
             # if there is no name, make one up
             if not numchars:
@@ -739,15 +736,13 @@ class BrainwareSrcIO(BaseIO):
         time = np.fromfile(self._fsrc, dtype=np.double, count=1)[0]
 
         # int16 -- length of next string
-        numchars1 = np.asscalar(np.fromfile(self._fsrc,
-                                            dtype=np.int16, count=1))
+        numchars1 = np.fromfile(self._fsrc, dtype=np.int16, count=1).item()
 
         # char * numchars -- the one who sent the comment
         sender = self.__read_str(numchars1)
 
         # int16 -- length of next string
-        numchars2 = np.asscalar(np.fromfile(self._fsrc,
-                                            dtype=np.int16, count=1))
+        numchars2 = np.fromfile(self._fsrc, dtype=np.int16, count=1).item()
 
         # char * numchars -- comment text
         text = self.__read_str(numchars2, utf=False)
@@ -1397,8 +1392,7 @@ class BrainwareSrcIO(BaseIO):
         self._fsrc.seek(2, 1)
 
         # uint16 -- number of characters in next string
-        numchars = np.asscalar(np.fromfile(self._fsrc,
-                                           dtype=np.uint16, count=1))
+        numchars = np.fromfile(self._fsrc, dtype=np.uint16, count=1).item()
 
         # char * numchars -- ID string of Unit
         name = self.__read_str(numchars)
