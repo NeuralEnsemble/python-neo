@@ -137,7 +137,10 @@ class SpikeGLXRawIO(BaseRawIO):
         return self._t_stops[seg_index]
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        pass
+        assert channel_indexes is not None
+        stream_name = self._global_channel_to_stream[channel_indexes[0]]
+        memmap = self._memmaps[seg_index, stream_name]
+        return int(memmap.shape[0])
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
