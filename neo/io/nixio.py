@@ -305,6 +305,7 @@ class NixIO(BaseIO):
         )
 
         # descend into Groups
+        groups_to_resolve = []
         for grp in nix_block.groups:
             if grp.type == "neo.segment":
                 newseg = self._nix_to_neo_segment(grp)
@@ -312,12 +313,21 @@ class NixIO(BaseIO):
                 # parent reference
                 newseg.block = neo_block
             elif grp.type == "neo.group":
-                newgrp = self._nix_to_neo_group(grp)
+                newgrp, parent_name = self._nix_to_neo_group(grp)
+                assert parent_name is None
                 neo_block.groups.append(newgrp)
                 # parent reference
                 newgrp.block = neo_block
+            elif grp.type == "neo.subgroup":
+                newgrp, parent_name = self._nix_to_neo_group(grp)
+                groups_to_resolve.append((newgrp, parent_name))
             else:
                 raise Exception("Unexpected group type")
+
+        # link subgroups to parents
+        for newgrp, parent_name in groups_to_resolve:
+            parent = self._neo_map[parent_name]
+            parent.groups.append(newgrp)
 
         # find free floating (Groupless) signals and spiketrains
         blockdas = self._group_signals(nix_block.data_arrays)
@@ -408,6 +418,7 @@ class NixIO(BaseIO):
 
     def _nix_to_neo_group(self, nix_group):
         neo_attrs = self._nix_attr_to_neo(nix_group)
+        parent_name = neo_attrs.pop("neo_parent", None)
         neo_group = Group(**neo_attrs)
         self._neo_map[nix_group.name] = neo_group
         dataarrays = list(filter(
@@ -427,8 +438,7 @@ class NixIO(BaseIO):
             obj = self._neo_map[mtag.name]
             neo_group.add(obj)
 
-        # todo: handle sub-groups, once we implement writing those
-        return neo_group
+        return neo_group, parent_name
 
     def _nix_to_neo_channelindex(self, nix_source):
         neo_attrs = self._nix_attr_to_neo(nix_source)
@@ -880,27 +890,38 @@ class NixIO(BaseIO):
         for imagesequence in segment.imagesequences:
             self._write_imagesequence(imagesequence, nixblock, nixgroup)
 
-    def _write_group(self, neo_group, nixblock):
+    def _write_group(self, neo_group, nixblock, parent=None):
         """
         Convert the provided Neo Group to a NIX Group and write it to the
         NIX file.
 
         :param neo_group: Neo Group to be written
         :param nixblock: NIX Block where the NIX Group will be created
+        :param parent: for sub-groups, the parent Neo Group
         """
+        if parent:
+            label = "neo.subgroup"
+            # note that the use of a different label for top-level groups and sub-groups is not
+            # strictly  necessary, the presence of the "neo_parent" annotation is sufficient.
+            # However, I think it adds clarity and helps in debugging and testing.
+        else:
+            label = "neo.group"
+
         if "nix_name" in neo_group.annotations:
             nix_name = neo_group.annotations["nix_name"]
         else:
-            nix_name = "neo.group.{}".format(self._generate_nix_name())
+            nix_name = "{}.{}".format(label, self._generate_nix_name())
             neo_group.annotate(nix_name=nix_name)
 
-        nixgroup = nixblock.create_group(nix_name, "neo.group")
+        nixgroup = nixblock.create_group(nix_name, label)
         nixgroup.metadata = nixblock.metadata.create_section(
-            nix_name, "neo.group.metadata"
+            nix_name, f"{label}.metadata"
         )
         metadata = nixgroup.metadata
         neoname = neo_group.name if neo_group.name is not None else ""
         metadata["neo_name"] = neoname
+        if parent:
+            metadata["neo_parent"] = parent.annotations["nix_name"]
         nixgroup.definition = neo_group.description
         if neo_group.annotations:
             for k, v in neo_group.annotations.items():
@@ -944,9 +965,9 @@ class NixIO(BaseIO):
         for chview in neo_group.channelviews:
             self._write_channelview(chview, nixblock, nixgroup)
 
-        if len(neo_group.groups) > 0:
-            # todo
-            raise NotImplementedError("Cannot yet store groups within groups")
+        # save sub-groups
+        for subgroup in neo_group.groups:
+            self._write_group(subgroup, nixblock, parent=neo_group)
 
     def _write_analogsignal(self, anasig, nixblock, nixgroup):
         """
