@@ -216,7 +216,12 @@ class MicromedRawIO(BaseRawIO):
             durations = None
         else:
             durations = raw_event['stop'] - raw_event['start']
-        labels = raw_event['label'].astype('U')
+
+        try:
+            labels = raw_event['label'].astype('U')
+        except UnicodeDecodeError:
+            # sometimes the conversion do not work : here a simple fix
+            labels = np.array([e.decode('cp1252') for e in raw_event['label']], dtype='U')
 
         return timestamp, durations, labels
 

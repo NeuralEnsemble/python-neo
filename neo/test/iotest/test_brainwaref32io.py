@@ -123,7 +123,7 @@ class BrainwareF32IOTestCase(BaseTestIO, unittest.TestCase):
             obj_single = obj_reader_single()
 
             try:
-                assert_same_sub_schema(obj_base, obj_single)
+                assert_same_sub_schema(obj_base, [obj_single])
             except BaseException as exc:
                 exc.args += ('from ' + os.path.basename(path),)
                 raise

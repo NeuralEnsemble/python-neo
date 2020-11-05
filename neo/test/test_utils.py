@@ -361,6 +361,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
                                             [[16., 17.], [16.1, 17.1]]]) * pq.mV,
                         array_annotations={'spikenum': np.arange(1, 9)})
 
+        # test without resetting the time
         seg = Segment()
         seg2 = Segment(name='NoCut')
         seg.epochs = [epoch, epoch2]
@@ -369,12 +370,11 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         seg.irregularlysampledsignals = [irrsig]
         seg.spiketrains = [st]
 
-        block = Block()
-        block.segments = [seg, seg2]
-        block.create_many_to_one_relationship()
+        original_block = Block()
+        original_block.segments = [seg, seg2]
+        original_block.create_many_to_one_relationship()
 
-        # test without resetting the time
-        cut_block_by_epochs(block, properties={'pick': 'me'})
+        block = cut_block_by_epochs(original_block, properties={'pick': 'me'})
 
         assert_neo_object_is_compliant(block)
         self.assertEqual(len(block.segments), 3)
@@ -413,6 +413,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
                                epoch2.time_slice(t_start=epoch.times[0],
                                                 t_stop=epoch.times[0] + epoch.durations[0]))
 
+        # test with resetting the time
         seg = Segment()
         seg2 = Segment(name='NoCut')
         seg.epochs = [epoch, epoch2]
@@ -421,12 +422,11 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         seg.irregularlysampledsignals = [irrsig]
         seg.spiketrains = [st]
 
-        block = Block()
-        block.segments = [seg, seg2]
-        block.create_many_to_one_relationship()
+        original_block = Block()
+        original_block.segments = [seg, seg2]
+        original_block.create_many_to_one_relationship()
 
-        # test with resetting the time
-        cut_block_by_epochs(block, properties={'pick': 'me'}, reset_time=True)
+        block = cut_block_by_epochs(original_block, properties={'pick': 'me'}, reset_time=True)
 
         assert_neo_object_is_compliant(block)
         self.assertEqual(len(block.segments), 3)
@@ -583,11 +583,11 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
         loaded_st = proxy_st.load()
         loaded_anasig = proxy_anasig.load()
 
-        block = Block()
-        block.segments = [seg]
-        block.create_many_to_one_relationship()
+        original_block = Block()
+        original_block.segments = [seg]
+        original_block.create_many_to_one_relationship()
 
-        cut_block_by_epochs(block, properties={'pick': 'me'})
+        block = cut_block_by_epochs(original_block, properties={'pick': 'me'})
 
         assert_neo_object_is_compliant(block)
         self.assertEqual(len(block.segments), proxy_epoch.shape[0])
@@ -637,7 +637,7 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
         # test correct loading and slicing of EpochProxy objects
         # (not tested above since we used the EpochProxy to cut the block)
 
-        cut_block_by_epochs(block2, properties={'pick': 'me instead'})
+        block3 = cut_block_by_epochs(block2, properties={'pick': 'me instead'})
 
         for epoch_idx in range(len(epoch)):
             sliced_epoch = loaded_epoch.time_slice(t_start=epoch.times[epoch_idx],
@@ -646,7 +646,11 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
             has_epoch = len(sliced_epoch) > 0
 
             if has_epoch:
-                self.assertTrue(isinstance(block2.segments[epoch_idx].epochs[0],
+                self.assertTrue(isinstance(block3.segments[epoch_idx].epochs[0],
                                            Epoch))
-                assert_same_attributes(block2.segments[epoch_idx].epochs[0],
+                assert_same_attributes(block3.segments[epoch_idx].epochs[0],
                                        sliced_epoch)
+
+
+if __name__ == "__main__":
+    unittest.main()

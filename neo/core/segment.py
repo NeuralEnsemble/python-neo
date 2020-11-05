@@ -103,7 +103,12 @@ class Segment(Container):
         '''
         t_starts = [sig.t_start for sig in self.analogsignals +
                     self.spiketrains + self.irregularlysampledsignals]
-        t_starts += [e.times[0] for e in self.epochs + self.events if len(e.times) > 0]
+
+        for e in self.epochs + self.events:
+            if hasattr(e, 't_start'):  # in case of proxy objects
+                t_starts += [e.t_start]
+            elif len(e) > 0:
+                t_starts += [e.times[0]]
 
         # t_start is not defined if no children are present
         if len(t_starts) == 0:
@@ -120,7 +125,12 @@ class Segment(Container):
         '''
         t_stops = [sig.t_stop for sig in self.analogsignals +
                    self.spiketrains + self.irregularlysampledsignals]
-        t_stops += [e.times[-1] for e in self.epochs + self.events if len(e.times) > 0]
+
+        for e in self.epochs + self.events:
+            if hasattr(e, 't_stop'):  # in case of proxy objects
+                t_stops += [e.t_stop]
+            elif len(e) > 0:
+                t_stops += [e.times[-1]]
 
         # t_stop is not defined if no children are present
         if len(t_stops) == 0:
@@ -286,6 +296,11 @@ class Segment(Container):
             setattr(subseg, attr, getattr(self, attr))
 
         subseg.annotations = deepcopy(self.annotations)
+
+        if t_start is None:
+            t_start = self.t_start
+        if t_stop is None:
+            t_stop = self.t_stop
 
         t_shift = - t_start
 

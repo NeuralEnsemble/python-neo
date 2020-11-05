@@ -50,11 +50,12 @@ TODO:
 import datetime
 import os
 import re
+import warnings
 
 import numpy as np
 import quantities as pq
 
-import neo
+import neo.io.blackrockio
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment, SpikeTrain, Unit, Event,
                       ChannelIndex, AnalogSignal)
@@ -142,7 +143,7 @@ class BlackrockIO(BaseIO):
     is_streameable = False
 
     read_params = {
-        neo.Block: [
+        Block: [
             ('nsx_to_load', {
                 'value': 'none',
                 'label': "List of nsx files (ids, int) to read."}),
@@ -168,7 +169,7 @@ class BlackrockIO(BaseIO):
             ('load_events', {
                 'value': False,
                 'label': "States if events should be loaded."})],
-        neo.Segment: [
+        Segment: [
             ('n_start', {
                 'label': "Start time point (Quantity) for segment"}),
             ('n_stop', {
@@ -216,6 +217,10 @@ class BlackrockIO(BaseIO):
         """
         Initialize the BlackrockIO class.
         """
+
+        warnings.warn('{} is deprecated and will be removed in neo version 0.10. Use {} instead.'
+                      ''.format(self.__class__, neo.io.blackrockio.BlackrockIO), FutureWarning)
+
         BaseIO.__init__(self)
 
         # Used to avoid unnecessary repetition of verbose messages

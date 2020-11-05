@@ -115,13 +115,14 @@ These relationships are bi-directional, i.e. a child object can access its paren
 Here is an example showing these relationships in use::
 
     from neo.io import AxonIO
-    import urllib
+    import urllib.request
     url = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/axon/File_axon_3.abf"
     filename = './test.abf'
-    urllib.urlretrieve(url, filename)
+    urllib.request.urlretrieve(url, filename)
 
     r = AxonIO(filename=filename)
-    bl = r.read() # read the entire file > a Block
+    blocks = r.read() # read the entire file > a list of Blocks
+    bl = blocks[0]
     print(bl)
     print(bl.segments) # child access
     for seg in bl.segments:

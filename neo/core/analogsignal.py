@@ -442,17 +442,13 @@ class AnalogSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        _pp("sampling rate: {} {}".format(self.sampling_rate,
-                                          self.sampling_rate.dimensionality.string))
-        _pp("time: {} {} to {} {}".format(self.t_start,
-                                          self.t_start.dimensionality.string,
-                                          self.t_stop,
-                                          self.t_stop.dimensionality.string))
+        _pp("sampling rate: {}".format(self.sampling_rate))
+        _pp("time: {} to {}".format(self.t_start, self.t_stop))
 
     def time_index(self, t):
-        """Return the array index corresponding to the time `t`"""
+        """Return the array index (or indices) corresponding to the time (or times) `t`"""
         i = (t - self.t_start) * self.sampling_rate
-        i = int(np.rint(i.simplified.magnitude))
+        i = np.rint(i.simplified.magnitude).astype(np.int)
         return i
 
     def time_slice(self, t_start, t_stop):

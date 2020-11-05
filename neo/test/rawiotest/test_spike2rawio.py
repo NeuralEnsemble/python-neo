@@ -13,6 +13,7 @@ class TestSpike2RawIO(BaseTestRawIO, unittest.TestCase, ):
         'File_spike2_3.smr',
         '130322-1LY.smr',  # this is for bug 182
         'multi_sampling.smr',  # this is for bug 466
+        'Two-mice-bigfile-test000.smr',  # SONv9 file
     ]
     entities_to_test = files_to_download
 

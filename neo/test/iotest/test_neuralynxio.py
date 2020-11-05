@@ -1,5 +1,5 @@
 """
-Tests of neo.io.blackrockio
+Tests of neo.io.neuralynxio.py
 """
 
 import time

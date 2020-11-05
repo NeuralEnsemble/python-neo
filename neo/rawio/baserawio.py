@@ -9,14 +9,14 @@ BaseRawIO
 abstract class which should be overridden to write a RawIO.
 
 RawIO is a new API in neo that is supposed to acces as fast as possible
-raw data. All IO with theses carractéristics should/could be rewritten:
+raw data. All IO with theses characteristics should/could be rewritten:
   * internally use of memmap (or hdf5)
   * reading header is quite cheap (not read all the file)
   * neo tree object is symetric and logical: same channel/units/event
     along all block and segments.
 
 
-So this handle **only** one simplified but very frequent case of dataset:
+So this handles **only** one simplified but very frequent case of dataset:
     * Only one channel set  for AnalogSignal (aka ChannelIndex) stable along Segment
     * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
     * AnalogSignal have all the same sampling_rate acroos all Segment
@@ -25,7 +25,7 @@ So this handle **only** one simplified but very frequent case of dataset:
       a the same time. So signal_group_mode=='split-all' in BaseFromRaw
 
 
-An helper class `neo.io.basefromrawio.BaseFromRaw` should transform a RawIO to
+A helper class `neo.io.basefromrawio.BaseFromRaw` should transform a RawIO to
 neo legacy IO from free.
 
 With this API the IO have an attributes `header` with necessary keys.
@@ -134,9 +134,9 @@ class BaseRawIO:
 
     def parse_header(self):
         """
-        This must parse the file header to get all stuff for fast later one.
+        This must parse the file header to get all stuff for fast use later on.
 
-        This must contain
+        This must create
         self.header['nb_block']
         self.header['nb_segment']
         self.header['signal_channels']
@@ -176,7 +176,7 @@ class BaseRawIO:
         """
         Helper function that generate a nested dict
         of all annotations.
-        must be called when theses are Ok:
+        must be called when these are Ok:
           * block_count()
           * segment_count()
           * signal_channels_count()
@@ -258,7 +258,7 @@ class BaseRawIO:
 
     def _raw_annotate(self, obj_name, chan_index=0, block_index=0, seg_index=0, **kargs):
         """
-        Annotate a object in the list/dict tree annotations.
+        Annotate an object in the list/dict tree annotations.
         """
         bl_annotations = self.raw_annotations['blocks'][block_index]
         seg_annotations = bl_annotations['segments'][seg_index]
@@ -315,31 +315,31 @@ class BaseRawIO:
         return self.header['nb_segment'][block_index]
 
     def signal_channels_count(self):
-        """Return the number of signal channel.
-        Same allong all block and Segment.
+        """Return the number of signal channels.
+        Same along all Blocks and Segments.
         """
         return len(self.header['signal_channels'])
 
     def unit_channels_count(self):
-        """Return the number of unit (aka spike) channel.
-        Same allong all block and Segment.
+        """Return the number of unit (aka spike) channels.
+        Same along all Blocks and Segment.
         """
         return len(self.header['unit_channels'])
 
     def event_channels_count(self):
-        """Return the number of event/epoch channel.
-        Same allong all block and Segment.
+        """Return the number of event/epoch channels.
+        Same allong all Blocks and Segments.
         """
         return len(self.header['event_channels'])
 
     def segment_t_start(self, block_index, seg_index):
-        """Global t_start of a Segment in s. shared by all objects except
+        """Global t_start of a Segment in s. Shared by all objects except
         for AnalogSignal.
         """
         return self._segment_t_start(block_index, seg_index)
 
     def segment_t_stop(self, block_index, seg_index):
-        """Global t_start of a Segment in s. shared by all objects except
+        """Global t_start of a Segment in s. Shared by all objects except
         for AnalogSignal.
         """
         return self._segment_t_stop(block_index, seg_index)
@@ -349,20 +349,20 @@ class BaseRawIO:
 
     def _group_signal_channel_characteristics(self):
         """
-        Usefull for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
+        Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
 
         Group signals channels by same characteristics:
           * sampling_rate (global along block and segment)
           * group_id (explicite channel group)
 
-        If all channels have the same characteristics them
+        If all channels have the same characteristics then
         `get_analogsignal_chunk` can be call wihtout restriction.
-        If not then **channel_indexes** must be specified
+        If not, then **channel_indexes** must be specified
         in `get_analogsignal_chunk` and only channels with same
-        caracteristics can be read at the same time.
+        characteristics can be read at the same time.
 
-        This is usefull for some IO  than
-        have internally several signals channels familly.
+        This is useful for some IO  than
+        have internally several signals channels family.
 
         For many RawIO all channels have the same
         sampling_rate/size/t_start. In that cases, internal flag
@@ -386,12 +386,12 @@ class BaseRawIO:
 
     def _check_common_characteristics(self, channel_indexes):
         """
-        Usefull for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
+        Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
 
-        Check is a set a signal channel_indexes share common
-        characteristics (**sampling_rate/t_start/size**)
-        Usefull only when RawIO propose differents channels groups
-        with differents sampling_rate for instance.
+        Check that a set a signal channel_indexes share common
+        characteristics (**sampling_rate/t_start/size**).
+        Useful only when RawIO propose differents channels groups
+        with different sampling_rate for instance.
         """
         # ~ print('_check_common_characteristics', channel_indexes)
 
@@ -400,11 +400,11 @@ class BaseRawIO:
         characteristics = self.header['signal_channels'][_common_sig_characteristics]
         # ~ print(characteristics[channel_indexes])
         assert np.unique(characteristics[channel_indexes]).size == 1, \
-            'This channel set have differents characteristics'
+            'This channel set has varied characteristics'
 
     def get_group_signal_channel_indexes(self):
         """
-        Usefull for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
+        Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
 
         Return a list of channel_indexes than have same characteristics
         """
@@ -441,8 +441,8 @@ class BaseRawIO:
 
     def _get_channel_indexes(self, channel_indexes, channel_names, channel_ids):
         """
-        select channel_indexes from channel_indexes/channel_names/channel_ids
-        depending which is not None
+        Select channel_indexes from channel_indexes/channel_names/channel_ids
+        depending which is not None.
         """
         if channel_indexes is None and channel_names is not None:
             channel_indexes = self.channel_name_to_index(channel_names)
@@ -523,7 +523,7 @@ class BaseRawIO:
 
     def rescale_spike_timestamp(self, spike_timestamps, dtype='float64'):
         """
-        Rescale spike timestamps to second
+        Rescale spike timestamps to seconds.
         """
         return self._rescale_spike_timestamp(spike_timestamps, dtype)
 
@@ -583,11 +583,11 @@ class BaseRawIO:
 
     def setup_cache(self, cache_path, **init_kargs):
         if self.rawmode in ('one-file', 'multi-file'):
-            ressource_name = self.filename
+            resource_name = self.filename
         elif self.rawmode == 'one-dir':
-            ressource_name = self.dirname
+            resource_name = self.dirname
         else:
-            raise (NotImlementedError)
+            raise (NotImplementedError)
 
         if cache_path == 'home':
             if sys.platform.startswith('win'):
@@ -601,18 +601,19 @@ class BaseRawIO:
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
         elif cache_path == 'same_as_resource':
-            dirname = os.path.dirname(ressource_name)
+            dirname = os.path.dirname(resource_name)
         else:
             assert os.path.exists(cache_path), \
-                'cache_path do not exists use "home" or "same_as_file" to make this auto'
+                'cache_path do not exists use "home" or "same_as_resource" to make this auto'
 
-        # the hash of the ressource (dir of file) is done with filename+datetime
-        # TODO make something more sofisticated when rawmode='one-dir' that use all filename and datetime
-        d = dict(ressource_name=ressource_name, mtime=os.path.getmtime(ressource_name))
+        # the hash of the resource (dir of file) is done with filename+datetime
+        # TODO make something more sophisticated when rawmode='one-dir' that use all
+        #  filename and datetime
+        d = dict(ressource_name=resource_name, mtime=os.path.getmtime(resource_name))
         hash = joblib.hash(d, hash_name='md5')
 
-        # name is compund by the real_n,ame and the hash
-        name = '{}_{}'.format(os.path.basename(ressource_name), hash)
+        # name is constructed from the real_n,ame and the hash
+        name = '{}_{}'.format(os.path.basename(resource_name), hash)
         self.cache_filename = os.path.join(dirname, name)
 
         if os.path.exists(self.cache_filename):
@@ -634,7 +635,7 @@ class BaseRawIO:
 
     ##################
 
-    # Functions to be implement in IO below here
+    # Functions to be implemented in IO below here
 
     def _parse_header(self):
         raise (NotImplementedError)

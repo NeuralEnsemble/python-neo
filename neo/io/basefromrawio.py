@@ -14,6 +14,7 @@ of the lazy load with proxy objects.
 
 """
 import collections
+import warnings
 import numpy as np
 
 from neo import logging_handler
@@ -32,7 +33,6 @@ from neo.io.proxyobjects import (AnalogSignalProxy,
 
 import quantities as pq
 
-# test push to andrew
 
 class BaseFromRaw(BaseIO):
     """
@@ -67,7 +67,8 @@ class BaseFromRaw(BaseIO):
 
     mode = 'file'
 
-    _prefered_signal_group_mode = 'split-all'  # 'group-by-same-units'
+    _prefered_signal_group_mode = 'group-by-same-units'  # 'split-all'
+    _default_group_mode_have_change_in_0_9 = False
 
     def __init__(self, *args, **kargs):
         BaseIO.__init__(self, *args, **kargs)
@@ -80,7 +81,7 @@ class BaseFromRaw(BaseIO):
         :param block_index: int default 0. In case of several block block_index can be specified.
 
         :param lazy: False by default.
-        
+
         :param create_group_across_segment: bool or dict
             If True :
               * Create a neo.Group to group AnalogSignal segments
@@ -102,14 +103,14 @@ class BaseFromRaw(BaseIO):
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
-            if self._prefered_signal_group_mode == 'split-all':
-                self.logger.warning("the default signal_group_mode will change from "\
-                                "'split-all' to 'group-by-same-units' in next release")
-        
+            if self._default_group_mode_have_change_in_0_9:
+                warnings.warn('default "signal_group_mode" have change in version 0.9:'
+                        'now all channels are group together in AnalogSignal')
+
         l = ['AnalogSignal', 'SpikeTrain', 'Event', 'Epoch']
         if create_group_across_segment is None:
             # @andrew @ julia @michael ?
-            # I think here the default None could give this 
+            # I think here the default None could give this
             create_group_across_segment = {
                 'AnalogSignal': True,   #because mimic the old ChannelIndex for AnalogSignals
                 'SpikeTrain': False,  # False by default because can create too many object for simulation
@@ -125,7 +126,7 @@ class BaseFromRaw(BaseIO):
             create_group_across_segment = {create_group_across_segment.get(k, False) for k in l}
         else:
             raise ValueError('create_group_across_segment must be bool or dict')
-        
+
         # annotations
         bl_annotations = dict(self.raw_annotations['blocks'][block_index])
         bl_annotations.pop('segments')
@@ -141,13 +142,13 @@ class BaseFromRaw(BaseIO):
             for channel_index in channel_indexes_list:
                 for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
                         channel_index, signal_group_mode=signal_group_mode).items():
-                    group = Group(name='AnalogSignal group {}'.format(i))
-                    # @andrew @ julia @michael : do we annotate group across segment with this arrays ?
-                    group.annotate(ch_names=all_channels[ind_abs]['name'].astype('U'))  # ??
-                    group.annotate(channel_ids=all_channels[ind_abs]['id'])  # ??
-                    bl.groups.append(group)
-                    sig_groups.append(group)
-        
+                        group = Group(name='AnalogSignal group {}'.format(i))
+                        # @andrew @ julia @michael : do we annotate group across segment with this arrays ?
+                        group.annotate(ch_names=all_channels[ind_abs]['name'].astype('U'))  # ??
+                        group.annotate(channel_ids=all_channels[ind_abs]['id'])  # ??
+                        bl.groups.append(group)
+                        sig_groups.append(group)
+
         if create_group_across_segment['SpikeTrain']:
             unit_channels = self.header['unit_channels']
             st_groups = []
@@ -160,17 +161,17 @@ class BaseFromRaw(BaseIO):
                 group.annotations.annotate(**unit_annotations)
                 bl.groups.append(group)
                 st_groups.append(group)
-        
+
         if create_group_across_segment['Event']:
-            # @andrew @ julia @michael : 
+            # @andrew @ julia @michael :
             # Do we need this ? I guess yes
             raise NotImplementedError()
-        
+
         if create_group_across_segment['Epoch']:
-            # @andrew @ julia @michael : 
+            # @andrew @ julia @michael :
             # Do we need this ? I guess yes
             raise NotImplementedError()
-        
+
         # Read all segments
         for seg_index in range(self.segment_count(block_index)):
             seg = self.read_segment(block_index=block_index, seg_index=seg_index,
@@ -183,7 +184,7 @@ class BaseFromRaw(BaseIO):
             if create_group_across_segment['AnalogSignal']:
                 for c, anasig in enumerate(seg.analogsignals):
                     sig_groups[c].add(anasig)
-            
+
             if create_group_across_segment['SpikeTrain']:
                 for c, sptr in enumerate(seg.spiketrains):
                     st_groups[c].add(sptr)
@@ -220,7 +221,11 @@ class BaseFromRaw(BaseIO):
         """
 
         if lazy:
-            assert time_slice is None, 'For lazy=true you must specify time_slice when loading'
+            assert time_slice is None,\
+                'For lazy=True you must specify time_slice when LazyObject.load(time_slice=...)'
+
+            assert not load_waveforms,\
+                'For lazy=True you must specify load_waveforms when SpikeTrain.load(load_waveforms=...)'
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
