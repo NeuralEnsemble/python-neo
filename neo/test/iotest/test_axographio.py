@@ -209,7 +209,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
         assert_equal(len(blk.segments), 30)
-        assert_equal(len(blk.channel_indexes), 2)
+        assert_equal(len(blk.groups), 2)
 
     def test_force_single_segment(self):
         """Test reading an episodic file into one Segment"""
@@ -218,7 +218,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         reader = AxographIO(filename=filename, force_single_segment=True)
         blk = reader.read_block()
         assert_equal(len(blk.segments), 1)
-        assert_equal(len(blk.channel_indexes), 60)
+        assert_equal(len(blk.groups), 60)
 
     def test_events_and_epochs(self):
         """Test loading events and epochs"""

@@ -109,13 +109,12 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         # test 4 Units
         block = reader.read_block(load_waveforms=True,
-                                signal_group_mode='split-all',
-                                units_group_mode='all-in-one')
+                                  signal_group_mode='split-all')
 
         self.assertEqual(len(block.segments[0].analogsignals), 10)
-        self.assertEqual(len(block.channel_indexes[-1].units), 4)
-        self.assertEqual(len(block.channel_indexes[-1].units),
-                         len(block.segments[0].spiketrains))
+        #self.assertEqual(len(block.channel_indexes[-1].units), 4)
+        #self.assertEqual(len(block.channel_indexes[-1].units),
+        #                 len(block.segments[0].spiketrains))
 
         anasig = block.segments[0].analogsignals[0]
         self.assertIsNotNone(anasig.file_origin)
@@ -163,14 +162,13 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         # test 4 Units
         block = reader.read_block(load_waveforms=True,
-                                signal_group_mode='split-all',
-                              units_group_mode='all-in-one')
+                                  signal_group_mode='split-all',
+                                  )#units_group_mode='all-in-one')
 
         self.assertEqual(len(block.segments[0].analogsignals), 96)
-        self.assertEqual(len(block.channel_indexes[-1].units), 218)
-        self.assertEqual(len(block.channel_indexes[-1].units),
-                         len(block.segments[0].spiketrains))
-
+        #self.assertEqual(len(block.channel_indexes[-1].units), 218)
+        #self.assertEqual(len(block.channel_indexes[-1].units),
+        #                 len(block.segments[0].spiketrains))
         anasig = block.segments[0].analogsignals[0]
         self.assertIsNotNone(anasig.file_origin)
 
@@ -261,18 +259,18 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                 verbose=False, **param[1])
             block = session.read_block(load_waveforms=True, signal_group_mode='split-all')
             # Check if analog data are equal
-            self.assertGreater(len(block.channel_indexes), 0)
-            for i, chidx in enumerate(block.channel_indexes):
+            self.assertGreater(len(block.groups), 0)
+            for i, chidx_grp in enumerate(block.channel_indexes):
                 # Break for ChannelIndexes for Units that don't contain any Analogsignals
-                if len(chidx.analogsignals) == 0 and len(chidx.units) >= 1:
+                if len(chidx_grp.analogsignals) == 0 and len(chidx_grp.spiketrains) >= 1:
                     break
-                # Should only have one AnalogSignal per ChannelIndex
-                self.assertEqual(len(chidx.analogsignals), 1)
+                # Should only have one AnalogSignal per ChannelIndex-representing Group
+                self.assertEqual(len(chidx_grp.analogsignals), 1)
 
                 # Find out channel_id in order to compare correctly
-                idx = chidx.analogsignals[0].annotations['channel_id']
+                idx = chidx_grp.analogsignals[0].annotations['channel_id']
                 # Get data of AnalogSignal without pq.units
-                anasig = np.squeeze(chidx.analogsignals[0].base[:].magnitude)
+                anasig = np.squeeze(chidx_grp.analogsignals[0].base[:].magnitude)
                 # Test for equality of first nonzero values of AnalogSignal
                 #                                   and matlab file contents
                 # If not equal test if hardcoded gain is responsible for this
@@ -280,7 +278,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                 j = 0
                 while anasig[j] == 0:
                     j += 1
-                if lfp_ml[i, j] != np.squeeze(chidx.analogsignals[0].base[j].magnitude):
+                if lfp_ml[i, j] != np.squeeze(chidx_grp.analogsignals[0].base[j].magnitude):
                     anasig = anasig / 152.592547
                     anasig = np.round(anasig).astype(int)
 
