@@ -88,7 +88,3 @@ class ConversionTest(unittest.TestCase):
             group_names = np.asarray([g.name for g in group.groups])
             for unit in channel_index.units:
                 self.assertIn(unit.name, group_names)
-
-            matching_groups = np.asarray(group.groups)[group_names == unit.name]
-            self.assertEqual(len(channel_index.units), len(matching_groups))
-
