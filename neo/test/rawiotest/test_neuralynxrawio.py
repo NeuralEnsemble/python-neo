@@ -260,12 +260,13 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
 
         # BML style with two blocks of records and one partially filled record to exercise
         # _parseGivenActualFrequency
-        filename = self.get_filename_path('BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
+        filename = self.get_filename_path(
+            'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader.buildForFile(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
-        self.assertEqual(len(nb.startBlocks),2)
+        self.assertEqual(len(nb.startBlocks), 2)
         self.assertListEqual(nb.startTimes, [1837623129, 6132625241])
         self.assertListEqual(nb.endTimes, [1837651009, 6132642649])
 

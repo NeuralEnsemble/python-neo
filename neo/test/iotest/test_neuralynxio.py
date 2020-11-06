@@ -278,9 +278,9 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                     raise IOError('plain data file "' + filename + ' improperly formatted')
                 numAvail = min(numSampsThisLine,vals[3]) # only use valid samples
                 if numAvail < numSamps - len(res):
-                    res.append(vals[4:(4+numAvail)])
+                    res.append(vals[4:(4 + numAvail)])
                 else:
-                    res.append(vals[4:(4+numSamps-len(res))])
+                    res.append(vals[4:(4 + numSamps - len(res))])
                 if len(res) == numSamps:
                     break
 

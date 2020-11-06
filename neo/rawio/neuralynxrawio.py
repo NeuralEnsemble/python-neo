@@ -628,7 +628,7 @@ class NcsBlocks:
         self.startBlocks = []  # index of starting record for each block
         self.startTimes = []  # starttime of first record for each block
         self.endBlocks = []  # index of last record (inclusive) for each block
-        self.endTimes = [] # endtime of last record for each block
+        self.endTimes = []  # endtime of last record for each block
         self.sampFreqUsed = 0  # actual sampling frequency of samples
         self.microsPerSampUsed = 0  # microseconds per sample
 
@@ -1120,7 +1120,7 @@ class NlxHeader(OrderedDict):
         if an == 'Cheetah':
             av = info['ApplicationVersion']
             mv = av.version[0]
-            if av <= '2': # version 1 uses same as older versions
+            if av <= '2':  # version 1 uses same as older versions
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
             elif av < '5':
                 hpd = NlxHeader.header_pattern_dicts['bv5']
