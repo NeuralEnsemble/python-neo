@@ -110,8 +110,8 @@ class NeuralynxRawIO(BaseRawIO):
                 self._empty_ncs.append(filename)
                 continue
 
-            # All files have more or less the same header structure
-            info = NlxHeader.buildForFile(filename)
+            # All file have more or less the same header structure
+            info = NlxHeader.build_for_file(filename)
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
@@ -230,7 +230,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._timestamp_limits = None
         self._nb_segment = 1
 
-        # Read ncs files for gaps detection and nb_segment computation.
+        # Read ncs files for gap detection and nb_segment computation.
         # :TODO: current algorithm depends on side-effect of read_ncs_files on
         #   self._sigs_memmap, self._sigs_t_start, self._sigs_t_stop,
         #   self._sigs_length, self._nb_segment, self._timestamp_limits
@@ -495,7 +495,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         # parse the structure of the first file
         data0 = np.memmap(filename0, dtype=self._ncs_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
-        hdr0 = NlxHeader.buildForFile(filename0)
+        hdr0 = NlxHeader.build_for_file(filename0)
         nb0 = NcsBlocksFactory.buildForNcsFile(data0, hdr0)
 
         # construct proper gap ranges free of lost samples artifacts
@@ -518,7 +518,7 @@ class NeuralynxRawIO(BaseRawIO):
             else:
                 data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
                                  offset=NlxHeader.HEADER_SIZE)
-                hdr = NlxHeader.buildForFile(ncs_filename)
+                hdr = NlxHeader.build_for_file(ncs_filename)
                 nb = NcsBlocksFactory.buildForNcsFile(data, hdr)
 
                 # Check that record block structure of each file is identical to the first.
@@ -1024,7 +1024,7 @@ class NlxHeader(OrderedDict):
             datetimeformat='%Y/%m/%d %H:%M:%S')
     }
 
-    def buildForFile(filename):
+    def build_for_file(filename):
         """
         Factory function to build NlxHeader for a given file.
         """
@@ -1142,7 +1142,7 @@ class NlxHeader(OrderedDict):
 
         return info
 
-    def typeOfRecording(self):
+    def type_of_recording(self):
         """
         Determines type of recording in Ncs file with this header.
 
