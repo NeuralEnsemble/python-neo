@@ -109,6 +109,7 @@ def merge_annotations(A, *Bs):
     logger.debug("Merging annotations: A=%s Bs=%s merged=%s", A, Bs, merged)
     return merged
 
+
 def intersect_annotations(A, B):
     """
     Identify common entries in dictionaries A and B

@@ -239,12 +239,10 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
         if np.__version__.split(".")[:2] > ['1', '13']:
             # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many
             # -changes-to-array-printing-disableable-with-the-new-legacy-printing-mode
-            targ = (
-                    '<IrregularlySampledSignal(array([[2.],\n       [4.],\n       [6.]]) * V '
+            targ = ('<IrregularlySampledSignal(array([[2.],\n       [4.],\n       [6.]]) * V '
                     '' + 'at times [1.1 1.5 1.7] s)>')
         else:
-            targ = (
-                    '<IrregularlySampledSignal(array([[ 2.],\n       [ 4.],\n       [ 6.]]) '
+            targ = ('<IrregularlySampledSignal(array([[ 2.],\n       [ 4.],\n       [ 6.]]) '
                     '* V ' + 'at times [ 1.1  1.5  1.7] s)>')
         res = repr(sig)
         self.assertEqual(targ, res)
@@ -946,7 +944,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertRaises(MergeError, signal1.merge, signal3)
 
     def test_concatenate_simple(self):
-        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=[1, 10, 11, 14] * pq.s)
+        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s,
+                                           times=[1, 10, 11, 14] * pq.s)
         signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=[15, 16, 21] * pq.s)
 
         result = signal1.concatenate(signal2)
@@ -977,8 +976,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=range(2, 5) * pq.s)
 
         result = signal1.concatenate(signal2, allow_overlap=True)
-        assert_array_equal(np.array([0,1,2,4,3,5,6]).reshape((-1, 1)), result.magnitude)
-        assert_array_equal(np.array([0,1,2,2,3,3,4]), result.times)
+        assert_array_equal(np.array([0, 1, 2, 4, 3, 5, 6]).reshape((-1, 1)), result.magnitude)
+        assert_array_equal(np.array([0, 1, 2, 2, 3, 3, 4]), result.times)
 
     def test_concatenate_multi_trace(self):
         data1 = np.arange(4).reshape(2, 2)

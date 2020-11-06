@@ -714,7 +714,8 @@ class AnalogSignal(BaseSignal):
         units, sr, shape = attribute_values[0]
 
         # find gaps between Analogsignals
-        combined_time_ranges = self._concatenate_time_ranges([(s.t_start, s.t_stop) for s in signals])
+        combined_time_ranges = self._concatenate_time_ranges(
+            [(s.t_start, s.t_stop) for s in signals])
         missing_time_ranges = self._invert_time_ranges(combined_time_ranges)
         if len(missing_time_ranges):
             diffs = np.diff(np.asarray(missing_time_ranges), axis=1)
@@ -759,7 +760,7 @@ class AnalogSignal(BaseSignal):
                 kwargs[name] = f'concatenation ({attr})'
 
         conc_signal = AnalogSignal(np.full(shape=shape, fill_value=padding, dtype=signals[0].dtype),
-                                   sampling_rate=sr,  t_start=t_start,  units=units, **kwargs)
+                                   sampling_rate=sr, t_start=t_start, units=units, **kwargs)
 
         if not overwrite:
             signals = signals[::-1]
@@ -783,10 +784,7 @@ class AnalogSignal(BaseSignal):
     def _invert_time_ranges(self, time_ranges):
         i = 0
         new_ranges = []
-        while i < len(time_ranges)-1:
-            new_ranges.append((time_ranges[i][1], time_ranges[i+1][0]))
+        while i < len(time_ranges) - 1:
+            new_ranges.append((time_ranges[i][1], time_ranges[i + 1][0]))
             i += 1
         return new_ranges
-
-
-

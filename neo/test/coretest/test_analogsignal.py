@@ -370,18 +370,17 @@ class TestAnalogSignalProperties(unittest.TestCase):
     def test__pretty(self):
         for i, signal in enumerate(self.signals):
             prepr = pretty(signal)
-            targ = (
-                    ('AnalogSignal with %d channels of length %d; units %s; datatype %s \n'
+            targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n'
                      '' % (signal.shape[1], signal.shape[0],
                            signal.units.dimensionality.unicode, signal.dtype))
                     + ('annotations: %s\n' % signal.annotations)
-                    + ('sampling rate: {} {}\n'.format(float(signal.sampling_rate),
-                                                       signal.sampling_rate.dimensionality.unicode))
+                    + ('sampling rate: {} {}\n'.format(
+                        float(signal.sampling_rate),
+                        signal.sampling_rate.dimensionality.unicode))
                     + ('time: {} {} to {} {}'.format(float(signal.t_start),
                                                      signal.t_start.dimensionality.unicode,
                                                      float(signal.t_stop),
-                                                     signal.t_stop.dimensionality.unicode))
-            )
+                                                     signal.t_stop.dimensionality.unicode)))
             self.assertEqual(prepr, targ)
 
 
@@ -1648,8 +1647,9 @@ class TestAnalogSignalCombination(unittest.TestCase):
                                t_start=signal1.t_stop + 3 * signal1.sampling_period)
 
         result = signal1.concatenate(signal2, overwrite=False, padding=True)
-        assert_array_equal(np.array([0, 1, 2, 3, np.NaN, np.NaN, np.NaN, 4, 5, 6]).reshape((-1, 1)),
-                           result.magnitude)
+        assert_array_equal(
+            np.array([0, 1, 2, 3, np.NaN, np.NaN, np.NaN, 4, 5, 6]).reshape((-1, 1)),
+            result.magnitude)
 
     def test_concatenate_padding_quantity(self):
         signal1 = AnalogSignal([0, 1, 2, 3] * pq.V, sampling_rate=1 * pq.Hz)
