@@ -35,7 +35,7 @@ import quantities as pq
 
 # needed core neo modules
 from neo.core import (AnalogSignal, Block,
-                      ChannelIndex, Segment)
+                      Group, Segment)
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -75,7 +75,7 @@ class BrainwareDamIO(BaseIO):
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects = [Block, ChannelIndex,
+    supported_objects = [Block, Group,
                          Segment, AnalogSignal]
 
     readable_objects = [Block]
@@ -128,13 +128,10 @@ class BrainwareDamIO(BaseIO):
         block = Block(file_origin=self._filename)
 
         # create the objects to store other objects
-        chx = ChannelIndex(file_origin=self._filename,
-                           channel_ids=np.array([1]),
-                           index=np.array([0]),
-                           channel_names=np.array(['Chan1'], dtype='U'))
-
+        gr = Group(file_origin=self._filename)
+        
         # load objects into their containers
-        block.channel_indexes.append(chx)
+        block.groups.append(gr)
 
         # open the file
         with open(self._path, 'rb') as fobject:
@@ -146,8 +143,8 @@ class BrainwareDamIO(BaseIO):
                     break
 
                 # store the segment and signals
-                seg.analogsignals[0].channel_index = chx
                 block.segments.append(seg)
+                gr.analogsignals.append(seg.analogsignals[0])
 
         # remove the file object
         self._fsrc = None

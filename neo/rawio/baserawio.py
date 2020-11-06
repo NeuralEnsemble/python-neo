@@ -402,7 +402,7 @@ class BaseRawIO:
         assert np.unique(characteristics[channel_indexes]).size == 1, \
             'This channel set has varied characteristics'
 
-    def get_group_channel_indexes(self):
+    def get_group_signal_channel_indexes(self):
         """
         Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
 

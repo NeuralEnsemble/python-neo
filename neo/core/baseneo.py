@@ -238,7 +238,7 @@ class BaseNeo:
     # Parent objects whose children can have multiple parents
     _multi_parent_objects = ()
 
-    # Attributes that an instance is requires to have defined
+    # Attributes that an instance is required to have defined
     _necessary_attrs = ()
     # Attributes that an instance may or may have defined
     _recommended_attrs = (('name', str),
