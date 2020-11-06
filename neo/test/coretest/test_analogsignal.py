@@ -369,12 +369,18 @@ class TestAnalogSignalProperties(unittest.TestCase):
     def test__pretty(self):
         for i, signal in enumerate(self.signals):
             prepr = pretty(signal)
-            targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n'
-                     '' % (signal.shape[1], signal.shape[0],
-                           signal.units.dimensionality.unicode, signal.dtype))
-                    + ('annotations: %s\n' % signal.annotations)
-                    + ('sampling rate: {}\n'.format(signal.sampling_rate))
-                    + ('time: {} to {}'.format(signal.t_start, signal.t_stop)))
+            targ = (
+                ('AnalogSignal with %d channels of length %d; units %s; datatype %s \n'
+                 '' % (signal.shape[1], signal.shape[0],
+                       signal.units.dimensionality.unicode, signal.dtype))
+                + ('annotations: %s\n' % signal.annotations)
+                + ('sampling rate: {} {}\n'.format(float(signal.sampling_rate),
+                                                   signal.sampling_rate.dimensionality.unicode))
+                + ('time: {} {} to {} {}'.format(float(signal.t_start),
+                                                 signal.t_start.dimensionality.unicode,
+                                                 float(signal.t_stop),
+                                                 signal.t_stop.dimensionality.unicode))
+            )
             self.assertEqual(prepr, targ)
 
 
@@ -735,6 +741,16 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal1[9][3], self.signal1[9, 3])
         self.assertTrue(hasattr(self.signal1[9, 3], 'units'))
         self.assertRaises(IndexError, self.signal1.__getitem__, (99, 73))
+
+    def test__time_index(self):
+        # scalar arguments
+        self.assertEqual(self.signal2.time_index(2.0 * pq.s), 2)
+        self.assertEqual(self.signal2.time_index(1.99 * pq.s), 2)
+        self.assertEqual(self.signal2.time_index(2.01 * pq.s), 2)
+
+        # vector arguments
+        assert_array_equal(self.signal2.time_index([2.0, 0.99, 3.01] * pq.s), [2, 1, 3])
+        assert_array_equal(self.signal2.time_index([2.0] * pq.s), [2])
 
     def test__time_slice(self):
         t_start = 2 * pq.s

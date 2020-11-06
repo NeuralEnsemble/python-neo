@@ -21,28 +21,26 @@ class Block(Container):
 
     *Usage*::
 
-        >>> from neo.core import (Block, Segment, ChannelIndex,
-        ...                       AnalogSignal)
+        >>> from neo.core import Block, Segment, Group, AnalogSignal
         >>> from quantities import nA, kHz
         >>> import numpy as np
         >>>
-        >>> # create a Block with 3 Segment and 2 ChannelIndex objects
+        >>> # create a Block with 3 Segment and 2 Group objects
         ,,, blk = Block()
         >>> for ind in range(3):
         ...     seg = Segment(name='segment %d' % ind, index=ind)
         ...     blk.segments.append(seg)
         ...
         >>> for ind in range(2):
-        ...     chx = ChannelIndex(name='Array probe %d' % ind,
-        ...                        index=np.arange(64))
-        ...     blk.channel_indexes.append(chx)
+        ...     group = Group(name='Array probe %d' % ind)
+        ...     blk.groups.append(group)
         ...
         >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
-        ...     for chx in blk.channel_indexes:
+        ...     for group in blk.groups:
         ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                          sampling_rate=10*kHz)
-        ...         chx.analogsignals.append(a)
+        ...         group.analogsignals.append(a)
         ...         seg.analogsignals.append(a)
 
     *Required attributes/properties*:
@@ -57,7 +55,7 @@ class Block(Container):
         :rec_datetime: (datetime) The date and time of the original recording.
 
     *Properties available on this object*:
-        :list_units: descends through hierarchy and returns a list of
+        :list_units: (deprecated) descends through hierarchy and returns a list of
             :class:`Unit` objects existing in the block. This shortcut exists
             because a common analysis case is analyzing all neurons that
             you recorded in a session.
@@ -67,11 +65,12 @@ class Block(Container):
 
     *Container of*:
         :class:`Segment`
-        :class:`ChannelIndex`
+        :class:`Group`
+        :class:`ChannelIndex` (deprecated)
 
     '''
 
-    _container_child_objects = ('Segment', 'ChannelIndex')
+    _container_child_objects = ('Segment', 'ChannelIndex', 'Group')
     _child_properties = ('Unit',)
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),

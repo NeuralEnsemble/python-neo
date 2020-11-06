@@ -197,23 +197,21 @@ class AxonRawIO(BaseRawIO):
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
-        # only one events channel : tag
-        if mode in [3, 5]:  # TODO check if tags exits in other mode
-            # In ABF timstamps are not attached too any particular segment
-            # so each segment acess all event
-            timestamps = []
-            labels = []
-            comments = []
-            for i, tag in enumerate(info['listTag']):
-                timestamps.append(tag['lTagTime'])
-                labels.append(str(tag['nTagType']))
-                comments.append(clean_string(tag['sComment']))
-            self._raw_ev_timestamps = np.array(timestamps)
-            self._ev_labels = np.array(labels, dtype='U')
-            self._ev_comments = np.array(comments, dtype='U')
 
-        event_channels = []
-        event_channels.append(('Tag', '', 'event'))
+        # only one events channel : tag
+        # In ABF timstamps are not attached too any particular segment
+        # so each segment acess all event
+        timestamps = []
+        labels = []
+        comments = []
+        for i, tag in enumerate(info['listTag']):
+            timestamps.append(tag['lTagTime'])
+            labels.append(str(tag['nTagType']))
+            comments.append(clean_string(tag['sComment']))
+        self._raw_ev_timestamps = np.array(timestamps)
+        self._ev_labels = np.array(labels, dtype='U')
+        self._ev_comments = np.array(comments, dtype='U')
+        event_channels = [('Tag', '', 'event')]
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes

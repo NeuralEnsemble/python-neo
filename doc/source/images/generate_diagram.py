@@ -207,12 +207,13 @@ def generate_diagram_simple():
                 'Segment': (.5 + rw * bf * 1, .5),
                 'Event': (.5 + rw * bf * 4, 3.0),
                 'Epoch': (.5 + rw * bf * 4, 1.0),
-                'ChannelIndex': (.5 + rw * bf * 1, 7.5),
-                'Unit': (.5 + rw * bf * 2., 9.9),
+                'Group': (.5 + rw * bf * 1, 7.5),
+                'ChannelView': (.5 + rw * bf * 2., 9.9),
                 'SpikeTrain': (.5 + rw * bf * 3, 7.5),
                 'IrregularlySampledSignal': (.5 + rw * bf * 3, 0.5),
                 'AnalogSignal': (.5 + rw * bf * 3, 4.9),
                 }
+    # todo: add ImageSequence, RegionOfInterest
     generate_diagram('simple_generated_diagram.svg',
                      rect_pos, rect_width, figsize)
     generate_diagram('simple_generated_diagram.png',

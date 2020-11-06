@@ -16,6 +16,10 @@ class ChannelIndex(Container):
     '''
     A container for indexing/grouping data channels.
 
+    Use of :class:`ChannelIndex` is deprecated. Its various uses can be replaced
+    by the :class:`Group` and :class:`ChannelView` classes, or by use of
+    array annotations.
+
     This container has several purposes:
 
       * Grouping all :class:`AnalogSignal`\\s and

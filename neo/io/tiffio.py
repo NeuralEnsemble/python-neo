@@ -81,11 +81,6 @@ class TiffIO(BaseIO):
         self.sampling_rate = sampling_rate
         self.spatial_scale = spatial_scale
 
-    def read(self, lazy=False, **kwargs):
-        if lazy:
-            raise ValueError('This IO module does not support lazy loading')
-        return [self.read_block(lazy=lazy, **kwargs)]
-
     def read_block(self, lazy=False, **kwargs):
         # to sort file
         def natural_sort(l):

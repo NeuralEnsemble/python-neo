@@ -20,7 +20,9 @@ from neo.core import (AnalogSignal,
                       Epoch, Event, SpikeTrain)
 from neo.core.dataobject import ArrayDict
 
-import logging
+
+logger = logging.getLogger("Neo")
+
 
 class BaseProxy(BaseNeo):
     def __init__(self, array_annotations=None, **annotations):
@@ -70,9 +72,9 @@ class AnalogSignalProxy(BaseProxy):
 
     Usage:
     >>> proxy_anasig = AnalogSignalProxy(rawio=self.reader,
-                                                                global_channel_indexes=None,
-                                                                block_index=0,
-                                                                seg_index=0)
+                                         global_channel_indexes=None,
+                                         block_index=0,
+                                         seg_index=0)
     >>> anasig = proxy_anasig.load()
     >>> slice_of_anasig = proxy_anasig.load(time_slice=(1.*pq.s, 2.*pq.s))
     >>> some_channel_of_anasig = proxy_anasig.load(channel_indexes=[0,5,10])
@@ -82,6 +84,7 @@ class AnalogSignalProxy(BaseProxy):
     _necessary_attrs = (('sampling_rate', pq.Quantity, 0),
                                     ('t_start', pq.Quantity, 0))
     _recommended_attrs = BaseNeo._recommended_attrs
+    proxy_for = AnalogSignal
 
     def __init__(self, rawio=None, global_channel_indexes=None, block_index=0, seg_index=0):
         self._rawio = rawio
@@ -289,6 +292,7 @@ class SpikeTrainProxy(BaseProxy):
     _necessary_attrs = (('t_start', pq.Quantity, 0),
                                     ('t_stop', pq.Quantity, 0))
     _recommended_attrs = ()
+    proxy_for = SpikeTrain
 
     def __init__(self, rawio=None, unit_index=None, block_index=0, seg_index=0):
 
@@ -471,6 +475,7 @@ class EventProxy(_EventOrEpoch):
     '''
     _necessary_attrs = (('times', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
+    proxy_for = Event
 
 
 class EpochProxy(_EventOrEpoch):
@@ -499,6 +504,7 @@ class EpochProxy(_EventOrEpoch):
     _necessary_attrs = (('times', pq.Quantity, 1),
                         ('durations', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
+    proxy_for = Epoch
 
 
 proxyobjectlist = [AnalogSignalProxy, SpikeTrainProxy, EventProxy,
@@ -506,7 +512,10 @@ proxyobjectlist = [AnalogSignalProxy, SpikeTrainProxy, EventProxy,
 
 
 unit_convert = {'Volts': 'V', 'volts': 'V', 'Volt': 'V',
-                'volt': 'V', ' Volt': 'V', 'microV': 'uV', 'µV': 'uV'}
+                'volt': 'V', ' Volt': 'V', 'microV': 'uV',
+                # note that "micro" and "mu" are two different characters in Unicode
+                # although they mostly look the same. Here we accept both.
+                'µV': 'uV', 'μV': 'uV'}
 
 
 def ensure_signal_units(units):
@@ -517,8 +526,8 @@ def ensure_signal_units(units):
     try:
         units = pq.Quantity(1, units)
     except:
-        logging.warning('Units "{}" can not be converted to a quantity. Using dimensionless '
-                        'instead'.format(units))
+        logger.warning('Units "{}" can not be converted to a quantity. Using dimensionless '
+                       'instead'.format(units))
         units = ''
         units = pq.Quantity(1, units)
     return units

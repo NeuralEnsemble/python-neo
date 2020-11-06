@@ -13,6 +13,8 @@ class Unit(Container):
     '''
     A container of :class:`SpikeTrain` objects from a unit.
 
+    Use of :class:`Unit` is deprecated. It can be replaced by the :class:`Group`.
+
     A :class:`Unit` regroups all the :class:`SpikeTrain`
     objects that were emitted by a single spike source during a :class:`Block`.
     A spike source is often a single neuron but doesn't have to be.  The spikes
