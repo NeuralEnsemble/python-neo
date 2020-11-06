@@ -1008,7 +1008,7 @@ class NixIO(BaseIO):
         if anasig.array_annotations:
             for k, v in anasig.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -1141,7 +1141,7 @@ class NixIO(BaseIO):
         if irsig.array_annotations:
             for k, v in irsig.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -1191,7 +1191,7 @@ class NixIO(BaseIO):
         if event.array_annotations:
             for k, v in event.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -1252,7 +1252,7 @@ class NixIO(BaseIO):
         if epoch.array_annotations:
             for k, v in epoch.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -1311,7 +1311,7 @@ class NixIO(BaseIO):
         if spiketrain.array_annotations:
             for k, v in spiketrain.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         if nixgroup:
             nixgroup.multi_tags.append(nixmt)
@@ -1513,7 +1513,7 @@ class NixIO(BaseIO):
                     values = values[0]
                 if prop.definition in (DATEANNOTATION, TIMEANNOTATION, DATETIMEANNOTATION):
                     values = dt_from_nix(values, prop.definition)
-                if prop.definition == ARRAYANNOTATION:
+                if prop.type == ARRAYANNOTATION:
                     if 'array_annotations' in neo_attrs:
                         neo_attrs['array_annotations'][prop.name] = values
                     else:
