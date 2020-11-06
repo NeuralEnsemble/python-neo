@@ -155,8 +155,8 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
         for typeTest in self.ncsTypeTestFiles:
 
             filename = self.get_filename_path(typeTest[0])
-            hdr = NlxHeader.buildForFile(filename)
-            self.assertEqual(hdr.typeOfRecording(), typeTest[1])
+            hdr = NlxHeader.build_for_file(filename)
+            self.assertEqual(hdr.type_of_recording(), typeTest[1])
 
 
 class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
