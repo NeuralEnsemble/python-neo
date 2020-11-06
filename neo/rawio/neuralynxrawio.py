@@ -108,7 +108,7 @@ class NeuralynxRawIO(BaseRawIO):
                 continue
 
             # All file have more or less the same header structure
-            info = NlxHeader.buildForFile(filename)
+            info = NlxHeader.build_for_file(filename)
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
@@ -227,7 +227,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._timestamp_limits = None
         self._nb_segment = 1
 
-        # Read ncs files for gaps detection and nb_segment computation.
+        # Read ncs files for gap detection and nb_segment computation.
         # :TODO: current algorithm depends on side-effect of read_ncs_files on
         #   self._sigs_memmap, self._sigs_t_start, self._sigs_t_stop,
         #   self._sigs_length, self._nb_segment, self._timestamp_limits
@@ -695,7 +695,7 @@ class NlxHeader(OrderedDict):
             datetimeformat='%Y/%m/%d %H:%M:%S')
     }
 
-    def buildForFile(filename):
+    def build_for_file(filename):
         """
         Factory function to build NlxHeader for a given file.
         """
@@ -810,7 +810,7 @@ class NlxHeader(OrderedDict):
 
         return info
 
-    def typeOfRecording(self):
+    def type_of_recording(self):
         """
         Determines type of recording in Ncs file with this header.
 
