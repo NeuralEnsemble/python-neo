@@ -22,12 +22,14 @@ from neo import AnalogSignal
 class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuralynxIO
     files_to_test = [
+        # 'Cheetah_v4.0.2/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
         'Pegasus_v2.1.1',
         'Cheetah_v6.3.2/incomplete_blocks']
     files_to_download = [
+        'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
         'Cheetah_v5.5.1/original_data/Events.nev',
