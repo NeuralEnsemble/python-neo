@@ -110,13 +110,8 @@ class NeuralynxRawIO(BaseRawIO):
                 self._empty_ncs.append(filename)
                 continue
 
-<<<<<<< HEAD
             # All file have more or less the same header structure
             info = NlxHeader.build_for_file(filename)
-=======
-            # All files have more or less the same header structure
-            info = NlxHeader.buildForFile(filename)
->>>>>>> ba82efe4580e74c321e04cf110be27c050ce77d5
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
@@ -516,19 +511,11 @@ class NeuralynxRawIO(BaseRawIO):
         # create segment with subdata block/t_start/t_stop/length for each channel
         for chan_uid, ncs_filename in self.ncs_filenames.items():
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
             data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
                               offset=NlxHeader.HEADER_SIZE)
-=======
-            data = np.memmap(ncs_filename, dtype=self.ncs_dtype, mode='r',
-                             offset=NlxHeader.HEADER_SIZE)
->>>>>>> 153446dc... Remove unneeded classes. Clean up style.
+
             assert data.size == data0.size, 'ncs files do not have the same data length'
-=======
-=======
->>>>>>> ba82efe4580e74c321e04cf110be27c050ce77d5
+
             if chan_uid == chan_uid0:
                 data = data0
                 hdr = hdr0
@@ -551,10 +538,6 @@ class NeuralynxRawIO(BaseRawIO):
                 for i, ebi in enumerate(nb.endBlocks):
                     if ebi != nb0.endBlocks[i]:
                         raise IOError('ncs files have different end block structure')
-<<<<<<< HEAD
->>>>>>> 6982c597... Use NcsBlocksFactory and logical or.
-=======
->>>>>>> ba82efe4580e74c321e04cf110be27c050ce77d5
 
             # create a memmap for each record block
             for seg_index in range(len(nb.startBlocks)):
@@ -891,27 +874,12 @@ class NcsBlocksFactory:
 
         # old Neuralynx style with rounded whole microseconds for the samples
         if acqType == "PRE4":
-<<<<<<< HEAD
-<<<<<<< HEAD
             freq = nlxHdr['SamplingFrequency']
             microsPerSampUsed = math.floor(
                 WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(freq))
             sampFreqUsed = WholeMicrosTimePositionBlock.getFreqForMicrosPerSamp(microsPerSampUsed)
             nb = NcsBlocks._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(freq))
-=======
-=======
->>>>>>> ba82efe4580e74c321e04cf110be27c050ce77d5
-            freq = nlxHdr['sampling_rate']
-            microsPerSampUsed = math.floor(WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
-                                            freq))
-            sampFreqUsed = WholeMicrosTimePositionBlock.getFreqForMicrosPerSamp(microsPerSampUsed)
-            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed,
-                                                             math.floor(freq))
             nb.sampFreqUsed = sampFreqUsed
-<<<<<<< HEAD
->>>>>>> 60006871... Tests for PRE4 type and code corrections.
-=======
->>>>>>> ba82efe4580e74c321e04cf110be27c050ce77d5
             nb.microsPerSampUsed = microsPerSampUsed
 
         # digital lynx style with fractional frequency and micros per samp determined from
