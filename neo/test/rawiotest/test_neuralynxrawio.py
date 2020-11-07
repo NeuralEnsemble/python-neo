@@ -146,11 +146,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         ncsBlocks = NcsBlocks()
-<<<<<<< HEAD
         ncsBlocks.sampFreqUsed = 1/(35e-6)
-=======
-        ncsBlocks.sampFreqUsed = 1 / 35e-6
->>>>>>> ba82efe4... More PEP8 items.
         ncsBlocks.microsPerSampUsed = 35
         ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed,
                                                                 27789)
@@ -205,7 +201,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(data0.shape[0], 6690)
         self.assertEqual(data0['timestamp'][6689], 8515800549)  # timestamp of last record
 
-        hdr = NlxHeader.buildForFile(filename)
+        hdr = NlxHeader.build_for_file(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
         self.assertEqual(nb.sampFreqUsed, 32000.012813673042)
         self.assertEqual(nb.microsPerSampUsed, 31.249987486652431)
@@ -234,7 +230,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         # Test early files where the frequency listed in the header is
         # floor(1e6/(actual number of microseconds between samples)
         filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
-        hdr = NlxHeader.buildForFile(filename)
+        hdr = NlxHeader.build_for_file(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
@@ -249,7 +245,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         # test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap
         filename = self.get_filename_path('Cheetah_v5.5.1/original_data/Tet3a.ncs')
-        hdr = NlxHeader.buildForFile(filename)
+        hdr = NlxHeader.build_for_file(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
