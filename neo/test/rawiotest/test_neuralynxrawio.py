@@ -146,9 +146,14 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         ncsBlocks = NcsBlocks()
+<<<<<<< HEAD
         ncsBlocks.sampFreqUsed = 1/(35e-6)
+=======
+        ncsBlocks.sampFreqUsed = 1 / 35e-6
+>>>>>>> ba82efe4... More PEP8 items.
         ncsBlocks.microsPerSampUsed = 35
-        ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed, 27789)
+        ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed,
+                                                                27789)
         self.assertEqual(len(ncsBlocks.startBlocks), 1)
         self.assertEqual(ncsBlocks.startBlocks[0], 0)
         self.assertEqual(len(ncsBlocks.endBlocks), 1)
@@ -164,7 +169,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
                           offset=NlxHeader.HEADER_SIZE)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
 
-        self.assertEqual(nb.sampFreqUsed, 1/35e-6)
+        self.assertEqual(nb.sampFreqUsed, 1 / 35e-6)
         self.assertEqual(nb.microsPerSampUsed, 35)
         self.assertEqual(len(nb.startBlocks), 1)
         self.assertEqual(nb.startBlocks[0], 0)

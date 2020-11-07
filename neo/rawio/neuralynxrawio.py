@@ -554,7 +554,7 @@ class NeuralynxRawIO(BaseRawIO):
                         data0[nb0.endBlocks[seg_index]]['timestamp']):
                     raise IOError('ncs files have different timestamp structure')
 
-                subdata = data[nb.startBlocks[seg_index]:(nb.endBlocks[seg_index]+1)]
+                subdata = data[nb.startBlocks[seg_index]:(nb.endBlocks[seg_index] + 1)]
                 self._sigs_memmap[seg_index][chan_uid] = subdata
 
                 if chan_uid == chan_uid0:
@@ -606,7 +606,7 @@ class WholeMicrosTimePositionBlock:
         start time, and sample position.
         """
         return round(startTime +
-                     WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(sampFr)*posn)
+                     WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(sampFr) * posn)
 
 
 class CscRecordHeader:
@@ -647,7 +647,7 @@ class NcsBlocksFactory:
     """
 
     _maxGapLength = 5  # maximum gap between predicted and actual block timestamps still
-                       # considered within one NcsBlock
+                        # considered within one NcsBlock
 
     @staticmethod
     def _parseGivenActualFrequency(ncsMemMap, ncsBlocks, chanNum, reqFreq, blkOnePredTime):
@@ -792,7 +792,7 @@ class NcsBlocksFactory:
             predTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
                                                                    lastRecTime, lastRecNumSamps)
             if abs(hdr.timestamp - predTime) > maxGapLen:
-                ncsBlocks.endBlocks.append(recn-1)
+                ncsBlocks.endBlocks.append(recn - 1)
                 ncsBlocks.startBlocks.append(recn)
                 if blkLen > maxBlkLen:
                     maxBlkLen = blkLen
@@ -897,7 +897,8 @@ class NcsBlocksFactory:
 >>>>>>> 60006871... Tests for PRE4 type and code corrections.
             nb.microsPerSampUsed = microsPerSampUsed
 
-        # digital lynx style with fractional frequency and micros per samp determined from block times
+        # digital lynx style with fractional frequency and micros per samp determined from
+        # block times
         elif acqType == "DIGITALLYNX" or acqType == "DIGITALLYNXSX":
             nomFreq = nlxHdr['sampling_rate']
             nb = NcsBlocksFactory._buildForMaxGap(ncsMemMap, nomFreq)
