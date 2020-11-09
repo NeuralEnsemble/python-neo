@@ -664,6 +664,8 @@ class AnalogSignal(BaseSignal):
 
         Units, sampling_rate and number of signal traces must be the same
         for all signals. Otherwise a ValueError is raised.
+        Note that timestamps of concatenated signals might shift in oder to
+        align the sampling times of all signals.
 
         Parameters
         ----------
