@@ -16,12 +16,16 @@ logging.getLogger().setLevel(logging.INFO)
 class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
+        'BML/original_data',
         'Cheetah_v4.0.2/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
         'Cheetah_v6.3.2/incomplete_blocks']
     files_to_download = [
+        'BML/original_data/CSC1_trunc.Ncs',
+        'BML/plain_data/CSC1_trunc.txt',
+        'BML/README.txt',
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
         'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
         'Cheetah_v4.0.2/README.txt',
@@ -69,6 +73,19 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v6.3.2/incomplete_blocks/README.txt']
 
     def test_read_ncs_files_sideeffects(self):
+
+        # Test BML style of Ncs files, similar to PRE4 but with fractional frequency
+        # in the header and fractional microsPerSamp, which is then rounded as appropriate
+        # in each record.
+        rawio = NeuralynxRawIO(self.get_filename_path('BML/original_data'))
+        rawio.parse_header()
+        # test values here from direct inspection of .ncs files
+        self.assertEqual(rawio._nb_segment, 1)
+        self.assertListEqual(rawio._timestamp_limits, [(0, 192000)])
+        self.assertEqual(rawio._sigs_length[0], 4608)
+        self.assertEqual(rawio._sigs_t_start[0], 0)
+        self.assertEqual(rawio._sigs_t_stop[0], 0.192)
+        self.assertEqual(len(rawio._sigs_memmap), 1)
 
         # Test Cheetah 4.0.2, which is PRE4 type with frequency in header and
         # no microsPerSamp. Number of microseconds per sample in file is inverse of
