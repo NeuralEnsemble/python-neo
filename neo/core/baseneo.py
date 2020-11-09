@@ -126,7 +126,7 @@ def intersect_annotations(A, B):
 
     result = {}
 
-    for key in A.keys() & B.keys():
+    for key in set(A.keys()) & set(B.keys()):
         v1, v2 = A[key], B[key]
         assert type(v1) == type(v2), 'type({}) {} != type({}) {}'.format(v1, type(v1),
                                                                          v2, type(v2))
