@@ -22,14 +22,27 @@ from neo import AnalogSignal
 class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuralynxIO
     files_to_test = [
-        # 'Cheetah_v4.0.2/original_data',
+        'BML/original_data',
+        'BML_unfilledsplit/original_data',
+        'Cheetah_v1.1.0/original_data',
+        'Cheetah_v4.0.2/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
-        'Pegasus_v2.1.1',
-        'Cheetah_v6.3.2/incomplete_blocks']
+        'Pegasus_v2.1.1']
     files_to_download = [
+        'BML/original_data/CSC1_trunc.Ncs',
+        'BML/plain_data/CSC1_trunc.txt',
+        'BML/README.txt',
+        'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs',
+        'BML_unfilledsplit/plain_data/unfilledSplitRecords.txt',
+        'BML_unfilledsplit/README.txt',
+        'Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs',
+        'Cheetah_v1.1.0/README.txt',
+        'Cheetah_v1.1.0/plain_data/CSC67_trunc.txt',
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
+        'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
+        'Cheetah_v4.0.2/README.txt',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
         'Cheetah_v5.5.1/original_data/Events.nev',
@@ -248,26 +261,55 @@ class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
 
 
 class TestData(CommonNeuralynxIOTest, unittest.TestCase):
-    # def test_ncs(self):
-    #     for session in self.files_to_test[1:2]:  # in the long run this should include all files
-    #         dirname = self.get_filename_path(session)
-    #         nio = NeuralynxIO(dirname=dirname, use_cache=False)
-    #         block = nio.read_block()
 
-    #         for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
-    #             chid = anasig.channel_index.channel_ids[anasig_id]
+    def _load_plaindata(self, filename, numSamps):
+        """
+        Load numSamps samples only from Ncs dump files which contain one row for each record,
+        each row containing the timestamp, channel number, whole integer sampling frequency,
+        number of samples, followed by that number of samples (which may be different for
+        each record).
+        """
+        res = []
+        totRes = 0
+        with open(filename) as f:
+            for line in f:
+                vals = list(map(int, line.split()))
+                numSampsThisLine = len(vals) - 4
+                if numSampsThisLine < 0 or numSampsThisLine < vals[3]:
+                    raise IOError('plain data file "' + filename + ' improperly formatted')
+                numAvail = min(numSampsThisLine, vals[3])  # only use valid samples
+                if numAvail < numSamps - len(res):
+                    res.append(vals[4:(4 + numAvail)])
+                else:
+                    res.append(vals[4:(4 + numSamps - len(res))])
+                totRes += len(res[-1])
+                if totRes == numSamps:
+                    break
 
-    #             # need to decode, unless keyerror
-    #             chname = anasig.channel_index.channel_names[anasig_id]
-    #             chuid = (chname, chid)
-    #             filename = nio.ncs_filenames[chuid][:-3] + 'txt'
-    #             filename = filename.replace('original_data', 'plain_data')
-    #             plain_data = np.loadtxt(filename)[:, 5:].flatten()  # first columns are meta info
-    #             overlap = 512 * 500
-    #             gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
-    #             np.testing.assert_allclose(plain_data[:overlap],
-    #                                        anasig.magnitude[:overlap, 0] * gain_factor_0,
-    #                                        rtol=0.01)
+            return [item for sublist in res for item in sublist]
+
+    def test_ncs(self):
+        for session in self.files_to_test:
+            dirname = self.get_filename_path(session)
+            nio = NeuralynxIO(dirname=dirname, use_cache=False)
+            block = nio.read_block()
+
+            # check that data agrees in first segment only
+            for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
+                chid = anasig.channel_index.channel_ids[anasig_id]
+
+                # need to decode, unless keyerror
+                chname = anasig.channel_index.channel_names[anasig_id]
+                chuid = (chname, chid)
+                filename = nio.ncs_filenames[chuid][:-3] + 'txt'
+                filename = filename.replace('original_data', 'plain_data')
+                overlap = 512 * 500
+                plain_data = self._load_plaindata(filename, overlap)
+                gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
+                numToTest = min(len(plain_data), len(anasig.magnitude[:, 0]))
+                np.testing.assert_allclose(plain_data[:numToTest],
+                                           anasig.magnitude[:numToTest, 0] * gain_factor_0,
+                                           rtol=0.01, err_msg=" for file " + filename)
 
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
@@ -308,7 +350,7 @@ class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
 
         for t, gt in zip(nio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561]):
             self.assertEqual(np.round(t, 4), np.round(gt, 4))
-        for t, gt in zip(nio._sigs_t_stop, [8427.830803, 8487.768029, 8515.816549]):
+        for t, gt in zip(nio._sigs_t_stop, [8427.831990, 8487.768498, 8515.816549]):
             self.assertEqual(np.round(t, 4), np.round(gt, 4))
 
 
