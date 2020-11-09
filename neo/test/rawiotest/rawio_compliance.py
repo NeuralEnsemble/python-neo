@@ -76,7 +76,7 @@ def count_element(reader):
 
             if nb_sig > 0:
                 if reader._several_channel_groups:
-                    channel_indexes_list = reader.get_group_channel_indexes()
+                    channel_indexes_list = reader.get_group_signal_channel_indexes()
                     for channel_indexes in channel_indexes_list:
                         sig_size = reader.get_signal_size(block_index, seg_index,
                                                           channel_indexes=channel_indexes)
@@ -133,7 +133,7 @@ def read_analogsignals(reader):
         return
 
     if reader._several_channel_groups:
-        channel_indexes_list = reader.get_group_channel_indexes()
+        channel_indexes_list = reader.get_group_signal_channel_indexes()
     else:
         channel_indexes_list = [None]
 
@@ -239,7 +239,7 @@ def benchmark_speed_read_signals(reader):
     """
 
     if reader._several_channel_groups:
-        channel_indexes_list = reader.get_group_channel_indexes()
+        channel_indexes_list = reader.get_group_signal_channel_indexes()
     else:
         channel_indexes_list = [None]
 

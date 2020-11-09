@@ -27,6 +27,11 @@ development of this code
 
 The code is implemented with the permission of Dr. Jan Schnupp
 
+Note when porting ChannelIndex/Unit to Group  (Samuel Garcia).
+The ChannelIndex was used as group of units.
+To avoid now a "group of group" each units is directly a "Group"'.
+
+
 Author: Todd Jennings
 """
 
@@ -42,7 +47,7 @@ import quantities as pq
 
 # needed core neo modules
 from neo.core import (Block, Event,
-                      ChannelIndex, Segment, SpikeTrain, Unit)
+                      Group, Segment, SpikeTrain, Unit)
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -71,7 +76,7 @@ class BrainwareSrcIO(BaseIO):
     reading or closed.
 
     Note 1:
-        The first Unit in each ChannelIndex is always
+        The first Unit in each Group is always
         UnassignedSpikes, which has a SpikeTrain for each Segment containing
         all the spikes not assigned to any Unit in that Segment.
 
@@ -85,8 +90,7 @@ class BrainwareSrcIO(BaseIO):
         a condition, each repetition is stored as a separate Segment.
 
     Note 4:
-        There is always only one ChannelIndex.  BrainWare stores the
-        equivalent of ChannelIndexes in separate files.
+        There is always only one Group.
 
     Usage:
         >>> from neo.io.brainwaresrcio import BrainwareSrcIO
@@ -96,8 +100,8 @@ class BrainwareSrcIO(BaseIO):
         >>> blks = srcfile.read_all_blocks()
         >>> print blk1.segments
         >>> print blk1.segments[0].spiketrains
-        >>> print blk1.units
-        >>> print blk1.units[0].name
+        >>> print blk1.groups
+        >>> print blk1.groups[0].name
         >>> print blk2
         >>> print blk2[0].segments
         >>> print blks
@@ -108,8 +112,8 @@ class BrainwareSrcIO(BaseIO):
     is_writable = False  # write is not supported
 
     # This class is able to directly or indirectly handle the following objects
-    supported_objects = [Block, ChannelIndex,
-                         Segment, SpikeTrain, Event, Unit]
+    supported_objects = [Block, Group,
+                         Segment, SpikeTrain, Event]
 
     readable_objects = [Block]
     writeable_objects = []
@@ -156,15 +160,11 @@ class BrainwareSrcIO(BaseIO):
         # This stores the current Block
         self._blk = None
 
-        # This stores the current ChannelIndex for easy access
-        # It is equivalent to self._blk.channel_indexes[0]
-        self._chx = None
-
         # This stores the current Segment for easy access
         # It is equivalent to self._blk.segments[-1]
         self._seg0 = None
 
-        # this stores a dictionary of the Block's Units by name,
+        # this stores a dictionary of the Block's Group (Units) by name,
         # making it easier and faster to retrieve Units by name later
         # UnassignedSpikes and Units accessed by index are not stored here
         self._unitdict = {}
@@ -262,15 +262,11 @@ class BrainwareSrcIO(BaseIO):
         # create the Block and the contents all Blocks of from IO share
         self._blk = Block(file_origin=self._file_origin)
 
-        self._chx = ChannelIndex(file_origin=self._file_origin,
-                                 index=np.array([], dtype=np.int))
         self._seg0 = Segment(name='Comments', file_origin=self._file_origin)
-        self._unit0 = Unit(name='UnassignedSpikes',
-                           file_origin=self._file_origin,
+        self._unit0 = Group(name='UnassignedSpikes',
                            elliptic=[], boundaries=[],
                            timestamp=[], max_valid=[])
-        self._blk.channel_indexes.append(self._chx)
-        self._chx.units.append(self._unit0)
+        self._blk.groups.append(self._unit0)
         self._blk.segments.append(self._seg0)
 
         # this actually reads the contents of the Block
@@ -290,7 +286,6 @@ class BrainwareSrcIO(BaseIO):
 
         # reset the per-Block attributes
         self._blk = None
-        self._chx = None
         self._unitdict = {}
 
         # combine the comments into one big event
@@ -390,8 +385,7 @@ class BrainwareSrcIO(BaseIO):
 
         try:
             # uint16 -- the ID code of the next sequence
-            seqid = np.asscalar(np.fromfile(self._fsrc,
-                                            dtype=np.uint16, count=1))
+            seqid = np.fromfile(self._fsrc, dtype=np.uint16, count=1).item()
         except ValueError:
             # return a None if at EOF.  Other methods use None to recognize
             # an EOF
@@ -439,9 +433,9 @@ class BrainwareSrcIO(BaseIO):
         should go based on its class.  Warning are issued if this method is
         used since manual reorganization may be needed.
         """
-        if isinstance(data_obj, Unit):
-            self.logger.warning('Unknown Unit found, adding to Units list')
-            self._chx.units.append(data_obj)
+        if isinstance(data_obj, Group):
+            self.logger.warning('Unknown Group found, adding to Group list')
+            self._blk.groups.append(data_obj)
             if data_obj.name:
                 self._unitdict[data_obj.name] = data_obj
         elif isinstance(data_obj, Segment):
@@ -634,8 +628,7 @@ class BrainwareSrcIO(BaseIO):
         """
         Read a string of a specific length.
         """
-        rawstr = np.asscalar(np.fromfile(self._fsrc,
-                                         dtype='S%s' % numchars, count=1))
+        rawstr = np.fromfile(self._fsrc, dtype='S%s' % numchars, count=1).item()
         return rawstr.decode('utf-8')
 
     def __read_annotations(self):
@@ -663,8 +656,7 @@ class BrainwareSrcIO(BaseIO):
             self._fsrc.seek(1, 1)
 
             # uint8 -- length of next string
-            numchars = np.asscalar(np.fromfile(self._fsrc,
-                                               dtype=np.uint8, count=1))
+            numchars = np.fromfile(self._fsrc, dtype=np.uint8, count=1).item()
 
             # if there is no name, make one up
             if not numchars:
@@ -735,15 +727,13 @@ class BrainwareSrcIO(BaseIO):
         time = np.fromfile(self._fsrc, dtype=np.double, count=1)[0]
 
         # int16 -- length of next string
-        numchars1 = np.asscalar(np.fromfile(self._fsrc,
-                                            dtype=np.int16, count=1))
+        numchars1 = np.fromfile(self._fsrc, dtype=np.int16, count=1).item()
 
         # char * numchars -- the one who sent the comment
         sender = self.__read_str(numchars1)
 
         # int16 -- length of next string
-        numchars2 = np.asscalar(np.fromfile(self._fsrc,
-                                            dtype=np.int16, count=1))
+        numchars2 = np.fromfile(self._fsrc, dtype=np.int16, count=1).item()
 
         # char * numchars -- comment text
         text = self.__read_str(numchars2, utf=False)
@@ -938,11 +928,6 @@ class BrainwareSrcIO(BaseIO):
         # we don't know which Segment specifically, though
         for _ in range(numelements):
             self.__read_comment()
-
-        # create a channel_index for the numchannels
-        self._chx.index = np.arange(numchannels)
-        self._chx.channel_names = np.array(['Chan{}'.format(i)
-                                            for i in range(numchannels)], dtype='U')
 
         # store what side of the head we are dealing with
         for segment in segments:
@@ -1257,7 +1242,6 @@ class BrainwareSrcIO(BaseIO):
         numelements = np.fromfile(self._fsrc, dtype=np.int16, count=1)[0]
 
         # {sequence} * numelements1 -- the number of lists of Units to read
-        self._chx.annotations['max_valid'] = []
         for i in range(numelements):
 
             # {skip} = byte * 2 (int16) -- skip 2 bytes
@@ -1274,19 +1258,19 @@ class BrainwareSrcIO(BaseIO):
 
             # if there aren't enough Units, create them
             # remember we need to skip the UnassignedSpikes Unit
-            if numunits > len(self._chx.units) + 1:
-                for ind1 in range(len(self._chx.units), numunits + 1):
-                    unit = Unit(name='unit%s' % ind1,
+            if numunits > len(self._blk.groups) + 1:
+                for ind1 in range(len(self._blk.groups), numunits + 1):
+                    unit = Group(name='unit%s' % ind1,
                                 file_origin=self._file_origin,
                                 elliptic=[], boundaries=[],
                                 timestamp=[], max_valid=[])
-                    self._chx.units.append(unit)
+                    self._blk.groups.append(unit)
 
             # {Block} * numelements -- Units
             for ind1 in range(numunits):
                 # get the Unit with the given index
                 # remember we need to skip the UnassignedSpikes Unit
-                unit = self._chx.units[ind1 + 1]
+                unit = self._blk.groups[ind1 + 1]
 
                 # {skip} = byte * 2 (int16) -- skip 2 bytes
                 self._fsrc.seek(2, 1)
@@ -1309,7 +1293,7 @@ class BrainwareSrcIO(BaseIO):
                 unit.annotations['boundaries'].append(boundaries)
                 unit.annotations['max_valid'].append(max_valid)
 
-        return self._chx.units[1:maxunit]
+        return self._blk.groups[1:maxunit]
 
     def __read_unit_list_timestamped(self):
         """
@@ -1399,8 +1383,7 @@ class BrainwareSrcIO(BaseIO):
         self._fsrc.seek(2, 1)
 
         # uint16 -- number of characters in next string
-        numchars = np.asscalar(np.fromfile(self._fsrc,
-                                           dtype=np.uint16, count=1))
+        numchars = np.fromfile(self._fsrc, dtype=np.uint16, count=1).item()
 
         # char * numchars -- ID string of Unit
         name = self.__read_str(numchars)
@@ -1419,9 +1402,9 @@ class BrainwareSrcIO(BaseIO):
         if name in self._unitdict:
             unit = self._unitdict[name]
         else:
-            unit = Unit(name=name, file_origin=self._file_origin,
+            unit = Group(name=name, file_origin=self._file_origin,
                         elliptic=[], boundaries=[], timestamp=[], max_valid=[])
-            self._chx.units.append(unit)
+            self._blk.groups.append(unit)
             self._unitdict[name] = unit
 
         # convert the individual spikes to SpikeTrains and add them to the Unit

@@ -209,7 +209,6 @@ class TestSegment(unittest.TestCase):
         self.check_creation(self.seg2)
 
     def test_times(self):
-
         for seg in [self.seg1, self.seg2]:
             # calculate target values for t_start and t_stop
             t_starts, t_stops = [], []
@@ -234,6 +233,47 @@ class TestSegment(unittest.TestCase):
 
             self.assertEqual(seg.t_start, targ_t_start)
             self.assertEqual(seg.t_stop, targ_t_stop)
+
+        # Testing times with ProxyObjects
+        seg = Segment()
+        reader = ExampleRawIO(filename='my_filename.fake')
+        reader.parse_header()
+
+        proxy_anasig = AnalogSignalProxy(rawio=reader, global_channel_indexes=None, block_index=0,
+                                         seg_index=0)
+        seg.analogsignals.append(proxy_anasig)
+
+        proxy_st = SpikeTrainProxy(rawio=reader, unit_index=0, block_index=0, seg_index=0)
+        seg.spiketrains.append(proxy_st)
+
+        proxy_event = EventProxy(rawio=reader, event_channel_index=0, block_index=0, seg_index=0)
+        seg.events.append(proxy_event)
+
+        proxy_epoch = EpochProxy(rawio=reader, event_channel_index=1, block_index=0, seg_index=0)
+        seg.epochs.append(proxy_epoch)
+
+        t_starts, t_stops = [], []
+        for children in [seg.analogsignals,
+                         seg.epochs,
+                         seg.events,
+                         seg.irregularlysampledsignals,
+                         seg.spiketrains]:
+            for child in children:
+                if hasattr(child, 't_start'):
+                    t_starts.append(child.t_start)
+                if hasattr(child, 't_stop'):
+                    t_stops.append(child.t_stop)
+                if hasattr(child, 'time'):
+                    t_starts.append(child.time)
+                    t_stops.append(child.time)
+                if hasattr(child, 'times'):
+                    t_starts.append(child.times[0])
+                    t_stops.append(child.times[-1])
+        targ_t_start = min(t_starts)
+        targ_t_stop = max(t_stops)
+
+        self.assertEqual(seg.t_start, targ_t_start)
+        self.assertEqual(seg.t_stop, targ_t_stop)
 
     def test__merge(self):
         seg1a = fake_neo(Block, seed=self.seed1, n=self.nchildren).segments[0]

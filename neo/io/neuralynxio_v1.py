@@ -28,6 +28,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
+import neo.io.neuralynxio
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal, SpikeTrain,
                       Event, Unit)
 from os import listdir, sep
@@ -145,6 +146,9 @@ class NeuralynxIO(BaseIO):
                             sessiondir
                             has priority over filename.
         """
+
+        warnings.warn('{} is deprecated and will be removed in neo version 0.10. Use {} instead.'
+                      ''.format(self.__class__, neo.io.neuralynxio.NeuralynxIO), FutureWarning)
 
         BaseIO.__init__(self)
 

@@ -31,7 +31,6 @@ import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.dataobject import DataObject
-from neo.core.channelindex import ChannelIndex
 from copy import copy, deepcopy
 
 from neo.core.basesignal import BaseSignal
@@ -142,7 +141,7 @@ class AnalogSignal(BaseSignal):
             read-only.
             (:attr:`t_start` + arange(:attr:`shape`[0])/:attr:`sampling_rate`)
         :channel_index:
-            access to the channel_index attribute of the principal ChannelIndex
+            (deprecated) access to the channel_index attribute of the principal ChannelIndex
             associated with this signal.
 
     *Slicing*:
@@ -443,14 +442,13 @@ class AnalogSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sampling rate: {!s}".format(self.sampling_rate),
-                     "time: {!s} to {!s}".format(self.t_start, self.t_stop)]:
-            _pp(line)
+        _pp("sampling rate: {}".format(self.sampling_rate))
+        _pp("time: {} to {}".format(self.t_start, self.t_stop))
 
     def time_index(self, t):
-        """Return the array index corresponding to the time `t`"""
+        """Return the array index (or indices) corresponding to the time (or times) `t`"""
         i = (t - self.t_start) * self.sampling_rate
-        i = int(np.rint(i.simplified.magnitude))
+        i = np.rint(i.simplified.magnitude).astype(np.int)
         return i
 
     def time_slice(self, t_start, t_stop):

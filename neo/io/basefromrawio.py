@@ -21,7 +21,7 @@ from neo import logging_handler
 from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
-                      ChannelIndex,
+                      Group,
                       Segment, SpikeTrain, Unit)
 from neo.io.baseio import BaseIO
 
@@ -55,7 +55,7 @@ class BaseFromRaw(BaseIO):
     is_writable = False
 
     supported_objects = [Block, Segment, AnalogSignal,
-                         SpikeTrain, Unit, ChannelIndex, Event, Epoch]
+                         SpikeTrain, Unit, Group, Event, Epoch]
     readable_objects = [Block, Segment]
     writeable_objects = []
 
@@ -68,33 +68,34 @@ class BaseFromRaw(BaseIO):
     mode = 'file'
 
     _prefered_signal_group_mode = 'group-by-same-units'  # 'split-all'
-    _prefered_units_group_mode = 'all-in-one'  # 'split-all'
     _default_group_mode_have_change_in_0_9 = False
 
     def __init__(self, *args, **kargs):
         BaseIO.__init__(self, *args, **kargs)
         self.parse_header()
 
-    def read_block(self, block_index=0, lazy=False, signal_group_mode=None,
-                   units_group_mode=None, load_waveforms=False):
+    def read_block(self, block_index=0, lazy=False,
+                    create_group_across_segment=None,
+                    signal_group_mode=None, load_waveforms=False):
         """
-
-
         :param block_index: int default 0. In case of several block block_index can be specified.
 
         :param lazy: False by default.
+
+        :param create_group_across_segment: bool or dict
+            If True :
+              * Create a neo.Group to group AnalogSignal segments
+              * Create a neo.Group to group SpikeTrain across segments
+              * Create a neo.Group to group Event across segments
+              * Create a neo.Group to group Epoch across segments
+            With a dict the behavior can be controlled more finely
+            create_group_across_segment = { 'AnalogSignal': True, 'SpikeTrain': False, ...}
 
         :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
         This control behavior for grouping channels in AnalogSignal.
             * 'split-all': each channel will give an AnalogSignal
             * 'group-by-same-units' all channel sharing the same quantity units ar grouped in
             a 2D AnalogSignal
-
-        :param units_group_mode: 'split-all' or 'all-in-one'(default depend IO)
-        This control behavior for grouping Unit in ChannelIndex:
-            * 'split-all': each neo.Unit is assigned to a new neo.ChannelIndex
-            * 'all-in-one': all neo.Unit are grouped in the same neo.ChannelIndex
-              (global spike sorting for instance)
 
         :param load_waveforms: False by default. Control SpikeTrains.waveforms is None or not.
 
@@ -106,8 +107,25 @@ class BaseFromRaw(BaseIO):
                 warnings.warn('default "signal_group_mode" have change in version 0.9:'
                         'now all channels are group together in AnalogSignal')
 
-        if units_group_mode is None:
-            units_group_mode = self._prefered_units_group_mode
+        l = ['AnalogSignal', 'SpikeTrain', 'Event', 'Epoch']
+        if create_group_across_segment is None:
+            # @andrew @ julia @michael ?
+            # I think here the default None could give this
+            create_group_across_segment = {
+                'AnalogSignal': True,   #because mimic the old ChannelIndex for AnalogSignals
+                'SpikeTrain': False,  # False by default because can create too many object for simulation
+                'Event': False,  # not implemented yet
+                'Epoch': False,  # not implemented yet
+            }
+        elif isinstance(create_group_across_segment, bool):
+            # bool to dict
+            v = create_group_across_segment
+            create_group_across_segment = { k: v for k in l}
+        elif isinstance(create_group_across_segment, dict):
+            # put False to missing keys
+            create_group_across_segment = {create_group_across_segment.get(k, False) for k in l}
+        else:
+            raise ValueError('create_group_across_segment must be bool or dict')
 
         # annotations
         bl_annotations = dict(self.raw_annotations['blocks'][block_index])
@@ -116,68 +134,43 @@ class BaseFromRaw(BaseIO):
 
         bl = Block(**bl_annotations)
 
-        # ChannelIndex are plit in 2 parts:
-        #  * some for AnalogSignals
-        #  * some for Units
+        # Group for AnalogSignals
+        if create_group_across_segment['AnalogSignal']:
+            all_channels = self.header['signal_channels']
+            channel_indexes_list = self.get_group_signal_channel_indexes()
+            sig_groups = []
+            for channel_index in channel_indexes_list:
+                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
+                        channel_index, signal_group_mode=signal_group_mode).items():
+                        group = Group(name='AnalogSignal group {}'.format(i))
+                        # @andrew @ julia @michael : do we annotate group across segment with this arrays ?
+                        group.annotate(ch_names=all_channels[ind_abs]['name'].astype('U'))  # ??
+                        group.annotate(channel_ids=all_channels[ind_abs]['id'])  # ??
+                        bl.groups.append(group)
+                        sig_groups.append(group)
 
-        # ChannelIndex for AnalogSignals
-        all_channels = self.header['signal_channels']
-        channel_indexes_list = self.get_group_channel_indexes()
-        for channel_index in channel_indexes_list:
-            for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
-                    channel_index, signal_group_mode=signal_group_mode).items():
-                if signal_group_mode == "split-all":
-                    chidx_annotations = self.raw_annotations['signal_channels'][i]
-                elif signal_group_mode == "group-by-same-units":
-                    # this should be done with array_annotation soon:
-                    keys = list(self.raw_annotations['signal_channels'][ind_abs[0]].keys())
-                    # take key from first channel of the group
-                    chidx_annotations = {key: [] for key in keys}
-                    for j in ind_abs:
-                        for key in keys:
-                            v = self.raw_annotations['signal_channels'][j].get(key, None)
-                            chidx_annotations[key].append(v)
-                if 'name' in list(chidx_annotations.keys()):
-                    chidx_annotations.pop('name')
-                chidx_annotations = check_annotations(chidx_annotations)
-                # this should be done with array_annotation soon:
-                ch_names = all_channels[ind_abs]['name'].astype('U')
-                neo_channel_index = ChannelIndex(index=ind_within,
-                                                 channel_names=ch_names,
-                                                 channel_ids=all_channels[ind_abs]['id'],
-                                                 name='Channel group {}'.format(i),
-                                                 )
-                neo_channel_index.annotations.update(chidx_annotations)
-
-                bl.channel_indexes.append(neo_channel_index)
-
-        # ChannelIndex and Unit
-        # 2 case are possible in neo defifferent IO have choosen one or other:
-        #  * All units are grouped in the same ChannelIndex and indexes are all channels:
-        #    'all-in-one'
-        #  * Each units is assigned to one ChannelIndex: 'split-all'
-        # This is kept for compatibility
-        unit_channels = self.header['unit_channels']
-        if units_group_mode == 'all-in-one':
-            if unit_channels.size > 0:
-                channel_index = ChannelIndex(index=np.array([], dtype='i'),
-                                             name='ChannelIndex for all Unit')
-                bl.channel_indexes.append(channel_index)
+        if create_group_across_segment['SpikeTrain']:
+            unit_channels = self.header['unit_channels']
+            st_groups = []
             for c in range(unit_channels.size):
+                group = Group(name='SpikeTrain group {}'.format(i))
+                group.annotate(unit_name=unit_channels[c]['name'])
+                group.annotate(unit_id=unit_channels[c]['id'])
                 unit_annotations = self.raw_annotations['unit_channels'][c]
                 unit_annotations = check_annotations(unit_annotations)
-                unit = Unit(**unit_annotations)
-                channel_index.units.append(unit)
+                group.annotations.annotate(**unit_annotations)
+                bl.groups.append(group)
+                st_groups.append(group)
 
-        elif units_group_mode == 'split-all':
-            for c in range(len(unit_channels)):
-                unit_annotations = self.raw_annotations['unit_channels'][c]
-                unit_annotations = check_annotations(unit_annotations)
-                unit = Unit(**unit_annotations)
-                channel_index = ChannelIndex(index=np.array([], dtype='i'),
-                                             name='ChannelIndex for Unit')
-                channel_index.units.append(unit)
-                bl.channel_indexes.append(channel_index)
+        if create_group_across_segment['Event']:
+            # @andrew @ julia @michael :
+            # Do we need this ? I guess yes
+            raise NotImplementedError()
+
+        if create_group_across_segment['Epoch']:
+            # @andrew @ julia @michael :
+            # Do we need this ? I guess yes
+            raise NotImplementedError()
 
         # Read all segments
         for seg_index in range(self.segment_count(block_index)):
@@ -186,17 +179,15 @@ class BaseFromRaw(BaseIO):
                                     load_waveforms=load_waveforms)
             bl.segments.append(seg)
 
-        # create link to other containers ChannelIndex and Units
+        # create link between group (across segment) and data objects
         for seg in bl.segments:
-            for c, anasig in enumerate(seg.analogsignals):
-                bl.channel_indexes[c].analogsignals.append(anasig)
+            if create_group_across_segment['AnalogSignal']:
+                for c, anasig in enumerate(seg.analogsignals):
+                    sig_groups[c].add(anasig)
 
-            nsig = len(seg.analogsignals)
-            for c, sptr in enumerate(seg.spiketrains):
-                if units_group_mode == 'all-in-one':
-                    bl.channel_indexes[nsig].units[c].spiketrains.append(sptr)
-                elif units_group_mode == 'split-all':
-                    bl.channel_indexes[nsig + c].units[0].spiketrains.append(sptr)
+            if create_group_across_segment['SpikeTrain']:
+                for c, sptr in enumerate(seg.spiketrains):
+                    st_groups[c].add(sptr)
 
         bl.create_many_to_one_relationship()
 
@@ -250,7 +241,7 @@ class BaseFromRaw(BaseIO):
         # AnalogSignal
         signal_channels = self.header['signal_channels']
         if signal_channels.size > 0:
-            channel_indexes_list = self.get_group_channel_indexes()
+            channel_indexes_list = self.get_group_signal_channel_indexes()
             for channel_indexes in channel_indexes_list:
                 for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
                         channel_indexes,

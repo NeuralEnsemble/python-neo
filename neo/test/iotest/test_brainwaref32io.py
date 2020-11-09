@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 import quantities as pq
 
-from neo.core import Block, ChannelIndex, Segment, SpikeTrain, Unit
+from neo.core import Block, Segment, SpikeTrain, Group
 from neo.io import BrainwareF32IO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
@@ -41,14 +41,8 @@ def proc_f32(filename):
 
     # create the objects to store other objects
     block = Block(file_origin=filenameorig)
-    chx = ChannelIndex(file_origin=filenameorig,
-                       index=np.array([], dtype=np.int),
-                       channel_names=np.array([], dtype='U'))
-    unit = Unit(file_origin=filenameorig)
-
-    # load objects into their containers
-    block.channel_indexes.append(chx)
-    chx.units.append(unit)
+    gr = Group(file_origin=filenameorig)
+    block.groups.append(gr)
 
     try:
         with np.load(filename, allow_pickle=True) as f32obj:
@@ -81,7 +75,7 @@ def proc_f32(filename):
 
             segment = Segment(file_origin=filenameorig, **params)
             segment.spiketrains = [train]
-            unit.spiketrains.append(train)
+            gr.spiketrains.append(train)
             block.segments.append(segment)
 
     block.create_many_to_one_relationship()

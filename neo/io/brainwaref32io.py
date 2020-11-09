@@ -32,7 +32,7 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import Block, ChannelIndex, Segment, SpikeTrain, Unit
+from neo.core import Block, Group, Segment, SpikeTrain, Unit
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -59,8 +59,7 @@ class BrainwareF32IO(BaseIO):
     reading or closed.
 
     Note 1:
-        There is always only one ChannelIndex.  BrainWare stores the
-        equivalent of ChannelIndexes in separate files.
+        There is always only one Group.
 
     Usage:
         >>> from neo.io.brainwaref32io import BrainwareF32IO
@@ -80,7 +79,7 @@ class BrainwareF32IO(BaseIO):
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects = [Block, ChannelIndex,
+    supported_objects = [Block, Group,
                          Segment, SpikeTrain, Unit]
 
     readable_objects = [Block]
@@ -117,7 +116,7 @@ class BrainwareF32IO(BaseIO):
         self._fsrc = None
 
         self._blk = None
-        self.__unit = None
+        self.__unit_group = None
 
         self.__t_stop = None
         self.__params = None
@@ -143,13 +142,8 @@ class BrainwareF32IO(BaseIO):
         block = self._blk
 
         # create the objects to store other objects
-        chx = ChannelIndex(file_origin=self._filename,
-                           index=np.array([], dtype=np.int))
-        self.__unit = Unit(file_origin=self._filename)
-
-        # load objects into their containers
-        block.channel_indexes.append(chx)
-        chx.units.append(self.__unit)
+        self.__unit_group =  Group(file_origin=self._filename)
+        block.groups.append(self.__unit_group)
 
         # initialize values
         self.__t_stop = None
@@ -276,7 +270,7 @@ class BrainwareF32IO(BaseIO):
                            file_origin=self._filename)
 
         self.__seg.spiketrains = [train]
-        self.__unit.spiketrains.append(train)
+        self.__unit_group.spiketrains.append(train)
         self._blk.segments.append(self.__seg)
 
         # set an empty segment

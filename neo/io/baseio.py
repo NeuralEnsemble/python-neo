@@ -19,9 +19,9 @@ import logging
 
 from neo import logging_handler
 from neo.core import (AnalogSignal, Block,
-                      Epoch, Event,
+                      Epoch, Event, Group,
                       IrregularlySampledSignal,
-                      ChannelIndex,
+                      ChannelIndex, ChannelView,
                       Segment, SpikeTrain, Unit, ImageSequence,
                       RectangularRegionOfInterest, CircularRegionOfInterest,
                       PolygonRegionOfInterest)
@@ -182,11 +182,17 @@ class BaseIO:
     def read_channelindex(self, **kargs):
         assert (ChannelIndex in self.readable_objects), read_error
 
+    def read_channelview(self, **kargs):
+        assert (ChannelView in self.readable_objects), read_error
+
     def read_event(self, **kargs):
         assert (Event in self.readable_objects), read_error
 
     def read_epoch(self, **kargs):
         assert (Epoch in self.readable_objects), read_error
+
+    def read_group(self, **kargs):
+        assert (Group in self.readable_objects), read_error
 
     ######## All individual write methods #######################
     def write_block(self, bl, **kargs):
@@ -222,8 +228,14 @@ class BaseIO:
     def write_channelindex(self, chx, **kargs):
         assert (ChannelIndex in self.writeable_objects), write_error
 
+    def write_channelview(self, chv, **kargs):
+        assert (ChannelView in self.writeable_objects), write_error
+
     def write_event(self, ev, **kargs):
         assert (Event in self.writeable_objects), write_error
 
     def write_epoch(self, ep, **kargs):
         assert (Epoch in self.writeable_objects), write_error
+
+    def write_group(self, group, **kargs):
+        assert (Group in self.writeable_objects), write_error
