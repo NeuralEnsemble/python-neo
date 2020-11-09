@@ -64,6 +64,8 @@ cut across the simple container hierarchy.
     are three subclasses that link :class:`ImageSequence` objects to signals (:class:`AnalogSignal` objects)
     extracted from them.
 
+For more details, see :doc:`grouping`.
+
 
 NumPy compatibility
 ===================
