@@ -270,6 +270,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
         each record).
         """
         res = []
+        totRes = 0
         with open(filename) as f:
             for line in f:
                 vals = list(map(int, line.split()))
@@ -281,7 +282,8 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                     res.append(vals[4:(4 + numAvail)])
                 else:
                     res.append(vals[4:(4 + numSamps - len(res))])
-                if len(res) == numSamps:
+                totRes += len(res[-1])
+                if totRes == numSamps:
                     break
 
             return [item for sublist in res for item in sublist]
