@@ -239,13 +239,11 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
         if np.__version__.split(".")[:2] > ['1', '13']:
             # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many
             # -changes-to-array-printing-disableable-with-the-new-legacy-printing-mode
-            targ = (
-                '<IrregularlySampledSignal(array([[2.],\n       [4.],\n       [6.]]) * V '
-                '' + 'at times [1.1 1.5 1.7] s)>')
+            targ = ('<IrregularlySampledSignal(array([[2.],\n       [4.],\n       [6.]]) * V '
+                    '' + 'at times [1.1 1.5 1.7] s)>')
         else:
-            targ = (
-                '<IrregularlySampledSignal(array([[ 2.],\n       [ 4.],\n       [ 6.]]) '
-                '* V ' + 'at times [ 1.1  1.5  1.7] s)>')
+            targ = ('<IrregularlySampledSignal(array([[ 2.],\n       [ 4.],\n       [ 6.]]) '
+                    '* V ' + 'at times [ 1.1  1.5  1.7] s)>')
         res = repr(sig)
         self.assertEqual(targ, res)
 
@@ -461,7 +459,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         length = self.signal1.shape[-1]
         params1 = {'test0': ['y{}'.format(i) for i in range(length)],
                    'test1': ['deeptest' for i in range(length)],
-                   'test2': [(-1)**i > 0 for i in range(length)]}
+                   'test2': [(-1) ** i > 0 for i in range(length)]}
         self.signal1.array_annotate(**params1)
         result = self.signal1.time_slice(None, None)
 
@@ -479,7 +477,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
                              == result.array_annotations['test2']))
 
         # Change annotations of result
-        params3 = {'test0': ['z{}'.format(i) for i in range(1, result.shape[-1]+1)]}
+        params3 = {'test0': ['z{}'.format(i) for i in range(1, result.shape[-1] + 1)]}
         result.array_annotate(**params3)
         result.array_annotations['test1'][0] = 'shallow2'
         self.assertFalse(all(self.signal1.array_annotations['test0']
@@ -493,12 +491,12 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         result = self.signal1.time_slice(None, None)
 
         # Change values of original array
-        self.signal1[2] = 7.3*self.signal1.units
+        self.signal1[2] = 7.3 * self.signal1.units
 
         self.assertFalse(all(self.signal1 == result))
 
         # Change values of sliced array
-        result[3] = 9.5*result.units
+        result[3] = 9.5 * result.units
 
         self.assertFalse(all(self.signal1 == result))
 
@@ -944,6 +942,73 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         assert_arrays_equal(merged12.magnitude, target_data12)
 
         self.assertRaises(MergeError, signal1.merge, signal3)
+
+    def test_concatenate_simple(self):
+        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s,
+                                           times=[1, 10, 11, 14] * pq.s)
+        signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=[15, 16, 21] * pq.s)
+
+        result = signal1.concatenate(signal2)
+        assert_array_equal(np.array([0, 1, 2, 3, 4, 5, 6]).reshape((-1, 1)), result.magnitude)
+        assert_array_equal(np.array([1, 10, 11, 14, 15, 16, 21]), result.times)
+        for attr in signal1._necessary_attrs:
+            if attr[0] == 'times':
+                continue
+            self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
+
+    def test_concatenate_no_overlap(self):
+        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=range(4) * pq.s)
+        signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=range(4, 7) * pq.s)
+
+        for allow_overlap in [True, False]:
+            result = signal1.concatenate(signal2, allow_overlap=allow_overlap)
+            assert_array_equal(np.arange(7).reshape((-1, 1)), result.magnitude)
+            assert_array_equal(np.arange(7), result.times)
+
+    def test_concatenate_overlap_exception(self):
+        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=range(4) * pq.s)
+        signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=range(2, 5) * pq.s)
+
+        self.assertRaises(ValueError, signal1.concatenate, signal2, allow_overlap=False)
+
+    def test_concatenate_overlap(self):
+        signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=range(4) * pq.s)
+        signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=range(2, 5) * pq.s)
+
+        result = signal1.concatenate(signal2, allow_overlap=True)
+        assert_array_equal(np.array([0, 1, 2, 4, 3, 5, 6]).reshape((-1, 1)), result.magnitude)
+        assert_array_equal(np.array([0, 1, 2, 2, 3, 3, 4]), result.times)
+
+    def test_concatenate_multi_trace(self):
+        data1 = np.arange(4).reshape(2, 2)
+        data2 = np.arange(4, 8).reshape(2, 2)
+        n1 = len(data1)
+        n2 = len(data2)
+        signal1 = IrregularlySampledSignal(signal=data1 * pq.s, times=range(n1) * pq.s)
+        signal2 = IrregularlySampledSignal(signal=data2 * pq.s, times=range(n1, n1 + n2) * pq.s)
+
+        result = signal1.concatenate(signal2)
+        data_expected = np.array([[0, 1], [2, 3], [4, 5], [6, 7]])
+        assert_array_equal(data_expected, result.magnitude)
+
+    def test_concatenate_array_annotations(self):
+        array_anno1 = {'first': ['a', 'b']}
+        array_anno2 = {'first': ['a', 'b'],
+                       'second': ['c', 'd']}
+        data1 = np.arange(4).reshape(2, 2)
+        data2 = np.arange(4, 8).reshape(2, 2)
+        n1 = len(data1)
+        n2 = len(data2)
+        signal1 = IrregularlySampledSignal(signal=data1 * pq.s, times=range(n1) * pq.s,
+                                           array_annotations=array_anno1)
+        signal2 = IrregularlySampledSignal(signal=data2 * pq.s, times=range(n1, n1 + n2) * pq.s,
+                                           array_annotations=array_anno2)
+
+        result = signal1.concatenate(signal2)
+        assert_array_equal(array_anno1.keys(), result.array_annotations.keys())
+
+        for k in array_anno1.keys():
+            assert_array_equal(np.asarray(array_anno1[k]), result.array_annotations[k])
 
 
 class TestAnalogSignalFunctions(unittest.TestCase):
