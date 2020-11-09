@@ -513,37 +513,16 @@ class NeuralynxRawIO(BaseRawIO):
 
             if chan_uid == chan_uid0:
                 data = data0
-                hdr = hdr0
-                nb = nb0
             else:
                 data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
                                  offset=NlxHeader.HEADER_SIZE)
-                hdr = NlxHeader.build_for_file(ncs_filename)
-                nb = NcsBlocksFactory.buildForNcsFile(data, hdr)
+                if not NcsBlocksFactory._verifyBlockStructure(data, nb0):
+                    raise IOError('ncs files have different block structures')
 
-                # Check that record block structure of each file is identical to the first.
-                if len(nb.startBlocks) != len(nb0.startBlocks) or len(nb.endBlocks) != \
-                        len(nb0.endBlocks):
-                    raise IOError('ncs files have different numbers of blocks of records')
+            # create a memmap for each record block of the current file
+            for seg_index in range(len(nb0.startBlocks)):
 
-                for i, sbi in enumerate(nb.startBlocks):
-                    if sbi != nb0.startBlocks[i]:
-                        raise IOError('ncs files have different start block structure')
-
-                for i, ebi in enumerate(nb.endBlocks):
-                    if ebi != nb0.endBlocks[i]:
-                        raise IOError('ncs files have different end block structure')
-
-            # create a memmap for each record block
-            for seg_index in range(len(nb.startBlocks)):
-
-                if (data[nb.startBlocks[seg_index]]['timestamp'] !=
-                        data0[nb0.startBlocks[seg_index]]['timestamp'] or
-                        data[nb.endBlocks[seg_index]]['timestamp'] !=
-                        data0[nb0.endBlocks[seg_index]]['timestamp']):
-                    raise IOError('ncs files have different timestamp structure')
-
-                subdata = data[nb.startBlocks[seg_index]:(nb.endBlocks[seg_index] + 1)]
+                subdata = data[nb0.startBlocks[seg_index]:(nb0.endBlocks[seg_index] + 1)]
                 self._sigs_memmap[seg_index][chan_uid] = subdata
 
                 if chan_uid == chan_uid0:
