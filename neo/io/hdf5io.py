@@ -7,6 +7,7 @@
 import logging
 from distutils.version import LooseVersion
 import pickle
+from warnings import warn
 import numpy as np
 import quantities as pq
 
@@ -54,6 +55,12 @@ class NeoHdf5IO(BaseIO):
     is_writable = False
 
     def __init__(self, filename):
+        warning_msg = (
+            "NeoHdf5IO will be removed in the next release of Neo. "
+            "If you still have data in this format, we recommend saving it using NixIO "
+            "which is also based on HDF5."
+        )
+        warn(warning_msg, FutureWarning)
         if not HAVE_H5PY:
             raise ImportError("h5py is not available")
         if HAVE_H5PY:
