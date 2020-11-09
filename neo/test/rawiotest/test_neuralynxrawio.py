@@ -275,7 +275,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
-        hdr0 = NlxHeader.buildForFile(filename)
+        hdr0 = NlxHeader.build_for_file(filename)
         nb0 = NcsBlocksFactory.buildForNcsFile(data0, hdr0)
 
         self.assertTrue(NcsBlocksFactory._verifyBlockStructure(data0,nb0))
@@ -285,7 +285,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
             'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
         data1 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
-        hdr1 = NlxHeader.buildForFile(filename)
+        hdr1 = NlxHeader.build_for_file(filename)
         nb1 = NcsBlocksFactory.buildForNcsFile(data1, hdr1)
 
         self.assertFalse(NcsBlocksFactory._verifyBlockStructure(data1, nb0))
