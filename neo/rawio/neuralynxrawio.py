@@ -670,12 +670,12 @@ class NcsBlocksFactory:
             hdr = CscRecordHeader(ncsMemMap, recn)
             if hdr.channel_id != chanNum | hdr.sample_rate != reqFreq:
                 raise IOError('Channel number or sampling frequency changed in ' +
-                                'records within file')
+                              'records within file')
             predTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
                                                                    startBlockPredTime, blkLen)
             nValidSamps = hdr.nb_valid
             if hdr.timestamp != predTime:
-                ncsBlocks.endBlocks.append(recn-1)
+                ncsBlocks.endBlocks.append(recn - 1)
                 ncsBlocks.startBlocks.append(recn)
                 startBlockPredTime = WholeMicrosTimePositionBlock.calcSampleTime(
                     ncsBlocks.sampFreqUsed,
@@ -696,8 +696,9 @@ class NcsBlocksFactory:
         Requires that frequency in each record agrees with requested frequency. This is
         normally obtained by rounding the header frequency; however, this value may be different
         from the rounded actual frequency used in the recording, since the underlying
-        requirement in older Ncs files was that the rounded number of whole microseconds
-        per sample be the same for all records in a block.
+        requirement in older Ncs files was that the number of microseconds per sample in the
+        records is the inverse of the sampling frequency stated in the header truncated to
+        whole microseconds.
 
         PARAMETERS
         ncsMemMap:
@@ -782,7 +783,7 @@ class NcsBlocksFactory:
             hdr = CscRecordHeader(ncsMemMap, recn)
             if hdr.channel_id != chanNum or hdr.sample_rate != recFreq:
                 raise IOError('Channel number or sampling frequency changed in ' +
-                                'records within file')
+                              'records within file')
             predTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
                                                                    lastRecTime, lastRecNumSamps)
             if abs(hdr.timestamp - predTime) > maxGapLen:
@@ -791,7 +792,7 @@ class NcsBlocksFactory:
                 if blkLen > maxBlkLen:
                     maxBlkLen = blkLen
                     maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
-                                          (lastRecTime - startBlockTime)
+                                         (lastRecTime - startBlockTime)
                 startBlockTime = hdr.timestamp
                 blkLen = hdr.nb_valid
             else:
@@ -872,7 +873,8 @@ class NcsBlocksFactory:
         """
         acqType = nlxHdr.type_of_recording()
 
-        # old Neuralynx style with rounded whole microseconds for the samples
+        # Old Neuralynx style with truncated whole microseconds for actual sampling. This
+        # restriction arose from the sampling being based on a master 1 MHz clock.
         if acqType == "PRE4":
             freq = nlxHdr['sampling_rate']
             microsPerSampUsed = math.floor(

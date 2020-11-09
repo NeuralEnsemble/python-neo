@@ -22,7 +22,7 @@ from neo import AnalogSignal
 class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuralynxIO
     files_to_test = [
-        # 'Cheetah_v4.0.2/original_data',
+        'Cheetah_v4.0.2/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
@@ -30,6 +30,8 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v6.3.2/incomplete_blocks']
     files_to_download = [
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
+        'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
+        'Cheetah_v4.0.2/README.txt',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
         'Cheetah_v5.5.1/original_data/Events.nev',
@@ -248,26 +250,26 @@ class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
 
 
 class TestData(CommonNeuralynxIOTest, unittest.TestCase):
-    # def test_ncs(self):
-    #     for session in self.files_to_test[1:2]:  # in the long run this should include all files
-    #         dirname = self.get_filename_path(session)
-    #         nio = NeuralynxIO(dirname=dirname, use_cache=False)
-    #         block = nio.read_block()
+    def test_ncs(self):
+        for session in self.files_to_test[1:2]:  # in the long run this should include all files
+            dirname = self.get_filename_path(session)
+            nio = NeuralynxIO(dirname=dirname, use_cache=False)
+            block = nio.read_block()
 
-    #         for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
-    #             chid = anasig.channel_index.channel_ids[anasig_id]
+            for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
+                chid = anasig.channel_index.channel_ids[anasig_id]
 
-    #             # need to decode, unless keyerror
-    #             chname = anasig.channel_index.channel_names[anasig_id]
-    #             chuid = (chname, chid)
-    #             filename = nio.ncs_filenames[chuid][:-3] + 'txt'
-    #             filename = filename.replace('original_data', 'plain_data')
-    #             plain_data = np.loadtxt(filename)[:, 5:].flatten()  # first columns are meta info
-    #             overlap = 512 * 500
-    #             gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
-    #             np.testing.assert_allclose(plain_data[:overlap],
-    #                                        anasig.magnitude[:overlap, 0] * gain_factor_0,
-    #                                        rtol=0.01)
+                # need to decode, unless keyerror
+                chname = anasig.channel_index.channel_names[anasig_id]
+                chuid = (chname, chid)
+                filename = nio.ncs_filenames[chuid][:-3] + 'txt'
+                filename = filename.replace('original_data', 'plain_data')
+                plain_data = np.loadtxt(filename)[:, 4:].flatten()  # first 4 columns are meta info
+                overlap = 512 * 500
+                gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
+                np.testing.assert_allclose(plain_data[:overlap],
+                                           anasig.magnitude[:overlap, 0] * gain_factor_0,
+                                           rtol=0.01)
 
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
