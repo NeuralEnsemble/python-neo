@@ -17,6 +17,8 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
         'BML/original_data',
+        'BML_unfilledsplit/original_data',
+        'Cheetah_v1.1.0/original_data',
         'Cheetah_v4.0.2/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
@@ -26,6 +28,12 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'BML/original_data/CSC1_trunc.Ncs',
         'BML/plain_data/CSC1_trunc.txt',
         'BML/README.txt',
+        'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs',
+        'BML_unfilledsplit/plain_data/unfilledSplitRecords.txt',
+        'BML_unfilledsplit/README.txt',
+        'Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs',
+        'Cheetah_v1.1.0/README.txt',
+        'Cheetah_v1.1.0/plain_data/CSC67_trunc.txt',
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
         'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
         'Cheetah_v4.0.2/README.txt',
@@ -163,7 +171,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(data0.shape[0], 6690)
         self.assertEqual(data0['timestamp'][6689], 8515800549)  # timestamp of last record
 
-        hdr = NlxHeader.buildForFile(filename)
+        hdr = NlxHeader.build_for_file(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
         self.assertEqual(nb.sampFreqUsed, 32000.012813673042)
         self.assertEqual(nb.microsPerSampUsed, 31.249987486652431)
@@ -192,7 +200,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         # Test early files where the frequency listed in the header is
         # floor(1e6/(actual number of microseconds between samples)
         filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
-        hdr = NlxHeader.buildForFile(filename)
+        hdr = NlxHeader.build_for_file(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
@@ -207,7 +215,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         # test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap
         filename = self.get_filename_path('Cheetah_v5.5.1/original_data/Tet3a.ncs')
-        hdr = NlxHeader.buildForFile(filename)
+        hdr = NlxHeader.build_for_file(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
@@ -219,6 +227,71 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(len(nb.endBlocks), 2)
         self.assertEqual(nb.endBlocks[0], 2497)
         self.assertEqual(nb.endBlocks[1], 3331)
+
+    def testBlockStartAndEndTimes(self):
+        # digitallynxsx version to exercise the _parseForMaxGap function with multiple blocks
+        filename = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr = NlxHeader.build_for_file(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertListEqual(nb.startTimes, [8408806811, 8427832053, 8487768561])
+        self.assertListEqual(nb.endTimes, [8427831990, 8487768498, 8515816549])
+
+        # digitallynxsx with single block of records to exercise path in _buildForMaxGap
+        filename = self.get_filename_path('Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr = NlxHeader.build_for_file(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(len(nb.startBlocks), 1)
+        self.assertEqual(nb.startTimes[0], 253293161778)
+        self.assertEqual(nb.endTimes[0], 253293349278)
+
+        # PRE4 version with single block of records to exercise path in _buildGivenActualFrequency
+        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr = NlxHeader.build_for_file(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(len(nb.startBlocks), 1)
+        self.assertEqual(nb.startTimes[0], 266982936)
+        self.assertEqual(nb.endTimes[0], 267162136)
+
+        # BML style with two blocks of records and one partially filled record to exercise
+        # _parseGivenActualFrequency
+        filename = self.get_filename_path(
+            'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr = NlxHeader.build_for_file(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(len(nb.startBlocks), 2)
+        self.assertListEqual(nb.startTimes, [1837623129, 6132625241])
+        self.assertListEqual(nb.endTimes, [1837651009, 6132642649])
+
+    def testBlockVerify(self):
+        # check that file verifies against itself for single block
+        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr0 = NlxHeader.build_for_file(filename)
+        nb0 = NcsBlocksFactory.buildForNcsFile(data0, hdr0)
+
+        self.assertTrue(NcsBlocksFactory._verifyBlockStructure(data0,nb0))
+
+        # check that fails against file with two blocks
+        filename = self.get_filename_path(
+            'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
+        data1 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr1 = NlxHeader.build_for_file(filename)
+        nb1 = NcsBlocksFactory.buildForNcsFile(data1, hdr1)
+
+        self.assertFalse(NcsBlocksFactory._verifyBlockStructure(data1, nb0))
+
+        # check that two blocks verify against self
+        self.assertTrue(NcsBlocksFactory._verifyBlockStructure(data1, nb1))
 
 
 class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):

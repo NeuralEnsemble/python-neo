@@ -518,37 +518,16 @@ class NeuralynxRawIO(BaseRawIO):
 
             if chan_uid == chan_uid0:
                 data = data0
-                hdr = hdr0
-                nb = nb0
             else:
                 data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
                                  offset=NlxHeader.HEADER_SIZE)
-                hdr = NlxHeader.build_for_file(ncs_filename)
-                nb = NcsBlocksFactory.buildForNcsFile(data, hdr)
+                if not NcsBlocksFactory._verifyBlockStructure(data, nb0):
+                    raise IOError('ncs files have different block structures')
 
-                # Check that record block structure of each file is identical to the first.
-                if len(nb.startBlocks) != len(nb0.startBlocks) or len(nb.endBlocks) != \
-                        len(nb0.endBlocks):
-                    raise IOError('ncs files have different numbers of blocks of records')
+            # create a memmap for each record block of the current file
+            for seg_index in range(len(nb0.startBlocks)):
 
-                for i, sbi in enumerate(nb.startBlocks):
-                    if sbi != nb0.startBlocks[i]:
-                        raise IOError('ncs files have different start block structure')
-
-                for i, ebi in enumerate(nb.endBlocks):
-                    if ebi != nb0.endBlocks[i]:
-                        raise IOError('ncs files have different end block structure')
-
-            # create a memmap for each record block
-            for seg_index in range(len(nb.startBlocks)):
-
-                if (data[nb.startBlocks[seg_index]]['timestamp'] !=
-                        data0[nb0.startBlocks[seg_index]]['timestamp'] or
-                        data[nb.endBlocks[seg_index]]['timestamp'] !=
-                        data0[nb0.endBlocks[seg_index]]['timestamp']):
-                    raise IOError('ncs files have different timestamp structure')
-
-                subdata = data[nb.startBlocks[seg_index]:(nb.endBlocks[seg_index] + 1)]
+                subdata = data[nb0.startBlocks[seg_index]:(nb0.endBlocks[seg_index] + 1)]
                 self._sigs_memmap[seg_index][chan_uid] = subdata
 
                 if chan_uid == chan_uid0:
@@ -626,7 +605,9 @@ class NcsBlocks:
 
     def __init__(self):
         self.startBlocks = []  # index of starting record for each block
+        self.startTimes = []  # starttime of first record for each block
         self.endBlocks = []  # index of last record (inclusive) for each block
+        self.endTimes = []  # endtime of last record for each block
         self.sampFreqUsed = 0  # actual sampling frequency of samples
         self.microsPerSampUsed = 0  # microseconds per sample
 
@@ -653,13 +634,14 @@ class NcsBlocksFactory:
         ncsMemMap:
             memmap of Ncs file
         ncsBlocks:
-            NcsBlocks with actual sampFreqUsed correct
+            NcsBlocks with actual sampFreqUsed correct, first element of startBlocks and
+            startTimes already added
         chanNum:
             channel number that should be present in all records
         reqFreq:
             rounded frequency that all records should contain
         blkOnePredTime:
-            predicted starting time of first block
+            predicted starting time of second record in block
 
         RETURN
         NcsBlocks object with block locations marked
@@ -676,15 +658,22 @@ class NcsBlocksFactory:
             nValidSamps = hdr.nb_valid
             if hdr.timestamp != predTime:
                 ncsBlocks.endBlocks.append(recn - 1)
+                ncsBlocks.endTimes.append(predTime)
                 ncsBlocks.startBlocks.append(recn)
+                ncsBlocks.startTimes.append(hdr.timestamp)
                 startBlockPredTime = WholeMicrosTimePositionBlock.calcSampleTime(
                     ncsBlocks.sampFreqUsed,
                     hdr.timestamp,
                     nValidSamps)
-                blklen = 0
+                blkLen = 0
             else:
                 blkLen += nValidSamps
+
         ncsBlocks.endBlocks.append(ncsMemMap.shape[0] - 1)
+        endTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
+                                                              startBlockPredTime,
+                                                              blkLen)
+        ncsBlocks.endTimes.append(endTime)
 
         return ncsBlocks
 
@@ -730,7 +719,12 @@ class NcsBlocksFactory:
         if rhl.channel_id == chanNum and rhl.sample_rate == reqFreq and \
                 rhl.timestamp == predLastBlockStartTime:
             nb.startBlocks.append(0)
+            nb.startTimes.append(rh0.timestamp)
             nb.endBlocks.append(lastBlkI)
+            lastBlkEndTime = WholeMicrosTimePositionBlock.calcSampleTime(actualSampFreq,
+                                                                         rhl.timestamp,
+                                                                         rhl.nb_valid)
+            nb.endTimes.append(lastBlkEndTime)
             return nb
 
         # otherwise need to scan looking for breaks
@@ -738,6 +732,8 @@ class NcsBlocksFactory:
             blkOnePredTime = WholeMicrosTimePositionBlock.calcSampleTime(actualSampFreq,
                                                                          rh0.timestamp,
                                                                          rh0.nb_valid)
+            nb.startBlocks.append(0)
+            nb.startTimes.append(rh0.timestamp)
             return NcsBlocksFactory._parseGivenActualFrequency(ncsMemMap, nb, chanNum, reqFreq,
                                                                blkOnePredTime)
 
@@ -778,6 +774,7 @@ class NcsBlocksFactory:
         recFreq = rh0.sample_rate
 
         ncsBlocks.startBlocks.append(0)
+        ncsBlocks.startTimes.append(rh0.timestamp)
         for recn in range(1, ncsMemMap.shape[0]):
             hdr = CscRecordHeader(ncsMemMap, recn)
             if hdr.channel_id != chanNum or hdr.sample_rate != recFreq:
@@ -787,7 +784,9 @@ class NcsBlocksFactory:
                                                                    lastRecTime, lastRecNumSamps)
             if abs(hdr.timestamp - predTime) > maxGapLen:
                 ncsBlocks.endBlocks.append(recn - 1)
+                ncsBlocks.endTimes.append(predTime)
                 ncsBlocks.startBlocks.append(recn)
+                ncsBlocks.startTimes.append(hdr.timestamp)
                 if blkLen > maxBlkLen:
                     maxBlkLen = blkLen
                     maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
@@ -800,6 +799,9 @@ class NcsBlocksFactory:
             lastRecNumSamps = hdr.nb_valid
 
         ncsBlocks.endBlocks.append(ncsMemMap.shape[0] - 1)
+        endTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
+                                                              lastRecTime, lastRecNumSamps)
+        ncsBlocks.endTimes.append(endTime)
 
         ncsBlocks.sampFreqUsed = maxBlkFreqEstimate
         ncsBlocks.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
@@ -843,7 +845,11 @@ class NcsBlocksFactory:
         if abs(rhl.timestamp - predLastBlockStartTime) == 0 and \
                 rhl.channel_id == chanNum and rhl.sample_rate == freqInFile:
             nb.startBlocks.append(0)
+            nb.startTimes.append(rh0.timestamp)
             nb.endBlocks.append(lastBlkI)
+            endTime = WholeMicrosTimePositionBlock.calcSampleTime(nomFreq, rhl.timestamp,
+                                                                  rhl.nb_valid)
+            nb.endTimes.append(endTime)
             nb.sampFreqUsed = numSampsForPred / (rhl.timestamp - rh0.timestamp) * 1e6
             nb.microsPerSampUsed = WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
                                         nb.sampFreqUsed)
@@ -900,6 +906,33 @@ class NcsBlocksFactory:
 
         return nb
 
+    @staticmethod
+    def _verifyBlockStructure(ncsMemMap, ncsBlocks):
+        """
+        Check that the record structure and timestamps for the ncsMemMap and nlxHeader
+        agrees with that in ncsBlocks.
+
+        Provides a more rapid verification of struture than building a new NcsBlocks
+        and checking equality.
+
+        PARAMETERS
+        ncsMemMap:
+            memmap of file to be checked
+        ncsBlocks
+            existing block structure to be checked
+        RETURN:
+            true if all timestamps and block record starts and stops agree, otherwise false.
+        """
+        for blki in range(0,len(ncsBlocks.startBlocks)):
+            stHdr = CscRecordHeader(ncsMemMap, ncsBlocks.startBlocks[blki])
+            if stHdr.timestamp != ncsBlocks.startTimes[blki]: return False
+            endHdr = CscRecordHeader(ncsMemMap, ncsBlocks.endBlocks[blki])
+            endTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
+                                                                  endHdr.timestamp,
+                                                                  endHdr.nb_valid)
+            if endTime != ncsBlocks.endTimes[blki]: return False
+
+        return True
 
 class NlxHeader(OrderedDict):
     """
@@ -969,7 +1002,7 @@ class NlxHeader(OrderedDict):
     # used depends on the application name and its version as well as the
     # -FileVersion property.
     #
-    # There are 3 styles understood by this code and the patterns used for parsing
+    # There are 4 styles understood by this code and the patterns used for parsing
     # the items within each are stored in a dictionary. Each dictionary is then
     # stored in main dictionary keyed by an abbreviation for the style.
     header_pattern_dicts = {
@@ -979,13 +1012,13 @@ class NlxHeader(OrderedDict):
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
             datetimeformat='%m/%d/%y %H:%M:%S.%f'),
-        # Cheetah before version 5 and BML
+        # Cheetah after version 1 and before version 5
         'bv5': dict(
             datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)'
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
             datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
-        # Cheetah version 5 before and including v 5.6.4
+        # Cheetah version 5 before and including v 5.6.4 as well as version 1
         'bv5.6.4': dict(
             datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)'
                             r'  \(h:m:s\.ms\) (?P<time>\S+)',
@@ -1086,11 +1119,16 @@ class NlxHeader(OrderedDict):
             assert len(info['InputRange']) == len(chid_entries), \
                 'Number of channel ids does not match input range values.'
 
-        # Filename and datetime depend on app name, app version, and -FileVersion
+        # Format of datetime depends on app name, app version
+        # :TODO: this works for current examples but is not likely actually related
+        # to app version in this manner.
         an = info['ApplicationName']
         if an == 'Cheetah':
             av = info['ApplicationVersion']
-            if av < '5':
+            mv = av.version[0]
+            if av <= '2':  # version 1 uses same as older versions
+                hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
+            elif av < '5':
                 hpd = NlxHeader.header_pattern_dicts['bv5']
             elif av <= '5.6.4':
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
