@@ -270,6 +270,29 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertListEqual(nb.startTimes, [1837623129, 6132625241])
         self.assertListEqual(nb.endTimes, [1837651009, 6132642649])
 
+    def testBlockVerify(self):
+        # check that file verifies against itself for single block
+        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr0 = NlxHeader.buildForFile(filename)
+        nb0 = NcsBlocksFactory.buildForNcsFile(data0, hdr0)
+
+        self.assertTrue(NcsBlocksFactory._verifyBlockStructure(data0,nb0))
+
+        # check that fails against file with two blocks
+        filename = self.get_filename_path(
+            'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
+        data1 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        hdr1 = NlxHeader.buildForFile(filename)
+        nb1 = NcsBlocksFactory.buildForNcsFile(data1, hdr1)
+
+        self.assertFalse(NcsBlocksFactory._verifyBlockStructure(data1, nb0))
+
+        # check that two blocks verify against self
+        self.assertTrue(NcsBlocksFactory._verifyBlockStructure(data1, nb1))
+
 
 class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
     """
