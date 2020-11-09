@@ -923,6 +923,33 @@ class NcsBlocksFactory:
 
         return nb
 
+    @staticmethod
+    def _verifyBlockStructure(ncsMemMap, ncsBlocks):
+        """
+        Check that the record structure and timestamps for the ncsMemMap and nlxHeader
+        agrees with that in ncsBlocks.
+
+        Provides a more rapid verification of struture than building a new NcsBlocks
+        and checking equality.
+
+        PARAMETERS
+        ncsMemMap:
+            memmap of file to be checked
+        ncsBlocks
+            existing block structure to be checked
+        RETURN:
+            true if all timestamps and block record starts and stops agree, otherwise false.
+        """
+        for blki in range(0,len(ncsBlocks.startBlocks)):
+            stHdr = CscRecordHeader(ncsMemMap, ncsBlocks.startBlocks[blki])
+            if stHdr.timestamp != ncsBlocks.startTimes[blki]: return False
+            endHdr = CscRecordHeader(ncsMemMap, ncsBlocks.endBlocks[blki])
+            endTime = WholeMicrosTimePositionBlock.calcSampleTime(ncsBlocks.sampFreqUsed,
+                                                                  endHdr.timestamp,
+                                                                  endHdr.nb_valid)
+            if endTime != ncsBlocks.endTimes[blki]: return False
+
+        return True
 
 class NlxHeader(OrderedDict):
     """
