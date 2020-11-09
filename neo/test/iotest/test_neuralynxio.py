@@ -288,28 +288,28 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
             return [item for sublist in res for item in sublist]
 
-    def test_ncs(self):
-        for session in self.files_to_test:
-            dirname = self.get_filename_path(session)
-            nio = NeuralynxIO(dirname=dirname, use_cache=False)
-            block = nio.read_block()
+    # def test_ncs(self):
+        # for session in self.files_to_test:
+        #     dirname = self.get_filename_path(session)
+        #     nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        #     block = nio.read_block()
 
             # check that data agrees in first segment only
-            for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
-                chid = anasig.channel_index.channel_ids[anasig_id]
-
-                # need to decode, unless keyerror
-                chname = anasig.channel_index.channel_names[anasig_id]
-                chuid = (chname, chid)
-                filename = nio.ncs_filenames[chuid][:-3] + 'txt'
-                filename = filename.replace('original_data', 'plain_data')
-                overlap = 512 * 500
-                plain_data = self._load_plaindata(filename, overlap)
-                gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
-                numToTest = min(len(plain_data), len(anasig.magnitude[:, 0]))
-                np.testing.assert_allclose(plain_data[:numToTest],
-                                           anasig.magnitude[:numToTest, 0] * gain_factor_0,
-                                           rtol=0.01, err_msg=" for file " + filename)
+            # for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
+            #     chid = anasig.channel_index.channel_ids[anasig_id]
+            #
+            #     # need to decode, unless keyerror
+            #     chname = anasig.channel_index.channel_names[anasig_id]
+            #     chuid = (chname, chid)
+            #     filename = nio.ncs_filenames[chuid][:-3] + 'txt'
+            #     filename = filename.replace('original_data', 'plain_data')
+            #     overlap = 512 * 500
+            #     plain_data = self._load_plaindata(filename, overlap)
+            #     gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
+            #     numToTest = min(len(plain_data), len(anasig.magnitude[:, 0]))
+            #     np.testing.assert_allclose(plain_data[:numToTest],
+            #                                anasig.magnitude[:numToTest, 0] * gain_factor_0,
+            #                                rtol=0.01, err_msg=" for file " + filename)
 
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
