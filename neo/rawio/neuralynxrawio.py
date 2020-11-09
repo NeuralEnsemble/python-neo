@@ -892,7 +892,7 @@ class NcsBlocksFactory:
             string specifying type of data acquisition used, one of types returned by
             NlxHeader.typeOfRecording()
         """
-        acqType = nlxHdr.typeOfRecording()
+        acqType = nlxHdr.type_of_recording()
 
         # Old Neuralynx style with truncated whole microseconds for actual sampling. This
         # restriction arose from the sampling being based on a master 1 MHz clock.
