@@ -62,7 +62,7 @@ To cite Neo in publications, see CITATION.txt
 Funding
 -------
 
-Development of PyNN has been partially funded by the European Union Sixth Framework Program (FP6) under
+Development of Neo has been partially funded by the European Union Sixth Framework Program (FP6) under
 grant agreement FETPI-015879 (FACETS), by the European Union Seventh Framework Program (FP7/2007­-2013)
 under grant agreements no. 269921 (BrainScaleS) and no. 604102 (HBP),
 and by the European Union’s Horizon 2020 Framework Programme for
