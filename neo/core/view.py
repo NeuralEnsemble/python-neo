@@ -14,7 +14,7 @@ from .dataobject import ArrayDict
 class ChannelView(BaseNeo):
     """
     A tool for indexing a subset of the channels within an :class:`AnalogSignal`
-    or :class:`IrregularlySampledSignal`\\s;
+    or :class:`IrregularlySampledSignal`;
 
     *Required attributes/properties*:
         :obj: (AnalogSignal or IrregularlySampledSignal) The signal being indexed.
