@@ -499,7 +499,7 @@ class NeuralynxRawIO(BaseRawIO):
         # construct proper gap ranges free of lost samples artifacts
         minimal_segment_length = 1  # in blocks
 
-        self._nb_segment = len(nb0.startBlocks)
+        self._nb_segment = len(nb0.blocks)
         self._sigs_memmap = [{} for seg_index in range(self._nb_segment)]
         self._sigs_t_start = []
         self._sigs_t_stop = []
@@ -523,9 +523,9 @@ class NeuralynxRawIO(BaseRawIO):
                     raise IOError('ncs files have different block structures')
 
             # create a memmap for each record block of the current file
-            for seg_index in range(len(nb0.startBlocks)):
+            for seg_index in range(len(nb0.blocks)):
 
-                subdata = data[nb0.startBlocks[seg_index]:(nb0.endBlocks[seg_index] + 1)]
+                subdata = data[nb0.blocks[seg_index].startBlock:(nb0.blocks[seg_index].endBlock + 1)]
                 self._sigs_memmap[seg_index][chan_uid] = subdata
 
                 if chan_uid == chan_uid0:
@@ -640,7 +640,8 @@ class NcsBlock:
 class NcsBlocks:
     """
     Contains information regarding the contiguous blocks of records in an Ncs file.
-    Methods of NcsBlocksFactory perform parsing of this information from an Ncs file.
+    Methods of NcsBlocksFactory perform parsing of this information from an Ncs file and
+    produce these where the blocks are discontiguous in time and in temporal order. 
     """
     def __init__(self):
         self.blocks = []
