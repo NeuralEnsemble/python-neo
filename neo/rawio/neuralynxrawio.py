@@ -595,17 +595,55 @@ class CscRecordHeader:
         self.nb_valid = ncsMemMap['nb_valid'][recn]
 
 
+class NcsBlock:
+    """
+    Information regarding a single contiguous block of records in an Ncs file.
+
+    Model is that times are closed on the left and open on the right. Record
+    numbers are closed on both left and right, that is, inclusive of the last record.
+
+    endTime should never be set less than startTime for comparison functions to work
+    properly, though this is not enforced.
+    """
+
+    def __init__(self):
+        self.startBlock = -1  # index of starting record
+        self.startTime = -1  # starttime of first record
+        self.endBlock = -1  # index of last record (inclusive)
+        self.endTime = -1  # end time of last record, that is, the end time of the last
+                           # sampling period contained in the record
+
+    def __init__(self, sb, st, eb, et):
+        self.startBlock = sb
+        self.startTime = st
+        self.endBlock = eb
+        self.endTime = et
+
+    def before_time(self, rhb):
+        """
+        Determine if this block is completely before another block in time.
+        """
+        return self.endTime < rhb.startTime
+
+    def overlaps_time(self, rhb):
+        """
+        Determine if this block overlaps another in time.
+        """
+        return self.startTime <= rhb.endTime and self.endTime >= rhb.startTime
+
+    def after_time(self, rhb):
+        """
+        Determine if this block is completely after another block in time.
+        """
+        return self.startTime >= rhb.endTime
+
 class NcsBlocks:
     """
     Contains information regarding the contiguous blocks of records in an Ncs file.
     Methods of NcsBlocksFactory perform parsing of this information from an Ncs file.
     """
-
     def __init__(self):
-        self.startBlocks = []  # index of starting record for each block
-        self.startTimes = []  # starttime of first record for each block
-        self.endBlocks = []  # index of last record (inclusive) for each block
-        self.endTimes = []  # endtime of last record for each block
+        self.blocks = []
         self.sampFreqUsed = 0  # actual sampling frequency of samples
         self.microsPerSampUsed = 0  # microseconds per sample
 
