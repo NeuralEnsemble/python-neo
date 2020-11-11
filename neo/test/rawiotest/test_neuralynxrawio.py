@@ -175,8 +175,8 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
         self.assertEqual(nb.sampFreqUsed, 32000.012813673042)
         self.assertEqual(nb.microsPerSampUsed, 31.249987486652431)
-        self.assertListEqual(nb.startBlocks, [0, 1190, 4937])
-        self.assertListEqual(nb.endBlocks, [1189, 4936, 6689])
+        self.assertListEqual([blk.startBlock for blk in nb.blocks], [0, 1190, 4937])
+        self.assertListEqual([blk.endBlock for blk in nb.blocks], [1189, 4936, 6689])
 
     def testBuildGivenActualFrequency(self):
 
@@ -190,10 +190,9 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         ncsBlocks.microsPerSampUsed = 35
         ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed,
                                                                 27789)
-        self.assertEqual(len(ncsBlocks.startBlocks), 1)
-        self.assertEqual(ncsBlocks.startBlocks[0], 0)
-        self.assertEqual(len(ncsBlocks.endBlocks), 1)
-        self.assertEqual(ncsBlocks.endBlocks[0], 9)
+        self.assertEqual(len(ncsBlocks.blocks), 1)
+        self.assertEqual(ncsBlocks.blocks[0].startBlock, 0)
+        self.assertEqual(ncsBlocks.blocks[0].endBlock, 9)
 
     def testBuildUsingHeaderAndScanning(self):
 
@@ -207,10 +206,9 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
 
         self.assertEqual(nb.sampFreqUsed, 1 / 35e-6)
         self.assertEqual(nb.microsPerSampUsed, 35)
-        self.assertEqual(len(nb.startBlocks), 1)
-        self.assertEqual(nb.startBlocks[0], 0)
-        self.assertEqual(len(nb.endBlocks), 1)
-        self.assertEqual(nb.endBlocks[0], 9)
+        self.assertEqual(len(nb.blocks), 1)
+        self.assertEqual(nb.blocks[0].startBlock, 0)
+        self.assertEqual(nb.blocks[0].endBlock, 9)
 
         # test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap
@@ -221,12 +219,9 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
         self.assertEqual(nb.sampFreqUsed, 32000)
         self.assertEqual(nb.microsPerSampUsed, 31.25)
-        self.assertEqual(len(nb.startBlocks), 2)
-        self.assertEqual(nb.startBlocks[0], 0)
-        self.assertEqual(nb.startBlocks[1], 2498)
-        self.assertEqual(len(nb.endBlocks), 2)
-        self.assertEqual(nb.endBlocks[0], 2497)
-        self.assertEqual(nb.endBlocks[1], 3331)
+        self.assertEqual(len(nb.blocks), 2)
+        self.assertListEqual([blk.startBlock for blk in nb.blocks], [0, 2498])
+        self.assertListEqual([blk.endBlock for blk in nb.blocks],[2497, 3331])
 
     def testBlockStartAndEndTimes(self):
         # digitallynxsx version to exercise the _parseForMaxGap function with multiple blocks
@@ -235,8 +230,8 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader.build_for_file(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
-        self.assertListEqual(nb.startTimes, [8408806811, 8427832053, 8487768561])
-        self.assertListEqual(nb.endTimes, [8427831990, 8487768498, 8515816549])
+        self.assertListEqual([blk.startTime for blk in nb.blocks], [8408806811, 8427832053, 8487768561])
+        self.assertListEqual([blk.endTime for blk in nb.blocks], [8427831990, 8487768498, 8515816549])
 
         # digitallynxsx with single block of records to exercise path in _buildForMaxGap
         filename = self.get_filename_path('Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs')
@@ -244,9 +239,9 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader.build_for_file(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
-        self.assertEqual(len(nb.startBlocks), 1)
-        self.assertEqual(nb.startTimes[0], 253293161778)
-        self.assertEqual(nb.endTimes[0], 253293349278)
+        self.assertEqual(len(nb.blocks), 1)
+        self.assertEqual(nb.blocks[0].startTime, 253293161778)
+        self.assertEqual(nb.blocks[0].endTime, 253293349278)
 
         # PRE4 version with single block of records to exercise path in _buildGivenActualFrequency
         filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
@@ -254,9 +249,9 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader.build_for_file(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
-        self.assertEqual(len(nb.startBlocks), 1)
-        self.assertEqual(nb.startTimes[0], 266982936)
-        self.assertEqual(nb.endTimes[0], 267162136)
+        self.assertEqual(len(nb.blocks), 1)
+        self.assertEqual(nb.blocks[0].startTime, 266982936)
+        self.assertEqual(nb.blocks[0].endTime, 267162136)
 
         # BML style with two blocks of records and one partially filled record to exercise
         # _parseGivenActualFrequency
@@ -266,9 +261,9 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader.build_for_file(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
-        self.assertEqual(len(nb.startBlocks), 2)
-        self.assertListEqual(nb.startTimes, [1837623129, 6132625241])
-        self.assertListEqual(nb.endTimes, [1837651009, 6132642649])
+        self.assertEqual(len(nb.blocks), 2)
+        self.assertListEqual([blk.startTime for blk in nb.blocks], [1837623129, 6132625241])
+        self.assertListEqual([blk.endTime for blk in nb.blocks], [1837651009, 6132642649])
 
     def testBlockVerify(self):
         # check that file verifies against itself for single block
