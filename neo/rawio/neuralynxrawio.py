@@ -8,11 +8,9 @@ NEV contains events
 NSE contains spikes and waveforms for mono electrodes
 NTT contains spikes and waveforms for tetrodes
 
-
-NCS can contains gaps that can be detected in irregularity
-in timestamps of data blocks. Each gap leads to one new segment.
-Some NCS files may need to be read entirely to detect those gaps which can be slow.
-
+NCS files can contains gaps that can be detected in irregularity
+in timestamps of data blocks. Each gap leads to one new segment being defined.
+Some NCS files may need to be read entirely to detect those gaps, which can be slow.
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia
 """
@@ -472,12 +470,12 @@ class NeuralynxRawIO(BaseRawIO):
         Given a list of ncs files, read their basic structure and setup the following
         attributes:
 
-            * self._sigs_memmap = [ {} for seg_index in range(self._nb_segment) ]
-            * self._sigs_t_start = []
-            * self._sigs_t_stop = []
-            * self._sigs_length = []
-            * self._nb_segment
-            * self._timestamp_limits
+            * self._sigs_memmap = [ {} for seg_index in range(self._nb_segment) ][chan_uid]
+            * self._sigs_t_start = [seg_index]
+            * self._sigs_t_stop = [seg_index]
+            * self._sigs_length = [seg_index]
+            * self._nb_segment, number of segments defined
+            * self._timestamp_limits, first time of any segment and last time of any segment
 
         Files will be scanned to determine the blocks of records. If file is a single
         block of records, this scan is brief, otherwise it will check each record which may
