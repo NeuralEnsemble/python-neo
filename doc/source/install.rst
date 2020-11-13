@@ -30,14 +30,14 @@ Neo will still install but the IO module that uses them will fail on loading:
    * stfio for StimfitIO
    * pillow for TiffIO
 
-These dependencies can be installed by specifying a comma seperated list on the
+These dependencies can be installed by specifying a comma-separated list with the
 ``pip install`` command::
 
     $ pip install neo[hdf5io,tiffio]
 
 Or when installing a specific version of neo::
 
-    $ pip install neo[hdf5io,tiffio]==0.8.0
+    $ pip install neo[hdf5io,tiffio]==0.9.0
 
 These additional dependencies for IO modules are available::
 

@@ -3,14 +3,22 @@ Grouping and linking data
 *************************
 
 
-... to do
-
-
-
-
 Migrating from ChannelIndex/Unit to ChannelView/Group
-==============================================
+=====================================================
 
+While the basic hierarchical :class:`Block` - :class:`Segment` structure of Neo has remained
+unchanged since the inception of Neo, the structures used to cross-link objects
+(for example to link a signal to the spike trains derived from it) have undergone changes,
+in an effort to find an easily understandable and usable approach.
+
+Below we give some examples of how to migrate from :class:`ChannelIndex` and :class:`Unit`,
+as used in Neo 0.8, to the new classes :class:`Group` and :class:`ChannelView`
+introduced in Neo 0.9.
+Note that Neo 0.9 supports the new and old API in parallel, to facilitate migration.
+IO classes in Neo 0.9 can read :class:`ChannelIndex` and :class:`Unit` objects,
+but do not write them.
+
+:class:`ChannelIndex` and :class:`Unit` will be removed in Neo 0.10.0.
 
 Examples
 --------
