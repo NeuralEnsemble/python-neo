@@ -232,7 +232,7 @@ class NeuralynxRawIO(BaseRawIO):
         # :TODO: current algorithm depends on side-effect of read_ncs_files on
         #   self._sigs_memmap, self._sigs_t_start, self._sigs_t_stop,
         #   self._sigs_length, self._nb_segment, self._timestamp_limits
-        self.read_ncs_files(self.ncs_filenames)
+        self._scan_ncs_files(self.ncs_filenames)
 
         # Determine timestamp limits in nev, nse file by scanning them.
         ts0, ts1 = None, None
@@ -465,7 +465,7 @@ class NeuralynxRawIO(BaseRawIO):
         event_times -= self.global_t_start
         return event_times
 
-    def read_ncs_files(self, ncs_filenames):
+    def _scan_ncs_files(self, ncs_filenames):
         """
         Given a list of ncs files, read their basic structure and setup the following
         attributes:
