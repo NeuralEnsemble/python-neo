@@ -488,18 +488,34 @@ class NeuralynxRawIO(BaseRawIO):
         if len(ncs_filenames) == 0:
             return None
 
-        chan_uid0 = list(ncs_filenames.keys())[0]
-        filename0 = ncs_filenames[chan_uid0]
+        # Build dictionary of chan_uid to associated NcsBlocks, memmap and NlxHeaders. Only
+        # construct new NcsBlocks when it is different from that for the preceding file.
+        chanBlockMap = dict()
+        for chan_uid, ncs_filename in self.ncs_filenames.items():
 
-        # parse the structure of the first file
-        data0 = np.memmap(filename0, dtype=self._ncs_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
-        hdr0 = NlxHeader.build_for_file(filename0)
-        nb0 = NcsBlocksFactory.buildForNcsFile(data0, hdr0)
+            data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
+                             offset=NlxHeader.HEADER_SIZE)
+            nlxHeader = NlxHeader.build_for_file(ncs_filename)
 
-        # construct proper gap ranges free of lost samples artifacts
-        minimal_segment_length = 1  # in blocks
+            if not chanBlockMap or (chanBlockMap and
+                                    not NcsBlocksFactory._verifyBlockStructure(data,
+                                                                               lastNcsBlocks)):
+                lastNcsBlocks = NcsBlocksFactory.buildForNcsFile(data, nlxHeader)
 
-        self._nb_segment = len(nb0.blocks)
+            chanBlockMap[chan_uid] = [lastNcsBlocks, nlxHeader, data]
+
+        # Construct an inverse dictionary from NcsBlocks to list of associated chan_uids
+        revBlockMap = dict()
+        for k, v in chanBlockMap.items():
+            revBlockMap.setdefault(v[0], []).append(k)
+
+        # If there is only one NcsBlocks structure in the set of ncs files, there should only
+        # be one entry. Otherwise this is presently unsupported.
+        if len(revBlockMap) > 1:
+            raise IOError('ncs files have {len(revBlockMap)} different block structures.' +
+                          'Unsupported. ')
+
+        self._nb_segment = len(lastNcsBlocks.blocks)
         self._sigs_memmap = [{} for seg_index in range(self._nb_segment)]
         self._sigs_t_start = []
         self._sigs_t_stop = []
@@ -507,31 +523,23 @@ class NeuralynxRawIO(BaseRawIO):
         self._timestamp_limits = []
 
         # create segment with subdata block/t_start/t_stop/length for each channel
-        for chan_uid, ncs_filename in self.ncs_filenames.items():
-
-            data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
-                              offset=NlxHeader.HEADER_SIZE)
-
-            assert data.size == data0.size, 'ncs files do not have the same data length'
-
-            if chan_uid == chan_uid0:
-                data = data0
-            else:
-                data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
-                                 offset=NlxHeader.HEADER_SIZE)
-                if not NcsBlocksFactory._verifyBlockStructure(data, nb0):
-                    raise IOError('ncs files have different block structures')
+        for i, fileEntry in enumerate(self.ncs_filenames.items()):
+            chan_uid = fileEntry[0]
+            data = chanBlockMap[chan_uid][2]
 
             # create a memmap for each record block of the current file
-            for seg_index in range(len(nb0.blocks)):
+            curBlocks = chanBlockMap[chan_uid][0]
+            for seg_index in range(len(curBlocks.blocks)):
 
-                subdata = data[nb0.blocks[seg_index].startBlock:(nb0.blocks[seg_index].endBlock + 1)]
+                subdata = data[curBlocks.blocks[seg_index].startBlock:(
+                        curBlocks.blocks[seg_index].endBlock + 1)]
                 self._sigs_memmap[seg_index][chan_uid] = subdata
 
-                if chan_uid == chan_uid0:
+                # set overall segment timestamp limits based on only NcsBlocks structure in use
+                if i == 0:
                     numSampsLastBlock = subdata[-1]['nb_valid']
                     ts0 = subdata[0]['timestamp']
-                    ts1 = WholeMicrosTimePositionBlock.calcSampleTime(nb0.sampFreqUsed,
+                    ts1 = WholeMicrosTimePositionBlock.calcSampleTime(curBlocks.sampFreqUsed,
                                                                       subdata[-1]['timestamp'],
                                                                       numSampsLastBlock)
                     self._timestamp_limits.append((ts0, ts1))
@@ -610,8 +618,8 @@ class NcsBlock:
         self.startBlock = -1  # index of starting record
         self.startTime = -1  # starttime of first record
         self.endBlock = -1  # index of last record (inclusive)
-        self.endTime = -1  # end time of last record, that is, the end time of the last
-                           # sampling period contained in the record
+        self.endTime = -1   # end time of last record, that is, the end time of the last
+                            # sampling period contained in the record
 
     def __init__(self, sb, st, eb, et):
         self.startBlock = sb
@@ -637,11 +645,16 @@ class NcsBlock:
         """
         return self.startTime >= rhb.endTime
 
+
 class NcsBlocks:
     """
     Contains information regarding the contiguous blocks of records in an Ncs file.
     Methods of NcsBlocksFactory perform parsing of this information from an Ncs file and
-    produce these where the blocks are discontiguous in time and in temporal order. 
+    produce these where the blocks are discontiguous in time and in temporal order.
+
+    TODO: This class will likely need __eq__, __ne__, and __hash__ to be useful in
+    more sophisticated segment construction algorithms.
+
     """
     def __init__(self):
         self.blocks = []
@@ -658,7 +671,7 @@ class NcsBlocksFactory:
     more complicated. Copied from Java code on Sept 7, 2020.
     """
 
-    _maxGapLength = 5  # maximum gap between predicted and actual block timestamps still
+    _maxGapLength = 5   # maximum gap between predicted and actual block timestamps still
                         # considered within one NcsBlock
 
     @staticmethod
@@ -958,7 +971,7 @@ class NcsBlocksFactory:
         RETURN:
             true if all timestamps and block record starts and stops agree, otherwise false.
         """
-        for blki in range(0,len(ncsBlocks.blocks)):
+        for blki in range(0, len(ncsBlocks.blocks)):
             stHdr = CscRecordHeader(ncsMemMap, ncsBlocks.blocks[blki].startBlock)
             if stHdr.timestamp != ncsBlocks.blocks[blki].startTime: return False
             endHdr = CscRecordHeader(ncsMemMap, ncsBlocks.blocks[blki].endBlock)
@@ -968,6 +981,7 @@ class NcsBlocksFactory:
             if endTime != ncsBlocks.blocks[blki].endTime: return False
 
         return True
+
 
 class NlxHeader(OrderedDict):
     """
