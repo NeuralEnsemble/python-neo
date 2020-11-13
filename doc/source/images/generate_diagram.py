@@ -58,7 +58,7 @@ def calc_coordinates(pos, height):
     return pos[0], y
 
 
-def generate_diagram(filename, rect_pos, rect_width, figsize):
+def generate_diagram(rect_pos, rect_width, figsize):
     rw = rect_width
 
     fig = pyplot.figure(figsize=figsize)
@@ -67,7 +67,7 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
     all_h = {}
     objs = {}
     for name in rect_pos:
-        objs[name] = fake_neo(name)
+        objs[name] = fake_neo(name, cascade=False)
         all_h[name] = get_rect_height(name, objs[name])
 
     # draw connections
@@ -81,6 +81,8 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
 
         for r in range(3):
             for ch_name in relationships[r]:
+                if ch_name not in rect_pos:
+                    continue
                 x1, y1 = calc_coordinates(rect_pos[ch_name], all_h[ch_name])
                 x2, y2 = calc_coordinates(pos, all_h[name])
 
@@ -196,28 +198,35 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
 
     ax.set_xticks([])
     ax.set_yticks([])
-    fig.savefig(filename, dpi=dpi)
+
+    return fig
 
 
 def generate_diagram_simple():
     figsize = (18, 12)
     rw = rect_width = 3.
     bf = blank_fact = 1.2
-    rect_pos = {'Block': (.5 + rw * bf * 0, 4),
+    rect_pos = {
+                #  col 0
+                'Block': (.5 + rw * bf * 0, 4),
+                #  col 1
                 'Segment': (.5 + rw * bf * 1, .5),
+                'Group': (.5 + rw * bf * 1, 7.5),
+                #  col 2
+                'IrregularlySampledSignal': (.5 + rw * bf * 3, 0.5),
+                'AnalogSignal': (.5 + rw * bf * 3, 2.9),
+                'ImageSequence': (.5 + rw * bf * 3, 5.0),
+                'SpikeTrain': (.5 + rw * bf * 3, 7.5),
+                #  col 3
                 'Event': (.5 + rw * bf * 4, 3.0),
                 'Epoch': (.5 + rw * bf * 4, 1.0),
-                'Group': (.5 + rw * bf * 1, 7.5),
-                'ChannelView': (.5 + rw * bf * 2., 9.9),
-                'SpikeTrain': (.5 + rw * bf * 3, 7.5),
-                'IrregularlySampledSignal': (.5 + rw * bf * 3, 0.5),
-                'AnalogSignal': (.5 + rw * bf * 3, 4.9),
+
                 }
     # todo: add ImageSequence, RegionOfInterest
-    generate_diagram('simple_generated_diagram.svg',
-                     rect_pos, rect_width, figsize)
-    generate_diagram('simple_generated_diagram.png',
-                     rect_pos, rect_width, figsize)
+    fig = generate_diagram(rect_pos, rect_width, figsize)
+    fig.savefig('simple_generated_diagram.png', dpi=dpi)
+    fig.savefig('simple_generated_diagram.svg', dpi=dpi)
+
 
 
 if __name__ == '__main__':
