@@ -512,8 +512,8 @@ class NeuralynxRawIO(BaseRawIO):
         # If there is only one NcsBlocks structure in the set of ncs files, there should only
         # be one entry. Otherwise this is presently unsupported.
         if len(revBlockMap) > 1:
-            raise IOError('ncs files have {len(revBlockMap)} different block structures.' +
-                          'Unsupported. ')
+            raise IOError('ncs files have {} different block structures. Unsupported.'.format(
+                len(revBlockMap)))
 
         self._nb_segment = len(lastNcsBlocks.blocks)
         self._sigs_memmap = [{} for seg_index in range(self._nb_segment)]
