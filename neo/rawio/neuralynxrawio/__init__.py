@@ -17,7 +17,7 @@ Author: Julia Sprenger, Carlos Canova, Samuel Garcia
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype,
+from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype,
                         _unit_channel_dtype, _event_channel_dtype)
 
 import numpy as np
