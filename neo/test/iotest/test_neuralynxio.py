@@ -262,13 +262,13 @@ class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
 
 class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
-    def _load_plaindata(self, filename, numSamps):
-        """
+    def load_plaindata(self, filename, numSamps):
+        '''
         Load numSamps samples only from Ncs dump files which contain one row for each record,
         each row containing the timestamp, channel number, whole integer sampling frequency,
         number of samples, followed by that number of samples (which may be different for
         each record).
-        """
+        '''
         res = []
         with open(filename) as f:
             for line in f:
@@ -276,7 +276,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 numSampsThisLine = len(vals) - 4
                 if numSampsThisLine < 0 or numSampsThisLine < vals[3]:
                     raise IOError('plain data file "' + filename + ' improperly formatted')
-                numAvail = min(numSampsThisLine, vals[3])  # only use valid samples
+                numAvail = min(numSampsThisLine,vals[3]) # only use valid samples
                 if numAvail < numSamps - len(res):
                     res.append(vals[4:(4+numAvail)])
                 else:
@@ -287,7 +287,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
             return [item for sublist in res for item in sublist]
 
     def test_ncs(self):
-        for session in self.files_to_test:
+        for session in self.files_to_test: # [1:3]:  # in the long run this should include all files
             dirname = self.get_filename_path(session)
             nio = NeuralynxIO(dirname=dirname, use_cache=False)
             block = nio.read_block()
@@ -302,7 +302,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 filename = nio.ncs_filenames[chuid][:-3] + 'txt'
                 filename = filename.replace('original_data', 'plain_data')
                 overlap = 512 * 500
-                plain_data = self._load_plaindata(filename, overlap)
+                plain_data = self.load_plaindata(filename, overlap)
                 gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
                 numToTest = min(len(plain_data), len(anasig.magnitude[:, 0]))
                 np.testing.assert_allclose(plain_data[:numToTest],
