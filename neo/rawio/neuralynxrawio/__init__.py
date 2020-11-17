@@ -22,7 +22,7 @@ from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype,
 
 import numpy as np
 import os
-from collections import OrderedDict
+from collections import (namedtuple, OrderedDict)
 
 from neo.rawio.neuralynxrawio.NcsBlocks import (NcsBlock, NcsBlocksFactory)
 from neo.rawio.neuralynxrawio.NlxHeader import NlxHeader
@@ -227,10 +227,10 @@ class NeuralynxRawIO(BaseRawIO):
         self._nb_segment = 1
 
         # Read ncs files for gap detection and nb_segment computation.
-        # :TODO: current algorithm depends on side-effect of read_ncs_files on
-        #   self._sigs_memmap, self._sigs_t_start, self._sigs_t_stop,
-        #   self._sigs_length, self._nb_segment, self._timestamp_limits
-        self._scan_ncs_files(self.ncs_filenames)
+        self._ncs_memmaps, ncsSegTimestampLimits = self.scan_ncs_files(self.ncs_filenames)
+        self._ncs_seg_timestamp_limits = ncsSegTimestampLimits
+        if ncsSegTimestampLimits:
+            self._nb_segment = ncsSegTimestampLimits.nb_segment
 
         # Determine timestamp limits in nev, nse file by scanning them.
         ts0, ts1 = None, None
@@ -463,27 +463,20 @@ class NeuralynxRawIO(BaseRawIO):
         event_times -= self.global_t_start
         return event_times
 
-    def _scan_ncs_files(self, ncs_filenames):
+    def scan_ncs_files(self, ncs_filenames):
         """
         Given a list of ncs files, read their basic structure.
 
         PARAMETERS:
-
+        ------
         ncs_filenames - list of ncs filenames to scan.
 
         RETURNS:
-            memmaps
-
-
-            and setup the following
-        attributes:
-
-            * self._sigs_memmap = [ {} for seg_index in range(self._nb_segment) ][chan_uid]
-            * self._sigs_t_start = [seg_index]
-            * self._sigs_t_stop = [seg_index]
-            * self._sigs_length = [seg_index]
-            * self._nb_segment, number of segments defined
-            * self._timestamp_limits, first time of any segment and last time of any segment
+        ------
+        memmaps
+            [ {} for seg_index in range(self._nb_segment) ][chan_uid]
+        seg_time_limits
+            SegmentTimeLimits for blocks in scanned Ncs files
 
         Files will be scanned to determine the blocks of records. If file is a single
         block of records, this scan is brief, otherwise it will check each record which may
@@ -494,7 +487,7 @@ class NeuralynxRawIO(BaseRawIO):
         #    being different in different groups of channels. These groups typically
         #    correspond to the channels collected by a single ADC card.
         if len(ncs_filenames) == 0:
-            return None
+            return None, None
 
         # Build dictionary of chan_uid to associated NcsBlocks, memmap and NlxHeaders. Only
         # construct new NcsBlocks when it is different from that for the preceding file.
@@ -561,6 +554,10 @@ class NeuralynxRawIO(BaseRawIO):
                     length = (subdata.size - 1) * NcsBlock._BLOCK_SIZE + numSampsLastBlock
                     self._sigs_length.append(length)
 
+
+# time limits for set of segments
+SegmentTimeLimits = namedtuple("SegmentTimeLimits", ['nb_segment', 't_start', 't_stop', 'length',
+                                                     'timestamp_limits'])
 
 nev_dtype = [
     ('reserved', '<i2'),
