@@ -495,7 +495,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         # parse the structure of the first file
         data0 = np.memmap(filename0, dtype=self._ncs_dtype, mode='r', offset=NlxHeader.HEADER_SIZE)
-        hdr0 = NlxHeader.buildForFile(filename0)
+        hdr0 = NlxHeader.build_for_file(filename0)
         nb0 = NcsBlocksFactory.buildForNcsFile(data0, hdr0)
 
         # construct proper gap ranges free of lost samples artifacts
@@ -523,7 +523,7 @@ class NeuralynxRawIO(BaseRawIO):
             else:
                 data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
                                  offset=NlxHeader.HEADER_SIZE)
-                hdr = NlxHeader.buildForFile(ncs_filename)
+                hdr = NlxHeader.build_for_file(ncs_filename)
                 nb = NcsBlocksFactory.buildForNcsFile(data, hdr)
 
                 # Check that record block structure of each file is identical to the first.
@@ -870,15 +870,15 @@ class NcsBlocksFactory:
             string specifying type of data acquisition used, one of types returned by
             NlxHeader.typeOfRecording()
         """
-        acqType = nlxHdr.typeOfRecording()
+        acqType = nlxHdr.type_of_recording()
 
         # old Neuralynx style with rounded whole microseconds for the samples
         if acqType == "PRE4":
-            freq = nlxHdr['SamplingFrequency']
+            freq = nlxHdr['sampling_rate']
             microsPerSampUsed = math.floor(
                 WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(freq))
             sampFreqUsed = WholeMicrosTimePositionBlock.getFreqForMicrosPerSamp(microsPerSampUsed)
-            nb = NcsBlocks._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(freq))
+            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(freq))
             nb.sampFreqUsed = sampFreqUsed
             nb.microsPerSampUsed = microsPerSampUsed
 

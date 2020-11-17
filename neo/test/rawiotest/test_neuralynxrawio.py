@@ -115,8 +115,8 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
         for typeTest in self.ncsTypeTestFiles:
 
             filename = self.get_filename_path(typeTest[0])
-            hdr = NlxHeader.buildForFile(filename)
-            self.assertEqual(hdr.typeOfRecording(), typeTest[1])
+            hdr = NlxHeader.build_for_file(filename)
+            self.assertEqual(hdr.type_of_recording(), typeTest[1])
 
 
 class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
@@ -146,7 +146,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         ncsBlocks = NcsBlocks()
-        ncsBlocks.sampFreqUsed = 1 / 35e-6
+        ncsBlocks.sampFreqUsed = 1/(35e-6)
         ncsBlocks.microsPerSampUsed = 35
         ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed,
                                                                 27789)
@@ -176,6 +176,76 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         # with a fairly large gap
         filename = self.get_filename_path('Cheetah_v5.5.1/original_data/Tet3a.ncs')
         hdr = NlxHeader.buildForFile(filename)
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(nb.sampFreqUsed, 32000)
+        self.assertEqual(nb.microsPerSampUsed, 31.25)
+        self.assertEqual(len(nb.startBlocks), 2)
+        self.assertEqual(nb.startBlocks[0], 0)
+        self.assertEqual(nb.startBlocks[1], 2498)
+        self.assertEqual(len(nb.endBlocks), 2)
+        self.assertEqual(nb.endBlocks[0], 2497)
+        self.assertEqual(nb.endBlocks[1], 3331)
+
+
+class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
+    """
+    Test building NcsBlocks for files of different revisions.
+    """
+
+    def test_ncsblocks_partial(self):
+        filename = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        self.assertEqual(data0.shape[0], 6690)
+        self.assertEqual(data0['timestamp'][6689], 8515800549)  # timestamp of last record
+
+        hdr = NlxHeader.build_for_file(filename)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+        self.assertEqual(nb.sampFreqUsed, 32000.012813673042)
+        self.assertEqual(nb.microsPerSampUsed, 31.249987486652431)
+        self.assertListEqual(nb.startBlocks, [0, 1190, 4937])
+        self.assertListEqual(nb.endBlocks, [1189, 4936, 6689])
+
+    def testBuildGivenActualFrequency(self):
+
+        # Test early files where the frequency listed in the header is
+        # floor(1e6/(actual number of microseconds between samples)
+        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        ncsBlocks = NcsBlocks()
+        ncsBlocks.sampFreqUsed = 1 / 35e-6
+        ncsBlocks.microsPerSampUsed = 35
+        ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed,
+                                                                27789)
+        self.assertEqual(len(ncsBlocks.startBlocks), 1)
+        self.assertEqual(ncsBlocks.startBlocks[0], 0)
+        self.assertEqual(len(ncsBlocks.endBlocks), 1)
+        self.assertEqual(ncsBlocks.endBlocks[0], 9)
+
+    def testBuildUsingHeaderAndScanning(self):
+
+        # Test early files where the frequency listed in the header is
+        # floor(1e6/(actual number of microseconds between samples)
+        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        hdr = NlxHeader.build_for_file(filename)
+        data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
+                          offset=NlxHeader.HEADER_SIZE)
+        nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
+
+        self.assertEqual(nb.sampFreqUsed, 1 / 35e-6)
+        self.assertEqual(nb.microsPerSampUsed, 35)
+        self.assertEqual(len(nb.startBlocks), 1)
+        self.assertEqual(nb.startBlocks[0], 0)
+        self.assertEqual(len(nb.endBlocks), 1)
+        self.assertEqual(nb.endBlocks[0], 9)
+
+        # test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
+        # with a fairly large gap
+        filename = self.get_filename_path('Cheetah_v5.5.1/original_data/Tet3a.ncs')
+        hdr = NlxHeader.build_for_file(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
