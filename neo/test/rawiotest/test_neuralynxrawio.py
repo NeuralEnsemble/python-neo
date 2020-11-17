@@ -3,9 +3,8 @@ import unittest
 import numpy as np
 
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
-from neo.rawio.neuralynxrawio import NlxHeader
-from neo.rawio.neuralynxrawio import NcsBlocksFactory
-from neo.rawio.neuralynxrawio import NcsBlocks
+from neo.rawio.neuralynxrawio.NlxHeader import NlxHeader
+from neo.rawio.neuralynxrawio.NcsBlocks import (NcsBlocks, NcsBlocksFactory)
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 import logging
