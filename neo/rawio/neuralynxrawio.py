@@ -110,8 +110,8 @@ class NeuralynxRawIO(BaseRawIO):
                 self._empty_ncs.append(filename)
                 continue
 
-            # All files have more or less the same header structure
-            info = NlxHeader.buildForFile(filename)
+            # All file have more or less the same header structure
+            info = NlxHeader.build_for_file(filename)
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
@@ -230,7 +230,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._timestamp_limits = None
         self._nb_segment = 1
 
-        # Read ncs files for gaps detection and nb_segment computation.
+        # Read ncs files for gap detection and nb_segment computation.
         # :TODO: current algorithm depends on side-effect of read_ncs_files on
         #   self._sigs_memmap, self._sigs_t_start, self._sigs_t_stop,
         #   self._sigs_length, self._nb_segment, self._timestamp_limits
@@ -247,7 +247,7 @@ class NeuralynxRawIO(BaseRawIO):
                     ts0 = ts[0]
                     ts1 = ts[-1]
                 ts0 = min(ts0, ts[0])
-                ts1 = max(ts0, ts[-1])  # :FIXME: possible error, should be ts1
+                ts1 = max(ts1, ts[-1])
 
         # decide on segment and global start and stop times based on files available
         if self._timestamp_limits is None:
@@ -325,7 +325,7 @@ class NeuralynxRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return self._sigs_t_start[seg_index] - self.global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indices):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         """
         Retrieve chunk of analog signal, a chunk being a set of contiguous samples.
 
@@ -339,7 +339,7 @@ class NeuralynxRawIO(BaseRawIO):
             sample index of first sample within segment to retrieve
         i_stop:
             sample index of last sample within segment to retrieve
-        channel_indices:
+        channel_indexes:
             list of channel indices to return data for
 
         RETURNS
@@ -356,11 +356,11 @@ class NeuralynxRawIO(BaseRawIO):
         sl0 = i_start % 512
         sl1 = sl0 + (i_stop - i_start)
 
-        if channel_indices is None:
-            channel_indices = slice(None)
+        if channel_indexes is None:
+            channel_indexes = slice(None)
 
-        channel_ids = self.header['signal_channels'][channel_indices]['id']
-        channel_names = self.header['signal_channels'][channel_indices]['name']
+        channel_ids = self.header['signal_channels'][channel_indexes]['id']
+        channel_names = self.header['signal_channels'][channel_indexes]['name']
 
         # create buffer for samples
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
@@ -510,6 +510,11 @@ class NeuralynxRawIO(BaseRawIO):
 
         # create segment with subdata block/t_start/t_stop/length for each channel
         for chan_uid, ncs_filename in self.ncs_filenames.items():
+
+            data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
+                              offset=NlxHeader.HEADER_SIZE)
+
+            assert data.size == data0.size, 'ncs files do not have the same data length'
 
             if chan_uid == chan_uid0:
                 data = data0
@@ -869,12 +874,11 @@ class NcsBlocksFactory:
 
         # old Neuralynx style with rounded whole microseconds for the samples
         if acqType == "PRE4":
-            freq = nlxHdr['sampling_rate']
-            microsPerSampUsed = math.floor(WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(
-                                            freq))
+            freq = nlxHdr['SamplingFrequency']
+            microsPerSampUsed = math.floor(
+                WholeMicrosTimePositionBlock.getMicrosPerSampForFreq(freq))
             sampFreqUsed = WholeMicrosTimePositionBlock.getFreqForMicrosPerSamp(microsPerSampUsed)
-            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed,
-                                                             math.floor(freq))
+            nb = NcsBlocks._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(freq))
             nb.sampFreqUsed = sampFreqUsed
             nb.microsPerSampUsed = microsPerSampUsed
 
@@ -990,7 +994,7 @@ class NlxHeader(OrderedDict):
             datetimeformat='%Y/%m/%d %H:%M:%S')
     }
 
-    def buildForFile(filename):
+    def build_for_file(filename):
         """
         Factory function to build NlxHeader for a given file.
         """
@@ -1103,7 +1107,7 @@ class NlxHeader(OrderedDict):
 
         return info
 
-    def typeOfRecording(self):
+    def type_of_recording(self):
         """
         Determines type of recording in Ncs file with this header.
 
