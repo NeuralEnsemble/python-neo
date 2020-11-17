@@ -185,7 +185,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         ncsBlocks = NcsBlocks()
-        ncsBlocks.sampFreqUsed = 1/(35e-6)
+        ncsBlocks.sampFreqUsed = 1 / (35e-6)
         ncsBlocks.microsPerSampUsed = 35
         ncsBlocks = NcsBlocksFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed,
                                                                 27789)
@@ -220,7 +220,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(nb.microsPerSampUsed, 31.25)
         self.assertEqual(len(nb.blocks), 2)
         self.assertListEqual([blk.startBlock for blk in nb.blocks], [0, 2498])
-        self.assertListEqual([blk.endBlock for blk in nb.blocks],[2497, 3331])
+        self.assertListEqual([blk.endBlock for blk in nb.blocks], [2497, 3331])
 
     def testBlockStartAndEndTimes(self):
         # digitallynxsx version to exercise the _parseForMaxGap function with multiple blocks
@@ -229,8 +229,10 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader.build_for_file(filename)
         nb = NcsBlocksFactory.buildForNcsFile(data0, hdr)
-        self.assertListEqual([blk.startTime for blk in nb.blocks], [8408806811, 8427832053, 8487768561])
-        self.assertListEqual([blk.endTime for blk in nb.blocks], [8427831990, 8487768498, 8515816549])
+        self.assertListEqual([blk.startTime for blk in nb.blocks], [8408806811, 8427832053,
+                                                                    8487768561])
+        self.assertListEqual([blk.endTime for blk in nb.blocks], [8427831990, 8487768498,
+                                                                  8515816549])
 
         # digitallynxsx with single block of records to exercise path in _buildForMaxGap
         filename = self.get_filename_path('Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs')
@@ -272,7 +274,7 @@ class TestNcsBlocksFactory(TestNeuralynxRawIO, unittest.TestCase):
         hdr0 = NlxHeader.build_for_file(filename)
         nb0 = NcsBlocksFactory.buildForNcsFile(data0, hdr0)
 
-        self.assertTrue(NcsBlocksFactory._verifyBlockStructure(data0,nb0))
+        self.assertTrue(NcsBlocksFactory._verifyBlockStructure(data0, nb0))
 
         # check that fails against file with two blocks
         filename = self.get_filename_path(

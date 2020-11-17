@@ -366,7 +366,8 @@ class NcsBlocksFactory:
             freq = nlxHdr['sampling_rate']
             microsPerSampUsed = math.floor(NcsBlocksFactory.getMicrosPerSampForFreq(freq))
             sampFreqUsed = NcsBlocksFactory.getFreqForMicrosPerSamp(microsPerSampUsed)
-            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(freq))
+            nb = NcsBlocksFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed,
+                                                             math.floor(freq))
             nb.sampFreqUsed = sampFreqUsed
             nb.microsPerSampUsed = microsPerSampUsed
 

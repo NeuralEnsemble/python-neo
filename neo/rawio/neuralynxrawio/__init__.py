@@ -24,7 +24,7 @@ import numpy as np
 import os
 from collections import OrderedDict
 
-from neo.rawio.neuralynxrawio.NcsBlocks import (NcsBlock,NcsBlocksFactory)
+from neo.rawio.neuralynxrawio.NcsBlocks import (NcsBlock, NcsBlocksFactory)
 from neo.rawio.neuralynxrawio.NlxHeader import NlxHeader
 
 
@@ -48,7 +48,7 @@ class NeuralynxRawIO(BaseRawIO):
     rawmode = 'one-dir'
 
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
-                  ('nb_valid', 'uint32'), ('samples', 'int16', (NcsBlock._BLOCK_SIZE,))]
+                  ('nb_valid', 'uint32'), ('samples', 'int16', (NcsBlock._BLOCK_SIZE))]
 
     def __init__(self, dirname='', keep_original_times=False, **kargs):
         """
