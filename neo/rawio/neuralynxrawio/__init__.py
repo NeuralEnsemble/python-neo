@@ -24,7 +24,7 @@ import numpy as np
 import os
 from collections import OrderedDict
 
-from neo.rawio.neuralynxrawio.NcsBlocks import (NcsBlock,NcsBlocksFactory)
+from neo.rawio.neuralynxrawio.NcsBlocks import (NcsBlock, NcsBlocksFactory)
 from neo.rawio.neuralynxrawio.NlxHeader import NlxHeader
 
 
