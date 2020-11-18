@@ -348,9 +348,11 @@ class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
 
-        for t, gt in zip(nio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561]):
+        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_start, [8408.806811, 8427.832053,
+                                                                 8487.768561]):
             self.assertEqual(np.round(t, 4), np.round(gt, 4))
-        for t, gt in zip(nio._sigs_t_stop, [8427.831990, 8487.768498, 8515.816549]):
+        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_stop, [8427.831990, 8487.768498,
+                                                                8515.816549]):
             self.assertEqual(np.round(t, 4), np.round(gt, 4))
 
 
