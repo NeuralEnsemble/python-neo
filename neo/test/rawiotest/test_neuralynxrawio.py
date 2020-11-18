@@ -19,6 +19,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'BML_unfilledsplit/original_data',
         'Cheetah_v1.1.0/original_data',
         'Cheetah_v4.0.2/original_data',
+        'Cheetah_v5.4.0/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
@@ -36,6 +37,9 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
         'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
         'Cheetah_v4.0.2/README.txt',
+        'Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs',
+        'Cheetah_v5.4.0/original_data/CheetahLogFile.txt',
+        'Cheetah_v5.4.0/plain_data/CSC5_trunc.txt',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
         'Cheetah_v5.5.1/original_data/Events.nev',
@@ -108,6 +112,17 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(rawio._ncs_seg_timestamp_limits.t_stop[0], 267.162136)
         self.assertEqual(len(rawio._ncs_memmaps), 1)
 
+        # Test Cheetah 5.4.0, which is DigitalLynx with one block of 7 records
+        rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v5.4.0/original_data'))
+        rawio.parse_header()
+        # test values from direct inspection of .ncs file
+        self.assertEqual(rawio._nb_segment, 1)
+        self.assertListEqual(rawio._ncs_seg_timestamp_limits.timestamp_limits,
+                             [(7807911561, 7811434776)]) # end value based on actual sampling freq
+        self.assertEqual(rawio._ncs_seg_timestamp_limits.t_start[0], 7807.911561)
+        self.assertEqual(rawio._ncs_seg_timestamp_limits.t_stop[0], 7811.434776)
+        self.assertEqual(len(rawio._ncs_memmaps), 1)
+
         # Test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap.
         rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v5.5.1/original_data'))
@@ -146,6 +161,7 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
 
     ncsTypeTestFiles = [
         ('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs', 'PRE4'),
+        ('Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs', 'DIGITALLYNX'),
         ('Cheetah_v5.5.1/original_data/STet3a.nse', 'DIGITALLYNXSX'),
         ('Cheetah_v5.5.1/original_data/Tet3a.ncs', 'DIGITALLYNXSX'),
         ('Cheetah_v5.6.3/original_data/CSC1.ncs', 'DIGITALLYNXSX'),
