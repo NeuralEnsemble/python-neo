@@ -91,8 +91,8 @@ class NcsBlocksFactory:
     more complicated. Copied from Java code on Sept 7, 2020.
     """
 
-    _maxGapLength = 5   # maximum gap between predicted and actual block timestamps still
-                        # considered within one NcsBlock
+    _maxGapSampFrac = 0.2  # maximum fraction of a sampling interval between predicted
+                           # and actual block timestamps still considered within one Ncs
 
     @staticmethod
     def getFreqForMicrosPerSamp(micros):
@@ -287,6 +287,11 @@ class NcsBlocksFactory:
             lastRecTime = hdr.timestamp
             lastRecNumSamps = hdr.nb_valid
 
+        if blkLen > maxBlkLen:
+            maxBlkLen = blkLen
+            maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
+                                 (lastRecTime - startBlockTime)
+
         curBlock.endBlock = ncsMemMap.shape[0] - 1
         endTime = NcsBlocksFactory.calcSampleTime(ncsBlocks.sampFreqUsed, lastRecTime,
                                                   lastRecNumSamps)
@@ -341,7 +346,8 @@ class NcsBlocksFactory:
         else:
             nb.sampFreqUsed = nomFreq
             nb.microsPerSampUsed = NcsBlocksFactory.getMicrosPerSampForFreq(nb.sampFreqUsed)
-            nb = NcsBlocksFactory._parseForMaxGap(ncsMemMap, nb, NcsBlocksFactory._maxGapLength)
+            maxGapToAllow = round(NcsBlocksFactory._maxGapSampFrac * 1e6 / nomFreq)
+            nb = NcsBlocksFactory._parseForMaxGap(ncsMemMap, nb, maxGapToAllow)
 
         return nb
 
