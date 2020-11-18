@@ -228,9 +228,13 @@ class NeuralynxRawIO(BaseRawIO):
 
         # Read ncs files for gap detection and nb_segment computation.
         self._ncs_memmaps, ncsSegTimestampLimits = self.scan_ncs_files(self.ncs_filenames)
-        self._ncs_seg_timestamp_limits = ncsSegTimestampLimits
         if ncsSegTimestampLimits:
+            self._ncs_seg_timestamp_limits = ncsSegTimestampLimits # save copy
             self._nb_segment = ncsSegTimestampLimits.nb_segment
+            self._sigs_length = ncsSegTimestampLimits.length.copy()
+            self._timestamp_limits = ncsSegTimestampLimits.timestamp_limits.copy()
+            self._sigs_t_start = ncsSegTimestampLimits.t_start.copy()
+            self._sigs_t_stop = ncsSegTimestampLimits.t_stop.copy()
 
         # Determine timestamp limits in nev, nse file by scanning them.
         ts0, ts1 = None, None
@@ -362,7 +366,7 @@ class NeuralynxRawIO(BaseRawIO):
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
 
         for i, chan_uid in enumerate(zip(channel_names, channel_ids)):
-            data = self._sigs_memmap[seg_index][chan_uid]
+            data = self._ncs_memmaps[seg_index][chan_uid]
             sub = data[block_start:block_stop]
             sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
 
@@ -516,12 +520,10 @@ class NeuralynxRawIO(BaseRawIO):
             raise IOError('ncs files have {} different block structures. Unsupported.'.format(
                 len(revBlockMap)))
 
-        self._nb_segment = len(lastNcsBlocks.blocks)
-        self._sigs_memmap = [{} for seg_index in range(self._nb_segment)]
-        self._sigs_t_start = []
-        self._sigs_t_stop = []
-        self._sigs_length = []
-        self._timestamp_limits = []
+        seg_time_limits = SegmentTimeLimits(nb_segment = len(lastNcsBlocks.blocks),
+                                            t_start = [], t_stop = [], length = [],
+                                            timestamp_limits = [])
+        memmaps = [{} for seg_index in range(seg_time_limits.nb_segment)]
 
         # create segment with subdata block/t_start/t_stop/length for each channel
         for i, fileEntry in enumerate(self.ncs_filenames.items()):
@@ -534,26 +536,27 @@ class NeuralynxRawIO(BaseRawIO):
 
                 subdata = data[curBlocks.blocks[seg_index].startBlock:(
                         curBlocks.blocks[seg_index].endBlock + 1)]
-                self._sigs_memmap[seg_index][chan_uid] = subdata
+                memmaps[seg_index][chan_uid] = subdata
 
-                # set overall segment timestamp limits based on only NcsBlocks structure in use
+                # create segment timestamp limits based on only NcsBlocks structure in use
                 if i == 0:
                     numSampsLastBlock = subdata[-1]['nb_valid']
                     ts0 = subdata[0]['timestamp']
                     ts1 = NcsBlocksFactory.calcSampleTime(curBlocks.sampFreqUsed,
                                                           subdata[-1]['timestamp'],
                                                           numSampsLastBlock)
-                    self._timestamp_limits.append((ts0, ts1))
+                    seg_time_limits.timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
-                    self._sigs_t_start.append(t_start)
+                    seg_time_limits.t_start.append(t_start)
                     t_stop = ts1 / 1e6
-                    self._sigs_t_stop.append(t_stop)
-                    # :TODO: This should really be the total of nb_valid in records, but this
+                    seg_time_limits.t_stop.append(t_stop)
+                    # :NOTE: This should really be the total of nb_valid in records, but this
                     #  allows the last record of a block to be shorter, the most common case.
                     #  Have never seen a block of records with not full records before the last.
                     length = (subdata.size - 1) * NcsBlock._BLOCK_SIZE + numSampsLastBlock
-                    self._sigs_length.append(length)
+                    seg_time_limits.length.append(length)
 
+        return memmaps, seg_time_limits
 
 # time limits for set of segments
 SegmentTimeLimits = namedtuple("SegmentTimeLimits", ['nb_segment', 't_start', 't_stop', 'length',
