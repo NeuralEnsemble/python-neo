@@ -289,7 +289,6 @@ class NcsSectionsFactory:
             lastRecNumSamps = hdr.nb_valid
 
         if blkLen > maxBlkLen:
-            maxBlkLen = blkLen
             maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
                                  (lastRecTime - startBlockTime)
 
