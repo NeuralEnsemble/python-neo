@@ -35,7 +35,7 @@ class NcsBlock:
         self.startTime = -1  # starttime of first record
         self.endBlock = -1  # index of last record (inclusive)
         self.endTime = -1   # end time of last record, that is, the end time of the last
-                            # sampling period contained in the record
+                            # sampling period contained in the last record of the block
 
     def __init__(self, sb, st, eb, et):
         self.startBlock = sb
@@ -397,10 +397,10 @@ class NcsBlocksFactory:
     @staticmethod
     def _verifyBlockStructure(ncsMemMap, ncsBlocks):
         """
-        Check that the record structure and timestamps for the ncsMemMap and nlxHeader
+        Check that the record structure and timestamps for the ncsMemMap
         agrees with that in ncsBlocks.
 
-        Provides a more rapid verification of struture than building a new NcsBlocks
+        Provides a more rapid verification of structure than building a new NcsBlocks
         and checking equality.
 
         PARAMETERS
