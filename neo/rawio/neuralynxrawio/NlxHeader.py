@@ -227,7 +227,7 @@ class NlxHeader(OrderedDict):
         sr = re.search(hpd['datetime1_regex'], txt_header)
         if not sr:
             raise IOError("No matching header open date/time for application {} " +
-                          "version {}. Please contact developers.".format(an,av))
+                          "version {}. Please contact developers.".format(an, av))
         else:
             dt1 = sr.groupdict()
             info['recording_opened'] = datetime.datetime.strptime(
