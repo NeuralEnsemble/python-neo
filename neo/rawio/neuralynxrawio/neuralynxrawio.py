@@ -17,8 +17,8 @@ Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 
-from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype,
-                        _unit_channel_dtype, _event_channel_dtype)
+from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+                                 _event_channel_dtype)
 
 import numpy as np
 import os
@@ -229,7 +229,7 @@ class NeuralynxRawIO(BaseRawIO):
         # Read ncs files for gap detection and nb_segment computation.
         self._ncs_memmaps, ncsSegTimestampLimits = self.scan_ncs_files(self.ncs_filenames)
         if ncsSegTimestampLimits:
-            self._ncs_seg_timestamp_limits = ncsSegTimestampLimits # save copy
+            self._ncs_seg_timestamp_limits = ncsSegTimestampLimits  # save copy
             self._nb_segment = ncsSegTimestampLimits.nb_segment
             self._sigs_length = ncsSegTimestampLimits.length.copy()
             self._timestamp_limits = ncsSegTimestampLimits.timestamp_limits.copy()
@@ -520,9 +520,9 @@ class NeuralynxRawIO(BaseRawIO):
             raise IOError('ncs files have {} different sections structures. Unsupported.'.format(
                 len(revSectMap)))
 
-        seg_time_limits = SegmentTimeLimits(nb_segment = len(lastNcsSections.sects),
-                                            t_start = [], t_stop = [], length = [],
-                                            timestamp_limits = [])
+        seg_time_limits = SegmentTimeLimits(nb_segment=len(lastNcsSections.sects),
+                                            t_start=[], t_stop=[], length=[],
+                                            timestamp_limits=[])
         memmaps = [{} for seg_index in range(seg_time_limits.nb_segment)]
 
         # create segment with subdata block/t_start/t_stop/length for each channel
@@ -558,9 +558,11 @@ class NeuralynxRawIO(BaseRawIO):
 
         return memmaps, seg_time_limits
 
+
 # time limits for set of segments
 SegmentTimeLimits = namedtuple("SegmentTimeLimits", ['nb_segment', 't_start', 't_stop', 'length',
                                                      'timestamp_limits'])
+
 
 nev_dtype = [
     ('reserved', '<i2'),
