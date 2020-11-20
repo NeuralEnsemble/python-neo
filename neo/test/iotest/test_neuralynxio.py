@@ -29,6 +29,7 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
+        'Cheetah_v6.3.2/incomplete_blocks',
         'Pegasus_v2.1.1']
     files_to_download = [
         'BML/original_data/CSC1_trunc.Ncs',
