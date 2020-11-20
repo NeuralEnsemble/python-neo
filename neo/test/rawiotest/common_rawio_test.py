@@ -28,8 +28,7 @@ from neo.test.rawiotest import rawio_compliance as compliance
 
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-# url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
-url_for_tests = "file:///Users/peter/Documents/GinRepositories/ephy_testing_data/" # local copy of repo
+url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
 class BaseTestRawIO:
