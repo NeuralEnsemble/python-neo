@@ -219,7 +219,6 @@ class NlxHeader(OrderedDict):
             info['recording_closed'] = datetime.datetime.strptime(
                 dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
 
-
     def type_of_recording(self):
         """
         Determines type of recording in Ncs file with this header.
