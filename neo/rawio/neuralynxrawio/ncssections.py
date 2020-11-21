@@ -400,17 +400,10 @@ class NcsSectionsFactory:
     @staticmethod
     def _verifySectionsStructure(ncsMemMap, ncsSects):
         """
-<<<<<<< HEAD:neo/rawio/neuralynxrawio/NcsBlocks.py
-        Check that the record structure and timestamps for the ncsMemMap and nlxHeader
-        agrees with that in ncsBlocks.
-
-        Provides a more rapid verification of struture than building a new NcsBlocks
-=======
         Check that the record structure and timestamps for the ncsMemMap
         agrees with that in ncsSects.
 
         Provides a more rapid verification of structure than building a new NcsSections
->>>>>>> 25217993... Changes to address comments by Julia Sprenger:neo/rawio/neuralynxrawio/ncssections.py
         and checking equality.
 
         PARAMETERS
