@@ -311,7 +311,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
             #     np.testing.assert_allclose(plain_data[:numToTest],
             #                                anasig.magnitude[:numToTest, 0] * gain_factor_0,
             #                                rtol=0.01, err_msg=" for file " + filename)
-
+    @unittest.skip
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
             dirname = self.get_filename_path(session)
