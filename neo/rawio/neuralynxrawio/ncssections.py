@@ -126,8 +126,8 @@ class NcsSectionsFactory:
         ncsMemMap:
             memmap of Ncs file
         ncsSections:
-            NcsSections with actual sampFreqUsed correct, first NcsSection with proper startSect and
-            startTime already added.
+            NcsSections with actual sampFreqUsed correct, first NcsSection with proper startSect
+            and startTime already added.
         chanNum:
             channel number that should be present in all records
         reqFreq:
@@ -207,7 +207,8 @@ class NcsSectionsFactory:
         lastBlkI = ncsMemMap.shape[0] - 1
         rhl = CscRecordHeader(ncsMemMap, lastBlkI)
         predLastBlockStartTime = NcsSectionsFactory.calc_sample_time(actualSampFreq, rh0.timestamp,
-                                                                     NcsSection._RECORD_SIZE * lastBlkI)
+                                                                     NcsSection._RECORD_SIZE *
+                                                                     lastBlkI)
         if rhl.channel_id == chanNum and rhl.sample_rate == reqFreq and \
                 rhl.timestamp == predLastBlockStartTime:
             lastBlkEndTime = NcsSectionsFactory.calc_sample_time(actualSampFreq, rhl.timestamp,
@@ -297,7 +298,8 @@ class NcsSectionsFactory:
         curBlock.endTime = endTime
 
         ncsSects.sampFreqUsed = maxBlkFreqEstimate
-        ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(maxBlkFreqEstimate)
+        ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(
+                                                                        maxBlkFreqEstimate)
 
         return ncsSects
 
