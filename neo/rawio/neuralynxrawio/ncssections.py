@@ -35,11 +35,7 @@ class NcsSection:
         self.startTime = -1  # starttime of first record
         self.endRec = -1  # index of last record (inclusive)
         self.endTime = -1   # end time of last record, that is, the end time of the last
-<<<<<<< HEAD:neo/rawio/neuralynxrawio/NcsBlocks.py
-                            # sampling period contained in the record
-=======
                             # sampling period contained in the last record of the section
->>>>>>> 25217993... Changes to address comments by Julia Sprenger:neo/rawio/neuralynxrawio/ncssections.py
 
     def __init__(self, sb, st, eb, et):
         self.startRec = sb
@@ -95,13 +91,8 @@ class NcsSectionsFactory:
     more complicated.
     """
 
-<<<<<<< HEAD:neo/rawio/neuralynxrawio/NcsBlocks.py
-    _maxGapLength = 5   # maximum gap between predicted and actual block timestamps still
-                        # considered within one NcsBlock
-=======
     _maxGapSampFrac = 0.2  # maximum fraction of a sampling interval between predicted
                            # and actual record timestamps still considered within one section
->>>>>>> 25217993... Changes to address comments by Julia Sprenger:neo/rawio/neuralynxrawio/ncssections.py
 
     @staticmethod
     def get_freq_for_micros_per_samp(micros):
@@ -296,11 +287,6 @@ class NcsSectionsFactory:
             lastRecTime = hdr.timestamp
             lastRecNumSamps = hdr.nb_valid
 
-<<<<<<< HEAD:neo/rawio/neuralynxrawio/NcsBlocks.py
-        curBlock.endBlock = ncsMemMap.shape[0] - 1
-        endTime = NcsBlocksFactory.calcSampleTime(ncsBlocks.sampFreqUsed, lastRecTime,
-                                                  lastRecNumSamps)
-=======
         if blkLen > maxBlkLen:
             maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
                                  (lastRecTime - startBlockTime)
@@ -308,7 +294,6 @@ class NcsSectionsFactory:
         curBlock.endRec = ncsMemMap.shape[0] - 1
         endTime = NcsSectionsFactory.calc_sample_time(ncsSects.sampFreqUsed, lastRecTime,
                                                       lastRecNumSamps)
->>>>>>> 25217993... Changes to address comments by Julia Sprenger:neo/rawio/neuralynxrawio/ncssections.py
         curBlock.endTime = endTime
 
         ncsSects.sampFreqUsed = maxBlkFreqEstimate
@@ -359,14 +344,9 @@ class NcsSectionsFactory:
         # otherwise parse records to determine blocks using default maximum gap length
         else:
             nb.sampFreqUsed = nomFreq
-<<<<<<< HEAD:neo/rawio/neuralynxrawio/NcsBlocks.py
-            nb.microsPerSampUsed = NcsBlocksFactory.getMicrosPerSampForFreq(nb.sampFreqUsed)
-            nb = NcsBlocksFactory._parseForMaxGap(ncsMemMap, nb, NcsBlocksFactory._maxGapLength)
-=======
             nb.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(nb.sampFreqUsed)
             maxGapToAllow = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / nomFreq)
             nb = NcsSectionsFactory._parseForMaxGap(ncsMemMap, nb, maxGapToAllow)
->>>>>>> 25217993... Changes to address comments by Julia Sprenger:neo/rawio/neuralynxrawio/ncssections.py
 
         return nb
 

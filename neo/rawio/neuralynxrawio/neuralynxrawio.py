@@ -227,7 +227,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._nb_segment = 1
 
         # Read ncs files for gap detection and nb_segment computation.
-        self._ncs_memmaps, ncsSegTimestampLimits = self.scan_ncs_files(self.ncs_filenames)
+        self._sigs_memmaps, ncsSegTimestampLimits = self.scan_ncs_files(self.ncs_filenames)
         if ncsSegTimestampLimits:
             self._ncs_seg_timestamp_limits = ncsSegTimestampLimits  # save copy
             self._nb_segment = ncsSegTimestampLimits.nb_segment
@@ -366,7 +366,7 @@ class NeuralynxRawIO(BaseRawIO):
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
 
         for i, chan_uid in enumerate(zip(channel_names, channel_ids)):
-            data = self._ncs_memmaps[seg_index][chan_uid]
+            data = self._sigs_memmaps[seg_index][chan_uid]
             sub = data[block_start:block_stop]
             sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
 

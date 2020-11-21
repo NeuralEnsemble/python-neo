@@ -92,7 +92,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(rawio._sigs_length[0], 4608)
         self.assertEqual(rawio._sigs_t_start[0], 0)
         self.assertEqual(rawio._sigs_t_stop[0], 0.192)
-        self.assertEqual(len(rawio._sigs_memmap), 1)
+        self.assertEqual(len(rawio._sigs_memmaps), 1)
 
         # Test Cheetah 4.0.2, which is PRE4 type with frequency in header and
         # no microsPerSamp. Number of microseconds per sample in file is inverse of
@@ -105,7 +105,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(rawio._sigs_length[0], 5120)
         self.assertEqual(rawio._sigs_t_start[0], 266.982936)
         self.assertEqual(rawio._sigs_t_stop[0], 267.162136)
-        self.assertEqual(len(rawio._sigs_memmap), 1)
+        self.assertEqual(len(rawio._sigs_memmaps), 1)
 
         # Test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap.
@@ -118,7 +118,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertListEqual(rawio._sigs_length, [1278976, 427008])
         self.assertListEqual(rawio._sigs_t_stop, [26162.525633, 26379.704633])
         self.assertListEqual(rawio._sigs_t_start, [26122.557633, 26366.360633])
-        self.assertEqual(len(rawio._sigs_memmap), 2)  # check only that there are 2 memmaps
+        self.assertEqual(len(rawio._sigs_memmaps), 2)  # check only that there are 2 memmaps
 
         # Test Cheetah 6.3.2, the incomplete_blocks test. This is a DigitalLynxSX with
         # three blocks of records. Gaps are on the order of 60 microseconds or so.
@@ -132,7 +132,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertListEqual(rawio._sigs_length, [608806, 1917967, 897536])
         self.assertListEqual(rawio._sigs_t_stop, [8427.831990, 8487.768498, 8515.816549])
         self.assertListEqual(rawio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561])
-        self.assertEqual(len(rawio._sigs_memmap), 3)  # check only that there are 3 memmaps
+        self.assertEqual(len(rawio._sigs_memmaps), 3)  # check only that there are 3 memmaps
 
 
 class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
