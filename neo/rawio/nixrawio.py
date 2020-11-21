@@ -50,7 +50,7 @@ class NIXRawIO(BaseRawIO):
         self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
         sig_channels = []
         size_list = []
-        for bl in self.file.sects:
+        for bl in self.file.blocks:
             for seg in bl.groups:
                 for da_idx, da in enumerate(seg.data_arrays):
                     if da.type == "neo.analogsignal":
@@ -80,7 +80,7 @@ class NIXRawIO(BaseRawIO):
         unit_channels = []
         unit_name = ""
         unit_id = ""
-        for bl in self.file.sects:
+        for bl in self.file.blocks:
             for seg in bl.groups:
                 for mt in seg.multi_tags:
                     if mt.type == "neo.spiketrain":
@@ -110,7 +110,7 @@ class NIXRawIO(BaseRawIO):
         event_channels = []
         event_count = 0
         epoch_count = 0
-        for bl in self.file.sects:
+        for bl in self.file.blocks:
             for seg in bl.groups:
                 for mt in seg.multi_tags:
                     if mt.type == "neo.event":
@@ -130,7 +130,7 @@ class NIXRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         self.da_list = {'blocks': []}
-        for block_index, blk in enumerate(self.file.sects):
+        for block_index, blk in enumerate(self.file.blocks):
             d = {'segments': []}
             self.da_list['blocks'].append(d)
             for seg_index, seg in enumerate(blk.groups):
@@ -151,7 +151,7 @@ class NIXRawIO(BaseRawIO):
                 segment['ch_name'] = da_name_list
 
         self.unit_list = {'blocks': []}
-        for block_index, blk in enumerate(self.file.sects):
+        for block_index, blk in enumerate(self.file.blocks):
             d = {'segments': []}
             self.unit_list['blocks'].append(d)
             for seg_index, seg in enumerate(blk.groups):
@@ -181,14 +181,14 @@ class NIXRawIO(BaseRawIO):
                             st_idx += 1
 
         self.header = {}
-        self.header['nb_block'] = len(self.file.sects)
-        self.header['nb_segment'] = [len(bl.groups) for bl in self.file.sects]
+        self.header['nb_block'] = len(self.file.blocks)
+        self.header['nb_segment'] = [len(bl.groups) for bl in self.file.blocks]
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
-        for blk_idx, blk in enumerate(self.file.sects):
+        for blk_idx, blk in enumerate(self.file.blocks):
             bl_ann = self.raw_annotations['blocks'][blk_idx]
             props = blk.metadata.inherited_properties()
             bl_ann.update(self._filter_properties(props, "block"))
@@ -233,14 +233,14 @@ class NIXRawIO(BaseRawIO):
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
-        for mt in self.file.sects[block_index].groups[seg_index].multi_tags:
+        for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
             if mt.type == "neo.spiketrain":
                 t_start = mt.metadata['t_start']
         return t_start
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = 0
-        for mt in self.file.sects[block_index].groups[seg_index].multi_tags:
+        for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
             if mt.type == "neo.spiketrain":
                 t_stop = mt.metadata['t_stop']
         return t_stop
@@ -258,7 +258,7 @@ class NIXRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = list(range(self.header['signal_channels'].size))
         ch_idx = channel_indexes[0]
-        block = self.file.sects[block_index]
+        block = self.file.blocks[block_index]
         das = [da for da in block.groups[seg_index].data_arrays]
         da = das[ch_idx]
         sig_t_start = float(da.metadata['t_start'])
@@ -290,7 +290,7 @@ class NIXRawIO(BaseRawIO):
     def _spike_count(self, block_index, seg_index, unit_index):
         count = 0
         head_id = self.header['unit_channels'][unit_index][1]
-        for mt in self.file.sects[block_index].groups[seg_index].multi_tags:
+        for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
             for src in mt.sources:
                 if mt.type == 'neo.spiketrain' and [src.type == "neo.unit"]:
                     if head_id == src.id:
@@ -338,7 +338,7 @@ class NIXRawIO(BaseRawIO):
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         event_count = 0
-        segment = self.file.sects[block_index].groups[seg_index]
+        segment = self.file.blocks[block_index].groups[seg_index]
         for event in segment.multi_tags:
             if event.type == 'neo.event' or event.type == 'neo.epoch':
                 if event_count == event_channel_index:
@@ -354,7 +354,7 @@ class NIXRawIO(BaseRawIO):
         durations = None
         if event_channel_index is None:
             raise IndexError
-        for mt in self.file.sects[block_index].groups[seg_index].multi_tags:
+        for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
             if mt.type == "neo.event" or mt.type == "neo.epoch":
                 labels.append(mt.positions.dimensions[0].labels)
                 po = mt.positions
@@ -381,7 +381,7 @@ class NIXRawIO(BaseRawIO):
 
     def _rescale_event_timestamp(self, event_timestamps, dtype='float64'):
         ev_unit = ''
-        for mt in self.file.sects[0].groups[0].multi_tags:
+        for mt in self.file.blocks[0].groups[0].multi_tags:
             if mt.type == "neo.event":
                 ev_unit = mt.positions.unit
                 break
@@ -393,7 +393,7 @@ class NIXRawIO(BaseRawIO):
 
     def _rescale_epoch_duration(self, raw_duration, dtype='float64'):
         ep_unit = ''
-        for mt in self.file.sects[0].groups[0].multi_tags:
+        for mt in self.file.blocks[0].groups[0].multi_tags:
             if mt.type == "neo.epoch":
                 ep_unit = mt.positions.unit
                 break
