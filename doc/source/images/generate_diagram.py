@@ -211,12 +211,16 @@ def generate_diagram_simple():
                 'Block': (.5 + rw * bf * 0, 4),
                 #  col 1
                 'Segment': (.5 + rw * bf * 1, .5),
-                'Group': (.5 + rw * bf * 1, 7.5),
-                #  col 2
-                'IrregularlySampledSignal': (.5 + rw * bf * 3, 0.5),
-                'AnalogSignal': (.5 + rw * bf * 3, 2.9),
-                'ImageSequence': (.5 + rw * bf * 3, 5.0),
-                'SpikeTrain': (.5 + rw * bf * 3, 7.5),
+                'Group': (.5 + rw * bf * 1, 6.5),
+                #  col 2 : not do for now too complicated with our object generator
+                # 'ChannelView': (.5 + rw * bf * 2, 5),
+
+                # col 2.5
+                'ImageSequence': (.5 + rw * bf * 2.5, 3.0),
+                'SpikeTrain': (.5 + rw * bf * 2.5, 0.5),
+                #  col 3
+                'IrregularlySampledSignal': (.5 + rw * bf * 3, 9),
+                'AnalogSignal': (.5 + rw * bf * 3, 7.),
                 #  col 3
                 'Event': (.5 + rw * bf * 4, 3.0),
                 'Epoch': (.5 + rw * bf * 4, 1.0),
@@ -226,7 +230,6 @@ def generate_diagram_simple():
     fig = generate_diagram(rect_pos, rect_width, figsize)
     fig.savefig('simple_generated_diagram.png', dpi=dpi)
     fig.savefig('simple_generated_diagram.svg', dpi=dpi)
-
 
 
 if __name__ == '__main__':
