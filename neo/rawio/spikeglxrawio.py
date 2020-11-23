@@ -10,12 +10,12 @@ that share the same sampling rate.
 
 Contrary to other implementations this read the entire folder and subfolder so:
   * It deal with severals segment taken from the naming "_gt0", "_gt1", "_gt2", ...
-  * It deal with all signal "imec0", "imec1" for neuropixel probes and also 
+  * It deal with all signal "imec0", "imec1" for neuropixel probes and also
      external signal like"nidq" This is the "device"
   * For imec device both "ap" and "lf" are extracted so one device have several "stream"
 
 Note:
-  * there are sevral version depending the NP probe generatio 1.0 2.0 3.0 
+  * there are sevral version depending the NP probe generatio 1.0 2.0 3.0
      I am not sure that the meta file is almost the same for all.
      Maybe there some differences, this have to be check.
      This IO have been tested basically wit neuropixel (NP) 2.0 one shank
@@ -79,8 +79,8 @@ class SpikeGLXRawIO(BaseRawIO):
             self.signals_info_dict[key] = info
 
             # create memmap
-            data = np.memmap(info['bin_file'], dtype='int16', mode='r', shape=(info['sample_length'],
-                            info['num_chan']), offset=0, order='C')
+            data = np.memmap(info['bin_file'], dtype='int16', mode='r',
+                        shape=(info['sample_length'], info['num_chan']), offset=0, order='C')
             self._memmaps[key] = data
 
         # create channel header
@@ -101,8 +101,8 @@ class SpikeGLXRawIO(BaseRawIO):
                 self._global_channel_to_stream[global_chan] = info['stream_name']
                 self._global_channel_to_local_channel.append(local_chan)
                 chan_name = info['channel_names'][local_chan]
-                sig_channels.append((chan_name, global_chan, info['sampling_rate'], 'int16', 
-                                    info['units'],  info['channel_gains'][local_chan],
+                sig_channels.append((chan_name, global_chan, info['sampling_rate'], 'int16',
+                                    info['units'], info['channel_gains'][local_chan],
                                     info['channel_offsets'][local_chan], group_id))
 
                 # annotation
@@ -112,7 +112,8 @@ class SpikeGLXRawIO(BaseRawIO):
 
                 # channel location
                 if 'channel_location' in info:
-                    self._channel_location[info['seg_index'], info['device']] = info['channel_location']
+                    self._channel_location[info['seg_index'], info['device']] = \
+                                                                                                    info['channel_location']
 
                 # the channel id is a global counter and so equivalent to channel_index
                 # this is bad : this should be changed by an id base on a str
@@ -186,7 +187,7 @@ class SpikeGLXRawIO(BaseRawIO):
         if np.all(np.diff(local_chans) == 1):
             # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
             # and so keep the underlying memmap
-            local_chans = slice(local_chans[0], local_chans[0]+len(local_chans))
+            local_chans = slice(local_chans[0], local_chans[0] + len(local_chans))
 
         raw_signals = memmap[slice(i_start, i_stop), local_chans]
 
@@ -244,7 +245,7 @@ def scan_files(dirname):
                     index_imroTbl = 3
                 elif signal_kind == 'lf':
                     index_imroTbl = 4
-                for c in range(num_chan-1):
+                for c in range(num_chan - 1):
                     # the last channel don't have gain
                     per_channel_gain[c] = 1. / float(meta['imroTbl'][c].split(' ')[index_imroTbl])
                 gain_factor = float(meta['imAiRangeMax']) / 512
@@ -260,7 +261,7 @@ def scan_files(dirname):
                 mn, ma, xa, dw = [int(e) for e in meta['snsMnMaXaDw'].split(sep=',')]
                 per_channel_gain = np.ones(num_chan, dtype='float64')
                 per_channel_gain[0:mn] = float(meta['niMNGain'])
-                per_channel_gain[mn:mn+ma] = float(meta['niMAGain'])
+                per_channel_gain[mn:mn + ma] = float(meta['niMAGain'])
                 gain_factor = float(meta['niAiRangeMax']) / 32768
                 channel_gains = per_channel_gain * gain_factor
 
