@@ -1,5 +1,9 @@
 """
-This module implement OpenEphys format.
+This module implement the "old" OpenEphys binary flat format.
+
+See
+https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/65667095/Flat+binary+format+old+version
+
 
 Author: Samuel Garcia
 """
@@ -17,13 +21,17 @@ RECORD_SIZE = 1024
 HEADER_SIZE = 1024
 
 
-class OpenEphysRawIO(BaseRawIO):
+class OldOpenEphysRawIO(BaseRawIO):
     """
-    OpenEphys GUI software offers several data formats, see
-    https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/491632/Data+format
-
-    This class implements the legacy OpenEphys format here
-    https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/65667092/Open+Ephys+format
+    This module implement the "old" OpenEphys binary flat format.
+    
+    See
+    https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/65667095/Flat+binary+format+old+version
+    
+    Since 2017 OpenEphys have a  "new" binary flat format which is more efficient.
+    You should use it.
+    
+    This class is kept in neo to be able to read old datasets.
 
     The OpenEphys group already proposes some tools here:
     https://github.com/open-ephys/analysis-tools/blob/master/OpenEphys.py

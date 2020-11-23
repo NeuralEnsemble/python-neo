@@ -1,8 +1,8 @@
 from neo.io.basefromrawio import BaseFromRaw
-from neo.rawio.openephysrawio import OpenEphysRawIO
+from neo.rawio.oldopenephysrawio import OldOpenEphysRawIO
 
 
-class OpenEphysIO(OpenEphysRawIO, BaseFromRaw):
+class OldOpenEphysIO(OldOpenEphysRawIO, BaseFromRaw):
     _prefered_signal_group_mode = 'group-by-same-units'
     mode = 'dir'
 

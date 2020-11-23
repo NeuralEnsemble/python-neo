@@ -1,11 +1,11 @@
 import unittest
 
-from neo.rawio.openephysrawio import OpenEphysRawIO
+from neo.rawio.oldopenephysrawio import OldOpenEphysRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
-class TestOpenEphysRawIO(BaseTestRawIO, unittest.TestCase, ):
-    rawioclass = OpenEphysRawIO
+class TestOldOpenEphysRawIO(BaseTestRawIO, unittest.TestCase, ):
+    rawioclass = OldOpenEphysRawIO
     entities_to_test = ['OpenEphys_SampleData_1',
         # 'OpenEphys_SampleData_2_(multiple_starts)',  # This not implemented this raise error
         # 'OpenEphys_SampleData_3',
