@@ -20,7 +20,8 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.baseneo import (BaseNeo, _check_annotations,
-                              merge_annotations, merge_annotation)
+                              merge_annotations, merge_annotation,
+                              intersect_annotations)
 from neo.test.tools import assert_arrays_equal
 
 
@@ -1264,6 +1265,51 @@ class Test_pprint(unittest.TestCase):
         res = pretty(obj)
         targ = "BaseNeo name: '{}' description: '{}'".format(name, description)
         self.assertEqual(res, targ)
+
+
+class Test_intersect_annotations(unittest.TestCase):
+    '''
+    TestCase for intersect_annotations
+    '''
+
+    def setUp(self):
+        self.dict1 = {1: '1', 2: '2'}
+        self.dict2 = {1: '1'}
+        self.dict3 = {'list1': [1, 2, 3]}
+        self.dict4 = {'list1': [1, 2, 3], 'list2': [1, 2, 3]}
+        self.dict5 = {'list1': [1, 2]}
+        self.dict6 = {'array1': np.array([1, 2])}
+        self.dict7 = {'array1': np.array([1, 2]), 'array2': np.array([1, 2]),
+                      'array3': np.array([1, 2, 3])}
+
+        self.all_simple_dicts = [self.dict1, self.dict2, self.dict3,
+                                 self.dict4, self.dict5, ]
+
+    def test_simple(self):
+        result = intersect_annotations(self.dict1, self.dict2)
+        self.assertDictEqual(self.dict2, result)
+
+    def test_intersect_self(self):
+        for d in self.all_simple_dicts:
+            result = intersect_annotations(d, d)
+            self.assertDictEqual(d, result)
+
+    def test_list(self):
+        result = intersect_annotations(self.dict3, self.dict4)
+        self.assertDictEqual(self.dict3, result)
+
+    def test_list_values(self):
+        result = intersect_annotations(self.dict4, self.dict5)
+        self.assertDictEqual({}, result)
+
+    def test_keys(self):
+        result = intersect_annotations(self.dict1, self.dict4)
+        self.assertDictEqual({}, result)
+
+    def test_arrays(self):
+        result = intersect_annotations(self.dict6, self.dict7)
+        self.assertEqual(self.dict6.keys(), result.keys())
+        np.testing.assert_array_equal([1, 2], result['array1'])
 
 
 if __name__ == "__main__":

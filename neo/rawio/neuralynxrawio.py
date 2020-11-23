@@ -108,7 +108,7 @@ class NeuralynxRawIO(BaseRawIO):
                 continue
 
             # All file have more or less the same header structure
-            info = NlxHeader.buildForFile(filename)
+            info = NlxHeader.build_for_file(filename)
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
@@ -227,7 +227,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._timestamp_limits = None
         self._nb_segment = 1
 
-        # Read ncs files for gaps detection and nb_segment computation.
+        # Read ncs files for gap detection and nb_segment computation.
         # :TODO: current algorithm depends on side-effect of read_ncs_files on
         #   self._sigs_memmap, self._sigs_t_start, self._sigs_t_stop,
         #   self._sigs_length, self._nb_segment, self._timestamp_limits
@@ -661,6 +661,7 @@ class NlxHeader(OrderedDict):
         ('ApplicationName', '', None),  # also include version number when present
         ('AcquisitionSystem', '', None),
         ('ReferenceChannel', '', None),
+        ('NLX_Base_Class_Type', '', None)  # in version 4 and earlier versions of Cheetah
     ]
 
     # Filename and datetime may appear in header lines starting with # at
@@ -694,7 +695,7 @@ class NlxHeader(OrderedDict):
             datetimeformat='%Y/%m/%d %H:%M:%S')
     }
 
-    def buildForFile(filename):
+    def build_for_file(filename):
         """
         Factory function to build NlxHeader for a given file.
         """
@@ -808,6 +809,48 @@ class NlxHeader(OrderedDict):
                 dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
 
         return info
+
+    def type_of_recording(self):
+        """
+        Determines type of recording in Ncs file with this header.
+
+        RETURN:
+            one of 'PRE4','BML','DIGITALLYNX','DIGITALLYNXSX','UNKNOWN'
+        """
+
+        if 'NLX_Base_Class_Type' in self:
+
+            # older style standard neuralynx acquisition with rounded sampling frequency
+            if self['NLX_Base_Class_Type'] == 'CscAcqEnt':
+                return 'PRE4'
+
+            # BML style with fractional frequency and microsPerSamp
+            elif self['NLX_Base_Class_Type'] == 'BmlAcq':
+                return 'BML'
+
+            else:
+                return 'UNKNOWN'
+
+        elif 'HardwareSubSystemType' in self:
+
+            # DigitalLynx
+            if self['HardwareSubSystemType'] == 'DigitalLynx':
+                return 'DIGITALLYNX'
+
+            # DigitalLynxSX
+            elif self['HardwareSubSystemType'] == 'DigitalLynxSX':
+                return 'DIGITALLYNXSX'
+
+        elif 'FileType' in self:
+
+            if self['FileVersion'] in ['3.3', '3.4']:
+                return self['AcquisitionSystem'].split()[1].upper()
+
+            else:
+                return 'UNKNOWN'
+
+        else:
+            return 'UNKNOWN'
 
 
 class NcsHeader():

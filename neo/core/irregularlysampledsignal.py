@@ -31,7 +31,7 @@ else:
 import numpy as np
 import quantities as pq
 
-from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.baseneo import MergeError, merge_annotations, intersect_annotations
 from neo.core.basesignal import BaseSignal
 from neo.core.analogsignal import AnalogSignal
 from neo.core.channelindex import ChannelIndex
@@ -512,5 +512,96 @@ class IrregularlySampledSignal(BaseSignal):
                                                      other.channel_index.channel_names]))
         else:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
+
+        return signal
+
+    def concatenate(self, other, allow_overlap=False):
+        '''
+        Combine this and another signal along the time axis.
+
+        The signal objects are concatenated vertically
+        (row-wise, :func:`np.vstack`). Patching can be
+        used to combine signals across segments.
+        Note: Only array annotations common to
+        both signals are attached to the concatenated signal.
+
+        If the attributes of the two signal are not
+        compatible, an Exception is raised.
+
+        Required attributes of the signal are used.
+
+        Parameters
+        ----------
+        other : neo.BaseSignal
+            The object that is merged into this one.
+        allow_overlap : bool
+            If false, overlapping samples between the two
+            signals are not permitted and an ValueError is raised.
+            If true, no check for overlapping samples is
+            performed and all samples are combined.
+
+        Returns
+        -------
+        signal : neo.IrregularlySampledSignal
+            Signal containing all non-overlapping samples of
+            both source signals.
+
+        Raises
+        ------
+        MergeError
+            If `other` object has incompatible attributes.
+        '''
+
+        for attr in self._necessary_attrs:
+            if not (attr[0] in ['signal', 'times', 't_start', 't_stop', 'times']):
+                if getattr(self, attr[0], None) != getattr(other, attr[0], None):
+                    raise MergeError(
+                        "Cannot concatenate these two signals as the %s differ." % attr[0])
+
+        if hasattr(self, "lazy_shape"):
+            if hasattr(other, "lazy_shape"):
+                if self.lazy_shape[-1] != other.lazy_shape[-1]:
+                    raise MergeError("Cannot concatenate signals as they contain"
+                                     " different numbers of traces.")
+                merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0], self.lazy_shape[-1])
+            else:
+                raise MergeError("Cannot concatenate a lazy object with a real object.")
+        if other.units != self.units:
+            other = other.rescale(self.units)
+
+        new_times = np.hstack((self.times, other.times))
+        sorting = np.argsort(new_times)
+        new_samples = np.vstack((self.magnitude, other.magnitude))
+
+        kwargs = {}
+        for name in ("name", "description", "file_origin"):
+            attr_self = getattr(self, name)
+            attr_other = getattr(other, name)
+            if attr_self == attr_other:
+                kwargs[name] = attr_self
+            else:
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
+        kwargs.update(merged_annotations)
+
+        kwargs['array_annotations'] = intersect_annotations(self.array_annotations,
+                                                            other.array_annotations)
+
+        if not allow_overlap:
+            if max(self.t_start, other.t_start) <= min(self.t_stop, other.t_stop):
+                raise ValueError('Can not combine signals that overlap in time. Allow for '
+                                 'overlapping samples using the "no_overlap" parameter.')
+
+        t_start = min(self.t_start, other.t_start)
+        t_stop = max(self.t_start, other.t_start)
+
+        signal = IrregularlySampledSignal(signal=new_samples[sorting], times=new_times[sorting],
+                                          units=self.units, dtype=self.dtype, copy=False,
+                                          t_start=t_start, t_stop=t_stop, **kwargs)
+        signal.segment = None
+        signal.channel_index = None
+
+        if hasattr(self, "lazy_shape"):
+            signal.lazy_shape = merged_lazy_shape
 
         return signal

@@ -38,7 +38,7 @@ There is a simple hierarchy of containers:
     May contain any of the data objects.
   * :py:class:`Block`: The top-level container gathering all of the data, discrete and continuous,
     for a given recording session.
-    Contains :class:`Segment`, :class:`Unit` and :class:`ChannelIndex` objects.
+    Contains :class:`Segment` and :class:`Group` objects.
 
 
 Grouping/linking objects
@@ -49,22 +49,22 @@ were recorded on which electrodes, which spike trains were obtained from which
 membrane potential signals, etc. They contain references to data objects that
 cut across the simple container hierarchy.
 
-  * :py:class:`ChannelIndex`: A set of indices into :py:class:`AnalogSignal` objects,
-    representing logical and/or physical recording channels. This has two uses:
+  * :py:class:`ChannelView`: A set of indices into :py:class:`AnalogSignal` objects,
+    representing logical and/or physical recording channels.
+    For spike sorting of extracellular signals, where spikes may be recorded on more than one
+    recording channel, the :py:class:`ChannelView` can be used to reference the group of recording channels
+    from which the spikes were obtained.
 
-      1. for linking :py:class:`AnalogSignal` objects recorded from the same (multi)electrode
-         across several :py:class:`Segment`\s.
-      2. for spike sorting of extracellular signals, where spikes may be recorded on more than one
-         recording channel, and the :py:class:`ChannelIndex` can be used to associate each
-         :py:class:`Unit` with the group of recording channels from which it was obtained.
-
-  * :py:class:`Unit`: links the :class:`SpikeTrain` objects within a :class:`Block`,
-    possibly across multiple Segments, that were emitted by the same cell.
-    A :class:`Unit` is linked to the :class:`ChannelIndex` object from which the spikes were detected.
+  * :py:class:`Group`: Can contain any of the data objects, views, or other groups,
+    outside the hierarchy of the segment and block containers.
+    A common use is to link the :class:`SpikeTrain` objects within a :class:`Block`,
+    possibly across multiple Segments, that were emitted by the same neuron.
 
   * :py:class:`CircularRegionOfInterest`, :py:class:`RectangularRegionOfInterest` and :py:class:`PolygonRegionOfInterest`
     are three subclasses that link :class:`ImageSequence` objects to signals (:class:`AnalogSignal` objects)
     extracted from them.
+
+For more details, see :doc:`grouping`.
 
 
 NumPy compatibility
@@ -105,14 +105,14 @@ In general, an object can access its children with an attribute *childname+s* in
     * :attr:`Block.segments`
     * :attr:`Segments.analogsignals`
     * :attr:`Segments.spiketrains`
-    * :attr:`Block.channel_indexes`
+    * :attr:`Block.groups`
 
 These relationships are bi-directional, i.e. a child object can access its parent:
 
     * :attr:`Segment.block`
     * :attr:`AnalogSignal.segment`
     * :attr:`SpikeTrain.segment`
-    * :attr:`ChannelIndex.block`
+    * :attr:`Group.block`
 
 Here is an example showing these relationships in use::
 
@@ -134,38 +134,39 @@ Here is an example showing these relationships in use::
 
 In some cases, a one-to-many relationship is sufficient. Here is a simple example with tetrodes, in which each tetrode has its own group.::
 
-    from neo import Block, ChannelIndex
+    from neo import Block, Group
     bl = Block()
 
     # the four tetrodes
     for i in range(4):
-        chx = ChannelIndex(name='Tetrode %d' % i,
-                           index=[0, 1, 2, 3])
-        bl.channelindexes.append(chx)
+        group = Group(name='Tetrode %d' % i)
+        bl.groups.append(group)
 
     # now we load the data and associate it with the created channels
     # ...
 
-Now consider a more complex example: a 1x4 silicon probe, with a neuron on channels 0,1,2 and another neuron on channels 1,2,3. We create a group for each neuron to hold the :class:`Unit` object associated with this spike sorting group. Each group also contains the channels on which that neuron spiked. The relationship is many-to-many because channels 1 and 2 occur in multiple groups.::
+Now consider a more complex example: a 1x4 silicon probe, with a neuron on channels 0,1,2 and another neuron on channels 1,2,3.
+We create a group for each neuron to hold the spiketrains for each spike sorting group together with
+the channels on which that neuron spiked::
 
     bl = Block(name='probe data')
 
     # one group for each neuron
-    chx0 = ChannelIndex(name='Group 0',
-                        index=[0, 1, 2])
-    bl.channelindexes.append(chx0)
+    view0 = ChannelView(recorded_signals, index=[0, 1, 2])
+    unit0 = Group(view0, name='Group 0')
+    bl.groups.append(unit0)
 
-    chx1 = ChannelIndex(name='Group 1',
-                        index=[1, 2, 3])
-    bl.channelindexes.append(chx1)
+    view1 = ChannelView(recorded_signals, index=[1, 2, 3])
+    unit1 = Group(view1, name='Group 1')
+    bl.groups.append(unit1)
 
-    # now we add the spiketrain from Unit 0 to chx0
-    # and add the spiketrain from Unit 1 to chx1
+    # now we add the spiketrains from Unit 0 to unit0
+    # and add the spiketrains from Unit 1 to unit1
     # ...
 
-Note that because neurons are sorted from groups of channels in this situation, it is natural that the :py:class:`ChannelIndex` contains a reference to the :py:class:`Unit` object.
-That unit then contains references to its spiketrains. Also note that recording channels can be
-identified by names/labels as well as, or instead of, integer indices.
+
+Now each putative neuron is represented by a :class:`Group` containing the spiktrains of that neuron
+and a view of the signal selecting only those channels from which the spikes were obtained.
 
 
 See :doc:`usecases` for more examples of how the different objects may be used.

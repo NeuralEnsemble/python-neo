@@ -3,6 +3,7 @@ This module defines :class:`BaseNeo`, the abstract base class
 used by all :module:`neo.core` classes.
 """
 
+from copy import deepcopy
 from datetime import datetime, date, time, timedelta
 from decimal import Decimal
 import logging
@@ -107,6 +108,37 @@ def merge_annotations(A, *Bs):
                     merged[name] = "MERGE CONFLICT"  # temporary hack
     logger.debug("Merging annotations: A=%s Bs=%s merged=%s", A, Bs, merged)
     return merged
+
+
+def intersect_annotations(A, B):
+    """
+    Identify common entries in dictionaries A and B
+    and return these in a separate dictionary.
+
+    Entries have to share key as well as value to be
+    considered common.
+
+    Parameters
+    ----------
+    A, B : dict
+        Dictionaries to merge.
+    """
+
+    result = {}
+
+    for key in set(A.keys()) & set(B.keys()):
+        v1, v2 = A[key], B[key]
+        assert type(v1) == type(v2), 'type({}) {} != type({}) {}'.format(v1, type(v1),
+                                                                         v2, type(v2))
+        if isinstance(v1, dict) and v1 == v2:
+            result[key] = deepcopy(v1)
+        elif isinstance(v1, str) and v1 == v2:
+            result[key] = A[key]
+        elif isinstance(v1, list) and v1 == v2:
+            result[key] = deepcopy(v1)
+        elif isinstance(v1, np.ndarray) and all(v1 == v2):
+            result[key] = deepcopy(v1)
+    return result
 
 
 def _reference_name(class_name):
@@ -238,7 +270,7 @@ class BaseNeo:
     # Parent objects whose children can have multiple parents
     _multi_parent_objects = ()
 
-    # Attributes that an instance is requires to have defined
+    # Attributes that an instance is required to have defined
     _necessary_attrs = ()
     # Attributes that an instance may or may have defined
     _recommended_attrs = (('name', str),

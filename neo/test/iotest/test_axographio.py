@@ -210,7 +210,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         blk = reader.read_block(signal_group_mode='split-all')
 
         assert_equal(len(blk.segments), 30)
-        assert_equal(len(blk.channel_indexes), 2)
+        assert_equal(len(blk.groups), 2)
         assert_equal(len(blk.segments[0].analogsignals), 2)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]
@@ -233,7 +233,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         blk = reader.read_block(signal_group_mode='split-all')
 
         assert_equal(len(blk.segments), 1)
-        assert_equal(len(blk.channel_indexes), 60)
+        assert_equal(len(blk.groups), 60)
         assert_equal(len(blk.segments[0].analogsignals), 60)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]
@@ -256,7 +256,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         blk = reader.read_block(signal_group_mode='group-by-same-units')
 
         assert_equal(len(blk.segments), 30)
-        assert_equal(len(blk.channel_indexes), 1)
+        assert_equal(len(blk.groups), 1)
         assert_equal(len(blk.segments[0].analogsignals), 1)
 
         names = [sig.name for sig in blk.segments[0].analogsignals]

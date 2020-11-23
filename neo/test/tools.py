@@ -151,16 +151,17 @@ def assert_neo_object_is_compliant(ob, check_type=True):
                                                                 obattr.dtype.kind, dtp.kind)
 
     # test bijectivity : parents and children
-    for container in getattr(ob, '_single_child_containers', []):
-        for i, child in enumerate(getattr(ob, container, [])):
-            assert hasattr(child, _reference_name(
-                classname)), '%s should have %s attribute (2 way relationship)' \
-                             '' % (container, _reference_name(classname))
-            if hasattr(child, _reference_name(classname)):
-                parent = getattr(child, _reference_name(classname))
-                assert parent == ob, '%s.%s %s is not symmetric with %s.%s' \
-                                     '' % (container, _reference_name(classname), i, classname,
-                                           container)
+    if classname != "Group":  # objects in a Group do not keep a reference to the group.
+        for container in getattr(ob, '_single_child_containers', []):
+            for i, child in enumerate(getattr(ob, container, [])):
+                assert hasattr(child, _reference_name(
+                    classname)), '%s should have %s attribute (2 way relationship)' \
+                                '' % (container, _reference_name(classname))
+                if hasattr(child, _reference_name(classname)):
+                    parent = getattr(child, _reference_name(classname))
+                    assert parent == ob, '%s.%s %s is not symmetric with %s.%s' \
+                                        '' % (container, _reference_name(classname), i, classname,
+                                            container)
 
     # recursive on one to many rel
     for i, child in enumerate(getattr(ob, 'children', [])):

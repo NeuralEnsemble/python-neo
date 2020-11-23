@@ -27,13 +27,15 @@ import itertools
 from uuid import uuid4
 import warnings
 from distutils.version import LooseVersion as Version
+from itertools import chain
 
 import quantities as pq
 import numpy as np
 
 from .baseio import BaseIO
-from ..core import (Block, Segment, ChannelIndex, AnalogSignal, IrregularlySampledSignal, Epoch,
-                    Event, SpikeTrain, ImageSequence, Unit)
+from ..core import (Block, Segment, ChannelIndex, AnalogSignal,
+                    IrregularlySampledSignal, Epoch, Event, SpikeTrain,
+                    ImageSequence, Unit, ChannelView, Group)
 from ..io.proxyobjects import BaseProxy
 from ..version import version as neover
 
@@ -155,7 +157,8 @@ class NixIO(BaseIO):
     is_readable = True
     is_writable = True
 
-    supported_objects = [Block, Segment, ChannelIndex, AnalogSignal, IrregularlySampledSignal,
+    supported_objects = [Block, Segment, ChannelIndex, Group, ChannelView,
+                         AnalogSignal, IrregularlySampledSignal,
                          Epoch, Event, SpikeTrain, Unit]
     readable_objects = [Block]
     writeable_objects = [Block]
@@ -208,6 +211,7 @@ class NixIO(BaseIO):
         self._neo_map = dict()
         self._ref_map = dict()
         self._signal_map = dict()
+        self._view_map = dict()
 
         # _names_ok is used to guard against name check duplication
         self._names_ok = False
@@ -289,11 +293,29 @@ class NixIO(BaseIO):
         neo_block.rec_datetime = datetime.fromtimestamp(nix_block.created_at)
 
         # descend into Groups
+        groups_to_resolve = []
         for grp in nix_block.groups:
-            newseg = self._nix_to_neo_segment(grp)
-            neo_block.segments.append(newseg)
-            # parent reference
-            newseg.block = neo_block
+            if grp.type == "neo.segment":
+                newseg = self._nix_to_neo_segment(grp)
+                neo_block.segments.append(newseg)
+                # parent reference
+                newseg.block = neo_block
+            elif grp.type == "neo.group":
+                newgrp, parent_name = self._nix_to_neo_group(grp)
+                assert parent_name is None
+                neo_block.groups.append(newgrp)
+                # parent reference
+                newgrp.block = neo_block
+            elif grp.type == "neo.subgroup":
+                newgrp, parent_name = self._nix_to_neo_group(grp)
+                groups_to_resolve.append((newgrp, parent_name))
+            else:
+                raise Exception("Unexpected group type")
+
+        # link subgroups to parents
+        for newgrp, parent_name in groups_to_resolve:
+            parent = self._neo_map[parent_name]
+            parent.groups.append(newgrp)
 
         # find free floating (Groupless) signals and spiketrains
         blockdas = self._group_signals(nix_block.data_arrays)
@@ -323,6 +345,7 @@ class NixIO(BaseIO):
         self._neo_map = dict()
         self._ref_map = dict()
         self._signal_map = dict()
+        self._view_map = dict()
 
         return neo_block
 
@@ -379,6 +402,30 @@ class NixIO(BaseIO):
 
         return neo_segment
 
+    def _nix_to_neo_group(self, nix_group):
+        neo_attrs = self._nix_attr_to_neo(nix_group)
+        parent_name = neo_attrs.pop("neo_parent", None)
+        neo_group = Group(**neo_attrs)
+        self._neo_map[nix_group.name] = neo_group
+        dataarrays = list(filter(
+            lambda da: da.type in ("neo.analogsignal",
+                                   "neo.irregularlysampledsignal",
+                                   "neo.imagesequence",),
+            nix_group.data_arrays))
+        dataarrays = self._group_signals(dataarrays)
+        # descend into DataArrays
+        for name in dataarrays:
+            obj = self._neo_map[name]
+            neo_group.add(obj)
+        # descend into MultiTags
+        for mtag in nix_group.multi_tags:
+            if mtag.type == "neo.channelview" and mtag.name not in self._neo_map:
+                self._nix_to_neo_channelview(mtag)
+            obj = self._neo_map[mtag.name]
+            neo_group.add(obj)
+
+        return neo_group, parent_name
+
     def _nix_to_neo_channelindex(self, nix_source):
         neo_attrs = self._nix_attr_to_neo(nix_source)
         channels = list(self._nix_attr_to_neo(c) for c in nix_source.sources
@@ -416,6 +463,15 @@ class NixIO(BaseIO):
                 newunit.channel_index = neo_chx
 
         return neo_chx
+
+    def _nix_to_neo_channelview(self, nix_mtag):
+        neo_attrs = self._nix_attr_to_neo(nix_mtag)
+        index = nix_mtag.positions
+        nix_name, = self._group_signals(nix_mtag.references).keys()
+        obj = self._neo_map[nix_name]
+        neo_chview = ChannelView(obj, index, **neo_attrs)
+        self._neo_map[nix_mtag.name] = neo_chview
+        return neo_chview
 
     def _nix_to_neo_unit(self, nix_source):
         neo_attrs = self._nix_attr_to_neo(nix_source)
@@ -650,6 +706,10 @@ class NixIO(BaseIO):
         for chx in block.channel_indexes:
             self._write_channelindex(chx, nixblock)
 
+        # descend into Neo Groups
+        for group in block.groups:
+            self._write_group(group, nixblock)
+
         self._create_source_links(block, nixblock)
 
     def _write_channelindex(self, chx, nixblock):
@@ -708,6 +768,54 @@ class NixIO(BaseIO):
         for unit in chx.units:
             self._write_unit(unit, nixsource)
 
+    def _write_channelview(self, chview, nixblock, nixgroup):
+        """
+        Convert the provided Neo ChannelView to a NIX MultiTag and write it to
+        the NIX file.
+
+        :param chx: The Neo ChannelView to be written
+        :param nixblock: NIX Block where the MultiTag will be created
+        """
+        if "nix_name" in chview.annotations:
+            nix_name = chview.annotations["nix_name"]
+        else:
+            nix_name = "neo.channelview.{}".format(self._generate_nix_name())
+            chview.annotate(nix_name=nix_name)
+
+        # create a new data array if this channelview was not saved yet
+        if not nix_name in self._view_map:
+            channels = nixblock.create_data_array(
+                "{}.index".format(nix_name), "neo.channelview.index", data=chview.index
+            )
+
+            nixmt = nixblock.create_multi_tag(nix_name, "neo.channelview",
+                                              positions=channels)
+
+            nixmt.metadata = nixgroup.metadata.create_section(
+                nix_name, "neo.channelview.metadata"
+            )
+            metadata = nixmt.metadata
+            neoname = chview.name if chview.name is not None else ""
+            metadata["neo_name"] = neoname
+            nixmt.definition = chview.description
+            if chview.annotations:
+                for k, v in chview.annotations.items():
+                    self._write_property(metadata, k, v)
+            self._view_map[nix_name] = nixmt
+
+            # link tag to the data array for the ChannelView's signal
+            if not ("nix_name" in chview.obj.annotations
+                    and chview.obj.annotations["nix_name"] in self._signal_map):
+                # the following restriction could be relaxed later
+                # but for a first pass this simplifies my mental model
+                raise Exception("Need to save signals before saving views")
+            nix_name = chview.obj.annotations["nix_name"]
+            nixmt.references.extend(self._signal_map[nix_name])
+        else:
+            nixmt = self._view_map[nix_name]
+
+        nixgroup.multi_tags.append(nixmt)
+
     def _write_segment(self, segment, nixblock):
         """
         Convert the provided Neo Segment to a NIX Group and write it to the
@@ -754,6 +862,85 @@ class NixIO(BaseIO):
 
         for imagesequence in segment.imagesequences:
             self._write_imagesequence(imagesequence, nixblock, nixgroup)
+
+    def _write_group(self, neo_group, nixblock, parent=None):
+        """
+        Convert the provided Neo Group to a NIX Group and write it to the
+        NIX file.
+
+        :param neo_group: Neo Group to be written
+        :param nixblock: NIX Block where the NIX Group will be created
+        :param parent: for sub-groups, the parent Neo Group
+        """
+        if parent:
+            label = "neo.subgroup"
+            # note that the use of a different label for top-level groups and sub-groups is not
+            # strictly  necessary, the presence of the "neo_parent" annotation is sufficient.
+            # However, I think it adds clarity and helps in debugging and testing.
+        else:
+            label = "neo.group"
+
+        if "nix_name" in neo_group.annotations:
+            nix_name = neo_group.annotations["nix_name"]
+        else:
+            nix_name = "{}.{}".format(label, self._generate_nix_name())
+            neo_group.annotate(nix_name=nix_name)
+
+        nixgroup = nixblock.create_group(nix_name, label)
+        nixgroup.metadata = nixblock.metadata.create_section(
+            nix_name, f"{label}.metadata"
+        )
+        metadata = nixgroup.metadata
+        neoname = neo_group.name if neo_group.name is not None else ""
+        metadata["neo_name"] = neoname
+        if parent:
+            metadata["neo_parent"] = parent.annotations["nix_name"]
+        nixgroup.definition = neo_group.description
+        if neo_group.annotations:
+            for k, v in neo_group.annotations.items():
+                self._write_property(metadata, k, v)
+
+        # link signals and image sequences
+        objnames = []
+        for obj in chain(
+            neo_group.analogsignals,
+            neo_group.irregularlysampledsignals,
+            neo_group.imagesequences,
+        ):
+            if not ("nix_name" in obj.annotations
+                    and obj.annotations["nix_name"] in self._signal_map):
+                # the following restriction could be relaxed later
+                # but for a first pass this simplifies my mental model
+                raise Exception("Orphan signals/image sequences cannot be stored, needs to belong to a Segment")
+            objnames.append(obj.annotations["nix_name"])
+        for name in objnames:
+            for da in self._signal_map[name]:
+                nixgroup.data_arrays.append(da)
+
+        # link events, epochs and spiketrains
+        objnames = []
+        for obj in chain(
+            neo_group.events,
+            neo_group.epochs,
+            neo_group.spiketrains,
+        ):
+            if not ("nix_name" in obj.annotations
+                    and obj.annotations["nix_name"] in nixblock.multi_tags):
+                # the following restriction could be relaxed later
+                # but for a first pass this simplifies my mental model
+                raise Exception("Orphan epochs/events/spiketrains cannot be stored, needs to belong to a Segment")
+            objnames.append(obj.annotations["nix_name"])
+        for name in objnames:
+            mt = nixblock.multi_tags[name]
+            nixgroup.multi_tags.append(mt)
+
+        # save channel views
+        for chview in neo_group.channelviews:
+            self._write_channelview(chview, nixblock, nixgroup)
+
+        # save sub-groups
+        for subgroup in neo_group.groups:
+            self._write_group(subgroup, nixblock, parent=neo_group)
 
     def _write_analogsignal(self, anasig, nixblock, nixgroup):
         """
@@ -821,7 +1008,7 @@ class NixIO(BaseIO):
         if anasig.array_annotations:
             for k, v in anasig.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -954,7 +1141,7 @@ class NixIO(BaseIO):
         if irsig.array_annotations:
             for k, v in irsig.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -1004,7 +1191,7 @@ class NixIO(BaseIO):
         if event.array_annotations:
             for k, v in event.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -1065,7 +1252,7 @@ class NixIO(BaseIO):
         if epoch.array_annotations:
             for k, v in epoch.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -1124,7 +1311,7 @@ class NixIO(BaseIO):
         if spiketrain.array_annotations:
             for k, v in spiketrain.array_annotations.items():
                 p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
+                p.type = ARRAYANNOTATION
 
         if nixgroup:
             nixgroup.multi_tags.append(nixmt)
@@ -1326,7 +1513,7 @@ class NixIO(BaseIO):
                     values = values[0]
                 if prop.definition in (DATEANNOTATION, TIMEANNOTATION, DATETIMEANNOTATION):
                     values = dt_from_nix(values, prop.definition)
-                if prop.definition == ARRAYANNOTATION:
+                if prop.type == ARRAYANNOTATION:
                     if 'array_annotations' in neo_attrs:
                         neo_attrs['array_annotations'][prop.name] = values
                     else:
@@ -1446,6 +1633,7 @@ class NixIO(BaseIO):
             self._neo_map = None
             self._ref_map = None
             self._signal_map = None
+            self._view_map = None
             self._block_read_counter = None
 
     def __del__(self):

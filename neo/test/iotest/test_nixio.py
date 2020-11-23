@@ -20,7 +20,7 @@ except ImportError:
 from datetime import date, time, datetime
 
 from tempfile import mkdtemp
-
+from itertools import chain
 import unittest
 import string
 import numpy as np
@@ -28,7 +28,7 @@ import quantities as pq
 
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain,
-                      Event, Epoch, ImageSequence)
+                      Event, Epoch, ImageSequence, Group, ChannelView)
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io.nixio import (NixIO, create_quantity, units_to_string, neover,
                           dt_from_nix, dt_to_nix, DATETIMEANNOTATION)
@@ -60,7 +60,10 @@ class NixIOTest(unittest.TestCase):
     def compare_blocks(self, neoblocks, nixblocks):
         for neoblock, nixblock in zip(neoblocks, nixblocks):
             self.compare_attr(neoblock, nixblock)
-            self.assertEqual(len(neoblock.segments), len(nixblock.groups))
+            self.assertEqual(len(neoblock.segments),
+                             len([grp for grp in nixblock.groups if grp.type == "neo.segment"]))
+            self.assertEqual(len(neoblock.groups),
+                             len([grp for grp in nixblock.groups if grp.type == "neo.group"]))
             for idx, neoseg in enumerate(neoblock.segments):
                 nixgrp = nixblock.groups[neoseg.annotations["nix_name"]]
                 self.compare_segment_group(neoseg, nixgrp)
@@ -417,7 +420,7 @@ class NixIOTest(unittest.TestCase):
             asig_md.create_property(arr_ann_name,
                                     arr_ann_val.magnitude.flatten())
             asig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
-            asig_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
+            asig_md.props[arr_ann_name].type = 'ARRAYANNOTATION'
 
             for idx in range(10):
                 da_asig = blk.create_data_array(
@@ -451,7 +454,7 @@ class NixIOTest(unittest.TestCase):
             imgseq_md.create_property(arr_ann_name,
                                       arr_ann_val.magnitude.flatten())
             imgseq_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
-            imgseq_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
+            imgseq_md.props[arr_ann_name].type = 'ARRAYANNOTATION'
 
             for idx in range(10):
                 da_imgseq = blk.create_data_array(
@@ -484,7 +487,7 @@ class NixIOTest(unittest.TestCase):
             isig_md.create_property(arr_ann_name,
                                     arr_ann_val.magnitude.flatten())
             isig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
-            isig_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
+            isig_md.props[arr_ann_name].type = 'ARRAYANNOTATION'
             for idx in range(7):
                 da_isig = blk.create_data_array(
                     "{}.{}".format(isig_name, idx),
@@ -526,7 +529,7 @@ class NixIOTest(unittest.TestCase):
             mtag_st_md.create_property(arr_ann_name,
                                        arr_ann_val.magnitude.flatten())
             mtag_st_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
-            mtag_st_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
+            mtag_st_md.props[arr_ann_name].type = 'ARRAYANNOTATION'
 
             waveforms = cls.rquant((10, 8, 5), 1)
             wfname = "{}.waveforms".format(mtag_st.name)
@@ -578,7 +581,7 @@ class NixIOTest(unittest.TestCase):
             mtag_ep.metadata.create_property(arr_ann_name,
                                              arr_ann_val.magnitude.flatten())
             mtag_ep.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
-            mtag_ep.metadata.props[arr_ann_name].definition = 'ARRAYANNOTATION'
+            mtag_ep.metadata.props[arr_ann_name].type = 'ARRAYANNOTATION'
 
             label_dim = mtag_ep.positions.append_set_dimension()
             label_dim.labels = cls.rsentence(5).split(" ")
@@ -611,7 +614,7 @@ class NixIOTest(unittest.TestCase):
             mtag_ev.metadata.create_property(arr_ann_name,
                                              arr_ann_val.magnitude.flatten())
             mtag_ev.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
-            mtag_ev.metadata.props[arr_ann_name].definition = 'ARRAYANNOTATION'
+            mtag_ev.metadata.props[arr_ann_name].type = 'ARRAYANNOTATION'
 
             label_dim = mtag_ev.positions.append_set_dimension()
             label_dim.labels = cls.rsentence(5).split(" ")
@@ -999,6 +1002,88 @@ class NixIOWriteTest(NixIOTest):
         self.write_and_compare([block])
 
         spiketrain.left_sweep = pq.Quantity(-10, "ms")
+        self.write_and_compare([block])
+
+    def test_group_write(self):
+        signals = [
+            AnalogSignal(np.random.random(size=(1000, 5)) * pq.mV,
+                         sampling_period=1 * pq.ms, name="sig1"),
+            AnalogSignal(np.random.random(size=(1000, 3)) * pq.mV,
+                         sampling_period=1 * pq.ms, name="sig2"),
+        ]
+        spiketrains = [
+            SpikeTrain([0.1, 54.3, 76.6, 464.2], units=pq.ms,
+                       t_stop=1000.0 * pq.ms, t_start=0.0 * pq.ms),
+            SpikeTrain([30.1, 154.3, 276.6, 864.2], units=pq.ms,
+                       t_stop=1000.0 * pq.ms, t_start=0.0 * pq.ms),
+            SpikeTrain([120.1, 454.3, 576.6, 764.2], units=pq.ms,
+                       t_stop=1000.0 * pq.ms, t_start=0.0 * pq.ms),
+        ]
+        epochs =  [
+            Epoch(times=[0, 500], durations=[100, 100], units=pq.ms, labels=["A", "B"])
+        ]
+
+        seg = Segment(name="seg1")
+        seg.analogsignals.extend(signals)
+        seg.spiketrains.extend(spiketrains)
+        seg.epochs.extend(epochs)
+        for obj in chain(signals, spiketrains, epochs):
+            obj.segment = seg
+
+        views = [ChannelView(index=np.array([0, 3, 4]), obj=signals[0], name="view_of_sig1")]
+        groups = [
+            Group(objects=(signals[0:1] + spiketrains[0:2] + epochs + views), name="group1"),
+            Group(objects=(signals[1:2] + spiketrains[1:] + epochs), name="group2")
+        ]
+
+        block = Block(name="block1")
+        block.segments.append(seg)
+        block.groups.extend(groups)
+        for obj in chain([seg], groups):
+            obj.block = block
+
+        self.write_and_compare([block])
+
+    def test_group_write_nested(self):
+        signals = [
+            AnalogSignal(np.random.random(size=(1000, 5)) * pq.mV,
+                         sampling_period=1 * pq.ms, name="sig1"),
+            AnalogSignal(np.random.random(size=(1000, 3)) * pq.mV,
+                         sampling_period=1 * pq.ms, name="sig2"),
+        ]
+        spiketrains = [
+            SpikeTrain([0.1, 54.3, 76.6, 464.2], units=pq.ms,
+                       t_stop=1000.0 * pq.ms, t_start=0.0 * pq.ms),
+            SpikeTrain([30.1, 154.3, 276.6, 864.2], units=pq.ms,
+                       t_stop=1000.0 * pq.ms, t_start=0.0 * pq.ms),
+            SpikeTrain([120.1, 454.3, 576.6, 764.2], units=pq.ms,
+                       t_stop=1000.0 * pq.ms, t_start=0.0 * pq.ms),
+        ]
+        epochs =  [
+            Epoch(times=[0, 500], durations=[100, 100], units=pq.ms, labels=["A", "B"])
+        ]
+
+        seg = Segment(name="seg1")
+        seg.analogsignals.extend(signals)
+        seg.spiketrains.extend(spiketrains)
+        seg.epochs.extend(epochs)
+        for obj in chain(signals, spiketrains, epochs):
+            obj.segment = seg
+
+        views = [ChannelView(index=np.array([0, 3, 4]), obj=signals[0], name="view_of_sig1")]
+
+        subgroup = Group(objects=(signals[0:1] + views), name="subgroup")
+        groups = [
+            Group(objects=([subgroup] + spiketrains[0:2] + epochs), name="group1"),
+            Group(objects=(signals[1:2] + spiketrains[1:] + epochs), name="group2")
+        ]
+
+        block = Block(name="block1")
+        block.segments.append(seg)
+        block.groups.extend(groups)
+        for obj in chain([seg], groups):
+            obj.block = block
+
         self.write_and_compare([block])
 
     def test_metadata_structure_write(self):
@@ -1484,6 +1569,24 @@ class NixIOWriteTest(NixIOTest):
         self.assertEqual(rblock.annotations["los"], losval)
 
         # TODO: multi dimensional value (GH Issue #501)
+
+    def test_empty_array_annotations(self):
+        wblock = Block("block with spiketrain")
+        wseg = Segment()
+        wseg.spiketrains = [SpikeTrain(times=[] * pq.s, t_stop=1 * pq.s,
+                                       array_annotations={'empty': []})]
+        wblock.segments = [wseg]
+        self.writer.write_block(wblock)
+        try:
+            rblock = self.writer.read_block(neoname="block with spiketrain")
+        except Exception as exc:
+            self.fail('The following exception was raised when'
+                      + ' reading the block with an empty array annotation:\n'
+                      + str(exc))
+        rst = rblock.segments[0].spiketrains[0]
+        self.assertEqual(len(rst.array_annotations), 1)
+        self.assertIn('empty', rst.array_annotations.keys())
+        self.assertEqual(len(rst.array_annotations['empty']), 0)
 
     def test_write_proxyobjects(self):
 

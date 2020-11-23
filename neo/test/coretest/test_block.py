@@ -243,8 +243,8 @@ class TestBlock(unittest.TestCase):
         blk1a.segments.append(self.segs2[0])
         blk1a.merge(self.blk2)
 
-        segs1a = clone_object(self.blk1).segments
-        chxs1a = clone_object(self.chxs1)
+        segs1a = deepcopy(self.blk1.segments)
+        chxs1a = deepcopy(self.chxs1)
 
         assert_same_sub_schema(chxs1a + self.chxs2,
                                blk1a.channel_indexes)
@@ -252,11 +252,11 @@ class TestBlock(unittest.TestCase):
                                blk1a.segments)
 
     def test__children(self):
-        segs1a = clone_object(self.blk1).segments
-        chxs1a = clone_object(self.chxs1)
+        segs1a = deepcopy(self.blk1.segments)
+        chxs1a = deepcopy(self.chxs1)
 
         self.assertEqual(self.blk1._container_child_objects,
-                         ('Segment', 'ChannelIndex'))
+                         ('Segment', 'ChannelIndex', 'Group'))
         self.assertEqual(self.blk1._data_child_objects, ())
         self.assertEqual(self.blk1._single_parent_objects, ())
         self.assertEqual(self.blk1._multi_child_objects, ())
@@ -265,21 +265,21 @@ class TestBlock(unittest.TestCase):
                          ('Unit',))
 
         self.assertEqual(self.blk1._single_child_objects,
-                         ('Segment', 'ChannelIndex'))
+                         ('Segment', 'ChannelIndex', 'Group'))
 
         self.assertEqual(self.blk1._container_child_containers,
-                         ('segments', 'channel_indexes'))
+                         ('segments', 'channel_indexes', 'groups'))
         self.assertEqual(self.blk1._data_child_containers, ())
         self.assertEqual(self.blk1._single_child_containers,
-                         ('segments', 'channel_indexes'))
+                         ('segments', 'channel_indexes', 'groups'))
         self.assertEqual(self.blk1._single_parent_containers, ())
         self.assertEqual(self.blk1._multi_child_containers, ())
         self.assertEqual(self.blk1._multi_parent_containers, ())
 
         self.assertEqual(self.blk1._child_objects,
-                         ('Segment', 'ChannelIndex'))
+                         ('Segment', 'ChannelIndex', 'Group'))
         self.assertEqual(self.blk1._child_containers,
-                         ('segments', 'channel_indexes'))
+                         ('segments', 'channel_indexes', 'groups'))
         self.assertEqual(self.blk1._parent_objects, ())
         self.assertEqual(self.blk1._parent_containers, ())
 
@@ -341,6 +341,7 @@ class TestBlock(unittest.TestCase):
 
     def test__size(self):
         targ = {'segments': self.nchildren,
+                'groups': 0,  # need to update test data generation to handle groups
                 'channel_indexes': self.nchildren}
         self.assertEqual(self.targobj.size, targ)
 

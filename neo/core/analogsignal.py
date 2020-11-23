@@ -29,9 +29,8 @@ else:
 import numpy as np
 import quantities as pq
 
-from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.baseneo import BaseNeo, MergeError, merge_annotations, intersect_annotations
 from neo.core.dataobject import DataObject
-from neo.core.channelindex import ChannelIndex
 from copy import copy, deepcopy
 
 from neo.core.basesignal import BaseSignal
@@ -142,7 +141,7 @@ class AnalogSignal(BaseSignal):
             read-only.
             (:attr:`t_start` + arange(:attr:`shape`[0])/:attr:`sampling_rate`)
         :channel_index:
-            access to the channel_index attribute of the principal ChannelIndex
+            (deprecated) access to the channel_index attribute of the principal ChannelIndex
             associated with this signal.
 
     *Slicing*:
@@ -443,9 +442,8 @@ class AnalogSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sampling rate: {!s}".format(self.sampling_rate),
-                     "time: {!s} to {!s}".format(self.t_start, self.t_stop)]:
-            _pp(line)
+        _pp("sampling rate: {}".format(self.sampling_rate))
+        _pp("time: {} to {}".format(self.t_start, self.t_stop))
 
     def time_index(self, t):
         """Return the array index (or indices) corresponding to the time (or times) `t`"""
@@ -659,3 +657,136 @@ class AnalogSignal(BaseSignal):
         rectified_signal.array_annotations = self.array_annotations.copy()
 
         return rectified_signal
+
+    def concatenate(self, *signals, overwrite=False, padding=False):
+        """
+        Concatenate multiple neo.AnalogSignal objects across time.
+
+        Units, sampling_rate and number of signal traces must be the same
+        for all signals. Otherwise a ValueError is raised.
+        Note that timestamps of concatenated signals might shift in oder to
+        align the sampling times of all signals.
+
+        Parameters
+        ----------
+        signals: neo.AnalogSignal objects
+            AnalogSignals that will be concatenated
+        overwrite : bool
+            If True, samples of the earlier (lower index in `signals`)
+            signals are overwritten by that of later (higher index in `signals`)
+            signals.
+            If False, samples of the later are overwritten by earlier signal.
+            Default: False
+        padding : bool, scalar quantity
+            Sampling values to use as padding in case signals do not overlap.
+            If False, do not apply padding. Signals have to align or
+            overlap. If True, signals will be padded using
+            np.NaN as pad values. If a scalar quantity is provided, this
+            will be used for padding. The other signal is moved
+            forward in time by maximum one sampling period to
+            align the sampling times of both signals.
+            Default: False
+
+        Returns
+        -------
+        signal: neo.AnalogSignal
+            concatenated output signal
+        """
+
+        # Sanity of inputs
+        if not hasattr(signals, '__iter__'):
+            raise TypeError('signals must be iterable')
+        if not all([isinstance(a, AnalogSignal) for a in signals]):
+            raise TypeError('Entries of anasiglist have to be of type neo.AnalogSignal')
+        if len(signals) == 0:
+            return self
+
+        signals = [self] + list(signals)
+
+        # Check required common attributes: units, sampling_rate and shape[-1]
+        shared_attributes = ['units', 'sampling_rate']
+        attribute_values = [tuple((getattr(anasig, attr) for attr in shared_attributes))
+                            for anasig in signals]
+        # add shape dimensions that do not relate to time
+        attribute_values = [(attribute_values[i] + (signals[i].shape[1:],))
+                            for i in range(len(signals))]
+        if not all([attrs == attribute_values[0] for attrs in attribute_values]):
+            raise MergeError(
+                f'AnalogSignals have to share {shared_attributes} attributes to be concatenated.')
+        units, sr, shape = attribute_values[0]
+
+        # find gaps between Analogsignals
+        combined_time_ranges = self._concatenate_time_ranges(
+            [(s.t_start, s.t_stop) for s in signals])
+        missing_time_ranges = self._invert_time_ranges(combined_time_ranges)
+        if len(missing_time_ranges):
+            diffs = np.diff(np.asarray(missing_time_ranges), axis=1)
+        else:
+            diffs = []
+
+        if padding is False and any(diffs > signals[0].sampling_period):
+            raise MergeError(f'Signals are not continuous. Can not concatenate signals with gaps. '
+                             f'Please provide a padding value.')
+        if padding is not False:
+            logger.warning('Signals will be padded using {}.'.format(padding))
+            if padding is True:
+                padding = np.NaN * units
+            if isinstance(padding, pq.Quantity):
+                padding = padding.rescale(units).magnitude
+            else:
+                raise MergeError('Invalid type of padding value. Please provide a bool value '
+                                 'or a quantities object.')
+
+        t_start = min([a.t_start for a in signals])
+        t_stop = max([a.t_stop for a in signals])
+        n_samples = int(np.rint(((t_stop - t_start) * sr).rescale('dimensionless').magnitude))
+        shape = (n_samples,) + shape
+
+        # Collect attributes and annotations across all concatenated signals
+        kwargs = {}
+        common_annotations = signals[0].annotations
+        common_array_annotations = signals[0].array_annotations
+        for anasig in signals[1:]:
+            common_annotations = intersect_annotations(common_annotations, anasig.annotations)
+            common_array_annotations = intersect_annotations(common_array_annotations,
+                                                             anasig.array_annotations)
+
+        kwargs['annotations'] = common_annotations
+        kwargs['array_annotations'] = common_array_annotations
+
+        for name in ("name", "description", "file_origin"):
+            attr = [getattr(s, name) for s in signals]
+            if all([a == attr[0] for a in attr]):
+                kwargs[name] = attr[0]
+            else:
+                kwargs[name] = f'concatenation ({attr})'
+
+        conc_signal = AnalogSignal(np.full(shape=shape, fill_value=padding, dtype=signals[0].dtype),
+                                   sampling_rate=sr, t_start=t_start, units=units, **kwargs)
+
+        if not overwrite:
+            signals = signals[::-1]
+        while len(signals) > 0:
+            conc_signal.splice(signals.pop(0), copy=False)
+
+        return conc_signal
+
+    def _concatenate_time_ranges(self, time_ranges):
+        time_ranges = sorted(time_ranges)
+        new_ranges = time_ranges[:1]
+        for t_start, t_stop in time_ranges[1:]:
+            # time range are non continuous -> define new range
+            if t_start > new_ranges[-1][1]:
+                new_ranges.append((t_start, t_stop))
+            # time range is continuous -> extend time range
+            elif t_stop > new_ranges[-1][1]:
+                new_ranges[-1] = (new_ranges[-1][0], t_stop)
+        return new_ranges
+
+    def _invert_time_ranges(self, time_ranges):
+        i = 0
+        new_ranges = []
+        while i < len(time_ranges) - 1:
+            new_ranges.append((time_ranges[i][1], time_ranges[i + 1][0]))
+            i += 1
+        return new_ranges
