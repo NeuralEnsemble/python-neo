@@ -139,6 +139,7 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
     """
     Test of decoding of NlxHeader for type of recording.
     """
+    entities_to_test = []
 
     ncsTypeTestFiles = [
         ('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs', 'PRE4'),
@@ -162,6 +163,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
     """
     Test building NcsBlocks for files of different revisions.
     """
+    entities_to_test = []
 
     def test_ncsblocks_partial(self):
         filename = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
