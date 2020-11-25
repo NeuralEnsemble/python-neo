@@ -30,8 +30,6 @@ Note:
 
 See:
 https://billkarsh.github.io/SpikeGLX/#offline-analysis-tools
-
-And also:
 https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/spikeglxrecordingextractor/spikeglxrecordingextractor.py
 
 
