@@ -222,12 +222,14 @@ def scan_files(dirname):
 
             num_chan = int(meta['nSavedChans'])
 
-            # when file is Noise4Sam_g0_t0.nidq.bin or Noise4Sam_g0_t0.imec0.lf.bin
-            # name is the first part "Noise4Sam_g0_t0"
-            # gtX X is the seg_index here 0
-            # nidq or imec0 is the device
-            # lf or ap is "signal_kind"
-            # stream_name = device + signal_kind
+            # Example file name structure:
+            # Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
+            # The filenames consist of 3 or 4 parts separated by `.`
+            # `name` corresponds to everything before first dot, here `Noise4Sam_g0_t0`
+            # `seg_index` corresponds to X in `gtX`, here 0
+            # `device` corresponds to the second part of the filename, here `nidq` or `imec0`
+            # `signal_kind` corresponds to the optional third part of the filename, here `lf`. Valid values for `signal_kind` are `lf` and `ap`.
+            # `stream_name` is the concatenation of `device.signal_kind`
             name = file.split('.')[0]
             r = re.findall(r'_g(\d*)_t', name)
             seg_index = int(r[0][0])
