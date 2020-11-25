@@ -8,11 +8,11 @@ Here an adaptation of the spikeglx tools into the neo rawio API.
 Note that each pair of ".bin"/."meta" files is represented as a group of two AnalogSignals
 that share the same sampling rate.
 
-Contrary to other implementations this read the entire folder and subfolder so:
-  * It deal with severals segment taken from the naming "_gt0", "_gt1", "_gt2", ...
-  * It deal with all signal "imec0", "imec1" for neuropixel probes and also
-     external signal like"nidq" This is the "device"
-  * For imec device both "ap" and "lf" are extracted so one device have several "stream"
+Contrary to other implementations this IO reads the entire folder and subfolder and:
+  * deals with severals segment based on the `_gt0`, `_gt1`, `_gt2`, etc postfixes
+  * deals with all signals "imec0", "imec1" for neuropixel probes and also
+     external signal like"nidq". This is the "device"
+  * For imec device both "ap" and "lf" are extracted so one device have several "streams"
 
 Note:
   * there are sevral version depending the NP probe generatio 1.0 2.0 3.0
