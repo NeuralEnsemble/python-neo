@@ -15,10 +15,10 @@ Contrary to other implementations this IO reads the entire folder and subfolder 
   * For imec device both "ap" and "lf" are extracted so one device have several "streams"
 
 Note:
-  * there are sevral version depending the NP probe generatio 1.0 2.0 3.0
-     I am not sure that the meta file is almost the same for all.
-     Maybe there some differences, this have to be check.
-     This IO have been tested basically wit neuropixel (NP) 2.0 one shank
+  * there are several versions depending the neuropixel probe generation (`1.0`/`2.0`/`3.0`)
+     Here, we assume that the `meta` file has the same structure across all generations.
+     TODO: This need so be checked.
+     This IO is developed based on neuropixel generation 2.0, single shank recordings.
 
 
 # TODO:
