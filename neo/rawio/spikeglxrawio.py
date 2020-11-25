@@ -205,7 +205,7 @@ class SpikeGLXRawIO(BaseRawIO):
 
 def scan_files(dirname):
     """
-    Scan pair of bin/meta files and return information about it.
+    Scan for pairs of `.bin` and `.meta` files and return information about it.
     """
     info_list = []
 
