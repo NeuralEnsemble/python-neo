@@ -5,7 +5,7 @@ See https://billkarsh.github.io/SpikeGLX/
 
 Here an adaptation of the spikeglx tools into the neo rawio API.
 
-Note that each pair of ".bin"/."meta" represent a group of analog signal
+Note that each pair of ".bin"/."meta" files is represented as a group of two AnalogSignals
 that share the same sampling rate.
 
 Contrary to other implementations this read the entire folder and subfolder so:
