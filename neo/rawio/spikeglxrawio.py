@@ -114,7 +114,7 @@ class SpikeGLXRawIO(BaseRawIO):
                                                                                                     info['channel_location']
 
                 # the channel id is a global counter and so equivalent to channel_index
-                # this is bad : this should be changed by an id base on a str
+                # this is bad and should rather be changed to a string based id
                 global_chan += 1
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
