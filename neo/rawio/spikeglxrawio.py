@@ -259,7 +259,7 @@ def scan_files(dirname):
                 units = 'V'
                 channel_gains = np.ones(num_chan)
 
-                # there differents kind of channel with diffrents gain
+                # there are differents kinds of channels with different gain values
                 mn, ma, xa, dw = [int(e) for e in meta['snsMnMaXaDw'].split(sep=',')]
                 per_channel_gain = np.ones(num_chan, dtype='float64')
                 per_channel_gain[0:mn] = float(meta['niMNGain'])
