@@ -247,8 +247,8 @@ def scan_files(dirname):
                     index_imroTbl = 3
                 elif signal_kind == 'lf':
                     index_imroTbl = 4
+                # the last channel doesn't have a gain value
                 for c in range(num_chan - 1):
-                    # the last channel don't have gain
                     per_channel_gain[c] = 1. / float(meta['imroTbl'][c].split(' ')[index_imroTbl])
                 gain_factor = float(meta['imAiRangeMax']) / 512
                 channel_gains = per_channel_gain * gain_factor * 1e6
