@@ -97,7 +97,7 @@ class BaseIO:
     mode = 'file'  # or 'fake' or 'dir' or 'database'
 
     def __init__(self, filename=None, **kargs):
-        self.filename = filename
+        self.filename = str(filename)
         # create a logger for the IO class
         fullname = self.__class__.__module__ + '.' + self.__class__.__name__
         self.logger = logging.getLogger(fullname)
