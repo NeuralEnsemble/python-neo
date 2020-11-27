@@ -207,65 +207,6 @@ class BaseTestIO:
                                         return_path=return_path,
                                         clean=clean)
 
-    def create_file_reader(self, filename=None, return_path=False,
-                           clean=False, target=None, readall=False):
-        '''
-        Create a function that can read from the specified filename.
-
-        If filename is None, create a filename (default).
-
-        If return_path is True, return the full path of the file along with
-        the reader function.  return reader, path.  Default is False.
-
-        If clean is True, try to delete existing versions of the file
-        before creating the io object.  Default is False.
-
-        If target is None, use the first supported_objects from ioobj
-        If target is False, use the 'read' method.
-        If target is the Block or Segment class, use read_block or
-        read_segment, respectively.
-        If target is a string, use 'read_'+target.
-
-        If readall is True, use the read_all_ method instead of the read_
-        method. Default is False.
-        '''
-        ioobj, path = self.generic_io_object(filename=filename,
-                                             return_path=True, clean=clean)
-
-        res = create_generic_reader(ioobj, target=target, readall=readall)
-
-        if return_path:
-            return res, path
-        return res
-
-    def create_file_writer(self, filename=None, return_path=False,
-                           clean=False, target=None):
-        '''
-        Create a function that can write from the specified filename.
-
-        If filename is None, create a filename (default).
-
-        If return_path is True, return the full path of the file along with
-        the writer function.  return writer, path.  Default is False.
-
-        If clean is True, try to delete existing versions of the file
-        before creating the io object.  Default is False.
-
-        If target is None, use the first supported_objects from ioobj
-        If target is False, use the 'write' method.
-        If target is the Block or Segment class, use write_block or
-        write_segment, respectively.
-        If target is a string, use 'write_'+target.
-        '''
-        ioobj, path = self.generic_io_object(filename=filename,
-                                             return_path=True, clean=clean)
-
-        res = create_generic_writer(ioobj, target=target)
-
-        if return_path:
-            return res, path
-        return res
-
     def read_file(self, filename=None, return_path=False, clean=False,
                   target=None, readall=False, lazy=False):
         '''
