@@ -515,7 +515,8 @@ class BaseTestIO:
 
     def test__handle_pathlib_filename(self):
         if self.files_to_test:
-            filename = get_test_file_full_path(self.ioclass, filename=self.files_to_test[0],directory=self.local_test_dir)
+            filename = get_test_file_full_path(self.ioclass, filename=self.files_to_test[0],
+                                               directory=self.local_test_dir)
             pathlib_filename = pathlib.Path(filename)
 
             if self.ioclass.mode == 'file':

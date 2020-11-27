@@ -45,8 +45,7 @@ def cleanup_test_file(mode, path, directory=None):
             shutil.rmtree(path)
 
 
-def get_test_file_full_path(ioclass, filename=None,
-                            directory=None, clean=False):
+def get_test_file_full_path(ioclass, filename=None, directory=None, clean=False):
     """
     Get the full path for a file of the given filename.
 
