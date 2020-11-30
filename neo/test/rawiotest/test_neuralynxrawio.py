@@ -92,11 +92,11 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 1)
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.timestamp_limits, [(0, 192000)])
-        self.assertEqual(rawio._ncs_seg_timestamp_limits.length[0], 4608)
-        self.assertEqual(rawio._ncs_seg_timestamp_limits.t_start[0], 0)
-        self.assertEqual(rawio._ncs_seg_timestamp_limits.t_stop[0], 0.192)
-        self.assertEqual(len(rawio._ncs_memmaps), 1)
+        self.assertListEqual(rawio._timestamp_limits, [(0, 192000)])
+        self.assertEqual(rawio._sigs_length[0], 4608)
+        self.assertEqual(rawio._sigs_t_start[0], 0)
+        self.assertEqual(rawio._sigs_t_stop[0], 0.192)
+        self.assertEqual(len(rawio._sigs_memmaps), 1)
 
         # Test Cheetah 4.0.2, which is PRE4 type with frequency in header and
         # no microsPerSamp. Number of microseconds per sample in file is inverse of
@@ -105,23 +105,11 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 1)
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.timestamp_limits,
-                             [(266982936, 267162136)])
-        self.assertEqual(rawio._ncs_seg_timestamp_limits.length[0], 5120)
-        self.assertEqual(rawio._ncs_seg_timestamp_limits.t_start[0], 266.982936)
-        self.assertEqual(rawio._ncs_seg_timestamp_limits.t_stop[0], 267.162136)
-        self.assertEqual(len(rawio._ncs_memmaps), 1)
-
-        # Test Cheetah 5.4.0, which is DigitalLynx with one block of 7 records
-        rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v5.4.0/original_data'))
-        rawio.parse_header()
-        # test values from direct inspection of .ncs file
-        self.assertEqual(rawio._nb_segment, 1)
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.timestamp_limits,
-                             [(7807911561, 7811434776)]) # end value based on actual sampling freq
-        self.assertEqual(rawio._ncs_seg_timestamp_limits.t_start[0], 7807.911561)
-        self.assertEqual(rawio._ncs_seg_timestamp_limits.t_stop[0], 7811.434776)
-        self.assertEqual(len(rawio._ncs_memmaps), 1)
+        self.assertListEqual(rawio._timestamp_limits, [(266982936, 267162136)])
+        self.assertEqual(rawio._sigs_length[0], 5120)
+        self.assertEqual(rawio._sigs_t_start[0], 266.982936)
+        self.assertEqual(rawio._sigs_t_stop[0], 267.162136)
+        self.assertEqual(len(rawio._sigs_memmaps), 1)
 
         # Test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap.
@@ -129,12 +117,12 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 2)
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.timestamp_limits,
-                             [(26122557633, 26162525633), (26366360633, 26379704633)])
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.length, [1278976, 427008])
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.t_stop, [26162.525633, 26379.704633])
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.t_start, [26122.557633, 26366.360633])
-        self.assertEqual(len(rawio._ncs_memmaps), 2)  # check only that there are 2 memmaps
+        self.assertListEqual(rawio._timestamp_limits, [(26122557633, 26162525633),
+                                                       (26366360633, 26379704633)])
+        self.assertListEqual(rawio._sigs_length, [1278976, 427008])
+        self.assertListEqual(rawio._sigs_t_stop, [26162.525633, 26379.704633])
+        self.assertListEqual(rawio._sigs_t_start, [26122.557633, 26366.360633])
+        self.assertEqual(len(rawio._sigs_memmaps), 2)  # check only that there are 2 memmaps
 
         # Test Cheetah 6.3.2, the incomplete_blocks test. This is a DigitalLynxSX with
         # three blocks of records. Gaps are on the order of 60 microseconds or so.
@@ -143,15 +131,13 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         # test values here from direct inspection of .ncs file, except for 3rd block
         # t_stop, which is extended due to events past the last block of ncs records.
         self.assertEqual(rawio._nb_segment, 3)
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.timestamp_limits,
-                             [(8408806811, 8427831990), (8427832053, 8487768498),
-                              (8487768561, 8515816549)])
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.length, [608806, 1917967, 897536])
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.t_stop, [8427.831990, 8487.768498,
-                                                                      8515.816549])
-        self.assertListEqual(rawio._ncs_seg_timestamp_limits.t_start, [8408.806811, 8427.832053,
-                                                                       8487.768561])
-        self.assertEqual(len(rawio._ncs_memmaps), 3)  # check only that there are 3 memmaps
+        self.assertListEqual(rawio._timestamp_limits, [(8408806811, 8427831990),
+                                                       (8427832053, 8487768498),
+                                                       (8487768561, 8515816549)])
+        self.assertListEqual(rawio._sigs_length, [608806, 1917967, 897536])
+        self.assertListEqual(rawio._sigs_t_stop, [8427.831990, 8487.768498, 8515.816549])
+        self.assertListEqual(rawio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561])
+        self.assertEqual(len(rawio._sigs_memmaps), 3)  # check only that there are 3 memmaps
 
 
 class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
