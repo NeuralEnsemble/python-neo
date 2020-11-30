@@ -46,7 +46,6 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
         'Cheetah_v4.0.2/README.txt',
         'Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs',
-        'Cheetah_v5.4.0/original_data/CheetahLogFile.txt',
         'Cheetah_v5.4.0/plain_data/CSC5_trunc.txt',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
