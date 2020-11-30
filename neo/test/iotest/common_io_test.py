@@ -42,7 +42,8 @@ from neo.test.generate_datasets import generate_from_supported_objects
 
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
+# url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
+url_for_tests = "file:///Users/peter/Documents/GinRepositories/ephy_testing_data/" # local copy of repo
 
 
 class BaseTestIO:

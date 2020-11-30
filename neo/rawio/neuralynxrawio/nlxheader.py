@@ -113,12 +113,11 @@ class NlxHeader(OrderedDict):
             datetimeformat='%Y/%m/%d %H:%M:%S')
     }
 
-    @staticmethod
-    def build_for_file(filename):
+    def __init__(self, filename):
         """
         Factory function to build NlxHeader for a given file.
         """
-
+        super(OrderedDict, self).__init__()
         with open(filename, 'rb') as f:
             txt_header = f.read(NlxHeader.HEADER_SIZE)
         txt_header = txt_header.strip(b'\x00').decode('latin-1')
@@ -128,7 +127,6 @@ class NlxHeader(OrderedDict):
             'Neuralynx files must start with 8 # characters.'
 
         # find keys
-        info = NlxHeader()
         for k1, k2, type_ in NlxHeader.txt_header_keys:
             pattern = r'-(?P<name>' + k1 + r')\s+(?P<value>[\S ]*)'
             matches = re.findall(pattern, txt_header)
@@ -140,71 +138,71 @@ class NlxHeader(OrderedDict):
                 value = match[1].rstrip(' ')
                 if type_ is not None:
                     value = type_(value)
-                info[name] = value
+                self[name] = value
 
-        # if channel_ids or s not in info then the filename is used
+        # if channel_ids or s not in self then the filename is used
         name = os.path.splitext(os.path.basename(filename))[0]
 
         # convert channel ids
-        if 'channel_ids' in info:
-            chid_entries = re.findall(r'\w+', info['channel_ids'])
-            info['channel_ids'] = [int(c) for c in chid_entries]
+        if 'channel_ids' in self:
+            chid_entries = re.findall(r'\w+', self['channel_ids'])
+            self['channel_ids'] = [int(c) for c in chid_entries]
         else:
-            info['channel_ids'] = [name]
+            self['channel_ids'] = [name]
 
         # convert channel names
-        if 'channel_names' in info:
-            name_entries = re.findall(r'\w+', info['channel_names'])
+        if 'channel_names' in self:
+            name_entries = re.findall(r'\w+', self['channel_names'])
             if len(name_entries) == 1:
-                info['channel_names'] = name_entries * len(info['channel_ids'])
-            assert len(info['channel_names']) == len(info['channel_ids']), \
+                self['channel_names'] = name_entries * len(self['channel_ids'])
+            assert len(self['channel_names']) == len(self['channel_ids']), \
                 'Number of channel ids does not match channel names.'
         else:
-            info['channel_names'] = [name] * len(info['channel_ids'])
+            self['channel_names'] = [name] * len(self['channel_ids'])
 
         # version and application name
         # older Cheetah versions with CheetahRev property
-        if 'CheetahRev' in info:
-            assert 'ApplicationName' not in info
-            info['ApplicationName'] = 'Cheetah'
-            app_version = info['CheetahRev']
+        if 'CheetahRev' in self:
+            assert 'ApplicationName' not in self
+            self['ApplicationName'] = 'Cheetah'
+            app_version = self['CheetahRev']
         # new file version 3.4 does not contain CheetahRev property, but ApplicationName instead
-        elif 'ApplicationName' in info:
+        elif 'ApplicationName' in self:
             pattern = r'(\S*) "([\S ]*)"'
-            match = re.findall(pattern, info['ApplicationName'])
+            match = re.findall(pattern, self['ApplicationName'])
             assert len(match) == 1, 'impossible to find application name and version'
-            info['ApplicationName'], app_version = match[0]
+            self['ApplicationName'], app_version = match[0]
         # BML Ncs file writing contained neither property, assume BML version 2
         else:
-            info['ApplicationName'] = 'BML'
+            self['ApplicationName'] = 'BML'
             app_version = "2.0"
 
-        info['ApplicationVersion'] = distutils.version.LooseVersion(app_version)
+        self['ApplicationVersion'] = distutils.version.LooseVersion(app_version)
 
         # convert bit_to_microvolt
-        if 'bit_to_microVolt' in info:
-            btm_entries = re.findall(r'\S+', info['bit_to_microVolt'])
+        if 'bit_to_microVolt' in self:
+            btm_entries = re.findall(r'\S+', self['bit_to_microVolt'])
             if len(btm_entries) == 1:
-                btm_entries = btm_entries * len(info['channel_ids'])
-            info['bit_to_microVolt'] = [float(e) * 1e6 for e in btm_entries]
-            assert len(info['bit_to_microVolt']) == len(info['channel_ids']), \
+                btm_entries = btm_entries * len(self['channel_ids'])
+            self['bit_to_microVolt'] = [float(e) * 1e6 for e in btm_entries]
+            assert len(self['bit_to_microVolt']) == len(self['channel_ids']), \
                 'Number of channel ids does not match bit_to_microVolt conversion factors.'
 
-        if 'InputRange' in info:
-            ir_entries = re.findall(r'\w+', info['InputRange'])
+        if 'InputRange' in self:
+            ir_entries = re.findall(r'\w+', self['InputRange'])
             if len(ir_entries) == 1:
-                info['InputRange'] = [int(ir_entries[0])] * len(chid_entries)
+                self['InputRange'] = [int(ir_entries[0])] * len(chid_entries)
             else:
-                info['InputRange'] = [int(e) for e in ir_entries]
-            assert len(info['InputRange']) == len(chid_entries), \
+                self['InputRange'] = [int(e) for e in ir_entries]
+            assert len(self['InputRange']) == len(chid_entries), \
                 'Number of channel ids does not match input range values.'
 
         # Format of datetime depends on app name, app version
         # :TODO: this works for current examples but is not likely actually related
         # to app version in this manner.
-        an = info['ApplicationName']
+        an = self['ApplicationName']
         if an == 'Cheetah':
-            av = info['ApplicationVersion']
+            av = self['ApplicationVersion']
             if av <= '2':  # version 1 uses same as older versions
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
             elif av < '5':
@@ -244,7 +242,6 @@ class NlxHeader(OrderedDict):
                 info['recording_closed'] = datetime.datetime.strptime(
                     dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
 
-        return info
 
     def type_of_recording(self):
         """

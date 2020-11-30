@@ -1,5 +1,5 @@
 """
-RawIO for reading data from Neuralynx files.
+Class for reading data from Neuralynx files.
 This IO supports NCS, NEV, NSE and NTT file formats.
 
 
@@ -7,13 +7,12 @@ NCS contains the sampled signal for one channel
 NEV contains events
 NSE contains spikes and waveforms for mono electrodes
 NTT contains spikes and waveforms for tetrodes
-<<<<<<< HEAD
 
 NCS files can contains gaps that can be detected in irregularity
-in timestamps of data blocks. Each gap leads to one new segment being defined.
+in timestamps of data records. Each gap leads to one new segment being defined.
 Some NCS files may need to be read entirely to detect those gaps, which can be slow.
 
-Author: Julia Sprenger, Carlos Canova, Samuel Garcia
+Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
 """
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
@@ -25,8 +24,8 @@ import numpy as np
 import os
 from collections import (namedtuple, OrderedDict)
 
-from neo.rawio.neuralynxrawio.NcsBlocks import (NcsBlock, NcsBlocksFactory)
-from neo.rawio.neuralynxrawio.NlxHeader import NlxHeader
+from neo.rawio.neuralynxrawio.ncssections import (NcsSection, NcsSectionsFactory)
+from neo.rawio.neuralynxrawio.nlxheader import NlxHeader
 
 
 class NeuralynxRawIO(BaseRawIO):
@@ -49,7 +48,7 @@ class NeuralynxRawIO(BaseRawIO):
     rawmode = 'one-dir'
 
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
-                  ('nb_valid', 'uint32'), ('samples', 'int16', (NcsBlock._BLOCK_SIZE))]
+                  ('nb_valid', 'uint32'), ('samples', 'int16', (NcsSection._RECORD_SIZE))]
 
     def __init__(self, dirname='', keep_original_times=False, **kargs):
         """
@@ -108,7 +107,7 @@ class NeuralynxRawIO(BaseRawIO):
                 continue
 
             # All file have more or less the same header structure
-            info = NlxHeader.build_for_file(filename)
+            info = NlxHeader(filename)
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
@@ -352,8 +351,8 @@ class NeuralynxRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self._sigs_length[seg_index]
 
-        block_start = i_start // NcsBlock._BLOCK_SIZE
-        block_stop = i_stop // NcsBlock._BLOCK_SIZE + 1
+        block_start = i_start // NcsSection._RECORD_SIZE
+        block_stop = i_stop // NcsSection._RECORD_SIZE + 1
         sl0 = i_start % 512
         sl1 = sl0 + (i_stop - i_start)
 
@@ -481,10 +480,10 @@ class NeuralynxRawIO(BaseRawIO):
         memmaps
             [ {} for seg_index in range(self._nb_segment) ][chan_uid]
         seg_time_limits
-            SegmentTimeLimits for blocks in scanned Ncs files
+            SegmentTimeLimits for sections in scanned Ncs files
 
-        Files will be scanned to determine the blocks of records. If file is a single
-        block of records, this scan is brief, otherwise it will check each record which may
+        Files will be scanned to determine the sections of records. If file is a single
+        section of records, this scan is brief, otherwise it will check each record which may
         take some time.
         """
 
@@ -494,34 +493,34 @@ class NeuralynxRawIO(BaseRawIO):
         if len(ncs_filenames) == 0:
             return None, None
 
-        # Build dictionary of chan_uid to associated NcsBlocks, memmap and NlxHeaders. Only
-        # construct new NcsBlocks when it is different from that for the preceding file.
-        chanBlockMap = dict()
+        # Build dictionary of chan_uid to associated NcsSections, memmap and NlxHeaders. Only
+        # construct new NcsSections when it is different from that for the preceding file.
+        chanSectMap = dict()
         for chan_uid, ncs_filename in self.ncs_filenames.items():
 
             data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
                              offset=NlxHeader.HEADER_SIZE)
-            nlxHeader = NlxHeader.build_for_file(ncs_filename)
+            nlxHeader = NlxHeader(ncs_filename)
 
-            if not chanBlockMap or (chanBlockMap and
-                                    not NcsBlocksFactory._verifyBlockStructure(data,
-                                                                               lastNcsBlocks)):
-                lastNcsBlocks = NcsBlocksFactory.buildForNcsFile(data, nlxHeader)
+            if not chanSectMap or (chanSectMap and
+                                    not NcsSectionsFactory._verifySectionsStructure(data,
+                                                                                lastNcsSections)):
+                lastNcsSections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
 
-            chanBlockMap[chan_uid] = [lastNcsBlocks, nlxHeader, data]
+            chanSectMap[chan_uid] = [lastNcsSections, nlxHeader, data]
 
-        # Construct an inverse dictionary from NcsBlocks to list of associated chan_uids
-        revBlockMap = dict()
-        for k, v in chanBlockMap.items():
-            revBlockMap.setdefault(v[0], []).append(k)
+        # Construct an inverse dictionary from NcsSections to list of associated chan_uids
+        revSectMap = dict()
+        for k, v in chanSectMap.items():
+            revSectMap.setdefault(v[0], []).append(k)
 
-        # If there is only one NcsBlocks structure in the set of ncs files, there should only
+        # If there is only one NcsSections structure in the set of ncs files, there should only
         # be one entry. Otherwise this is presently unsupported.
-        if len(revBlockMap) > 1:
-            raise IOError('ncs files have {} different block structures. Unsupported.'.format(
-                len(revBlockMap)))
+        if len(revSectMap) > 1:
+            raise IOError('ncs files have {} different sections structures. Unsupported.'.format(
+                len(revSectMap)))
 
-        seg_time_limits = SegmentTimeLimits(nb_segment = len(lastNcsBlocks.blocks),
+        seg_time_limits = SegmentTimeLimits(nb_segment = len(lastNcsSections.sects),
                                             t_start = [], t_stop = [], length = [],
                                             timestamp_limits = [])
         memmaps = [{} for seg_index in range(seg_time_limits.nb_segment)]
@@ -529,32 +528,32 @@ class NeuralynxRawIO(BaseRawIO):
         # create segment with subdata block/t_start/t_stop/length for each channel
         for i, fileEntry in enumerate(self.ncs_filenames.items()):
             chan_uid = fileEntry[0]
-            data = chanBlockMap[chan_uid][2]
+            data = chanSectMap[chan_uid][2]
 
-            # create a memmap for each record block of the current file
-            curBlocks = chanBlockMap[chan_uid][0]
-            for seg_index in range(len(curBlocks.blocks)):
+            # create a memmap for each record section of the current file
+            curSects = chanSectMap[chan_uid][0]
+            for seg_index in range(len(curSects.sects)):
 
-                subdata = data[curBlocks.blocks[seg_index].startBlock:(
-                        curBlocks.blocks[seg_index].endBlock + 1)]
+                curSect = curSects.sects[seg_index]
+                subdata = data[curSect.startRec:(curSect.endRec + 1)]
                 memmaps[seg_index][chan_uid] = subdata
 
-                # create segment timestamp limits based on only NcsBlocks structure in use
+                # create segment timestamp limits based on only NcsSections structure in use
                 if i == 0:
-                    numSampsLastBlock = subdata[-1]['nb_valid']
+                    numSampsLastSect = subdata[-1]['nb_valid']
                     ts0 = subdata[0]['timestamp']
-                    ts1 = NcsBlocksFactory.calcSampleTime(curBlocks.sampFreqUsed,
-                                                          subdata[-1]['timestamp'],
-                                                          numSampsLastBlock)
+                    ts1 = NcsSectionsFactory.calc_sample_time(curSects.sampFreqUsed,
+                                                              subdata[-1]['timestamp'],
+                                                              numSampsLastSect)
                     seg_time_limits.timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     seg_time_limits.t_start.append(t_start)
                     t_stop = ts1 / 1e6
                     seg_time_limits.t_stop.append(t_stop)
                     # :NOTE: This should really be the total of nb_valid in records, but this
-                    #  allows the last record of a block to be shorter, the most common case.
-                    #  Have never seen a block of records with not full records before the last.
-                    length = (subdata.size - 1) * NcsBlock._BLOCK_SIZE + numSampsLastBlock
+                    #  allows the last record of a section to be shorter, the most common case.
+                    #  Have never seen a section of records with not full records before the last.
+                    length = (subdata.size - 1) * NcsSection._RECORD_SIZE + numSampsLastSect
                     seg_time_limits.length.append(length)
 
         return memmaps, seg_time_limits
@@ -602,6 +601,3 @@ def get_nse_or_ntt_dtype(info, ext):
         dtype += [('samples', 'int16', (nb_sample, nb_chan))]
 
     return dtype
-=======
-"""
->>>>>>> 25217993... Changes to address comments by Julia Sprenger
