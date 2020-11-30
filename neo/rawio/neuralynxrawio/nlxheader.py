@@ -228,7 +228,7 @@ class NlxHeader(OrderedDict):
                           "version {}. Please contact developers.".format(an, av))
         else:
             dt1 = sr.groupdict()
-            info['recording_opened'] = datetime.datetime.strptime(
+            self['recording_opened'] = datetime.datetime.strptime(
                 dt1['date'] + ' ' + dt1['time'], hpd['datetimeformat'])
 
         # close time, if available
@@ -239,7 +239,7 @@ class NlxHeader(OrderedDict):
                               "version {}. Please contact developers.".format(an, av))
             else:
                 dt2 = sr.groupdict()
-                info['recording_closed'] = datetime.datetime.strptime(
+                self['recording_closed'] = datetime.datetime.strptime(
                     dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
 
     def type_of_recording(self):
