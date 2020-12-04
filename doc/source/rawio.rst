@@ -114,8 +114,9 @@ Read signal chunks of data and scale them::
 
 
 There are 3 ways to select a subset of channels: by index (0 based), by id or by name.
-By index is not ambiguous 0 to n-1 (included), for some IOs channel_names (and sometimes channel_ids) have no guarantees to
-be unique, in such cases it would raise an error.
+By index is unambiguous 0 to n-1 (included), whereas for some IOs channel_names
+(and sometimes channel_ids) have no guarantees to
+be unique. In such cases, using names or ids may raise an error.
 
 Example with BlackrockRawIO for the file FileSpec2.3001::
 
