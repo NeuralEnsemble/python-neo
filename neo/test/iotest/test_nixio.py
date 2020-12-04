@@ -26,8 +26,8 @@ import string
 import numpy as np
 import quantities as pq
 
-from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
-                      IrregularlySampledSignal, Unit, SpikeTrain,
+from neo.core import (Block, Segment, AnalogSignal,
+                      IrregularlySampledSignal, SpikeTrain,
                       Event, Epoch, ImageSequence, Group, ChannelView)
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io.nixio import (NixIO, create_quantity, units_to_string, neover,
@@ -133,46 +133,11 @@ class NixIOTest(unittest.TestCase):
     def check_refs(self, neoblock, nixblock):
         """
         Checks whether the references between objects that are not nested are
-        mapped correctly (e.g., SpikeTrains referenced by a Unit).
+        mapped correctly.
 
         :param neoblock: A Neo block
         :param nixblock: The corresponding NIX block
         """
-        for idx, neochx in enumerate(neoblock.channel_indexes):
-            nixchx = nixblock.sources[neochx.annotations["nix_name"]]
-            # AnalogSignals referencing CHX
-            neoasigs = list(sig.annotations["nix_name"]
-                            for sig in neochx.analogsignals)
-            nixasigs = list({da.metadata.name for da in nixblock.data_arrays
-                             if da.type == "neo.analogsignal"
-                             and nixchx in da.sources})
-
-            self.assertEqual(len(neoasigs), len(nixasigs))
-            # IrregularlySampledSignals referencing CHX
-            neoisigs = list(sig.annotations["nix_name"] for sig in
-                            neochx.irregularlysampledsignals)
-            nixisigs = list(
-                {da.metadata.name for da in nixblock.data_arrays
-                 if da.type == "neo.irregularlysampledsignal"
-                 and nixchx in da.sources}
-            )
-            self.assertEqual(len(neoisigs), len(nixisigs))
-            # SpikeTrains referencing CHX and Units
-            for sidx, neounit in enumerate(neochx.units):
-                nixunit = nixchx.sources[neounit.annotations["nix_name"]]
-                neosts = list(st.annotations["nix_name"]
-                              for st in neounit.spiketrains)
-                nixsts = list(mt for mt in nixblock.multi_tags
-                              if mt.type == "neo.spiketrain" and
-                              nixunit.name in mt.sources)
-                # SpikeTrains must also reference CHX
-                for nixst in nixsts:
-                    self.assertIn(nixchx.name, nixst.sources)
-                nixsts = list(st.name for st in nixsts)
-                self.assertEqual(len(neosts), len(nixsts))
-                for neoname in neosts:
-                    if neoname:
-                        self.assertIn(neoname, nixsts)
 
         # Events and Epochs must reference all Signals in the Group (NIX only)
         for nixgroup in nixblock.groups:
@@ -622,45 +587,7 @@ class NixIOTest(unittest.TestCase):
             for siggroup in allsignalgroups:
                 mtag_ev.references.extend(siggroup)
 
-        # CHX
-        nixchx = blk.create_source(cls.rword(10),
-                                   "neo.channelindex")
-        nixchx.metadata = nix_blocks[0].metadata.create_section(
-            nixchx.name, "neo.channelindex.metadata"
-        )
-        chantype = "neo.channelindex"
-        # 3 channels
-        for idx, chan in enumerate([2, 5, 9]):
-            channame = "{}.ChannelIndex{}".format(nixchx.name, idx)
-            nixrc = nixchx.create_source(channame, chantype)
-            nixrc.definition = cls.rsentence(13)
-            nixrc.metadata = nixchx.metadata.create_section(
-                nixrc.name, "neo.channelindex.metadata"
-            )
-            nixrc.metadata.create_property("index", chan)
-            nixrc.metadata.create_property("channel_id", chan + 1)
-            dims = cls.rquant(3, 1)
-            coordprop = nixrc.metadata.create_property("coordinates", dims)
-            coordprop.unit = "pm"
-
-        nunits = 1
-        stsperunit = np.array_split(allspiketrains, nunits)
-        for idx in range(nunits):
-            unitname = "{}-unit{}".format(cls.rword(5), idx)
-            nixunit = nixchx.create_source(unitname, "neo.unit")
-            nixunit.metadata = nixchx.metadata.create_section(
-                unitname, unitname + ".metadata"
-            )
-            nixunit.definition = cls.rsentence(4, 10)
-            for st in stsperunit[idx]:
-                st.sources.append(nixchx)
-                st.sources.append(nixunit)
-
-        # pick a few signal groups to reference this CHX
-        randsiggroups = np.random.choice(allsignalgroups, 5, False)
-        for siggroup in randsiggroups:
-            for sig in siggroup:
-                sig.sources.append(nixchx)
+        # todo: Groups
 
         return nixfile
 
@@ -752,13 +679,12 @@ class NixIOTest(unittest.TestCase):
         spiketrain.annotate(**d)
         seg.spiketrains.append(spiketrain)
 
-        chx = ChannelIndex(name="achx", index=[1, 2], channel_ids=[0, 10])
-        chx.annotate(**cls.rdict(5))
-        blk.channel_indexes.append(chx)
+        chv = ChannelView(name="achv", index=[1, 2], channel_ids=[0, 10])
+        chv.annotate(**cls.rdict(5))
 
-        unit = Unit()
-        unit.annotate(**cls.rdict(2))
-        chx.units.append(unit)
+        group = Group(chv)
+        group.annotate(**cls.rdict(2))
+        blk.groups.append(group)
 
         return blk
 
@@ -798,50 +724,6 @@ class NixIOWriteTest(NixIOTest):
         self.write_and_compare([block])
 
         segment.annotate(**self.rdict(2))
-        self.write_and_compare([block])
-
-    def test_channel_index_write(self):
-        block = Block(name=self.rword())
-        chx = ChannelIndex(name=self.rword(),
-                           description=self.rsentence(),
-                           channel_ids=[10, 20, 30, 50, 80, 130],
-                           index=[1, 2, 3, 5, 8, 13])
-        block.channel_indexes.append(chx)
-        self.write_and_compare([block])
-
-        chx.annotate(**self.rdict(3))
-        self.write_and_compare([block])
-
-        chx.channel_names = ["one", "two", "three", "five",
-                             "eight", "xiii"]
-
-        chx.coordinates = self.rquant((6, 3), pq.um)
-        self.write_and_compare([block])
-
-        # add an empty channel index and check again
-        newchx = ChannelIndex(np.array([]))
-        block.channel_indexes.append(newchx)
-        self.write_and_compare([block])
-
-    def test_channel_index_coords(self):
-        block = Block(name=self.rword())
-        chxn = ChannelIndex(name=self.rword(),
-                            description=self.rsentence(),
-                            channel_ids=[10, 20, 30],
-                            index=[1, 2, 3])
-        chxn.coordinates = self.rquant((3, 3), pq.mm)
-        chx1 = ChannelIndex(name=self.rword(),
-                            description=self.rsentence(),
-                            channel_ids=[1],
-                            index=[0])
-        chx1.coordinates = self.rquant(2, pq.mm)
-        block.channel_indexes.append(chxn)
-        block.channel_indexes.append(chx1)
-        self.write_and_compare([block])
-
-        # add an empty channel index and check again
-        newchx = ChannelIndex(np.array([]))
-        block.channel_indexes.append(newchx)
         self.write_and_compare([block])
 
     def test_signals_write(self):
@@ -1157,12 +1039,12 @@ class NixIOWriteTest(NixIOTest):
                                                       t_stop=times[-1] + pq.s,
                                                       units=pq.s))
             for chidx in range(nchx):
-                chx = ChannelIndex(index=[1, 2],
-                                   channel_ids=[11, 22])
-                blk.channel_indexes.append(chx)
+                chx = Group(index=[1, 2],
+                            channel_ids=[11, 22])
+                blk.groups.append(chx)
                 for unidx in range(nunits):
-                    unit = Unit()
-                    chx.units.append(unit)
+                    unit = Group()
+                    chx.add(unit)
         self.writer.write_all_blocks(blocks)
         self.compare_blocks(blocks, self.reader.blocks)
 
@@ -1230,13 +1112,13 @@ class NixIOWriteTest(NixIOTest):
                                    units=pq.s)
                     )
             for chidx in range(nchx):
-                chx = ChannelIndex(name="chx{}".format(chidx),
+                chx = Group(name="chx{}".format(chidx),
                                    index=[1, 2],
                                    channel_ids=[11, 22])
-                blk.channel_indexes.append(chx)
+                blk.group.append(chx)
                 for unidx in range(nunits):
-                    unit = Unit(name="unit{}".format(unidx))
-                    chx.units.append(unit)
+                    unit = Group(name="unit{}".format(unidx))
+                    chx.add(unit)
 
         # put guard on _generate_nix_name
         if not SKIPMOCK:
@@ -1330,19 +1212,19 @@ class NixIOWriteTest(NixIOTest):
         with self.assertRaises(ValueError):
             self.io.write_block(blk, use_obj_names=True)
 
-        # name conflict in channel indexes
-        blk = Block(name="ChannelIndex conflict Block")
-        blk.channel_indexes.append(ChannelIndex(name="chax", index=[1]))
-        blk.channel_indexes.append(ChannelIndex(name="chax", index=[2]))
+        # name conflict in groups
+        blk = Block(name="Group conflict Block")
+        blk.channel_indexes.append(Group(name="chax", index=[1]))
+        blk.channel_indexes.append(Group(name="chax", index=[2]))
         with self.assertRaises(ValueError):
             self.io.write_block(blk, use_obj_names=True)
 
-        # name conflict in units
+        # name conflict in sub-groups
         blk = Block(name="unitconf")
-        chx = ChannelIndex(name="ok", index=[100])
+        chx = Group(name="ok", index=[100])
         blk.channel_indexes.append(chx)
-        chx.units.append(Unit(name="IHAVEATWIN"))
-        chx.units.append(Unit(name="IHAVEATWIN"))
+        chx.units.append(Group(name="IHAVEATWIN"))
+        chx.units.append(Group(name="IHAVEATWIN"))
         with self.assertRaises(ValueError):
             self.io.write_block(blk, use_obj_names=True)
 
@@ -1373,15 +1255,15 @@ class NixIOWriteTest(NixIOTest):
             seg.epochs.append(epoch)
             seg.spiketrains.append(st)
 
-        chidx = ChannelIndex([10, 20, 29])
+        chidx = Group(index=[10, 20, 29])
         seg = blk.segments[0]
         st = SpikeTrain(name="choochoo", times=[10, 11, 80], t_stop=1000,
                         units="s")
         seg.spiketrains.append(st)
-        blk.channel_indexes.append(chidx)
+        blk.group.append(chidx)
         for idx in range(6):
-            unit = Unit("unit" + str(idx))
-            chidx.units.append(unit)
+            unit = Group("unit" + str(idx))
+            chidx.add(unit)
             unit.spiketrains.append(st)
 
         self.writer.write_block(blk)
@@ -1389,7 +1271,7 @@ class NixIOWriteTest(NixIOTest):
 
     def test_no_segment_write(self):
         # Tests storing AnalogSignal, IrregularlySampledSignal, and SpikeTrain
-        # objects in the secondary (ChannelIndex) substructure without them
+        # objects in the secondary (Group) substructure without them
         # being attached to a Segment.
         blk = Block("segmentless block")
         signal = AnalogSignal(name="sig1", signal=[0, 1, 2], units="mV",
@@ -1402,14 +1284,14 @@ class NixIOWriteTest(NixIOTest):
         stb = SpikeTrain(name="the train of spikes b", times=[1.1, 2.2, 10.1],
                          t_stop=100, units="ms")
 
-        chidx = ChannelIndex([8, 13, 21])
-        blk.channel_indexes.append(chidx)
-        chidx.analogsignals.append(signal)
-        chidx.irregularlysampledsignals.append(othersignal)
+        chidx = Group()
+        blk.groups.append(chidx)
+        chidx.add(ChannelView(signal, index=[8, 13, 21]))
+        chidx.add(ChannelView(othersignal, index=[8, 13, 21]))
 
-        unit = Unit()
-        chidx.units.append(unit)
-        unit.spiketrains.extend([sta, stb])
+        unit = Group()
+        chidx.add(unit)
+        unit.add([sta, stb])
         self.writer.write_block(blk)
         self.writer.close()
 
@@ -1418,9 +1300,9 @@ class NixIOWriteTest(NixIOTest):
         reader = NixIO(self.filename, "ro")
         blk = reader.read_block(neoname="segmentless block")
         chx = blk.channel_indexes[0]
-        self.assertEqual(len(chx.analogsignals), 1)
-        self.assertEqual(len(chx.irregularlysampledsignals), 1)
-        self.assertEqual(len(chx.units[0].spiketrains), 2)
+        self.assertEqual(len([obj for obj in chx if isinstance(obj, AnalogSignal)]), 1)
+        self.assertEqual(len([obj for obj in chx if isinstance(obj, IrregularlySampledSignal)]), 1)
+        self.assertEqual(len([obj for obj in chx if isinstance(obj, SpikeTrain)]), 2)
 
     def test_rewrite_refs(self):
 
@@ -1436,23 +1318,23 @@ class NixIOWriteTest(NixIOTest):
 
         blk = Block()
         # ChannelIndex
-        chidx = ChannelIndex(index=[1])
-        blk.channel_indexes.append(chidx)
+        chidx = Group(index=[1])
+        blk.groups.append(chidx)
 
         # Two signals on ChannelIndex
         for idx in range(2):
             asigchx = AnalogSignal(signal=[idx], units="mV",
                                    sampling_rate=pq.Hz)
-            chidx.analogsignals.append(asigchx)
+            chidx.add(asigchx)
 
         # Unit
-        unit = Unit()
-        chidx.units.append(unit)
+        unit = Group()
+        chidx.add(unit)
 
         # Three SpikeTrains on Unit
         for idx in range(3):
             st = SpikeTrain([idx], units="ms", t_stop=40)
-            unit.spiketrains.append(st)
+            unit.add(st)
 
         # Segment
         seg = Segment()
@@ -1632,15 +1514,15 @@ class NixIOWriteTest(NixIOTest):
             seg.events.append(event)
 
             # add channel index and unit
-            channel = ChannelIndex([0], channel_names=['mychannelname'],
+            channel = Group(index=[0], channel_names=['mychannelname'],
                                    channel_ids=[4],
                                    name=['testname'])
-            block.channel_indexes.append(channel)
-            unit = Unit(name='myunit', description='blablabla',
-                        file_origin='fileA.nix',
-                        myannotation='myannotation')
-            channel.units.append(unit)
-            unit.spiketrains.append(spiketrain)
+            block.groups.add(channel)
+            unit = Group(name='myunit', description='blablabla',
+                         file_origin='fileA.nix',
+                         myannotation='myannotation')
+            channel.add(unit)
+            unit.add(spiketrain)
 
             # make sure everything is linked properly
             block.create_relationship()

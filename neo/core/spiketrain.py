@@ -199,8 +199,8 @@ class SpikeTrain(DataObject):
 
     '''
 
-    _single_parent_objects = ('Segment', 'Unit')
-    _single_parent_attrs = ('segment', 'unit')
+    _single_parent_objects = ('Segment',)
+    _single_parent_attrs = ('segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('t_start', pq.Quantity, 0),
                         ('t_stop', pq.Quantity, 0))

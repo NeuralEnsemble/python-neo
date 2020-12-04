@@ -140,9 +140,6 @@ class AnalogSignal(BaseSignal):
         :times: (quantity 1D) The time points of each sample of the signal,
             read-only.
             (:attr:`t_start` + arange(:attr:`shape`[0])/:attr:`sampling_rate`)
-        :channel_index:
-            (deprecated) access to the channel_index attribute of the principal ChannelIndex
-            associated with this signal.
 
     *Slicing*:
         :class:`AnalogSignal` objects can be sliced. When taking a single
@@ -160,8 +157,8 @@ class AnalogSignal(BaseSignal):
 
     '''
 
-    _single_parent_objects = ('Segment', 'ChannelIndex')
-    _single_parent_attrs = ('segment', 'channel_index')
+    _single_parent_objects = ('Segment',)
+    _single_parent_attrs = ('segment',)
     _quantity_attr = 'signal'
     _necessary_attrs = (('signal', pq.Quantity, 2),
                         ('sampling_rate', pq.Quantity, 0),
@@ -243,14 +240,6 @@ class AnalogSignal(BaseSignal):
                                                            super().__repr__(),
                                                            self.t_start, self.t_stop,
                                                            self.sampling_rate))
-
-    def get_channel_index(self):
-        """
-        """
-        if self.channel_index:
-            return self.channel_index.index
-        else:
-            return None
 
     def __getitem__(self, i):
         '''

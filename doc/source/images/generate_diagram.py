@@ -13,7 +13,7 @@ from matplotlib import pyplot
 from matplotlib.patches import Rectangle, ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
 
-from neo.test.generate_datasets import fake_neo
+from neo.test.generate_datasets import random_block
 
 line_heigth = .22
 fontsize = 10.5

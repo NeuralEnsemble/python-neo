@@ -9,8 +9,8 @@ import unittest
 import numpy as np
 import quantities as pq
 
-from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Unit, Epoch, Event, ChannelIndex, \
-    IrregularlySampledSignal
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Epoch, Event, \
+    IrregularlySampledSignal, Group
 from neo.io import PickleIO
 from numpy.testing import assert_array_equal
 from neo.test.tools import assert_arrays_equal, assert_file_contents_equal
@@ -27,9 +27,7 @@ class TestPickleIO(unittest.TestCase):
     def test__issue_285(self):
         # Spiketrain
         train = SpikeTrain([3, 4, 5] * pq.s, t_stop=10.0)
-        unit = Unit()
-        train.unit = unit
-        unit.spiketrains.append(train)
+        unit = Group([train])
 
         epoch = Epoch(np.array([0, 10, 20]),
                       np.array([2, 2, 2]),
@@ -49,7 +47,6 @@ class TestPickleIO(unittest.TestCase):
         reader = PickleIO(filename="blk.pkl")
         r_blk = reader.read_block()
         r_seg = r_blk.segments[0]
-        self.assertIsInstance(r_seg.spiketrains[0].unit, Unit)
         self.assertIsInstance(r_seg.epochs[0], Epoch)
         os.remove('blk.pkl')
 

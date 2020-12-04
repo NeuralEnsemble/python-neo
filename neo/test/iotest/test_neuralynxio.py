@@ -429,7 +429,7 @@ def compare_old_and_new_neuralynxio():
 
 def compare_neo_content(bl1, bl2):
     print('*' * 5, 'Comparison of blocks', '*' * 5)
-    object_types_to_test = [Segment, ChannelIndex, Unit, AnalogSignal,
+    object_types_to_test = [Segment, AnalogSignal,
                             SpikeTrain, Event, Epoch]
     for objtype in object_types_to_test:
         print('Testing {}'.format(objtype))

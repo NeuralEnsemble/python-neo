@@ -111,10 +111,6 @@ Classes:
 
     .. autoattribute:: extensions
 
-.. .. autoclass:: neo.io.ElphyIO
-
-    .. autoattribute:: extensions
-
 .. autoclass:: neo.io.IgorIO
 
     .. autoattribute:: extensions
@@ -132,10 +128,6 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.MicromedIO
-
-    .. autoattribute:: extensions
-
-.. autoclass:: neo.io.NeoHdf5IO
 
     .. autoattribute:: extensions
 
@@ -242,7 +234,6 @@ from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axographio import AxographIO
 from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
-from neo.io.blackrockio_v4 import BlackrockIO as OldBlackrockIO
 from neo.io.blkio import BlkIO
 from neo.io.bci2000io import BCI2000IO
 from neo.io.brainvisionio import BrainVisionIO
@@ -250,18 +241,15 @@ from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.elanio import ElanIO
-# from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
 from neo.io.intanio import IntanIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.micromedio import MicromedIO
-from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
 from neo.io.neuralynxio import NeuralynxIO
-from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
@@ -294,15 +282,13 @@ iolist = [
     BrainwareF32IO,
     BrainwareSrcIO,
     ElanIO,
-    # ElphyIO,
     ExampleIO,
     IgorIO,
     IntanIO,
     KlustaKwikIO,
     KwikIO,
     MicromedIO,
-    NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
-    NeoHdf5IO,
+    NixIO,
     NeoMatlabIO,
     NestIO,
     NeuralynxIO,

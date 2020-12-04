@@ -26,19 +26,19 @@ else:
     NSDF_ERR = None
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal, ChannelIndex
+from neo.core import Block, Segment, AnalogSignal, Group
 
 
 class NSDFIO(BaseIO):
     """
     Class for reading and writing files in NSDF Format.
 
-    It supports reading and writing: Block, Segment, AnalogSignal, ChannelIndex, with all relationships and metadata.
+    It supports reading and writing: Block, Segment, AnalogSignal, Group, with all relationships and metadata.
     """
     is_readable = True
     is_writable = False  # True - disabled pending update to Neo 0.9 API
 
-    supported_objects = [Block, Segment, AnalogSignal, ChannelIndex]
+    supported_objects = [Block, Segment, AnalogSignal, Group]
 
     readable_objects = [Block, Segment]
     writeable_objects = []  # [Block, Segment] - disabled pending update to Neo 0.9 API
@@ -536,10 +536,10 @@ class NSDFIO(BaseIO):
                             t_start=t_start, sampling_period=pq.Quantity(dataobj.dt, dataobj.tunit))
 
     def _create_channelindex(self, group):
-        return ChannelIndex(index=self._read_array(group, 'index'),
-                            channel_names=self._read_array(group, 'channel_names'),
-                            channel_ids=self._read_array(group, 'channel_ids'),
-                            coordinates=self._read_array(group, 'coordinates'))
+        return Group(index=self._read_array(group, 'index'),
+                     channel_names=self._read_array(group, 'channel_names'),
+                     channel_ids=self._read_array(group, 'channel_ids'),
+                     coordinates=self._read_array(group, 'coordinates'))
 
     def _read_array(self, group, name):
         if group.__contains__(name) == False:

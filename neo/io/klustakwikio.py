@@ -7,7 +7,6 @@ Supported : Read, Write
 Author : Chris Rodgers
 
 TODO:
-* When reading, put the Unit into the RCG, RC hierarchy
 * When writing, figure out how to get group and cluster if those annotations
 weren't set. Consider removing those annotations if they are redundant.
 * Load features in addition to spiketimes.
@@ -33,7 +32,7 @@ else:
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
-from neo.core import Block, Segment, Unit, SpikeTrain
+from neo.core import Block, Segment, Group, SpikeTrain
 
 # Pasted version of feature file format spec
 """
@@ -72,7 +71,7 @@ class KlustaKwikIO(BaseIO):
     is_writable = True
 
     # This IO can only manipulate objects relating to spike times
-    supported_objects = [Block, SpikeTrain, Unit]
+    supported_objects = [Block, SpikeTrain, Group]
 
     # Keep things simple by always returning a block
     readable_objects = [Block]
@@ -167,8 +166,8 @@ class KlustaKwikIO(BaseIO):
             unique_unit_ids = np.unique(uids)
             for unit_id in sorted(unique_unit_ids):
                 # Initialize the unit
-                u = Unit(name=('unit %d from group %d' % (unit_id, group)),
-                         index=unit_id, group=group)
+                u = Group(name=('unit %d from group %d' % (unit_id, group)),
+                          index=unit_id, group=group)
 
                 # Initialize a new SpikeTrain for the spikes from this unit
                 st = SpikeTrain(
@@ -184,8 +183,9 @@ class KlustaKwikIO(BaseIO):
                     st.annotations['waveform_features'] = features
 
                 # Link
-                u.spiketrains.append(st)
+                u.add(st)
                 seg.spiketrains.append(st)
+                block.groups.append(g)
 
         block.create_many_to_one_relationship()
         return block
@@ -255,7 +255,7 @@ class KlustaKwikIO(BaseIO):
         this process, since the KlustaKwik format does not allow for
         segment boundaries.
 
-        As implemented currently, does not use the `Unit` object at all.
+        As implemented currently, does not use the `Group` object at all.
 
         We first try to use the sampling rate of each SpikeTrain, or if this
         is not set, we use `self.sampling_rate`.

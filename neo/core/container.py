@@ -56,7 +56,13 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         targdict += [kwargs]
 
     if not targdict:
-        results = data
+        results = []
+        # would be nicer to use set(), but
+        #  (i) that would change object ordering: problem?
+        #  (ii) this gives  unhashable type exceptions
+        for obj in data:
+            if all([obj is not res for res in results]):
+                results.append(obj)
 
     # if multiple dicts are provided, apply each filter sequentially
     elif not hasattr(targdict, 'keys'):
@@ -340,7 +346,7 @@ class Container(BaseNeo):
         """
         childs = [list(child.data_children_recur) for child in
                   self.container_children]
-        return self.data_children + tuple(sum(childs, []))
+        return tuple(unique_objs(self.data_children + tuple(sum(childs, []))))
 
     @property
     def container_children_recur(self):
@@ -440,7 +446,7 @@ class Container(BaseNeo):
         objs = list(getattr(self, container_name, []))
         for child in self.container_children_recur:
             objs.extend(getattr(child, container_name, []))
-        return objs
+        return unique_objs(objs)
 
     def create_many_to_one_relationship(self, force=False, recursive=True):
         """

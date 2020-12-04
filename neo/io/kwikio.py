@@ -37,8 +37,7 @@ else:
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import (Segment, SpikeTrain, Unit, Epoch, AnalogSignal,
-                      ChannelIndex, Block)
+from neo.core import Segment, SpikeTrain, Epoch, AnalogSignal, Block, Group
 import neo.io.tools
 
 
@@ -53,8 +52,7 @@ class KwikIO(BaseIO):
     is_readable = True  # This class can only read data
     is_writable = False  # write is not supported
 
-    supported_objects = [Block, Segment, SpikeTrain, AnalogSignal,
-                         ChannelIndex]
+    supported_objects = [Block, Segment, SpikeTrain, AnalogSignal]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
@@ -116,10 +114,10 @@ class KwikIO(BaseIO):
             group_id = model.channel_group
             group_meta = {'group_id': group_id}
             group_meta.update(model.metadata)
-            chx = ChannelIndex(name='channel group #{}'.format(group_id),
-                               index=model.channels,
-                               **group_meta)
-            blk.channel_indexes.append(chx)
+            chx = Group(name='channel group #{}'.format(group_id),
+                        index=model.channels,
+                        **group_meta)
+            blk.groups.add(chx)
             clusters = model.spike_clusters
             for cluster_id in model.cluster_ids:
                 meta = model.cluster_metadata[cluster_id]
@@ -133,17 +131,15 @@ class KwikIO(BaseIO):
                                             raw_data_units=raw_data_units)
                 sptr.annotations.update({'cluster_group': meta,
                                          'group_id': model.channel_group})
-                sptr.channel_index = chx
-                unit = Unit(cluster_group=meta,
-                            group_id=model.channel_group,
-                            name='unit #{}'.format(cluster_id))
-                unit.spiketrains.append(sptr)
-                chx.units.append(unit)
-                unit.channel_index = chx
+                unit = Group(cluster_group=meta,
+                             group_id=model.channel_group,
+                             name='unit #{}'.format(cluster_id))
+                unit.add(sptr)
+                chx.add(unit)
                 seg.spiketrains.append(sptr)
             if get_raw_data:
                 ana = self.read_analogsignal(model, units=raw_data_units)
-                ana.channel_index = chx
+                chx.add(ana)
                 seg.analogsignals.append(ana)
 
         seg.duration = model.duration * pq.s
