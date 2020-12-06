@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for reading/writing data from/to Python pickle format.
 

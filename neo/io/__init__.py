@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 :mod:`neo.io` provides classes for reading and/or writing
 electrophysiological data files.

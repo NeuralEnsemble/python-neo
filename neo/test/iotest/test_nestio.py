@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.exampleio
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
 import warnings
 
 import unittest

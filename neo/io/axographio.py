@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AxographIO
 ==========
@@ -25,7 +24,7 @@ class AxographIO(AxographRawIO, BaseFromRaw):
     Example:
         >>> import neo
         >>> r = neo.io.AxographIO(filename=filename)
-        >>> blk = r.read_block()
+        >>> blk = r.read_block(signal_group_mode='split-all')
         >>> display(blk)
 
         >>> # get signals
@@ -49,7 +48,8 @@ class AxographIO(AxographRawIO, BaseFromRaw):
     name = 'AxographIO'
     description = 'This IO reads .axgd/.axgx files created with AxoGraph'
 
-    _prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'group-by-same-units'
+    _default_group_mode_have_change_in_0_9 = True
 
     def __init__(self, filename='', force_single_segment=False):
         AxographRawIO.__init__(self, filename, force_single_segment)

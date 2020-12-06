@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module defines :class:`DataObject`, the abstract base class
 used by all :module:`neo.core` classes that can contain data (i.e. are not container classes).
@@ -295,7 +294,7 @@ class DataObject(BaseNeo, pq.Quantity):
         :return: Copy of self
         '''
 
-        obj = super(DataObject, self).copy(**kwargs)
+        obj = super().copy(**kwargs)
         obj.array_annotations = self.array_annotations
         return obj
 
@@ -331,12 +330,6 @@ class DataObject(BaseNeo, pq.Quantity):
         except IndexError:
             length = 1
         return length
-
-    def duplicate_with_new_array(self, signal, units=None):
-        warnings.warn("Use of the `duplicate_with_new_array function is deprecated. "
-                      "Please use `duplicate_with_new_data` instead.",
-                      DeprecationWarning)
-        return self.duplicate_with_new_data(signal, units=units)
 
     def __deepcopy__(self, memo):
         """
@@ -385,7 +378,7 @@ class ArrayDict(dict):
     """
 
     def __init__(self, length, check_function=_normalize_array_annotations, *args, **kwargs):
-        super(ArrayDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.check_function = check_function
         self.length = length
 
@@ -394,7 +387,7 @@ class ArrayDict(dict):
         # Need to wrap key and value in a dict in order to make sure
         # that nested dicts are detected
         value = self.check_function({key: value}, self.length)[key]
-        super(ArrayDict, self).__setitem__(key, value)
+        super().__setitem__(key, value)
 
     # Updating the dict also needs to perform checks, so rerouting this to __setitem__
     def update(self, *args, **kwargs):
@@ -409,4 +402,4 @@ class ArrayDict(dict):
             self[key] = kwargs[key]
 
     def __reduce__(self):
-        return super(ArrayDict, self).__reduce__()
+        return super().__reduce__()

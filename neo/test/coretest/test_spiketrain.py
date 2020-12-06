@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.spiketrain.SpikeTrain class and related functions
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import
 
 import sys
 
@@ -673,6 +669,10 @@ class TestConstructor(unittest.TestCase):
         self.assertRaises(ValueError, SpikeTrain, times=np.arange(10), units='s', t_stop=4,
                           waveforms=np.ones((10, 6, 50)))
 
+    def test__create_with_invalid_times_dimension(self):
+        data2d = np.array([1, 2, 3, 4]).reshape((4, -1))
+        self.assertRaises(ValueError, SpikeTrain, times=data2d * pq.s, t_stop=10 * pq.s)
+
     def test_defaults(self):
         # default recommended attributes
         train1 = SpikeTrain([3, 4, 5], units='sec', t_stop=10.0)
@@ -1058,7 +1058,7 @@ class TestTimeSlice(unittest.TestCase):
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
-    def test_time_slice_out_of_boundries(self):
+    def test_time_slice_out_of_boundaries(self):
         self.train1.t_start = 0.1 * pq.ms
         assert_neo_object_is_compliant(self.train1)
 
@@ -1085,6 +1085,12 @@ class TestTimeSlice(unittest.TestCase):
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
         self.assertIsInstance(result.array_annotations, ArrayDict)
+
+    def test_time_slice_completely_out_of_boundaries(self):
+        # issue 831
+        t_start = 20.0 * pq.ms
+        t_stop = 70.0 * pq.ms
+        self.assertRaises(ValueError, self.train1.time_slice, t_start, t_stop)
 
     def test_time_slice_empty(self):
         waveforms = np.array([[[]]]) * pq.mV
@@ -1812,9 +1818,6 @@ class TestChanging(unittest.TestCase):
         data = [3, 4, 5] * pq.ms
         train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
-        if sys.version_info[0] == 2:
-            self.assertRaises(ValueError, train.__setslice__, 0, 3, [3, 4, 11] * pq.ms)
-            self.assertRaises(ValueError, train.__setslice__, 0, 3, [0, 4, 5] * pq.ms)
 
     def test__adding_time_scalar(self):
         data = [3, 4, 5] * pq.ms

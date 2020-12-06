@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Module for reading and writing NSDF files
 
@@ -9,7 +7,6 @@ This module support both reading and writing NDSF files.
 Note: Read file must be written using this IO
 """
 
-from __future__ import absolute_import
 
 import numpy as np
 import quantities as pq
@@ -39,12 +36,12 @@ class NSDFIO(BaseIO):
     It supports reading and writing: Block, Segment, AnalogSignal, ChannelIndex, with all relationships and metadata.
     """
     is_readable = True
-    is_writable = True
+    is_writable = False  # True - disabled pending update to Neo 0.9 API
 
     supported_objects = [Block, Segment, AnalogSignal, ChannelIndex]
 
     readable_objects = [Block, Segment]
-    writeable_objects = [Block, Segment]
+    writeable_objects = []  # [Block, Segment] - disabled pending update to Neo 0.9 API
 
     has_header = False
     is_streameable = False
@@ -77,6 +74,7 @@ class NSDFIO(BaseIO):
 
         :param blocks: List of blocks to be written
         """
+        raise NotImplementedError("Implementation not yet updated for Neo 0.9")
         writer = self._init_writing()
         neo_model, blocks_model, segments_model = self._prepare_model_tree(writer)
 
@@ -93,6 +91,7 @@ class NSDFIO(BaseIO):
         :param writer: NSDFWriter instance (optional)
         :param parent: NSDF ModelComponent which will be the parent of block NSDF representation (optional)
         """
+        raise NotImplementedError("Implementation not yet updated for Neo 0.9")
         if not isinstance(block, Block):
             raise ValueError("Must provide a Block to write.")
 
@@ -135,6 +134,7 @@ class NSDFIO(BaseIO):
         :param writer: NSDFWriter instance (optional)
         :param parent: NSDF ModelComponent which will be the parent of segment NSDF representation (optional)
         """
+        raise NotImplementedError("Implementation not yet updated for Neo 0.9")
         if not isinstance(segment, Segment):
             raise ValueError("Must provide a Segment to write.")
 
@@ -173,6 +173,7 @@ class NSDFIO(BaseIO):
         :param writer: NSDFWriter instance
         :param parent: NSDF ModelComponent which will be the parent of signal NSDF representation
         """
+        raise NotImplementedError("Implementation not yet updated for Neo 0.9")
         uid = uuid1().hex
         model = nsdf.ModelComponent(name, uid=uid, parent=parent)
 
@@ -203,6 +204,7 @@ class NSDFIO(BaseIO):
         :param writer: NSDFWriter instance
         :param parent: NSDF ModelComponent which will be the parent of channelindex NSDF representation
         """
+        raise NotImplementedError("Implementation not yet updated for Neo 0.9")
         uid = uuid1().hex
         model = nsdf.ModelComponent(name, uid=uid, parent=parent)
 

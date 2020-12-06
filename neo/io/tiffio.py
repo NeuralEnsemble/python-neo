@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Neo IO module for optical imaging data stored as a folder of TIFF images.
 """
@@ -81,11 +80,6 @@ class TiffIO(BaseIO):
         self.units = units
         self.sampling_rate = sampling_rate
         self.spatial_scale = spatial_scale
-
-    def read(self, lazy=False, **kwargs):
-        if lazy:
-            raise ValueError('This IO module does not support lazy loading')
-        return [self.read_block(lazy=lazy, **kwargs)]
 
     def read_block(self, lazy=False, **kwargs):
         # to sort file

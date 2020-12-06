@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.NSDFIO
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
 
 import numpy as np
 import quantities as pq

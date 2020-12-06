@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for reading/writing Neo objects in MATLAB format (.mat) versions
 5 to 7.2.
@@ -277,7 +276,11 @@ class NeoMatlabIO(BaseIO):
                 struct[childname] = []
 
         # attributes
-        for i, attr in enumerate(ob._all_attrs):
+        all_attrs = list(ob._all_attrs)
+        if hasattr(ob, 'annotations'):
+            all_attrs.append(('annotations', type(ob.annotations)))
+
+        for i, attr in enumerate(all_attrs):
             attrname, attrtype = attr[0], attr[1]
 
             # ~ if attrname =='':
@@ -285,7 +288,8 @@ class NeoMatlabIO(BaseIO):
             # ~ struct['units'] = ob.dimensionality.string
             # ~ continue
 
-            if (hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname):
+            if (hasattr(ob, '_quantity_attr') and
+                    ob._quantity_attr == attrname):
                 struct[attrname] = ob.magnitude
                 struct[attrname + '_units'] = ob.dimensionality.string
                 continue
@@ -309,7 +313,7 @@ class NeoMatlabIO(BaseIO):
 
     def create_ob_from_struct(self, struct, classname):
         cl = class_by_name[classname]
-        # check if hinerits Quantity
+        # check if inherits Quantity
         # ~ is_quantity = False
         # ~ for attr in cl._necessary_attrs:
         # ~ if attr[0] == '' and attr[1] == pq.Quantity:
@@ -373,13 +377,16 @@ class NeoMatlabIO(BaseIO):
             if attrname.endswith('_units') or attrname == 'units':
                 # linked with another field
                 continue
-            if (hasattr(cl, '_quantity_attr') and cl._quantity_attr == attrname):
+
+            if hasattr(cl, '_quantity_attr') and cl._quantity_attr == attrname:
                 continue
 
             item = getattr(struct, attrname)
 
-            attributes = cl._necessary_attrs + cl._recommended_attrs
-            dict_attributes = {a[0]: a[1:] for a in attributes}
+            attributes = cl._necessary_attrs + cl._recommended_attrs \
+                                             + (('annotations', dict),)
+            dict_attributes = dict([(a[0], a[1:]) for a in attributes])
+
             if attrname in dict_attributes:
                 attrtype = dict_attributes[attrname][0]
                 if attrtype == datetime:
@@ -399,6 +406,9 @@ class NeoMatlabIO(BaseIO):
                         item = pq.Quantity(item, units)
                     else:
                         item = pq.Quantity(item, units)
+                elif attrtype == dict:
+                    # FIXME: works but doesn't convert nested struct to dict
+                    item = {fn: getattr(item, fn) for fn in item._fieldnames}
                 else:
                     item = attrtype(item)
 

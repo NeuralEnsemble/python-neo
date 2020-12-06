@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Classe for reading/writing SpikeTrains in a text file.
 It is the simple case where different spiketrains are written line by line.

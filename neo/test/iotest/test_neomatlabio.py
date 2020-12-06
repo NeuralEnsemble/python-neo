@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.neomatlabio
 """
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
 
 import unittest
 
@@ -23,9 +19,10 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
     def test_write_read_single_spike(self):
         block1 = Block()
         seg = Segment('segment1')
-        spiketrain = SpikeTrain([1] * pq.s, t_stop=10 * pq.s, sampling_rate=1 * pq.Hz)
+        spiketrain1 = SpikeTrain([1] * pq.s, t_stop=10 * pq.s, sampling_rate=1 * pq.Hz)
+        spiketrain1.annotate(yep='yop')
         block1.segments.append(seg)
-        seg.spiketrains.append(spiketrain)
+        seg.spiketrains.append(spiketrain1)
 
         # write block
         filename = BaseTestIO.get_filename_path(self, 'matlabiotestfile.mat')
@@ -38,6 +35,11 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
 
         self.assertEqual(block1.segments[0].spiketrains[0],
                          block2.segments[0].spiketrains[0])
+
+        # test annotations
+        spiketrain2 = block2.segments[0].spiketrains[0]
+        assert 'yep' in spiketrain2.annotations
+        assert spiketrain2.annotations['yep'] == 'yop'
 
 
 if __name__ == "__main__":

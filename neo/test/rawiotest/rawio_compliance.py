@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Here a list for testing neo.rawio API compliance.
 This is called automatically by `BaseTestRawIO`
@@ -77,7 +76,7 @@ def count_element(reader):
 
             if nb_sig > 0:
                 if reader._several_channel_groups:
-                    channel_indexes_list = reader.get_group_channel_indexes()
+                    channel_indexes_list = reader.get_group_signal_channel_indexes()
                     for channel_indexes in channel_indexes_list:
                         sig_size = reader.get_signal_size(block_index, seg_index,
                                                           channel_indexes=channel_indexes)
@@ -134,7 +133,7 @@ def read_analogsignals(reader):
         return
 
     if reader._several_channel_groups:
-        channel_indexes_list = reader.get_group_channel_indexes()
+        channel_indexes_list = reader.get_group_signal_channel_indexes()
     else:
         channel_indexes_list = [None]
 
@@ -210,6 +209,28 @@ def read_analogsignals(reader):
             if unique_chan_id:
                 np.testing.assert_array_equal(float_chunk0, float_chunk2)
 
+        # read 500ms with several chunksize
+        sr = reader.get_signal_sampling_rate(channel_indexes=channel_indexes)
+        lenght_to_read = int(.5 * sr)
+        if lenght_to_read < sig_size:
+            ref_raw_sigs = reader.get_analogsignal_chunk(block_index=block_index,
+                                                    seg_index=seg_index, i_start=0,
+                                                    i_stop=lenght_to_read,
+                                                    channel_indexes=channel_indexes)
+            for chunksize in (511, 512, 513, 1023, 1024, 1025):
+                i_start = 0
+                chunks = []
+                while i_start < lenght_to_read:
+                    i_stop = min(i_start + chunksize, lenght_to_read)
+                    raw_chunk = reader.get_analogsignal_chunk(block_index=block_index,
+                                                            seg_index=seg_index, i_start=i_start,
+                                                            i_stop=i_stop,
+                                                            channel_indexes=channel_indexes)
+                    chunks.append(raw_chunk)
+                    i_start += chunksize
+                chunk_raw_sigs = np.concatenate(chunks, axis=0)
+                np.testing.assert_array_equal(ref_raw_sigs, chunk_raw_sigs)
+
 
 def benchmark_speed_read_signals(reader):
     """
@@ -218,7 +239,7 @@ def benchmark_speed_read_signals(reader):
     """
 
     if reader._several_channel_groups:
-        channel_indexes_list = reader.get_group_channel_indexes()
+        channel_indexes_list = reader.get_group_signal_channel_indexes()
     else:
         channel_indexes_list = [None]
 

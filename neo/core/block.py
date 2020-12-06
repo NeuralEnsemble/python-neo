@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`Block`, the main container gathering all the data,
 whether discrete or continous, for a given recording session. base class
@@ -7,9 +6,6 @@ used by all :module:`neo.core` classes.
 :class:`Block` derives from :class:`Container`,
 from :module:`neo.core.container`.
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
 
@@ -25,28 +21,26 @@ class Block(Container):
 
     *Usage*::
 
-        >>> from neo.core import (Block, Segment, ChannelIndex,
-        ...                       AnalogSignal)
+        >>> from neo.core import Block, Segment, Group, AnalogSignal
         >>> from quantities import nA, kHz
         >>> import numpy as np
         >>>
-        >>> # create a Block with 3 Segment and 2 ChannelIndex objects
+        >>> # create a Block with 3 Segment and 2 Group objects
         ,,, blk = Block()
         >>> for ind in range(3):
         ...     seg = Segment(name='segment %d' % ind, index=ind)
         ...     blk.segments.append(seg)
         ...
         >>> for ind in range(2):
-        ...     chx = ChannelIndex(name='Array probe %d' % ind,
-        ...                        index=np.arange(64))
-        ...     blk.channel_indexes.append(chx)
+        ...     group = Group(name='Array probe %d' % ind)
+        ...     blk.groups.append(group)
         ...
         >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
-        ...     for chx in blk.channel_indexes:
+        ...     for group in blk.groups:
         ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                          sampling_rate=10*kHz)
-        ...         chx.analogsignals.append(a)
+        ...         group.analogsignals.append(a)
         ...         seg.analogsignals.append(a)
 
     *Required attributes/properties*:
@@ -61,7 +55,7 @@ class Block(Container):
         :rec_datetime: (datetime) The date and time of the original recording.
 
     *Properties available on this object*:
-        :list_units: descends through hierarchy and returns a list of
+        :list_units: (deprecated) descends through hierarchy and returns a list of
             :class:`Unit` objects existing in the block. This shortcut exists
             because a common analysis case is analyzing all neurons that
             you recorded in a session.
@@ -71,11 +65,12 @@ class Block(Container):
 
     *Container of*:
         :class:`Segment`
-        :class:`ChannelIndex`
+        :class:`Group`
+        :class:`ChannelIndex` (deprecated)
 
     '''
 
-    _container_child_objects = ('Segment', 'ChannelIndex')
+    _container_child_objects = ('Segment', 'ChannelIndex', 'Group')
     _child_properties = ('Unit',)
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
@@ -92,7 +87,7 @@ class Block(Container):
         '''
         Initalize a new :class:`Block` instance.
         '''
-        super(Block, self).__init__(name=name, description=description,
+        super().__init__(name=name, description=description,
                                     file_origin=file_origin, **annotations)
 
         self.file_datetime = file_datetime
@@ -112,7 +107,7 @@ class Block(Container):
         # objects in both Segment and Unit
         # Only Block can have duplicate items right now, so implement
         # this here for performance reasons.
-        return tuple(unique_objs(super(Block, self).data_children_recur))
+        return tuple(unique_objs(super().data_children_recur))
 
     def list_children_by_class(self, cls):
         '''
@@ -125,7 +120,7 @@ class Block(Container):
         # objects in both Segment and Unit
         # Only Block can have duplicate items right now, so implement
         # this here for performance reasons.
-        return unique_objs(super(Block, self).list_children_by_class(cls))
+        return unique_objs(super().list_children_by_class(cls))
 
     @property
     def list_units(self):

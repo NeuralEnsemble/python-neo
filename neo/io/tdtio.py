@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.tdtrawio import TdtRawIO
 
@@ -12,7 +11,8 @@ class TdtIO(TdtRawIO, BaseFromRaw):
     (sub directories).
     Tanks correspond to Neo Blocks and TDT blocks correspond to Neo Segments.
     """
-    _prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'group-by-same-units'
+    _default_group_mode_have_change_in_0_9 = True
     mode = 'dir'
 
     def __init__(self, dirname):

@@ -26,11 +26,6 @@ Based on exampleio.py and axonio.py from neo.io
 08 Feb 2014, C. Schmidt-Hieber, University College London
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
-import sys
-
 import numpy as np
 import quantities as pq
 

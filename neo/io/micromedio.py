@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.micromedrawio import MicromedRawIO
 from neo.core import Segment, AnalogSignal, Epoch, Event

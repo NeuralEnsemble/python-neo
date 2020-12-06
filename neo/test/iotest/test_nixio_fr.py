@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.nixio_fr
 """
-from __future__ import absolute_import
 import numpy as np
 import unittest
 from quantities import s
@@ -30,7 +28,7 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
     files_to_download = ['nixio_fr.nix']
 
     def setUp(self):
-        super(TestNixfr, self).setUp()
+        super().setUp()
         self.testfilename = self.get_filename_path('nixio_fr.nix')
         self.reader_fr = NixIOfr(filename=self.testfilename)
         self.reader_norm = NixIO(filename=self.testfilename, mode='ro')
@@ -90,7 +88,7 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
         event1 = seg1.events[0]
         raw_time = 10 + np.cumsum(np.array([0, 1, 2, 3, 4]))
         assert np.all(event1.times == np.array(raw_time * pq.s / 1000))
-        assert np.all(event1.labels == np.array([b'A', b'B', b'C', b'D', b'E']))
+        assert np.all(event1.labels == np.array(['A', 'B', 'C', 'D', 'E'], dtype='U'))
         assert len(seg1.events) == 1
 
     def test_epoch(self):

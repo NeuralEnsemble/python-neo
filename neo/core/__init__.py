@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 :mod:`neo.core` provides classes for storing common electrophysiological data
 types.  Some of these classes contain raw data, such as spike trains or
@@ -12,11 +11,12 @@ Classes:
 
 .. autoclass:: Block
 .. autoclass:: Segment
-.. autoclass:: ChannelIndex
-.. autoclass:: Unit
+.. autoclass:: Group
 
 .. autoclass:: AnalogSignal
 .. autoclass:: IrregularlySampledSignal
+
+.. autoclass:: ChannelView
 
 .. autoclass:: Event
 .. autoclass:: Epoch
@@ -28,10 +28,12 @@ Classes:
 .. autoclass:: CircularRegionOfInterest
 .. autoclass:: PolygonRegionOfInterest
 
-"""
+Deprecated classes:
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
+.. autoclass:: ChannelIndex
+.. autoclass:: Unit
+
+"""
 
 from neo.core.block import Block
 from neo.core.segment import Segment
@@ -49,12 +51,15 @@ from neo.core.spiketrain import SpikeTrain
 from neo.core.imagesequence import ImageSequence
 from neo.core.regionofinterest import RectangularRegionOfInterest, CircularRegionOfInterest, PolygonRegionOfInterest
 
+from neo.core.view import ChannelView
+from neo.core.group import Group
+
 # Block should always be first in this list
 objectlist = [Block, Segment, ChannelIndex,
               AnalogSignal, IrregularlySampledSignal,
               Event, Epoch, Unit, SpikeTrain, ImageSequence,
               RectangularRegionOfInterest, CircularRegionOfInterest,
-              PolygonRegionOfInterest]
+              PolygonRegionOfInterest, ChannelView, Group]
 
 objectnames = [ob.__name__ for ob in objectlist]
 class_by_name = dict(zip(objectnames, objectlist))

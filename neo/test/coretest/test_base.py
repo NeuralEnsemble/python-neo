@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.baseneo.BaseNeo class and related functions
 """
@@ -21,16 +20,9 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.baseneo import (BaseNeo, _check_annotations,
-                              merge_annotations, merge_annotation)
+                              merge_annotations, merge_annotation,
+                              intersect_annotations)
 from neo.test.tools import assert_arrays_equal
-
-if sys.version_info[0] >= 3:
-    _bytes = bytes
-
-    long = int
-
-    def bytes(s):
-        return _bytes(s, encoding='ascii')
 
 
 class Test_check_annotations(unittest.TestCase):
@@ -608,14 +600,6 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
         self.assertEqual(value, self.base.annotations['data'])
         self.assertDictEqual(result, self.base.annotations)
 
-    def test_python_long(self):
-        '''test to make sure long type data is accepted'''
-        value = long(7)
-        self.base.annotate(data=value)
-        result = {'data': value}
-        self.assertEqual(value, self.base.annotations['data'])
-        self.assertDictEqual(result, self.base.annotations)
-
     def test_python_float(self):
         '''test to make sure float type data is accepted'''
         value = 9.2
@@ -642,7 +626,7 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
 
     def test_python_unicode(self):
         '''test to make sure unicode type data is accepted'''
-        value = u'this is also a test'
+        value = 'this is also a test'
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertEqual(value, self.base.annotations['data'])
@@ -650,7 +634,7 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
 
     def test_python_bytes(self):
         '''test to make sure bytes type data is accepted'''
-        value = bytes('1,2,3,4,5')
+        value = bytes('1,2,3,4,5', encoding='ascii')
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertEqual(value, self.base.annotations['data'])
@@ -731,7 +715,7 @@ class TestBaseNeoContainerTypes(unittest.TestCase):
     def test_python_list(self):
         '''test to make sure list type data is accepted'''
         value = [None, 10, 9.2, complex(23, 11),
-                 ['this is a test', bytes('1,2,3,4,5')],
+                 ['this is a test', bytes('1,2,3,4,5', encoding='ascii')],
                  [Fraction(13, 21), Decimal("3.14")]]
         self.base.annotate(data=value)
         result = {'data': value}
@@ -741,7 +725,7 @@ class TestBaseNeoContainerTypes(unittest.TestCase):
     def test_python_tuple(self):
         '''test to make sure tuple type data is accepted'''
         value = (None, 10, 9.2, complex(23, 11),
-                 ('this is a test', bytes('1,2,3,4,5')),
+                 ('this is a test', bytes('1,2,3,4,5', encoding='ascii')),
                  (Fraction(13, 21), Decimal("3.14")))
         self.base.annotate(data=value)
         result = {'data': value}
@@ -753,7 +737,7 @@ class TestBaseNeoContainerTypes(unittest.TestCase):
         value = {'NoneType': None, 'int': 10, 'float': 9.2,
                  'complex': complex(23, 11),
                  'dict1': {'string': 'this is a test',
-                           'bytes': bytes('1,2,3,4,5')},
+                           'bytes': bytes('1,2,3,4,5', encoding='ascii')},
                  'dict2': {'Fraction': Fraction(13, 21),
                            'Decimal': Decimal("3.14")}}
         self.base.annotate(data=value)
@@ -965,11 +949,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_string0(self):
         '''test to make sure string0 type numpy arrays are accepted'''
-        if sys.version_info[0] >= 3:
-            dtype = np.str0
-        else:
-            dtype = np.string0
-        value = np.array([1, 2, 3, 4, 5], dtype=dtype)
+        value = np.array([1, 2, 3, 4, 5], dtype=np.str0)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1163,11 +1143,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_string0(self):
         '''test to make sure string0 type numpy scalars are rejected'''
-        if sys.version_info[0] >= 3:
-            dtype = np.str0
-        else:
-            dtype = np.string0
-        value = np.array(99, dtype=dtype)
+        value = np.array(99, dtype=np.str0)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1264,7 +1240,7 @@ class TestBaseNeoUserDefinedTypes(unittest.TestCase):
     def test_my_class(self):
         '''test to make sure user defined class type data is rejected'''
 
-        class Foo(object):
+        class Foo:
             pass
 
         value = Foo()
@@ -1273,7 +1249,7 @@ class TestBaseNeoUserDefinedTypes(unittest.TestCase):
     def test_my_class_list(self):
         '''test to make sure user defined class type data is rejected'''
 
-        class Foo(object):
+        class Foo:
             pass
 
         value = [Foo(), Foo(), Foo()]
@@ -1289,6 +1265,51 @@ class Test_pprint(unittest.TestCase):
         res = pretty(obj)
         targ = "BaseNeo name: '{}' description: '{}'".format(name, description)
         self.assertEqual(res, targ)
+
+
+class Test_intersect_annotations(unittest.TestCase):
+    '''
+    TestCase for intersect_annotations
+    '''
+
+    def setUp(self):
+        self.dict1 = {1: '1', 2: '2'}
+        self.dict2 = {1: '1'}
+        self.dict3 = {'list1': [1, 2, 3]}
+        self.dict4 = {'list1': [1, 2, 3], 'list2': [1, 2, 3]}
+        self.dict5 = {'list1': [1, 2]}
+        self.dict6 = {'array1': np.array([1, 2])}
+        self.dict7 = {'array1': np.array([1, 2]), 'array2': np.array([1, 2]),
+                      'array3': np.array([1, 2, 3])}
+
+        self.all_simple_dicts = [self.dict1, self.dict2, self.dict3,
+                                 self.dict4, self.dict5, ]
+
+    def test_simple(self):
+        result = intersect_annotations(self.dict1, self.dict2)
+        self.assertDictEqual(self.dict2, result)
+
+    def test_intersect_self(self):
+        for d in self.all_simple_dicts:
+            result = intersect_annotations(d, d)
+            self.assertDictEqual(d, result)
+
+    def test_list(self):
+        result = intersect_annotations(self.dict3, self.dict4)
+        self.assertDictEqual(self.dict3, result)
+
+    def test_list_values(self):
+        result = intersect_annotations(self.dict4, self.dict5)
+        self.assertDictEqual({}, result)
+
+    def test_keys(self):
+        result = intersect_annotations(self.dict1, self.dict4)
+        self.assertDictEqual({}, result)
+
+    def test_arrays(self):
+        result = intersect_annotations(self.dict6, self.dict7)
+        self.assertEqual(self.dict6.keys(), result.keys())
+        np.testing.assert_array_equal([1, 2], result['array1'])
 
 
 if __name__ == "__main__":

@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 
 
 """
 
-from __future__ import absolute_import
 
-import sys
 import logging
+from distutils.version import LooseVersion
 import pickle
+from warnings import warn
 import numpy as np
 import quantities as pq
 
@@ -26,7 +25,7 @@ from neo.io.baseio import BaseIO
 from neo.core.baseneo import MergeError
 
 logger = logging.getLogger('Neo')
-
+min_h5py_version = LooseVersion('2.6.0')
 
 def disjoint_groups(groups):
     """`groups` should be a list of sets"""
@@ -56,8 +55,18 @@ class NeoHdf5IO(BaseIO):
     is_writable = False
 
     def __init__(self, filename):
+        warning_msg = (
+            "NeoHdf5IO will be removed in the next release of Neo. "
+            "If you still have data in this format, we recommend saving it using NixIO "
+            "which is also based on HDF5."
+        )
+        warn(warning_msg, FutureWarning)
         if not HAVE_H5PY:
             raise ImportError("h5py is not available")
+        if HAVE_H5PY:
+            if LooseVersion(h5py.__version__) < min_h5py_version:
+                raise ImportError('h5py version {} is too old. Minimal required version is {}'
+                                  ''.format(h5py.__version__, min_h5py_version))
         BaseIO.__init__(self, filename=filename)
         self._data = h5py.File(filename, 'r')
         self.object_refs = {}
@@ -216,7 +225,7 @@ class NeoHdf5IO(BaseIO):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
         durations = self._get_quantity(node["durations"])
-        labels = node["labels"].value
+        labels = node["labels"][()].astype('U')
         epoch = Epoch(times=times, durations=durations, labels=labels, **attributes)
         epoch.segment = parent
         return epoch
@@ -227,7 +236,7 @@ class NeoHdf5IO(BaseIO):
     def _read_eventarray(self, node, parent):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
-        labels = node["labels"].value
+        labels = node["labels"][()].astype('U')
         event = Event(times=times, labels=labels, **attributes)
         event.segment = parent
         return event
@@ -238,8 +247,8 @@ class NeoHdf5IO(BaseIO):
     def _read_recordingchannelgroup(self, node, parent):
         # todo: handle Units
         attributes = self._get_standard_attributes(node)
-        channel_indexes = node["channel_indexes"].value
-        channel_names = node["channel_names"].value
+        channel_indexes = node["channel_indexes"][()]
+        channel_names = node["channel_names"][()]
 
         if channel_indexes.size:
             if len(node['recordingchannels']):
@@ -311,7 +320,7 @@ class NeoHdf5IO(BaseIO):
             return objects
 
     def _get_quantity(self, node):
-        value = node.value
+        value = node[()]
         unit_str = [x for x in node.attrs.keys() if "unit" in x][0].split("__")[1]
         units = getattr(pq, unit_str)
         return value * units
@@ -324,24 +333,17 @@ class NeoHdf5IO(BaseIO):
                 attributes[name] = node.attrs[name]
         for name in ('rec_datetime', 'file_datetime'):
             if name in node.attrs:
-                if sys.version_info.major > 2:
-                    attributes[name] = pickle.loads(node.attrs[name], encoding='bytes')
-                else:  # Python 2 doesn't have the encoding argument
-                    attributes[name] = pickle.loads(node.attrs[name])
-        if sys.version_info.major > 2:
-            annotations = pickle.loads(node.attrs['annotations'], encoding='bytes')
-        else:
-            annotations = pickle.loads(node.attrs['annotations'])
+                attributes[name] = pickle.loads(node.attrs[name], encoding='bytes')
+        annotations = pickle.loads(node.attrs['annotations'], encoding='bytes')
         attributes.update(annotations)
         # avoid "dictionary changed size during iteration" error
         attribute_names = list(attributes.keys())
-        if sys.version_info.major > 2:
-            for name in attribute_names:
-                if isinstance(attributes[name], (bytes, np.bytes_)):
-                    attributes[name] = attributes[name].decode('utf-8')
-                if isinstance(name, bytes):
-                    attributes[name.decode('utf-8')] = attributes[name]
-                    attributes.pop(name)
+        for name in attribute_names:
+            if isinstance(attributes[name], (bytes, np.bytes_)):
+                attributes[name] = attributes[name].decode('utf-8')
+            if isinstance(name, bytes):
+                attributes[name.decode('utf-8')] = attributes[name]
+                attributes.pop(name)
         return attributes
 
     def _resolve_channel_indexes(self, block):

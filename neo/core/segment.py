@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`Segment`, a container for data sharing a common
 time basis.
@@ -6,9 +5,6 @@ time basis.
 :class:`Segment` derives from :class:`Container`,
 from :module:`neo.core.container`.
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
 
@@ -92,7 +88,7 @@ class Segment(Container):
         '''
         Initialize a new :class:`Segment` instance.
         '''
-        super(Segment, self).__init__(name=name, description=description,
+        super().__init__(name=name, description=description,
                                       file_origin=file_origin, **annotations)
 
         self.file_datetime = file_datetime
@@ -107,7 +103,12 @@ class Segment(Container):
         '''
         t_starts = [sig.t_start for sig in self.analogsignals +
                     self.spiketrains + self.irregularlysampledsignals]
-        t_starts += [e.times[0] for e in self.epochs + self.events if len(e.times) > 0]
+
+        for e in self.epochs + self.events:
+            if hasattr(e, 't_start'):  # in case of proxy objects
+                t_starts += [e.t_start]
+            elif len(e) > 0:
+                t_starts += [e.times[0]]
 
         # t_start is not defined if no children are present
         if len(t_starts) == 0:
@@ -124,7 +125,12 @@ class Segment(Container):
         '''
         t_stops = [sig.t_stop for sig in self.analogsignals +
                    self.spiketrains + self.irregularlysampledsignals]
-        t_stops += [e.times[-1] for e in self.epochs + self.events if len(e.times) > 0]
+
+        for e in self.epochs + self.events:
+            if hasattr(e, 't_stop'):  # in case of proxy objects
+                t_stops += [e.t_stop]
+            elif len(e) > 0:
+                t_stops += [e.times[-1]]
 
         # t_stop is not defined if no children are present
         if len(t_stops) == 0:
@@ -247,6 +253,8 @@ class Segment(Container):
             2
 
         '''
+        # todo: provide equivalent method using Group/ChannelView
+        #       add deprecation message (use decorator)?
         seg = Segment()
         seg.spiketrains = self.take_spiketrains_by_unit(unit_list)
         seg.analogsignals = \
@@ -288,6 +296,11 @@ class Segment(Container):
             setattr(subseg, attr, getattr(self, attr))
 
         subseg.annotations = deepcopy(self.annotations)
+
+        if t_start is None:
+            t_start = self.t_start
+        if t_stop is None:
+            t_stop = self.t_stop
 
         t_shift = - t_start
 

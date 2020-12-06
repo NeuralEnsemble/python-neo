@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ExampleRawIO is a class of a  fake example.
 This is to be used when coding a new RawIO.
@@ -26,8 +25,8 @@ Rules for creating a new class:
     * copy paste neo/rawio/tests/test_examplerawio.py and do the same
 
   3. Step 3 : Create the neo.io class with the wrapper
-    * Create a file in neo/io/ that endith with "io.py"
-    * Create a that inherits both your RawIO class and BaseFromRaw class
+    * Create a file in neo/io/ that ends with "io.py"
+    * Create a class that inherits both your RawIO class and BaseFromRaw class
     * copy/paste from neo/io/exampleio.py
 
   4.Step 4 : IO test
@@ -37,7 +36,6 @@ Rules for creating a new class:
 
 
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
@@ -49,7 +47,7 @@ class ExampleRawIO(BaseRawIO):
     """
     Class for "reading" fake data from an imaginary file.
 
-    For the user, it give acces to raw data (signals, event, spikes) as they
+    For the user, it gives access to raw data (signals, event, spikes) as they
     are in the (fake) file int16 and int64.
 
     For a developer, it is just an example showing guidelines for someone who wants
@@ -60,11 +58,11 @@ class ExampleRawIO(BaseRawIO):
       * Follow the :ref:`io_guiline`
 
     This fake IO:
-        * have 2 blocks
+        * has 2 blocks
         * blocks have 2 and 3 segments
-        * have 16 signal_channel sample_rate = 10000
-        * have 3 unit_channel
-        * have 2 event channel: one have *type=event*, the other have
+        * has 16 signal_channels sample_rate = 10000
+        * has 3 unit_channels
+        * has 2 event channels: one has *type=event*, the other has
           *type=epoch*
 
 
@@ -100,7 +98,7 @@ class ExampleRawIO(BaseRawIO):
     def _parse_header(self):
         # This is the central of a RawIO
         # we need to collect in the original format all
-        # informations needed for further fast acces
+        # informations needed for further fast access
         # at any place in the file
         # In short _parse_header can be slow but
         # _get_analogsignal_chunk need to be as fast as possible
@@ -109,12 +107,12 @@ class ExampleRawIO(BaseRawIO):
         # This is mandatory!!!!
         # gain/offset/units are really important because
         # the scaling to real value will be done with that
-        # at the end real_signal = (raw_signal* gain + offset) * pq.Quantity(units)
+        # at the end real_signal = (raw_signal * gain + offset) * pq.Quantity(units)
         sig_channels = []
         for c in range(16):
             ch_name = 'ch{}'.format(c)
             # our channel id is c+1 just for fun
-            # Note that chan_id should be realated to
+            # Note that chan_id should be related to
             # original channel id in the file format
             # so that the end user should not be lost when reading datasets
             chan_id = c + 1
@@ -123,9 +121,9 @@ class ExampleRawIO(BaseRawIO):
             units = 'uV'
             gain = 1000. / 2 ** 16
             offset = 0.
-            # group_id isonly for special cases when channel have diferents
+            # group_id is only for special cases when channels have different
             # sampling rate for instance. See TdtIO for that.
-            # Here this is the general case :all channel have the same characteritics
+            # Here this is the general case: all channel have the same characteritics
             group_id = 0
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)

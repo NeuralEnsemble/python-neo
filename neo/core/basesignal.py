@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module implements :class:`BaseSignal`, an array of signals.
 This is a parent class from which all signal objects inherit:
@@ -15,9 +14,6 @@ Only child objects :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
 can be created.
 '''
 
-# needed for Python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import copy
 import logging
 from copy import deepcopy
@@ -25,7 +21,7 @@ from copy import deepcopy
 import numpy as np
 import quantities as pq
 
-from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.baseneo import MergeError, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
 from neo.core.channelindex import ChannelIndex
 
@@ -66,7 +62,7 @@ class BaseSignal(DataObject):
         and :class:`IrregularlySampledSignal`) are set in
         :meth:`_array_finalize_spec`
         '''
-        super(BaseSignal, self).__array_finalize__(obj)
+        super().__array_finalize__(obj)
         self._array_finalize_spec(obj)
 
         # The additional arguments
@@ -105,7 +101,7 @@ class BaseSignal(DataObject):
         return signal
 
     def rescale(self, units):
-        obj = super(BaseSignal, self).rescale(units)
+        obj = super().rescale(units)
         obj.channel_index = self.channel_index
         return obj
 
@@ -129,7 +125,7 @@ class BaseSignal(DataObject):
         after a mathematical operation.
         '''
         self._check_consistency(other)
-        f = getattr(super(BaseSignal, self), op)
+        f = getattr(super(), op)
         new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
         # _copy_data_complement can't always copy array annotations,
@@ -143,8 +139,12 @@ class BaseSignal(DataObject):
         '''
         required_attributes = {}
         for attr in self._necessary_attrs:
-            if 'signal' == attr[0]:
-                required_attributes[str(attr[0])] = signal
+            if attr[0] == "signal":
+                required_attributes["signal"] = signal
+            elif attr[0] == "image_data":
+                required_attributes["image_data"] = signal
+            elif attr[0] == "t_start":
+                required_attributes["t_start"] = getattr(self, "t_start", 0.0 * pq.ms)
             else:
                 required_attributes[str(attr[0])] = getattr(self, attr[0], None)
         required_attributes['units'] = units
@@ -180,7 +180,9 @@ class BaseSignal(DataObject):
         all_attr = {self._recommended_attrs, self._necessary_attrs}
         for sub_at in all_attr:
             for attr in sub_at:
-                if attr[0] != 'signal':
+                if attr[0] == "t_start":
+                    setattr(self, attr[0], deepcopy(getattr(other, attr[0], 0.0 * pq.ms)))
+                elif attr[0] != 'signal':
                     setattr(self, attr[0], deepcopy(getattr(other, attr[0], None)))
         setattr(self, 'annotations', deepcopy(getattr(other, 'annotations', None)))
 
@@ -280,11 +282,52 @@ class BaseSignal(DataObject):
         # merge channel_index (move to ChannelIndex.merge()?)
         if self.channel_index and other.channel_index:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]),
-                channel_ids=np.hstack(
-                    [self.channel_index.channel_ids, other.channel_index.channel_ids]),
-                channel_names=np.hstack(
-                    [self.channel_index.channel_names, other.channel_index.channel_names]))
+                                                channel_ids=np.hstack(
+                                                    [self.channel_index.channel_ids,
+                                                     other.channel_index.channel_ids]),
+                                                channel_names=np.hstack(
+                                                    [self.channel_index.channel_names,
+                                                     other.channel_index.channel_names]))
         else:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 
         return signal
+
+    def time_slice(self, t_start, t_stop):
+        '''
+        Creates a new AnalogSignal corresponding to the time slice of the
+        original Signal between times t_start, t_stop.
+        '''
+        NotImplementedError('Needs to be implemented for subclasses.')
+
+    def concatenate(self, *signals):
+        '''
+        Concatenate multiple signals across time.
+
+        The signal objects are concatenated vertically
+        (row-wise, :func:`np.vstack`). Concatenation can be
+        used to combine signals across segments.
+        Note: Only (array) annotations common to
+        both signals are attached to the concatenated signal.
+
+        If the attributes of the signals are not
+        compatible, an Exception is raised.
+
+        Parameters
+        ----------
+        signals : multiple neo.BaseSignal objects
+            The objects that is concatenated with this one.
+
+        Returns
+        -------
+        signal : neo.BaseSignal
+            Signal containing all non-overlapping samples of
+            the source signals.
+
+        Raises
+        ------
+        MergeError
+            If `other` object has incompatible attributes.
+        '''
+
+        NotImplementedError('Patching need to be implemented in sublcasses')

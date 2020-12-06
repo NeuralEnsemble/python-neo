@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 '''
 Generate datasets for testing
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import
 
 from datetime import datetime
 
@@ -94,7 +90,7 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
             evt_size = rand() * np.diff(event_size_range)
             evt_size += event_size_range[0]
             evt_size = int(evt_size)
-            labels = np.array(labels, dtype='S')
+            labels = np.array(labels, dtype='U')
             labels = labels[(rand(evt_size) * len(labels)).astype('i')]
             evt = Event(times=rand(evt_size) * duration, labels=labels)
             # Randomly generate array_annotations from given options
@@ -114,7 +110,7 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
                 dur += epoch_duration_range[0]
                 durations.append(dur)
                 t = t + dur
-            labels = np.array(labels, dtype='S')
+            labels = np.array(labels, dtype='U')
             labels = labels[(rand(len(times)) * len(labels)).astype('i')]
             assert len(times) == len(durations)
             assert len(times) == len(labels)
@@ -210,10 +206,14 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, 
         data = np.array(0.0)
     elif name == 't_stop':
         data = np.array(1.0)
-    elif n and name == 'channel_indexes':
+    elif n and name in ['channel_indexes', 'channel_ids']:
         data = np.arange(n)
+    elif n and name == 'coordinates':
+        data = np.arange(0, 2*n).reshape((n, 2))
     elif n and name == 'channel_names':
         data = np.array(["ch%d" % i for i in range(n)])
+    elif n and name == 'index':  # ChannelIndex.index
+        data = np.random.randint(0, n, n)
     elif n and obj == 'AnalogSignal':
         if name == 'signal':
             size = []
@@ -278,8 +278,7 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
     If annotate is True (default), also add annotations to the values.
     """
 
-    if hasattr(cls,
-               'lower'):  # is this a test that cls is a string? better to use isinstance(cls,
+    if hasattr(cls, 'lower'):  # is this a test that cls is a string? better to use isinstance(cls,
         # basestring), no?
         cls = class_by_name[cls]
     # iseed is needed below for generation of array annotations
@@ -399,6 +398,8 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
         cascade = 'block'
     for i, childname in enumerate(getattr(obj, '_child_objects', [])):
         # we create a few of each class
+        if childname == 'Group':
+            continue  # avoid infinite recursion, since Groups can contain  Groups
         for j in range(n):
             if seed is not None:
                 iseed = 10 * seed + 100 * i + 1000 * j

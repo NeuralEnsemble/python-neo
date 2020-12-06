@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Common tools that are useful for neo.io object tests
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
-import logging
 import os
 import shutil
-import tempfile
 
 from neo.core import Block, Segment
 from neo.test.generate_datasets import generate_from_supported_objects

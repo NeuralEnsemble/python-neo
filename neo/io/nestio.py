@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading output files from NEST simulations
 ( http://www.nest-simulator.org/ ).
@@ -13,7 +12,6 @@ Authors: Julia Sprenger, Maximilian Schmidt, Johanna Senk
 """
 
 # needed for Python3 compatibility
-from __future__ import absolute_import
 
 import os.path
 import warnings

@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.rawio.axographrawio
 """
-
-# needed for python 3 compatibility
-from __future__ import (unicode_literals, print_function, division,
-                        absolute_import)
 
 import unittest
 
@@ -22,6 +17,9 @@ class TestAxographRawIO(BaseTestRawIO, unittest.TestCase):
         'File_axograph.axgd',       # version 6 file
         'episodic.axgd',
         'events_and_epochs.axgx',
+        'written-by-axographio-with-linearsequence.axgx',
+        'written-by-axographio-without-linearsequence.axgx',
+        'corrupt-comment.axgx',
     ]
     entities_to_test = files_to_download
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # neo documentation build configuration file, created by
 # sphinx-quickstart on Fri Feb 25 14:18:12 2011.
@@ -25,7 +24,7 @@ with open("../../neo/version.py") as fp:
 neo_version = '.'.join(str(e) for e in LooseVersion(neo_release).version[:2])
 
 
-AUTHORS = u'Neo authors and contributors <neuralensemble@googlegroups.com>'
+AUTHORS = 'Neo authors and contributors <neuralensemble@googlegroups.com>'
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -51,8 +50,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Neo'
-copyright = u'2010-2019, ' + AUTHORS
+project = 'Neo'
+copyright = '2010-2020, ' + AUTHORS
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -193,7 +192,7 @@ htmlhelp_basename = 'neodoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author,
 #  documentclass [howto/manual]).
-latex_documents = [('index', 'neo.tex', u'Neo Documentation',
+latex_documents = [('index', 'neo.tex', 'Neo Documentation',
                     AUTHORS, 'manual')]
 
 # The name of an image file (relative to this directory) to place at the
@@ -216,5 +215,5 @@ latex_documents = [('index', 'neo.tex', u'Neo Documentation',
 todo_include_todos = True  # set to False before releasing documentation
 
 rst_epilog = """
-.. |neo_github_url| replace:: https://github.com/NeuralEnsemble/python-neo/archive/neo-{0}.zip
+.. |neo_github_url| replace:: https://github.com/NeuralEnsemble/python-neo/archive/neo-{}.zip
 """.format(neo_release)

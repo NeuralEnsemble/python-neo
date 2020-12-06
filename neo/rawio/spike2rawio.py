@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Classe for reading data in CED spike2 files (.smr).
 
@@ -18,7 +17,6 @@ This IO support old (<v6) and new files (>v7) of spike2
 Author: Samuel Garcia
 
 """
-from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
@@ -54,6 +52,10 @@ class Spike2RawIO(BaseRawIO):
                 info['dtime_base'] = 1e-6
                 info['datetime_detail'] = 0
                 info['datetime_year'] = 0
+            if info['system_id'] == 9:
+                self._diskblock = DISKBLOCK
+            else:
+                self._diskblock = 1
 
             self._time_factor = info['us_per_time'] * info['dtime_base']
 
@@ -85,7 +87,7 @@ class Spike2RawIO(BaseRawIO):
                 if chan_info['blocks'] == 0:
                     chan_info['t_start'] = 0.  # this means empty signals
                 else:
-                    fid.seek(chan_info['firstblock'])
+                    fid.seek(chan_info['firstblock'] * self._diskblock)
                     block_info = read_as_dict(fid, blockHeaderDesciption)
                     chan_info['t_start'] = float(block_info['start_time']) * \
                         float(info['us_per_time']) * float(info['dtime_base'])
@@ -99,12 +101,12 @@ class Spike2RawIO(BaseRawIO):
         self._by_seg_data_blocks = {}
         for chan_id, chan_info in enumerate(self._channel_infos):
             data_blocks = []
-            ind = chan_info['firstblock']
+            ind = chan_info['firstblock'] * self._diskblock
             for b in range(chan_info['blocks']):
                 block_info = self._memmap[ind:ind + 20].view(blockHeaderDesciption)[0]
                 data_blocks.append((ind, block_info['items'], 0,
                                     block_info['start_time'], block_info['end_time']))
-                ind = block_info['succ_block']
+                ind = block_info['succ_block'] * self._diskblock
 
             data_blocks = np.array(data_blocks, dtype=[(
                 'pos', 'int32'), ('size', 'int32'), ('cumsum', 'int32'),
@@ -123,7 +125,8 @@ class Spike2RawIO(BaseRawIO):
                 data_blocks = self._all_data_blocks[chan_id]
                 sig_size = np.sum(self._all_data_blocks[chan_id]['size'])
                 if sig_size > 0:
-                    interval = get_sample_interval(info, chan_info) / self._time_factor
+                    interval = int(np.round(get_sample_interval(info,
+                                            chan_info) / self._time_factor))
                     # detect gaps
                     inter_block_sizes = data_blocks['start_time'][1:] - \
                         data_blocks['end_time'][:-1]
@@ -374,8 +377,8 @@ class Spike2RawIO(BaseRawIO):
             data_blocks = self._by_seg_data_blocks[chan_id][seg_index]
 
             # loop over data blocks and get chunks
-            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
-            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
+            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='right') - 1
+            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='right')
             ind = 0
             for bl in range(bl0, bl1):
                 ind0 = data_blocks[bl]['pos']
@@ -605,10 +608,10 @@ def get_sample_interval(info, chan_info):
     Get sample interval for one channel
     """
     if info['system_id'] in [1, 2, 3, 4, 5]:  # Before version 5
-        sample_interval = (chan_info['divide'] * info['us_per_time'] *
+        sample_interval = (int(chan_info['divide']) * info['us_per_time'] *
                            info['time_per_adc']) * 1e-6
     else:
-        sample_interval = (chan_info['l_chan_dvd'] *
+        sample_interval = (int(chan_info['l_chan_dvd']) *
                            info['us_per_time'] * info['dtime_base'])
     return sample_interval
 
@@ -681,3 +684,5 @@ dict_kind = {
     8: 'TextMark',
     9: 'RealWave',
 }
+
+DISKBLOCK = 512

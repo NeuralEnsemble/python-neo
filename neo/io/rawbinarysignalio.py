@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading/writing data in a raw binary interleaved compact file.
 Sampling rate, units, number of channel and dtype must be externally known.
@@ -41,7 +40,8 @@ class RawBinarySignalIO(RawBinarySignalRawIO, BaseFromRaw):
 
     """
 
-    _prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'group-by-same-units'
+    _default_group_mode_have_change_in_0_9 = True
 
     is_readable = True
     is_writable = True

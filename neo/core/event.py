@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`Event`, an array of events.
 
@@ -6,10 +5,6 @@ This module defines :class:`Event`, an array of events.
 :module:`neo.core.baseneo`.
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
-import sys
 from copy import deepcopy, copy
 
 import numpy as np
@@ -18,8 +13,6 @@ import quantities as pq
 from neo.core.baseneo import merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
 from neo.core.epoch import Epoch
-
-PY_VER = sys.version_info[0]
 
 
 def _new_event(cls, times=None, labels=None, units=None, name=None, file_origin=None,
@@ -46,17 +39,17 @@ class Event(DataObject):
         >>>
         >>> evt = Event(np.arange(0, 30, 10)*s,
         ...             labels=np.array(['trig0', 'trig1', 'trig2'],
-        ...                             dtype='S'))
+        ...                             dtype='U'))
         >>>
         >>> evt.times
         array([  0.,  10.,  20.]) * s
         >>> evt.labels
         array(['trig0', 'trig1', 'trig2'],
-              dtype='|S5')
+              dtype='<U5')
 
     *Required attributes/properties*:
-        :times: (quantity array 1D, numpy array 1D or list) The times of the events.
-        :labels: (numpy.array 1D dtype='S' or list) Names or labels for the events.
+        :times: (quantity array 1D) The time of the events.
+        :labels: (numpy.array 1D dtype='U' or list) Names or labels for the events.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset.
@@ -75,7 +68,7 @@ class Event(DataObject):
     _single_parent_objects = ('Segment',)
     _single_parent_attrs = ('segment',)
     _quantity_attr = 'times'
-    _necessary_attrs = (('times', pq.Quantity, 1), ('labels', np.ndarray, 1, np.dtype('S')))
+    _necessary_attrs = (('times', pq.Quantity, 1), ('labels', np.ndarray, 1, np.dtype('U')))
 
     def __new__(cls, times=None, labels=None, units=None, name=None, description=None,
                 file_origin=None, array_annotations=None, **annotations):
@@ -83,8 +76,10 @@ class Event(DataObject):
             times = np.array([]) * pq.s
         elif isinstance(times, (list, tuple)):
             times = np.array(times)
+        if len(times.shape) > 1:
+            raise ValueError("Times array has more than 1 dimension")
         if labels is None:
-            labels = np.array([], dtype='S')
+            labels = np.array([], dtype='U')
         else:
             labels = np.array(labels)
             if labels.size != times.size and labels.size:
@@ -131,7 +126,7 @@ class Event(DataObject):
                             self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
-        super(Event, self).__array_finalize__(obj)
+        super().__array_finalize__(obj)
         self._labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
@@ -148,21 +143,18 @@ class Event(DataObject):
         '''
         Returns a string representing the :class:`Event`.
         '''
-        # need to convert labels to unicode for python 3 or repr is messed up
-        if PY_VER == 3:
-            labels = self.labels.astype('U')
-        else:
-            labels = self.labels
-        objs = ['%s@%s' % (label, time) for label, time in zip(labels, self.times)]
+
+        objs = ['%s@%s' % (label, str(time)) for label, time in zip(self.labels, self.times)]
         return '<Event: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
-        super(Event, self)._repr_pretty_(pp, cycle)
+        super()._repr_pretty_(pp, cycle)
 
     def rescale(self, units):
         '''
         Return a copy of the :class:`Event` converted to the specified
         units
+        :return: Copy of self with specified units
         '''
         # Use simpler functionality, if nothing will be changed
         dim = pq.quantity.validate_dimensionality(units)
@@ -170,13 +162,13 @@ class Event(DataObject):
             return self.copy()
 
         # Rescale the object into a new object
-        obj = self.duplicate_with_new_data(times=self.view(pq.Quantity).rescale(dim),
-                                           labels=self.labels,
-                                           units=units)
+        obj = self.duplicate_with_new_data(
+            times=self.view(pq.Quantity).rescale(dim),
+            labels=self.labels,
+            units=units)
 
         # Expected behavior is deepcopy, so deepcopying array_annotations
         obj.array_annotations = deepcopy(self.array_annotations)
-
         obj.segment = self.segment
         return obj
 
@@ -230,7 +222,7 @@ class Event(DataObject):
             setattr(self, attr, deepcopy(getattr(other, attr, None)))
 
     def __getitem__(self, i):
-        obj = super(Event, self).__getitem__(i)
+        obj = super().__getitem__(i)
         if self._labels is not None and self._labels.size > 0:
             obj.labels = self._labels[i]
         else:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from Neuralynx files.
 This IO supports NCS, NEV and NSE file formats.
@@ -15,9 +14,6 @@ Author: Julia Sprenger, Carlos Canova
 Adapted from the exampleIO of python-neo
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
-
 import sys
 import os
 import warnings
@@ -32,6 +28,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
+import neo.io.neuralynxio
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal, SpikeTrain,
                       Event, Unit)
 from os import listdir, sep
@@ -149,6 +146,9 @@ class NeuralynxIO(BaseIO):
                             sessiondir
                             has priority over filename.
         """
+
+        warnings.warn('{} is deprecated and will be removed in neo version 0.10. Use {} instead.'
+                      ''.format(self.__class__, neo.io.neuralynxio.NeuralynxIO), FutureWarning)
 
         BaseIO.__init__(self)
 
@@ -1198,7 +1198,7 @@ class NeuralynxIO(BaseIO):
 
         # If already associated, disassociate first
         if self.associated:
-            raise IOError(
+            raise OSError(
                 "Trying to associate an already associated NeuralynxIO "
                 "object.")
 
@@ -1287,7 +1287,7 @@ class NeuralynxIO(BaseIO):
                 if os.path.exists(parameterfile):
                     parameters_read = pickle.load(open(parameterfile, 'rb'))
                 else:
-                    raise IOError('Inconsistent cache files.')
+                    raise OSError('Inconsistent cache files.')
 
                 for IOdict, dictname in [(self.parameters_global, 'global'),
                                          (self.parameters_ncs, 'ncs'),
@@ -1784,10 +1784,6 @@ class NeuralynxIO(BaseIO):
         # Reading main file header (plain text, 16kB)
         text_header = codecs.open(self.sessiondir + sep + filename, 'r',
                                   'latin-1').read(16384)
-
-        # necessary text encoding depends on Python version
-        if sys.version_info.major < 3:
-            text_header = text_header.encode('latin-1')
 
         parameter_dict['cheetah_version'] = \
             self.__get_cheetah_version_from_txt_header(text_header, filename)

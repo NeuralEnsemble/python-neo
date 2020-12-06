@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.utils module
 """
@@ -32,8 +31,10 @@ class BaseProxyTest(unittest.TestCase):
 
 class TestUtilsWithoutProxyObjects(unittest.TestCase):
     def test__get_events(self):
-        starts_1 = Event(times=[0.5, 10.0, 25.2] * pq.s)
-        starts_1.annotate(event_type='trial start', pick='me')
+        starts_1 = Event(times=[0.5, 10.0, 25.2] * pq.s,
+                         labels=['label1', 'label2', 'label3'],
+                         name='pick_me')
+        starts_1.annotate(event_type='trial start')
         starts_1.array_annotate(trial_id=[1, 2, 3])
 
         stops_1 = Event(times=[5.5, 14.9, 30.1] * pq.s)
@@ -56,9 +57,9 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         block = Block()
         block.segments = [seg, seg2]
 
-        # test getting one whole event via annotation
+        # test getting one whole event via annotation or attribute
         extracted_starts1 = get_events(seg, event_type='trial start')
-        extracted_starts1b = get_events(block, pick='me')
+        extracted_starts1b = get_events(block, name='pick_me')
 
         self.assertEqual(len(extracted_starts1), 1)
         self.assertEqual(len(extracted_starts1b), 1)
@@ -116,6 +117,20 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
 
         # test getting more than one event time of one event
         trials_1_2 = get_events(block, trial_id=[1, 2], event_type='trial start')
+
+        self.assertEqual(len(trials_1_2), 1)
+
+        trials_1_2 = trials_1_2[0]
+
+        self.assertEqual(starts_1.name, trials_1_2.name)
+        self.assertEqual(starts_1.description, trials_1_2.description)
+        self.assertEqual(starts_1.file_origin, trials_1_2.file_origin)
+        self.assertEqual(starts_1.annotations['event_type'], trials_1_2.annotations['event_type'])
+        assert_arrays_equal(trials_1_2.array_annotations['trial_id'], np.array([1, 2]))
+        self.assertIsInstance(trials_1_2.array_annotations, ArrayDict)
+
+        # test selecting event times by label
+        trials_1_2 = get_events(block, labels=['label1', 'label2'])
 
         self.assertEqual(len(trials_1_2), 1)
 
@@ -346,6 +361,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
                                             [[16., 17.], [16.1, 17.1]]]) * pq.mV,
                         array_annotations={'spikenum': np.arange(1, 9)})
 
+        # test without resetting the time
         seg = Segment()
         seg2 = Segment(name='NoCut')
         seg.epochs = [epoch, epoch2]
@@ -354,12 +370,11 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         seg.irregularlysampledsignals = [irrsig]
         seg.spiketrains = [st]
 
-        block = Block()
-        block.segments = [seg, seg2]
-        block.create_many_to_one_relationship()
+        original_block = Block()
+        original_block.segments = [seg, seg2]
+        original_block.create_many_to_one_relationship()
 
-        # test without resetting the time
-        cut_block_by_epochs(block, properties={'pick': 'me'})
+        block = cut_block_by_epochs(original_block, properties={'pick': 'me'})
 
         assert_neo_object_is_compliant(block)
         self.assertEqual(len(block.segments), 3)
@@ -398,6 +413,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
                                epoch2.time_slice(t_start=epoch.times[0],
                                                 t_stop=epoch.times[0] + epoch.durations[0]))
 
+        # test with resetting the time
         seg = Segment()
         seg2 = Segment(name='NoCut')
         seg.epochs = [epoch, epoch2]
@@ -406,12 +422,11 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         seg.irregularlysampledsignals = [irrsig]
         seg.spiketrains = [st]
 
-        block = Block()
-        block.segments = [seg, seg2]
-        block.create_many_to_one_relationship()
+        original_block = Block()
+        original_block.segments = [seg, seg2]
+        original_block.create_many_to_one_relationship()
 
-        # test with resetting the time
-        cut_block_by_epochs(block, properties={'pick': 'me'}, reset_time=True)
+        block = cut_block_by_epochs(original_block, properties={'pick': 'me'}, reset_time=True)
 
         assert_neo_object_is_compliant(block)
         self.assertEqual(len(block.segments), 3)
@@ -568,11 +583,11 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
         loaded_st = proxy_st.load()
         loaded_anasig = proxy_anasig.load()
 
-        block = Block()
-        block.segments = [seg]
-        block.create_many_to_one_relationship()
+        original_block = Block()
+        original_block.segments = [seg]
+        original_block.create_many_to_one_relationship()
 
-        cut_block_by_epochs(block, properties={'pick': 'me'})
+        block = cut_block_by_epochs(original_block, properties={'pick': 'me'})
 
         assert_neo_object_is_compliant(block)
         self.assertEqual(len(block.segments), proxy_epoch.shape[0])
@@ -622,7 +637,7 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
         # test correct loading and slicing of EpochProxy objects
         # (not tested above since we used the EpochProxy to cut the block)
 
-        cut_block_by_epochs(block2, properties={'pick': 'me instead'})
+        block3 = cut_block_by_epochs(block2, properties={'pick': 'me instead'})
 
         for epoch_idx in range(len(epoch)):
             sliced_epoch = loaded_epoch.time_slice(t_start=epoch.times[epoch_idx],
@@ -631,7 +646,11 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
             has_epoch = len(sliced_epoch) > 0
 
             if has_epoch:
-                self.assertTrue(isinstance(block2.segments[epoch_idx].epochs[0],
+                self.assertTrue(isinstance(block3.segments[epoch_idx].epochs[0],
                                            Epoch))
-                assert_same_attributes(block2.segments[epoch_idx].epochs[0],
+                assert_same_attributes(block3.segments[epoch_idx].epochs[0],
                                        sliced_epoch)
+
+
+if __name__ == "__main__":
+    unittest.main()

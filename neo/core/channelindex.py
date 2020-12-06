@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`ChannelIndex`, a container for multiple
 data channels.
@@ -6,9 +5,6 @@ data channels.
 :class:`ChannelIndex` derives from :class:`Container`,
 from :module:`neo.core.container`.
 '''
-
-# needed for Python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import quantities as pq
@@ -19,6 +15,10 @@ from neo.core.container import Container
 class ChannelIndex(Container):
     '''
     A container for indexing/grouping data channels.
+
+    Use of :class:`ChannelIndex` is deprecated. Its various uses can be replaced
+    by the :class:`Group` and :class:`ChannelView` classes, or by use of
+    array annotations.
 
     This container has several purposes:
 
@@ -156,7 +156,7 @@ class ChannelIndex(Container):
     _data_child_objects = ('AnalogSignal', 'IrregularlySampledSignal')
     _single_parent_objects = ('Block',)
     _necessary_attrs = (('index', np.ndarray, 1, np.dtype('i')),)
-    _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('S')),
+    _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('U')),
                            ('channel_ids', np.ndarray, 1, np.dtype('i')),
                            ('coordinates', pq.Quantity, 2)) +
                           Container._recommended_attrs)
@@ -170,14 +170,14 @@ class ChannelIndex(Container):
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
         # in annotations
-        super(ChannelIndex, self).__init__(name=name,
-                                           description=description,
-                                           file_origin=file_origin,
-                                           **annotations)
+        super().__init__(name=name,
+                         description=description,
+                         file_origin=file_origin,
+                         **annotations)
 
         # Defaults
         if channel_names is None:
-            channel_names = np.array([], dtype='S')
+            channel_names = np.array([], dtype='U')
         if channel_ids is None:
             channel_ids = np.array([], dtype='i')
 

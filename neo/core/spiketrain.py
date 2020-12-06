@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module implements :class:`SpikeTrain`, an array of spike times.
 
@@ -17,9 +16,6 @@ This is where user-specified attributes are set.
 created by slicing. This is where attributes are copied over from
 the old object.
 '''
-
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
 
 import neo
 import sys
@@ -278,6 +274,10 @@ class SpikeTrain(DataObject):
         # Construct Quantity from data
         obj = pq.Quantity(times, units=units, dtype=dtype, copy=copy).view(cls)
 
+        # spiketrain times always need to be 1-dimensional
+        if len(obj.shape) > 1:
+            raise ValueError("Spiketrain times array has more than 1 dimension")
+
         # if the dtype and units match, just copy the values here instead
         # of doing the much more expensive creation of a new Quantity
         # using items() is orders of magnitude faster
@@ -328,14 +328,14 @@ class SpikeTrain(DataObject):
                             array_annotations=array_annotations, **annotations)
 
     def _repr_pretty_(self, pp, cycle):
-        super(SpikeTrain, self)._repr_pretty_(pp, cycle)
+        super()._repr_pretty_(pp, cycle)
 
     def rescale(self, units):
         '''
         Return a copy of the :class:`SpikeTrain` converted to the specified
         units
         '''
-        obj = super(SpikeTrain, self).rescale(units)
+        obj = super().rescale(units)
         obj.t_start = self.t_start.rescale(units)
         obj.t_stop = self.t_stop.rescale(units)
         obj.unit = self.unit
@@ -369,7 +369,7 @@ class SpikeTrain(DataObject):
         '''
         # This calls Quantity.__array_finalize__ which deals with
         # dimensionality
-        super(SpikeTrain, self).__array_finalize__(obj)
+        super().__array_finalize__(obj)
 
         # Supposedly, during initialization from constructor, obj is supposed
         # to be None, but this never happens. It must be something to do
@@ -412,7 +412,7 @@ class SpikeTrain(DataObject):
         Returns a string representing the :class:`SpikeTrain`.
         '''
         return '<SpikeTrain(%s, [%s, %s])>' % (
-            super(SpikeTrain, self).__repr__(), self.t_start, self.t_stop)
+            super().__repr__(), self.t_start, self.t_stop)
 
     def sort(self):
         '''
@@ -428,7 +428,7 @@ class SpikeTrain(DataObject):
         # now sort the times
         # We have sorted twice, but `self = self[sort_indices]` introduces
         # a dependency on the slicing functionality of SpikeTrain.
-        super(SpikeTrain, self).sort()
+        super().sort()
 
     def __getslice__(self, i, j):
         '''
@@ -511,7 +511,7 @@ class SpikeTrain(DataObject):
         '''
         Get the item or slice :attr:`i`.
         '''
-        obj = super(SpikeTrain, self).__getitem__(i)
+        obj = super().__getitem__(i)
         if hasattr(obj, 'waveforms') and obj.waveforms is not None:
             obj.waveforms = obj.waveforms.__getitem__(i)
         try:
@@ -530,13 +530,13 @@ class SpikeTrain(DataObject):
             # "Setting a value  # requires a quantity")?
         # check for values outside t_start, t_stop
         _check_time_in_range(value, self.t_start, self.t_stop)
-        super(SpikeTrain, self).__setitem__(i, value)
+        super().__setitem__(i, value)
 
     def __setslice__(self, i, j, value):
         if not hasattr(value, "units"):
             value = pq.Quantity(value, units=self.units)
         _check_time_in_range(value, self.t_start, self.t_stop)
-        super(SpikeTrain, self).__setslice__(i, j, value)
+        super().__setslice__(i, j, value)
 
     def _copy_data_complement(self, other, deep_copy=False):
         '''
@@ -599,6 +599,13 @@ class SpikeTrain(DataObject):
             _t_start = -np.inf
         if t_stop is None:
             _t_stop = np.inf
+
+        if _t_start > self.t_stop or _t_stop < self.t_start:
+            # the alternative to raising an exception would be to return
+            # a zero-duration spike train set at self.t_stop or self.t_start
+            raise ValueError("A time slice completely outside the "
+                             "boundaries of the spike train is not defined.")
+
         indices = (self >= _t_start) & (self <= _t_stop)
 
         # Time slicing should create a deep copy of the object

@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# needed for python 3 compatibility
-from __future__ import unicode_literals, print_function, division, absolute_import
-
 import unittest
 
 from neo.rawio.axonrawio import AxonRawIO
@@ -20,6 +15,7 @@ class TestAxonRawIO(BaseTestRawIO, unittest.TestCase, ):
         'File_axon_5.abf',  # V.20
         'File_axon_6.abf',  # V.20
         'File_axon_7.abf',  # V2.6
+        'test_file_edr3.abf',  # EDR3
     ]
     files_to_download = entities_to_test
 
