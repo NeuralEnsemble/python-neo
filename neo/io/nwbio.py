@@ -94,6 +94,7 @@ prefix_map = {
     1e-12: 'pico'
 }
 
+
 def try_json_field(content):
     """
     Try to interpret a string as JSON data.
@@ -612,9 +613,9 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
         if timeseries.conversion:
             self.units = _recompose_unit(timeseries.unit, timeseries.conversion)
         if timeseries.starting_time is not None:
-            self.t_start = timeseries.starting_time * pq.s  # todo: use timeseries.starting_time_unit
+            self.t_start = timeseries.starting_time * pq.s
         else:
-            self.t_start = timeseries.timestamps[0] * pq.s  # todo: use timeseries.timestamps.unit
+            self.t_start = timeseries.timestamps[0] * pq.s
         if timeseries.rate:
             self.sampling_rate = timeseries.rate * pq.Hz
         else:
@@ -659,7 +660,6 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
                     electrode_metadata["device"][field_name] = value
             self.annotations["nwb_electrode"] = electrode_metadata
 
-
     def load(self, time_slice=None, strict_slicing=True):
         """
         *Args*:
@@ -669,16 +669,17 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
                 Control if an error is raised or not when one of the time_slice members
                 (t_start or t_stop) is outside the real time range of the segment.
         """
+        i_start, i_stop, sig_t_start = None, None, self.t_start
         if time_slice:
-            i_start, i_stop, sig_t_start = self._time_slice_indices(time_slice,
-                                                                    strict_slicing=strict_slicing)
-            signal = self._timeseries.data[i_start: i_stop]
-        else:
-            signal = self._timeseries.data[:]
-            sig_t_start = self.t_start
+            if self.sampling_rate is None:
+                i_start, i_stop = np.searchsorted(self._timeseries.timestamps, time_slice)
+            else:
+                i_start, i_stop, sig_t_start = self._time_slice_indices(
+                    time_slice, strict_slicing=strict_slicing)
+        signal = self._timeseries.data[i_start: i_stop]
         if self.sampling_rate is None:
             return IrregularlySampledSignal(
-                        self._timeseries.timestamps[:] * pq.s,
+                        self._timeseries.timestamps[i_start:i_stop] * pq.s,
                         signal,
                         units=self.units,
                         t_start=sig_t_start,
