@@ -35,6 +35,7 @@ class NSDFIO(BaseIO):
 
     It supports reading and writing: Block, Segment, AnalogSignal, ChannelIndex, with all relationships and metadata.
     """
+
     is_readable = True
     is_writable = False  # True - disabled pending update to Neo 0.9 API
 
@@ -46,9 +47,9 @@ class NSDFIO(BaseIO):
     has_header = False
     is_streameable = False
 
-    name = 'NSDF'
-    extensions = ['h5']
-    mode = 'file'
+    name = "NSDF"
+    extensions = ["h5"]
+    mode = "file"
 
     def __init__(self, filename=None):
         """
@@ -65,8 +66,8 @@ class NSDFIO(BaseIO):
         BaseIO.__init__(self)
 
         self.filename = filename
-        self.dt_format = '%d/%m/%Y %H:%M:%S'
-        self.modeltree_path = '/model/modeltree/neo/'
+        self.dt_format = "%d/%m/%Y %H:%M:%S"
+        self.modeltree_path = "/model/modeltree/neo/"
 
     def write_all_blocks(self, blocks):
         """
@@ -82,7 +83,7 @@ class NSDFIO(BaseIO):
         for i, block in enumerate(blocks):
             self.write_block(block, name_pattern.format(i), writer, blocks_model)
 
-    def write_block(self, block=None, name='0', writer=None, parent=None):
+    def write_block(self, block=None, name="0", writer=None, parent=None):
         """
         Write a Block to the file
 
@@ -110,22 +111,28 @@ class NSDFIO(BaseIO):
         self._clean_nsdfio_annotations(block)
 
     def _write_block_children(self, block, block_model, writer):
-        segments_model = nsdf.ModelComponent(name='segments', uid=uuid1().hex, parent=block_model)
+        segments_model = nsdf.ModelComponent(name="segments", uid=uuid1().hex, parent=block_model)
         self._write_model_component(segments_model, writer)
         name_pattern = self._name_pattern(len(block.segments))
         for i, segment in enumerate(block.segments):
-            self.write_segment(segment=segment, name=name_pattern.format(i),
-                               writer=writer, parent=segments_model)
+            self.write_segment(
+                segment=segment, name=name_pattern.format(i), writer=writer, parent=segments_model
+            )
 
         channel_indexes_model = nsdf.ModelComponent(
-            name='channel_indexes', uid=uuid1().hex, parent=block_model)
+            name="channel_indexes", uid=uuid1().hex, parent=block_model
+        )
         self._write_model_component(channel_indexes_model, writer)
         name_pattern = self._name_pattern(len(block.channel_indexes))
         for i, channelindex in enumerate(block.channel_indexes):
-            self.write_channelindex(channelindex=channelindex, name=name_pattern.format(i),
-                                    writer=writer, parent=channel_indexes_model)
+            self.write_channelindex(
+                channelindex=channelindex,
+                name=name_pattern.format(i),
+                writer=writer,
+                parent=channel_indexes_model,
+            )
 
-    def write_segment(self, segment=None, name='0', writer=None, parent=None):
+    def write_segment(self, segment=None, name="0", writer=None, parent=None):
         """
         Write a Segment to the file
 
@@ -157,12 +164,17 @@ class NSDFIO(BaseIO):
 
     def _write_segment_children(self, model, segment, writer):
         analogsignals_model = nsdf.ModelComponent(
-            name='analogsignals', uid=uuid1().hex, parent=model)
+            name="analogsignals", uid=uuid1().hex, parent=model
+        )
         self._write_model_component(analogsignals_model, writer)
         name_pattern = self._name_pattern(len(segment.analogsignals))
         for i, signal in enumerate(segment.analogsignals):
-            self.write_analogsignal(signal=signal, name=name_pattern.format(i),
-                                    parent=analogsignals_model, writer=writer)
+            self.write_analogsignal(
+                signal=signal,
+                name=name_pattern.format(i),
+                parent=analogsignals_model,
+                writer=writer,
+            )
 
     def write_analogsignal(self, signal, name, writer, parent):
         """
@@ -177,17 +189,18 @@ class NSDFIO(BaseIO):
         uid = uuid1().hex
         model = nsdf.ModelComponent(name, uid=uid, parent=parent)
 
-        if signal.annotations.get('nsdfio_uid') is not None:
-            model.attrs['reference_to'] = signal.annotations['nsdfio_uid']
+        if signal.annotations.get("nsdfio_uid") is not None:
+            model.attrs["reference_to"] = signal.annotations["nsdfio_uid"]
             self._write_model_component(model, writer)
             return
 
         self._write_basic_metadata(model, signal)
-        signal.annotations['nsdfio_uid'] = uid
+        signal.annotations["nsdfio_uid"] = uid
 
         r_signal = np.swapaxes(signal, 0, 1)
         channels_model, channels, source_ds = self._create_signal_data_sources(
-            model, r_signal, uid, writer)
+            model, r_signal, uid, writer
+        )
         self._write_signal_data(model, channels, r_signal, signal, source_ds, writer)
 
         self._write_model_component(model, writer)
@@ -217,24 +230,29 @@ class NSDFIO(BaseIO):
 
     def _write_channelindex_children(self, channelindex, model, writer):
         analogsignals_model = nsdf.ModelComponent(
-            name='analogsignals', uid=uuid1().hex, parent=model)
+            name="analogsignals", uid=uuid1().hex, parent=model
+        )
         self._write_model_component(analogsignals_model, writer)
         name_pattern = self._name_pattern(len(channelindex.analogsignals))
         for i, signal in enumerate(channelindex.analogsignals):
-            self.write_analogsignal(signal=signal, name=name_pattern.format(i),
-                                    parent=analogsignals_model, writer=writer)
+            self.write_analogsignal(
+                signal=signal,
+                name=name_pattern.format(i),
+                parent=analogsignals_model,
+                writer=writer,
+            )
 
     def _init_writing(self):
-        return nsdf.NSDFWriter(self.filename, mode='w')
+        return nsdf.NSDFWriter(self.filename, mode="w")
 
     def _prepare_model_tree(self, writer):
-        neo_model = nsdf.ModelComponent('neo', uid=uuid1().hex)
+        neo_model = nsdf.ModelComponent("neo", uid=uuid1().hex)
         self._write_model_component(neo_model, writer)
 
-        blocks_model = nsdf.ModelComponent('blocks', uid=uuid1().hex, parent=neo_model)
+        blocks_model = nsdf.ModelComponent("blocks", uid=uuid1().hex, parent=neo_model)
         self._write_model_component(blocks_model, writer)
 
-        segments_model = nsdf.ModelComponent('segments', uid=uuid1().hex, parent=neo_model)
+        segments_model = nsdf.ModelComponent("segments", uid=uuid1().hex, parent=neo_model)
         self._write_model_component(segments_model, writer)
 
         return neo_model, blocks_model, segments_model
@@ -243,21 +261,21 @@ class NSDFIO(BaseIO):
         return len(str(n))
 
     def _name_pattern(self, how_many_items):
-        return '{{:0{}d}}'.format(self._number_of_digits(max(how_many_items - 1, 0)))
+        return "{{:0{}d}}".format(self._number_of_digits(max(how_many_items - 1, 0)))
 
     def _clean_nsdfio_annotations(self, object):
-        nsdfio_annotations = ('nsdfio_uid',)
+        nsdfio_annotations = ("nsdfio_uid",)
 
         for key in nsdfio_annotations:
             object.annotations.pop(key, None)
 
-        if hasattr(object, 'children'):
+        if hasattr(object, "children"):
             for child in object.children:
                 self._clean_nsdfio_annotations(child)
 
     def _write_model_component(self, model, writer):
         if model.parent is None:
-            nsdf.add_model_component(model, writer.model['modeltree/'])
+            nsdf.add_model_component(model, writer.model["modeltree/"])
         else:
             nsdf.add_model_component(model, model.parent.hdfgroup)
 
@@ -273,44 +291,44 @@ class NSDFIO(BaseIO):
 
     def _write_basic_attributes(self, model, object):
         if object.name is not None:
-            model.attrs['name'] = object.name
+            model.attrs["name"] = object.name
         if object.description is not None:
-            model.attrs['description'] = object.description
+            model.attrs["description"] = object.description
 
     def _write_datetime_attributes(self, model, object):
         if object.rec_datetime is not None:
-            model.attrs['rec_datetime'] = object.rec_datetime.strftime(self.dt_format)
+            model.attrs["rec_datetime"] = object.rec_datetime.strftime(self.dt_format)
 
     def _write_index_attribute(self, model, object):
         if object.index is not None:
-            model.attrs['index'] = object.index
+            model.attrs["index"] = object.index
 
     def _write_annotations(self, model, object):
         if object.annotations is not None:
-            model.attrs['annotations'] = pickle.dumps(object.annotations)
+            model.attrs["annotations"] = pickle.dumps(object.annotations)
 
     def _write_signal_data(self, model, channels, r_signal, signal, source_ds, writer):
-        dataobj = nsdf.UniformData('signal', unit=str(signal.units.dimensionality))
+        dataobj = nsdf.UniformData("signal", unit=str(signal.units.dimensionality))
         dataobj.dtype = signal.dtype
         for i in range(len(channels)):
             dataobj.put_data(channels[i].uid, r_signal[i])
 
-        dataobj.set_dt(float(signal.sampling_period.magnitude),
-                       str(signal.sampling_period.dimensionality))
+        dataobj.set_dt(
+            float(signal.sampling_period.magnitude), str(signal.sampling_period.dimensionality)
+        )
 
         rescaled_tstart = signal.t_start.rescale(signal.sampling_period.dimensionality)
-        writer.add_uniform_data(source_ds, dataobj,
-                                tstart=float(rescaled_tstart.magnitude))
-        model.attrs['t_start_unit'] = str(signal.t_start.dimensionality)
+        writer.add_uniform_data(source_ds, dataobj, tstart=float(rescaled_tstart.magnitude))
+        model.attrs["t_start_unit"] = str(signal.t_start.dimensionality)
 
     def _create_signal_data_sources(self, model, r_signal, uid, writer):
         channels = []
-        channels_model = nsdf.ModelComponent(name='channels', uid=uuid1().hex, parent=model)
-        name_pattern = '{{:0{}d}}'.format(self._number_of_digits(max(len(r_signal) - 1, 0)))
+        channels_model = nsdf.ModelComponent(name="channels", uid=uuid1().hex, parent=model)
+        name_pattern = "{{:0{}d}}".format(self._number_of_digits(max(len(r_signal) - 1, 0)))
         for i in range(len(r_signal)):
-            channels.append(nsdf.ModelComponent(name_pattern.format(i),
-                                                uid=uuid1().hex,
-                                                parent=channels_model))
+            channels.append(
+                nsdf.ModelComponent(name_pattern.format(i), uid=uuid1().hex, parent=channels_model)
+            )
 
         source_ds = writer.add_uniform_ds(uid, [channel.uid for channel in channels])
         return channels_model, channels, source_ds
@@ -318,18 +336,18 @@ class NSDFIO(BaseIO):
     def _write_channelindex_arrays(self, model, channelindex, writer):
         group = model.hdfgroup
 
-        self._write_array(group, 'index', channelindex.index)
+        self._write_array(group, "index", channelindex.index)
         if channelindex.channel_names is not None:
-            self._write_array(group, 'channel_names', channelindex.channel_names)
+            self._write_array(group, "channel_names", channelindex.channel_names)
         if channelindex.channel_ids is not None:
-            self._write_array(group, 'channel_ids', channelindex.channel_ids)
+            self._write_array(group, "channel_ids", channelindex.channel_ids)
         if channelindex.coordinates is not None:
-            self._write_array(group, 'coordinates', channelindex.coordinates)
+            self._write_array(group, "coordinates", channelindex.coordinates)
 
     def _write_array(self, group, name, array):
         if isinstance(array, pq.Quantity):
             group.create_dataset(name, data=array.magnitude)
-            group[name].attrs['dimensionality'] = str(array.dimensionality)
+            group[name].attrs["dimensionality"] = str(array.dimensionality)
         else:
             group.create_dataset(name, data=array)
 
@@ -340,12 +358,12 @@ class NSDFIO(BaseIO):
         :param lazy: Enables lazy reading
         :return: List of read blocks
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         reader = self._init_reading()
         blocks = []
 
-        blocks_path = self.modeltree_path + 'blocks/'
+        blocks_path = self.modeltree_path + "blocks/"
         for block in reader.model[blocks_path].values():
             blocks.append(self.read_block(group=block, reader=reader))
 
@@ -360,10 +378,10 @@ class NSDFIO(BaseIO):
         :param reader: NSDFReader instance (optional)
         :return: Read block
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         block = Block()
-        group, reader = self._select_first_container(group, reader, 'block')
+        group, reader = self._select_first_container(group, reader, "block")
 
         if group is None:
             return None
@@ -378,9 +396,9 @@ class NSDFIO(BaseIO):
         return block
 
     def _read_block_children(self, block, group, reader):
-        for child in group['segments/'].values():
+        for child in group["segments/"].values():
             block.segments.append(self.read_segment(group=child, reader=reader))
-        for child in group['channel_indexes/'].values():
+        for child in group["channel_indexes/"].values():
             block.channel_indexes.append(self.read_channelindex(group=child, reader=reader))
 
     def read_segment(self, lazy=False, group=None, reader=None):
@@ -392,10 +410,10 @@ class NSDFIO(BaseIO):
         :param reader: NSDFReader instance (optional)
         :return: Read segment
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         segment = Segment()
-        group, reader = self._select_first_container(group, reader, 'segment')
+        group, reader = self._select_first_container(group, reader, "segment")
 
         if group is None:
             return None
@@ -409,7 +427,7 @@ class NSDFIO(BaseIO):
         return segment
 
     def _read_segment_children(self, group, reader, segment):
-        for child in group['analogsignals/'].values():
+        for child in group["analogsignals/"].values():
             segment.analogsignals.append(self.read_analogsignal(group=child, reader=reader))
 
     def read_analogsignal(self, lazy=False, group=None, reader=None):
@@ -421,15 +439,15 @@ class NSDFIO(BaseIO):
         :param reader: NSDFReader instance
         :return: Read AnalogSignal
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         attrs = group.attrs
 
-        if attrs.get('reference_to') is not None:
-            return self.objects_dict[attrs['reference_to']]
+        if attrs.get("reference_to") is not None:
+            return self.objects_dict[attrs["reference_to"]]
 
-        uid = attrs['uid']
-        data_group = reader.data['uniform/{}/signal'.format(uid)]
+        uid = attrs["uid"]
+        data_group = reader.data["uniform/{}/signal".format(uid)]
 
         t_start = self._read_analogsignal_t_start(attrs, data_group)
         signal = self._create_analogsignal(data_group, group, t_start, uid, reader)
@@ -448,7 +466,7 @@ class NSDFIO(BaseIO):
         :param reader: NSDFReader instance
         :return: Read ChannelIndex
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         attrs = group.attrs
 
@@ -460,7 +478,7 @@ class NSDFIO(BaseIO):
         return channelindex
 
     def _read_channelindex_children(self, group, reader, channelindex):
-        for child in group['analogsignals/'].values():
+        for child in group["analogsignals/"].values():
             channelindex.analogsignals.append(self.read_analogsignal(group=child, reader=reader))
 
     def _init_reading(self):
@@ -474,7 +492,7 @@ class NSDFIO(BaseIO):
             reader = self._init_reading()
 
         if group is None:
-            path = self.modeltree_path + name + 's/'
+            path = self.modeltree_path + name + "s/"
             if len(reader.model[path].values()) > 0:
                 group = reader.model[path].values()[0]
 
@@ -491,61 +509,68 @@ class NSDFIO(BaseIO):
         self._read_annotations(attrs, signal)
 
     def _read_basic_attributes(self, attrs, object):
-        if attrs.get('name') is not None:
-            object.name = attrs['name']
-        if attrs.get('description') is not None:
-            object.description = attrs['description']
+        if attrs.get("name") is not None:
+            object.name = attrs["name"]
+        if attrs.get("description") is not None:
+            object.description = attrs["description"]
         object.file_origin = self.filename
 
     def _read_datetime_attributes(self, attrs, object):
         object.file_datetime = self.file_datetime
-        if attrs.get('rec_datetime') is not None:
-            object.rec_datetime = datetime.strptime(attrs['rec_datetime'], self.dt_format)
+        if attrs.get("rec_datetime") is not None:
+            object.rec_datetime = datetime.strptime(attrs["rec_datetime"], self.dt_format)
 
     def _read_annotations(self, attrs, object):
-        if attrs.get('annotations') is not None:
-            object.annotations = pickle.loads(attrs['annotations'])
+        if attrs.get("annotations") is not None:
+            object.annotations = pickle.loads(attrs["annotations"])
 
     def _read_index_attribute(self, attrs, object):
-        if attrs.get('index') is not None:
-            object.index = attrs['index']
+        if attrs.get("index") is not None:
+            object.index = attrs["index"]
 
     def _create_analogsignal(self, data_group, group, t_start, uid, reader):
         # for lazy
         # data_shape = data_group.shape
         # data_shape = (data_shape[1], data_shape[0])
-        dataobj = reader.get_uniform_data(uid, 'signal')
+        dataobj = reader.get_uniform_data(uid, "signal")
         data = self._read_signal_data(dataobj, group)
         signal = self._create_normal_analogsignal(data, dataobj, uid, t_start)
         return signal
 
     def _read_analogsignal_t_start(self, attrs, data_group):
-        t_start = float(data_group.attrs['tstart']) * pq.Quantity(1, data_group.attrs['tunit'])
-        t_start = t_start.rescale(attrs['t_start_unit'])
+        t_start = float(data_group.attrs["tstart"]) * pq.Quantity(1, data_group.attrs["tunit"])
+        t_start = t_start.rescale(attrs["t_start_unit"])
         return t_start
 
     def _read_signal_data(self, dataobj, group):
         data = []
-        for channel in group['channels/'].values():
-            channel_uid = channel.attrs['uid']
+        for channel in group["channels/"].values():
+            channel_uid = channel.attrs["uid"]
             data += [dataobj.get_data(channel_uid)]
         return data
 
     def _create_normal_analogsignal(self, data, dataobj, uid, t_start):
-        return AnalogSignal(np.swapaxes(data, 0, 1), dtype=dataobj.dtype, units=dataobj.unit,
-                            t_start=t_start, sampling_period=pq.Quantity(dataobj.dt, dataobj.tunit))
+        return AnalogSignal(
+            np.swapaxes(data, 0, 1),
+            dtype=dataobj.dtype,
+            units=dataobj.unit,
+            t_start=t_start,
+            sampling_period=pq.Quantity(dataobj.dt, dataobj.tunit),
+        )
 
     def _create_channelindex(self, group):
-        return ChannelIndex(index=self._read_array(group, 'index'),
-                            channel_names=self._read_array(group, 'channel_names'),
-                            channel_ids=self._read_array(group, 'channel_ids'),
-                            coordinates=self._read_array(group, 'coordinates'))
+        return ChannelIndex(
+            index=self._read_array(group, "index"),
+            channel_names=self._read_array(group, "channel_names"),
+            channel_ids=self._read_array(group, "channel_ids"),
+            coordinates=self._read_array(group, "coordinates"),
+        )
 
     def _read_array(self, group, name):
         if group.__contains__(name) == False:
             return None
         array = group[name][:]
 
-        if group[name].attrs.get('dimensionality') is not None:
-            return pq.Quantity(array, group[name].attrs['dimensionality'])
+        if group[name].attrs.get("dimensionality") is not None:
+            return pq.Quantity(array, group[name].attrs["dimensionality"])
         return array

@@ -1,10 +1,10 @@
-'''
+"""
 This module defines :class:`Segment`, a container for data sharing a common
 time basis.
 
 :class:`Segment` derives from :class:`Container`,
 from :module:`neo.core.container`.
-'''
+"""
 
 from datetime import datetime
 
@@ -16,7 +16,7 @@ from neo.core.container import Container
 
 
 class Segment(Container):
-    '''
+    """
     A container for data sharing a common time basis.
 
     A :class:`Segment` is a heterogeneous container for discrete or continous
@@ -70,26 +70,40 @@ class Segment(Container):
         :class:`IrregularlySampledSignal`
         :class:`SpikeTrain`
 
-    '''
+    """
 
-    _data_child_objects = ('AnalogSignal',
-                           'Epoch', 'Event',
-                           'IrregularlySampledSignal', 'SpikeTrain', 'ImageSequence')
-    _single_parent_objects = ('Block',)
-    _recommended_attrs = ((('file_datetime', datetime),
-                           ('rec_datetime', datetime),
-                           ('index', int)) +
-                          Container._recommended_attrs)
-    _repr_pretty_containers = ('analogsignals',)
+    _data_child_objects = (
+        "AnalogSignal",
+        "Epoch",
+        "Event",
+        "IrregularlySampledSignal",
+        "SpikeTrain",
+        "ImageSequence",
+    )
+    _single_parent_objects = ("Block",)
+    _recommended_attrs = (
+        ("file_datetime", datetime),
+        ("rec_datetime", datetime),
+        ("index", int),
+    ) + Container._recommended_attrs
+    _repr_pretty_containers = ("analogsignals",)
 
-    def __init__(self, name=None, description=None, file_origin=None,
-                 file_datetime=None, rec_datetime=None, index=None,
-                 **annotations):
-        '''
+    def __init__(
+        self,
+        name=None,
+        description=None,
+        file_origin=None,
+        file_datetime=None,
+        rec_datetime=None,
+        index=None,
+        **annotations
+    ):
+        """
         Initialize a new :class:`Segment` instance.
-        '''
-        super().__init__(name=name, description=description,
-                                      file_origin=file_origin, **annotations)
+        """
+        super().__init__(
+            name=name, description=description, file_origin=file_origin, **annotations
+        )
 
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
@@ -98,14 +112,16 @@ class Segment(Container):
     # t_start attribute is handled as a property so type checking can be done
     @property
     def t_start(self):
-        '''
+        """
         Time when first signal begins.
-        '''
-        t_starts = [sig.t_start for sig in self.analogsignals +
-                    self.spiketrains + self.irregularlysampledsignals]
+        """
+        t_starts = [
+            sig.t_start
+            for sig in self.analogsignals + self.spiketrains + self.irregularlysampledsignals
+        ]
 
         for e in self.epochs + self.events:
-            if hasattr(e, 't_start'):  # in case of proxy objects
+            if hasattr(e, "t_start"):  # in case of proxy objects
                 t_starts += [e.t_start]
             elif len(e) > 0:
                 t_starts += [e.times[0]]
@@ -120,14 +136,16 @@ class Segment(Container):
     # t_stop attribute is handled as a property so type checking can be done
     @property
     def t_stop(self):
-        '''
+        """
         Time when last signal ends.
-        '''
-        t_stops = [sig.t_stop for sig in self.analogsignals +
-                   self.spiketrains + self.irregularlysampledsignals]
+        """
+        t_stops = [
+            sig.t_stop
+            for sig in self.analogsignals + self.spiketrains + self.irregularlysampledsignals
+        ]
 
         for e in self.epochs + self.events:
-            if hasattr(e, 't_stop'):  # in case of proxy objects
+            if hasattr(e, "t_stop"):  # in case of proxy objects
                 t_stops += [e.t_stop]
             elif len(e) > 0:
                 t_stops += [e.times[-1]]
@@ -140,10 +158,10 @@ class Segment(Container):
         return t_stop
 
     def take_spiketrains_by_unit(self, unit_list=None):
-        '''
+        """
         Return :class:`SpikeTrains` in the :class:`Segment` that are also in a
         :class:`Unit` in the :attr:`unit_list` provided.
-        '''
+        """
         if unit_list is None:
             return []
         spiketrain_list = []
@@ -181,11 +199,11 @@ class Segment(Container):
     #     return anasig_list
 
     def take_slice_of_analogsignalarray_by_unit(self, unit_list=None):
-        '''
+        """
         Return slices of the :class:`AnalogSignal` objects in the
         :class:`Segment` that correspond to a :attr:`channel_index`  of any of
         the :class:`Unit` objects in the :attr:`unit_list` provided.
-        '''
+        """
         if unit_list is None:
             return []
         indexes = []
@@ -195,13 +213,12 @@ class Segment(Container):
 
         return self.take_slice_of_analogsignalarray_by_channelindex(indexes)
 
-    def take_slice_of_analogsignalarray_by_channelindex(self,
-                                                        channel_indexes=None):
-        '''
+    def take_slice_of_analogsignalarray_by_channelindex(self, channel_indexes=None):
+        """
         Return slices of the :class:`AnalogSignalArrays` in the
         :class:`Segment` that correspond to the :attr:`channel_indexes`
         provided.
-        '''
+        """
         if channel_indexes is None:
             return []
 
@@ -214,7 +231,7 @@ class Segment(Container):
         return sliced_sigarrays
 
     def construct_subsegment_by_unit(self, unit_list=None):
-        '''
+        """
         Return a new :class:`Segment that contains the :class:`AnalogSignal`,
         :class:`AnalogSignal`, and :class:`SpikeTrain`
         objects common to both the current :class:`Segment` and any
@@ -252,13 +269,12 @@ class Segment(Container):
             >>> len(seg1.spiketrains)
             2
 
-        '''
+        """
         # todo: provide equivalent method using Group/ChannelView
         #       add deprecation message (use decorator)?
         seg = Segment()
         seg.spiketrains = self.take_spiketrains_by_unit(unit_list)
-        seg.analogsignals = \
-            self.take_slice_of_analogsignalarray_by_unit(unit_list)
+        seg.analogsignals = self.take_slice_of_analogsignalarray_by_unit(unit_list)
         # TODO copy others attributes
         return seg
 
@@ -291,8 +307,14 @@ class Segment(Container):
         """
         subseg = Segment(**kwargs)
 
-        for attr in ['file_datetime', 'rec_datetime', 'index',
-                     'name', 'description', 'file_origin']:
+        for attr in [
+            "file_datetime",
+            "rec_datetime",
+            "index",
+            "name",
+            "description",
+            "file_origin",
+        ]:
             setattr(subseg, attr, getattr(self, attr))
 
         subseg.annotations = deepcopy(self.annotations)
@@ -302,11 +324,11 @@ class Segment(Container):
         if t_stop is None:
             t_stop = self.t_stop
 
-        t_shift = - t_start
+        t_shift = -t_start
 
         # cut analogsignals and analogsignalarrays
         for ana_id in range(len(self.analogsignals)):
-            if hasattr(self.analogsignals[ana_id], '_rawio'):
+            if hasattr(self.analogsignals[ana_id], "_rawio"):
                 ana_time_slice = self.analogsignals[ana_id].load(time_slice=(t_start, t_stop))
             else:
                 ana_time_slice = self.analogsignals[ana_id].time_slice(t_start, t_stop)
@@ -316,9 +338,10 @@ class Segment(Container):
 
         # cut irregularly sampled signals
         for irr_id in range(len(self.irregularlysampledsignals)):
-            if hasattr(self.irregularlysampledsignals[irr_id], '_rawio'):
+            if hasattr(self.irregularlysampledsignals[irr_id], "_rawio"):
                 ana_time_slice = self.irregularlysampledsignals[irr_id].load(
-                    time_slice=(t_start, t_stop))
+                    time_slice=(t_start, t_stop)
+                )
             else:
                 ana_time_slice = self.irregularlysampledsignals[irr_id].time_slice(t_start, t_stop)
             if reset_time:
@@ -327,7 +350,7 @@ class Segment(Container):
 
         # cut spiketrains
         for st_id in range(len(self.spiketrains)):
-            if hasattr(self.spiketrains[st_id], '_rawio'):
+            if hasattr(self.spiketrains[st_id], "_rawio"):
                 st_time_slice = self.spiketrains[st_id].load(time_slice=(t_start, t_stop))
             else:
                 st_time_slice = self.spiketrains[st_id].time_slice(t_start, t_stop)
@@ -337,7 +360,7 @@ class Segment(Container):
 
         # cut events
         for ev_id in range(len(self.events)):
-            if hasattr(self.events[ev_id], '_rawio'):
+            if hasattr(self.events[ev_id], "_rawio"):
                 ev_time_slice = self.events[ev_id].load(time_slice=(t_start, t_stop))
             else:
                 ev_time_slice = self.events[ev_id].time_slice(t_start, t_stop)
@@ -349,7 +372,7 @@ class Segment(Container):
 
         # cut epochs
         for ep_id in range(len(self.epochs)):
-            if hasattr(self.epochs[ep_id], '_rawio'):
+            if hasattr(self.epochs[ep_id], "_rawio"):
                 ep_time_slice = self.epochs[ep_id].load(time_slice=(t_start, t_stop))
             else:
                 ep_time_slice = self.epochs[ep_id].time_slice(t_start, t_stop)

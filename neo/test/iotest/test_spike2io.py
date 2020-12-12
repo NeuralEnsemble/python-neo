@@ -10,15 +10,17 @@ from neo.io import Spike2IO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
+class TestSpike2IO(
+    BaseTestIO, unittest.TestCase,
+):
     ioclass = Spike2IO
     files_to_test = [
-        'File_spike2_1.smr',
-        'File_spike2_2.smr',
-        'File_spike2_3.smr',
-        '130322-1LY.smr',  # this is for bug 182
-        'multi_sampling.smr',  # this is for bug 466
-        'Two-mice-bigfile-test000.smr',  # SONv9 file
+        "File_spike2_1.smr",
+        "File_spike2_2.smr",
+        "File_spike2_3.smr",
+        "130322-1LY.smr",  # this is for bug 182
+        "multi_sampling.smr",  # this is for bug 466
+        "Two-mice-bigfile-test000.smr",  # SONv9 file
     ]
     files_to_download = files_to_test
 
@@ -27,9 +29,9 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         Some file can have several sampling_rate.
         This one contain 3 differents signals sampling rate
         """
-        filename = self.get_filename_path('multi_sampling.smr')
+        filename = self.get_filename_path("multi_sampling.smr")
         reader = Spike2IO(filename=filename, try_signal_grouping=False)
-        bl = reader.read_block(signal_group_mode='group-by-same-units')
+        bl = reader.read_block(signal_group_mode="group-by-same-units")
         assert len(bl.segments) == 10
         seg = bl.segments[0]
 
@@ -55,9 +57,9 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         Some files can contain multiple sampling rates.
         This file contains three signals with different sampling rates.
         """
-        filename = self.get_filename_path('multi_sampling.smr')
+        filename = self.get_filename_path("multi_sampling.smr")
         reader = Spike2IO(filename=filename, try_signal_grouping=True)
-        bl = reader.read_block(signal_group_mode='group-by-same-units')
+        bl = reader.read_block(signal_group_mode="group-by-same-units")
         assert len(bl.segments) == 10
         seg = bl.segments[0]
 

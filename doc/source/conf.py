@@ -19,12 +19,12 @@ from distutils.version import LooseVersion
 with open("../../neo/version.py") as fp:
     d = {}
     exec(fp.read(), d)
-    neo_release = d['version']
+    neo_release = d["version"]
 
-neo_version = '.'.join(str(e) for e in LooseVersion(neo_release).version[:2])
+neo_version = ".".join(str(e) for e in LooseVersion(neo_release).version[:2])
 
 
-AUTHORS = 'Neo authors and contributors <neuralensemble@googlegroups.com>'
+AUTHORS = "Neo authors and contributors <neuralensemble@googlegroups.com>"
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -35,23 +35,23 @@ AUTHORS = 'Neo authors and contributors <neuralensemble@googlegroups.com>'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo']
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.doctest", "sphinx.ext.todo"]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The encoding of source files.
 # source_encoding = 'utf-8'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
-project = 'Neo'
-copyright = '2010-2020, ' + AUTHORS
+project = "Neo"
+copyright = "2010-2020, " + AUTHORS
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -95,7 +95,7 @@ exclude_trees = []
 # show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
@@ -106,7 +106,7 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
 # html_theme = 'default'
-html_theme = 'sphinxdoc'
+html_theme = "sphinxdoc"
 # html_theme = 'haiku'
 # html_theme = 'scrolls'
 # html_theme = 'agogo'
@@ -128,7 +128,7 @@ html_theme = 'sphinxdoc'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/neologo_light.png'
+html_logo = "images/neologo_light.png"
 
 
 # The name of an image file (within the static path) to use as favicon of the
@@ -140,7 +140,7 @@ html_favicon = None
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['images']
+html_static_path = ["images"]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -178,7 +178,7 @@ html_static_path = ['images']
 # html_file_suffix = ''
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'neodoc'
+htmlhelp_basename = "neodoc"
 
 
 # -- Options for LaTeX output -------------------------------------------------
@@ -192,8 +192,7 @@ htmlhelp_basename = 'neodoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author,
 #  documentclass [howto/manual]).
-latex_documents = [('index', 'neo.tex', 'Neo Documentation',
-                    AUTHORS, 'manual')]
+latex_documents = [("index", "neo.tex", "Neo Documentation", AUTHORS, "manual")]
 
 # The name of an image file (relative to this directory) to place at the
 # top of the title page.
@@ -216,4 +215,6 @@ todo_include_todos = True  # set to False before releasing documentation
 
 rst_epilog = """
 .. |neo_github_url| replace:: https://github.com/NeuralEnsemble/python-neo/archive/neo-{}.zip
-""".format(neo_release)
+""".format(
+    neo_release
+)

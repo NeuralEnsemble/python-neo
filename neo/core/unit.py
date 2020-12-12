@@ -1,16 +1,16 @@
-'''
+"""
 This module defines :class:`Unit`, a container of :class:`SpikeTrain` objects
 from a unit.
 
 :class:`Unit` derives from :class:`Container`,
 from :module:`neo.core.container`.
-'''
+"""
 
 from neo.core.container import Container
 
 
 class Unit(Container):
-    '''
+    """
     A container of :class:`SpikeTrain` objects from a unit.
 
     Use of :class:`Unit` is deprecated. It can be replaced by the :class:`Group`.
@@ -53,19 +53,19 @@ class Unit(Container):
     *Container of*:
         :class:`SpikeTrain`
 
-    '''
+    """
 
-    _data_child_objects = ('SpikeTrain',)
-    _single_parent_objects = ('ChannelIndex',)
+    _data_child_objects = ("SpikeTrain",)
+    _single_parent_objects = ("ChannelIndex",)
     _recommended_attrs = Container._recommended_attrs
 
-    def __init__(self, name=None, description=None, file_origin=None,
-                 **annotations):
-        '''
+    def __init__(self, name=None, description=None, file_origin=None, **annotations):
+        """
         Initialize a new :clas:`Unit` instance (spike source)
-        '''
-        super().__init__(name=name, description=description,
-                                   file_origin=file_origin, **annotations)
+        """
+        super().__init__(
+            name=name, description=description, file_origin=file_origin, **annotations
+        )
         self.channel_index = None
 
     def get_channel_indexes(self):

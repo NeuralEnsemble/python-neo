@@ -1,10 +1,10 @@
-'''
+"""
 This module defines :class:`ChannelIndex`, a container for multiple
 data channels.
 
 :class:`ChannelIndex` derives from :class:`Container`,
 from :module:`neo.core.container`.
-'''
+"""
 
 import numpy as np
 import quantities as pq
@@ -13,7 +13,7 @@ from neo.core.container import Container
 
 
 class ChannelIndex(Container):
-    '''
+    """
     A container for indexing/grouping data channels.
 
     Use of :class:`ChannelIndex` is deprecated. Its various uses can be replaced
@@ -150,36 +150,44 @@ class ChannelIndex(Container):
         :class:`IrregularlySampledSignal`
         :class:`Unit`
 
-    '''
+    """
 
-    _container_child_objects = ('Unit',)
-    _data_child_objects = ('AnalogSignal', 'IrregularlySampledSignal')
-    _single_parent_objects = ('Block',)
-    _necessary_attrs = (('index', np.ndarray, 1, np.dtype('i')),)
-    _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('U')),
-                           ('channel_ids', np.ndarray, 1, np.dtype('i')),
-                           ('coordinates', pq.Quantity, 2)) +
-                          Container._recommended_attrs)
+    _container_child_objects = ("Unit",)
+    _data_child_objects = ("AnalogSignal", "IrregularlySampledSignal")
+    _single_parent_objects = ("Block",)
+    _necessary_attrs = (("index", np.ndarray, 1, np.dtype("i")),)
+    _recommended_attrs = (
+        ("channel_names", np.ndarray, 1, np.dtype("U")),
+        ("channel_ids", np.ndarray, 1, np.dtype("i")),
+        ("coordinates", pq.Quantity, 2),
+    ) + Container._recommended_attrs
 
-    def __init__(self, index, channel_names=None, channel_ids=None,
-                 name=None, description=None, file_origin=None,
-                 coordinates=None, **annotations):
-        '''
+    def __init__(
+        self,
+        index,
+        channel_names=None,
+        channel_ids=None,
+        name=None,
+        description=None,
+        file_origin=None,
+        coordinates=None,
+        **annotations
+    ):
+        """
         Initialize a new :class:`ChannelIndex` instance.
-        '''
+        """
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
         # in annotations
-        super().__init__(name=name,
-                         description=description,
-                         file_origin=file_origin,
-                         **annotations)
+        super().__init__(
+            name=name, description=description, file_origin=file_origin, **annotations
+        )
 
         # Defaults
         if channel_names is None:
-            channel_names = np.array([], dtype='U')
+            channel_names = np.array([], dtype="U")
         if channel_ids is None:
-            channel_ids = np.array([], dtype='i')
+            channel_ids = np.array([], dtype="i")
 
         # Store recommended attributes
         self.channel_names = np.array(channel_names)
@@ -188,9 +196,9 @@ class ChannelIndex(Container):
         self.coordinates = coordinates
 
     def __getitem__(self, i):
-        '''
+        """
         Get the item or slice :attr:`i`.
-        '''
+        """
         index = self.index.__getitem__(i)
         if self.channel_names.size > 0:
             channel_names = self.channel_names[index]
@@ -204,9 +212,9 @@ class ChannelIndex(Container):
                 channel_ids = [channel_ids]
         else:
             channel_ids = None
-        obj = ChannelIndex(index=np.arange(index.size),
-                           channel_names=channel_names,
-                           channel_ids=channel_ids)
+        obj = ChannelIndex(
+            index=np.arange(index.size), channel_names=channel_names, channel_ids=channel_ids
+        )
         obj.block = self.block
         obj.analogsignals = self.analogsignals
         obj.irregularlysampledsignals = self.irregularlysampledsignals

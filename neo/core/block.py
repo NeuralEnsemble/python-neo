@@ -1,11 +1,11 @@
-'''
+"""
 This module defines :class:`Block`, the main container gathering all the data,
 whether discrete or continous, for a given recording session. base class
 used by all :module:`neo.core` classes.
 
 :class:`Block` derives from :class:`Container`,
 from :module:`neo.core.container`.
-'''
+"""
 
 from datetime import datetime
 
@@ -13,7 +13,7 @@ from neo.core.container import Container, unique_objs
 
 
 class Block(Container):
-    '''
+    """
     Main container gathering all the data, whether discrete or continous, for a
     given recording session.
 
@@ -68,41 +68,53 @@ class Block(Container):
         :class:`Group`
         :class:`ChannelIndex` (deprecated)
 
-    '''
+    """
 
-    _container_child_objects = ('Segment', 'ChannelIndex', 'Group')
-    _child_properties = ('Unit',)
-    _recommended_attrs = ((('file_datetime', datetime),
-                           ('rec_datetime', datetime),
-                           ('index', int)) +
-                          Container._recommended_attrs)
-    _repr_pretty_attrs_keys_ = (Container._repr_pretty_attrs_keys_ +
-                                ('file_origin', 'file_datetime',
-                                 'rec_datetime', 'index'))
-    _repr_pretty_containers = ('segments',)
+    _container_child_objects = ("Segment", "ChannelIndex", "Group")
+    _child_properties = ("Unit",)
+    _recommended_attrs = (
+        ("file_datetime", datetime),
+        ("rec_datetime", datetime),
+        ("index", int),
+    ) + Container._recommended_attrs
+    _repr_pretty_attrs_keys_ = Container._repr_pretty_attrs_keys_ + (
+        "file_origin",
+        "file_datetime",
+        "rec_datetime",
+        "index",
+    )
+    _repr_pretty_containers = ("segments",)
 
-    def __init__(self, name=None, description=None, file_origin=None,
-                 file_datetime=None, rec_datetime=None, index=None,
-                 **annotations):
-        '''
+    def __init__(
+        self,
+        name=None,
+        description=None,
+        file_origin=None,
+        file_datetime=None,
+        rec_datetime=None,
+        index=None,
+        **annotations
+    ):
+        """
         Initalize a new :class:`Block` instance.
-        '''
-        super().__init__(name=name, description=description,
-                                    file_origin=file_origin, **annotations)
+        """
+        super().__init__(
+            name=name, description=description, file_origin=file_origin, **annotations
+        )
 
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
-        self.regionsofinterest = []   # temporary workaround.
+        self.regionsofinterest = []  # temporary workaround.
         # the goal is to store all sub-classes of RegionOfInterest in a single list
         # but this will need substantial changes to container handling
 
     @property
     def data_children_recur(self):
-        '''
+        """
         All data child objects stored in the current object,
         obtained recursively.
-        '''
+        """
         # subclassing this to remove duplicate objects such as SpikeTrain
         # objects in both Segment and Unit
         # Only Block can have duplicate items right now, so implement
@@ -110,12 +122,12 @@ class Block(Container):
         return tuple(unique_objs(super().data_children_recur))
 
     def list_children_by_class(self, cls):
-        '''
+        """
         List all children of a particular class recursively.
 
         You can either provide a class object, a class name,
         or the name of the container storing the class.
-        '''
+        """
         # subclassing this to remove duplicate objects such as SpikeTrain
         # objects in both Segment and Unit
         # Only Block can have duplicate items right now, so implement
@@ -124,7 +136,7 @@ class Block(Container):
 
     @property
     def list_units(self):
-        '''
+        """
         Return a list of all :class:`Unit` objects in the :class:`Block`.
-        '''
-        return self.list_children_by_class('unit')
+        """
+        return self.list_children_by_class("unit")

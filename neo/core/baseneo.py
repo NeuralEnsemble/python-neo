@@ -11,12 +11,22 @@ from numbers import Number
 
 import numpy as np
 
-ALLOWED_ANNOTATION_TYPES = (int, float, complex,
-                            str, bytes,
-                            type(None),
-                            datetime, date, time, timedelta,
-                            Number, Decimal,
-                            np.number, np.bool_)
+ALLOWED_ANNOTATION_TYPES = (
+    int,
+    float,
+    complex,
+    str,
+    bytes,
+    type(None),
+    datetime,
+    date,
+    time,
+    timedelta,
+    Number,
+    Decimal,
+    np.number,
+    np.bool_,
+)
 
 # handle both Python 2 and Python 3
 try:
@@ -39,8 +49,10 @@ def _check_annotations(value):
     """
     if isinstance(value, np.ndarray):
         if not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES):
-            raise ValueError("Invalid annotation. NumPy arrays with dtype %s"
-                             "are not allowed" % value.dtype.type)
+            raise ValueError(
+                "Invalid annotation. NumPy arrays with dtype %s"
+                "are not allowed" % value.dtype.type
+            )
     elif isinstance(value, dict):
         for element in value.values():
             _check_annotations(element)
@@ -48,8 +60,9 @@ def _check_annotations(value):
         for element in value:
             _check_annotations(element)
     elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
-        raise ValueError("Invalid annotation. Annotations of type %s are not"
-                         "allowed" % type(value))
+        raise ValueError(
+            "Invalid annotation. Annotations of type %s are not" "allowed" % type(value)
+        )
 
 
 def merge_annotation(a, b):
@@ -64,8 +77,7 @@ def merge_annotation(a, b):
         For strings: concatenate with ';'
         Otherwise: fail if the annotations are not equal
     """
-    assert type(a) == type(b), 'type({}) {} != type({}) {}'.format(a, type(a),
-                                                               b, type(b))
+    assert type(a) == type(b), "type({}) {} != type({}) {}".format(a, type(a), b, type(b))
     if isinstance(a, dict):
         return merge_annotations(a, b)
     elif isinstance(a, np.ndarray):  # concatenate b to a
@@ -78,7 +90,7 @@ def merge_annotation(a, b):
         else:
             return a + ";" + b
     else:
-        assert a == b, '{} != {}'.format(a, b)
+        assert a == b, "{} != {}".format(a, b)
         return a
 
 
@@ -128,8 +140,9 @@ def intersect_annotations(A, B):
 
     for key in set(A.keys()) & set(B.keys()):
         v1, v2 = A[key], B[key]
-        assert type(v1) == type(v2), 'type({}) {} != type({}) {}'.format(v1, type(v1),
-                                                                         v2, type(v2))
+        assert type(v1) == type(v2), "type({}) {} != type({}) {}".format(
+            v1, type(v1), v2, type(v2)
+        )
         if isinstance(v1, dict) and v1 == v2:
             result[key] = deepcopy(v1)
         elif isinstance(v1, str) and v1 == v2:
@@ -150,9 +163,7 @@ def _reference_name(class_name):
     `segment.block`. The attribute name `block` is obtained by calling
     `_container_name("Block")`.
     """
-    name_map = {
-        "ChannelIndex": "channel_index"
-    }
+    name_map = {"ChannelIndex": "channel_index"}
     return name_map.get(class_name, class_name.lower())
 
 
@@ -165,10 +176,8 @@ def _container_name(class_name):
     referenced by `block.segments`. The attribute name `segments` is
     obtained by calling `_container_name_plural("Segment")`.
     """
-    name_map = {
-        "ChannelIndex": "channel_indexes"
-    }
-    return name_map.get(class_name, _reference_name(class_name) + 's')
+    name_map = {"ChannelIndex": "channel_indexes"}
+    return name_map.get(class_name, _reference_name(class_name) + "s")
 
 
 class BaseNeo:
@@ -273,14 +282,11 @@ class BaseNeo:
     # Attributes that an instance is required to have defined
     _necessary_attrs = ()
     # Attributes that an instance may or may have defined
-    _recommended_attrs = (('name', str),
-                          ('description', str),
-                          ('file_origin', str))
+    _recommended_attrs = (("name", str), ("description", str), ("file_origin", str))
     # Attributes that are used for pretty-printing
     _repr_pretty_attrs_keys_ = ("name", "description", "annotations")
 
-    def __init__(self, name=None, description=None, file_origin=None,
-                 **annotations):
+    def __init__(self, name=None, description=None, file_origin=None, **annotations):
         """
         This is the base constructor for all Neo objects.
 
@@ -346,16 +352,14 @@ class BaseNeo:
         """
         Containers for parent objects whose children can have a single parent.
         """
-        return tuple([_reference_name(parent) for parent in
-                      self._single_parent_objects])
+        return tuple([_reference_name(parent) for parent in self._single_parent_objects])
 
     @property
     def _multi_parent_containers(self):
         """
         Containers for parent objects whose children can have multiple parents.
         """
-        return tuple([_container_name(parent) for parent in
-                      self._multi_parent_objects])
+        return tuple([_container_name(parent) for parent in self._multi_parent_objects])
 
     @property
     def _parent_objects(self):
@@ -376,10 +380,8 @@ class BaseNeo:
         """
         All parent objects storing the current object.
         """
-        single = [getattr(self, attr) for attr in
-                  self._single_parent_containers]
-        multi = [list(getattr(self, attr)) for attr in
-                 self._multi_parent_containers]
+        single = [getattr(self, attr) for attr in self._single_parent_containers]
+        multi = [list(getattr(self, attr)) for attr in self._multi_parent_containers]
         return tuple(single + sum(multi, []))
 
     @property
@@ -403,8 +405,7 @@ class BaseNeo:
             Otherwise: fail if the annotations are not equal
         """
         other_annotations = [other.annotations for other in others]
-        merged_annotations = merge_annotations(self.annotations,
-                                               *other_annotations)
+        merged_annotations = merge_annotations(self.annotations, *other_annotations)
         self.annotations.update(merged_annotations)
 
     def merge(self, *others):
@@ -421,8 +422,11 @@ class BaseNeo:
         according to the type of "obj"
         """
         if obj.__class__.__name__ not in self._single_parent_objects:
-            raise TypeError("{} can only have parents of type {}, not {}".format(
-                self.__class__.__name__, self._single_parent_objects, obj.__class__.__name__))
+            raise TypeError(
+                "{} can only have parents of type {}, not {}".format(
+                    self.__class__.__name__, self._single_parent_objects, obj.__class__.__name__
+                )
+            )
         loc = self._single_parent_objects.index(obj.__class__.__name__)
         parent_attr = self._single_parent_attrs[loc]
         setattr(self, parent_attr, obj)

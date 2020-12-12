@@ -1,4 +1,4 @@
-'''
+"""
 Common tests for RawIOs:
 
 It is copy/paste from neo/test/iotests/common_io_test.py
@@ -13,7 +13,7 @@ gin.g-node.org and upload files at NeuralEnsemble/ephy_testing_data
 data repo.
 
 
-'''
+"""
 
 __test__ = False
 
@@ -21,8 +21,12 @@ import os
 import logging
 import unittest
 
-from neo.test.rawiotest.tools import (can_use_network, make_all_directories,
-                                   download_test_file, create_local_temp_dir)
+from neo.test.rawiotest.tools import (
+    can_use_network,
+    make_all_directories,
+    download_test_file,
+    create_local_temp_dir,
+)
 
 from neo.test.rawiotest import rawio_compliance as compliance
 
@@ -32,13 +36,14 @@ url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw
 
 
 class BaseTestRawIO:
-    '''
+    """
     This class make common tests for all IOs.
 
     Basically download files from G-node portal.
     And test the IO is working.
 
-    '''
+    """
+
     # ~ __test__ = False
 
     # all IO test need to modify this:
@@ -53,28 +58,28 @@ class BaseTestRawIO:
     local_test_dir = None
 
     def setUp(self):
-        '''
+        """
         Set up the test fixture.  This is run for every test
-        '''
-        self.shortname = self.rawioclass.__name__.lower().replace('rawio', '')
+        """
+        self.shortname = self.rawioclass.__name__.lower().replace("rawio", "")
         self.create_local_dir_if_not_exists()
         self.download_test_files_if_not_present()
 
     def create_local_dir_if_not_exists(self):
-        '''
+        """
         Create a local directory to store testing files and return it.
 
         The directory path is also written to self.local_test_dir
-        '''
+        """
         self.local_test_dir = create_local_temp_dir(self.shortname)
         return self.local_test_dir
 
     def download_test_files_if_not_present(self):
-        '''
+        """
         Download %s file at G-node for testing
         url_for_tests is global at beginning of this file.
 
-        ''' % self.rawioclass.__name__
+        """ % self.rawioclass.__name__
 
         if not self.use_network:
             raise unittest.SkipTest("Requires download of data from the web")
@@ -82,23 +87,22 @@ class BaseTestRawIO:
         url = url_for_tests + self.shortname
         try:
             make_all_directories(self.files_to_download, self.local_test_dir)
-            download_test_file(self.files_to_download,
-                               self.local_test_dir, url)
+            download_test_file(self.files_to_download, self.local_test_dir, url)
         except OSError as exc:
             raise unittest.SkipTest(exc)
 
     download_test_files_if_not_present.__test__ = False
 
     def cleanup_file(self, path):
-        '''
+        """
         Remove test files or directories safely.
-        '''
+        """
         cleanup_test_file(self.rawioclass, path, directory=self.local_test_dir)
 
     def get_filename_path(self, filename):
-        '''
+        """
         Get the path to a filename in the current temporary file directory
-        '''
+        """
         return os.path.join(self.local_test_dir, filename)
 
     def test_read_all(self):
@@ -107,18 +111,18 @@ class BaseTestRawIO:
         for entity_name in self.entities_to_test:
             entity_name = self.get_filename_path(entity_name)
 
-            if self.rawioclass.rawmode.endswith('-file'):
+            if self.rawioclass.rawmode.endswith("-file"):
                 reader = self.rawioclass(filename=entity_name)
-            elif self.rawioclass.rawmode.endswith('-dir'):
+            elif self.rawioclass.rawmode.endswith("-dir"):
                 reader = self.rawioclass(dirname=entity_name)
 
             txt = reader.__repr__()
-            assert 'nb_block' not in txt, 'Before parser_header() nb_block should be NOT known'
+            assert "nb_block" not in txt, "Before parser_header() nb_block should be NOT known"
 
             reader.parse_header()
 
             txt = reader.__repr__()
-            assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
+            assert "nb_block" in txt, "After parser_header() nb_block should be known"
             # ~ print(txt)
 
             #

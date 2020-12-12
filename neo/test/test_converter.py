@@ -6,15 +6,15 @@ import unittest
 import copy
 import numpy as np
 
-from neo.io.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy,
-                EventProxy, EpochProxy)
+from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
 
-from neo.core import (Epoch, Event, SpikeTrain)
+from neo.core import Epoch, Event, SpikeTrain
 from neo.core.basesignal import BaseSignal
 
-from neo.test.tools import (assert_arrays_equal, assert_same_attributes)
+from neo.test.tools import assert_arrays_equal, assert_same_attributes
 from neo.test.generate_datasets import fake_neo
 from neo.converter import convert_channelindex_to_view_group
+
 
 class ConversionTest(unittest.TestCase):
     def setUp(self):
@@ -23,7 +23,7 @@ class ConversionTest(unittest.TestCase):
         self.new_block = convert_channelindex_to_view_group(block)
 
     def test_no_deprecated_attributes(self):
-        self.assertFalse(hasattr(self.new_block, 'channel_indexes'))
+        self.assertFalse(hasattr(self.new_block, "channel_indexes"))
         # collecting data objects
         objs = []
         for seg in self.new_block.segments:
@@ -36,13 +36,13 @@ class ConversionTest(unittest.TestCase):
 
         for obj in objs:
             if isinstance(obj, BaseSignal):
-                self.assertFalse(hasattr(obj, 'channel_index'))
+                self.assertFalse(hasattr(obj, "channel_index"))
             elif isinstance(obj, SpikeTrain):
-                self.assertFalse(hasattr(obj, 'unit'))
+                self.assertFalse(hasattr(obj, "unit"))
             elif isinstance(obj, (Event, Epoch)):
                 pass
             else:
-                raise TypeError(f'Unexpected data type object {type(obj)}')
+                raise TypeError(f"Unexpected data type object {type(obj)}")
 
     def test_block_conversion(self):
         # verify that all previous data is present in new structure
@@ -60,20 +60,27 @@ class ConversionTest(unittest.TestCase):
             view_names = np.asarray([v.name for v in group.channelviews])
             matching_views = np.asarray(group.channelviews)[view_names == channel_index.name]
             for view in matching_views:
-                self.assertIn('channel_ids', view.array_annotations)
-                self.assertIn('channel_names', view.array_annotations)
-                self.assertIn('coordinates_dim0', view.array_annotations)
-                self.assertIn('coordinates_dim1', view.array_annotations)
+                self.assertIn("channel_ids", view.array_annotations)
+                self.assertIn("channel_names", view.array_annotations)
+                self.assertIn("coordinates_dim0", view.array_annotations)
+                self.assertIn("coordinates_dim1", view.array_annotations)
 
                 # check content of attributes
                 assert_arrays_equal(channel_index.index, view.index)
-                assert_arrays_equal(channel_index.channel_ids, view.array_annotations['channel_ids'])
-                assert_arrays_equal(channel_index.channel_names,
-                                    view.array_annotations['channel_names'])
-                view_coordinates = np.vstack((view.array_annotations['coordinates_dim0'],
-                                              view.array_annotations['coordinates_dim1'])).T
+                assert_arrays_equal(
+                    channel_index.channel_ids, view.array_annotations["channel_ids"]
+                )
+                assert_arrays_equal(
+                    channel_index.channel_names, view.array_annotations["channel_names"]
+                )
+                view_coordinates = np.vstack(
+                    (
+                        view.array_annotations["coordinates_dim0"],
+                        view.array_annotations["coordinates_dim1"],
+                    )
+                ).T
                 # readd unit lost during stacking of arrays
-                units = view.array_annotations['coordinates_dim0'].units
+                units = view.array_annotations["coordinates_dim0"].units
                 view_coordinates = view_coordinates.magnitude * units
                 assert_arrays_equal(channel_index.coordinates, view_coordinates)
                 self.assertDictEqual(channel_index.annotations, view.annotations)

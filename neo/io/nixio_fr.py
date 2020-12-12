@@ -6,21 +6,26 @@ from neo.rawio.nixrawio import NIXRawIO
 
 class NixIO(NIXRawIO, BaseFromRaw):
 
-    name = 'NIX IO'
+    name = "NIX IO"
 
-    _prefered_signal_group_mode = 'group-by-same-units'
-    _prefered_units_group_mode = 'all-in-one'
+    _prefered_signal_group_mode = "group-by-same-units"
+    _prefered_units_group_mode = "all-in-one"
 
     def __init__(self, filename):
         NIXRawIO.__init__(self, filename)
         BaseFromRaw.__init__(self, filename)
 
-    def read_block(self, block_index=0, lazy=False, signal_group_mode=None,
-                   units_group_mode=None, load_waveforms=False):
-        bl = super().read_block(block_index, lazy,
-                                           signal_group_mode,
-                                           units_group_mode,
-                                           load_waveforms)
+    def read_block(
+        self,
+        block_index=0,
+        lazy=False,
+        signal_group_mode=None,
+        units_group_mode=None,
+        load_waveforms=False,
+    ):
+        bl = super().read_block(
+            block_index, lazy, signal_group_mode, units_group_mode, load_waveforms
+        )
         for chx in bl.channel_indexes:
             if "nix_name" in chx.annotations:
                 nixname = chx.annotations["nix_name"]

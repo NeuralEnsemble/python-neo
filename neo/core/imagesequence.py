@@ -97,10 +97,21 @@ class ImageSequence(BaseSignal):
     )
     _recommended_attrs = BaseNeo._recommended_attrs
 
-    def __new__(cls, image_data, units=None, dtype=None, copy=True, t_start=0 * pq.s,
-                spatial_scale=None, frame_duration=None,
-                sampling_rate=None, name=None, description=None, file_origin=None,
-                **annotations):
+    def __new__(
+        cls,
+        image_data,
+        units=None,
+        dtype=None,
+        copy=True,
+        t_start=0 * pq.s,
+        spatial_scale=None,
+        frame_duration=None,
+        sampling_rate=None,
+        name=None,
+        description=None,
+        file_origin=None,
+        **annotations
+    ):
         """
         Constructs new :class:`ImageSequence` from data.
 
@@ -127,10 +138,21 @@ class ImageSequence(BaseSignal):
 
         return obj
 
-    def __init__(self, image_data, units=None, dtype=None, copy=True, t_start=0 * pq.s,
-                 spatial_scale=None, frame_duration=None,
-                 sampling_rate=None, name=None, description=None, file_origin=None,
-                 **annotations):
+    def __init__(
+        self,
+        image_data,
+        units=None,
+        dtype=None,
+        copy=True,
+        t_start=0 * pq.s,
+        spatial_scale=None,
+        frame_duration=None,
+        sampling_rate=None,
+        name=None,
+        description=None,
+        file_origin=None,
+        **annotations
+    ):
         """
         Initializes a newly constructed :class:`ImageSequence` instance.
         """

@@ -11,9 +11,10 @@ class TdtIO(TdtRawIO, BaseFromRaw):
     (sub directories).
     Tanks correspond to Neo Blocks and TDT blocks correspond to Neo Segments.
     """
-    _prefered_signal_group_mode = 'group-by-same-units'
+
+    _prefered_signal_group_mode = "group-by-same-units"
     _default_group_mode_have_change_in_0_9 = True
-    mode = 'dir'
+    mode = "dir"
 
     def __init__(self, dirname):
         TdtRawIO.__init__(self, dirname=dirname)

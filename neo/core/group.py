@@ -37,17 +37,31 @@ class Group(Container):
         :class:`AnalogSignal`, :class:`IrregularlySampledSignal`, :class:`SpikeTrain`,
         :class:`Event`, :class:`Epoch`, :class:`ChannelView`, :class:`Group`
     """
-    _data_child_objects = (
-        'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain',
-        'Event', 'Epoch', 'ChannelView', 'ImageSequence'
-    )
-    _container_child_objects = ('Segment', 'Group')
-    _single_parent_objects = ('Block',)
 
-    def __init__(self, objects=None, name=None, description=None, file_origin=None,
-                 allowed_types=None, **annotations):
-        super().__init__(name=name, description=description,
-                         file_origin=file_origin, **annotations)
+    _data_child_objects = (
+        "AnalogSignal",
+        "IrregularlySampledSignal",
+        "SpikeTrain",
+        "Event",
+        "Epoch",
+        "ChannelView",
+        "ImageSequence",
+    )
+    _container_child_objects = ("Segment", "Group")
+    _single_parent_objects = ("Block",)
+
+    def __init__(
+        self,
+        objects=None,
+        name=None,
+        description=None,
+        file_origin=None,
+        allowed_types=None,
+        **annotations
+    ):
+        super().__init__(
+            name=name, description=description, file_origin=file_origin, **annotations
+        )
         if allowed_types is None:
             self.allowed_types = None
         else:
@@ -71,7 +85,9 @@ class Group(Container):
         """Add a new Neo object to the Group"""
         for obj in objects:
             if self.allowed_types and not isinstance(obj, self.allowed_types):
-                raise TypeError("This Group can only contain {}, but not {}"
-                                "".format(self.allowed_types, type(obj)))
+                raise TypeError(
+                    "This Group can only contain {}, but not {}"
+                    "".format(self.allowed_types, type(obj))
+                )
             container = self._get_container(obj.__class__)
             container.append(obj)

@@ -37,8 +37,7 @@ Rules for creating a new class:
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
 
 import numpy as np
 
@@ -80,10 +79,11 @@ class ExampleRawIO(BaseRawIO):
         >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
 
     """
-    extensions = ['fake']
-    rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    extensions = ["fake"]
+    rawmode = "one-file"
+
+    def __init__(self, filename=""):
         BaseRawIO.__init__(self)
         # note that this filename is ued in self._source_name
         self.filename = filename
@@ -110,17 +110,17 @@ class ExampleRawIO(BaseRawIO):
         # at the end real_signal = (raw_signal * gain + offset) * pq.Quantity(units)
         sig_channels = []
         for c in range(16):
-            ch_name = 'ch{}'.format(c)
+            ch_name = "ch{}".format(c)
             # our channel id is c+1 just for fun
             # Note that chan_id should be related to
             # original channel id in the file format
             # so that the end user should not be lost when reading datasets
             chan_id = c + 1
-            sr = 10000.  # Hz
-            dtype = 'int16'
-            units = 'uV'
-            gain = 1000. / 2 ** 16
-            offset = 0.
+            sr = 10000.0  # Hz
+            dtype = "int16"
+            units = "uV"
+            gain = 1000.0 / 2 ** 16
+            offset = 0.0
             # group_id is only for special cases when channels have different
             # sampling rate for instance. See TdtIO for that.
             # Here this is the general case: all channel have the same characteritics
@@ -136,33 +136,34 @@ class ExampleRawIO(BaseRawIO):
         # will return None
         unit_channels = []
         for c in range(3):
-            unit_name = 'unit{}'.format(c)
-            unit_id = '#{}'.format(c)
-            wf_units = 'uV'
-            wf_gain = 1000. / 2 ** 16
-            wf_offset = 0.
+            unit_name = "unit{}".format(c)
+            unit_id = "#{}".format(c)
+            wf_units = "uV"
+            wf_gain = 1000.0 / 2 ** 16
+            wf_offset = 0.0
             wf_left_sweep = 20
-            wf_sampling_rate = 10000.
-            unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
-                                  wf_offset, wf_left_sweep, wf_sampling_rate))
+            wf_sampling_rate = 10000.0
+            unit_channels.append(
+                (unit_name, unit_id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate)
+            )
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
 
         # creating event/epoch channel
         # This is mandatory!!!!
         # In RawIO epoch and event they are dealt the same way.
         event_channels = []
-        event_channels.append(('Some events', 'ev_0', 'event'))
-        event_channels.append(('Some epochs', 'ep_1', 'epoch'))
+        event_channels.append(("Some events", "ev_0", "event"))
+        event_channels.append(("Some epochs", "ep_1", "epoch"))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # fille into header dict
         # This is mandatory!!!!!
         self.header = {}
-        self.header['nb_block'] = 2
-        self.header['nb_segment'] = [2, 3]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
-        self.header['event_channels'] = event_channels
+        self.header["nb_block"] = 2
+        self.header["nb_segment"] = [2, 3]
+        self.header["signal_channels"] = sig_channels
+        self.header["unit_channels"] = unit_channels
+        self.header["event_channels"] = event_channels
 
         # insert some annotation at some place
         # at neo.io level IO are free to add some annoations
@@ -171,38 +172,38 @@ class ExampleRawIO(BaseRawIO):
         self._generate_minimal_annotations()
         # If you are a lazy dev you can stop here.
         for block_index in range(2):
-            bl_ann = self.raw_annotations['blocks'][block_index]
-            bl_ann['name'] = 'Block #{}'.format(block_index)
-            bl_ann['block_extra_info'] = 'This is the block {}'.format(block_index)
+            bl_ann = self.raw_annotations["blocks"][block_index]
+            bl_ann["name"] = "Block #{}".format(block_index)
+            bl_ann["block_extra_info"] = "This is the block {}".format(block_index)
             for seg_index in range([2, 3][block_index]):
-                seg_ann = bl_ann['segments'][seg_index]
-                seg_ann['name'] = 'Seg #{} Block #{}'.format(
-                    seg_index, block_index)
-                seg_ann['seg_extra_info'] = 'This is the seg {} of block {}'.format(
-                    seg_index, block_index)
+                seg_ann = bl_ann["segments"][seg_index]
+                seg_ann["name"] = "Seg #{} Block #{}".format(seg_index, block_index)
+                seg_ann["seg_extra_info"] = "This is the seg {} of block {}".format(
+                    seg_index, block_index
+                )
                 for c in range(16):
-                    anasig_an = seg_ann['signals'][c]
-                    anasig_an['info'] = 'This is a good signals'
+                    anasig_an = seg_ann["signals"][c]
+                    anasig_an["info"] = "This is a good signals"
                 for c in range(3):
-                    spiketrain_an = seg_ann['units'][c]
-                    spiketrain_an['quality'] = 'Good!!'
+                    spiketrain_an = seg_ann["units"][c]
+                    spiketrain_an["quality"] = "Good!!"
                 for c in range(2):
-                    event_an = seg_ann['events'][c]
+                    event_an = seg_ann["events"][c]
                     if c == 0:
-                        event_an['nickname'] = 'Miss Event 0'
+                        event_an["nickname"] = "Miss Event 0"
                     elif c == 1:
-                        event_an['nickname'] = 'MrEpoch 1'
+                        event_an["nickname"] = "MrEpoch 1"
 
     def _segment_t_start(self, block_index, seg_index):
         # this must return an float scale in second
         # this t_start will be shared by all object in the segment
         # except AnalogSignal
-        all_starts = [[0., 15.], [0., 20., 60.]]
+        all_starts = [[0.0, 15.0], [0.0, 20.0, 60.0]]
         return all_starts[block_index][seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
         # this must return an float scale in second
-        all_stops = [[10., 25.], [10., 30., 70.]]
+        all_stops = [[10.0, 25.0], [10.0, 30.0, 70.0]]
         return all_stops[block_index][seg_index]
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
@@ -253,7 +254,7 @@ class ExampleRawIO(BaseRawIO):
             nb_chan = 16
         else:
             nb_chan = len(channel_indexes)
-        raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
+        raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype="int16")
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
@@ -271,7 +272,7 @@ class ExampleRawIO(BaseRawIO):
 
         # the same clip t_start/t_start must be used in _spike_raw_waveforms()
 
-        ts_start = (self._segment_t_start(block_index, seg_index) * 10000)
+        ts_start = self._segment_t_start(block_index, seg_index) * 10000
 
         spike_timestamps = np.arange(0, 10000, 500) + ts_start
 
@@ -288,7 +289,7 @@ class ExampleRawIO(BaseRawIO):
         # must rescale to second a particular spike_timestamps
         # with a fixed dtype so the user can choose the precisino he want.
         spike_times = spike_timestamps.astype(dtype)
-        spike_times /= 10000.  # because 10kHz
+        spike_times /= 10000.0  # because 10kHz
         return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
@@ -312,7 +313,9 @@ class ExampleRawIO(BaseRawIO):
         nb_spike = ts.size
 
         np.random.seed(2205)  # a magic number (my birthday)
-        waveforms = np.random.randint(low=-2**4, high=2**4, size=nb_spike * 50, dtype='int16')
+        waveforms = np.random.randint(
+            low=-(2 ** 4), high=2 ** 4, size=nb_spike * 50, dtype="int16"
+        )
         waveforms = waveforms.reshape(nb_spike, 1, 50)
         return waveforms
 
@@ -335,13 +338,13 @@ class ExampleRawIO(BaseRawIO):
         # in our IO event are directly coded in seconds
         seg_t_start = self._segment_t_start(block_index, seg_index)
         if event_channel_index == 0:
-            timestamp = np.arange(0, 6, dtype='float64') + seg_t_start
+            timestamp = np.arange(0, 6, dtype="float64") + seg_t_start
             durations = None
-            labels = np.array(['trigger_a', 'trigger_b'] * 3, dtype='U12')
+            labels = np.array(["trigger_a", "trigger_b"] * 3, dtype="U12")
         elif event_channel_index == 1:
-            timestamp = np.arange(0, 10, dtype='float64') + .5 + seg_t_start
-            durations = np.ones((10), dtype='float64') * .25
-            labels = np.array(['zoneX'] * 5 + ['zoneZ'] * 5, dtype='U12')
+            timestamp = np.arange(0, 10, dtype="float64") + 0.5 + seg_t_start
+            durations = np.ones((10), dtype="float64") * 0.25
+            labels = np.array(["zoneX"] * 5 + ["zoneZ"] * 5, dtype="U12")
 
         if t_start is not None:
             keep = timestamp >= t_start

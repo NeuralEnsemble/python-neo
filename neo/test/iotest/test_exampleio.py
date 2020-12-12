@@ -6,9 +6,8 @@ import unittest
 
 from neo.io.exampleio import ExampleIO  # , HAVE_SCIPY
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io.proxyobjects import (AnalogSignalProxy,
-                SpikeTrainProxy, EventProxy, EpochProxy)
-from neo import (AnalogSignal, SpikeTrain)
+from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
+from neo import AnalogSignal, SpikeTrain
 
 import quantities as pq
 import numpy as np
@@ -17,11 +16,14 @@ import numpy as np
 # This run standart tests, this is mandatory for all IO
 
 
-class TestExampleIO(BaseTestIO, unittest.TestCase, ):
+class TestExampleIO(
+    BaseTestIO, unittest.TestCase,
+):
     ioclass = ExampleIO
-    files_to_test = ['fake1',
-                     'fake2',
-                     ]
+    files_to_test = [
+        "fake1",
+        "fake2",
+    ]
     files_to_download = []
 
 
@@ -47,8 +49,8 @@ class Specific_TestExampleIO(unittest.TestCase):
             self.assertNotEqual(st.size, 0)
 
         # annotations
-        assert 'seg_extra_info' in seg.annotations
-        assert seg.name == 'Seg #0 Block #0'
+        assert "seg_extra_info" in seg.annotations
+        assert seg.name == "Seg #0 Block #0"
         for anasig in seg.analogsignals:
             assert anasig.name is not None
         for st in seg.spiketrains:
@@ -61,8 +63,8 @@ class Specific_TestExampleIO(unittest.TestCase):
     def test_read_block(self):
         r = ExampleIO(filename=None)
         bl = r.read_block(lazy=True)
-        #assert len(bl.list_units) == 3
-        #assert len(bl.channel_indexes) == 1 + 1  # signals grouped + units grouped
+        # assert len(bl.list_units) == 3
+        # assert len(bl.channel_indexes) == 1 + 1  # signals grouped + units grouped
 
     def test_read_segment_with_time_slice(self):
         r = ExampleIO(filename=None)

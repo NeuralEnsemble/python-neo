@@ -37,8 +37,7 @@ else:
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import (Segment, SpikeTrain, Unit, Epoch, AnalogSignal,
-                      ChannelIndex, Block)
+from neo.core import Segment, SpikeTrain, Unit, Epoch, AnalogSignal, ChannelIndex, Block
 import neo.io.tools
 
 
@@ -53,8 +52,7 @@ class KwikIO(BaseIO):
     is_readable = True  # This class can only read data
     is_writable = False  # write is not supported
 
-    supported_objects = [Block, Segment, SpikeTrain, AnalogSignal,
-                         ChannelIndex]
+    supported_objects = [Block, Segment, SpikeTrain, AnalogSignal, ChannelIndex]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
@@ -68,10 +66,10 @@ class KwikIO(BaseIO):
     has_header = False
     is_streameable = False
 
-    name = 'Kwik'
-    description = 'This IO reads experimental data from a .kwik dataset'
-    extensions = ['kwik']
-    mode = 'file'
+    name = "Kwik"
+    description = "This IO reads experimental data from a .kwik dataset"
+    extensions = ["kwik"]
+    mode = "file"
 
     def __init__(self, filename):
         """
@@ -83,16 +81,18 @@ class KwikIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = os.path.abspath(filename)
         model = kwik.KwikModel(self.filename)  # TODO this group is loaded twice
-        self.models = [kwik.KwikModel(self.filename, channel_group=grp)
-                       for grp in model.channel_groups]
+        self.models = [
+            kwik.KwikModel(self.filename, channel_group=grp) for grp in model.channel_groups
+        ]
 
-    def read_block(self,
-                   lazy=False,
-                   get_waveforms=True,
-                   cluster_group=None,
-                   raw_data_units='uV',
-                   get_raw_data=False,
-                   ):
+    def read_block(
+        self,
+        lazy=False,
+        get_waveforms=True,
+        cluster_group=None,
+        raw_data_units="uV",
+        get_raw_data=False,
+    ):
         """
         Reads a block with segments and channel_indexes
 
@@ -107,18 +107,18 @@ class KwikIO(BaseIO):
             Which clusters to load, possibilities are "noise", "unsorted",
             "good", if None all is loaded.
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         blk = Block()
         seg = Segment(file_origin=self.filename)
         blk.segments += [seg]
         for model in self.models:
             group_id = model.channel_group
-            group_meta = {'group_id': group_id}
+            group_meta = {"group_id": group_id}
             group_meta.update(model.metadata)
-            chx = ChannelIndex(name='channel group #{}'.format(group_id),
-                               index=model.channels,
-                               **group_meta)
+            chx = ChannelIndex(
+                name="channel group #{}".format(group_id), index=model.channels, **group_meta
+            )
             blk.channel_indexes.append(chx)
             clusters = model.spike_clusters
             for cluster_id in model.cluster_ids:
@@ -127,16 +127,19 @@ class KwikIO(BaseIO):
                     pass
                 elif cluster_group != meta:
                     continue
-                sptr = self.read_spiketrain(cluster_id=cluster_id,
-                                            model=model,
-                                            get_waveforms=get_waveforms,
-                                            raw_data_units=raw_data_units)
-                sptr.annotations.update({'cluster_group': meta,
-                                         'group_id': model.channel_group})
+                sptr = self.read_spiketrain(
+                    cluster_id=cluster_id,
+                    model=model,
+                    get_waveforms=get_waveforms,
+                    raw_data_units=raw_data_units,
+                )
+                sptr.annotations.update({"cluster_group": meta, "group_id": model.channel_group})
                 sptr.channel_index = chx
-                unit = Unit(cluster_group=meta,
-                            group_id=model.channel_group,
-                            name='unit #{}'.format(cluster_id))
+                unit = Unit(
+                    cluster_group=meta,
+                    group_id=model.channel_group,
+                    name="unit #{}".format(cluster_id),
+                )
                 unit.spiketrains.append(sptr)
                 chx.units.append(unit)
                 unit.channel_index = chx
@@ -151,7 +154,7 @@ class KwikIO(BaseIO):
         blk.create_many_to_one_relationship()
         return blk
 
-    def read_analogsignal(self, model, units='uV', lazy=False):
+    def read_analogsignal(self, model, units="uV", lazy=False):
         """
         Reads analogsignals
 
@@ -159,19 +162,20 @@ class KwikIO(BaseIO):
         units: str, default = "uV"
             SI units of the raw trace according to voltage_gain given to klusta
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
-        arr = model.traces[:] * model.metadata['voltage_gain']
-        ana = AnalogSignal(arr, sampling_rate=model.sample_rate * pq.Hz,
-                           units=units,
-                           file_origin=model.metadata['raw_data_files'])
+        arr = model.traces[:] * model.metadata["voltage_gain"]
+        ana = AnalogSignal(
+            arr,
+            sampling_rate=model.sample_rate * pq.Hz,
+            units=units,
+            file_origin=model.metadata["raw_data_files"],
+        )
         return ana
 
-    def read_spiketrain(self, cluster_id, model,
-                        lazy=False,
-                        get_waveforms=True,
-                        raw_data_units=None
-                        ):
+    def read_spiketrain(
+        self, cluster_id, model, lazy=False, get_waveforms=True, raw_data_units=None
+    ):
         """
         Reads sorted spiketrains
 
@@ -184,7 +188,7 @@ class KwikIO(BaseIO):
             A KwikModel object obtained by klusta.kwik.KwikModel(fname)
         """
         try:
-            if (not (cluster_id in model.cluster_ids)):
+            if not (cluster_id in model.cluster_ids):
                 raise ValueError
         except ValueError:
             print("Exception: cluster_id (%d) not found !! " % cluster_id)
@@ -198,9 +202,13 @@ class KwikIO(BaseIO):
             w = pq.Quantity(w, raw_data_units)
         else:
             w = None
-        sptr = SpikeTrain(times=model.spike_times[idx],
-                          t_stop=model.duration, waveforms=w, units='s',
-                          sampling_rate=model.sample_rate * pq.Hz,
-                          file_origin=self.filename,
-                          **{'cluster_id': cluster_id})
+        sptr = SpikeTrain(
+            times=model.spike_times[idx],
+            t_stop=model.duration,
+            waveforms=w,
+            units="s",
+            sampling_rate=model.sample_rate * pq.Hz,
+            file_origin=self.filename,
+            **{"cluster_id": cluster_id}
+        )
         return sptr

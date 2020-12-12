@@ -49,9 +49,9 @@ class IgorIO(BaseIO):
     writeable_objects = []
     has_header = False
     is_streameable = False
-    name = 'igorpro'
-    extensions = ['ibw', 'pxp']
-    mode = 'file'
+    name = "igorpro"
+    extensions = ["ibw", "pxp"]
+    mode = "file"
 
     def __init__(self, filename=None, parse_notes=None):
         """
@@ -66,14 +66,15 @@ class IgorIO(BaseIO):
 
         """
         BaseIO.__init__(self)
-        assert any([filename.endswith('.%s' % x) for x in self.extensions]), \
+        assert any([filename.endswith(".%s" % x) for x in self.extensions]), (
             "Only the following extensions are supported: %s" % self.extensions
+        )
         self.filename = filename
-        self.extension = filename.split('.')[-1]
+        self.extension = filename.split(".")[-1]
         self.parse_notes = parse_notes
 
     def read_block(self, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         block = Block(file_origin=self.filename)
         block.segments.append(self.read_segment(lazy=lazy))
@@ -81,70 +82,74 @@ class IgorIO(BaseIO):
         return block
 
     def read_segment(self, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         segment = Segment(file_origin=self.filename)
-        segment.analogsignals.append(
-            self.read_analogsignal(lazy=lazy))
+        segment.analogsignals.append(self.read_analogsignal(lazy=lazy))
         segment.analogsignals[-1].segment = segment
         return segment
 
     def read_analogsignal(self, path=None, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         if not HAVE_IGOR:
-            raise Exception("`igor` package not installed. "
-                             "Try `pip install igor`")
-        if self.extension == 'ibw':
+            raise Exception("`igor` package not installed. " "Try `pip install igor`")
+        if self.extension == "ibw":
             data = bw.load(self.filename)
-            version = data['version']
+            version = data["version"]
             if version > 5:
-                raise IOError("Igor binary wave file format version {} "
-                               "is not supported.".format(version))
-        elif self.extension == 'pxp':
-            assert type(path) is str, \
-                "A colon-separated Igor-style path must be provided."
+                raise IOError(
+                    "Igor binary wave file format version {} " "is not supported.".format(version)
+                )
+        elif self.extension == "pxp":
+            assert type(path) is str, "A colon-separated Igor-style path must be provided."
             _, filesystem = pxp.load(self.filename)
-            path = path.split(':')
-            location = filesystem['root']
+            path = path.split(":")
+            location = filesystem["root"]
             for element in path:
-                if element != 'root':
-                    location = location[element.encode('utf8')]
+                if element != "root":
+                    location = location[element.encode("utf8")]
             data = location.wave
-        content = data['wave']
+        content = data["wave"]
         if "padding" in content:
-            assert content['padding'].size == 0, \
-                "Cannot handle non-empty padding"
-        signal = content['wData']
-        note = content['note']
-        header = content['wave_header']
-        name = str(header['bname'].decode('utf-8'))
-        units = "".join([x.decode() for x in header['dataUnits']])
+            assert content["padding"].size == 0, "Cannot handle non-empty padding"
+        signal = content["wData"]
+        note = content["note"]
+        header = content["wave_header"]
+        name = str(header["bname"].decode("utf-8"))
+        units = "".join([x.decode() for x in header["dataUnits"]])
         try:
-            time_units = "".join([x.decode() for x in header['xUnits']])
+            time_units = "".join([x.decode() for x in header["xUnits"]])
             assert len(time_units)
         except:
             time_units = "s"
         try:
-            t_start = pq.Quantity(header['hsB'], time_units)
+            t_start = pq.Quantity(header["hsB"], time_units)
         except KeyError:
-            t_start = pq.Quantity(header['sfB'][0], time_units)
+            t_start = pq.Quantity(header["sfB"][0], time_units)
         try:
-            sampling_period = pq.Quantity(header['hsA'], time_units)
+            sampling_period = pq.Quantity(header["hsA"], time_units)
         except:
-            sampling_period = pq.Quantity(header['sfA'][0], time_units)
+            sampling_period = pq.Quantity(header["sfA"][0], time_units)
         if self.parse_notes:
             try:
                 annotations = self.parse_notes(note)
             except ValueError:
                 warn("Couldn't parse notes field.")
-                annotations = {'note': note}
+                annotations = {"note": note}
         else:
-            annotations = {'note': note}
+            annotations = {"note": note}
 
-        signal = AnalogSignal(signal, units=units, copy=False, t_start=t_start,
-                              sampling_period=sampling_period, name=name,
-                              file_origin=self.filename, **annotations)
+        signal = AnalogSignal(
+            signal,
+            units=units,
+            copy=False,
+            t_start=t_start,
+            sampling_period=sampling_period,
+            name=name,
+            file_origin=self.filename,
+            **annotations
+        )
         return signal
 
 

@@ -16,8 +16,7 @@ Author: Samuel Garcia
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
 
 import numpy as np
 
@@ -28,20 +27,20 @@ import io
 
 
 class ElanRawIO(BaseRawIO):
-    extensions = ['eeg']
-    rawmode = 'one-file'
+    extensions = ["eeg"]
+    rawmode = "one-file"
 
-    def __init__(self, filename=''):
+    def __init__(self, filename=""):
         BaseRawIO.__init__(self)
         self.filename = filename
 
     def _parse_header(self):
 
-        with open(self.filename + '.ent', mode='rt', encoding='ascii', newline=None) as f:
+        with open(self.filename + ".ent", mode="rt", encoding="ascii", newline=None) as f:
 
             # version
             version = f.readline()[:-1]
-            assert version in ['V2', 'V3'], 'Read only V2 or V3 .eeg.ent files. %s given' % version
+            assert version in ["V2", "V3"], "Read only V2 or V3 .eeg.ent files. %s given" % version
 
             # info
             info1 = f.readline()[:-1]
@@ -50,9 +49,9 @@ class ElanRawIO(BaseRawIO):
             # strange 2 line for datetime
             # line1
             l = f.readline()
-            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
-            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
-            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
+            r1 = re.findall(r"(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)", l)
+            r2 = re.findall(r"(\d+):(\d+):(\d+)", l)
+            r3 = re.findall(r"(\d+)-(\d+)-(\d+)", l)
             YY, MM, DD, hh, mm, ss = (None,) * 6
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
@@ -63,9 +62,9 @@ class ElanRawIO(BaseRawIO):
 
             # line2
             l = f.readline()
-            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
-            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
-            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
+            r1 = re.findall(r"(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)", l)
+            r2 = re.findall(r"(\d+):(\d+):(\d+)", l)
+            r3 = re.findall(r"(\d+)-(\d+)-(\d+)", l)
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
             elif len(r2) != 0:
@@ -73,8 +72,9 @@ class ElanRawIO(BaseRawIO):
             elif len(r3) != 0:
                 DD, MM, YY = r3[0]
             try:
-                fulldatetime = datetime.datetime(int(YY), int(MM), int(DD),
-                                                 int(hh), int(mm), int(ss))
+                fulldatetime = datetime.datetime(
+                    int(YY), int(MM), int(DD), int(hh), int(mm), int(ss)
+                )
             except:
                 fulldatetime = None
 
@@ -84,7 +84,7 @@ class ElanRawIO(BaseRawIO):
 
             # sampling rate sample
             l = f.readline()
-            self._sampling_rate = 1. / float(l)
+            self._sampling_rate = 1.0 / float(l)
 
             # nb channel
             l = f.readline()
@@ -93,68 +93,84 @@ class ElanRawIO(BaseRawIO):
             channel_infos = [{} for c in range(nb_channel + 2)]
             # channel label
             for c in range(nb_channel + 2):
-                channel_infos[c]['label'] = f.readline()[:-1]
+                channel_infos[c]["label"] = f.readline()[:-1]
             # channel kind
             for c in range(nb_channel + 2):
-                channel_infos[c]['kind'] = f.readline()[:-1]
+                channel_infos[c]["kind"] = f.readline()[:-1]
             # channel unit
             for c in range(nb_channel + 2):
-                channel_infos[c]['units'] = f.readline()[:-1]
+                channel_infos[c]["units"] = f.readline()[:-1]
             # range for gain and offset
             for c in range(nb_channel + 2):
-                channel_infos[c]['min_physic'] = float(f.readline()[:-1])
+                channel_infos[c]["min_physic"] = float(f.readline()[:-1])
             for c in range(nb_channel + 2):
-                channel_infos[c]['max_physic'] = float(f.readline()[:-1])
+                channel_infos[c]["max_physic"] = float(f.readline()[:-1])
             for c in range(nb_channel + 2):
-                channel_infos[c]['min_logic'] = float(f.readline()[:-1])
+                channel_infos[c]["min_logic"] = float(f.readline()[:-1])
             for c in range(nb_channel + 2):
-                channel_infos[c]['max_logic'] = float(f.readline()[:-1])
+                channel_infos[c]["max_logic"] = float(f.readline()[:-1])
 
             # info filter
             info_filter = []
             for c in range(nb_channel + 2):
-                channel_infos[c]['info_filter'] = f.readline()[:-1]
+                channel_infos[c]["info_filter"] = f.readline()[:-1]
 
-        n = int(round(np.log(channel_infos[0]['max_logic'] -
-                             channel_infos[0]['min_logic']) / np.log(2)) / 8)
-        sig_dtype = np.dtype('>i' + str(n))
+        n = int(
+            round(
+                np.log(channel_infos[0]["max_logic"] - channel_infos[0]["min_logic"]) / np.log(2)
+            )
+            / 8
+        )
+        sig_dtype = np.dtype(">i" + str(n))
 
         sig_channels = []
         for c, chan_info in enumerate(channel_infos[:-2]):
-            chan_name = chan_info['label']
+            chan_name = chan_info["label"]
             chan_id = c
 
-            gain = (chan_info['max_physic'] - chan_info['min_physic']) / \
-                   (chan_info['max_logic'] - chan_info['min_logic'])
-            offset = - chan_info['min_logic'] * gain + chan_info['min_physic']
+            gain = (chan_info["max_physic"] - chan_info["min_physic"]) / (
+                chan_info["max_logic"] - chan_info["min_logic"]
+            )
+            offset = -chan_info["min_logic"] * gain + chan_info["min_physic"]
             gourp_id = 0
-            sig_channels.append((chan_name, chan_id, self._sampling_rate, sig_dtype,
-                                 chan_info['units'], gain, offset, gourp_id))
+            sig_channels.append(
+                (
+                    chan_name,
+                    chan_id,
+                    self._sampling_rate,
+                    sig_dtype,
+                    chan_info["units"],
+                    gain,
+                    offset,
+                    gourp_id,
+                )
+            )
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # raw data
-        self._raw_signals = np.memmap(self.filename, dtype=sig_dtype, mode='r',
-                                      offset=0).reshape(-1, nb_channel + 2)
+        self._raw_signals = np.memmap(self.filename, dtype=sig_dtype, mode="r", offset=0).reshape(
+            -1, nb_channel + 2
+        )
         self._raw_signals = self._raw_signals[:, :-2]
 
         # triggers
-        with open(self.filename + '.pos', mode='rt', encoding='ascii', newline=None) as f:
+        with open(self.filename + ".pos", mode="rt", encoding="ascii", newline=None) as f:
             self._raw_event_timestamps = []
             self._event_labels = []
             self._reject_codes = []
             for l in f.readlines():
-                r = re.findall(r' *(\d+) *(\d+) *(\d+) *', l)
+                r = re.findall(r" *(\d+) *(\d+) *(\d+) *", l)
                 self._raw_event_timestamps.append(int(r[0][0]))
                 self._event_labels.append(str(r[0][1]))
                 self._reject_codes.append(str(r[0][2]))
 
-        self._raw_event_timestamps = np.array(self._raw_event_timestamps, dtype='int64')
-        self._event_labels = np.array(self._event_labels, dtype='U')
-        self._reject_codes = np.array(self._reject_codes, dtype='U')
+        self._raw_event_timestamps = np.array(self._raw_event_timestamps, dtype="int64")
+        self._event_labels = np.array(self._event_labels, dtype="U")
+        self._reject_codes = np.array(self._reject_codes, dtype="U")
 
         event_channels = []
-        event_channels.append(('Trigger', '', 'event'))
+        event_channels.append(("Trigger", "", "event"))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
@@ -163,29 +179,30 @@ class ElanRawIO(BaseRawIO):
 
         # fille into header dict
         self.header = {}
-        self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
-        self.header['event_channels'] = event_channels
+        self.header["nb_block"] = 1
+        self.header["nb_segment"] = [1]
+        self.header["signal_channels"] = sig_channels
+        self.header["unit_channels"] = unit_channels
+        self.header["event_channels"] = event_channels
 
         # insert some annotation at some place
         self._generate_minimal_annotations()
-        extra_info = dict(rec_datetime=fulldatetime, elan_version=version,
-                          info1=info1, info2=info2)
-        for obj_name in ('blocks', 'segments'):
+        extra_info = dict(
+            rec_datetime=fulldatetime, elan_version=version, info1=info1, info2=info2
+        )
+        for obj_name in ("blocks", "segments"):
             self._raw_annotate(obj_name, **extra_info)
         for c in range(nb_channel):
             d = channel_infos[c]
-            self._raw_annotate('signals', chan_index=c, info_filter=d['info_filter'])
-            self._raw_annotate('signals', chan_index=c, kind=d['kind'])
-        self._raw_annotate('events', chan_index=0, reject_codes=self._reject_codes)
+            self._raw_annotate("signals", chan_index=c, info_filter=d["info_filter"])
+            self._raw_annotate("signals", chan_index=c, kind=d["kind"])
+        self._raw_annotate("events", chan_index=0, reject_codes=self._reject_codes)
 
     def _source_name(self):
         return self.filename
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.
+        return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = self._raw_signals.shape[0] / self._sampling_rate
@@ -195,7 +212,7 @@ class ElanRawIO(BaseRawIO):
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes=None):
-        return 0.
+        return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if channel_indexes is None:

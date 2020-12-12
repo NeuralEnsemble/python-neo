@@ -23,11 +23,13 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
     NSE contains spikes and waveforms for mono electrodes
     NTT contains spikes and waveforms for tetrodes
     """
-    _prefered_signal_group_mode = 'group-by-same-units'
-    mode = 'dir'
 
-    def __init__(self, dirname, use_cache=False, cache_path='same_as_resource',
-                 keep_original_times=False):
+    _prefered_signal_group_mode = "group-by-same-units"
+    mode = "dir"
+
+    def __init__(
+        self, dirname, use_cache=False, cache_path="same_as_resource", keep_original_times=False
+    ):
         """
         Initialise IO instance
 
@@ -46,6 +48,11 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             shifted to begin at t_start = 0*pq.second.
             Default: False
         """
-        NeuralynxRawIO.__init__(self, dirname=dirname, use_cache=use_cache,
-                                cache_path=cache_path, keep_original_times=keep_original_times)
+        NeuralynxRawIO.__init__(
+            self,
+            dirname=dirname,
+            use_cache=use_cache,
+            cache_path=cache_path,
+            keep_original_times=keep_original_times,
+        )
         BaseFromRaw.__init__(self, dirname)

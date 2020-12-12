@@ -15,45 +15,54 @@ from matplotlib.font_manager import FontProperties
 
 from neo.test.generate_datasets import fake_neo
 
-line_heigth = .22
+line_heigth = 0.22
 fontsize = 10.5
-left_text_shift = .1
+left_text_shift = 0.1
 dpi = 100
 
 
 def get_rect_height(name, obj):
-    '''
+    """
     calculate rectangle height
-    '''
+    """
     nlines = 1.5
-    nlines += len(getattr(obj, '_all_attrs', []))
-    nlines += len(getattr(obj, '_single_child_objects', []))
-    nlines += len(getattr(obj, '_multi_child_objects', []))
-    nlines += len(getattr(obj, '_multi_parent_objects', []))
+    nlines += len(getattr(obj, "_all_attrs", []))
+    nlines += len(getattr(obj, "_single_child_objects", []))
+    nlines += len(getattr(obj, "_multi_child_objects", []))
+    nlines += len(getattr(obj, "_multi_parent_objects", []))
     return nlines * line_heigth
 
 
 def annotate(ax, coord1, coord2, connectionstyle, color, alpha):
-    arrowprops = dict(arrowstyle='fancy',
-                      # ~ patchB=p,
-                      shrinkA=.3, shrinkB=.3,
-                      fc=color, ec=color,
-                      connectionstyle=connectionstyle,
-                      alpha=alpha)
+    arrowprops = dict(
+        arrowstyle="fancy",
+        # ~ patchB=p,
+        shrinkA=0.3,
+        shrinkB=0.3,
+        fc=color,
+        ec=color,
+        connectionstyle=connectionstyle,
+        alpha=alpha,
+    )
     bbox = dict(boxstyle="square", fc="w")
-    a = ax.annotate('', coord1, coord2,
-                    # xycoords="figure fraction",
-                    # textcoords="figure fraction",
-                    ha="right", va="center",
-                    size=fontsize,
-                    arrowprops=arrowprops,
-                    bbox=bbox)
+    a = ax.annotate(
+        "",
+        coord1,
+        coord2,
+        # xycoords="figure fraction",
+        # textcoords="figure fraction",
+        ha="right",
+        va="center",
+        size=fontsize,
+        arrowprops=arrowprops,
+        bbox=bbox,
+    )
     a.set_zorder(-4)
 
 
 def calc_coordinates(pos, height):
     x = pos[0]
-    y = pos[1] + height - line_heigth * .5
+    y = pos[1] + height - line_heigth * 0.5
 
     return pos[0], y
 
@@ -71,13 +80,15 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         all_h[name] = get_rect_height(name, objs[name])
 
     # draw connections
-    color = ['c', 'm', 'y']
-    alpha = [1., 1., 0.3]
+    color = ["c", "m", "y"]
+    alpha = [1.0, 1.0, 0.3]
     for name, pos in rect_pos.items():
         obj = objs[name]
-        relationships = [getattr(obj, '_single_child_objects', []),
-                         getattr(obj, '_multi_child_objects', []),
-                         getattr(obj, '_child_properties', [])]
+        relationships = [
+            getattr(obj, "_single_child_objects", []),
+            getattr(obj, "_multi_child_objects", []),
+            getattr(obj, "_child_properties", []),
+        ]
 
         for r in range(3):
             for ch_name in relationships[r]:
@@ -92,103 +103,132 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
                 else:
                     connectionstyle = "arc3,rad=-0.7"
 
-                annotate(ax=ax, coord1=(x1, y1), coord2=(x2, y2),
-                         connectionstyle=connectionstyle,
-                         color=color[r], alpha=alpha[r])
+                annotate(
+                    ax=ax,
+                    coord1=(x1, y1),
+                    coord2=(x2, y2),
+                    connectionstyle=connectionstyle,
+                    color=color[r],
+                    alpha=alpha[r],
+                )
 
     # draw boxes
     for name, pos in rect_pos.items():
         htotal = all_h[name]
         obj = objs[name]
-        allrelationship = (list(getattr(obj, '_child_containers', []))
-                           + list(getattr(obj, '_multi_parent_containers', [])))
+        allrelationship = list(getattr(obj, "_child_containers", [])) + list(
+            getattr(obj, "_multi_parent_containers", [])
+        )
 
-        rect = Rectangle(pos, rect_width, htotal,
-                         facecolor='w', edgecolor='k', linewidth=2.)
+        rect = Rectangle(pos, rect_width, htotal, facecolor="w", edgecolor="k", linewidth=2.0)
         ax.add_patch(rect)
 
         # title green
         pos2 = pos[0], pos[1] + htotal - line_heigth * 1.5
-        rect = Rectangle(pos2, rect_width, line_heigth * 1.5,
-                         facecolor='g', edgecolor='k', alpha=.5, linewidth=2.)
+        rect = Rectangle(
+            pos2,
+            rect_width,
+            line_heigth * 1.5,
+            facecolor="g",
+            edgecolor="k",
+            alpha=0.5,
+            linewidth=2.0,
+        )
         ax.add_patch(rect)
 
         # single relationship
-        relationship = getattr(obj, '_single_child_objects', [])
+        relationship = getattr(obj, "_single_child_objects", [])
         pos2 = pos[1] + htotal - line_heigth * (1.5 + len(relationship))
         rect_height = len(relationship) * line_heigth
 
-        rect = Rectangle((pos[0], pos2), rect_width, rect_height,
-                         facecolor='c', edgecolor='k', alpha=.5)
+        rect = Rectangle(
+            (pos[0], pos2), rect_width, rect_height, facecolor="c", edgecolor="k", alpha=0.5
+        )
         ax.add_patch(rect)
 
         # multi relationship
-        relationship = (list(getattr(obj, '_multi_child_objects', []))
-                        + list(getattr(obj, '_multi_parent_containers', [])))
-        pos2 = (pos[1] + htotal - line_heigth * (1.5 + len(relationship))
-                - rect_height)
+        relationship = list(getattr(obj, "_multi_child_objects", [])) + list(
+            getattr(obj, "_multi_parent_containers", [])
+        )
+        pos2 = pos[1] + htotal - line_heigth * (1.5 + len(relationship)) - rect_height
         rect_height = len(relationship) * line_heigth
 
-        rect = Rectangle((pos[0], pos2), rect_width, rect_height,
-                         facecolor='m', edgecolor='k', alpha=.5)
+        rect = Rectangle(
+            (pos[0], pos2), rect_width, rect_height, facecolor="m", edgecolor="k", alpha=0.5
+        )
         ax.add_patch(rect)
 
         # necessary attr
-        pos2 = (pos[1] + htotal
-                - line_heigth * (1.5 + len(allrelationship) + len(obj._necessary_attrs)))
-        rect = Rectangle((pos[0], pos2), rect_width,
-                         line_heigth * len(obj._necessary_attrs),
-                         facecolor='r', edgecolor='k', alpha=.5)
+        pos2 = (
+            pos[1]
+            + htotal
+            - line_heigth * (1.5 + len(allrelationship) + len(obj._necessary_attrs))
+        )
+        rect = Rectangle(
+            (pos[0], pos2),
+            rect_width,
+            line_heigth * len(obj._necessary_attrs),
+            facecolor="r",
+            edgecolor="k",
+            alpha=0.5,
+        )
         ax.add_patch(rect)
 
         # name
-        if hasattr(obj, '_quantity_attr'):
-            post = '* '
+        if hasattr(obj, "_quantity_attr"):
+            post = "* "
         else:
-            post = ''
-        ax.text(pos[0] + rect_width / 2., pos[1] + htotal - line_heigth * 1.5 / 2.,
-                name + post,
-                horizontalalignment='center', verticalalignment='center',
-                fontsize=fontsize + 2,
-                fontproperties=FontProperties(weight='bold'),
-                )
+            post = ""
+        ax.text(
+            pos[0] + rect_width / 2.0,
+            pos[1] + htotal - line_heigth * 1.5 / 2.0,
+            name + post,
+            horizontalalignment="center",
+            verticalalignment="center",
+            fontsize=fontsize + 2,
+            fontproperties=FontProperties(weight="bold"),
+        )
 
         # relationship
         for i, relat in enumerate(allrelationship):
-            ax.text(pos[0] + left_text_shift, pos[1] + htotal - line_heigth * (i + 2),
-                    relat + ': list',
-                    horizontalalignment='left', verticalalignment='center',
-                    fontsize=fontsize,
-                    )
+            ax.text(
+                pos[0] + left_text_shift,
+                pos[1] + htotal - line_heigth * (i + 2),
+                relat + ": list",
+                horizontalalignment="left",
+                verticalalignment="center",
+                fontsize=fontsize,
+            )
         # attributes
         for i, attr in enumerate(obj._all_attrs):
             attrname, attrtype = attr[0], attr[1]
             t1 = attrname
-            if (hasattr(obj, '_quantity_attr')
-                    and obj._quantity_attr == attrname):
-                t1 = attrname + '(object itself)'
+            if hasattr(obj, "_quantity_attr") and obj._quantity_attr == attrname:
+                t1 = attrname + "(object itself)"
             else:
                 t1 = attrname
 
             if attrtype == pq.Quantity:
                 if attr[2] == 0:
-                    t2 = 'Quantity scalar'
+                    t2 = "Quantity scalar"
                 else:
-                    t2 = 'Quantity %dD' % attr[2]
+                    t2 = "Quantity %dD" % attr[2]
             elif attrtype == np.ndarray:
                 t2 = "np.ndarray %dD dt='%s'" % (attr[2], attr[3].kind)
             elif attrtype == datetime:
-                t2 = 'datetime'
+                t2 = "datetime"
             else:
                 t2 = attrtype.__name__
 
-            t = t1 + ' :  ' + t2
-            ax.text(pos[0] + left_text_shift,
-                    pos[1] + htotal - line_heigth * (i + len(allrelationship) + 2),
-                    t,
-                    horizontalalignment='left', verticalalignment='center',
-                    fontsize=fontsize,
-                    )
+            t = t1 + " :  " + t2
+            ax.text(
+                pos[0] + left_text_shift,
+                pos[1] + htotal - line_heigth * (i + len(allrelationship) + 2),
+                t,
+                horizontalalignment="left",
+                verticalalignment="center",
+                fontsize=fontsize,
+            )
 
     xlim, ylim = figsize
     ax.set_xlim(0, xlim)
@@ -201,25 +241,24 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
 
 def generate_diagram_simple():
     figsize = (18, 12)
-    rw = rect_width = 3.
+    rw = rect_width = 3.0
     bf = blank_fact = 1.2
-    rect_pos = {'Block': (.5 + rw * bf * 0, 4),
-                'Segment': (.5 + rw * bf * 1, .5),
-                'Event': (.5 + rw * bf * 4, 3.0),
-                'Epoch': (.5 + rw * bf * 4, 1.0),
-                'Group': (.5 + rw * bf * 1, 7.5),
-                'ChannelView': (.5 + rw * bf * 2., 9.9),
-                'SpikeTrain': (.5 + rw * bf * 3, 7.5),
-                'IrregularlySampledSignal': (.5 + rw * bf * 3, 0.5),
-                'AnalogSignal': (.5 + rw * bf * 3, 4.9),
-                }
+    rect_pos = {
+        "Block": (0.5 + rw * bf * 0, 4),
+        "Segment": (0.5 + rw * bf * 1, 0.5),
+        "Event": (0.5 + rw * bf * 4, 3.0),
+        "Epoch": (0.5 + rw * bf * 4, 1.0),
+        "Group": (0.5 + rw * bf * 1, 7.5),
+        "ChannelView": (0.5 + rw * bf * 2.0, 9.9),
+        "SpikeTrain": (0.5 + rw * bf * 3, 7.5),
+        "IrregularlySampledSignal": (0.5 + rw * bf * 3, 0.5),
+        "AnalogSignal": (0.5 + rw * bf * 3, 4.9),
+    }
     # todo: add ImageSequence, RegionOfInterest
-    generate_diagram('simple_generated_diagram.svg',
-                     rect_pos, rect_width, figsize)
-    generate_diagram('simple_generated_diagram.png',
-                     rect_pos, rect_width, figsize)
+    generate_diagram("simple_generated_diagram.svg", rect_pos, rect_width, figsize)
+    generate_diagram("simple_generated_diagram.png", rect_pos, rect_width, figsize)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     generate_diagram_simple()
     pyplot.show()

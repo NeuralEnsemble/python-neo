@@ -226,12 +226,14 @@ try:
     import neuroshare as ns
 except ImportError as err:
     from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
+
     # print("\n neuroshare library not found, loading data with ctypes" )
     # print("\n to use the API be sure to install the library found at:")
     # print("\n www.http://pythonhosted.org/neuroshare/")
 
 else:
     from neo.io.neuroshareapiio import NeuroshareapiIO as NeuroshareIO
+
     # print("neuroshare library successfully imported")
     # print("\n loading with API...")
 
@@ -250,6 +252,7 @@ from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.elanio import ElanIO
+
 # from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
@@ -320,7 +323,7 @@ iolist = [
     TdtIO,
     TiffIO,
     WinEdrIO,
-    WinWcpIO
+    WinWcpIO,
 ]
 
 

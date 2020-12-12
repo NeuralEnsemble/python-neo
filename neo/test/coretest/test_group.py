@@ -18,23 +18,29 @@ from neo.core.group import Group
 
 
 class TestGroup(unittest.TestCase):
-
     def setUp(self):
         test_data = np.random.rand(100, 8) * pq.mV
         channel_names = np.array(["a", "b", "c", "d", "e", "f", "g", "h"])
-        self.test_signal = AnalogSignal(test_data,
-                                        sampling_period=0.1 * pq.ms,
-                                        name="test signal",
-                                        description="this is a test signal",
-                                        array_annotations={"channel_names": channel_names},
-                                        attUQoLtUaE=42)
-        self.test_view = ChannelView(self.test_signal, [1, 2, 5, 7],
-                              name="view of test signal",
-                              description="this is a view of a test signal",
-                              array_annotations={"something": np.array(["A", "B", "C", "D"])},
-                              sLaTfat="fish")
-        self.test_spiketrains = [SpikeTrain(np.arange(100.0), units="ms", t_stop=200),
-                                 SpikeTrain(np.arange(0.5, 100.5), units="ms", t_stop=200)]
+        self.test_signal = AnalogSignal(
+            test_data,
+            sampling_period=0.1 * pq.ms,
+            name="test signal",
+            description="this is a test signal",
+            array_annotations={"channel_names": channel_names},
+            attUQoLtUaE=42,
+        )
+        self.test_view = ChannelView(
+            self.test_signal,
+            [1, 2, 5, 7],
+            name="view of test signal",
+            description="this is a view of a test signal",
+            array_annotations={"something": np.array(["A", "B", "C", "D"])},
+            sLaTfat="fish",
+        )
+        self.test_spiketrains = [
+            SpikeTrain(np.arange(100.0), units="ms", t_stop=200),
+            SpikeTrain(np.arange(0.5, 100.5), units="ms", t_stop=200),
+        ]
         self.test_segment = Segment()
         self.test_segment.analogsignals.append(self.test_signal)
         self.test_segment.spiketrains.extend(self.test_spiketrains)
@@ -55,15 +61,18 @@ class TestGroup(unittest.TestCase):
         group = Group()
 
     def test_children(self):
-        group = Group(self.test_spiketrains + [self.test_view]
-                      + [self.test_signal] + [self.test_segment])
+        group = Group(
+            self.test_spiketrains + [self.test_view] + [self.test_signal] + [self.test_segment]
+        )
 
         # note: ordering is by class name for data children (AnalogSignal, SpikeTrain),
         #       then container children (Segment)
-        assert group.children == (self.test_signal,
-                                  *self.test_spiketrains,
-                                  self.test_view,
-                                  self.test_segment)
+        assert group.children == (
+            self.test_signal,
+            *self.test_spiketrains,
+            self.test_view,
+            self.test_segment,
+        )
 
     def test_with_allowed_types(self):
         objects = [self.test_signal] + self.test_spiketrains

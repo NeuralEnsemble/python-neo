@@ -9,8 +9,17 @@ import unittest
 import numpy as np
 import quantities as pq
 
-from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Unit, Epoch, Event, ChannelIndex, \
-    IrregularlySampledSignal
+from neo.core import (
+    Block,
+    Segment,
+    AnalogSignal,
+    SpikeTrain,
+    Unit,
+    Epoch,
+    Event,
+    ChannelIndex,
+    IrregularlySampledSignal,
+)
 from neo.io import PickleIO
 from numpy.testing import assert_array_equal
 from neo.test.tools import assert_arrays_equal, assert_file_contents_equal
@@ -31,10 +40,9 @@ class TestPickleIO(unittest.TestCase):
         train.unit = unit
         unit.spiketrains.append(train)
 
-        epoch = Epoch(np.array([0, 10, 20]),
-                      np.array([2, 2, 2]),
-                      np.array(["a", "b", "c"]),
-                      units="ms")
+        epoch = Epoch(
+            np.array([0, 10, 20]), np.array([2, 2, 2]), np.array(["a", "b", "c"]), units="ms"
+        )
 
         blk = Block()
         seg = Segment()
@@ -51,12 +59,14 @@ class TestPickleIO(unittest.TestCase):
         r_seg = r_blk.segments[0]
         self.assertIsInstance(r_seg.spiketrains[0].unit, Unit)
         self.assertIsInstance(r_seg.epochs[0], Epoch)
-        os.remove('blk.pkl')
+        os.remove("blk.pkl")
 
         # Epoch
-        epoch = Epoch(times=np.arange(0, 30, 10) * pq.s,
-                      durations=[10, 5, 7] * pq.ms,
-                      labels=np.array(['btn0', 'btn1', 'btn2'], dtype='U'))
+        epoch = Epoch(
+            times=np.arange(0, 30, 10) * pq.s,
+            durations=[10, 5, 7] * pq.ms,
+            labels=np.array(["btn0", "btn1", "btn2"], dtype="U"),
+        )
         epoch.segment = Segment()
         blk = Block()
         seg = Segment()
@@ -70,11 +80,12 @@ class TestPickleIO(unittest.TestCase):
         r_blk = reader.read_block()
         r_seg = r_blk.segments[0]
         self.assertIsInstance(r_seg.epochs[0].segment, Segment)
-        os.remove('blk.pkl')
+        os.remove("blk.pkl")
 
         # Event
-        event = Event(np.arange(0, 30, 10) * pq.s,
-                      labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
+        event = Event(
+            np.arange(0, 30, 10) * pq.s, labels=np.array(["trig0", "trig1", "trig2"], dtype="U")
+        )
         event.segment = Segment()
 
         blk = Block()
@@ -89,11 +100,12 @@ class TestPickleIO(unittest.TestCase):
         r_blk = reader.read_block()
         r_seg = r_blk.segments[0]
         self.assertIsInstance(r_seg.events[0].segment, Segment)
-        os.remove('blk.pkl')
+        os.remove("blk.pkl")
 
         # IrregularlySampledSignal
         signal = IrregularlySampledSignal(
-            [0.0, 1.23, 6.78], [1, 2, 3], units='mV', time_units='ms')
+            [0.0, 1.23, 6.78], [1, 2, 3], units="mV", time_units="ms"
+        )
         signal.segment = Segment()
 
         blk = Block()
@@ -109,8 +121,8 @@ class TestPickleIO(unittest.TestCase):
         r_blk = reader.read_block()
         r_seg = r_blk.segments[0]
         self.assertIsInstance(r_seg.irregularlysampledsignals[0].segment, Segment)
-        os.remove('blk.pkl')
+        os.remove("blk.pkl")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,4 @@
-'''
+"""
 This module implements :class:`AnalogSignal`, an array of analog signals.
 
 :class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` which
@@ -15,7 +15,7 @@ This is where user-specified attributes are set.
 * :meth:`__array_finalize__` is called for all new objects, including those
 created by slicing. This is where attributes are copied over from
 the old object.
-'''
+"""
 
 import logging
 
@@ -39,42 +39,64 @@ logger = logging.getLogger("Neo")
 
 
 def _get_sampling_rate(sampling_rate, sampling_period):
-    '''
+    """
     Gets the sampling_rate from either the sampling_period or the
     sampling_rate, or makes sure they match if both are specified
-    '''
+    """
     if sampling_period is None:
         if sampling_rate is None:
             raise ValueError("You must provide either the sampling rate or " + "sampling period")
     elif sampling_rate is None:
         sampling_rate = 1.0 / sampling_period
     elif sampling_period != 1.0 / sampling_rate:
-        raise ValueError('The sampling_rate has to be 1/sampling_period')
-    if not hasattr(sampling_rate, 'units'):
+        raise ValueError("The sampling_rate has to be 1/sampling_period")
+    if not hasattr(sampling_rate, "units"):
         raise TypeError("Sampling rate/sampling period must have units")
     return sampling_rate
 
 
-def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True, t_start=0 * pq.s,
-                           sampling_rate=None, sampling_period=None, name=None, file_origin=None,
-                           description=None, array_annotations=None, annotations=None,
-                           channel_index=None, segment=None):
-    '''
+def _new_AnalogSignalArray(
+    cls,
+    signal,
+    units=None,
+    dtype=None,
+    copy=True,
+    t_start=0 * pq.s,
+    sampling_rate=None,
+    sampling_period=None,
+    name=None,
+    file_origin=None,
+    description=None,
+    array_annotations=None,
+    annotations=None,
+    channel_index=None,
+    segment=None,
+):
+    """
     A function to map AnalogSignal.__new__ to function that
         does not do the unit checking. This is needed for pickle to work.
-    '''
-    obj = cls(signal=signal, units=units, dtype=dtype, copy=copy,
-              t_start=t_start, sampling_rate=sampling_rate,
-              sampling_period=sampling_period, name=name,
-              file_origin=file_origin, description=description,
-              array_annotations=array_annotations, **annotations)
+    """
+    obj = cls(
+        signal=signal,
+        units=units,
+        dtype=dtype,
+        copy=copy,
+        t_start=t_start,
+        sampling_rate=sampling_rate,
+        sampling_period=sampling_period,
+        name=name,
+        file_origin=file_origin,
+        description=description,
+        array_annotations=array_annotations,
+        **annotations,
+    )
     obj.channel_index = channel_index
     obj.segment = segment
     return obj
 
 
 class AnalogSignal(BaseSignal):
-    '''
+    """
     Array of one or more continuous analog signals.
 
     A representation of several continuous, analog signals that
@@ -158,27 +180,41 @@ class AnalogSignal(BaseSignal):
     *Operations available on this object*:
         == != + * /
 
-    '''
+    """
 
-    _single_parent_objects = ('Segment', 'ChannelIndex')
-    _single_parent_attrs = ('segment', 'channel_index')
-    _quantity_attr = 'signal'
-    _necessary_attrs = (('signal', pq.Quantity, 2),
-                        ('sampling_rate', pq.Quantity, 0),
-                        ('t_start', pq.Quantity, 0))
+    _single_parent_objects = ("Segment", "ChannelIndex")
+    _single_parent_attrs = ("segment", "channel_index")
+    _quantity_attr = "signal"
+    _necessary_attrs = (
+        ("signal", pq.Quantity, 2),
+        ("sampling_rate", pq.Quantity, 0),
+        ("t_start", pq.Quantity, 0),
+    )
     _recommended_attrs = BaseNeo._recommended_attrs
 
-    def __new__(cls, signal, units=None, dtype=None, copy=True, t_start=0 * pq.s,
-                sampling_rate=None, sampling_period=None, name=None, file_origin=None,
-                description=None, array_annotations=None, **annotations):
-        '''
+    def __new__(
+        cls,
+        signal,
+        units=None,
+        dtype=None,
+        copy=True,
+        t_start=0 * pq.s,
+        sampling_rate=None,
+        sampling_period=None,
+        name=None,
+        file_origin=None,
+        description=None,
+        array_annotations=None,
+        **annotations,
+    ):
+        """
         Constructs new :class:`AnalogSignal` from data.
 
         This is called whenever a new class:`AnalogSignal` is created from
         the constructor, but not when slicing.
 
         __array_finalize__ is called on the new object.
-        '''
+        """
         signal = cls._rescale(signal, units=units)
         obj = pq.Quantity(signal, units=units, dtype=dtype, copy=copy).view(cls)
 
@@ -186,7 +222,7 @@ class AnalogSignal(BaseSignal):
             obj.shape = (-1, 1)
 
         if t_start is None:
-            raise ValueError('t_start cannot be None')
+            raise ValueError("t_start cannot be None")
         obj._t_start = t_start
 
         obj._sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
@@ -195,12 +231,24 @@ class AnalogSignal(BaseSignal):
         obj.channel_index = None
         return obj
 
-    def __init__(self, signal, units=None, dtype=None, copy=True, t_start=0 * pq.s,
-                 sampling_rate=None, sampling_period=None, name=None, file_origin=None,
-                 description=None, array_annotations=None, **annotations):
-        '''
+    def __init__(
+        self,
+        signal,
+        units=None,
+        dtype=None,
+        copy=True,
+        t_start=0 * pq.s,
+        sampling_rate=None,
+        sampling_period=None,
+        name=None,
+        file_origin=None,
+        description=None,
+        array_annotations=None,
+        **annotations,
+    ):
+        """
         Initializes a newly constructed :class:`AnalogSignal` instance.
-        '''
+        """
         # This method is only called when constructing a new AnalogSignal,
         # not when slicing or viewing. We use the same call signature
         # as __new__ for documentation purposes. Anything not in the call
@@ -208,41 +256,65 @@ class AnalogSignal(BaseSignal):
 
         # Calls parent __init__, which grabs universally recommended
         # attributes and sets up self.annotations
-        DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
-                            array_annotations=array_annotations, **annotations)
+        DataObject.__init__(
+            self,
+            name=name,
+            file_origin=file_origin,
+            description=description,
+            array_annotations=array_annotations,
+            **annotations,
+        )
 
     def __reduce__(self):
-        '''
+        """
         Map the __new__ function onto _new_AnalogSignalArray, so that pickle
         works
-        '''
-        return _new_AnalogSignalArray, (self.__class__, np.array(self), self.units, self.dtype,
-                                        True, self.t_start, self.sampling_rate,
-                                        self.sampling_period, self.name, self.file_origin,
-                                        self.description, self.array_annotations,
-                                        self.annotations, self.channel_index, self.segment)
+        """
+        return (
+            _new_AnalogSignalArray,
+            (
+                self.__class__,
+                np.array(self),
+                self.units,
+                self.dtype,
+                True,
+                self.t_start,
+                self.sampling_rate,
+                self.sampling_period,
+                self.name,
+                self.file_origin,
+                self.description,
+                self.array_annotations,
+                self.annotations,
+                self.channel_index,
+                self.segment,
+            ),
+        )
 
     def _array_finalize_spec(self, obj):
-        '''
+        """
         Set default values for attributes specific to :class:`AnalogSignal`.
 
         Common attributes are defined in
         :meth:`__array_finalize__` in :class:`basesignal.BaseSignal`),
         which is called every time a new signal is created
         and calls this method.
-        '''
-        self._t_start = getattr(obj, '_t_start', 0 * pq.s)
-        self._sampling_rate = getattr(obj, '_sampling_rate', None)
+        """
+        self._t_start = getattr(obj, "_t_start", 0 * pq.s)
+        self._sampling_rate = getattr(obj, "_sampling_rate", None)
         return obj
 
     def __repr__(self):
-        '''
+        """
         Returns a string representing the :class:`AnalogSignal`.
-        '''
-        return ('<%s(%s, [%s, %s], sampling rate: %s)>' % (self.__class__.__name__,
-                                                           super().__repr__(),
-                                                           self.t_start, self.t_stop,
-                                                           self.sampling_rate))
+        """
+        return "<%s(%s, [%s, %s], sampling rate: %s)>" % (
+            self.__class__.__name__,
+            super().__repr__(),
+            self.t_start,
+            self.t_stop,
+            self.sampling_rate,
+        )
 
     def get_channel_index(self):
         """
@@ -253,9 +325,9 @@ class AnalogSignal(BaseSignal):
             return None
 
     def __getitem__(self, i):
-        '''
+        """
         Get the item or slice :attr:`i`.
-        '''
+        """
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
             obj = super().__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
@@ -267,12 +339,13 @@ class AnalogSignal(BaseSignal):
             else:
                 if isinstance(j, slice):
                     if j.start:
-                        obj.t_start = (self.t_start + j.start * self.sampling_period)
+                        obj.t_start = self.t_start + j.start * self.sampling_period
                     if j.step:
                         obj.sampling_period *= j.step
                 elif isinstance(j, np.ndarray):
                     raise NotImplementedError(
-                        "Arrays not yet supported")  # in the general case, would need to return
+                        "Arrays not yet supported"
+                    )  # in the general case, would need to return
                     #  IrregularlySampledSignal(Array)
                 else:
                     raise TypeError("%s not supported" % type(j))
@@ -296,8 +369,10 @@ class AnalogSignal(BaseSignal):
                 obj = obj.T.reshape(self.shape[1], -1).T
                 obj = pq.Quantity(obj, units=self.units)
             else:
-                raise IndexError("indexing of an AnalogSignals needs to keep the same number of "
-                                 "sample for each trace contained")
+                raise IndexError(
+                    "indexing of an AnalogSignals needs to keep the same number of "
+                    "sample for each trace contained"
+                )
         else:
             raise IndexError("index should be an integer, tuple, slice or boolean numpy array")
         return obj
@@ -320,119 +395,125 @@ class AnalogSignal(BaseSignal):
     # be done
     @property
     def sampling_rate(self):
-        '''
+        """
         Number of samples per unit time.
 
         (1/:attr:`sampling_period`)
-        '''
+        """
         return self._sampling_rate
 
     @sampling_rate.setter
     def sampling_rate(self, rate):
-        '''
+        """
         Setter for :attr:`sampling_rate`
-        '''
+        """
         if rate is None:
-            raise ValueError('sampling_rate cannot be None')
-        elif not hasattr(rate, 'units'):
-            raise ValueError('sampling_rate must have units')
+            raise ValueError("sampling_rate cannot be None")
+        elif not hasattr(rate, "units"):
+            raise ValueError("sampling_rate must have units")
         self._sampling_rate = rate
 
     # sampling_period attribute is handled as a property on underlying rate
     @property
     def sampling_period(self):
-        '''
+        """
         Interval between two samples.
 
         (1/:attr:`sampling_rate`)
-        '''
-        return 1. / self.sampling_rate
+        """
+        return 1.0 / self.sampling_rate
 
     @sampling_period.setter
     def sampling_period(self, period):
-        '''
+        """
         Setter for :attr:`sampling_period`
-        '''
+        """
         if period is None:
-            raise ValueError('sampling_period cannot be None')
-        elif not hasattr(period, 'units'):
-            raise ValueError('sampling_period must have units')
-        self.sampling_rate = 1. / period
+            raise ValueError("sampling_period cannot be None")
+        elif not hasattr(period, "units"):
+            raise ValueError("sampling_period must have units")
+        self.sampling_rate = 1.0 / period
 
     # t_start attribute is handled as a property so type checking can be done
     @property
     def t_start(self):
-        '''
+        """
         Time when signal begins.
-        '''
+        """
         return self._t_start
 
     @t_start.setter
     def t_start(self, start):
-        '''
+        """
         Setter for :attr:`t_start`
-        '''
+        """
         if start is None:
-            raise ValueError('t_start cannot be None')
+            raise ValueError("t_start cannot be None")
         self._t_start = start
 
     @property
     def duration(self):
-        '''
+        """
         Signal duration
 
         (:attr:`size` * :attr:`sampling_period`)
-        '''
+        """
         return self.shape[0] / self.sampling_rate
 
     @property
     def t_stop(self):
-        '''
+        """
         Time when signal ends.
 
         (:attr:`t_start` + :attr:`duration`)
-        '''
+        """
         return self.t_start + self.duration
 
     @property
     def times(self):
-        '''
+        """
         The time points of each sample of the signal
 
         (:attr:`t_start` + arange(:attr:`shape`)/:attr:`sampling_rate`)
-        '''
+        """
         return self.t_start + np.arange(self.shape[0]) / self.sampling_rate
 
     def __eq__(self, other):
-        '''
+        """
         Equality test (==)
-        '''
-        if (isinstance(other, AnalogSignal) and (
-                self.t_start != other.t_start or self.sampling_rate != other.sampling_rate)):
+        """
+        if isinstance(other, AnalogSignal) and (
+            self.t_start != other.t_start or self.sampling_rate != other.sampling_rate
+        ):
             return False
         return super().__eq__(other)
 
     def _check_consistency(self, other):
-        '''
+        """
         Check if the attributes of another :class:`AnalogSignal`
         are compatible with this one.
-        '''
+        """
         if isinstance(other, AnalogSignal):
             for attr in "t_start", "sampling_rate":
                 if getattr(self, attr) != getattr(other, attr):
                     raise ValueError(
-                        "Inconsistent values of %s" % attr)  # how to handle name and annotations?
+                        "Inconsistent values of %s" % attr
+                    )  # how to handle name and annotations?
 
     def _repr_pretty_(self, pp, cycle):
-        '''
+        """
         Handle pretty-printing the :class:`AnalogSignal`.
-        '''
-        pp.text("{cls} with {channels} channels of length {length}; "
-                "units {units}; datatype {dtype} ".format(cls=self.__class__.__name__,
-                                                          channels=self.shape[1],
-                                                          length=self.shape[0],
-                                                          units=self.units.dimensionality.string,
-                                                          dtype=self.dtype))
+        """
+        pp.text(
+            "{cls} with {channels} channels of length {length}; "
+            "units {units}; datatype {dtype} ".format(
+                cls=self.__class__.__name__,
+                channels=self.shape[1],
+                length=self.shape[0],
+                units=self.units.dimensionality.string,
+                dtype=self.dtype,
+            )
+        )
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
@@ -452,7 +533,7 @@ class AnalogSignal(BaseSignal):
         return i
 
     def time_slice(self, t_start, t_stop):
-        '''
+        """
         Creates a new AnalogSignal corresponding to the time slice of the
         original AnalogSignal between times t_start, t_stop. Note, that for
         numerical stability reasons if t_start does not fall exactly on
@@ -461,7 +542,7 @@ class AnalogSignal(BaseSignal):
         make the duration of the resultant signal as close as possible to
         t_stop - t_start. This means that for a given duration, the size
         of the slice will always be the same.
-        '''
+        """
 
         # checking start time and transforming to start index
         if t_start is None:
@@ -478,8 +559,10 @@ class AnalogSignal(BaseSignal):
             j = i + int(np.rint(delta.simplified.magnitude))
 
         if (i < 0) or (j > len(self)):
-            raise ValueError('t_start, t_stop have to be within the analog \
-                              signal duration')
+            raise ValueError(
+                "t_start, t_stop have to be within the analog \
+                              signal duration"
+            )
 
         # Time slicing should create a deep copy of the object
         obj = deepcopy(self[i:j])
@@ -568,14 +651,15 @@ class AnalogSignal(BaseSignal):
         """
 
         if not HAVE_SCIPY:
-            raise ImportError('Decimating requires availability of scipy.signal')
+            raise ImportError("Decimating requires availability of scipy.signal")
 
         # Resampling is only permitted along the time axis (axis=0)
-        if 'axis' in kwargs:
-            kwargs.pop('axis')
+        if "axis" in kwargs:
+            kwargs.pop("axis")
 
-        downsampled_data = scipy.signal.decimate(self.magnitude, downsampling_factor, axis=0,
-                                                 **kwargs)
+        downsampled_data = scipy.signal.decimate(
+            self.magnitude, downsampling_factor, axis=0, **kwargs
+        )
         downsampled_signal = self.duplicate_with_new_data(downsampled_data)
 
         # since the number of channels stays the same, we can also copy array annotations here
@@ -611,16 +695,17 @@ class AnalogSignal(BaseSignal):
         """
 
         if not HAVE_SCIPY:
-            raise ImportError('Resampling requires availability of scipy.signal')
+            raise ImportError("Resampling requires availability of scipy.signal")
 
         # Resampling is only permitted along the time axis (axis=0)
-        if 'axis' in kwargs:
-            kwargs.pop('axis')
-        if 't' in kwargs:
-            kwargs.pop('t')
+        if "axis" in kwargs:
+            kwargs.pop("axis")
+        if "t" in kwargs:
+            kwargs.pop("t")
 
-        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count,
-                                                                t=self.times, axis=0, **kwargs)
+        resampled_data, resampled_times = scipy.signal.resample(
+            self.magnitude, sample_count, t=self.times, axis=0, **kwargs
+        )
 
         resampled_signal = self.duplicate_with_new_data(resampled_data)
         resampled_signal.sampling_rate = (sample_count / self.shape[0]) * self.sampling_rate
@@ -694,30 +779,34 @@ class AnalogSignal(BaseSignal):
         """
 
         # Sanity of inputs
-        if not hasattr(signals, '__iter__'):
-            raise TypeError('signals must be iterable')
+        if not hasattr(signals, "__iter__"):
+            raise TypeError("signals must be iterable")
         if not all([isinstance(a, AnalogSignal) for a in signals]):
-            raise TypeError('Entries of anasiglist have to be of type neo.AnalogSignal')
+            raise TypeError("Entries of anasiglist have to be of type neo.AnalogSignal")
         if len(signals) == 0:
             return self
 
         signals = [self] + list(signals)
 
         # Check required common attributes: units, sampling_rate and shape[-1]
-        shared_attributes = ['units', 'sampling_rate']
-        attribute_values = [tuple((getattr(anasig, attr) for attr in shared_attributes))
-                            for anasig in signals]
+        shared_attributes = ["units", "sampling_rate"]
+        attribute_values = [
+            tuple((getattr(anasig, attr) for attr in shared_attributes)) for anasig in signals
+        ]
         # add shape dimensions that do not relate to time
-        attribute_values = [(attribute_values[i] + (signals[i].shape[1:],))
-                            for i in range(len(signals))]
+        attribute_values = [
+            (attribute_values[i] + (signals[i].shape[1:],)) for i in range(len(signals))
+        ]
         if not all([attrs == attribute_values[0] for attrs in attribute_values]):
             raise MergeError(
-                f'AnalogSignals have to share {shared_attributes} attributes to be concatenated.')
+                f"AnalogSignals have to share {shared_attributes} attributes to be concatenated."
+            )
         units, sr, shape = attribute_values[0]
 
         # find gaps between Analogsignals
         combined_time_ranges = self._concatenate_time_ranges(
-            [(s.t_start, s.t_stop) for s in signals])
+            [(s.t_start, s.t_stop) for s in signals]
+        )
         missing_time_ranges = self._invert_time_ranges(combined_time_ranges)
         if len(missing_time_ranges):
             diffs = np.diff(np.asarray(missing_time_ranges), axis=1)
@@ -725,21 +814,25 @@ class AnalogSignal(BaseSignal):
             diffs = []
 
         if padding is False and any(diffs > signals[0].sampling_period):
-            raise MergeError(f'Signals are not continuous. Can not concatenate signals with gaps. '
-                             f'Please provide a padding value.')
+            raise MergeError(
+                f"Signals are not continuous. Can not concatenate signals with gaps. "
+                f"Please provide a padding value."
+            )
         if padding is not False:
-            logger.warning('Signals will be padded using {}.'.format(padding))
+            logger.warning("Signals will be padded using {}.".format(padding))
             if padding is True:
                 padding = np.NaN * units
             if isinstance(padding, pq.Quantity):
                 padding = padding.rescale(units).magnitude
             else:
-                raise MergeError('Invalid type of padding value. Please provide a bool value '
-                                 'or a quantities object.')
+                raise MergeError(
+                    "Invalid type of padding value. Please provide a bool value "
+                    "or a quantities object."
+                )
 
         t_start = min([a.t_start for a in signals])
         t_stop = max([a.t_stop for a in signals])
-        n_samples = int(np.rint(((t_stop - t_start) * sr).rescale('dimensionless').magnitude))
+        n_samples = int(np.rint(((t_stop - t_start) * sr).rescale("dimensionless").magnitude))
         shape = (n_samples,) + shape
 
         # Collect attributes and annotations across all concatenated signals
@@ -748,21 +841,27 @@ class AnalogSignal(BaseSignal):
         common_array_annotations = signals[0].array_annotations
         for anasig in signals[1:]:
             common_annotations = intersect_annotations(common_annotations, anasig.annotations)
-            common_array_annotations = intersect_annotations(common_array_annotations,
-                                                             anasig.array_annotations)
+            common_array_annotations = intersect_annotations(
+                common_array_annotations, anasig.array_annotations
+            )
 
-        kwargs['annotations'] = common_annotations
-        kwargs['array_annotations'] = common_array_annotations
+        kwargs["annotations"] = common_annotations
+        kwargs["array_annotations"] = common_array_annotations
 
         for name in ("name", "description", "file_origin"):
             attr = [getattr(s, name) for s in signals]
             if all([a == attr[0] for a in attr]):
                 kwargs[name] = attr[0]
             else:
-                kwargs[name] = f'concatenation ({attr})'
+                kwargs[name] = f"concatenation ({attr})"
 
-        conc_signal = AnalogSignal(np.full(shape=shape, fill_value=padding, dtype=signals[0].dtype),
-                                   sampling_rate=sr, t_start=t_start, units=units, **kwargs)
+        conc_signal = AnalogSignal(
+            np.full(shape=shape, fill_value=padding, dtype=signals[0].dtype),
+            sampling_rate=sr,
+            t_start=t_start,
+            units=units,
+            **kwargs,
+        )
 
         if not overwrite:
             signals = signals[::-1]

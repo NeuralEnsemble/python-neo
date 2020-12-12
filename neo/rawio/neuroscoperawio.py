@@ -16,47 +16,47 @@ Author: Samuel Garcia
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
 
 import numpy as np
 from xml.etree import ElementTree
 
 
 class NeuroScopeRawIO(BaseRawIO):
-    extensions = ['xml', 'dat']
-    rawmode = 'one-file'
+    extensions = ["xml", "dat"]
+    rawmode = "one-file"
 
-    def __init__(self, filename=''):
+    def __init__(self, filename=""):
         BaseRawIO.__init__(self)
         self.filename = filename
 
     def _source_name(self):
-        return self.filename.replace('.xml', '').replace('.dat', '')
+        return self.filename.replace(".xml", "").replace(".dat", "")
 
     def _parse_header(self):
-        filename = self.filename.replace('.xml', '').replace('.dat', '')
+        filename = self.filename.replace(".xml", "").replace(".dat", "")
 
-        tree = ElementTree.parse(filename + '.xml')
+        tree = ElementTree.parse(filename + ".xml")
         root = tree.getroot()
-        acq = root.find('acquisitionSystem')
-        nbits = int(acq.find('nBits').text)
-        nb_channel = int(acq.find('nChannels').text)
-        self._sampling_rate = float(acq.find('samplingRate').text)
-        voltage_range = float(acq.find('voltageRange').text)
+        acq = root.find("acquisitionSystem")
+        nbits = int(acq.find("nBits").text)
+        nb_channel = int(acq.find("nChannels").text)
+        self._sampling_rate = float(acq.find("samplingRate").text)
+        voltage_range = float(acq.find("voltageRange").text)
         # offset = int(acq.find('offset').text)
-        amplification = float(acq.find('amplification').text)
+        amplification = float(acq.find("amplification").text)
 
         # find groups for channels
         channel_group = {}
         for grp_index, xml_chx in enumerate(
-                root.find('anatomicalDescription').find('channelGroups').findall('group')):
+            root.find("anatomicalDescription").find("channelGroups").findall("group")
+        ):
             for xml_rc in xml_chx:
                 channel_group[int(xml_rc.text)] = grp_index
 
         if nbits == 16:
-            sig_dtype = 'int16'
-            gain = voltage_range / (2 ** 16) / amplification / 1000.
+            sig_dtype = "int16"
+            gain = voltage_range / (2 ** 16) / amplification / 1000.0
             # ~ elif nbits==32:
             # Not sure if it is int or float
             # ~ dt = 'int32'
@@ -64,19 +64,21 @@ class NeuroScopeRawIO(BaseRawIO):
         else:
             raise (NotImplementedError)
 
-        self._raw_signals = np.memmap(filename + '.dat', dtype=sig_dtype,
-                                      mode='r', offset=0).reshape(-1, nb_channel)
+        self._raw_signals = np.memmap(
+            filename + ".dat", dtype=sig_dtype, mode="r", offset=0
+        ).reshape(-1, nb_channel)
 
         # signals
         sig_channels = []
         for c in range(nb_channel):
-            name = 'ch{}grp{}'.format(c, channel_group[c])
+            name = "ch{}grp{}".format(c, channel_group[c])
             chan_id = c
-            units = 'mV'
-            offset = 0.
+            units = "mV"
+            offset = 0.0
             group_id = 0
-            sig_channels.append((name, chan_id, self._sampling_rate,
-                                 sig_dtype, units, gain, offset, group_id))
+            sig_channels.append(
+                (name, chan_id, self._sampling_rate, sig_dtype, units, gain, offset, group_id)
+            )
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No events
@@ -89,16 +91,16 @@ class NeuroScopeRawIO(BaseRawIO):
 
         # fille into header dict
         self.header = {}
-        self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
-        self.header['event_channels'] = event_channels
+        self.header["nb_block"] = 1
+        self.header["nb_segment"] = [1]
+        self.header["signal_channels"] = sig_channels
+        self.header["unit_channels"] = unit_channels
+        self.header["event_channels"] = event_channels
 
         self._generate_minimal_annotations()
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.
+        return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = self._raw_signals.shape[0] / self._sampling_rate
@@ -108,7 +110,7 @@ class NeuroScopeRawIO(BaseRawIO):
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        return 0.
+        return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if channel_indexes is None:

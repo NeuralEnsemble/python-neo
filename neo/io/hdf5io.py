@@ -18,14 +18,24 @@ except ImportError as err:
 else:
     HAVE_H5PY = True
 
-from neo.core import (objectlist, Block, Segment, AnalogSignal, SpikeTrain,
-                      Epoch, Event, IrregularlySampledSignal, ChannelIndex,
-                      Unit)
+from neo.core import (
+    objectlist,
+    Block,
+    Segment,
+    AnalogSignal,
+    SpikeTrain,
+    Epoch,
+    Event,
+    IrregularlySampledSignal,
+    ChannelIndex,
+    Unit,
+)
 from neo.io.baseio import BaseIO
 from neo.core.baseneo import MergeError
 
-logger = logging.getLogger('Neo')
-min_h5py_version = LooseVersion('2.6.0')
+logger = logging.getLogger("Neo")
+min_h5py_version = LooseVersion("2.6.0")
+
 
 def disjoint_groups(groups):
     """`groups` should be a list of sets"""
@@ -46,11 +56,12 @@ class NeoHdf5IO(BaseIO):
 
     Writing to HDF5 is not supported by this IO; we recommend using NixIO for this.
     """
+
     supported_objects = objectlist
     readable_objects = objectlist
-    name = 'NeoHdf5 IO'
-    extensions = ['h5']
-    mode = 'file'
+    name = "NeoHdf5 IO"
+    extensions = ["h5"]
+    mode = "file"
     is_readable = True
     is_writable = False
 
@@ -65,10 +76,12 @@ class NeoHdf5IO(BaseIO):
             raise ImportError("h5py is not available")
         if HAVE_H5PY:
             if LooseVersion(h5py.__version__) < min_h5py_version:
-                raise ImportError('h5py version {} is too old. Minimal required version is {}'
-                                  ''.format(h5py.__version__, min_h5py_version))
+                raise ImportError(
+                    "h5py version {} is too old. Minimal required version is {}"
+                    "".format(h5py.__version__, min_h5py_version)
+                )
         BaseIO.__init__(self, filename=filename)
-        self._data = h5py.File(filename, 'r')
+        self._data = h5py.File(filename, "r")
         self.object_refs = {}
 
     def read_all_blocks(self, lazy=False, merge_singles=True, **kargs):
@@ -80,7 +93,7 @@ class NeoHdf5IO(BaseIO):
          `AnalogSignal` objects into multichannel objects, and similarly for single `Epoch`,
          `Event` and `IrregularlySampledSignal` objects.
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         self.merge_singles = merge_singles
 
@@ -94,7 +107,7 @@ class NeoHdf5IO(BaseIO):
         """
         Load the first block in the file.
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
         return self.read_all_blocks(lazy=lazy)[0]
 
     def _read_block(self, node):
@@ -103,27 +116,30 @@ class NeoHdf5IO(BaseIO):
             attributes["index"] = int(attributes["index"])
         block = Block(**attributes)
 
-        for name, child_node in node['segments'].items():
+        for name, child_node in node["segments"].items():
             if "Segment" in name:
                 block.segments.append(self._read_segment(child_node, parent=block))
 
-        if len(node['recordingchannelgroups']) > 0:
-            for name, child_node in node['recordingchannelgroups'].items():
+        if len(node["recordingchannelgroups"]) > 0:
+            for name, child_node in node["recordingchannelgroups"].items():
                 if "RecordingChannelGroup" in name:
                     block.channel_indexes.append(
-                        self._read_recordingchannelgroup(child_node, parent=block))
+                        self._read_recordingchannelgroup(child_node, parent=block)
+                    )
             self._resolve_channel_indexes(block)
         elif self.merge_singles:
             # if no RecordingChannelGroups are defined, merging
             # takes place here.
             for segment in block.segments:
-                if hasattr(segment, 'unmerged_analogsignals'):
+                if hasattr(segment, "unmerged_analogsignals"):
                     segment.analogsignals.extend(
-                        self._merge_data_objects(segment.unmerged_analogsignals))
+                        self._merge_data_objects(segment.unmerged_analogsignals)
+                    )
                     del segment.unmerged_analogsignals
-                if hasattr(segment, 'unmerged_irregularlysampledsignals'):
+                if hasattr(segment, "unmerged_irregularlysampledsignals"):
                     segment.irregularlysampledsignals.extend(
-                        self._merge_data_objects(segment.unmerged_irregularlysampledsignals))
+                        self._merge_data_objects(segment.unmerged_irregularlysampledsignals)
+                    )
                     del segment.unmerged_irregularlysampledsignals
 
         return block
@@ -133,19 +149,19 @@ class NeoHdf5IO(BaseIO):
         segment = Segment(**attributes)
 
         signals = []
-        for name, child_node in node['analogsignals'].items():
+        for name, child_node in node["analogsignals"].items():
             if "AnalogSignal" in name:
                 signals.append(self._read_analogsignal(child_node, parent=segment))
         if signals and self.merge_singles:
             segment.unmerged_analogsignals = signals  # signals will be merged later
             signals = []
-        for name, child_node in node['analogsignalarrays'].items():
+        for name, child_node in node["analogsignalarrays"].items():
             if "AnalogSignalArray" in name:
                 signals.append(self._read_analogsignalarray(child_node, parent=segment))
         segment.analogsignals = signals
 
         irr_signals = []
-        for name, child_node in node['irregularlysampledsignals'].items():
+        for name, child_node in node["irregularlysampledsignals"].items():
             if "IrregularlySampledSignal" in name:
                 irr_signals.append(self._read_irregularlysampledsignal(child_node, parent=segment))
         if irr_signals and self.merge_singles:
@@ -154,31 +170,31 @@ class NeoHdf5IO(BaseIO):
         segment.irregularlysampledsignals = irr_signals
 
         epochs = []
-        for name, child_node in node['epochs'].items():
+        for name, child_node in node["epochs"].items():
             if "Epoch" in name:
                 epochs.append(self._read_epoch(child_node, parent=segment))
         if self.merge_singles:
             epochs = self._merge_data_objects(epochs)
-        for name, child_node in node['epocharrays'].items():
+        for name, child_node in node["epocharrays"].items():
             if "EpochArray" in name:
                 epochs.append(self._read_epocharray(child_node, parent=segment))
         segment.epochs = epochs
 
         events = []
-        for name, child_node in node['events'].items():
+        for name, child_node in node["events"].items():
             if "Event" in name:
                 events.append(self._read_event(child_node, parent=segment))
         if self.merge_singles:
             events = self._merge_data_objects(events)
-        for name, child_node in node['eventarrays'].items():
+        for name, child_node in node["eventarrays"].items():
             if "EventArray" in name:
                 events.append(self._read_eventarray(child_node, parent=segment))
         segment.events = events
 
         spiketrains = []
-        for name, child_node in node['spikes'].items():
-            raise NotImplementedError('Spike objects not yet handled.')
-        for name, child_node in node['spiketrains'].items():
+        for name, child_node in node["spikes"].items():
+            raise NotImplementedError("Spike objects not yet handled.")
+        for name, child_node in node["spiketrains"].items():
             if "SpikeTrain" in name:
                 spiketrains.append(self._read_spiketrain(child_node, parent=segment))
         segment.spiketrains = spiketrains
@@ -191,9 +207,12 @@ class NeoHdf5IO(BaseIO):
         # todo: handle channel_index
         sampling_rate = self._get_quantity(node["sampling_rate"])
         t_start = self._get_quantity(node["t_start"])
-        signal = AnalogSignal(self._get_quantity(node["signal"]),
-                              sampling_rate=sampling_rate, t_start=t_start,
-                              **attributes)
+        signal = AnalogSignal(
+            self._get_quantity(node["signal"]),
+            sampling_rate=sampling_rate,
+            t_start=t_start,
+            **attributes
+        )
         signal.segment = parent
         self.object_refs[node.attrs["object_ref"]] = signal
         return signal
@@ -203,9 +222,11 @@ class NeoHdf5IO(BaseIO):
 
     def _read_irregularlysampledsignal(self, node, parent):
         attributes = self._get_standard_attributes(node)
-        signal = IrregularlySampledSignal(times=self._get_quantity(node["times"]),
-                                          signal=self._get_quantity(node["signal"]),
-                                          **attributes)
+        signal = IrregularlySampledSignal(
+            times=self._get_quantity(node["times"]),
+            signal=self._get_quantity(node["signal"]),
+            **attributes
+        )
         signal.segment = parent
         return signal
 
@@ -214,9 +235,9 @@ class NeoHdf5IO(BaseIO):
         t_start = self._get_quantity(node["t_start"])
         t_stop = self._get_quantity(node["t_stop"])
         # todo: handle sampling_rate, waveforms, left_sweep
-        spiketrain = SpikeTrain(self._get_quantity(node["times"]),
-                                t_start=t_start, t_stop=t_stop,
-                                **attributes)
+        spiketrain = SpikeTrain(
+            self._get_quantity(node["times"]), t_start=t_start, t_stop=t_stop, **attributes
+        )
         spiketrain.segment = parent
         self.object_refs[node.attrs["object_ref"]] = spiketrain
         return spiketrain
@@ -225,7 +246,7 @@ class NeoHdf5IO(BaseIO):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
         durations = self._get_quantity(node["durations"])
-        labels = node["labels"][()].astype('U')
+        labels = node["labels"][()].astype("U")
         epoch = Epoch(times=times, durations=durations, labels=labels, **attributes)
         epoch.segment = parent
         return epoch
@@ -236,7 +257,7 @@ class NeoHdf5IO(BaseIO):
     def _read_eventarray(self, node, parent):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
-        labels = node["labels"][()].astype('U')
+        labels = node["labels"][()].astype("U")
         event = Event(times=times, labels=labels, **attributes)
         event.segment = parent
         return event
@@ -251,14 +272,16 @@ class NeoHdf5IO(BaseIO):
         channel_names = node["channel_names"][()]
 
         if channel_indexes.size:
-            if len(node['recordingchannels']):
-                raise MergeError("Cannot handle a RecordingChannelGroup which both has a "
-                                 "'channel_indexes' attribute and contains "
-                                 "RecordingChannel objects")
+            if len(node["recordingchannels"]):
+                raise MergeError(
+                    "Cannot handle a RecordingChannelGroup which both has a "
+                    "'channel_indexes' attribute and contains "
+                    "RecordingChannel objects"
+                )
             raise NotImplementedError("todo")  # need to handle node['analogsignalarrays']
         else:
             channels = []
-            for name, child_node in node['recordingchannels'].items():
+            for name, child_node in node["recordingchannels"].items():
                 if "RecordingChannel" in name:
                     channels.append(self._read_recordingchannel(child_node))
             channel_index = ChannelIndex(None, **attributes)
@@ -266,7 +289,7 @@ class NeoHdf5IO(BaseIO):
             # construction of the index is deferred until we have processed
             # all RecordingChannelGroup nodes
             units = []
-            for name, child_node in node['units'].items():
+            for name, child_node in node["units"].items():
                 if "Unit" in name:
                     units.append(self._read_unit(child_node, parent=channel_index))
             channel_index.units = units
@@ -286,7 +309,7 @@ class NeoHdf5IO(BaseIO):
             if "IrregularlySampledSignal" in name:
                 obj_ref = child_node.attrs["object_ref"]
                 irregsignals.append(obj_ref)
-        return attributes['index'], analogsignals, irregsignals
+        return attributes["index"], analogsignals, irregsignals
 
     def _read_unit(self, node, parent):
         attributes = self._get_standard_attributes(node)
@@ -306,15 +329,15 @@ class NeoHdf5IO(BaseIO):
             while objects:
                 obj = objects.pop(0)
                 try:
-                    combined_obj_ref = merged_objects[-1].annotations['object_ref']
+                    combined_obj_ref = merged_objects[-1].annotations["object_ref"]
                     merged_objects[-1] = merged_objects[-1].merge(obj)
-                    merged_objects[-1].annotations['object_ref'] = combined_obj_ref + \
-                                                                   "-" + obj.annotations[
-                                                                       'object_ref']
+                    merged_objects[-1].annotations["object_ref"] = (
+                        combined_obj_ref + "-" + obj.annotations["object_ref"]
+                    )
                 except MergeError:
                     merged_objects.append(obj)
             for obj in merged_objects:
-                self.object_refs[obj.annotations['object_ref']] = obj
+                self.object_refs[obj.annotations["object_ref"]] = obj
             return merged_objects
         else:
             return objects
@@ -328,26 +351,25 @@ class NeoHdf5IO(BaseIO):
     def _get_standard_attributes(self, node):
         """Retrieve attributes"""
         attributes = {}
-        for name in ('name', 'description', 'index', 'file_origin', 'object_ref'):
+        for name in ("name", "description", "index", "file_origin", "object_ref"):
             if name in node.attrs:
                 attributes[name] = node.attrs[name]
-        for name in ('rec_datetime', 'file_datetime'):
+        for name in ("rec_datetime", "file_datetime"):
             if name in node.attrs:
-                attributes[name] = pickle.loads(node.attrs[name], encoding='bytes')
-        annotations = pickle.loads(node.attrs['annotations'], encoding='bytes')
+                attributes[name] = pickle.loads(node.attrs[name], encoding="bytes")
+        annotations = pickle.loads(node.attrs["annotations"], encoding="bytes")
         attributes.update(annotations)
         # avoid "dictionary changed size during iteration" error
         attribute_names = list(attributes.keys())
         for name in attribute_names:
             if isinstance(attributes[name], (bytes, np.bytes_)):
-                attributes[name] = attributes[name].decode('utf-8')
+                attributes[name] = attributes[name].decode("utf-8")
             if isinstance(name, bytes):
-                attributes[name.decode('utf-8')] = attributes[name]
+                attributes[name.decode("utf-8")] = attributes[name]
                 attributes.pop(name)
         return attributes
 
     def _resolve_channel_indexes(self, block):
-
         def disjoint_channel_indexes(channel_indexes):
             channel_indexes = channel_indexes[:]
             for ci1 in channel_indexes:
@@ -373,16 +395,16 @@ class NeoHdf5IO(BaseIO):
                     signal = self.object_refs[signal_ref]
                     segment_id = id(signal.segment)
                     if segment_id in by_segment:
-                        by_segment[segment_id]['analogsignals'].append(signal)
+                        by_segment[segment_id]["analogsignals"].append(signal)
                     else:
-                        by_segment[segment_id] = {'analogsignals': [signal], 'irregsignals': []}
+                        by_segment[segment_id] = {"analogsignals": [signal], "irregsignals": []}
                 for signal_ref in irregsignals:
                     signal = self.object_refs[signal_ref]
                     segment_id = id(signal.segment)
                     if segment_id in by_segment:
-                        by_segment[segment_id]['irregsignals'].append(signal)
+                        by_segment[segment_id]["irregsignals"].append(signal)
                     else:
-                        by_segment[segment_id] = {'analogsignals': [], 'irregsignals': [signal]}
+                        by_segment[segment_id] = {"analogsignals": [], "irregsignals": [signal]}
 
             assert len(ids) > 0
             if self.merge_singles:
@@ -398,23 +420,23 @@ class NeoHdf5IO(BaseIO):
                             break
                     assert segment is not None
 
-                    if segment_data['analogsignals']:
-                        merged_signals = self._merge_data_objects(segment_data['analogsignals'])
+                    if segment_data["analogsignals"]:
+                        merged_signals = self._merge_data_objects(segment_data["analogsignals"])
                         assert len(merged_signals) == 1
                         merged_signals[0].channel_index = ci
-                        merged_signals[0].annotations['object_ref'] = "-".join(
-                            obj.annotations['object_ref']
-                            for obj in segment_data['analogsignals'])
+                        merged_signals[0].annotations["object_ref"] = "-".join(
+                            obj.annotations["object_ref"] for obj in segment_data["analogsignals"]
+                        )
                         segment.analogsignals.extend(merged_signals)
                         ci.analogsignals = merged_signals
 
-                    if segment_data['irregsignals']:
-                        merged_signals = self._merge_data_objects(segment_data['irregsignals'])
+                    if segment_data["irregsignals"]:
+                        merged_signals = self._merge_data_objects(segment_data["irregsignals"])
                         assert len(merged_signals) == 1
                         merged_signals[0].channel_index = ci
-                        merged_signals[0].annotations['object_ref'] = "-".join(
-                            obj.annotations['object_ref']
-                            for obj in segment_data['irregsignals'])
+                        merged_signals[0].annotations["object_ref"] = "-".join(
+                            obj.annotations["object_ref"] for obj in segment_data["irregsignals"]
+                        )
                         segment.irregularlysampledsignals.extend(merged_signals)
                         ci.irregularlysampledsignals = merged_signals
             else:

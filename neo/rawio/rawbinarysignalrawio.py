@@ -17,8 +17,7 @@ Important release note:
 Author: Samuel Garcia
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
 
 import numpy as np
 
@@ -27,11 +26,19 @@ import sys
 
 
 class RawBinarySignalRawIO(BaseRawIO):
-    extensions = ['raw', '*']
-    rawmode = 'one-file'
+    extensions = ["raw", "*"]
+    rawmode = "one-file"
 
-    def __init__(self, filename='', dtype='int16', sampling_rate=10000.,
-                 nb_channel=2, signal_gain=1., signal_offset=0., bytesoffset=0):
+    def __init__(
+        self,
+        filename="",
+        dtype="int16",
+        sampling_rate=10000.0,
+        nb_channel=2,
+        signal_gain=1.0,
+        signal_offset=0.0,
+        bytesoffset=0,
+    ):
         BaseRawIO.__init__(self)
         self.filename = filename
         self.dtype = dtype
@@ -47,8 +54,9 @@ class RawBinarySignalRawIO(BaseRawIO):
     def _parse_header(self):
 
         if os.path.exists(self.filename):
-            self._raw_signals = np.memmap(self.filename, dtype=self.dtype, mode='r',
-                                          offset=self.bytesoffset).reshape(-1, self.nb_channel)
+            self._raw_signals = np.memmap(
+                self.filename, dtype=self.dtype, mode="r", offset=self.bytesoffset
+            ).reshape(-1, self.nb_channel)
         else:
             # The the neo.io.RawBinarySignalIO is used for write_segment
             self._raw_signals = None
@@ -56,12 +64,22 @@ class RawBinarySignalRawIO(BaseRawIO):
         sig_channels = []
         if self._raw_signals is not None:
             for c in range(self.nb_channel):
-                name = 'ch{}'.format(c)
+                name = "ch{}".format(c)
                 chan_id = c
-                units = ''
+                units = ""
                 group_id = 0
-                sig_channels.append((name, chan_id, self.sampling_rate, self.dtype,
-                                     units, self.signal_gain, self.signal_offset, group_id))
+                sig_channels.append(
+                    (
+                        name,
+                        chan_id,
+                        self.sampling_rate,
+                        self.dtype,
+                        units,
+                        self.signal_gain,
+                        self.signal_offset,
+                        group_id,
+                    )
+                )
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -75,17 +93,17 @@ class RawBinarySignalRawIO(BaseRawIO):
 
         # fille into header dict
         self.header = {}
-        self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
-        self.header['event_channels'] = event_channels
+        self.header["nb_block"] = 1
+        self.header["nb_segment"] = [1]
+        self.header["signal_channels"] = sig_channels
+        self.header["unit_channels"] = unit_channels
+        self.header["event_channels"] = event_channels
 
         # insert some annotation at some place
         self._generate_minimal_annotations()
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.
+        return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = self._raw_signals.shape[0] / self.sampling_rate
@@ -95,7 +113,7 @@ class RawBinarySignalRawIO(BaseRawIO):
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        return 0.
+        return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if channel_indexes is None:

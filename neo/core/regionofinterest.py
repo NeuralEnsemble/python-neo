@@ -3,6 +3,7 @@ from math import floor, ceil
 
 class RegionOfInterest:
     """Abstract base class"""
+
     pass
 
 
@@ -36,8 +37,7 @@ class CircularRegionOfInterest(RegionOfInterest):
         return self.centre
 
     def is_inside(self, x, y):
-        if ((x - self.x) * (x - self.x) +
-                (y - self.y) * (y - self.y) <= self.radius * self.radius):
+        if (x - self.x) * (x - self.x) + (y - self.y) * (y - self.y) <= self.radius * self.radius:
             return True
         else:
             return False
@@ -77,8 +77,10 @@ class RectangularRegionOfInterest(RegionOfInterest):
         self.height = height
 
     def is_inside(self, x, y):
-        if (self.x - self.width/2.0 <= x < self.x + self.width/2.0
-                and self.y - self.height/2.0 <= y < self.y + self.height/2.0):
+        if (
+            self.x - self.width / 2.0 <= x < self.x + self.width / 2.0
+            and self.y - self.height / 2.0 <= y < self.y + self.height / 2.0
+        ):
             return True
         else:
             return False
@@ -135,9 +137,13 @@ class PolygonRegionOfInterest(RegionOfInterest):
             c = 0
             for i in range(0, nvert):
                 j = i - 1 if i != 0 else nvert - 1
-                if (((verty[i]*1.0 > testy*1.0) != (verty[j]*1.0 > testy*1.0)) and
-                        (testx*1.0 < (vertx[j]*1.0 - vertx[i]*1.0) * (testy*1.0 - verty[i]*1.0) /
-                         (verty[j]*1.0 - verty[i]*1.0) + vertx[i]*1.0)):
+                if ((verty[i] * 1.0 > testy * 1.0) != (verty[j] * 1.0 > testy * 1.0)) and (
+                    testx * 1.0
+                    < (vertx[j] * 1.0 - vertx[i] * 1.0)
+                    * (testy * 1.0 - verty[i] * 1.0)
+                    / (verty[j] * 1.0 - verty[i] * 1.0)
+                    + vertx[i] * 1.0
+                ):
                     c += 1
             # If odd, that means that we are inside the polygon
             if c % 2 == 1:
@@ -147,8 +153,12 @@ class PolygonRegionOfInterest(RegionOfInterest):
 
     def pixels_in_region(self):
 
-        min_x, max_x, min_y, max_y = (self.vertices[0][0], self.vertices[0][0],
-                                      self.vertices[0][1], self.vertices[0][1])
+        min_x, max_x, min_y, max_y = (
+            self.vertices[0][0],
+            self.vertices[0][0],
+            self.vertices[0][1],
+            self.vertices[0][1],
+        )
 
         for i in self.vertices:
             if i[0] < min_x:
