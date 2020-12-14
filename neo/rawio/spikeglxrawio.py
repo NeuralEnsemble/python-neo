@@ -5,8 +5,9 @@ See https://billkarsh.github.io/SpikeGLX/
 
 Here an adaptation of the spikeglx tools into the neo rawio API.
 
-Note that each pair of ".bin"/."meta" files is represented as a group of two AnalogSignals
+Note that each pair of ".bin"/."meta" files is represented as a group of channels
 that share the same sampling rate.
+It will be one AnalogSignal multi channel at neo.io level.
 
 Contrary to other implementations this IO reads the entire folder and subfolder and:
   * deals with severals segment based on the `_gt0`, `_gt1`, `_gt2`, etc postfixes
@@ -16,20 +17,22 @@ Contrary to other implementations this IO reads the entire folder and subfolder 
 
 Note:
   * there are several versions depending the neuropixel probe generation (`1.0`/`2.0`/`3.0`)
-     Here, we assume that the `meta` file has the same structure across all generations.
-     TODO: This need so be checked.
-     This IO is developed based on neuropixel generation 2.0, single shank recordings.
+    Here, we assume that the `meta` file has the same structure across all generations.
+    This need so be checked.
+    This IO is developed based on neuropixel generation 2.0, single shank recordings.
 
 
-# TODO:
+# Not implemented yet in this reader:
   * contact SpkeGLX developer to see how to deal with absolut t_start when several segment
   * contact SpkeGLX developer to understand the last channel SY0 function
-  * better handling of annotations at object level by sub group of device (need rawio change)
+  * better handling of annotations at object level by sub group of device (after rawio change)
   * better handling of channel location
 
 
 See:
+https://billkarsh.github.io/SpikeGLX/
 https://billkarsh.github.io/SpikeGLX/#offline-analysis-tools
+https://billkarsh.github.io/SpikeGLX/#metadata-guides
 https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/spikeglxrecordingextractor/spikeglxrecordingextractor.py
 
 
@@ -48,7 +51,6 @@ import numpy as np
 class SpikeGLXRawIO(BaseRawIO):
     """
     Class for reading data from a SpikeGLX system
-    https://billkarsh.github.io/SpikeGLX/
     """
     extensions = []
     rawmode = 'one-dir'
@@ -111,15 +113,15 @@ class SpikeGLXRawIO(BaseRawIO):
                 # channel location
                 if 'channel_location' in info:
                     self._channel_location[info['seg_index'], info['device']] = \
-                                                                                                    info['channel_location']
+                                                                info['channel_location']
 
                 # the channel id is a global counter and so equivalent to channel_index
                 # this is bad and should rather be changed to a string based id
                 global_chan += 1
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        self._global_channel_to_local_channel = np.array(
-                                    self._global_channel_to_local_channel, dtype='int64')
+        self._global_channel_to_local_channel = np.array(self._global_channel_to_local_channel,
+                                                                             dtype='int64')
 
         # No events
         event_channels = []
@@ -223,11 +225,12 @@ def scan_files(dirname):
             # Example file name structure:
             # Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
             # The filenames consist of 3 or 4 parts separated by `.`
-            # `name` corresponds to everything before first dot, here `Noise4Sam_g0_t0`
-            # `seg_index` corresponds to X in `gtX`, here 0
-            # `device` corresponds to the second part of the filename, here `nidq` or `imec0`
-            # `signal_kind` corresponds to the optional third part of the filename, here `lf`. Valid values for `signal_kind` are `lf` and `ap`.
-            # `stream_name` is the concatenation of `device.signal_kind`
+            #   * "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user
+            #      at recording time.
+            #   * "_gt0_" will give the `seg_index` (here 0)
+            #   * "nidq" or "imec0" will give the `device` variable
+            #   * "lf" or "ap" will be the `signal_kind` variable
+            # `stream_name` variable is the concatenation of `device.signal_kind`
             name = file.split('.')[0]
             r = re.findall(r'_g(\d*)_t', name)
             seg_index = int(r[0][0])
