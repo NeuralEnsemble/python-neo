@@ -16,7 +16,7 @@ Contrary to other implementations this IO reads the entire folder and subfolder 
   * For imec device both "ap" and "lf" are extracted so one device have several "streams"
 
 Note:
-  * there are several versions depending the neuropixel probe generation (`1.0`/`2.0`/`3.0`)
+  * there are several versions depending the neuropixel probe generation (`1.x`/`2.x`/`3.x`)
     Here, we assume that the `meta` file has the same structure across all generations.
     This need so be checked.
     This IO is developed based on neuropixel generation 2.0, single shank recordings.
@@ -194,6 +194,8 @@ class SpikeGLXRawIO(BaseRawIO):
         return raw_signals
 
     def get_channel_location(self, seg_index=0, device=None, x_pitch=21, y_pitch=20):
+        # x_pitch=21, y_pitch=2 are taken from spikeinterface implementation.
+        # This need to be check.
         if device is None:
             if len(self._channel_location) == 1:
                 locations = list(self._channel_location.values())[0]
@@ -265,6 +267,7 @@ def scan_files(dirname):
                 per_channel_gain = np.ones(num_chan, dtype='float64')
                 per_channel_gain[0:mn] = float(meta['niMNGain'])
                 per_channel_gain[mn:mn + ma] = float(meta['niMAGain'])
+                # this scaling come from the code of SpikeGLX#offline-analysis-tools
                 gain_factor = float(meta['niAiRangeMax']) / 32768
                 channel_gains = per_channel_gain * gain_factor
 
