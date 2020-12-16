@@ -65,7 +65,7 @@ class SpikeGLXRawIO(BaseRawIO):
     def _parse_header(self):
         self.signals_info_list = scan_files(self.dirname)
 
-        # sort stream_name by hiher sampling rate first
+        # sort stream_name by higher sampling rate first
         srates = {info['stream_name']: info['sampling_rate'] for info in self.signals_info_list}
         stream_names = sorted(list(srates.keys()), key=lambda e: srates[e])[::-1]
 
