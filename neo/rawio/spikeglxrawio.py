@@ -195,6 +195,8 @@ class SpikeGLXRawIO(BaseRawIO):
 
     def get_channel_location(self, seg_index=0, device=None, x_pitch=21, y_pitch=20):
         # x_pitch=21, y_pitch=2 are taken from spikeinterface implementation.
+        # See also  `_parse_spikeglx_metafile` in spikeglxrecordingextractor.py
+        # in https://github.com/SpikeInterface/spikeextractors
         # This need to be check.
         if device is None:
             if len(self._channel_location) == 1:
