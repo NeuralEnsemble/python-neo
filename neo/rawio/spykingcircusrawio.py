@@ -120,7 +120,7 @@ class SpykingCircusRawIO(BaseRawIO):
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
 
-        self.duration = f_results['info']['duration'][0]
+        self._duration = f_results['info']['duration'][0]
         self._generate_minimal_annotations()
 
 
@@ -128,7 +128,7 @@ class SpykingCircusRawIO(BaseRawIO):
         return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
-        return self.duration
+        return self._duration
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
         return None
