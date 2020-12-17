@@ -49,6 +49,7 @@ Classes:
 * :attr:`RawMCSIO`
 * :attr:`Spike2IO`
 * :attr:`SpikeGLXIO`
+* :attr:`SpykingCircusIO`
 * :attr:`StimfitIO`
 * :attr:`TdtIO`
 * :attr:`TiffIO`
@@ -200,6 +201,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+. autoclass:: SpykingCircusIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.StimfitIO
 
     .. autoattribute:: extensions
@@ -279,11 +284,13 @@ from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
 from neo.io.spikeglxio import SpikeGLXIO
+from neo.io.spykingcircusio import SpykingCircusIO
 from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
 from neo.io.tiffio import TiffIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
+
 
 iolist = [
     AlphaOmegaIO,
@@ -323,6 +330,7 @@ iolist = [
     RawMCSIO,
     Spike2IO,
     SpikeGLXIO,
+    SpykingCircusIO,
     StimfitIO,
     TdtIO,
     TiffIO,
