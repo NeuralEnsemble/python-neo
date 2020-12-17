@@ -15,7 +15,7 @@ class TridesclousRawIO(BaseRawIO):
 
     """
     extensions = []
-    rawmode = 'one-folder'
+    rawmode = 'one-dir'
 
     def __init__(self, dirname='', chan_grp=None):
         BaseRawIO.__init__(self)

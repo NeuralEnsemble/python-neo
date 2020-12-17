@@ -11,14 +11,16 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 class TestTrisdesclousRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = TridesclousRawIO
     files_to_download = [
-        'Noise4Sam_g0/Noise4Sam_g0_t0.nidq.bin',
-        'Noise4Sam_g0/Noise4Sam_g0_t0.nidq.meta',
-        'Noise4Sam_g0/Noise4Sam_g0_imec0/Noise4Sam_g0_t0.imec0.ap.bin',
-        'Noise4Sam_g0/Noise4Sam_g0_imec0/Noise4Sam_g0_t0.imec0.ap.meta',
-        'Noise4Sam_g0/Noise4Sam_g0_imec0/Noise4Sam_g0_t0.imec0.lf.bin',
-        'Noise4Sam_g0/Noise4Sam_g0_imec0/Noise4Sam_g0_t0.imec0.lf.meta'
+        'tdc_example0/info.json',
+        'tdc_example0/probe.prb',
+        'tdc_example0/channel_group_0/segment_0/arrays.json',
+        'tdc_example0/channel_group_0/segment_0/spikes.raw',
+        'tdc_example0/channel_group_0/catalogues/initial/arrays.json',
+        'tdc_example0/channel_group_0/catalogues/initial/arrays.json',
+        'tdc_example0/channel_group_0/catalogues/initial/catalogue.pickle',
+        'tdc_example0/channel_group_0/catalogues/initial/arrays.json',
     ]
-    entities_to_test = ['Noise4Sam_g0']
+    entities_to_test = ['tdc_example0']
 
 
 if __name__ == "__main__":
