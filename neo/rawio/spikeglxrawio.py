@@ -269,7 +269,10 @@ def scan_files(dirname):
                 per_channel_gain = np.ones(num_chan, dtype='float64')
                 per_channel_gain[0:mn] = float(meta['niMNGain'])
                 per_channel_gain[mn:mn + ma] = float(meta['niMAGain'])
-                # this scaling come from the code of SpikeGLX#offline-analysis-tools
+                # this scaling come from the code in this zip
+                # https://billkarsh.github.io/SpikeGLX/Support/SpikeGLX_Datafile_Tools.zip
+                # in file readSGLX.py line76
+                # this is equivalent of 2**15
                 gain_factor = float(meta['niAiRangeMax']) / 32768
                 channel_gains = per_channel_gain * gain_factor
 
