@@ -51,6 +51,7 @@ Classes:
 * :attr:`SpikeGLXIO`
 * :attr:`StimfitIO`
 * :attr:`TdtIO`
+* :attr:`TridesclousIO`
 * :attr:`TiffIO`
 * :attr:`WinEdrIO`
 * :attr:`WinWcpIO`
@@ -208,6 +209,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.TridesclousIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.TiffIO
 
     .. autoattribute:: extensions
@@ -282,6 +287,7 @@ from neo.io.spikeglxio import SpikeGLXIO
 from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
 from neo.io.tiffio import TiffIO
+from neo.io.tridesclousio import TridesclousIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
 
@@ -326,6 +332,7 @@ iolist = [
     StimfitIO,
     TdtIO,
     TiffIO,
+    TridesclousIO,
     WinEdrIO,
     WinWcpIO
 ]

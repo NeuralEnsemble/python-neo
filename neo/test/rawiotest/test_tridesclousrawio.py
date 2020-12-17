@@ -8,7 +8,7 @@ from neo.rawio.tridesclousrawio import TridesclousRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
-class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
+class TestTrisdesclousRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = TridesclousRawIO
     files_to_download = [
         'Noise4Sam_g0/Noise4Sam_g0_t0.nidq.bin',

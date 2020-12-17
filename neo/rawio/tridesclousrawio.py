@@ -10,14 +10,6 @@ import numpy as np
 
 from pathlib import Path
 
-try:
-    import tridesclous as tdc
-    HAVE_TDC = True
-except ImportError:
-    HAVE_TDC = False
-
-
-
 class TridesclousRawIO(BaseRawIO):
     """
 
@@ -34,29 +26,40 @@ class TridesclousRawIO(BaseRawIO):
         return self.dirname
 
     def _parse_header(self):
-        assert HAVE_TDC, 'Not installed'
-        tdc_folder = Path(folder_path)
+        try:
+            import tridesclous as tdc
+        except ImportError:
+            print('tridesclous is not installed')
         
-        dataio = tdc.DataIO(str(self.dirname))
-        chan_group = self.chan_grp
+        tdc_folder = Path(self.dirname)
+        
+        tdc_dataio = tdc.DataIO(str(self.dirname))
+        chan_grp = self.chan_grp
         if chan_grp is None:
             # if chan_grp is not provided, take the first one if unique
-            chan_grps = list(dataio.channel_groups.keys())
+            chan_grps = list(tdc_dataio.channel_groups.keys())
             assert len(chan_grps) == 1, 'There are several groups in the folder, specify chan_grp=...'
             chan_grp = chan_grps[0]
 
-        self._sampling_rate = dataio.get_sample_rate()
-        catalogue = dataio.load_catalogue(name='initial', chan_grp=chan_grp)
+        self._sampling_rate =  float(tdc_dataio.sample_rate)
+        catalogue = tdc_dataio.load_catalogue(name='initial', chan_grp=chan_grp)
         
         labels = catalogue['clusters']['cluster_label']
         labels = labels[labels >= 0]
         self.unit_labels = labels
         
-        self._all_spikes = dataio.get_spikes(seg_num=0, chan_grp=self.chan_grp, i_start=None, i_stop=None).copy()
-    
-        self._sampling_frequency = dataio.sample_rate
-        self._kwargs = {'folder_path': str(Path(folder_path).absolute()), 'chan_grp': chan_grp}
+        nb_segment = tdc_dataio.nb_segment
         
+        self._all_spikes = []
+        for seg_index in range(nb_segment):
+            self._all_spikes.append(tdc_dataio.get_spikes(seg_num=seg_index, chan_grp=chan_grp, i_start=None, i_stop=None).copy())
+        
+        self._sampling_rate = tdc_dataio.sample_rate
+        sr = self._sampling_rate
+        
+        self._t_starts = [0.] * nb_segment
+        self._t_stops = [tdc_dataio.datasource.get_segment_shape(s)[0]/sr
+                                                for s in range(nb_segment)]
         
         sig_channels = []
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -81,7 +84,7 @@ class TridesclousRawIO(BaseRawIO):
         # This is mandatory!!!!!
         self.header = {}
         self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
+        self.header['nb_segment'] = [nb_segment]
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
@@ -89,10 +92,13 @@ class TridesclousRawIO(BaseRawIO):
         self._generate_minimal_annotations()
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.
+        assert block_index == 0
+        return self._t_starts[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
-        pass
+        assert block_index == 0
+        return self._t_stops[seg_index]
+
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
         return None
@@ -104,19 +110,20 @@ class TridesclousRawIO(BaseRawIO):
         return None
 
     def _spike_count(self, block_index, seg_index, unit_index):
+        assert block_index == 0
+        spikes = self._all_spikes[seg_index]
         unit_label = self.unit_labels[unit_index]
-        mask = self._all_spikes['cluster_label'] == unit_label
+        mask = spikes['cluster_label'] == unit_label
         nb_spikes = np.sum(mask)
         return nb_spikes
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         assert block_index == 0
-        assert seg_index == 0
         unit_label = self.unit_labels[unit_index]
-        mask = self._all_spikes['cluster_label'] == unit_label
-        spike_timestamps = self._all_spikes['index'][mask].copy()
+        spikes = self._all_spikes[seg_index]
+        mask = spikes['cluster_label'] == unit_label
+        spike_timestamps = spikes['index'][mask].copy()
 
-        
         if t_start is not None:
             start_frame = int(t_start * self._sampling_rate)
             spike_timestamps = spike_timestamps[spike_timestamps >= start_frame]
@@ -127,10 +134,8 @@ class TridesclousRawIO(BaseRawIO):
         return spike_timestamps
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        # must rescale to second a particular spike_timestamps
-        # with a fixed dtype so the user can choose the precisino he want.
         spike_times = spike_timestamps.astype(dtype)
-        spike_times /= 10000.  # because 10kHz
+        spike_times /= self._sampling_rate
         return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):

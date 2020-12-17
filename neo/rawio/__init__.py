@@ -30,6 +30,7 @@ Classes:
 * :attr:`Spike2RawIO`
 * :attr:`SpikeGLXRawIO`
 * :attr:`TdtRawIO`
+* :attr:`TridesclousRawIO`
 * :attr:`WinEdrRawIO`
 * :attr:`WinWcpRawIO`
 
@@ -106,6 +107,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.TridesclousRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.WinEdrRawIO
 
     .. autoattribute:: extensions
@@ -136,6 +141,7 @@ from neo.rawio.rawmcsrawio import RawMCSRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
 from neo.rawio.spikeglxrawio import SpikeGLXRawIO
 from neo.rawio.tdtrawio import TdtRawIO
+from neo.rawio.tridesclousrawio import TridesclousRawIO
 from neo.rawio.winedrrawio import WinEdrRawIO
 from neo.rawio.winwcprawio import WinWcpRawIO
 
@@ -158,6 +164,7 @@ rawiolist = [
     Spike2RawIO,
     SpikeGLXRawIO,
     TdtRawIO,
+    TridesclousRawIO,
     WinEdrRawIO,
     WinWcpRawIO,
 ]
