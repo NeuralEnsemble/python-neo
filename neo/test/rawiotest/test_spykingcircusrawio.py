@@ -1,5 +1,5 @@
 """
-Tests of neo.rawio.spikeglxrawio
+Tests of neo.rawio.spykingcircusrawio
 """
 
 import unittest
@@ -11,14 +11,11 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 class TestSpykingCircusRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = SpykingCircusRawIO
     files_to_download = [
-        'Noise4Sam_g0/Noise4Sam_g0_t0.nidq.bin',
-        'Noise4Sam_g0/Noise4Sam_g0_t0.nidq.meta',
-        'Noise4Sam_g0/Noise4Sam_g0_imec0/Noise4Sam_g0_t0.imec0.ap.bin',
-        'Noise4Sam_g0/Noise4Sam_g0_imec0/Noise4Sam_g0_t0.imec0.ap.meta',
-        'Noise4Sam_g0/Noise4Sam_g0_imec0/Noise4Sam_g0_t0.imec0.lf.bin',
-        'Noise4Sam_g0/Noise4Sam_g0_imec0/Noise4Sam_g0_t0.imec0.lf.meta'
+        'spykingcircus_example0/recording.params',
+        'spykingcircus_example0/recording/recording.result.hdf5',
+        'spykingcircus_example0/recording/recording.result-merged.hdf5',
     ]
-    entities_to_test = ['Noise4Sam_g0']
+    entities_to_test = ['spykingcircus_example0']
 
 
 if __name__ == "__main__":
