@@ -46,7 +46,7 @@ class SpykingCircusRawIO(BaseRawIO):
     def _parse_header(self):
         assert HAVE_HDF5, self.installation_mes
         spykingcircus_folder = Path(self.dirname)
-        SpykingCircusRawIO.__init__(self, spykingcircus_folder)
+        #SpykingCircusRawIO.__init__(self, spykingcircus_folder)
         listfiles = spykingcircus_folder.iterdir()
         results = None
         sample_rate = None
@@ -89,10 +89,8 @@ class SpykingCircusRawIO(BaseRawIO):
         f_results = h5py.File(results, 'r')
 
         self._all_spikes = []
-        self.unit_labels = []
         for temp in f_results['spiketimes'].keys():
             self._all_spikes.append(np.array(f_results['spiketimes'][temp]).astype('int64'))
-            self.unit_labels.append(int(temp.split('_')[-1]))
 
         self._kwargs = {'folder_path': str(Path(spykingcircus_folder).absolute())}
 
@@ -100,9 +98,9 @@ class SpykingCircusRawIO(BaseRawIO):
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         
         unit_channels = []
-        for unit_index, unit_label in enumerate(self.unit_labels):
-            unit_name = f'unit{unit_index} #{unit_label}'
-            unit_id = f'{unit_label}'
+        for unit_index in range(len(self._all_spikes)):
+            unit_name = f'unit{unit_index} #{unit_index}'
+            unit_id = f'{unit_index}'
             wf_units = ''
             wf_gain = 0
             wf_offset = 0.
@@ -142,16 +140,14 @@ class SpykingCircusRawIO(BaseRawIO):
         return None
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        unit_label = self.unit_labels[unit_index]
-        nb_spikes = np.sum(self._all_spikes[unit_label])
+        nb_spikes = len(self._all_spikes[unit_index])
         return nb_spikes
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         assert block_index == 0
         assert seg_index == 0
 
-        unit_label = self.unit_labels[unit_index]
-        spike_timestamps = self._all_spikes[unit_label].copy()
+        spike_timestamps = self._all_spikes[unit_index].copy()
         
         if t_start is not None:
             start_frame = int(t_start * self._sampling_rate)
