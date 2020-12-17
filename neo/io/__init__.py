@@ -48,6 +48,7 @@ Classes:
 * :attr:`RawBinarySignalIO`
 * :attr:`RawMCSIO`
 * :attr:`Spike2IO`
+* :attr:`SpikeGLXIO`
 * :attr:`StimfitIO`
 * :attr:`TdtIO`
 * :attr:`TiffIO`
@@ -195,6 +196,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: SpikeGLXIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.StimfitIO
 
     .. autoattribute:: extensions
@@ -273,6 +278,7 @@ from neo.io.plexonio import PlexonIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
+from neo.io.spikeglxio import SpikeGLXIO
 from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
 from neo.io.tiffio import TiffIO
@@ -316,6 +322,7 @@ iolist = [
     RawBinarySignalIO,
     RawMCSIO,
     Spike2IO,
+    SpikeGLXIO,
     StimfitIO,
     TdtIO,
     TiffIO,
