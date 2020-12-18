@@ -156,13 +156,10 @@ class MEArecRawIO(BaseRawIO):
         return None
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        return np.array([]), np.array([]), np.array([])
+        return None
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        event_times = event_timestamps.astype(dtype)
-        return event_times
+        return None
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
-        # really easy here because in our case it is already seconds
-        durations = raw_duration.astype(dtype)
-        return durations
+        return None
