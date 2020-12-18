@@ -38,14 +38,9 @@ class MEArecRawIO(BaseRawIO):
 
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
-        # note that this filename is ued in self._source_name
         self.filename = filename
 
     def _source_name(self):
-        # this function is used by __repr__
-        # for general cases self.filename is good
-        # But for URL you could mask some part of the URL to keep
-        # the main part.
         return self.filename
 
     def _parse_header(self):
