@@ -123,8 +123,6 @@ class PhyRawIO(BaseRawIO):
         if (phy_folder / 'params.py').is_file():
             with (phy_folder / 'params.py').open('r') as f:
                 contents = f.read()
-            contents = re.sub(r'range\(([\d,]*)\)', r'list(range(\1))',
-                              contents)
             metadata = dict()
             contents = contents.replace('\n', ' ')
             pattern = re.compile(r'(\S*)[\s]?=[\s]?(\S*)')
