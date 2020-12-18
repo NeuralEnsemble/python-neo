@@ -156,7 +156,7 @@ class MEArecRawIO(BaseRawIO):
         return None
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        return np.array([]), np.array([]), np.array([])
+        return None
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         return None
