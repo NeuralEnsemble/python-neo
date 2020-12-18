@@ -15,6 +15,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
 import numpy as np
 from copy import deepcopy
 
+
 class MEArecRawIO(BaseRawIO):
     """
     Class for "reading" fake data from a MEArec file.
@@ -54,7 +55,8 @@ class MEArecRawIO(BaseRawIO):
         except ImportError:
             HAVE_MEAREC = False
         assert HAVE_MEAREC, 'MEArec is not installed'
-        self._recgen = mr.load_recordings(recordings=self.filename, return_h5_objects=True, check_suffix=False,
+        self._recgen = mr.load_recordings(recordings=self.filename, return_h5_objects=True,
+                                          check_suffix=False,
                                           load=['recordings', 'spiketrains', 'channel_positions'],
                                           load_waveforms=False)
         self._sampling_rate = self._recgen.info['recordings']['fs']
@@ -92,8 +94,6 @@ class MEArecRawIO(BaseRawIO):
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        # fille into header dict
-        # This is mandatory!!!!!
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
