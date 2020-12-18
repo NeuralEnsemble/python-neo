@@ -55,26 +55,7 @@ import ast
 
 class PhyRawIO(BaseRawIO):
     """
-    Class for "reading" fake data from an imaginary file.
-
-    For the user, it gives access to raw data (signals, event, spikes) as they
-    are in the (fake) file int16 and int64.
-
-    For a developer, it is just an example showing guidelines for someone who wants
-    to develop a new IO module.
-
-    Two rules for developers:
-      * Respect the :ref:`neo_rawio_API`
-      * Follow the :ref:`io_guiline`
-
-    This fake IO:
-        * has 2 blocks
-        * blocks have 2 and 3 segments
-        * has 16 signal_channels sample_rate = 10000
-        * has 3 unit_channels
-        * has 2 event channels: one has *type=event*, the other has
-          *type=epoch*
-
+    Class for reading Phy data.
 
     Usage:
         >>> import neo.rawio
@@ -87,7 +68,7 @@ class PhyRawIO(BaseRawIO):
 
     """
     extensions = []
-    rawmode = 'one-folder'
+    rawmode = 'one-dir'
 
     def __init__(self, dirname=''):
         BaseRawIO.__init__(self)
@@ -134,6 +115,9 @@ class PhyRawIO(BaseRawIO):
 
         clust_ids = np.unique(self._spike_clusters)
         self.unit_labels = list(clust_ids)
+
+        self._t_start = 0.
+        self._t_stop = max(self._spike_times) / self._sampling_frequency
 
         sig_channels = []
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -197,10 +181,12 @@ class PhyRawIO(BaseRawIO):
                                 break
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.
+        assert block_index == 0
+        return self._t_start
 
     def _segment_t_stop(self, block_index, seg_index):
-        pass
+        assert block_index == 0
+        return self._t_stop
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
         return None
@@ -212,7 +198,11 @@ class PhyRawIO(BaseRawIO):
         return None
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        nb_spikes = len(self._spike_times)
+        assert block_index == 0
+        spikes = self._spike_clusters
+        unit_label = self.unit_labels[unit_index]
+        mask = spikes == unit_label
+        nb_spikes = np.sum(mask)
         return nb_spikes
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
