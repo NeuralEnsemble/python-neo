@@ -117,7 +117,7 @@ class PhyRawIO(BaseRawIO):
         self.unit_labels = list(clust_ids)
 
         self._t_start = 0.
-        self._t_stop = max(self._spike_times) / self._sampling_frequency
+        self._t_stop = max(self._spike_times).item() / self._sampling_frequency
 
         sig_channels = []
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
