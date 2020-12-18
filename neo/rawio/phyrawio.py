@@ -50,6 +50,7 @@ import numpy as np
 from pathlib import Path
 import re
 import csv
+import ast
 
 
 class PhyRawIO(BaseRawIO):
@@ -117,17 +118,19 @@ class PhyRawIO(BaseRawIO):
         # else:
         #     pc_features = None
 
-        # This is taken from https://github.com/SpikeInterface/spikeextractors/
-        # blob/f20b1219eba9d3330d5d7cd7ce8d8924a255b8c2/spikeextractors/
-        # extraction_tools.py
+        # SEE: https://stackoverflow.com/questions/4388626/
+        #  python-safe-eval-string-to-bool-int-float-none-string
         if (phy_folder / 'params.py').is_file():
             with (phy_folder / 'params.py').open('r') as f:
                 contents = f.read()
             contents = re.sub(r'range\(([\d,]*)\)', r'list(range(\1))',
                               contents)
-            metadata = {}
-            exec(contents, {}, metadata)
-            metadata = {k.lower(): v for (k, v) in metadata.items()}
+            metadata = dict()
+            contents = contents.replace('\n', ' ')
+            pattern = re.compile(r'(\S*)[\s]?=[\s]?(\S*)')
+            elements = pattern.findall(contents)
+            for key, value in elements:
+                metadata[key.lower()] = ast.literal_eval(value)
 
         self._sampling_frequency = metadata['sample_rate']
 
