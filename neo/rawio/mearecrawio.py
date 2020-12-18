@@ -159,8 +159,7 @@ class MEArecRawIO(BaseRawIO):
         return np.array([]), np.array([]), np.array([])
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        event_times = event_timestamps.astype(dtype)
-        return event_times
+        return None
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
         return None
