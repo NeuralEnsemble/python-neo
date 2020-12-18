@@ -163,6 +163,4 @@ class MEArecRawIO(BaseRawIO):
         return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
-        # really easy here because in our case it is already seconds
-        durations = raw_duration.astype(dtype)
-        return durations
+        return None
