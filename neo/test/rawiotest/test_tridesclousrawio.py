@@ -15,10 +15,10 @@ class TestTrisdesclousRawIO(BaseTestRawIO, unittest.TestCase):
         'tdc_example0/probe.prb',
         'tdc_example0/channel_group_0/segment_0/arrays.json',
         'tdc_example0/channel_group_0/segment_0/spikes.raw',
-        'tdc_example0/channel_group_0/catalogues/initial/arrays.json',
+        'tdc_example0/channel_group_0/segment_0/processed_signals.raw',
         'tdc_example0/channel_group_0/catalogues/initial/arrays.json',
         'tdc_example0/channel_group_0/catalogues/initial/catalogue.pickle',
-        'tdc_example0/channel_group_0/catalogues/initial/arrays.json',
+        'tdc_example0/channel_group_0/catalogues/initial/clusters.raw',
     ]
     entities_to_test = ['tdc_example0']
 
