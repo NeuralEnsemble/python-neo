@@ -5,42 +5,7 @@ https://github.com/SpikeInterface/spikeextractors/blob/
 f20b1219eba9d3330d5d7cd7ce8d8924a255b8c2/spikeextractors/
 extractors/phyextractors/phyextractors.py
 
-ExampleRawIO is a class of a  fake example.
-This is to be used when coding a new RawIO.
-
-
-Rules for creating a new class:
-  1. Step 1: Create the main class
-    * Create a file in **neo/rawio/** that endith with "rawio.py"
-    * Create the class that inherits BaseRawIO
-    * copy/paste all methods that need to be implemented.
-      See the end a neo.rawio.baserawio.BaseRawIO
-    * code hard! The main difficulty **is _parse_header()**.
-      In short you have a create a mandatory dict than
-      contains channel informations::
-
-            self.header = {}
-            self.header['nb_block'] = 2
-            self.header['nb_segment'] = [2, 3]
-            self.header['signal_channels'] = sig_channels
-            self.header['unit_channels'] = unit_channels
-            self.header['event_channels'] = event_channels
-
-  2. Step 2: RawIO test:
-    * create a file in neo/rawio/tests with the same name with "test_" prefix
-    * copy paste neo/rawio/tests/test_examplerawio.py and do the same
-
-  3. Step 3 : Create the neo.io class with the wrapper
-    * Create a file in neo/io/ that ends with "io.py"
-    * Create a class that inherits both your RawIO class and BaseFromRaw class
-    * copy/paste from neo/io/exampleio.py
-
-  4.Step 4 : IO test
-    * create a file in neo/test/iotest with the same previous name with "test_" prefix
-    * copy/paste from neo/test/iotest/test_exampleio.py
-
-
-
+Author: Regimantas Jurkus
 """
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
@@ -163,21 +128,23 @@ class PhyRawIO(BaseRawIO):
             for seg_index in range([1][block_index]):
                 seg_ann = bl_ann['segments'][seg_index]
                 seg_ann['name'] = f'Seg #{seg_index} Block #{block_index}'
-                seg_ann['seg_extra_info'] = f'This is the seg {seg_index} of ' \
-                                            f'block {block_index}'
+                seg_ann['seg_extra_info'] = f'This is the seg {seg_index} ' \
+                                            f'of block {block_index}'
                 for index, clust_id in enumerate(clust_ids):
                     spiketrain_an = seg_ann['units'][index]
 
                     # Loop over list of list of dict and annotate each st
                     for annotation_list in annotation_lists:
-                        clust_key, property_name = tuple(annotation_list[0].keys())
+                        clust_key, property_name = tuple(annotation_list[0].
+                                                         keys())
                         if property_name == 'KSLabel':
                             annotation_name = 'quality'
                         else:
                             annotation_name = property_name.lower()
                         for annotation_dict in annotation_list:
                             if int(annotation_dict[clust_key]) == clust_id:
-                                spiketrain_an[annotation_name] = annotation_dict[property_name]
+                                spiketrain_an[annotation_name] = \
+                                    annotation_dict[property_name]
                                 break
 
     def _segment_t_start(self, block_index, seg_index):
@@ -194,7 +161,8 @@ class PhyRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return None
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                channel_indexes):
         return None
 
     def _spike_count(self, block_index, seg_index, unit_index):
@@ -205,7 +173,8 @@ class PhyRawIO(BaseRawIO):
         nb_spikes = np.sum(mask)
         return nb_spikes
 
-    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index,
+                              t_start, t_stop):
         assert block_index == 0
         assert seg_index == 0
 
@@ -215,7 +184,8 @@ class PhyRawIO(BaseRawIO):
 
         if t_start is not None:
             start_frame = int(t_start * self._sampling_frequency)
-            spike_timestamps = spike_timestamps[spike_timestamps >= start_frame]
+            spike_timestamps = spike_timestamps[spike_timestamps >=
+                                                start_frame]
         if t_stop is not None:
             end_frame = int(t_stop * self._sampling_frequency)
             spike_timestamps = spike_timestamps[spike_timestamps < end_frame]
@@ -227,13 +197,15 @@ class PhyRawIO(BaseRawIO):
         spike_times /= self._sampling_frequency
         return spike_times
 
-    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
+                                 t_start, t_stop):
         return None
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         return None
 
-    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index,
+                              event_channel_index, t_start, t_stop):
         return None
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
@@ -256,4 +228,3 @@ class PhyRawIO(BaseRawIO):
                 list_of_dict.append(row)
 
         return list_of_dict
-
