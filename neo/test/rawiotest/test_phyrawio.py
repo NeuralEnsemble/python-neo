@@ -1,24 +1,7 @@
 """
-Tests of neo.rawio.examplerawio
+Tests of neo.rawio.phyrawio
 
-Note for dev:
-if you write a new RawIO class your need to put some file
-to be tested at g-node portal, Ask neuralensemble list for that.
-The file need to be small.
-
-Then you have to copy/paste/renamed the TestExampleRawIO
-class and a full test will be done to test if the new coded IO
-is compliant with the RawIO API.
-
-If you have problems, do not hesitate to ask help github (prefered)
-of neuralensemble list.
-
-Note that same mechanism is used a neo.io API so files are tested
-several time with neo.rawio (numpy buffer) and neo.io (neo object tree).
-See neo.test.iotest.*
-
-
-Author: Samuel Garcia
+Author: Regimantas Jurkus
 
 """
 
@@ -27,6 +10,12 @@ import unittest
 from neo.rawio.phyrawio import PhyRawIO
 
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
+
+import csv
+import tempfile
+from pathlib import Path
+from collections import OrderedDict
+import sys
 
 
 class TestPhyRawIO(BaseTestRawIO, unittest.TestCase):
@@ -42,6 +31,57 @@ class TestPhyRawIO(BaseTestRawIO, unittest.TestCase):
         'phy_example_0/cluster_group.tsv',
     ]
     entities_to_test = ['phy_example_0']
+
+    def test_csv_tsv_parser_with_csv(self):
+        csv_tempfile = Path(tempfile.gettempdir()).joinpath('test.csv')
+        with open(csv_tempfile, 'w') as csv_file:
+            csv_writer = csv.writer(csv_file, delimiter=',')
+            csv_writer.writerow(['Header 1', 'Header 2'])
+            csv_writer.writerow(['Value 1', 'Value 2'])
+
+        # the parser in PhyRawIO runs csv.DictReader to parse the file
+        # csv.DictReader for python version 3.6+ returns list of OrderedDict
+        if (3, 6) <= sys.version_info < (3, 8):
+            target = [OrderedDict({'Header 1': 'Value 1',
+                                   'Header 2': 'Value 2'})]
+
+        # csv.DictReader for python version 3.8+ returns list of dict
+        elif sys.version_info >= (3, 8):
+            target = [{'Header 1': 'Value 1', 'Header 2': 'Value 2'}]
+
+        list_of_dict = PhyRawIO._parse_tsv_or_csv_to_list_of_dict(csv_tempfile)
+
+        self.assertEqual(target, list_of_dict)
+
+    def test_csv_tsv_parser_with_tsv(self):
+        tsv_tempfile = Path(tempfile.gettempdir()).joinpath('test.tsv')
+        with open(tsv_tempfile, 'w') as tsv_file:
+            tsv_writer = csv.writer(tsv_file, delimiter='\t')
+            tsv_writer.writerow(['Header 1', 'Header 2'])
+            tsv_writer.writerow(['Value 1', 'Value 2'])
+
+        # the parser in PhyRawIO runs csv.DictReader to parse the file
+        # csv.DictReader for python version 3.6+ returns list of OrderedDict
+        if (3, 6) <= sys.version_info < (3, 8):
+            target = [OrderedDict({'Header 1': 'Value 1',
+                                   'Header 2': 'Value 2'})]
+
+        # csv.DictReader for python version 3.8+ returns list of dict
+        elif sys.version_info >= (3, 8):
+            target = [{'Header 1': 'Value 1', 'Header 2': 'Value 2'}]
+
+        list_of_dict = PhyRawIO._parse_tsv_or_csv_to_list_of_dict(tsv_tempfile)
+
+        self.assertEqual(target, list_of_dict)
+
+    def test_csv_tsv_parser_error_raising(self):
+        txt_tempfile = Path(tempfile.gettempdir()).joinpath('test.txt')
+        with open(txt_tempfile, 'w') as txt_file:
+            txt_file.write('This is a test')
+
+        self.assertRaises(ValueError,
+                          PhyRawIO._parse_tsv_or_csv_to_list_of_dict,
+                          txt_tempfile)
 
 
 if __name__ == "__main__":
