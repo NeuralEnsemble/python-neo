@@ -1,5 +1,5 @@
 """
-Tests of neo.io.exampleio
+Tests of neo.io.phyio
 """
 
 import unittest
@@ -15,8 +15,6 @@ import numpy as np
 
 import tempfile
 from pathlib import Path
-
-# This run standart tests, this is mandatory for all IO
 
 
 class TestPhyIO(BaseTestIO, unittest.TestCase):
