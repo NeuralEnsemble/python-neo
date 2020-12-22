@@ -1,6 +1,3 @@
-"""
-"""
-
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.phyrawio import PhyRawIO
 
