@@ -121,31 +121,26 @@ class PhyRawIO(BaseRawIO):
         annotation_lists = [self._parse_tsv_or_csv_to_list_of_dict(file)
                             for file in csv_tsv_files]
 
-        for block_index in range(1):
-            bl_ann = self.raw_annotations['blocks'][block_index]
-            bl_ann['name'] = f'Block #{block_index}'
-            bl_ann['block_extra_info'] = f'This is the block {block_index}'
-            for seg_index in range([1][block_index]):
-                seg_ann = bl_ann['segments'][seg_index]
-                seg_ann['name'] = f'Seg #{seg_index} Block #{block_index}'
-                seg_ann['seg_extra_info'] = f'This is the seg {seg_index} ' \
-                                            f'of block {block_index}'
-                for index, clust_id in enumerate(clust_ids):
-                    spiketrain_an = seg_ann['units'][index]
+        bl_ann = self.raw_annotations['blocks'][0]
+        bl_ann['name'] = "Block #0"
+        seg_ann = bl_ann['segments'][0]
+        seg_ann['name'] = 'Seg #0 Block #0'
+        for index, clust_id in enumerate(clust_ids):
+            spiketrain_an = seg_ann['units'][index]
 
-                    # Loop over list of list of dict and annotate each st
-                    for annotation_list in annotation_lists:
-                        clust_key, property_name = tuple(annotation_list[0].
-                                                         keys())
-                        if property_name == 'KSLabel':
-                            annotation_name = 'quality'
-                        else:
-                            annotation_name = property_name.lower()
-                        for annotation_dict in annotation_list:
-                            if int(annotation_dict[clust_key]) == clust_id:
-                                spiketrain_an[annotation_name] = \
-                                    annotation_dict[property_name]
-                                break
+            # Loop over list of list of dict and annotate each st
+            for annotation_list in annotation_lists:
+                clust_key, property_name = tuple(annotation_list[0].
+                                                 keys())
+                if property_name == 'KSLabel':
+                    annotation_name = 'quality'
+                else:
+                    annotation_name = property_name.lower()
+                for annotation_dict in annotation_list:
+                    if int(annotation_dict[clust_key]) == clust_id:
+                        spiketrain_an[annotation_name] = \
+                            annotation_dict[property_name]
+                        break
 
     def _segment_t_start(self, block_index, seg_index):
         assert block_index == 0
