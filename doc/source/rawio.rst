@@ -118,6 +118,10 @@ By index is unambiguous 0 to n-1 (included), whereas for some IOs channel_names
 (and sometimes channel_ids) have no guarantees to
 be unique. In such cases, using names or ids may raise an error.
 
+A selected subset of channels which is passed to get_analog_signal_chunk, get_analog_signal_size,
+or get_analog_signal_t_start has the additional restriction that all such channels must have
+the same t_start and signal_size.
+
 Example with BlackrockRawIO for the file FileSpec2.3001::
 
     >>> raw_sigs = reader.get_analogsignal_chunk(channel_indexes=None) #Take all channels
