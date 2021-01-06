@@ -654,12 +654,32 @@ class BaseRawIO:
     ###
     # signal and channel zone
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        """
+        Return the size of a set of AnalogSignals indexed by channel_indexes.
+
+        All channels indexed must have the same size and t_start.
+        """
         raise (NotImplementedError)
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        """
+        Return the t_start of a set of AnalogSignals indexed by channel_indexes.
+
+        All channels indexed must have the same size and t_start.
+        """
         raise (NotImplementedError)
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+        """
+        Return the samples from a set of AnalogSignals indexed by channel_indexes.
+
+        All channels indexed must have the same size and t_start.
+
+        RETURNS
+        -------
+            array of samples, with each requested channel in a column
+        """
+
         raise (NotImplementedError)
 
     ###
