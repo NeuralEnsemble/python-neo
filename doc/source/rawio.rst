@@ -122,6 +122,10 @@ A selected subset of channels which is passed to get_analog_signal_chunk, get_an
 or get_analog_signal_t_start has the additional restriction that all such channels must have
 the same t_start and signal_size.
 
+Such subsets of channels may be available in specific RawIOs by using the
+get_group_signal_channel_indexes method, if the RawIO has defined separate
+group_ids for each group with those common characteristics.
+
 Example with BlackrockRawIO for the file FileSpec2.3001::
 
     >>> raw_sigs = reader.get_analogsignal_chunk(channel_indexes=None) #Take all channels
