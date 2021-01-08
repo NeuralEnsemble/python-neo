@@ -31,15 +31,9 @@ class TestPhyIO(BaseTestIO, unittest.TestCase):
         'phy_example_0/cluster_group.tsv'
     ]
 
-
-class SpecificTestPhyIO(unittest.TestCase):
-    def setUp(self):
-        temp_directory = Path(tempfile.gettempdir())
-        self.temp_folder = temp_directory.joinpath(
-            'files_for_testing_neo/phy/phy_example_0')
-
     def test_read_segment_lazy(self):
-        r = PhyIO(dirname=self.temp_folder)
+        dirname = self.get_filename_path('phy_example_0')
+        r = PhyIO(dirname=dirname)
         seg = r.read_segment(lazy=True)
         for ana in seg.analogsignals:
             assert isinstance(ana, AnalogSignalProxy)
@@ -59,7 +53,6 @@ class SpecificTestPhyIO(unittest.TestCase):
             self.assertNotEqual(st.size, 0)
 
         # annotations
-        assert 'seg_extra_info' in seg.annotations
         assert seg.name == 'Seg #0 Block #0'
         for anasig in seg.analogsignals:
             assert anasig.name is not None
@@ -71,11 +64,13 @@ class SpecificTestPhyIO(unittest.TestCase):
             assert ep.name is not None
 
     def test_read_block(self):
-        r = PhyIO(dirname=self.temp_folder)
+        dirname = self.get_filename_path('phy_example_0')
+        r = PhyIO(dirname=dirname)
         bl = r.read_block(lazy=True)
 
     def test_read_segment_with_time_slice(self):
-        r = PhyIO(dirname=self.temp_folder)
+        dirname = self.get_filename_path('phy_example_0')
+        r = PhyIO(dirname=dirname)
         seg = r.read_segment(time_slice=None)
         spikes_full = seg.spiketrains[0]
 
