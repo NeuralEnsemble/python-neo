@@ -8,6 +8,8 @@ import tempfile
 
 from urllib.request import urlopen
 
+logger = logging.getLogger("neo.test")
+
 
 def can_use_network():
     """
@@ -57,7 +59,7 @@ def download_test_file(filename, localdir, url):
     distantfile = url + '/' + filename
 
     if not os.path.exists(localfile):
-        logging.info('Downloading %s here %s', distantfile, localfile)
+        logger.info('Downloading %s here %s', distantfile, localfile)
         dist = urlopen(distantfile)
         with open(localfile, 'wb') as f:
             f.write(dist.read())

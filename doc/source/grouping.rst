@@ -111,7 +111,7 @@ Each :class:`ChannelIndex` also contains the list of channels on which that neur
     block.channel_indexes.extend((chx0, chx1))
 
 
-Using :class:`ChannelView` and :class`Group`::
+Using :class:`ChannelView` and :class:`Group`::
 
     import numpy as np
     from quantities import ms, mV, kHz
@@ -136,7 +136,7 @@ Using :class:`ChannelView` and :class`Group`::
     # assign each spiketrain to a neuron (now using Group)
     units = []
     for i, spiketrain in enumerate(spiketrains):
-        unit = Group(spiketrain, name=f"Neuron #{i + 1}")
+        unit = Group([spiketrain], name=f"Neuron #{i + 1}")
         units.append(unit)
 
     # create a ChannelView of the signal for each unit, to show which channels the spikes come from
