@@ -31,13 +31,21 @@ class ElanRawIO(BaseRawIO):
     extensions = ['eeg']
     rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename='', entfile='', posfile=''):
         BaseRawIO.__init__(self)
         self.filename = filename
 
+        # check whether ent and pos files are defined
+        if not entfile:
+            entfile = self.filename + '.ent'
+        if not posfile:
+            posfile = self.filename + '.pos'
+        self.entfile = entfile
+        self.posfile = posfile
+
     def _parse_header(self):
 
-        with open(self.filename + '.ent', mode='rt', encoding='ascii', newline=None) as f:
+        with open(self.entfile, mode='rt', encoding='ascii', newline=None) as f:
 
             # version
             version = f.readline()[:-1]
@@ -139,12 +147,12 @@ class ElanRawIO(BaseRawIO):
         self._raw_signals = self._raw_signals[:, :-2]
 
         # triggers
-        with open(self.filename + '.pos', mode='rt', encoding='ascii', newline=None) as f:
+        with open(self.posfile, mode='rt', encoding='ascii', newline=None) as f:
             self._raw_event_timestamps = []
             self._event_labels = []
             self._reject_codes = []
             for l in f.readlines():
-                r = re.findall(r' *(\d+) *(\d+) *(\d+) *', l)
+                r = re.findall(r' *(\d+)\s* *(\d+)\s* *(\d+) *', l)
                 self._raw_event_timestamps.append(int(r[0][0]))
                 self._event_labels.append(str(r[0][1]))
                 self._reject_codes.append(str(r[0][2]))
