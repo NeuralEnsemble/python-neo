@@ -36,9 +36,9 @@ class ElanRawIO(BaseRawIO):
         self.filename = filename
 
         # check whether ent and pos files are defined
-        if not entfile:
+        if entfile is None:
             entfile = self.filename + '.ent'
-        if not posfile:
+        if posfile is None:
             posfile = self.filename + '.pos'
         self.entfile = entfile
         self.posfile = posfile
