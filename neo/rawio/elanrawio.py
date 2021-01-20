@@ -31,7 +31,7 @@ class ElanRawIO(BaseRawIO):
     extensions = ['eeg']
     rawmode = 'one-file'
 
-    def __init__(self, filename='', entfile='', posfile=''):
+    def __init__(self, filename=None, entfile=None, posfile=None):
         BaseRawIO.__init__(self)
         self.filename = filename
 
