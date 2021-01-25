@@ -473,27 +473,31 @@ def explore_folder(dirname):
                 info['nb_segment'] += 1
 
     # order continuous file by channel number within segment
+    # order "CH before "ADC"
     for seg_index, continuous_filenames in info['continuous'].items():
-        chan_ids = {}
+        chan_ids_by_type = {}
+        filenames_by_type = {}
         for continuous_filename in continuous_filenames:
             s = continuous_filename.replace('.continuous', '').split('_')
             processor_id, ch_name = s[0], s[1]
-            chan_str = re.split(r'(\d+)', s[1])[0]
-            chan_id = int(ch_name.replace(chan_str, ''))
-            if chan_str in chan_ids.keys():
-                chan_ids[chan_str].append(chan_id)
+            chan_type = re.split(r'(\d+)', s[1])[0]
+            chan_id = int(ch_name.replace(chan_type, ''))
+            if chan_type in chan_ids_by_type.keys():
+                chan_ids_by_type[chan_type].append(chan_id)
+                filenames_by_type[chan_type].append(continuous_filename)
             else:
-                chan_ids[chan_str] = [chan_id]
-        order = []
-        for type in chan_ids.keys():
-            order.append(np.argsort(chan_ids[type]))
-        order = [list.tolist() for list in order]
-        for i, sublist in enumerate(order):
-            if i > 0:
-                order[i] = [x + max(order[i - 1]) + 1 for x in order[i]]
-        order = [item for sublist in order for item in sublist]
-        continuous_filenames = [continuous_filenames[i] for i in order]
-        info['continuous'][seg_index] = continuous_filenames
+                chan_ids_by_type[chan_type] = [chan_id]
+                filenames_by_type[chan_type] = [continuous_filename]
+        chan_types = list(chan_ids_by_type.keys())
+        if chan_types[0] == 'ADC':
+            # put ADC at last position
+            chan_types = chan_types[1:] + chan_types[0:1]
+        ordered_continuous_filenames = []
+        for chan_type in chan_types:
+            local_order = np.argsort(chan_ids_by_type[chan_type])
+            local_filenames = np.array(filenames_by_type[chan_type])[local_order]
+            ordered_continuous_filenames.extend(local_filenames)
+        info['continuous'][seg_index] = ordered_continuous_filenames
 
     # order spike files within segment
     for seg_index, spike_filenames in info['spikes'].items():
