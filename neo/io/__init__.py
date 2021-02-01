@@ -30,6 +30,7 @@ Classes:
 * :attr:`ElanIO`
 * :attr:`IgorIO`
 * :attr:`IntanIO`
+* :attr:`MEArecIO`
 * :attr:`KlustaKwikIO`
 * :attr:`KwikIO`
 * :attr:`MicromedIO`
@@ -129,6 +130,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.KwikIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.MEArecIO
 
     .. autoattribute:: extensions
 
@@ -261,6 +266,7 @@ from neo.io.igorproio import IgorIO
 from neo.io.intanio import IntanIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
+from neo.io.mearecio import MEArecIO
 from neo.io.micromedio import MicromedIO
 from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
@@ -306,6 +312,7 @@ iolist = [
     IntanIO,
     KlustaKwikIO,
     KwikIO,
+    MEArecIO,
     MicromedIO,
     NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
     NeoHdf5IO,

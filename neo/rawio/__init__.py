@@ -18,6 +18,7 @@ Classes:
 * :attr:`BrainVisionRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
+* :attr:`MEArecRawIO`
 * :attr:`MicromedRawIO`
 * :attr:`NeuralynxRawIO`
 * :attr:`NeuroExplorerRawIO`
@@ -55,6 +56,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.IntanRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.MEArecRawIO
 
     .. autoattribute:: extensions
 
@@ -124,6 +129,7 @@ from neo.rawio.brainvisionrawio import BrainVisionRawIO
 from neo.rawio.elanrawio import ElanRawIO
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
+from neo.rawio.mearecrawio import MEArecRawIO
 from neo.rawio.micromedrawio import MicromedRawIO
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
@@ -147,6 +153,7 @@ rawiolist = [
     ElanRawIO,
     IntanRawIO,
     MicromedRawIO,
+    MEArecRawIO,
     NeuralynxRawIO,
     NeuroExplorerRawIO,
     NeuroScopeRawIO,
