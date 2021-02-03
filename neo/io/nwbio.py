@@ -18,6 +18,7 @@ Sample datasets from Allen Institute - http://alleninstitute.github.io/AllenSDK/
 from __future__ import absolute_import, division
 from neo.core import baseneo
 
+import logging
 import os
 from itertools import chain
 from datetime import datetime
@@ -69,6 +70,9 @@ except ImportError:
     have_hdmf = False
 except SyntaxError:
     have_hdmf = False
+
+
+logger = logging.getLogger("Neo")
 
 
 GLOBAL_ANNOTATIONS = (
@@ -202,7 +206,11 @@ def _recompose_unit(base_unit_name, conversion):
     unit_name = prefix_map[conversion] + base_unit_name
     if unit_name[-1] == "s":  # strip trailing 's', e.g. "volts" --> "volt"
         unit_name = unit_name[:-1]
-    return getattr(pq, unit_name)
+    try:
+        return getattr(pq, unit_name)
+    except AttributeError:
+        logger.warning(f"Can't handle unit '{unit_name}'. Returning dimensionless")
+        return pq.dimensionless
 
 
 class NWBIO(BaseIO):
