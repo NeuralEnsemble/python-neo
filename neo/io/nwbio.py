@@ -637,6 +637,8 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
                 self.annotations.pop("name")
             self.description = None
         self.shape = self._timeseries.data.shape
+        if len(self.shape) == 1:
+            self.shape = (self.shape[0], 1)
         metadata_fields = list(timeseries.__nwbfields__)
         for field_name in self.__class__.common_metadata_fields:  # already handled
             try:
