@@ -195,7 +195,8 @@ class AsciiSignalIO(BaseIO):
                                 delimiter=self.delimiter,
                                 usecols=self.usecols,
                                 skip_header=self.skiprows,
-                                dtype='f')
+                                dtype='f',
+                                invalid_raise=False)
             if len(sig.shape) == 1:
                 sig = sig[:, np.newaxis]
         elif self.method == 'csv':
