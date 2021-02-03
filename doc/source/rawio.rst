@@ -114,8 +114,17 @@ Read signal chunks of data and scale them::
 
 
 There are 3 ways to select a subset of channels: by index (0 based), by id or by name.
-By index is not ambiguous 0 to n-1 (included), for some IOs channel_names (and sometimes channel_ids) have no guarantees to
-be unique, in such cases it would raise an error.
+By index is unambiguous 0 to n-1 (included), whereas for some IOs channel_names
+(and sometimes channel_ids) have no guarantees to
+be unique. In such cases, using names or ids may raise an error.
+
+A selected subset of channels which is passed to get_analog_signal_chunk, get_analog_signal_size,
+or get_analog_signal_t_start has the additional restriction that all such channels must have
+the same t_start and signal_size.
+
+Such subsets of channels may be available in specific RawIOs by using the
+get_group_signal_channel_indexes method, if the RawIO has defined separate
+group_ids for each group with those common characteristics.
 
 Example with BlackrockRawIO for the file FileSpec2.3001::
 

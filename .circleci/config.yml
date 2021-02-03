@@ -40,6 +40,8 @@ jobs:
             pip install -r requirements.txt
             pip install -r .circleci/requirements_testing.txt
             pip install .
+            # install packages that depend on neo
+            pip install MEArec
             pip freeze
 
       - save_cache:
@@ -55,9 +57,12 @@ jobs:
       # run tests!
       - run:
           name: run tests
+          no_output_timeout: 20m
           command: |
             . venv/bin/activate
-            nosetests -v --with-coverage --cover-package=neo
+            nosetests -v --with-coverage --cover-package=neo --debug=neo.test
+      # note that we use --debug to get output while downloading files
+      # without this, CircleCI tends to time out because there's no output for a long time
 
       - run:
           name: coveralls

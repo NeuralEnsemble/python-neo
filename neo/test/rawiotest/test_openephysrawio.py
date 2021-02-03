@@ -72,6 +72,12 @@ class TestOpenEphysRawIO(BaseTestRawIO, unittest.TestCase, ):
         with self.assertRaises(Exception):
             reader.parse_header()
 
+    def test_channel_order(self):
+        reader = OpenEphysRawIO(dirname=self.get_filename_path(
+            'OpenEphys_SampleData_1'))
+        reader.parse_header()
+        reader.header['signal_channels']['name'][0].startswith('CH')
+
 
 if __name__ == "__main__":
     unittest.main()

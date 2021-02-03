@@ -30,6 +30,7 @@ Classes:
 * :attr:`ElanIO`
 * :attr:`IgorIO`
 * :attr:`IntanIO`
+* :attr:`MEArecIO`
 * :attr:`KlustaKwikIO`
 * :attr:`KwikIO`
 * :attr:`MicromedIO`
@@ -49,6 +50,7 @@ Classes:
 * :attr:`RawBinarySignalIO`
 * :attr:`RawMCSIO`
 * :attr:`Spike2IO`
+* :attr:`SpikeGLXIO`
 * :attr:`StimfitIO`
 * :attr:`TdtIO`
 * :attr:`TiffIO`
@@ -132,6 +134,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.MEArecIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.MicromedIO
 
     .. autoattribute:: extensions
@@ -200,6 +206,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: SpikeGLXIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.StimfitIO
 
     .. autoattribute:: extensions
@@ -261,6 +271,7 @@ from neo.io.igorproio import IgorIO
 from neo.io.intanio import IntanIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
+from neo.io.mearecio import MEArecIO
 from neo.io.micromedio import MicromedIO
 from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
@@ -279,6 +290,7 @@ from neo.io.plexonio import PlexonIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
+from neo.io.spikeglxio import SpikeGLXIO
 from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
 from neo.io.tiffio import TiffIO
@@ -306,6 +318,7 @@ iolist = [
     IntanIO,
     KlustaKwikIO,
     KwikIO,
+    MEArecIO,
     MicromedIO,
     NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
     NeoHdf5IO,
@@ -323,6 +336,7 @@ iolist = [
     RawBinarySignalIO,
     RawMCSIO,
     Spike2IO,
+    SpikeGLXIO,
     StimfitIO,
     TdtIO,
     TiffIO,
