@@ -54,6 +54,7 @@ and may not be the current affiliation of a contributor.
 * Aitor Morales-Gregorio [13]
 * Peter N Steinmetz [22]
 * Shashwat Sridhar
+* Alessio Buccino [23]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -77,6 +78,7 @@ and may not be the current affiliation of a contributor.
 20. Harden Technologies, LLC
 21. Institut des Neurosciences Paris-Saclay, CNRS UMR 9197 - Université Paris-Sud, Gif-sur-Yvette, France
 22. Neurtex Brain Research Institute, Dallas, TX, USAs
+23. Bio Engineering Laboratory, DBSSE, ETH, Basel, Switzerland
 
 If we've somehow missed you off the list we're very sorry - please let us know.
 
