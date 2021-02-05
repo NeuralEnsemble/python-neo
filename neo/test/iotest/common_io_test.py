@@ -515,12 +515,12 @@ class BaseTestIO:
 
     def test_create_group_across_segment(self):
         """
-        Read {io_name} files in 'files_to_test' with 
+        Read {io_name} files in 'files_to_test' with
         create_group_across_segment test cases.
 
         Test read_block method of BaseFromRaw with different test cases
-        for create_group_across_segment. 
-        
+        for create_group_across_segment.
+
         """.format(io_name=self.ioclass.__name__)
         test_cases = [
             {"SpikeTrain": True},
