@@ -22,6 +22,7 @@ from copy import copy
 import unittest
 
 from neo.core import Block, Segment
+from neo.io.basefromrawio import BaseFromRaw
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant,
                             assert_sub_schema_is_lazy_loaded,
@@ -154,7 +155,7 @@ class BaseTestIO:
         # sampling_rate (RawBinaryIO...) the test is too much complex to design
         # genericaly.
         if (self.higher in self.ioclass.read_params and
-                    len(self.ioclass.read_params[self.higher]) != 0):
+                len(self.ioclass.read_params[self.higher]) != 0):
             return False
 
         # handle cases where the test should write then read
@@ -511,3 +512,34 @@ class BaseTestIO:
                 # intercept exceptions and add more information
                 except BaseException as exc:
                     raise
+
+    def test_create_group_across_segment(self):
+        """
+        Read {io_name} files in 'files_to_test' with 
+        create_group_across_segment test cases.
+
+        Test read_block method of BaseFromRaw with different test cases
+        for create_group_across_segment. 
+        
+        """.format(io_name=self.ioclass.__name__)
+        test_cases = [
+            {"SpikeTrain": True},
+            {"AnalogSignal": True},
+            #
+            # The following cases will raise a NotImplementedError,
+            # so they're best enabled after the implementations are ready.
+            #
+            # {"Event": True},
+            # {"Epoch": True},
+            # {"SpikeTrain": True,
+            #  "AnalogSignal": True,
+            #  "Event": True,
+            #  "Epoch": True},
+            # True
+        ]
+        if issubclass(self.ioclass, BaseFromRaw):
+            for obj, reader in self.iter_objects(target=Block,
+                                                 lazy=self.ioclass.support_lazy,
+                                                 return_reader=True):
+                for case in test_cases:
+                    block = reader(lazy=True, create_group_across_segment=case)
