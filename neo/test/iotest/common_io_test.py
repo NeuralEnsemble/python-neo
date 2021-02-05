@@ -543,3 +543,4 @@ class BaseTestIO:
                                                  return_reader=True):
                 for case in test_cases:
                     block = reader(lazy=True, create_group_across_segment=case)
+                    assert True
