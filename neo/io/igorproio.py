@@ -128,7 +128,7 @@ class IgorIO(BaseIO):
                         location = location[element.encode('utf8')]
             data = location.wave
 
-        return self._wave_to_analogsignal(data['wave'])
+        return self._wave_to_analogsignal(data['wave'], [])
 
     def _wave_to_analogsignal(self, content, dirpath):
         if "padding" in content:
