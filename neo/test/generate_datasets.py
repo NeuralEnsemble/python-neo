@@ -18,6 +18,7 @@ from neo.core.dataobject import DataObject
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.fromtimestamp(424242424), None]
 
+
 def random_string(length=10):
     return "".join(random.choice(string.ascii_letters) for i in range(length))
 
@@ -86,7 +87,7 @@ def random_event(name=None, **annotations):
 def random_epoch():
     size = random.randint(1, 7)
     times = np.cumsum(np.random.uniform(5, 10, size=size))
-    durations = np.random.uniform(1, 3,  size=size)
+    durations = np.random.uniform(1, 3, size=size)
     labels = [random_string() for i in range(size)]
     obj = Epoch(
         times=times,
@@ -130,11 +131,11 @@ def random_segment():
     for i in range(n_sigs):
         seg.analogsignals.append(random_signal())
     n_irrsigs = random.randint(0, 5)
-    #for i in range(n_irrsigs):
+    # for i in range(n_irrsigs):
     #    seg.irregularlysampledsignals.append(random_irreg_signal())
     n_events = random.randint(0, 3)
     for i in range(n_events):
-       seg.events.append(random_event())
+        seg.events.append(random_event())
     n_epochs = random.randint(0, 3)
     for i in range(n_epochs):
         seg.epochs.append(random_epoch())
@@ -155,7 +156,7 @@ def random_group(candidates):
         objects = candidates
     else:
         k = random.randint(1, len(candidates))
-        objects=random.sample(candidates, k)
+        objects = random.sample(candidates, k)
     obj = Group(objects=objects,
                 name=random_string(),
                 **random_annotations(5))

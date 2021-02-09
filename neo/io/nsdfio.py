@@ -33,7 +33,8 @@ class NSDFIO(BaseIO):
     """
     Class for reading and writing files in NSDF Format.
 
-    It supports reading and writing: Block, Segment, AnalogSignal, Group, with all relationships and metadata.
+    It supports reading and writing: Block, Segment, AnalogSignal, Group,
+    with all relationships and metadata.
     """
     is_readable = True
     is_writable = False  # True - disabled pending update to Neo 0.9 API
