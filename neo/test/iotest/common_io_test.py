@@ -522,25 +522,36 @@ class BaseTestIO:
         for create_group_across_segment.
 
         """.format(io_name=self.ioclass.__name__)
+
         test_cases = [
             {"SpikeTrain": True},
             {"AnalogSignal": True},
-            #
-            # The following cases will raise a NotImplementedError,
-            # so they're best enabled after the implementations are ready.
-            #
-            # {"Event": True},
-            # {"Epoch": True},
-            # {"SpikeTrain": True,
-            #  "AnalogSignal": True,
-            #  "Event": True,
-            #  "Epoch": True},
-            # True
+            {"Event": True},
+            {"Epoch": True},
+            {"SpikeTrain": True,
+             "AnalogSignal": True,
+             "Event": True,
+             "Epoch": True},
+            True
         ]
+        expected_outcomes = [
+            None,
+            None,
+            NotImplementedError,
+            NotImplementedError,
+            NotImplementedError,
+            NotImplementedError,
+        ]
+
+        mock_test_case = unittest.TestCase()
         if issubclass(self.ioclass, BaseFromRaw):
             for obj, reader in self.iter_objects(target=Block,
                                                  lazy=self.ioclass.support_lazy,
                                                  return_reader=True):
-                for case in test_cases:
-                    block = reader(lazy=True, create_group_across_segment=case)
-                    assert True
+                for case, outcome in zip(test_cases, expected_outcomes):
+                    if outcome is not None:
+                        with mock_test_case.assertRaises(outcome):
+                            reader(lazy=self.ioclass.support_lazy, create_group_across_segment=case)
+                    else:
+                        block = reader(lazy=self.ioclass.support_lazy, create_group_across_segment=case)
+                        assert len(block.groups) > 0
