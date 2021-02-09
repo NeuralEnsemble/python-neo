@@ -118,14 +118,6 @@ class NSDFIO(BaseIO):
             self.write_segment(segment=segment, name=name_pattern.format(i),
                                writer=writer, parent=segments_model)
 
-        channel_indexes_model = nsdf.ModelComponent(
-            name='channel_indexes', uid=uuid1().hex, parent=block_model)
-        self._write_model_component(channel_indexes_model, writer)
-        name_pattern = self._name_pattern(len(block.channel_indexes))
-        for i, channelindex in enumerate(block.channel_indexes):
-            self.write_channelindex(channelindex=channelindex, name=name_pattern.format(i),
-                                    writer=writer, parent=channel_indexes_model)
-
     def write_segment(self, segment=None, name='0', writer=None, parent=None):
         """
         Write a Segment to the file
@@ -195,35 +187,6 @@ class NSDFIO(BaseIO):
         self._write_model_component(channels_model, writer)
         for channel_model in channels:
             self._write_model_component(channel_model, writer)
-
-    def write_channelindex(self, channelindex, name, writer, parent):
-        """
-        Write a ChannelIndex to the file
-
-        :param channelindex: ChannelIndex to be written
-        :param name: Name for channelindex representation in NSDF model tree
-        :param writer: NSDFWriter instance
-        :param parent: NSDF ModelComponent which will be the parent of channelindex NSDF representation
-        """
-        raise NotImplementedError("Implementation not yet updated for Neo 0.9")
-        uid = uuid1().hex
-        model = nsdf.ModelComponent(name, uid=uid, parent=parent)
-
-        self._write_basic_metadata(model, channelindex)
-        self._write_model_component(model, writer)
-
-        self._write_channelindex_arrays(model, channelindex, writer)
-
-        self._write_channelindex_children(channelindex, model, writer)
-
-    def _write_channelindex_children(self, channelindex, model, writer):
-        analogsignals_model = nsdf.ModelComponent(
-            name='analogsignals', uid=uuid1().hex, parent=model)
-        self._write_model_component(analogsignals_model, writer)
-        name_pattern = self._name_pattern(len(channelindex.analogsignals))
-        for i, signal in enumerate(channelindex.analogsignals):
-            self.write_analogsignal(signal=signal, name=name_pattern.format(i),
-                                    parent=analogsignals_model, writer=writer)
 
     def _init_writing(self):
         return nsdf.NSDFWriter(self.filename, mode='w')
@@ -316,17 +279,6 @@ class NSDFIO(BaseIO):
         source_ds = writer.add_uniform_ds(uid, [channel.uid for channel in channels])
         return channels_model, channels, source_ds
 
-    def _write_channelindex_arrays(self, model, channelindex, writer):
-        group = model.hdfgroup
-
-        self._write_array(group, 'index', channelindex.index)
-        if channelindex.channel_names is not None:
-            self._write_array(group, 'channel_names', channelindex.channel_names)
-        if channelindex.channel_ids is not None:
-            self._write_array(group, 'channel_ids', channelindex.channel_ids)
-        if channelindex.coordinates is not None:
-            self._write_array(group, 'coordinates', channelindex.coordinates)
-
     def _write_array(self, group, name, array):
         if isinstance(array, pq.Quantity):
             group.create_dataset(name, data=array.magnitude)
@@ -381,8 +333,6 @@ class NSDFIO(BaseIO):
     def _read_block_children(self, block, group, reader):
         for child in group['segments/'].values():
             block.segments.append(self.read_segment(group=child, reader=reader))
-        for child in group['channel_indexes/'].values():
-            block.channel_indexes.append(self.read_channelindex(group=child, reader=reader))
 
     def read_segment(self, lazy=False, group=None, reader=None):
         """
@@ -439,30 +389,6 @@ class NSDFIO(BaseIO):
 
         self.objects_dict[uid] = signal
         return signal
-
-    def read_channelindex(self, lazy=False, group=None, reader=None):
-        """
-        Read a ChannelIndex from the file (must be child of a Block)
-
-        :param lazy: Enables lazy reading
-        :param group: HDF5 Group representing the channelindex in NSDF model tree
-        :param reader: NSDFReader instance
-        :return: Read ChannelIndex
-        """
-        assert not lazy, 'Do not support lazy'
-
-        attrs = group.attrs
-
-        channelindex = self._create_channelindex(group)
-        self._read_channelindex_children(group, reader, channelindex)
-
-        self._read_basic_metadata(attrs, channelindex)
-
-        return channelindex
-
-    def _read_channelindex_children(self, group, reader, channelindex):
-        for child in group['analogsignals/'].values():
-            channelindex.analogsignals.append(self.read_analogsignal(group=child, reader=reader))
 
     def _init_reading(self):
         reader = nsdf.NSDFReader(self.filename)
@@ -535,12 +461,6 @@ class NSDFIO(BaseIO):
     def _create_normal_analogsignal(self, data, dataobj, uid, t_start):
         return AnalogSignal(np.swapaxes(data, 0, 1), dtype=dataobj.dtype, units=dataobj.unit,
                             t_start=t_start, sampling_period=pq.Quantity(dataobj.dt, dataobj.tunit))
-
-    def _create_channelindex(self, group):
-        return Group(index=self._read_array(group, 'index'),
-                     channel_names=self._read_array(group, 'channel_names'),
-                     channel_ids=self._read_array(group, 'channel_ids'),
-                     coordinates=self._read_array(group, 'coordinates'))
 
     def _read_array(self, group, name):
         if group.__contains__(name) == False:

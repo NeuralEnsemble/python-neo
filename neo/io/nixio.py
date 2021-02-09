@@ -331,13 +331,6 @@ class NixIO(BaseIO):
             if mt.type == "neo.spiketrain" and mt.name not in self._neo_map:
                 self._nix_to_neo_spiketrain(mt)
 
-        # descend into Sources
-        for src in nix_block.sources:
-            newchx = self._nix_to_neo_channelindex(src)
-            neo_block.channel_indexes.append(newchx)
-            # parent reference
-            newchx.block = neo_block
-
         # create object links
         neo_block.create_relationship()
 
@@ -425,11 +418,6 @@ class NixIO(BaseIO):
             neo_group.add(obj)
 
         return neo_group, parent_name
-
-    def _nix_to_neo_channelindex(self, nix_source):
-        raise Exception("ChannelIndex is no longer supported in Neo. Please use Neo v0.9 to "
-                        "convert any Unit and ChannelIndex objects in your data to use Groups, "
-                        "ChannelViews and array-valued annotations.")
 
     def _nix_to_neo_channelview(self, nix_mtag):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)

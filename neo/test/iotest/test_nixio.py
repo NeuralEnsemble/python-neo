@@ -74,62 +74,6 @@ class NixIOTest(unittest.TestCase):
                 self.compare_chx_source(neochx, nixsrc)
             self.check_refs(neoblock, nixblock)
 
-    def compare_chx_source(self, neochx, nixsrc):
-        self.compare_attr(neochx, nixsrc)
-        nix_channels = list(src for src in nixsrc.sources
-                            if src.type == "neo.channelindex")
-        self.assertEqual(len(neochx.index), len(nix_channels))
-        if len(neochx.channel_ids):
-            nix_chanids = list(src.metadata["channel_id"] for src
-                               in nixsrc.sources
-                               if src.type == "neo.channelindex")
-            self.assertEqual(len(neochx.channel_ids), len(nix_chanids))
-
-        # coordinates can be 1D if there's only one channel
-        if neochx.coordinates is not None:
-            neocoordinates = neochx.coordinates
-            if np.ndim(neocoordinates) == 1:
-                neocoordinates = [neocoordinates]
-        else:
-            neocoordinates = []
-
-        for nixchan in nix_channels:
-            nixchanidx = nixchan.metadata["index"]
-            try:
-                neochanpos = list(neochx.index).index(nixchanidx)
-            except ValueError:
-                self.fail("Channel indexes do not match.")
-
-            if len(neochx.channel_names):
-                neochanname = neochx.channel_names[neochanpos]
-                if ((not isinstance(neochanname, str)) and
-                        isinstance(neochanname, bytes)):
-                    neochanname = neochanname.decode()
-                nixchanname = nixchan.metadata["neo_name"]
-                self.assertEqual(neochanname, nixchanname)
-            else:
-                # Check if channel name exists but not loaded
-                self.assertNotIn("neo_name", nixchan.metadata)
-            if len(neochx.channel_ids):
-                neochanid = neochx.channel_ids[neochanpos]
-                nixchanid = nixchan.metadata["channel_id"]
-                self.assertEqual(neochanid, nixchanid)
-            elif "channel_id" in nixchan.metadata:
-                self.fail("Channel ID not loaded")
-
-            if len(neocoordinates):
-                neocoord = neocoordinates[neochanpos]
-                nixcoord = nixchan.metadata.props["coordinates"]
-                nixcoord = create_quantity(nixcoord.values, nixcoord.unit)
-                self.assertTrue(all(neocoord == nixcoord),
-                                msg="{} != {}".format(neocoord, nixcoord))
-        nix_units = list(src for src in nixsrc.sources
-                         if src.type == "neo.unit")
-        self.assertEqual(len(neochx.units), len(nix_units))
-        for neounit in neochx.units:
-            nixunit = nixsrc.sources[neounit.annotations["nix_name"]]
-            self.compare_attr(neounit, nixunit)
-
     def check_refs(self, neoblock, nixblock):
         """
         Checks whether the references between objects that are not nested are
