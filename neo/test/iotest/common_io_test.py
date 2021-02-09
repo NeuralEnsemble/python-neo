@@ -18,6 +18,7 @@ data repo.
 __test__ = False
 
 import os
+import inspect
 from copy import copy
 import unittest
 
@@ -548,10 +549,13 @@ class BaseTestIO:
             for obj, reader in self.iter_objects(target=Block,
                                                  lazy=self.ioclass.support_lazy,
                                                  return_reader=True):
-                for case, outcome in zip(test_cases, expected_outcomes):
-                    if outcome is not None:
-                        with mock_test_case.assertRaises(outcome):
+                if "create_group_across_segment" in inspect.signature(reader).parameters.keys():
+                    # Ignore testing readers for IOs where read_block is overridden to exclude
+                    # the create_group_across_segment functionality, for eg. NixIO_fr
+                    print(inspect.signature(reader).parameters)
+                    for case, outcome in zip(test_cases, expected_outcomes):
+                        if outcome is not None:
+                            with mock_test_case.assertRaises(outcome):
+                                reader(lazy=self.ioclass.support_lazy, create_group_across_segment=case)
+                        else:
                             reader(lazy=self.ioclass.support_lazy, create_group_across_segment=case)
-                    else:
-                        block = reader(lazy=self.ioclass.support_lazy, create_group_across_segment=case)
-                        assert len(block.groups) > 0
