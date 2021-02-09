@@ -552,7 +552,6 @@ class BaseTestIO:
                 if "create_group_across_segment" in inspect.signature(reader).parameters.keys():
                     # Ignore testing readers for IOs where read_block is overridden to exclude
                     # the create_group_across_segment functionality, for eg. NixIO_fr
-                    print(inspect.signature(reader).parameters)
                     for case, outcome in zip(test_cases, expected_outcomes):
                         if outcome is not None:
                             with mock_test_case.assertRaises(outcome):
