@@ -21,10 +21,6 @@ class NixIO(NIXRawIO, BaseFromRaw):
                                            signal_group_mode,
                                            units_group_mode,
                                            load_waveforms)
-        for chx in bl.channel_indexes:
-            if "nix_name" in chx.annotations:
-                nixname = chx.annotations["nix_name"]
-                chx.annotations["nix_name"] = nixname[0]
         return bl
 
     def __enter__(self):
