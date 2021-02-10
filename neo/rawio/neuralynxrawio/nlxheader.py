@@ -102,7 +102,22 @@ class NlxHeader(OrderedDict):
             datetime1_regex=r'-TimeCreated (?P<date>\S+) (?P<time>\S+)',
             datetime2_regex=r'-TimeClosed (?P<date>\S+) (?P<time>\S+)',
             filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
-            datetimeformat='%Y/%m/%d %H:%M:%S')
+            datetimeformat='%Y/%m/%d %H:%M:%S'),
+        # Not "Time Opened" but "Date Opened"
+        # I got some files having a header starting with:
+        #
+        #    ######## Neuralynx Data File Header
+        #    ## File Name: V:\xxx.nev
+        #    ## Date Opened: (mm/dd/yyy): 07/04/2015 At Time: 17:01:39
+        #    ## Date Closed: (mm/dd/yyy): 07/04/2015 At Time: 17:01:39
+        #
+        'use_date': dict(
+            datetime1_regex=r'## Date Opened: \(mm/dd/yyy\): (?P<date>\S+)'
+                            r' At Time: (?P<time>\S+)',
+            datetime2_regex=r'## Date Closed: \(mm/dd/yyy\): (?P<date>\S+)'
+                            r' At Time: (?P<time>\S+)',
+            filename_regex=r'## File Name: (?P<filename>\S+)',
+            datetimeformat='%m/%d/%Y %H:%M:%S')
     }
 
     def __init__(self, filename):
@@ -164,6 +179,10 @@ class NlxHeader(OrderedDict):
             match = re.findall(pattern, self['ApplicationName'])
             assert len(match) == 1, 'impossible to find application name and version'
             self['ApplicationName'], app_version = match[0]
+        # Some File use Date not Time
+        elif re.search('## Date', txt_header) is not None:
+            self['ApplicationName'] = 'use_date'
+            app_version = "2.0"
         # BML Ncs file writing contained neither property, assume BML version 2
         else:
             self['ApplicationName'] = 'BML'
@@ -203,6 +222,8 @@ class NlxHeader(OrderedDict):
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
             else:
                 hpd = NlxHeader.header_pattern_dicts['def']
+        elif an == 'use_date':
+            hpd = NlxHeader.header_pattern_dicts['use_date']
         elif an == 'BML':
             hpd = NlxHeader.header_pattern_dicts['bml']
         else:
