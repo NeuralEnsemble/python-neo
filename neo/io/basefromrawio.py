@@ -123,7 +123,7 @@ class BaseFromRaw(BaseIO):
             create_group_across_segment = { k: v for k in l}
         elif isinstance(create_group_across_segment, dict):
             # put False to missing keys
-            create_group_across_segment = {create_group_across_segment.get(k, False) for k in l}
+            create_group_across_segment = {k: create_group_across_segment.get(k, False) for k in l}
         else:
             raise ValueError('create_group_across_segment must be bool or dict')
 
@@ -153,12 +153,12 @@ class BaseFromRaw(BaseIO):
             unit_channels = self.header['unit_channels']
             st_groups = []
             for c in range(unit_channels.size):
-                group = Group(name='SpikeTrain group {}'.format(i))
+                group = Group(name='SpikeTrain group {}'.format(c))
                 group.annotate(unit_name=unit_channels[c]['name'])
                 group.annotate(unit_id=unit_channels[c]['id'])
                 unit_annotations = self.raw_annotations['unit_channels'][c]
                 unit_annotations = check_annotations(unit_annotations)
-                group.annotations.annotate(**unit_annotations)
+                group.annotate(**unit_annotations)
                 bl.groups.append(group)
                 st_groups.append(group)
 
