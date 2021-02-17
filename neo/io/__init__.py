@@ -44,6 +44,7 @@ Classes:
 * :attr:`NixIO`
 * :attr:`NSDFIO`
 * :attr:`OpenEphysIO`
+* :attr:`OpenEphysBinaryIO`
 * :attr:`PickleIO`
 * :attr:`PlexonIO`
 * :attr:`RawBinarySignalIO`
@@ -181,6 +182,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.OpenEphysBinaryIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.PickleIO
 
     .. autoattribute:: extensions
@@ -279,6 +284,7 @@ from neo.io.nixio import NixIO
 from neo.io.nixio_fr import NixIO as NixIOFr
 from neo.io.nsdfio import NSDFIO
 from neo.io.openephysio import OpenEphysIO
+from neo.io.openephysio import OpenEphysBinaryIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
@@ -324,6 +330,7 @@ iolist = [
     NeuroshareIO,
     NSDFIO,
     OpenEphysIO,
+    OpenEphysBinaryIO,
     PickleIO,
     PlexonIO,
     RawBinarySignalIO,

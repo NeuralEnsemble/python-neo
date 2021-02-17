@@ -1,5 +1,7 @@
 """
-This module implement OpenEphys format.
+This module implement the "old" OpenEphys format.
+In this format channels are split into several files
+
 
 Author: Samuel Garcia
 """
