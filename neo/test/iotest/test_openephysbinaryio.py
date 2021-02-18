@@ -14,6 +14,7 @@ from neo.test.rawiotest.test_openephysbinaryrawio import TestOpenEphysBinaryRawI
 class TestOpenEphysBinaryIO(BaseTestIO, unittest.TestCase, ):
     ioclass = OpenEphysBinaryIO
     files_to_test = [
+        'test_multiple_2020-12-17_17-34-35',
     ]
 
     files_to_download = TestOpenEphysBinaryRawIO.files_to_download
