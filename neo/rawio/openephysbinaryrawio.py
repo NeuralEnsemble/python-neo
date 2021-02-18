@@ -96,6 +96,12 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         sig_channels['id'] = np.arange(sig_channels.size, dtype='int')
+        
+        # make an array global to local channel
+        self._global_channel_to_local_channel = np.zeros(sig_channels.size, dtype='int64')
+        for group_id in np.unique(sig_channels['id']):
+            loc_chans, = np.nonzero(sig_channels['group_id'] == group_id)
+            self._global_channel_to_local_channel[loc_chans] = np.arange(loc_chans.size)
 
         #
         event_channels = []
@@ -110,11 +116,6 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         # for block_index in range(nb_block):
         #     for seg_index in range(nb_segment_per_block[block_index]):
         #         pass
-
-
-                
-
-
         
         # main header
         self.header = {}
@@ -164,13 +165,14 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         return t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        channels = self.header['signal_channels']
-        group_ids = channels[channel_indexes]['group_id']
-        assert np.unique(group_ids).size == 1
-        group_id = group_ids[0]
+        group_id = self._channels_to_group_id(channel_indexes)
         sigs = self._memmap_sigs[block_index][seg_index][group_id]
-
+        
         sigs = sigs[i_start:i_stop, :]
+        
+        if channel_indexes is not None:
+            local_chans = self._global_channel_to_local_channel[channel_indexes]
+            sigs = sigs[:, local_chans]
 
         return sigs
     
