@@ -284,7 +284,7 @@ from neo.io.nixio import NixIO
 from neo.io.nixio_fr import NixIO as NixIOFr
 from neo.io.nsdfio import NSDFIO
 from neo.io.openephysio import OpenEphysIO
-from neo.io.openephysio import OpenEphysBinaryIO
+from neo.io.openephysbinaryio import OpenEphysBinaryIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
