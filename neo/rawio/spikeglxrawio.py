@@ -39,7 +39,7 @@ https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/ex
 Author : Samuel Garcia
 """
 
-from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
+from .baserawio import BaseRawIO, _signal_channel_dtype, _spike_channel_dtype, _event_channel_dtype
 
 from pathlib import Path
 import os
@@ -128,8 +128,8 @@ class SpikeGLXRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # deal with nb_segment and t_start/t_stop per segment
         self._t_starts = {seg_index: 0. for seg_index in range(nb_segment)}
@@ -145,7 +145,7 @@ class SpikeGLXRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # insert some annotation at some place

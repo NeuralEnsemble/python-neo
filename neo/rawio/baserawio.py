@@ -8,7 +8,7 @@ Classes
 BaseRawIO
 abstract class which should be overridden to write a RawIO.
 
-RawIO is a new API in neo that is supposed to acces as fast as possible
+RawIO is a low level API in neo that is supposed to acces as fast as possible
 raw data. All IO with theses characteristics should/could be rewritten:
   * internally use of memmap (or hdf5)
   * reading header is quite cheap (not read all the file)
@@ -21,20 +21,24 @@ So this handles **only** one simplified but very frequent case of dataset:
     * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
     * AnalogSignal have all the same sampling_rate acroos all Segment
     * t_start/t_stop are the same for many object (SpikeTrain, Event) inside a Segment
-    * AnalogSignal should all have the same sampling_rate otherwise the won't be read
-      a the same time. So signal_group_mode=='split-all' in BaseFromRaw
+
+signal channels  are handled by group of  "stream".
+one stream will at neo.io level one AnalogSignal with multi-channel.
 
 
-A helper class `neo.io.basefromrawio.BaseFromRaw` should transform a RawIO to
-neo legacy IO from free.
+A helper class `neo.io.basefromrawio.BaseFromRaw` transform a RawIO to
+neo legacy IO. In short all "neo.rawio" classes are also "neo.io"
+with lazy reading capability.
+
 
 With this API the IO have an attributes `header` with necessary keys.
+This  `header` attribute is done in `_parse_header(...)` method.
 See ExampleRawIO as example.
 
 
 BaseRawIO implement a possible presistent cache system that can be used
 by some IOs to avoid very long parse_header(). The idea is that some variable
-or vector can be store somewhere (near the fiel, /tmp, any path)
+or vector can be store somewhere (near the file, /tmp, any path)
 
 
 """
@@ -60,19 +64,20 @@ possible_raw_modes = ['one-file', 'multi-file', 'one-dir', ]  # 'multi-dir', 'ur
 error_header = 'Header is not read yet, do parse_header() first'
 
 _signal_channel_dtype = [
-    ('name', 'U64'),
-    ('id', 'int64'),
+    ('name', 'U64'), # not necessary unique
+    ('id', 'U64'), # must be unique
     ('sampling_rate', 'float64'),
     ('dtype', 'U16'),
     ('units', 'U64'),
     ('gain', 'float64'),
     ('offset', 'float64'),
     ('group_id', 'int64'),
+    ('local_index', 'int64'),
 ]
 
-_common_sig_characteristics = ['sampling_rate', 'dtype', 'group_id']
+_common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id']
 
-_unit_channel_dtype = [
+_spike_channel_dtype = [
     ('name', 'U64'),
     ('id', 'U64'),
     # for waveform
@@ -83,10 +88,12 @@ _unit_channel_dtype = [
     ('wf_sampling_rate', 'float64'),
 ]
 
+# in rawio event and epoch are handle the same way
+# duration is None for event
 _event_channel_dtype = [
     ('name', 'U64'),
     ('id', 'U64'),
-    ('type', 'S5'),  # epoch ot event
+    ('type', 'S5'),  # epoch or event
 ]
 
 
@@ -140,7 +147,7 @@ class BaseRawIO:
         self.header['nb_block']
         self.header['nb_segment']
         self.header['signal_channels']
-        self.header['units_channels']
+        self.header['spike_channels']
         self.header['event_channels']
 
 
@@ -161,7 +168,7 @@ class BaseRawIO:
             nb_seg = [self.segment_count(i) for i in range(nb_block)]
             txt += 'nb_segment:  {}\n'.format(nb_seg)
 
-            for k in ('signal_channels', 'unit_channels', 'event_channels'):
+            for k in ('signal_channels', 'spike_channels', 'event_channels'):
                 ch = self.header[k]
                 if len(ch) > 8:
                     chantxt = "[{} ... {}]".format(', '.join(e for e in ch['name'][:4]),
@@ -180,7 +187,7 @@ class BaseRawIO:
           * block_count()
           * segment_count()
           * signal_channels_count()
-          * unit_channels_count()
+          * spike_channels_count()
           * event_channels_count()
 
         Usage:
@@ -195,10 +202,10 @@ class BaseRawIO:
         Standard annotation like name/id/file_origin are already generated here.
         """
         signal_channels = self.header['signal_channels']
-        unit_channels = self.header['unit_channels']
+        spike_channels = self.header['spike_channels']
         event_channels = self.header['event_channels']
 
-        a = {'blocks': [], 'signal_channels': [], 'unit_channels': [], 'event_channels': []}
+        a = {'blocks': [], 'signal_channels': [], 'spike_channels': [], 'event_channels': []}
         for block_index in range(self.block_count()):
             d = {'segments': []}
             d['file_origin'] = self.source_name()
@@ -215,11 +222,11 @@ class BaseRawIO:
                     d['channel_id'] = signal_channels['id'][c]
                     a['blocks'][block_index]['segments'][seg_index]['signals'].append(d)
 
-                for c in range(unit_channels.size):
+                for c in range(spike_channels.size):
                     # use for SpikeTrain.annotations
                     d = {}
-                    d['name'] = unit_channels['name'][c]
-                    d['id'] = unit_channels['id'][c]
+                    d['name'] = spike_channels['name'][c]
+                    d['id'] = spike_channels['id'][c]
                     a['blocks'][block_index]['segments'][seg_index]['units'].append(d)
 
                 for c in range(event_channels.size):
@@ -238,13 +245,13 @@ class BaseRawIO:
             d['file_origin'] = self._source_name()
             a['signal_channels'].append(d)
 
-        for c in range(unit_channels.size):
+        for c in range(spike_channels.size):
             # use for Unit.annotations
             d = {}
-            d['name'] = unit_channels['name'][c]
-            d['id'] = unit_channels['id'][c]
+            d['name'] = spike_channels['name'][c]
+            d['id'] = spike_channels['id'][c]
             d['file_origin'] = self._source_name()
-            a['unit_channels'].append(d)
+            a['spike_channels'].append(d)
 
         for c in range(event_channels.size):
             # not used in neo.io at the moment could usefull one day
@@ -269,7 +276,7 @@ class BaseRawIO:
         elif obj_name in ['signals', 'events', 'units']:
             obj_annotations = seg_annotations[obj_name][chan_index]
             obj_annotations.update(kargs)
-        elif obj_name in ['signal_channels', 'unit_channels', 'event_channel']:
+        elif obj_name in ['signal_channels', 'spike_channels', 'event_channel']:
             obj_annotations = self.raw_annotations[obj_name][chan_index]
             obj_annotations.update(kargs)
 
@@ -320,11 +327,11 @@ class BaseRawIO:
         """
         return len(self.header['signal_channels'])
 
-    def unit_channels_count(self):
+    def spike_channels_count(self):
         """Return the number of unit (aka spike) channels.
         Same along all Blocks and Segment.
         """
-        return len(self.header['unit_channels'])
+        return len(self.header['spike_channels'])
 
     def event_channels_count(self):
         """Return the number of event/epoch channels.
@@ -353,7 +360,7 @@ class BaseRawIO:
 
         Group signals channels by same characteristics:
           * sampling_rate (global along block and segment)
-          * group_id (explicite channel group)
+          * stream_id (explicite channel group)
 
         If all channels have the same characteristics then
         `get_analogsignal_chunk` can be call wihtout restriction.
@@ -534,8 +541,8 @@ class BaseRawIO:
         return wf
 
     def rescale_waveforms_to_float(self, raw_waveforms, dtype='float32', unit_index=0):
-        wf_gain = self.header['unit_channels']['wf_gain'][unit_index]
-        wf_offset = self.header['unit_channels']['wf_offset'][unit_index]
+        wf_gain = self.header['spike_channels']['wf_gain'][unit_index]
+        wf_offset = self.header['spike_channels']['wf_offset'][unit_index]
 
         float_waveforms = raw_waveforms.astype(dtype)
 

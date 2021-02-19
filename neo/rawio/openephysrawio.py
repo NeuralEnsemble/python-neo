@@ -9,7 +9,7 @@ import re
 
 import numpy as np
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 
@@ -163,7 +163,7 @@ class OpenEphysRawIO(BaseRawIO):
         self._sig_sampling_rate = sig_channels['sampling_rate'][0]  # unique for channel
 
         # scan for spikes files
-        unit_channels = []
+        spike_channels = []
 
         if len(info['spikes']) > 0:
 
@@ -216,10 +216,10 @@ class OpenEphysRawIO(BaseRawIO):
                 for sorted_id in all_sorted_ids:
                     unit_name = "{}#{}".format(name, sorted_id)
                     unit_id = "{}#{}".format(name, sorted_id)
-                    unit_channels.append((unit_name, unit_id, wf_units,
+                    spike_channels.append((unit_name, unit_id, wf_units,
                                 wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
 
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # event file are:
         #    * all_channel.events (header + binray)  -->  event 0
@@ -248,7 +248,7 @@ class OpenEphysRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotate some objects from coninuous files
@@ -302,7 +302,7 @@ class OpenEphysRawIO(BaseRawIO):
         return sigs_chunk
 
     def _get_spike_slice(self, seg_index, unit_index, t_start, t_stop):
-        name, sorted_id = self.header['unit_channels'][unit_index]['name'].split('#')
+        name, sorted_id = self.header['spike_channels'][unit_index]['name'].split('#')
         sorted_id = int(sorted_id)
         data_spike = self._spikes_memmap[seg_index][name]
 

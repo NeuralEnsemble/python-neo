@@ -9,7 +9,7 @@ https://link.springer.com/article/10.1007/s12021-020-09467-7
 Author : Alessio Buccino
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 import numpy as np
@@ -71,7 +71,7 @@ class MEArecRawIO(BaseRawIO):
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # creating units channels
-        unit_channels = []
+        spike_channels = []
         self._spiketrains = self._recgen.spiketrains
         for c in range(len(self._spiketrains)):
             unit_name = 'unit{}'.format(c)
@@ -82,9 +82,9 @@ class MEArecRawIO(BaseRawIO):
             wf_offset = 0.
             wf_left_sweep = 0
             wf_sampling_rate = self._sampling_rate
-            unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
+            spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                   wf_offset, wf_left_sweep, wf_sampling_rate))
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
@@ -93,7 +93,7 @@ class MEArecRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()

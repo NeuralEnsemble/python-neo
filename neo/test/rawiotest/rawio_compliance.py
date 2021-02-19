@@ -16,7 +16,7 @@ import logging
 
 import numpy as np
 
-from neo.rawio.baserawio import (_signal_channel_dtype, _unit_channel_dtype,
+from neo.rawio.baserawio import (_signal_channel_dtype, _spike_channel_dtype,
                                  _event_channel_dtype, _common_sig_characteristics)
 
 
@@ -28,7 +28,7 @@ def header_is_total(reader):
     """
     Test if hedaer contains:
       * 'signal_channels'
-      * 'unit_channels'
+      * 'spike_channels'
       * 'event_channels'
 
     """
@@ -40,11 +40,11 @@ def header_is_total(reader):
         for k, _ in _signal_channel_dtype:
             assert k in dt.fields, '%s not in signal_channels.dtype' % k
 
-    assert 'unit_channels' in h, 'unit_channels missing in header'
-    if h['unit_channels'] is not None:
-        dt = h['unit_channels'].dtype
-        for k, _ in _unit_channel_dtype:
-            assert k in dt.fields, '%s not in unit_channels.dtype' % k
+    assert 'spike_channels' in h, 'spike_channels missing in header'
+    if h['spike_channels'] is not None:
+        dt = h['spike_channels'].dtype
+        for k, _ in _spike_channel_dtype:
+            assert k in dt.fields, '%s not in spike_channels.dtype' % k
 
     assert 'event_channels' in h, 'event_channels missing in header'
     if h['event_channels'] is not None:
@@ -60,7 +60,7 @@ def count_element(reader):
     """
 
     nb_sig = reader.signal_channels_count()
-    nb_unit = reader.unit_channels_count()
+    nb_unit = reader.spike_channels_count()
     nb_event_channel = reader.event_channels_count()
 
     nb_block = reader.block_count()
@@ -272,7 +272,7 @@ def read_spike_times(reader):
     """
 
     nb_block = reader.block_count()
-    nb_unit = reader.unit_channels_count()
+    nb_unit = reader.spike_channels_count()
 
     for block_index in range(nb_block):
         nb_seg = reader.segment_count(block_index)
@@ -313,7 +313,7 @@ def read_spike_waveforms(reader):
     Read and convert some all waveforms.
     """
     nb_block = reader.block_count()
-    nb_unit = reader.unit_channels_count()
+    nb_unit = reader.spike_channels_count()
 
     for block_index in range(nb_block):
         nb_seg = reader.segment_count(block_index)

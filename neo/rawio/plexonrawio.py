@@ -23,7 +23,7 @@ Author: Samuel Garcia
 """
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 import numpy as np
@@ -186,7 +186,7 @@ class PlexonRawIO(BaseRawIO):
                 self.internal_unit_ids.append((chan_id, unit_id))
 
         # Spikes channels
-        unit_channels = []
+        spike_channels = []
         for unit_index, (chan_id, unit_id) in enumerate(self.internal_unit_ids):
             c = np.nonzero(dspChannelHeaders['Channel'] == chan_id)[0][0]
             h = dspChannelHeaders[c]
@@ -207,9 +207,9 @@ class PlexonRawIO(BaseRawIO):
             wf_offset = 0.
             wf_left_sweep = -1  # DONT KNOWN
             wf_sampling_rate = global_header['WaveformFreq']
-            unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
+            spike_channels.append((name, _id, wf_units, wf_gain, wf_offset,
                                   wf_left_sweep, wf_sampling_rate))
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # Event channels
         event_channels = []
@@ -226,7 +226,7 @@ class PlexonRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotations

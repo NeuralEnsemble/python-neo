@@ -154,7 +154,7 @@ Acquisition modes:
     Intervals".
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 import os
@@ -1316,8 +1316,8 @@ class AxographRawIO(BaseRawIO):
             np.array(sig_channels, dtype=_signal_channel_dtype)
         self.header['event_channels'] = \
             np.array(event_channels, dtype=_event_channel_dtype)
-        self.header['unit_channels'] = \
-            np.array([], dtype=_unit_channel_dtype)
+        self.header['spike_channels'] = \
+            np.array([], dtype=_spike_channel_dtype)
 
         ##############################################
         # DATA OBJECTS

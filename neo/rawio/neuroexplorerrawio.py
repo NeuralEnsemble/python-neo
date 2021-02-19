@@ -24,7 +24,7 @@ Author: Samuel Garcia, luc estebanez, mark hollenbeck
 """
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 import numpy as np
@@ -57,14 +57,14 @@ class NeuroExplorerRawIO(BaseRawIO):
         self._sig_lengths = []
         self._sig_t_starts = []
         sig_channels = []
-        unit_channels = []
+        spike_channels = []
         event_channels = []
         for i in range(self.global_header['nvar']):
             entity_header = self._entity_headers[i]
             name = entity_header['name']
             _id = i
             if entity_header['type'] == 0:  # Unit
-                unit_channels.append((name, _id, '', 0, 0, 0, 0))
+                spike_channels.append((name, _id, '', 0, 0, 0, 0))
 
             elif entity_header['type'] == 1:  # Event
                 event_channels.append((name, _id, 'event'))
@@ -78,7 +78,7 @@ class NeuroExplorerRawIO(BaseRawIO):
                 wf_offset = entity_header['MVOffset']
                 wf_left_sweep = 0
                 wf_sampling_rate = entity_header['WFrequency']
-                unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
+                spike_channels.append((name, _id, wf_units, wf_gain, wf_offset,
                                       wf_left_sweep, wf_sampling_rate))
 
             elif entity_header['type'] == 4:
@@ -105,7 +105,7 @@ class NeuroExplorerRawIO(BaseRawIO):
                 event_channels.append((name, _id, 'event'))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # each signal channel have a dierent groups that force reading
@@ -117,7 +117,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotations
@@ -161,13 +161,13 @@ class NeuroExplorerRawIO(BaseRawIO):
         return raw_signal
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        entity_index = int(self.header['unit_channels'][unit_index]['id'])
+        entity_index = int(self.header['spike_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
         nb_spike = entity_header['n']
         return nb_spike
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        entity_index = int(self.header['unit_channels'][unit_index]['id'])
+        entity_index = int(self.header['spike_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
         n = entity_header['n']
         offset = entity_header['offset']
@@ -188,7 +188,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        entity_index = int(self.header['unit_channels'][unit_index]['id'])
+        entity_index = int(self.header['spike_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
         if entity_header['type'] == 0:
             return None

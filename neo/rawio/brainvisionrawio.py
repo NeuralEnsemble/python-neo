@@ -7,7 +7,7 @@ S. More.
 Author: Samuel Garcia
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 import numpy as np
@@ -78,8 +78,8 @@ class BrainVisionRawIO(BaseRawIO):
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # read all markers in memory
 
@@ -113,7 +113,7 @@ class BrainVisionRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()

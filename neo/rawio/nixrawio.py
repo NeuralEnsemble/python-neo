@@ -8,7 +8,7 @@ Author: Chek Yin Choi
 """
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype,
-                        _unit_channel_dtype, _event_channel_dtype)
+                        _spike_channel_dtype, _event_channel_dtype)
 from ..io.nixio import NixIO
 from ..io.nixio import check_nix_version
 import numpy as np
@@ -77,7 +77,7 @@ class NIXRawIO(BaseRawIO):
             break
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
-        unit_channels = []
+        spike_channels = []
         unit_name = ""
         unit_id = ""
         for bl in self.file.blocks:
@@ -99,13 +99,13 @@ class NIXRawIO(BaseRawIO):
                                 wf_left_sweep = wf.metadata["left_sweep"]
                         wf_gain = 1
                         wf_offset = 0.
-                        unit_channels.append(
+                        spike_channels.append(
                             (unit_name, unit_id, wf_units, wf_gain,
                              wf_offset, wf_left_sweep, wf_sampling_rate)
                         )
                 break
             break
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         event_channels = []
         event_count = 0
@@ -184,7 +184,7 @@ class NIXRawIO(BaseRawIO):
         self.header['nb_block'] = len(self.file.blocks)
         self.header['nb_segment'] = [len(bl.groups) for bl in self.file.blocks]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
@@ -289,7 +289,7 @@ class NIXRawIO(BaseRawIO):
 
     def _spike_count(self, block_index, seg_index, unit_index):
         count = 0
-        head_id = self.header['unit_channels'][unit_index][1]
+        head_id = self.header['spike_channels'][unit_index][1]
         for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
             for src in mt.sources:
                 if mt.type == 'neo.spiketrain' and [src.type == "neo.unit"]:

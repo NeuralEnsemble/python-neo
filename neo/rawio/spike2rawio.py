@@ -19,7 +19,7 @@ Author: Samuel Garcia
 """
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 import numpy as np
@@ -192,7 +192,7 @@ class Spike2RawIO(BaseRawIO):
 
         # create typed channels
         sig_channels = []
-        unit_channels = []
+        spike_channels = []
         event_channels = []
 
         self.internal_unit_ids = {}
@@ -255,14 +255,14 @@ class Spike2RawIO(BaseRawIO):
                     # All spike from one channel are group in one SpikeTrain
                     unit_ids = ['all']
                 for unit_id in unit_ids:
-                    unit_index = len(unit_channels)
+                    unit_index = len(spike_channels)
                     self.internal_unit_ids[unit_index] = (chan_id, unit_id)
                     _id = "ch{}#{}".format(chan_id, unit_id)
-                    unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
+                    spike_channels.append((name, _id, wf_units, wf_gain, wf_offset,
                                           wf_left_sweep, wf_sampling_rate))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         if len(sig_channels) > 0:
@@ -300,7 +300,7 @@ class Spike2RawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotations
@@ -316,7 +316,7 @@ class Spike2RawIO(BaseRawIO):
             anasig_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
             anasig_an['comment'] = self._channel_infos[chan_id]['comment']
 
-        for c, unit_channel in enumerate(unit_channels):
+        for c, unit_channel in enumerate(spike_channels):
             chan_id, unit_id = self.internal_unit_ids[c]
             unit_an = seg_ann['units'][c]
             unit_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
@@ -481,7 +481,7 @@ class Spike2RawIO(BaseRawIO):
                                          lim0, lim1, marker_filter=marker_filter)
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        unit_header = self.header['unit_channels'][unit_index]
+        unit_header = self.header['spike_channels'][unit_index]
         chan_id, unit_id = self.internal_unit_ids[unit_index]
 
         if self.ced_units:
@@ -501,7 +501,7 @@ class Spike2RawIO(BaseRawIO):
         return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        unit_header = self.header['unit_channels'][unit_index]
+        unit_header = self.header['spike_channels'][unit_index]
         chan_id, unit_id = self.internal_unit_ids[unit_index]
 
         if self.ced_units:

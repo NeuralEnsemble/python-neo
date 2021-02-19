@@ -65,7 +65,7 @@ import warnings
 import numpy as np
 import quantities as pq
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 
@@ -223,7 +223,7 @@ class BlackrockRawIO(BaseRawIO):
         main_sampling_rate = 30000.
 
         event_channels = []
-        unit_channels = []
+        spike_channels = []
         sig_channels = []
 
         # Step1 NEV file
@@ -241,7 +241,7 @@ class BlackrockRawIO(BaseRawIO):
             spikes, spike_segment_ids = self.nev_data['Spikes']
 
             # scan all channel to get number of Unit
-            unit_channels = []
+            spike_channels = []
             self.internal_unit_ids = []  # pair of chan['packet_id'], spikes['unit_class_nb']
             for i in range(len(self.__nev_ext_header[b'NEUEVWAV'])):
 
@@ -261,7 +261,7 @@ class BlackrockRawIO(BaseRawIO):
                     # default value: threshold crossing after 10 samples of waveform
                     wf_left_sweep = 10
                     wf_sampling_rate = main_sampling_rate
-                    unit_channels.append((name, _id, wf_units, wf_gain,
+                    spike_channels.append((name, _id, wf_units, wf_gain,
                                           wf_offset, wf_left_sweep, wf_sampling_rate))
 
             # scan events
@@ -458,7 +458,7 @@ class BlackrockRawIO(BaseRawIO):
             self._sigs_t_starts = [None] * self._nb_segment
 
         # finalize header
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -466,7 +466,7 @@ class BlackrockRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [self._nb_segment]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         rec_datetime = self.__nev_params('rec_datetime') if self._avail_files['nev'] else None
@@ -487,8 +487,8 @@ class BlackrockRawIO(BaseRawIO):
         # block_ann['avail_ccf'] = self._avail_files['ccf']
         block_ann['rec_pauses'] = False
 
-        for c in range(unit_channels.size):
-            unit_ann = self.raw_annotations['unit_channels'][c]
+        for c in range(spike_channels.size):
+            unit_ann = self.raw_annotations['spike_channels'][c]
             channel_id, unit_id = self.internal_unit_ids[c]
             unit_ann['channel_id'] = self.internal_unit_ids[c][0]
             unit_ann['unit_id'] = self.internal_unit_ids[c][1]
@@ -577,10 +577,10 @@ class BlackrockRawIO(BaseRawIO):
                 chidx_ann['description'] = 'Container for Units and AnalogSignals of ' \
                                            'one recording channel across segments.'
 
-            for c in range(unit_channels.size):
+            for c in range(spike_channels.size):
                 channel_id, unit_id = self.internal_unit_ids[c]
                 st_ann = seg_ann['units'][c]
-                unit_ann = self.raw_annotations['unit_channels'][c]
+                unit_ann = self.raw_annotations['spike_channels'][c]
                 st_ann.update(unit_ann)
                 st_ann['description'] = 'SpikeTrain channel_id: {}, unit_id: {}'.format(
                     channel_id, unit_id)

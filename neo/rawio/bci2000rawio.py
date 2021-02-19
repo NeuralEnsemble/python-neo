@@ -3,7 +3,7 @@ BCI2000RawIO is a class to read BCI2000 .dat files.
 https://www.bci2000.org/mediawiki/index.php/Technical_Reference:BCI2000_File_Format
 """
 
-from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
+from .baserawio import BaseRawIO, _signal_channel_dtype, _spike_channel_dtype, _event_channel_dtype
 
 import numpy as np
 import re
@@ -62,7 +62,7 @@ class BCI2000RawIO(BaseRawIO):
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
         self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
 
-        self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
+        self.header['spike_channels'] = np.array([], dtype=_spike_channel_dtype)
 
         # creating event channel for each state variable
         event_channels = []

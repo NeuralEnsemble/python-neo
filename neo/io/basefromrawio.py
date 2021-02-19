@@ -150,13 +150,13 @@ class BaseFromRaw(BaseIO):
                         sig_groups.append(group)
 
         if create_group_across_segment['SpikeTrain']:
-            unit_channels = self.header['unit_channels']
+            spike_channels = self.header['spike_channels']
             st_groups = []
-            for c in range(unit_channels.size):
+            for c in range(spike_channels.size):
                 group = Group(name='SpikeTrain group {}'.format(c))
-                group.annotate(unit_name=unit_channels[c]['name'])
-                group.annotate(unit_id=unit_channels[c]['id'])
-                unit_annotations = self.raw_annotations['unit_channels'][c]
+                group.annotate(unit_name=spike_channels[c]['name'])
+                group.annotate(unit_id=spike_channels[c]['id'])
+                unit_annotations = self.raw_annotations['spike_channels'][c]
                 unit_annotations = check_annotations(unit_annotations)
                 group.annotate(**unit_annotations)
                 bl.groups.append(group)
@@ -259,8 +259,8 @@ class BaseFromRaw(BaseIO):
                     seg.analogsignals.append(anasig)
 
         # SpikeTrain and waveforms (optional)
-        unit_channels = self.header['unit_channels']
-        for unit_index in range(len(unit_channels)):
+        spike_channels = self.header['spike_channels']
+        for unit_index in range(len(spike_channels)):
             # make a proxy...
             sptr = SpikeTrainProxy(rawio=self, unit_index=unit_index,
                                                 block_index=block_index, seg_index=seg_index)

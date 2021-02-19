@@ -311,11 +311,11 @@ class SpikeTrainProxy(BaseProxy):
         # both necessary attr and annotations
         annotations = {}
         for k in ('name', 'id'):
-            annotations[k] = self._rawio.header['unit_channels'][unit_index][k]
+            annotations[k] = self._rawio.header['spike_channels'][unit_index][k]
         ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index]
         annotations.update(ann)
 
-        h = self._rawio.header['unit_channels'][unit_index]
+        h = self._rawio.header['spike_channels'][unit_index]
         wf_sampling_rate = h['wf_sampling_rate']
         if not np.isnan(wf_sampling_rate) and wf_sampling_rate > 0:
             self.sampling_rate = wf_sampling_rate * pq.Hz

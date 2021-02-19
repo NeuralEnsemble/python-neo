@@ -73,9 +73,9 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
             assert_equal(raw_sigs[:-1], lfp_ml[c, :])
 
         # Check if spikes in channels are equal
-        nb_unit = reader.unit_channels_count()
+        nb_unit = reader.spike_channels_count()
         for unit_index in range(nb_unit):
-            unit_name = reader.header['unit_channels'][unit_index]['name']
+            unit_name = reader.header['spike_channels'][unit_index]['name']
             # name is chXX#YY where XX is channel_id and YY is unit_id
             channel_id, unit_id = unit_name.split('#')
             channel_id = int(channel_id.replace('ch', ''))
@@ -150,9 +150,9 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
                 assert_equal(raw_sigs[:], lfp_ml[c, :])
 
             # Check if spikes in channels are equal
-            nb_unit = reader.unit_channels_count()
+            nb_unit = reader.spike_channels_count()
             for unit_index in range(nb_unit):
-                unit_name = reader.header['unit_channels'][unit_index]['name']
+                unit_name = reader.header['spike_channels'][unit_index]['name']
                 # name is chXX#YY where XX is channel_id and YY is unit_id
                 channel_id, unit_id = unit_name.split('#')
                 channel_id = int(channel_id.replace('ch', ''))

@@ -22,7 +22,7 @@ Units in this IO are not guaranteed.
 Author: Samuel Garcia, SummitKwan, Chadwick Boulay
 
 """
-from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
+from .baserawio import BaseRawIO, _signal_channel_dtype, _spike_channel_dtype, _event_channel_dtype
 
 import numpy as np
 import os
@@ -218,7 +218,7 @@ class TdtRawIO(BaseRawIO):
         self.internal_unit_ids = {}
         self._waveforms_size = []
         self._waveforms_dtype = []
-        unit_channels = []
+        spike_channels = []
         keep = info_channel_groups['TankEvType'] == EVTYPE_SNIP
         tsq = np.hstack(self._tsq)
         # If there is no chance the differet TSQ files will have different units,
@@ -231,7 +231,7 @@ class TdtRawIO(BaseRawIO):
                        (tsq['channel'] == chan_id)
                 unit_ids = np.unique(tsq[mask]['sortcode'])
                 for unit_id in unit_ids:
-                    unit_index = len(unit_channels)
+                    unit_index = len(spike_channels)
                     self.internal_unit_ids[unit_index] = (info['StoreName'], chan_id, unit_id)
 
                     unit_name = "ch{}#{}".format(chan_id, unit_id)
@@ -240,14 +240,14 @@ class TdtRawIO(BaseRawIO):
                     wf_offset = 0.
                     wf_left_sweep = info['NumPoints'] // 2
                     wf_sampling_rate = info['SampleFreq']
-                    unit_channels.append((unit_name, '{}'.format(unit_id),
+                    spike_channels.append((unit_name, '{}'.format(unit_id),
                                           wf_units, wf_gain, wf_offset,
                                           wf_left_sweep, wf_sampling_rate))
 
                     self._waveforms_size.append(info['NumPoints'])
                     self._waveforms_dtype.append(np.dtype(data_formats[info['DataFormat']]))
 
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # signal channels EVTYPE_STRON
         event_channels = []
@@ -264,7 +264,7 @@ class TdtRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
         self.header['signal_channels'] = signal_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotations only standard ones:

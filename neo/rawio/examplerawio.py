@@ -17,7 +17,7 @@ Rules for creating a new class:
             self.header['nb_block'] = 2
             self.header['nb_segment'] = [2, 3]
             self.header['signal_channels'] = sig_channels
-            self.header['unit_channels'] = unit_channels
+            self.header['spike_channels'] = spike_channels
             self.header['event_channels'] = event_channels
 
   2. Step 2: RawIO test:
@@ -37,7 +37,7 @@ Rules for creating a new class:
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 import numpy as np
@@ -61,7 +61,7 @@ class ExampleRawIO(BaseRawIO):
         * has 2 blocks
         * blocks have 2 and 3 segments
         * has 16 signal_channels sample_rate = 10000
-        * has 3 unit_channels
+        * has 3 spike_channels
         * has 2 event channels: one has *type=event*, the other has
           *type=epoch*
 
@@ -96,7 +96,7 @@ class ExampleRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        # This is the central of a RawIO
+        # This is the central part of a RawIO
         # we need to collect in the original format all
         # informations needed for further fast access
         # at any place in the file
@@ -134,7 +134,7 @@ class ExampleRawIO(BaseRawIO):
         # then wf_units/wf_gain/wf_offset/wf_left_sweep/wf_sampling_rate
         # can be set to any value because _spike_raw_waveforms
         # will return None
-        unit_channels = []
+        spike_channels = []
         for c in range(3):
             unit_name = 'unit{}'.format(c)
             unit_id = '#{}'.format(c)
@@ -143,9 +143,9 @@ class ExampleRawIO(BaseRawIO):
             wf_offset = 0.
             wf_left_sweep = 20
             wf_sampling_rate = 10000.
-            unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
+            spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                   wf_offset, wf_left_sweep, wf_sampling_rate))
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # creating event/epoch channel
         # This is mandatory!!!!
@@ -161,7 +161,7 @@ class ExampleRawIO(BaseRawIO):
         self.header['nb_block'] = 2
         self.header['nb_segment'] = [2, 3]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # insert some annotation at some place
@@ -302,7 +302,7 @@ class ExampleRawIO(BaseRawIO):
 
         # In our IO waveforms come from all channels
         # they are int16
-        # convertion to real units is done with self.header['unit_channels']
+        # convertion to real units is done with self.header['spike_channels']
         # Here, we have a realistic case: all waveforms are only noise.
         # it is not always the case
         # we 20 spikes with a sweep of 50 (5ms)

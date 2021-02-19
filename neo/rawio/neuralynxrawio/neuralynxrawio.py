@@ -17,7 +17,7 @@ Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 
-from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                                  _event_channel_dtype)
 
 import numpy as np
@@ -70,7 +70,7 @@ class NeuralynxRawIO(BaseRawIO):
     def _parse_header(self):
 
         sig_channels = []
-        unit_channels = []
+        spike_channels = []
         event_channels = []
 
         self.ncs_filenames = OrderedDict()  # (chan_name, chan_id): filename
@@ -183,7 +183,7 @@ class NeuralynxRawIO(BaseRawIO):
                         wf_offset = 0.
                         wf_left_sweep = -1  # NOT KNOWN
                         wf_sampling_rate = info['sampling_rate']
-                        unit_channels.append(
+                        spike_channels.append(
                             (unit_name, '{}'.format(unit_id), wf_units, wf_gain,
                              wf_offset, wf_left_sweep, wf_sampling_rate))
                         unit_annotations.append(dict(file_origin=filename))
@@ -212,7 +212,7 @@ class NeuralynxRawIO(BaseRawIO):
                     self._nev_memmap[chan_id] = data
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # require all sampled signals, ncs files, to have same sampling rate
@@ -281,7 +281,7 @@ class NeuralynxRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [self._nb_segment]
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotations
@@ -295,7 +295,7 @@ class NeuralynxRawIO(BaseRawIO):
                 sig_ann = seg_annotations['signals'][c]
                 sig_ann.update(signal_annotations[c])
 
-            for c in range(unit_channels.size):
+            for c in range(spike_channels.size):
                 unit_ann = seg_annotations['units'][c]
                 unit_ann.update(unit_annotations[c])
 
