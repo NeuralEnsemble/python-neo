@@ -44,75 +44,127 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
     def _parse_header(self):
         all_streams, nb_block, nb_segment_per_block = explore_folder(self.dirname)
-
-        ## signal zone
-        sig_source_names = []
-        sig_channels = []
-        self._memmap_sigs = {}
-        self._t_start_sigs = {}
-        self._t_start_segments = {}
-        self._t_stop_segments = {}
-        for block_index in range(nb_block):
-            self._memmap_sigs[block_index] = {}
-            self._t_start_sigs[block_index] = {}
-            self._t_start_segments[block_index] = {}
-            self._t_stop_segments[block_index] = {}
-            for seg_index in range(nb_segment_per_block[block_index]):
-                self._memmap_sigs[block_index][seg_index] = []
-                self._t_start_sigs[block_index][seg_index] = []
-                self._t_start_segments[block_index][seg_index] = None
-                self._t_stop_segments[block_index][seg_index] = None
         
         sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
-        print(sig_stream_names)
-
-        for block_index in all_streams:
-            for seg_index in all_streams[block_index]:
-                for stream_name, d in all_streams[block_index][seg_index]['continuous'].items():
-                    
-                    num_channels = len(d['channels'])
-                    if block_index == 0 and seg_index == 0:
-                        group_id = sig_stream_names.index(stream_name)
-                        new_channels = []
-                        for chan_info in d['channels']:
-                            # using 0 as default, generate final ids later
-                            chan_id = 0
-                            new_channels.append((chan_info['channel_name'],
-                                chan_id, float(d['sample_rate']), d['dtype'], chan_info['units'],
-                                chan_info['bit_volts'], 0., group_id))
-                        sig_channels.extend(new_channels)
-
-                    memmap_sigs = np.memmap(d['raw_filename'], d['dtype'],
-                                 order='C', mode='r').reshape(-1, num_channels)
-                    self._memmap_sigs[block_index][seg_index].append(memmap_sigs)
-                    self._t_start_sigs[block_index][seg_index].append(d['t_start'])
-
-                    if self._t_start_segments[block_index][seg_index] is None or\
-                            self._t_start_segments[block_index][seg_index] > d['t_start']:
-                        self._t_start_segments[block_index][seg_index] = d['t_start']
-                    
-                    t_stop = d['t_start']  + memmap_sigs.shape[0] / float(d['sample_rate'])
-                    if self._t_stop_segments[block_index][seg_index] is None or\
-                            self._t_stop_segments[block_index][seg_index] < t_stop:
-                        self._t_stop_segments[block_index][seg_index] = t_stop
-
+        event_stream_names = sorted(list(all_streams[0][0]['events'].keys()))
+        
+        
+        # first loop to reasign stream by "stream_index" instead of "stream_name"
+        self.signal_streams = {}
+        self.event_streams = {}
+        for block_index in range(nb_block):
+            self.signal_streams[block_index] = {}
+            self.event_streams[block_index] = {}
+            for seg_index in range(nb_segment_per_block[block_index]):
+                self.signal_streams[block_index][seg_index] = {}
+                self.event_streams[block_index][seg_index] = {}
+                for i, stream_name in enumerate(sig_stream_names):
+                    d = all_streams[block_index][seg_index]['continuous'][stream_name]
+                    self.signal_streams[block_index][seg_index][i] = d
+                for i, stream_name in enumerate(event_stream_names):
+                    d = all_streams[block_index][seg_index]['events'][stream_name]
+                    self.event_streams[block_index][seg_index][i] = d
+        
+        ## signals zone
+        
+        # create signals channel map: several channel per stream
+        sig_channels = []
+        for group_id, stream_name in enumerate(sig_stream_names):
+            # group_id is the index in vector sytream names
+            d = self.signal_streams[0][0][group_id]
+            new_channels = []
+            for chan_info in d['channels']:
+                chan_id = 0 # generate it after loop
+                new_channels.append((chan_info['channel_name'],
+                    chan_id, float(d['sample_rate']), d['dtype'], chan_info['units'],
+                    chan_info['bit_volts'], 0., group_id))
+            sig_channels.extend(new_channels)
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        # final global id
         sig_channels['id'] = np.arange(sig_channels.size, dtype='int')
         
         # make an array global to local channel
         self._global_channel_to_local_channel = np.zeros(sig_channels.size, dtype='int64')
-        for group_id in np.unique(sig_channels['id']):
+        for group_id, stream_name in enumerate(sig_stream_names):
             loc_chans, = np.nonzero(sig_channels['group_id'] == group_id)
             self._global_channel_to_local_channel[loc_chans] = np.arange(loc_chans.size)
-
-        ## channel zone
+        
+        # create memmap for signals
+        for block_index in range(nb_block):
+            for seg_index in range(nb_segment_per_block[block_index]):
+                for group_id, d in self.signal_streams[block_index][seg_index].items():
+                    num_channels = len(d['channels'])
+                    memmap_sigs = np.memmap(d['raw_filename'], d['dtype'],
+                                 order='C', mode='r').reshape(-1, num_channels)
+                    d['memmap'] = memmap_sigs
+        
+        ## events zone
+        
+        # channel map: one channel one stream
         event_channels = []
+        for stream_ind, stream_name in enumerate(event_stream_names):
+            d = self.event_streams[0][0][stream_ind]
+            event_channels.append((d['channel_name'], stream_ind, 'event'))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
+        
+        # create memmap
+        for stream_ind, stream_name in enumerate(event_stream_names):
+            # inject memmap loaded into main dict structure
+            #~ print()
+            #~ print(stream_ind, stream_name)
+            d = self.event_streams[0][0][stream_ind]
+
+            for name in _possible_event_stream_names:
+                if name+'_npy' in d:
+                    data = np.load(d[name+'_npy'], mmap_mode='r')
+                    d[name] = data
+                    #~ print('  ', name, d[name])
+            
+            # check that events have timestamps
+            assert 'timestamps' in d
+            
+            # for event the neo "label" will change depending the nature of event (ttl, text, binary)
+            # and this is transform into unicode
+            # TODO : find a way to offer all possible arrays with array_annotations
+            if 'text' in d:
+                # text case
+                d['labels'] = d['text'].astype('U')
+            elif 'metadata' in d:
+                # binary case
+                d['labels'] = d['channels'].astype('U')
+            elif 'channels' in d:
+                # ttl case use channels
+                d['labels'] = d['channels'].astype('U')
+            else:
+                raise ValueError(f'There is no possible labels for this event: {stream_name}')
 
         # no spike read yet
         # can be implemented on user demand
         unit_channels = np.array([], dtype=_unit_channel_dtype)
+        
+        # loop for t_start/t_stop on segment browse all object
+        self._t_start_segments = {}
+        self._t_stop_segments = {}
+        for block_index in range(nb_block):
+            self._t_start_segments[block_index] = {}
+            self._t_stop_segments[block_index] = {}
+            for seg_index in range(nb_segment_per_block[block_index]):
+                global_t_start = None
+                global_t_stop = None
+                
+                # loop over signals
+                for group_id, d in self.signal_streams[block_index][seg_index].items():
+                    t_start = d['t_start']
+                    dur = d['memmap'].shape[0] / float(d['sample_rate'])
+                    t_stop = t_start + dur
+                    if global_t_start is None or global_t_start > t_start:
+                        global_t_start = t_start
+                    if global_t_stop is None or global_t_stop < t_stop:
+                        global_t_stop = t_stop
 
+                self._t_start_segments[block_index][seg_index] = global_t_start
+                self._t_stop_segments[block_index][seg_index] = global_t_stop
+        
         # handle segment t_start
         # update t_start/t_stop with events
         # for block_index in range(nb_block):
@@ -150,6 +202,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         return self._t_stop_segments[block_index][seg_index]
 
     def _channels_to_group_id(self, channel_indexes):
+        if channel_indexes is None:
+            channel_indexes = slice(None)
         channels = self.header['signal_channels']
         group_ids = channels[channel_indexes]['group_id']
         assert np.unique(group_ids).size == 1
@@ -158,17 +212,20 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
         group_id = self._channels_to_group_id(channel_indexes)
-        sigs = self._memmap_sigs[block_index][seg_index][group_id]
+        #~ sigs = self._memmap_sigs[block_index][seg_index][group_id]
+        sigs = self.signal_streams[block_index][seg_index][group_id]['memmap']
         return sigs.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         group_id = self._channels_to_group_id(channel_indexes)
-        t_start = self._t_start_sigs[block_index][seg_index][group_id]
+        #~ t_start = self._t_start_sigs[block_index][seg_index][group_id]
+        t_start = self.signal_streams[block_index][seg_index][group_id]['t_start']
         return t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         group_id = self._channels_to_group_id(channel_indexes)
-        sigs = self._memmap_sigs[block_index][seg_index][group_id]
+        #~ sigs = self._memmap_sigs[block_index][seg_index][group_id]
+        sigs = self.signal_streams[block_index][seg_index][group_id]['memmap']
         
         sigs = sigs[i_start:i_stop, :]
         
@@ -191,17 +248,33 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         pass
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        pass
+        d = self.event_streams[0][0][event_channel_index]
+        return d['timestamps'].size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        pass
+        d = self.event_streams[0][0][event_channel_index]
+        timestamps = d['timestamps']
+        durations = None
+        labels = d['labels']
+        # TODO make the time slice
+        
+        return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        pass
+        # here we have a problem because we don't known from wich channel the event is from.
+        # lets take the first but this could be wrong
+        
+        d = self.event_streams[0][0][0]
+        # d = self.event_streams[0][0][event_channel_index]
+        event_times = event_timestamps.astype(dtype) / float(d['sample_rate'])
+        return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
         pass
 
+
+_possible_event_stream_names = ('timestamps', 'channels', 'text',
+        'full_word', 'channel_states', 'data_array', 'metadata')
 
 def explore_folder(dirname):
     """
@@ -298,21 +371,15 @@ def explore_folder(dirname):
             
             if (root / 'events').exists() and len(structure['events']) > 0:
                 for d in structure['events']:
+                    stream_name = node_name + '#' + d['folder_name']
                     
-                    text_npy = root / 'events' / d['folder_name'] / 'text.npy'
-                    timestamps_npy = root / 'events' / d['folder_name'] / 'timestamps.npy'
-                    channels_npy = root / 'events' / d['folder_name'] / 'channels.npy'
-                    if text_npy.is_file():
-                        # case with text event
-                        event_stream = d.copy()
-                        event_stream['text_npy'] = str(text_npy)
-                        event_stream['timestamps_npy'] = str(timestamps_npy)
-                        event_stream['channels_npy'] = str(channels_npy)
-                        all_streams[block_index][seg_index]['events'][stream_name] = event_stream
+                    event_stream = d.copy()
+                    for name in _possible_event_stream_names:
+                        npz_filename = root / 'events' / d['folder_name'] / f'{name}.npy'
+                        if npz_filename.is_file():
+                            event_stream[f'{name}_npy'] = str(npz_filename)
                     
-                    full_word_npy = root / 'events' / d['folder_name'] / 'full_word.npy'
-                    if full_word_npy.is_file():
-                        print('TTL is ignored')
-    
+                    all_streams[block_index][seg_index]['events'][stream_name] = event_stream
+
     return all_streams, nb_block, nb_segment_per_block
-    
+
