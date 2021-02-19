@@ -134,20 +134,26 @@ class BaseFromRaw(BaseIO):
 
         bl = Block(**bl_annotations)
 
-        # Group for AnalogSignals
+        # Group for AnalogSignals come from signal_streams
         if create_group_across_segment['AnalogSignal']:
-            all_channels = self.header['signal_channels']
-            channel_indexes_list = self.get_group_signal_channel_indexes()
-            sig_groups = []
-            for channel_index in channel_indexes_list:
-                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
-                        channel_index, signal_group_mode=signal_group_mode).items():
-                        group = Group(name='AnalogSignal group {}'.format(i))
-                        # @andrew @ julia @michael : do we annotate group across segment with this arrays ?
-                        group.annotate(ch_names=all_channels[ind_abs]['name'].astype('U'))  # ??
-                        group.annotate(channel_ids=all_channels[ind_abs]['id'])  # ??
-                        bl.groups.append(group)
-                        sig_groups.append(group)
+            #~ all_channels = self.header['signal_channels']
+            #~ channel_indexes_list = self.get_group_signal_channel_indexes()
+            #~ sig_groups = []
+            #~ for channel_index in channel_indexes_list:
+                #~ for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
+                        #~ channel_index, signal_group_mode=signal_group_mode).items():
+                        #~ group = Group(name='AnalogSignal group {}'.format(i))
+                        #~ # @andrew @ julia @michael : do we annotate group across segment with this arrays ?
+                        #~ group.annotate(ch_names=all_channels[ind_abs]['name'].astype('U'))  # ??
+                        #~ group.annotate(channel_ids=all_channels[ind_abs]['id'])  # ??
+                        #~ bl.groups.append(group)
+                        #~ sig_groups.append(group)
+            signal_streams = self.header['signal_streams']
+            stream_groups = []
+            for stream_index in range(signal_streams.size):
+                group = Group(name=signal_streams[stream_index]['name'],
+                                           stream_id=signal_streams[stream_index]['id'])
+                stream_groups.append(group)
 
         if create_group_across_segment['SpikeTrain']:
             spike_channels = self.header['spike_channels']
@@ -156,8 +162,8 @@ class BaseFromRaw(BaseIO):
                 group = Group(name='SpikeTrain group {}'.format(c))
                 group.annotate(unit_name=spike_channels[c]['name'])
                 group.annotate(unit_id=spike_channels[c]['id'])
-                unit_annotations = self.raw_annotations['spike_channels'][c]
-                unit_annotations = check_annotations(unit_annotations)
+                #~ unit_annotations = self.raw_annotations['spike_channels'][c]
+                #~ unit_annotations = check_annotations(unit_annotations)
                 group.annotate(**unit_annotations)
                 bl.groups.append(group)
                 st_groups.append(group)
@@ -183,7 +189,7 @@ class BaseFromRaw(BaseIO):
         for seg in bl.segments:
             if create_group_across_segment['AnalogSignal']:
                 for c, anasig in enumerate(seg.analogsignals):
-                    sig_groups[c].add(anasig)
+                    stream_groups[c].add(anasig)
 
             if create_group_across_segment['SpikeTrain']:
                 for c, sptr in enumerate(seg.spiketrains):
@@ -231,38 +237,50 @@ class BaseFromRaw(BaseIO):
             signal_group_mode = self._prefered_signal_group_mode
 
         # annotations
-        seg_annotations = dict(self.raw_annotations['blocks'][block_index]['segments'][seg_index])
-        for k in ('signals', 'units', 'events'):
+        seg_annotations = self.raw_annotations['blocks'][block_index]['segments'][seg_index].copy()
+        for k in ('signals', 'spikes', 'events'):
             seg_annotations.pop(k)
         seg_annotations = check_annotations(seg_annotations)
 
         seg = Segment(index=seg_index, **seg_annotations)
 
         # AnalogSignal
-        signal_channels = self.header['signal_channels']
-        if signal_channels.size > 0:
-            channel_indexes_list = self.get_group_signal_channel_indexes()
-            for channel_indexes in channel_indexes_list:
-                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
-                        channel_indexes,
-                        signal_group_mode=signal_group_mode).items():
-                    # make a proxy...
-                    anasig = AnalogSignalProxy(rawio=self, global_channel_indexes=ind_abs,
-                                    block_index=block_index, seg_index=seg_index)
+        #~ signal_channels = self.header['signal_channels']
+        #~ if signal_channels.size > 0:
+            #~ channel_indexes_list = self.get_group_signal_channel_indexes()
+            #~ for channel_indexes in channel_indexes_list:
+                #~ for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
+                        #~ channel_indexes,
+                        #~ signal_group_mode=signal_group_mode).items():
+                    #~ # make a proxy...
+                    #~ anasig = AnalogSignalProxy(rawio=self, global_channel_indexes=ind_abs,
+                                    #~ block_index=block_index, seg_index=seg_index)
 
-                    if not lazy:
-                        # ... and get the real AnalogSIgnal if not lazy
-                        anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
-                        # TODO magnitude_mode='rescaled'/'raw'
+                    #~ if not lazy:
+                        #~ # ... and get the real AnalogSIgnal if not lazy
+                        #~ anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
+                        #~ # TODO magnitude_mode='rescaled'/'raw'
 
-                    anasig.segment = seg
-                    seg.analogsignals.append(anasig)
+                    #~ anasig.segment = seg
+                    #~ seg.analogsignals.append(anasig)
+        
+        # AnalogSignal
+        signal_streams = self.header['signal_streams']
+        for stream_index in range(len(signal_streams)):
+            anasig = AnalogSignalProxy(rawio=self, stream_index=stream_index,
+                            block_index=block_index, seg_index=seg_index)
+            if not lazy:
+                # ... and get the real AnalogSIgnal if not lazy
+                anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
+
+            anasig.segment = seg
+            seg.analogsignals.append(anasig)
 
         # SpikeTrain and waveforms (optional)
         spike_channels = self.header['spike_channels']
-        for unit_index in range(len(spike_channels)):
+        for spike_channel_index in range(len(spike_channels)):
             # make a proxy...
-            sptr = SpikeTrainProxy(rawio=self, unit_index=unit_index,
+            sptr = SpikeTrainProxy(rawio=self, spike_channel_index=spike_channel_index,
                                                 block_index=block_index, seg_index=seg_index)
 
             if not lazy:
