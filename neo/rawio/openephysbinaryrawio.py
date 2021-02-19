@@ -45,7 +45,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     def _parse_header(self):
         all_streams, nb_block, nb_segment_per_block = explore_folder(self.dirname)
 
-        source_names = []
+        ## signal zone
+        sig_source_names = []
         sig_channels = []
         self._memmap_sigs = {}
         self._t_start_sigs = {}
@@ -61,38 +62,39 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 self._t_start_sigs[block_index][seg_index] = []
                 self._t_start_segments[block_index][seg_index] = None
                 self._t_stop_segments[block_index][seg_index] = None
-                
-        for node_name in sorted(list((all_streams.keys()))):
-            for block_index in all_streams[node_name]:
-                for seg_index in all_streams[node_name][block_index]:
-                    for d in all_streams[node_name][block_index][seg_index]['continuous']:
-                        source_name = node_name + '#' + d['name']
-                        if source_name not in source_names:
-                            
-                            source_names.append(source_name)
-                            group_id = source_names.index(source_name)
+        
+        sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
+        print(sig_stream_names)
 
-                            num_channels = len(d['channels'])
-                            new_channels = []
-                            for chan_info in d['channels']:
-                                # using 0 as default, generate final ids later
-                                chan_id = 0
-                                new_channels.append((chan_info['channel_name'],
-                                    chan_id, float(d['sample_rate']), d['dtype'], chan_info['units'],
-                                    chan_info['bit_volts'], 0., group_id))
-                            sig_channels.extend(new_channels)
-                        memmap_sigs = np.memmap(d['raw_filename'], d['dtype'], order='C', mode='r').reshape(-1, num_channels)
-                        self._memmap_sigs[block_index][seg_index].append(memmap_sigs)
-                        self._t_start_sigs[block_index][seg_index].append(d['t_start'])
+        for block_index in all_streams:
+            for seg_index in all_streams[block_index]:
+                for stream_name, d in all_streams[block_index][seg_index]['continuous'].items():
+                    
+                    num_channels = len(d['channels'])
+                    if block_index == 0 and seg_index == 0:
+                        group_id = sig_stream_names.index(stream_name)
+                        new_channels = []
+                        for chan_info in d['channels']:
+                            # using 0 as default, generate final ids later
+                            chan_id = 0
+                            new_channels.append((chan_info['channel_name'],
+                                chan_id, float(d['sample_rate']), d['dtype'], chan_info['units'],
+                                chan_info['bit_volts'], 0., group_id))
+                        sig_channels.extend(new_channels)
 
-                        if self._t_start_segments[block_index][seg_index] is None or\
-                                self._t_start_segments[block_index][seg_index] > d['t_start']:
-                            self._t_start_segments[block_index][seg_index] = d['t_start']
-                        
-                        t_stop = d['t_start']  + memmap_sigs.shape[0] / float(d['sample_rate'])
-                        if self._t_stop_segments[block_index][seg_index] is None or\
-                                self._t_stop_segments[block_index][seg_index] < t_stop:
-                            self._t_stop_segments[block_index][seg_index] = t_stop
+                    memmap_sigs = np.memmap(d['raw_filename'], d['dtype'],
+                                 order='C', mode='r').reshape(-1, num_channels)
+                    self._memmap_sigs[block_index][seg_index].append(memmap_sigs)
+                    self._t_start_sigs[block_index][seg_index].append(d['t_start'])
+
+                    if self._t_start_segments[block_index][seg_index] is None or\
+                            self._t_start_segments[block_index][seg_index] > d['t_start']:
+                        self._t_start_segments[block_index][seg_index] = d['t_start']
+                    
+                    t_stop = d['t_start']  + memmap_sigs.shape[0] / float(d['sample_rate'])
+                    if self._t_stop_segments[block_index][seg_index] is None or\
+                            self._t_stop_segments[block_index][seg_index] < t_stop:
+                        self._t_stop_segments[block_index][seg_index] = t_stop
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         sig_channels['id'] = np.arange(sig_channels.size, dtype='int')
@@ -103,7 +105,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             loc_chans, = np.nonzero(sig_channels['group_id'] == group_id)
             self._global_channel_to_local_channel[loc_chans] = np.arange(loc_chans.size)
 
-        #
+        ## channel zone
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
@@ -206,7 +208,7 @@ def explore_folder(dirname):
     Exploring the OpenEphys folder structure and structure.oebin
     
     Returns nested dictionary structure:
-    [node_name][block_index][seg_index][stream_type][stream_information]
+    [block_index][seg_index][stream_type][stream_information]
     where
     - node_name is the open ephys node id
     - block_index is the neo Block index
@@ -238,21 +240,27 @@ def explore_folder(dirname):
             root = Path(root)
             
             node_name = root.parents[1].stem
+            if not node_name.startswith('Record'):
+                # before version 5.x.x there was not multi Node recording
+                # so no node_name
+                node_name = ''
 
-            if node_name not in all_streams:
-                all_streams[node_name] = {}
             
             block_index = int(root.parents[0].stem.replace('experiment', '')) - 1
-            if block_index not in all_streams[node_name]:
-                all_streams[node_name][block_index] = {}
+            if block_index not in all_streams:
+                all_streams[block_index] = {}
                 if block_index >= nb_block:
                     nb_block = block_index + 1
                     nb_segment_per_block.append(0)
 
             
-            seg_index = int(root.stem.replace('recording', '')) -1
-            if seg_index not in all_streams[node_name][block_index]:
-                all_streams[node_name][block_index][seg_index] = {}
+            seg_index = int(root.stem.replace('recording', '')) - 1
+            if seg_index not in all_streams[block_index]:
+                all_streams[block_index][seg_index] = {
+                            'continuous':{},
+                            'events':{},
+                            'spikes':{},
+                }
                 if seg_index >= nb_segment_per_block[block_index]:
                     nb_segment_per_block[block_index] = seg_index + 1
             
@@ -261,8 +269,11 @@ def explore_folder(dirname):
                 structure = json.load(f)
 
             if (root / 'continuous').exists() and len(structure['continuous']) > 0:
-                all_streams[node_name][block_index][seg_index]['continuous'] = []
                 for d in structure['continuous']:
+                    # when multi Record Node the stream name also contain
+                    # the node name to make it unique
+                    stream_name = node_name + '#' + d['folder_name']
+
                     raw_filename = root / 'continuous' / d['folder_name'] / 'continuous.dat'
                     
                     timestamp_file = root / 'continuous' / d['folder_name'] / 'timestamps.npy'
@@ -278,26 +289,26 @@ def explore_folder(dirname):
                     # TODO gap checking
                     signal_stream = d.copy()
                     signal_stream['raw_filename'] =  str(raw_filename)
-                    signal_stream['name'] = raw_filename.parents[0].stem
+                    # signal_stream['name'] = raw_filename.parents[0]
                     signal_stream['dtype'] = 'int16'
                     signal_stream['timestamp0'] = timestamp0
                     signal_stream['t_start'] = t_start
 
-                    all_streams[node_name][block_index][seg_index]['continuous'].append(signal_stream)
+                    all_streams[block_index][seg_index]['continuous'][stream_name] = signal_stream
             
             if (root / 'events').exists() and len(structure['events']) > 0:
-                all_streams[node_name][block_index][seg_index]['events'] = []
                 for d in structure['events']:
                     
                     text_npy = root / 'events' / d['folder_name'] / 'text.npy'
                     timestamps_npy = root / 'events' / d['folder_name'] / 'timestamps.npy'
+                    channels_npy = root / 'events' / d['folder_name'] / 'channels.npy'
                     if text_npy.is_file():
                         # case with text event
-                        event_stream = dict(
-                            text_npy=str(text_npy),
-                            timestamps_npy=str(timestamps_npy),
-                        )
-                        all_streams[node_name][block_index][seg_index]['events'].append(signal_stream)
+                        event_stream = d.copy()
+                        event_stream['text_npy'] = str(text_npy)
+                        event_stream['timestamps_npy'] = str(timestamps_npy)
+                        event_stream['channels_npy'] = str(channels_npy)
+                        all_streams[block_index][seg_index]['events'][stream_name] = event_stream
                     
                     full_word_npy = root / 'events' / d['folder_name'] / 'full_word.npy'
                     if full_word_npy.is_file():
