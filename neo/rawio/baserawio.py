@@ -72,7 +72,7 @@ _signal_channel_dtype = [
     ('gain', 'float64'),
     ('offset', 'float64'),
     ('group_id', 'int64'),
-    ('local_index', 'int64'),
+    # ('local_index', 'int64'),
 ]
 
 _common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id']
