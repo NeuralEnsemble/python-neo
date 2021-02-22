@@ -8,8 +8,8 @@ http://spider.science.strath.ac.uk/sipbs/software.htm
 Author : sgarcia
 Author: Samuel Garcia
 """
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype, _common_sig_characteristics)
 
 import numpy as np
 
@@ -75,9 +75,12 @@ class WinWcpRawIO(BaseRawIO):
 
         assert np.unique(all_sampling_interval).size == 1
 
+
         self._sampling_rate = 1. / all_sampling_interval[0]
 
-        sig_channels = []
+        
+
+        signal_channels = []
         for c in range(header['NC']):
             YG = float(header['YG%d' % c].replace(',', '.'))
             ADCMAX = header['ADCMAX']
@@ -88,11 +91,21 @@ class WinWcpRawIO(BaseRawIO):
             units = header['YU%d' % c]
             gain = VMax / ADCMAX / YG
             offset = 0.
-            group_id = 0
-            sig_channels.append((name, chan_id, self._sampling_rate, 'int16',
-                                 units, gain, offset, group_id))
+            stream_id = '0'
+            signal_channels.append((name, chan_id, self._sampling_rate, 'int16',
+                                 units, gain, offset, stream_id))
 
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        
+        characteristics = signal_channels[_common_sig_characteristics]
+        unique_characteristics = np.unique(characteristics)
+        signal_streams = []
+        for i in range(unique_characteristics.size):
+            mask = unique_characteristics[i] == characteristics
+            signal_channels['stream_id'][mask] = str(i)
+            signal_streams.append((f'stream {i}', str(i)))
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        
 
         # No events
         event_channels = []
@@ -106,7 +119,8 @@ class WinWcpRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
-        self.header['signal_channels'] = sig_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
@@ -120,21 +134,19 @@ class WinWcpRawIO(BaseRawIO):
         t_stop = self._raw_signals[seg_index].shape[0] / self._sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         return self._raw_signals[seg_index].shape[0]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        # WARNING check if id or index for signals (in the old IO it was ids
-        # ~ raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_indexes]
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        global_channel_indexes, = np.nonzero(self.header['signal_channels']['stream_id'] == stream_id)
         if channel_indexes is None:
-            channel_indexes = np.arange(self.header['signal_channels'].size)
-
-        ids = self.header['signal_channels']['id'].tolist()
-        channel_ids = [ids.index(c) for c in channel_indexes]
-        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_ids]
+            channel_indexes = slice(None)
+        global_channel_indexes = global_channel_indexes[channel_indexes]
+        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), :][:, global_channel_indexes]
         return raw_signals
 
 

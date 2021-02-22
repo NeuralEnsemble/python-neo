@@ -22,7 +22,8 @@ Units in this IO are not guaranteed.
 Author: Samuel Garcia, SummitKwan, Chadwick Boulay
 
 """
-from .baserawio import BaseRawIO, _signal_channel_dtype, _spike_channel_dtype, _event_channel_dtype
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 import os
@@ -136,6 +137,7 @@ class TdtRawIO(BaseRawIO):
         self._global_t_start = self._seg_t_starts[0]
 
         # signal channels EVTYPE_STREAM
+        signal_streams =[]
         signal_channels = []
         self._sigs_data_buf = {seg_index: {} for seg_index in range(nb_segment)}
         self._sigs_index = {seg_index: {} for seg_index in range(nb_segment)}
@@ -147,12 +149,16 @@ class TdtRawIO(BaseRawIO):
                               for seg_index in range(nb_segment)}  # key = seg_index then group_id
 
         keep = info_channel_groups['TankEvType'] == EVTYPE_STREAM
-        for group_id, info in enumerate(info_channel_groups[keep]):
-            self._sig_sample_per_chunk[group_id] = info['NumPoints']
+        for stream_index, info in enumerate(info_channel_groups[keep]):
+            self._sig_sample_per_chunk[stream_index] = info['NumPoints']
 
+            stream_name = str(info['StoreName'])
+            stream_id = f'{stream_index}'
+            signal_streams.append((stream_name, stream_id))
+            
             for c in range(info['NumChan']):
-                chan_index = len(signal_channels)
-                chan_id = c + 1  # If several StoreName then chan_id is not unique in TDT!!!!!
+                global_chan_index = len(signal_channels)
+                chan_id = c + 1  # several StoreName can have same chan_id: this is ok
 
                 # loop over segment to get sampling_rate/data_index/data_buffer
                 sampling_rate = None
@@ -164,20 +170,20 @@ class TdtRawIO(BaseRawIO):
                            (tsq['evname'] == info['StoreName']) & \
                            (tsq['channel'] == chan_id)
                     data_index = tsq[mask].copy()
-                    self._sigs_index[seg_index][chan_index] = data_index
+                    self._sigs_index[seg_index][global_chan_index] = data_index
 
                     size = info['NumPoints'] * data_index.size
-                    if group_id not in self._sigs_lengths[seg_index]:
-                        self._sigs_lengths[seg_index][group_id] = size
+                    if stream_index not in self._sigs_lengths[seg_index]:
+                        self._sigs_lengths[seg_index][stream_index] = size
                     else:
-                        assert self._sigs_lengths[seg_index][group_id] == size
+                        assert self._sigs_lengths[seg_index][stream_index] == size
 
                     # signal start time, relative to start of segment
                     t_start = data_index['timestamp'][0]
-                    if group_id not in self._sigs_t_start[seg_index]:
-                        self._sigs_t_start[seg_index][group_id] = t_start
+                    if stream_index not in self._sigs_t_start[seg_index]:
+                        self._sigs_t_start[seg_index][stream_index] = t_start
                     else:
-                        assert self._sigs_t_start[seg_index][group_id] == t_start
+                        assert self._sigs_t_start[seg_index][stream_index] == t_start
 
                     # sampling_rate and dtype
                     _sampling_rate = float(data_index['frequency'][0])
@@ -185,10 +191,10 @@ class TdtRawIO(BaseRawIO):
                     if sampling_rate is None:
                         sampling_rate = _sampling_rate
                         dtype = _dtype
-                        if group_id not in self._sig_dtype_by_group:
-                            self._sig_dtype_by_group[group_id] = np.dtype(dtype)
+                        if stream_index not in self._sig_dtype_by_group:
+                            self._sig_dtype_by_group[stream_index] = np.dtype(dtype)
                         else:
-                            assert self._sig_dtype_by_group[group_id] == dtype
+                            assert self._sig_dtype_by_group[stream_index] == dtype
                     else:
                         assert sampling_rate == _sampling_rate, 'sampling is changing!!!'
                         assert dtype == _dtype, 'sampling is changing!!!'
@@ -203,15 +209,16 @@ class TdtRawIO(BaseRawIO):
                     else:
                         data = self._tev_datas[seg_index]
                     assert data is not None, 'no TEV nor SEV'
-                    self._sigs_data_buf[seg_index][chan_index] = data
+                    self._sigs_data_buf[seg_index][global_chan_index] = data
 
                 chan_name = '{} {}'.format(info['StoreName'], c + 1)
                 sampling_rate = sampling_rate
                 units = 'V'  # WARNING this is not sur at all
                 gain = 1.
                 offset = 0.
-                signal_channels.append((chan_name, chan_id, sampling_rate, dtype,
-                                        units, gain, offset, group_id))
+                signal_channels.append((chan_name, str(chan_id), sampling_rate, dtype,
+                                        units, gain, offset, stream_id))
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         # unit channels EVTYPE_SNIP
@@ -263,6 +270,7 @@ class TdtRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
@@ -282,36 +290,43 @@ class TdtRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._seg_t_stops[seg_index] - self._global_t_start
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
-        size = self._sigs_lengths[seg_index][group_id]
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        size = self._sigs_lengths[seg_index][stream_index]
         return size
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
-        return self._sigs_t_start[seg_index][group_id] - self._global_t_start
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        return self._sigs_t_start[seg_index][stream_index] - self._global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        # check of channel_indexes is same group_id is done outside (BaseRawIO)
-        # so first is identique to others
-        group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        #~ group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
 
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._sigs_lengths[seg_index][group_id]
+            i_stop = self._sigs_lengths[seg_index][stream_index]
+        
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        signal_channels = self.header['signal_channels']
+        mask = signal_channels['stream_id'] == stream_id
+        global_chan_indexes = np.arange(signal_channels.size)[mask]
+        signal_channels = signal_channels[mask]
 
-        dt = self._sig_dtype_by_group[group_id]
-        raw_signals = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=dt)
+        if channel_indexes is None:
+            channel_indexes = slice(None)
+        global_chan_indexes = global_chan_indexes[channel_indexes]
+        signal_channels = signal_channels[channel_indexes]
 
-        sample_per_chunk = self._sig_sample_per_chunk[group_id]
+        dt = self._sig_dtype_by_group[stream_index]
+        raw_signals = np.zeros((i_stop - i_start, signal_channels.size), dtype=dt)
+
+        sample_per_chunk = self._sig_sample_per_chunk[stream_index]
         bl0 = i_start // sample_per_chunk
         bl1 = int(np.ceil(i_stop / sample_per_chunk))
         chunk_nb_bytes = sample_per_chunk * dt.itemsize
 
-        for c, channel_index in enumerate(channel_indexes):
-            data_index = self._sigs_index[seg_index][channel_index]
-            data_buf = self._sigs_data_buf[seg_index][channel_index]
+        for c, global_index in enumerate(global_chan_indexes):
+            data_index = self._sigs_index[seg_index][global_index]
+            data_buf = self._sigs_data_buf[seg_index][global_index]
 
             # loop over data blocks and get chunks
             ind = 0
