@@ -21,10 +21,9 @@ If one day, somebody use it, consider to offer me a beer.
 Author: Samuel Garcia
 
 """
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 from collections import OrderedDict
@@ -165,12 +164,17 @@ class PlexonRawIO(BaseRawIO):
                     .5 * (2 ** global_header['BitsPerSpikeSample']) *
                     h['Gain'] * h['PreampGain'])
             offset = 0.
-            group_id = 0
-            sig_channels.append((name, chan_id, sampling_rate, sig_dtype,
-                                 units, gain, offset, group_id))
+            stream_id = '0'
+            sig_channels.append((name, str(chan_id), sampling_rate, sig_dtype,
+                                 units, gain, offset, stream_id))
         if len(all_sig_length) > 0:
             self._signal_length = min(all_sig_length)
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        
+        if sig_channels.size > 0:
+            signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
+        else:
+            signal_streams = np.array([], dtype=_signal_stream_dtype)
 
         self._global_ssampling_rate = global_header['ADFrequency']
         if slowChannelHeaders.size > 0:
@@ -225,6 +229,7 @@ class PlexonRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = sig_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
@@ -248,13 +253,15 @@ class PlexonRawIO(BaseRawIO):
         else:
             return t_stop1
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return self._signal_length
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -262,11 +269,13 @@ class PlexonRawIO(BaseRawIO):
 
         if channel_indexes is None:
             channel_indexes = np.arange(self.header['signal_channels'].size)
+        elif isinstance(channel_indexes, slice):
+            channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
 
         raw_signals = np.zeros((i_stop - i_start, len(channel_indexes)), dtype='int16')
         for c, channel_index in enumerate(channel_indexes):
-            chan_header = self.header['signal_channels'][channel_index]
-            chan_id = chan_header['id']
+            chan_id = self.header['signal_channels'][channel_index]['id']
+            chan_id = np.int32(chan_id)
 
             data_blocks = self._data_blocks[5][chan_id]
 

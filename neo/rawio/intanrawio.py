@@ -60,7 +60,7 @@ class IntanRawIO(BaseRawIO):
         signal_channels = []
         for c, chan_info in enumerate(self._ordered_channels):
             name = chan_info['native_channel_name']
-            chan_id = c  # the chan_id have no meaning in intan
+            chan_id = str(c)  # the chan_id have no meaning in intan
             if chan_info['signal_type'] == 20:
                 # exception for temperature
                 sig_dtype = 'int16'

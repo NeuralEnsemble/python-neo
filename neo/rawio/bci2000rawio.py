@@ -46,7 +46,7 @@ class BCI2000RawIO(BaseRawIO):
         for chan_ix in range(file_info['SourceCh']):
             ch_name = param_defs['ChannelNames']['value'][chan_ix] \
                 if 'ChannelNames' in param_defs and param_defs['ChannelNames']['value'] is not np.nan else 'ch' + str(chan_ix)
-            chan_id = chan_ix + 1
+            chan_id = str(chan_ix + 1)
             sr = param_defs['SamplingRate']['value']  # Hz
             dtype = file_info['DataFormat']
             units = 'uV'

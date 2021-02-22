@@ -22,10 +22,9 @@ http://www.neuroexplorer.com/downloadspage/
 Author: Samuel Garcia, luc estebanez, mark hollenbeck
 
 """
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 from collections import OrderedDict
@@ -62,7 +61,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         for i in range(self.global_header['nvar']):
             entity_header = self._entity_headers[i]
             name = entity_header['name']
-            _id = i
+            _id = str(i)
             if entity_header['type'] == 0:  # Unit
                 spike_channels.append((name, _id, '', 0, 0, 0, 0))
 
@@ -91,9 +90,9 @@ class NeuroExplorerRawIO(BaseRawIO):
                 dtype = 'int16'
                 gain = entity_header['ADtoMV']
                 offset = entity_header['MVOffset']
-                group_id = 0
+                stream_id = str(_id)
                 sig_channels.append((name, _id, sampling_rate, dtype, units,
-                                     gain, offset, group_id))
+                                     gain, offset, stream_id))
                 self._sig_lengths.append(entity_header['NPointsWave'])
                 # sig t_start is the first timestamp if datablock
                 offset = entity_header['offset']
@@ -103,19 +102,23 @@ class NeuroExplorerRawIO(BaseRawIO):
 
             elif entity_header['type'] == 6:  # Markers
                 event_channels.append((name, _id, 'event'))
-
+        
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # each signal channel have a dierent groups that force reading
         # them one by one
-        sig_channels['group_id'] = np.arange(sig_channels.size)
+        sig_channels['stream_id'] = np.arange(sig_channels.size).astype('U')
+        signal_streams = np.zeros(sig_channels.size, dtype=_signal_stream_dtype)
+        signal_streams['name'] = sig_channels['name']
+        signal_streams['id'] = sig_channels['stream_id']
 
         # fill into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = sig_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
@@ -136,17 +139,14 @@ class NeuroExplorerRawIO(BaseRawIO):
         t_stop = self.global_header['tend'] / self.global_header['freq']
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        assert len(channel_indexes) == 1, 'only one channel by one channel'
-        return self._sig_lengths[channel_indexes[0]]
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        return self._sig_lengths[stream_index]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        assert len(channel_indexes) == 1, 'only one channel by one channel'
-        return self._sig_t_starts[channel_indexes[0]]
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        return self._sig_t_starts[stream_index]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        assert len(channel_indexes) == 1, 'only one channel by one channel'
-        channel_index = channel_indexes[0]
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        channel_index = stream_index
         entity_index = int(self.header['signal_channels'][channel_index]['id'])
         entity_header = self._entity_headers[entity_index]
         n = entity_header['n']

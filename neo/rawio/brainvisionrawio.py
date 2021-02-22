@@ -68,7 +68,7 @@ class BrainVisionRawIO(BaseRawIO):
                 channel_desc = channel_infos['ch%d' % (c + 1,)]
             name, ref, res, units = channel_desc.split(',')
             units = units.replace('µ', 'u')
-            chan_id = c + 1
+            chan_id = str(c + 1)
             if sig_dtype == np.int16 or sig_dtype == np.int32:
                 gain = float(res)
             else:

@@ -16,8 +16,8 @@ Author: Samuel Garcia
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 from xml.etree import ElementTree
@@ -66,17 +66,20 @@ class NeuroScopeRawIO(BaseRawIO):
 
         self._raw_signals = np.memmap(filename + '.dat', dtype=sig_dtype,
                                       mode='r', offset=0).reshape(-1, nb_channel)
-
+        
+        # one unique stream
+        signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
+        
         # signals
         sig_channels = []
         for c in range(nb_channel):
             name = 'ch{}grp{}'.format(c, channel_group[c])
-            chan_id = c
+            chan_id = str(c)
             units = 'mV'
             offset = 0.
-            group_id = 0
+            stream_id = '0'
             sig_channels.append((name, chan_id, self._sampling_rate,
-                                 sig_dtype, units, gain, offset, group_id))
+                                 sig_dtype, units, gain, offset, stream_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No events
@@ -91,6 +94,7 @@ class NeuroScopeRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = sig_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
@@ -104,14 +108,16 @@ class NeuroScopeRawIO(BaseRawIO):
         t_stop = self._raw_signals.shape[0] / self._sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return self._raw_signals.shape[0]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
+        raw_signals = self._raw_signals[slice(i_start, i_stop), :][:, channel_indexes]
         return raw_signals

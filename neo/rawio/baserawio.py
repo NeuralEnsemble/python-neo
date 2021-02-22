@@ -415,13 +415,15 @@ class BaseRawIO:
         """
         signal_streams = self.header['signal_streams']
         signal_channels = self.header['signal_channels']
-        
+        if signal_streams.size > 0:
+            assert signal_channels.size > 0, 'Signal stream but no signal_channels!!!'
+
         for stream_index in range(signal_streams.size):
             stream_id = signal_streams[stream_index]['id']
             mask = signal_channels['stream_id'] == stream_id
             characteristics = signal_channels[mask][_common_sig_characteristics]
             unique_characteristics = np.unique(characteristics)
-            assert unique_characteristics.size == 1, f'Some channel in stream_id {stream_id} do not have same {_common_sig_characteristics}'
+            assert unique_characteristics.size == 1, f'Some channel in stream_id {stream_id} do not have same {_common_sig_characteristics} {unique_characteristics}'
             
             # also check that id is unique inside a stream
             channel_ids = signal_channels[mask]['id']

@@ -132,7 +132,7 @@ class ElanRawIO(BaseRawIO):
         sig_channels = []
         for c, chan_info in enumerate(channel_infos[:-2]):
             chan_name = chan_info['label']
-            chan_id = c
+            chan_id = str(c)
 
             gain = (chan_info['max_physic'] - chan_info['min_physic']) / \
                    (chan_info['max_logic'] - chan_info['min_logic'])

@@ -9,8 +9,8 @@ import re
 
 import numpy as np
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 
 RECORD_SIZE = 1024
@@ -78,7 +78,7 @@ class OpenEphysRawIO(BaseRawIO):
         self._sigs_memmap = {}
         self._sig_length = {}
         self._sig_timestamp0 = {}
-        sig_channels = []
+        signal_channels = []
         oe_indices = sorted(list(info['continuous'].keys()))
         for seg_index, oe_index in enumerate(oe_indices):
             self._sigs_memmap[seg_index] = {}
@@ -116,8 +116,8 @@ class OpenEphysRawIO(BaseRawIO):
 
                 if seg_index == 0:
                     # add in channel list
-                    sig_channels.append((ch_name, chan_id, chan_info['sampleRate'],
-                                'int16', 'V', chan_info['bitVolts'], 0., int(processor_id)))
+                    signal_channels.append((ch_name, chan_id, chan_info['sampleRate'],
+                                'int16', 'V', chan_info['bitVolts'], 0., processor_id))
 
             # In some cases, continuous do not have the same lentgh because
             # one record block is missing when the "OE GUI is freezing"
@@ -159,8 +159,21 @@ class OpenEphysRawIO(BaseRawIO):
             self._sig_length[seg_index] = all_sigs_length[0]
             self._sig_timestamp0[seg_index] = all_first_timestamps[0]
 
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        self._sig_sampling_rate = sig_channels['sampling_rate'][0]  # unique for channel
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        self._sig_sampling_rate = signal_channels['sampling_rate'][0]  # unique for channel
+        
+        # split channels in stream depending the name CHxxx ADCxxx
+        stream_ids = [ name[:2] if name.startswith('CH') else name[:3] for name in signal_channels['name']]
+        signal_channels['stream_id'] = stream_ids
+        
+        # and create streams channels
+        stream_ids = []
+        for stream_id in signal_channels['stream_id']:
+            # keep natural order 'CH' first
+            if stream_id not in stream_ids:
+                stream_ids.append(stream_id)
+        signal_streams = [(f'Signals {stream_id}', f'{stream_id}') for stream_id in stream_ids]
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype) 
 
         # scan for spikes files
         spike_channels = []
@@ -247,7 +260,8 @@ class OpenEphysRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
-        self.header['signal_channels'] = sig_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
@@ -272,13 +286,13 @@ class OpenEphysRawIO(BaseRawIO):
         return (self._sig_timestamp0[seg_index] + self._sig_length[seg_index])\
             / self._sig_sampling_rate
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         return self._sig_length[seg_index]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sig_timestamp0[seg_index] / self._sig_sampling_rate
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -289,13 +303,15 @@ class OpenEphysRawIO(BaseRawIO):
         sl0 = i_start % RECORD_SIZE
         sl1 = sl0 + (i_stop - i_start)
 
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        global_channel_indexes, = np.nonzero(self.header['signal_channels']['stream_id'] == stream_id)
         if channel_indexes is None:
             channel_indexes = slice(None)
-        channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
+        global_channel_indexes = global_channel_indexes[channel_indexes]
 
-        sigs_chunk = np.zeros((i_stop - i_start, len(channel_indexes)), dtype='int16')
-        for i, chan_index in enumerate(channel_indexes):
-            data = self._sigs_memmap[seg_index][chan_index]
+        sigs_chunk = np.zeros((i_stop - i_start, len(global_channel_indexes)), dtype='int16')
+        for i, global_chan_index in enumerate(global_channel_indexes):
+            data = self._sigs_memmap[seg_index][global_chan_index]
             sub = data[block_start:block_stop]
             sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
 
