@@ -368,7 +368,7 @@ class BaseRawIO:
         """
         return len(self.header['signal_streams'])
 
-    def signal_channels_count(self, tream_index):
+    def signal_channels_count(self, stream_index):
         """Return the number of signal channels for a given stream
         Same along all Blocks and Segments.
         """
@@ -423,9 +423,13 @@ class BaseRawIO:
             characteristics = signal_channels[mask][_common_sig_characteristics]
             unique_characteristics = np.unique(characteristics)
             assert unique_characteristics.size == 1, f'Some channel in stream_id {stream_id} do not have same {_common_sig_characteristics}'
+            
+            # also check that id is unique inside a stream
+            channel_ids = signal_channels[mask]['id']
+            assert np.unique(channel_ids).size == channel_ids.size, f'signal_channels dont have unique ids for stream {stream_index}'
         
         self._several_channel_groups = signal_streams.size > 1
-
+        
     #~ def _check_common_characteristics(self, channel_indexes):
         #~ """
         #~ Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
@@ -461,38 +465,44 @@ class BaseRawIO:
         #~ else:
             #~ return [None]
 
-    def channel_name_to_index(self, channel_names):
+    def channel_name_to_index(self, stream_index, channel_names):
         """
-        Transform channel_names to channel_indexes.
+        Inside a stream, transform channel_names to channel_indexes.
         Based on self.header['signal_channels']
+        channel_indexes is local to stream
         """
-        ch = self.header['signal_channels']
-        channel_indexes, = np.nonzero(np.in1d(ch['name'], channel_names))
-        assert len(channel_indexes) == len(channel_names), 'not match'
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
+        chan_names = list(signal_channels['name'])
+        assert signal_channels.size == np.unique(chan_names).size, 'Channel names not unique'
+        channel_indexes = np.array([chan_names.index(name) for name in channel_names])
         return channel_indexes
 
-    def channel_id_to_index(self, channel_ids):
+    def channel_id_to_index(self, stream_index, channel_ids):
         """
-        Transform channel_ids to channel_indexes.
+        Inside a stream,  transform channel_ids to channel_indexes.
         Based on self.header['signal_channels']
+        channel_indexes is local to stream
         """
-        ch = self.header['signal_channels']
-        channel_indexes, = np.nonzero(np.in1d(ch['id'], channel_ids))
-        assert len(channel_indexes) == len(channel_ids), 'not match'
+        # unique ids is already check in _check_stream_signal_channel_characteristics
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
+        chan_ids = list(signal_channels['id'])
+        channel_indexes = np.array([chan_ids.index(chan_id) for chan_id in channel_ids])
         return channel_indexes
 
-    #~ def _get_channel_indexes(self, channel_indexes, channel_names, channel_ids):
-        #~ """
-        #~ Select channel_indexes from channel_indexes/channel_names/channel_ids
-        #~ depending which is not None.
-        #~ """
-        #~ if channel_indexes is None and channel_names is not None:
-            #~ channel_indexes = self.channel_name_to_index(channel_names)
-
-        #~ if channel_indexes is None and channel_ids is not None:
-            #~ channel_indexes = self.channel_id_to_index(channel_ids)
-
-        #~ return channel_indexes
+    def _get_channel_indexes(self, stream_index, channel_indexes, channel_names, channel_ids):
+        """
+        Select channel_indexes from channel_indexes/channel_names/channel_ids
+        depending which is not None.
+        """
+        if channel_indexes is None and channel_names is not None:
+            channel_indexes = self.channel_name_to_index(stream_index, channel_names)
+        elif channel_indexes is None and channel_ids is not None:
+            channel_indexes = self.channel_id_to_index(stream_index, channel_ids)
+        return channel_indexes
     
     def _get_stream_index(self, stream_index):
         if stream_index is None:
@@ -535,27 +545,26 @@ class BaseRawIO:
         """ 
         Return a chunk of raw signal.
         """
-        #~ channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
-        #~ if self._several_channel_groups:
-            #~ self._check_common_characteristics(channel_indexes)
-        
         stream_index = self._get_stream_index(stream_index)
-
+        channel_indexes = self._get_channel_indexes(stream_index, channel_indexes, channel_names, channel_ids)
+        
         raw_chunk = self._get_analogsignal_chunk(
             block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
-
         return raw_chunk
 
     def rescale_signal_raw_to_float(self, raw_signal, dtype='float32', stream_index=None,
                                     channel_indexes=None, channel_names=None, channel_ids=None):
         stream_index = self._get_stream_index(stream_index)
-        #~ channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
-        #~ if channel_indexes is None:
-            #~ channel_indexes = slice(None)
+        channel_indexes = self._get_channel_indexes(stream_index, channel_indexes, channel_names, channel_ids)
+        if channel_indexes is None:
+            channel_indexes = slice(None)
         
         stream_id = self.header['signal_streams'][stream_index]['id']
         mask = self.header['signal_channels']['stream_id'] == stream_id
         channels = self.header['signal_channels'][mask]
+        if channel_indexes is None:
+            channel_indexes = slice(None)
+        channels = channels[channel_indexes]
 
         float_signal = raw_signal.astype(dtype)
 

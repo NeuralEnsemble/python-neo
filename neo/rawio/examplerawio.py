@@ -9,14 +9,15 @@ Rules for creating a new class:
     * Create the class that inherits BaseRawIO
     * copy/paste all methods that need to be implemented.
       See the end a neo.rawio.baserawio.BaseRawIO
-    * code hard! The main difficulty **is _parse_header()**.
+    * code hard! The main difficulty is `_parse_header()`.
       In short you have a create a mandatory dict than
       contains channel informations::
 
             self.header = {}
             self.header['nb_block'] = 2
             self.header['nb_segment'] = [2, 3]
-            self.header['signal_channels'] = sig_channels
+            self.header['signal_streams'] = signal_streams
+            self.header['signal_channels'] = signal_channels
             self.header['spike_channels'] = spike_channels
             self.header['event_channels'] = event_channels
 
@@ -130,9 +131,8 @@ class ExampleRawIO(BaseRawIO):
             units = 'uV'
             gain = 1000. / 2 ** 16
             offset = 0.
-            # group_id is only for special cases when channels have different
-            # sampling rate for instance. See TdtIO for that.
-            # Here this is the general case: all channel have the same characteritics
+            # stream_id indicate how to group channels
+            # channels insisde a "stream" share same characteritics (sampling rate/dtype/t_start/units/...)
             stream_id = str(c // 8)
             signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -179,14 +179,15 @@ class ExampleRawIO(BaseRawIO):
         # to any object. To keep this functionality with the wrapper
         # BaseFromRaw you can add annoations in a nested dict.
         
-        # this be must call alaways !!! This generate the complicated nested dict
-        
+        # this be must call alaways !!! This generate the complicated nested dict of annotations/array_annotations
         self._generate_minimal_annotations()
-        # this really help for understand the nested (and complicated sometimes) dict
+        # this pprint lines really help for understand the nested (and complicated sometimes) dict
         # from pprint import pprint
-        #pprint(self.raw_annotations)
+        # pprint(self.raw_annotations)
         
         # If you are a lazy dev you can stop here.
+        # if you want to inject more annotations/array_annotations
+        # please have a look to the following loops:
         for block_index in range(2):
             bl_ann = self.raw_annotations['blocks'][block_index]
             bl_ann['name'] = 'Block #{}'.format(block_index)
@@ -197,9 +198,10 @@ class ExampleRawIO(BaseRawIO):
                     seg_index, block_index)
                 seg_ann['seg_extra_info'] = 'This is the seg {} of block {}'.format(
                     seg_index, block_index)
-                #~ for c in range(16):
-                    #~ anasig_an = seg_ann['signals'][c]
-                    #~ anasig_an['info'] = 'This is a good signals'
+                for c in range(2):
+                    sig_an = seg_ann['signals'][c]['nickname'] = f'This stream {c} is from a subdevice'
+                    # add some array annotations (8 channels)
+                    sig_an = seg_ann['signals'][c]['__array_annotations__']['impedance'] = np.random.rand(8) * 10000
                 for c in range(3):
                     spiketrain_an = seg_ann['spikes'][c]
                     spiketrain_an['quality'] = 'Good!!'
@@ -272,7 +274,7 @@ class ExampleRawIO(BaseRawIO):
 
         assert i_start >= 0, "I don't like your jokes"
         assert i_stop <= 100000, "I don't like your jokes"
-
+        
         if channel_indexes is None:
             nb_chan = 8
         elif isinstance(channel_indexes, slice):
