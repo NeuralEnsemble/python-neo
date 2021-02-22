@@ -162,9 +162,6 @@ class BaseFromRaw(BaseIO):
                 group = Group(name='SpikeTrain group {}'.format(c))
                 group.annotate(unit_name=spike_channels[c]['name'])
                 group.annotate(unit_id=spike_channels[c]['id'])
-                #~ unit_annotations = self.raw_annotations['spike_channels'][c]
-                #~ unit_annotations = check_annotations(unit_annotations)
-                group.annotate(**unit_annotations)
                 bl.groups.append(group)
                 st_groups.append(group)
 

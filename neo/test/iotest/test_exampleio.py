@@ -15,8 +15,6 @@ import numpy as np
 
 
 # This run standart tests, this is mandatory for all IO
-
-
 class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ExampleIO
     files_to_test = ['fake1',
@@ -24,7 +22,10 @@ class TestExampleIO(BaseTestIO, unittest.TestCase, ):
                      ]
     files_to_download = []
 
+# If he io is rawio based you can stop here
 
+# you can also if necessary check specific behavrio of the IO.
+# here an example even it is not specific
 class Specific_TestExampleIO(unittest.TestCase):
     def test_read_segment_lazy(self):
         r = ExampleIO(filename=None)
