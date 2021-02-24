@@ -137,6 +137,12 @@ class ExampleRawIO(BaseRawIO):
             signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
+        # add some difficulties in the second signal stream 2 channels have other units (pA)
+        # this will have no impact in neo.rawio. A stream with several units is valid.
+        # but for neo.io this stream will be splited in 2 parts so this ends with 3 AnalogSignals per segment.
+        #  this is because an AnalogSignal must have the same stream across channel
+        signal_channels[-2:]['units'] = 'pA'
+
         # creating units channels
         # This is mandatory!!!!
         # Note that if there is no waveform at all in the file

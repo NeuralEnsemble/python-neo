@@ -86,11 +86,15 @@ class AnalogSignalProxy(BaseProxy):
     _recommended_attrs = BaseNeo._recommended_attrs
     proxy_for = AnalogSignal
 
-    def __init__(self, rawio=None, stream_index=None, block_index=0, seg_index=0):
+    def __init__(self, rawio=None, stream_index=None, inner_stream_channels=None,
+                                            block_index=0, seg_index=0):
         self._rawio = rawio
         self._block_index = block_index
         self._seg_index = seg_index
         self._stream_index = stream_index
+        if inner_stream_channels is None:
+            inner_stream_channels = slice(inner_stream_channels)
+        self._inner_stream_channels = inner_stream_channels
         #~ if global_channel_indexes is None:
             #~ global_channel_indexes = slice(None)
         #~ total_nb_chan = self._rawio.header['signal_channels'].size
@@ -100,7 +104,9 @@ class AnalogSignalProxy(BaseProxy):
         signal_streams = self._rawio.header['signal_streams']
         stream_id = signal_streams[stream_index]['id']
         signal_channels = self._rawio.header['signal_channels']
-        self._global_channel_indexes, = np.nonzero(signal_channels['stream_id'] == stream_id)
+        global_inds, = np.nonzero(signal_channels['stream_id'] == stream_id)
+        self._nb_total_chann_in_stream = global_inds.size
+        self._global_channel_indexes = global_inds[inner_stream_channels]
         self._nb_chan = self._global_channel_indexes.size
 
         sig_chans = signal_channels[self._global_channel_indexes]
@@ -135,6 +141,7 @@ class AnalogSignalProxy(BaseProxy):
         ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][stream_index]
         annotations = ann.copy()
         array_annotations = annotations.pop('__array_annotations__')
+        array_annotations = {k:v[inner_stream_channels] for k, v in array_annotations.items()}
         
         #~ annotations['name'] = self._make_name(None)
         #~ if len(sig_chans) == 1:
@@ -202,6 +209,19 @@ class AnalogSignalProxy(BaseProxy):
 
         if channel_indexes is None:
             channel_indexes = slice(None)
+        
+        if isinstance(self._inner_stream_channels, slice) and self._inner_stream_channels == slice(None):
+            # sub stream is the entire stream
+            if channel_indexes is None:
+                fixed_channel_indexes = None
+            else:
+                fixed_channel_indexes = channel_indexes
+        else:
+            # sub stream is part of  stream
+            if channel_indexes is None:
+                fixed_channel_indexes = self._inner_stream_channels
+            else:
+                fixed_channel_indexes = self._inner_stream_channels[channel_indexes]
 
         sr = self.sampling_rate
 
@@ -237,12 +257,10 @@ class AnalogSignalProxy(BaseProxy):
 
         raw_signal = self._rawio.get_analogsignal_chunk(block_index=self._block_index,
                     seg_index=self._seg_index, i_start=i_start, i_stop=i_stop, 
-                    stream_index=self._stream_index, channel_indexes=channel_indexes)
-                    #~ channel_indexes=self._global_channel_indexes[channel_indexes])
+                    stream_index=self._stream_index, channel_indexes=fixed_channel_indexes)
 
         # if slice in channel : change name and array_annotations
         if raw_signal.shape[1] != self._nb_chan:
-            #~ name = self._make_name(channel_indexes)
             name = 'slice of  ' + self.name
             array_annotations = {k: v[channel_indexes] for k, v in self.array_annotations.items()}
         else:
@@ -261,7 +279,7 @@ class AnalogSignalProxy(BaseProxy):
             else:
                 dtype = 'float32'
             sig = self._rawio.rescale_signal_raw_to_float(raw_signal, dtype=dtype, 
-                                    stream_index=self._stream_index, channel_indexes=channel_indexes)
+                                    stream_index=self._stream_index, channel_indexes=fixed_channel_indexes)
                                     #~ channel_indexes=self._global_channel_indexes[channel_indexes])
             units = self.units
 

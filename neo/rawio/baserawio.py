@@ -78,8 +78,10 @@ _signal_channel_dtype = [
     ('offset', 'float64'),
     ('stream_id', 'U64'),
 ]
+# TODO add t_start and length here this would simplify all st_start/t_stop stuff for each RawIO class
 
-_common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id', 'units']
+_common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id']
+# _common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id', 'units']
 
 _spike_channel_dtype = [
     ('name', 'U64'),
