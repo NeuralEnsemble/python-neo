@@ -435,7 +435,7 @@ class TdtRawIO(BaseRawIO):
         # it was not implemented in previous IO.
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         # already in s
         ev_times = event_timestamps.astype(dtype)
         return ev_times

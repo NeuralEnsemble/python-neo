@@ -149,18 +149,3 @@ class MEArecRawIO(BaseRawIO):
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         return spike_timestamps.astype(dtype)
-
-    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        return None
-
-    def _event_count(self, block_index, seg_index, event_channel_index):
-        return None
-
-    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        return None
-
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
-        return None
-
-    def _rescale_epoch_duration(self, raw_duration, dtype):
-        return None

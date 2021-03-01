@@ -381,13 +381,13 @@ class AxographRawIO(BaseRawIO):
 
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         # Scale either event or epoch start times from sample index to seconds
         # (t_start shouldn't be added)
         event_times = event_timestamps.astype(dtype) * self._sampling_period
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         # Scale epoch durations from samples to seconds
         epoch_durations = raw_duration.astype(dtype) * self._sampling_period
         return epoch_durations

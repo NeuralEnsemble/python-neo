@@ -179,11 +179,11 @@ class BCI2000RawIO(BaseRawIO):
             keep = np.logical_and(keep, ts <= t_stop)
         return ts[keep], dur[keep], labels[keep]
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = (event_timestamps / float(self._read_info['sampling_rate'])).astype(dtype)
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         durations = (raw_duration / float(self._read_info['sampling_rate'])).astype(dtype)
         return durations
 

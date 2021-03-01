@@ -183,7 +183,7 @@ class BrainVisionRawIO(BaseRawIO):
 
         raise (NotImplementedError)
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
         return event_times
 

@@ -245,12 +245,12 @@ class NeuroExplorerRawIO(BaseRawIO):
 
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype)
         event_times /= self.global_header['freq']
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         durations = raw_duration.astype(dtype)
         durations /= self.global_header['freq']
         return durations

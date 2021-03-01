@@ -378,7 +378,7 @@ class PlexonRawIO(BaseRawIO):
 
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype)
         event_times /= self._global_ssampling_rate
         return event_times

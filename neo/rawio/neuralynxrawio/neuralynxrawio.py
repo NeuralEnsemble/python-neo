@@ -461,7 +461,7 @@ class NeuralynxRawIO(BaseRawIO):
         durations = None
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype)
         event_times /= 1e6
         event_times -= self.global_t_start

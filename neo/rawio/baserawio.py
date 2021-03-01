@@ -644,17 +644,19 @@ class BaseRawIO:
             block_index, seg_index, event_channel_index, t_start, t_stop)
         return timestamp, durations, labels
 
-    def rescale_event_timestamp(self, event_timestamps, dtype='float64'):
+    def rescale_event_timestamp(self, event_timestamps, dtype='float64',
+                    event_channel_index=0):
         """
         Rescale event timestamps to s
         """
-        return self._rescale_event_timestamp(event_timestamps, dtype)
+        return self._rescale_event_timestamp(event_timestamps, dtype, event_channel_index)
 
-    def rescale_epoch_duration(self, raw_duration, dtype='float64'):
+    def rescale_epoch_duration(self, raw_duration, dtype='float64',
+                    event_channel_index=0):
         """
         Rescale epoch raw duration to s
         """
-        return self._rescale_epoch_duration(raw_duration, dtype)
+        return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
     def setup_cache(self, cache_path, **init_kargs):
         if self.rawmode in ('one-file', 'multi-file'):

@@ -395,7 +395,7 @@ class ExampleRawIO(BaseRawIO):
 
         return timestamp, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         # must rescale to second a particular event_timestamps
         # with a fixed dtype so the user can choose the precisino he want.
 
@@ -403,7 +403,7 @@ class ExampleRawIO(BaseRawIO):
         event_times = event_timestamps.astype(dtype)
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         # really easy here because in our case it is already seconds
         durations = raw_duration.astype(dtype)
         return durations

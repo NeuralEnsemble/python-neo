@@ -766,7 +766,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return timestamp, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         ev_times = event_timestamps.astype(dtype)
         ev_times /= self.__nev_basic_header['timestamp_resolution']
         return ev_times

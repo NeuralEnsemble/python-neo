@@ -228,10 +228,10 @@ class MicromedRawIO(BaseRawIO):
 
         return timestamp, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
-        durations = raw_duration.astype(dtype) // self._sampling_rate
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
+        durations = raw_duration.astype(dtype) / self._sampling_rate
         return durations
