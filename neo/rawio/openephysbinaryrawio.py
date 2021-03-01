@@ -118,7 +118,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 if name+'_npy' in d:
                     data = np.load(d[name+'_npy'], mmap_mode='r')
                     d[name] = data
-                    #~ print('  ', name, d[name])
+                    print('  ', name, d[name])
             
             # check that events have timestamps
             assert 'timestamps' in d
@@ -162,6 +162,16 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     if global_t_stop is None or global_t_stop < t_stop:
                         global_t_stop = t_stop
 
+                # loop over events
+                for stream_ind, stream_name in enumerate(event_stream_names):
+                    d = self.event_streams[0][0][stream_ind]
+                    t_start = d['timestamps'][0] / d['sample_rate']
+                    t_stop = d['timestamps'][-1] / d['sample_rate']
+                    if global_t_start is None or global_t_start > t_start:
+                        global_t_start = t_start
+                    if global_t_stop is None or global_t_stop < t_stop:
+                        global_t_stop = t_stop
+
                 self._t_start_segments[block_index][seg_index] = global_t_start
                 self._t_stop_segments[block_index][seg_index] = global_t_stop
         
@@ -181,7 +191,6 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
         # Annotate some objects from continuous files
         self._generate_minimal_annotations()
-        # TODO signals annotaions name / stream_name / ...
         '''
             "channel_name": "CH0",
             "description": "Headstage data channel",
@@ -192,8 +201,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             "source_processor_index": 0,
             "recorded_processor_index": 0
         '''
-
-
+        # TODO annotations + array_annotations depend on rawio refactoring #949
 
     def _segment_t_start(self, block_index, seg_index):
         return self._t_start_segments[block_index][seg_index]
@@ -261,10 +269,12 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        # here we have a problem because we don't known from wich channel the event is from.
+        # here we have a problem because we don't known from which channel the event is from.
         # lets take the first but this could be wrong
         
-        d = self.event_streams[0][0][0]
+        # TODO depend on rawio refactoring #949
+        event_channel_index = 0
+        d = self.event_streams[0][0][event_channel_index]
         # d = self.event_streams[0][0][event_channel_index]
         event_times = event_timestamps.astype(dtype) / float(d['sample_rate'])
         return event_times
@@ -380,6 +390,8 @@ def explore_folder(dirname):
                             event_stream[f'{name}_npy'] = str(npz_filename)
                     
                     all_streams[block_index][seg_index]['events'][stream_name] = event_stream
+
+    # TODO for later: check stream / channel consistency across segment
 
     return all_streams, nb_block, nb_segment_per_block
 
