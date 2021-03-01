@@ -379,7 +379,7 @@ class NIXRawIO(BaseRawIO):
             timestamp, labels = timestamp[keep], labels[keep]
         return timestamp, durations, labels  # only the first fits in rescale
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype='float64', event_channel_index):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         ev_unit = ''
         for mt in self.file.blocks[0].groups[0].multi_tags:
             if mt.type == "neo.event":
@@ -391,7 +391,7 @@ class NIXRawIO(BaseRawIO):
         # supposing unit is second, other possibilities maybe mS microS...
         return event_times  # return in seconds
 
-    def _rescale_epoch_duration(self, raw_duration, dtype='float64', event_channel_index):
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         ep_unit = ''
         for mt in self.file.blocks[0].groups[0].multi_tags:
             if mt.type == "neo.epoch":
