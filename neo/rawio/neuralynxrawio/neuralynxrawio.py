@@ -14,11 +14,10 @@ Some NCS files may need to be read entirely to detect those gaps, which can be s
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
 """
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 
-from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
-                                 _event_channel_dtype)
+from ..baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 import os
@@ -69,7 +68,8 @@ class NeuralynxRawIO(BaseRawIO):
 
     def _parse_header(self):
 
-        sig_channels = []
+        stream_channels = []
+        signal_channels = []
         spike_channels = []
         event_channels = []
 
@@ -122,9 +122,9 @@ class NeuralynxRawIO(BaseRawIO):
                     if info.get('input_inverted', False):
                         gain *= -1
                     offset = 0.
-                    group_id = 0
-                    sig_channels.append((chan_name, chan_id, info['sampling_rate'],
-                                         'int16', units, gain, offset, group_id))
+                    stream_id = 0
+                    signal_channels.append((chan_name, str(chan_id), info['sampling_rate'],
+                                         'int16', units, gain, offset, stream_id))
                     self.ncs_filenames[chan_uid] = filename
                     keys = [
                         'DspFilterDelay_µs',
@@ -211,16 +211,21 @@ class NeuralynxRawIO(BaseRawIO):
 
                     self._nev_memmap[chan_id] = data
 
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # require all sampled signals, ncs files, to have same sampling rate
-        if sig_channels.size > 0:
-            sampling_rate = np.unique(sig_channels['sampling_rate'])
+        
+        if signal_channels.size > 0:
+            sampling_rate = np.unique(signal_channels['sampling_rate'])
             assert sampling_rate.size == 1
             self._sigs_sampling_rate = sampling_rate[0]
-
+            signal_streams = [('signals', '0')]
+        else:
+            signal_streams = []
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        
         # set 2 attributes needed later for header in case there are no ncs files in dataset,
         #   e.g. Pegasus
         self._timestamp_limits = None
@@ -280,7 +285,8 @@ class NeuralynxRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [self._nb_segment]
-        self.header['signal_channels'] = sig_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
@@ -290,13 +296,23 @@ class NeuralynxRawIO(BaseRawIO):
 
         for seg_index in range(self._nb_segment):
             seg_annotations = bl_annotations['segments'][seg_index]
-
-            for c in range(sig_channels.size):
+            
+            for c in range(signal_streams.size):
+                # one or no signal stream
                 sig_ann = seg_annotations['signals'][c]
-                sig_ann.update(signal_annotations[c])
+                # handle array annotations
+                for key in signal_annotations[0].keys():
+                    values = []
+                    for c in range(signal_channels.size):
+                        value = signal_annotations[0][key]
+                        values.append(value)
+                    values = np.array(values)
+                    if values.ndim == 1:
+                        # 'InputRange': is 2D and make bugs
+                        sig_ann['__array_annotations__'][key] = values
 
             for c in range(spike_channels.size):
-                unit_ann = seg_annotations['units'][c]
+                unit_ann = seg_annotations['spikes'][c]
                 unit_ann.update(unit_annotations[c])
 
             for c in range(event_channels.size):
@@ -319,13 +335,13 @@ class NeuralynxRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._seg_t_stops[seg_index] - self.global_t_start
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         return self._sigs_length[seg_index]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sigs_t_start[seg_index] - self.global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         """
         Retrieve chunk of analog signal, a chunk being a set of contiguous samples.
 
@@ -359,7 +375,7 @@ class NeuralynxRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(None)
 
-        channel_ids = self.header['signal_channels'][channel_indexes]['id']
+        channel_ids = self.header['signal_channels'][channel_indexes]['id'].astype(int)
         channel_names = self.header['signal_channels'][channel_indexes]['name']
 
         # create buffer for samples
