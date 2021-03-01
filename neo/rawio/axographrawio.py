@@ -154,8 +154,8 @@ Acquisition modes:
     Intervals".
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import os
 from datetime import datetime
@@ -267,20 +267,20 @@ class AxographRawIO(BaseRawIO):
     ###
     # signal and channel zone
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         # same for all signals in all segments
         return len(self._raw_signals[seg_index][0])
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         # same for all signals in all segments
         return self._t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
-                                channel_indexes):
+                                stream_index, channel_indexes):
 
         if channel_indexes is None or \
            np.all(channel_indexes == slice(None, None, None)):
-            channel_indexes = range(self.signal_channels_count())
+            channel_indexes = range(self.signal_channels_count(stream_index))
 
         raw_signals = [self._raw_signals
                        [seg_index]
@@ -865,8 +865,8 @@ class AxographRawIO(BaseRawIO):
 
                     # channel_info will be cast to _signal_channel_dtype
                     channel_info = (
-                        name, i, 1 / sampling_period, f.byte_order + dtype,
-                        units, gain, offset, 0)
+                        name, str(i), 1 / sampling_period, f.byte_order + dtype,
+                        units, gain, offset, '0')
 
                     self.logger.debug('channel_info: {}'.format(channel_info))
                     self.logger.debug('')
@@ -1308,10 +1308,17 @@ class AxographRawIO(BaseRawIO):
         event_channels = []
         event_channels.append(('AxoGraph Tags', '', 'event'))
         event_channels.append(('AxoGraph Intervals', '', 'epoch'))
+        
 
         # organize header
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        if len(sig_channels) > 0:
+            self.header['signal_streams'] = \
+            np.array([('Signals', '0')], dtype=_signal_stream_dtype)
+        else:
+            self.header['signal_streams'] =\
+            np.array([], dtype=_signal_stream_dtype)
         self.header['signal_channels'] = \
             np.array(sig_channels, dtype=_signal_channel_dtype)
         self.header['event_channels'] = \

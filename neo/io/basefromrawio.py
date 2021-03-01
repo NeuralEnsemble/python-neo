@@ -153,10 +153,7 @@ class BaseFromRaw(BaseIO):
             sub_streams = self.get_sub_signal_streams(signal_group_mode)
             sub_stream_groups = []
             for sub_stream in sub_streams:
-                stream_index, inner_stream_channels = sub_stream
-                name = signal_streams[stream_index]['name']
-                if inner_stream_channels is not None:
-                    name = name + '(substream)'
+                stream_index, inner_stream_channels, name = sub_stream
                 group = Group(name=name,
                                            stream_id=signal_streams[stream_index]['id'])
                 bl.groups.append(group)
@@ -282,14 +279,12 @@ class BaseFromRaw(BaseIO):
         signal_streams = self.header['signal_streams']
         sub_streams = self.get_sub_signal_streams(signal_group_mode)
         for sub_stream in sub_streams:
-            stream_index, inner_stream_channels = sub_stream
+            stream_index, inner_stream_channels, name = sub_stream
             anasig = AnalogSignalProxy(rawio=self, stream_index=stream_index,
                             inner_stream_channels=inner_stream_channels,
                             block_index=block_index, seg_index=seg_index)
-            
-            if inner_stream_channels is not None:
-                name = anasig.name + '(substream)'
-                anasig.name = name
+            anasig.name = name
+
             if not lazy:
                 # ... and get the real AnalogSIgnal if not lazy
                 anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
@@ -351,6 +346,7 @@ class BaseFromRaw(BaseIO):
         sub_streams = []
         for stream_index in range(len(signal_streams)):
             stream_id = signal_streams[stream_index]['id']
+            stream_name = signal_streams[stream_index]['name']
             mask = signal_channels['stream_id'] == stream_id
             channels = signal_channels[mask]
             if signal_group_mode == 'group-by-same-units':
@@ -367,19 +363,23 @@ class BaseFromRaw(BaseIO):
                 if len(all_units) == 1:
                     #no substream
                     inner_stream_channels = None  # None iwill be transform as slice later
-                    sub_stream = (stream_index, inner_stream_channels)
+                    name = stream_name
+                    sub_stream = (stream_index, inner_stream_channels, name)
                     sub_streams.append(sub_stream)
                 else:
                     
                     for units in all_units:
                         inner_stream_channels, = np.nonzero(channels['units'] == units)
-                        sub_stream = (stream_index, inner_stream_channels)
+                        chan_names = channels[inner_stream_channels]['name']
+                        name =  'Channels: (' + ' '.join(chan_names) + ')'
+                        sub_stream = (stream_index, inner_stream_channels, name)
                         sub_streams.append(sub_stream)
             elif signal_group_mode == 'split-all':
                 # mimic all neo <= 0.5 behavior
                 for i, channel in enumerate(channels):
                     inner_stream_channels = [i]
-                    sub_stream = (stream_index, inner_stream_channels)
+                    name = channels[i]['name']
+                    sub_stream = (stream_index, inner_stream_channels, name)
                     sub_streams.append(sub_stream)
             else:
                 raise (NotImplementedError)
