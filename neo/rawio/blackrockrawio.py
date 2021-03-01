@@ -601,35 +601,18 @@ class BlackrockRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._seg_t_stops[seg_index]
 
-    #~ def _get_nsx_and_local_indexes(self, channel_indexes):
-        #~ # internal helper to get nsx number and local channel index
-        #~ # from global channel indexes
-        #~ # when this is called channell_indexes are alwas in the same group_id
-        #~ # this is checked at BaseRaw level
-        #~ if channel_indexes is None:
-            #~ channel_indexes = slice(None)
-        #~ nsx_nb = self.header['signal_channels'][channel_indexes]['group_id'][0]
-        #~ if channel_indexes is None:
-            #~ local_indexes = slice(None)
-        #~ else:
-            #~ local_indexes = self._local_sig_indexes[channel_indexes]
-        #~ return nsx_nb, local_indexes
-
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        #~ nsx_nb, local_indexes = self._get_nsx_and_local_indexes(channel_indexes)
         stream_id = self.header['signal_streams'][stream_index]['id']
         nsx_nb = int(stream_id)
         memmap_data = self.nsx_datas[nsx_nb][seg_index]
         return memmap_data.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        #~ nsx_nb, local_indexes = self._get_nsx_and_local_indexes(channel_indexes)
         stream_id = self.header['signal_streams'][stream_index]['id']
         nsx_nb = int(stream_id)
         return self._sigs_t_starts[nsx_nb][seg_index]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        #~ nsx_nb, local_indexes = self._get_nsx_and_local_indexes(channel_indexes)
         stream_id = self.header['signal_streams'][stream_index]['id']
         nsx_nb = int(stream_id)
         memmap_data = self.nsx_datas[nsx_nb][seg_index]
