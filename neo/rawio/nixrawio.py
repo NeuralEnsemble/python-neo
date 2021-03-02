@@ -7,8 +7,9 @@ It supports all kinds of NEO objects.
 Author: Chek Yin Choi
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype,
-                        _spike_channel_dtype, _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
+
 from ..io.nixio import NixIO
 from ..io.nixio import check_nix_version
 import numpy as np
@@ -48,8 +49,9 @@ class NIXRawIO(BaseRawIO):
 
     def _parse_header(self):
         self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
-        sig_channels = []
+        signal_channels = []
         size_list = []
+        stream_ids = []
         for bl in self.file.blocks:
             for seg in bl.groups:
                 for da_idx, da in enumerate(seg.data_arrays):
@@ -62,20 +64,22 @@ class NIXRawIO(BaseRawIO):
                         da_leng = da.size
                         if da_leng not in size_list:
                             size_list.append(da_leng)
-                        group_id = 0
-                        for sid, li_leng in enumerate(size_list):
-                            if li_leng == da_leng:
-                                group_id = sid
-                                # very important! group_id use to store
-                                # channel groups!!!
-                                # use only for different signal length
+                            stream_ids.append(str(len(size_list)))
+                        # very important! group_id use to store
+                        # channel groups!!!
+                        # use only for different signal length
+                        stream_index = size_list.index(da_leng)
+                        stream_id = stream_ids[stream_index]
                         gain = 1
                         offset = 0.
-                        sig_channels.append((ch_name, chan_id, sr, dtype,
-                                            units, gain, offset, group_id))
+                        signal_channels.append((ch_name, chan_id, sr, dtype,
+                                            units, gain, offset, stream_id))
                 break
             break
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        signal_streams = np.zeros(len(stream_ids), dtype=_signal_stream_dtype)
+        signal_streams['id'] = stream_ids
+        signal_streams['name'] = ''
 
         spike_channels = []
         unit_name = ""
@@ -183,7 +187,8 @@ class NIXRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = len(self.file.blocks)
         self.header['nb_segment'] = [len(bl.groups) for bl in self.file.blocks]
-        self.header['signal_channels'] = sig_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
@@ -192,27 +197,28 @@ class NIXRawIO(BaseRawIO):
             bl_ann = self.raw_annotations['blocks'][blk_idx]
             props = blk.metadata.inherited_properties()
             bl_ann.update(self._filter_properties(props, "block"))
-            for grp_idx, grp in enumerate(blk.groups):
+            for grp_idx, group in enumerate(blk.groups):
                 seg_ann = bl_ann['segments'][grp_idx]
-                props = grp.metadata.inherited_properties()
+                props = group.metadata.inherited_properties()
                 seg_ann.update(self._filter_properties(props, "segment"))
-                sig_idx = 0
-                groupdas = NixIO._group_signals(grp.data_arrays)
-                for nix_name, signals in groupdas.items():
-                    da = signals[0]
-                    if da.type == 'neo.analogsignal' and seg_ann['signals']:
-                        # collect and group DataArrays
-                        sig_ann = seg_ann['signals'][sig_idx]
-                        sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
-                        props = da.metadata.inherited_properties()
-                        sig_ann.update(self._filter_properties(props, 'analogsignal'))
-                        sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
-                        sig_idx += 1
+                # TODO handle annotation at stream level
+                # sig_idx = 0
+                # groupdas = NixIO._group_signals(grp.data_arrays)
+                # for nix_name, signals in groupdas.items():
+                #    da = signals[0]
+                #     if da.type == 'neo.analogsignal' and seg_ann['signals']:
+                #         # collect and group DataArrays
+                #         sig_ann = seg_ann['signals'][sig_idx]
+                #         sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
+                #         props = da.metadata.inherited_properties()
+                #         sig_ann.update(self._filter_properties(props, 'analogsignal'))
+                #         sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
+                #         sig_idx += 1
                 sp_idx = 0
                 ev_idx = 0
-                for mt in grp.multi_tags:
-                    if mt.type == 'neo.spiketrain' and seg_ann['units']:
-                        st_ann = seg_ann['units'][sp_idx]
+                for mt in group.multi_tags:
+                    if mt.type == 'neo.spiketrain' and seg_ann['spikes']:
+                        st_ann = seg_ann['spikes'][sp_idx]
                         props = mt.metadata.inherited_properties()
                         st_ann.update(self._filter_properties(props, 'spiketrain'))
                         sp_idx += 1
@@ -225,11 +231,11 @@ class NIXRawIO(BaseRawIO):
                             event_ann.update(self._filter_properties(props, 'event'))
                             ev_idx += 1
 
-                # populate ChannelIndex annotations
-                for srcidx, source in enumerate(blk.sources):
-                    chx_ann = self.raw_annotations["signal_channels"][srcidx]
-                    props = source.metadata.inherited_properties()
-                    chx_ann.update(self._filter_properties(props, "channelindex"))
+                #~ # populate ChannelIndex annotations
+                #~ for srcidx, source in enumerate(blk.sources):
+                    #~ chx_ann = self.raw_annotations["signal_channels"][srcidx]
+                    #~ props = source.metadata.inherited_properties()
+                    #~ chx_ann.update(self._filter_properties(props, "channelindex"))
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
@@ -245,18 +251,20 @@ class NIXRawIO(BaseRawIO):
                 t_stop = mt.metadata['t_stop']
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = list(range(self.header['signal_channels'].size))
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        keep = self.header['signal_channels']['stream_id'] == stream_id
+        channel_indexes, = np.nonzero(keep)
         ch_idx = channel_indexes[0]
         block = self.da_list['blocks'][block_index]
         segment = block['segments'][seg_index]
         size = segment['data_size'][ch_idx]
         return size  # size is per signal, not the sum of all channel_indexes
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = list(range(self.header['signal_channels'].size))
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        keep = self.header['signal_channels']['stream_id'] == stream_id
+        channel_indexes, = np.nonzero(keep)
         ch_idx = channel_indexes[0]
         block = self.file.blocks[block_index]
         das = [da for da in block.groups[seg_index].data_arrays]
@@ -264,22 +272,22 @@ class NIXRawIO(BaseRawIO):
         sig_t_start = float(da.metadata['t_start'])
         return sig_t_start  # assume same group_id always same t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,
-                                i_start, i_stop, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = list(range(self.header['signal_channels'].size))
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        keep = self.header['signal_channels']['stream_id'] == stream_id
+        global_channel_indexes, = np.nonzero(keep)
+        if channel_indexes is not None:
+            global_channel_indexes = global_channel_indexes[channel_indexes]
+
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            block = self.da_list['blocks'][block_index]
-            segment = block['segments'][seg_index]
-            for c in channel_indexes:
-                i_stop = segment['data_size'][c]
-                break
+            i_stop = self.get_signal_size(block_index, seg_index, stream_index)
 
         raw_signals_list = []
         da_list = self.da_list['blocks'][block_index]['segments'][seg_index]
-        for idx in channel_indexes:
+        for idx in global_channel_indexes:
             da = da_list['data'][idx]
             raw_signals_list.append(da[i_start:i_stop])
 
