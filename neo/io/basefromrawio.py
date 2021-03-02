@@ -367,7 +367,6 @@ class BaseFromRaw(BaseIO):
                     sub_stream = (stream_index, inner_stream_channels, name)
                     sub_streams.append(sub_stream)
                 else:
-                    
                     for units in all_units:
                         inner_stream_channels, = np.nonzero(channels['units'] == units)
                         chan_names = channels[inner_stream_channels]['name']

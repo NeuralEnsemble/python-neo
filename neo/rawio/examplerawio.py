@@ -287,6 +287,7 @@ class ExampleRawIO(BaseRawIO):
             channel_indexes = np.arange(8, dtype='int')[channel_indexes]
             nb_chan = len(channel_indexes)
         else:
+            channel_indexes = np.asarray(channel_indexes)
             assert np.all(channel_indexes >= 0), 'bad boy'
             assert np.all(channel_indexes < 8), 'big bad wolf'
             nb_chan = len(channel_indexes)

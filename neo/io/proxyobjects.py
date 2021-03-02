@@ -206,18 +206,25 @@ class AnalogSignalProxy(BaseProxy):
                 Control if an error is raise or not when one of  time_slice member
                 (t_start or t_stop) is outside the real time range of the segment.
         '''
-
-        if channel_indexes is None:
-            channel_indexes = slice(None)
         
-        if isinstance(self._inner_stream_channels, slice) and self._inner_stream_channels == slice(None):
-            # sub stream is the entire stream
-            if channel_indexes is None:
-                fixed_channel_indexes = None
+        # fixed_channel_indexes is channel index (or slice) in the stream
+        # channel_indexes is channel index (or slice) in the substream
+        if isinstance(self._inner_stream_channels, slice):
+            if self._inner_stream_channels == slice(None):
+                # sub stream is the entire stream
+                if channel_indexes is None:
+                    fixed_channel_indexes = None
+                else:
+                    fixed_channel_indexes = channel_indexes
             else:
-                fixed_channel_indexes = channel_indexes
+                # sub stream is part of  stream with slice
+                if channel_indexes is None:
+                    fixed_channel_indexes = self._inner_stream_channels
+                else:
+                    global_inds = np.arange(self._nb_total_chann_in_stream)
+                    fixed_channel_indexes = global_inds[self._inner_stream_channels][channel_indexes]
         else:
-            # sub stream is part of  stream
+            # sub stream is part of  stream with indexes
             if channel_indexes is None:
                 fixed_channel_indexes = self._inner_stream_channels
             else:
@@ -262,7 +269,10 @@ class AnalogSignalProxy(BaseProxy):
         # if slice in channel : change name and array_annotations
         if raw_signal.shape[1] != self._nb_chan:
             name = 'slice of  ' + self.name
-            array_annotations = {k: v[channel_indexes] for k, v in self.array_annotations.items()}
+            channel_indexes2 = channel_indexes
+            if channel_indexes2 is None:
+                channel_indexes2 = slice(None)
+            array_annotations = {k: v[channel_indexes2] for k, v in self.array_annotations.items()}
         else:
             name = self.name
             array_annotations = self.array_annotations
