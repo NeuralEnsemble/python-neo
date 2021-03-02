@@ -455,7 +455,7 @@ class BaseTestIO:
         if self.higher == Segment:
             ob2 = ob2.segments[0]
 
-        # some formats (e.g. elphy) do not support double floating
+        # some formats do not support double floating
         # point spiketrains
         try:
             assert_same_sub_schema(ob1, ob2, True, 1e-8)

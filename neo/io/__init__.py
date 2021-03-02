@@ -113,10 +113,6 @@ Classes:
 
     .. autoattribute:: extensions
 
-.. .. autoclass:: neo.io.ElphyIO
-
-    .. autoattribute:: extensions
-
 .. autoclass:: neo.io.IgorIO
 
     .. autoattribute:: extensions
@@ -260,7 +256,6 @@ from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.elanio import ElanIO
-# from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
 from neo.io.intanio import IntanIO
@@ -306,7 +301,6 @@ iolist = [
     BrainwareF32IO,
     BrainwareSrcIO,
     ElanIO,
-    # ElphyIO,
     ExampleIO,
     IgorIO,
     IntanIO,
