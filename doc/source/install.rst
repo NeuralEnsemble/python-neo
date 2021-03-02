@@ -23,7 +23,7 @@ Certain IO modules have additional dependencies. If these are not satisfied,
 Neo will still install but the IO module that uses them will fail on loading:
 
    * scipy >= 1.0.0 for NeoMatlabIO
-   * h5py >= 2.5 for Hdf5IO, KwikIO
+   * h5py >= 2.5 for KwikIO
    * klusta for KwikIO
    * igor >= 0.2 for IgorIO
    * nixio >= 1.5 for NixIO
@@ -33,15 +33,14 @@ Neo will still install but the IO module that uses them will fail on loading:
 These dependencies can be installed by specifying a comma-separated list with the
 ``pip install`` command::
 
-    $ pip install neo[hdf5io,tiffio]
+    $ pip install neo[nixio,tiffio]
 
 Or when installing a specific version of neo::
 
-    $ pip install neo[hdf5io,tiffio]==0.9.0
+    $ pip install neo[nixio,tiffio]==0.9.0
 
 These additional dependencies for IO modules are available::
 
-  * hdf5io
   * igorproio
   * kwikio
   * neomatlabio

@@ -45,7 +45,7 @@ Requirements
     * Sphinx_ (for building documentation)
     * (optional) coverage_ >= 2.85 (for measuring test coverage)
     * (optional) scipy >= 0.12 (for MatlabIO)
-    * (optional) h5py >= 2.5 (for KwikIO, NeoHdf5IO)
+    * (optional) h5py >= 2.5 (for KwikIO)
     * (optional) nixio (for NixIO)
     * (optional) pillow (for TiffIO)
 
