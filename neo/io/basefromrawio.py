@@ -303,20 +303,14 @@ class BaseFromRaw(BaseIO):
             mask = signal_channels['stream_id'] == stream_id
             channels = signal_channels[mask]
             if signal_group_mode == 'group-by-same-units':
-                # default behavior
-                
-                ## this does not keep the original order
-               _, idx = np.unique(channels['units'], return_index=True)
-               all_units = channels['units'][np.sort(idx)]
-                # so python loop
-                all_units = []
-                for units in channels['units']:
-                    if units not in all_units:
-                        all_units.append(units)
+                # this does not keep the original order
+                _, idx = np.unique(channels['units'], return_index=True)
+                all_units = channels['units'][np.sort(idx)]
                 
                 if len(all_units) == 1:
-                    #no substream
-                    inner_stream_channels = None  # None iwill be transform as slice later
+                    # no substream
+                    #  None iwill be transform as slice later
+                    inner_stream_channels = None  
                     name = stream_name
                     sub_stream = (stream_index, inner_stream_channels, name)
                     sub_streams.append(sub_stream)
