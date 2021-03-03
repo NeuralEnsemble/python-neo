@@ -358,7 +358,7 @@ class BlackrockRawIO(BaseRawIO):
                             d[key] = params[key][i]
                         ext_header.append(d)
 
-                if len(ext_header) >0:
+                if len(ext_header) > 0:
                     signal_streams.append((f'nsx{nsx_nb}', str(nsx_nb)))
                 for i, chan in enumerate(ext_header):
                     if spec in ['2.2', '2.3']:
@@ -542,7 +542,7 @@ class BlackrockRawIO(BaseRawIO):
                 sig_ann = seg_ann['signals'][c]
                 stream_id = signal_streams['id'][c]
                 nsx_nb = int(stream_id)
-                sig_ann['description'] =  f'AnalogSignal from  nsx{nsx_nb}'
+                sig_ann['description'] = f'AnalogSignal from  nsx{nsx_nb}'
                 sig_ann['file_origin'] = self._filenames['nsx'] + '.ns' + str(nsx_nb)
                 sig_ann['nsx'] = nsx_nb
                 # handle signal array annotations from nsx header
@@ -606,7 +606,8 @@ class BlackrockRawIO(BaseRawIO):
         nsx_nb = int(stream_id)
         return self._sigs_t_starts[nsx_nb][seg_index]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
         nsx_nb = int(stream_id)
         memmap_data = self.nsx_datas[nsx_nb][seg_index]

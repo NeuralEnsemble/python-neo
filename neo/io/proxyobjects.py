@@ -140,7 +140,7 @@ class AnalogSignalProxy(BaseProxy):
         seg_ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]
         annotations = seg_ann['signals'][stream_index].copy()
         array_annotations = annotations.pop('__array_annotations__')
-        array_annotations = {k:v[inner_stream_channels] for k, v in array_annotations.items()}
+        array_annotations = {k: v[inner_stream_channels] for k, v in array_annotations.items()}
 
         BaseProxy.__init__(self, array_annotations=array_annotations, **annotations)
 
@@ -175,28 +175,28 @@ class AnalogSignalProxy(BaseProxy):
                 (t_start or t_stop) is outside the real time range of the segment.
         '''
 
-        # fixed_channel_indexes is channel index (or slice) in the stream
+        # fixed_chan_indexes is channel index (or slice) in the stream
         # channel_indexes is channel index (or slice) in the substream
         if isinstance(self._inner_stream_channels, slice):
             if self._inner_stream_channels == slice(None):
                 # sub stream is the entire stream
                 if channel_indexes is None:
-                    fixed_channel_indexes = None
+                    fixed_chan_indexes = None
                 else:
-                    fixed_channel_indexes = channel_indexes
+                    fixed_chan_indexes = channel_indexes
             else:
                 # sub stream is part of  stream with slice
                 if channel_indexes is None:
-                    fixed_channel_indexes = self._inner_stream_channels
+                    fixed_chan_indexes = self._inner_stream_channels
                 else:
                     global_inds = np.arange(self._nb_total_chann_in_stream)
-                    fixed_channel_indexes = global_inds[self._inner_stream_channels][channel_indexes]
+                    fixed_chan_indexes = global_inds[self._inner_stream_channels][channel_indexes]
         else:
             # sub stream is part of  stream with indexes
             if channel_indexes is None:
-                fixed_channel_indexes = self._inner_stream_channels
+                fixed_chan_indexes = self._inner_stream_channels
             else:
-                fixed_channel_indexes = self._inner_stream_channels[channel_indexes]
+                fixed_chan_indexes = self._inner_stream_channels[channel_indexes]
 
         sr = self.sampling_rate
 
@@ -231,8 +231,8 @@ class AnalogSignalProxy(BaseProxy):
                 i_stop = int((t_stop - self.t_start).magnitude * sr.magnitude)
 
         raw_signal = self._rawio.get_analogsignal_chunk(block_index=self._block_index,
-                    seg_index=self._seg_index, i_start=i_start, i_stop=i_stop, 
-                    stream_index=self._stream_index, channel_indexes=fixed_channel_indexes)
+                    seg_index=self._seg_index, i_start=i_start, i_stop=i_stop,
+                    stream_index=self._stream_index, channel_indexes=fixed_chan_indexes)
 
         # if slice in channel : change name and array_annotations
         if raw_signal.shape[1] != self._nb_chan:
@@ -256,8 +256,9 @@ class AnalogSignalProxy(BaseProxy):
                 dtype = 'float64'
             else:
                 dtype = 'float32'
-            sig = self._rawio.rescale_signal_raw_to_float(raw_signal, dtype=dtype, 
-                                    stream_index=self._stream_index, channel_indexes=fixed_channel_indexes)
+            sig = self._rawio.rescale_signal_raw_to_float(raw_signal, dtype=dtype,
+                                    stream_index=self._stream_index,
+                                    channel_indexes=fixed_chan_indexes)
             units = self.units
 
         anasig = AnalogSignal(sig, units=units, copy=False, t_start=sig_t_start,
@@ -298,7 +299,7 @@ class SpikeTrainProxy(BaseProxy):
     _single_parent_objects = ('Segment', 'Unit')
     _quantity_attr = 'times'
     _necessary_attrs = (('t_start', pq.Quantity, 0),
-                                    ('t_stop', pq.Quantity, 0))
+                        ('t_stop', pq.Quantity, 0))
     _recommended_attrs = ()
     proxy_for = SpikeTrain
 
@@ -316,8 +317,8 @@ class SpikeTrainProxy(BaseProxy):
         self.t_start = self._rawio.segment_t_start(block_index, seg_index) * pq.s
         self.t_stop = self._rawio.segment_t_stop(block_index, seg_index) * pq.s
 
-        ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['spikes'][spike_channel_index]
-        annotations = ann.copy()
+        seg_ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]
+        annotations = seg_ann['spikes'][spike_channel_index].copy()
         array_annotations = annotations.pop('__array_annotations__')
 
         h = self._rawio.header['spike_channels'][spike_channel_index]
@@ -350,8 +351,8 @@ class SpikeTrainProxy(BaseProxy):
         _t_start, _t_stop = prepare_time_slice(time_slice)
 
         spike_timestamps = self._rawio.get_spike_timestamps(block_index=self._block_index,
-                        seg_index=self._seg_index, spike_channel_index=self._spike_channel_index, t_start=_t_start,
-                        t_stop=_t_stop)
+                        seg_index=self._seg_index, spike_channel_index=self._spike_channel_index,
+                        t_start=_t_start, t_stop=_t_stop)
 
         if magnitude_mode == 'raw':
             # we must modify a bit the neo.rawio interface to also read the spike_timestamps
@@ -392,7 +393,6 @@ class SpikeTrainProxy(BaseProxy):
             # TODO handle array_annotations with time_slice
             pass
 
-        
         return sptr
 
 
@@ -418,13 +418,12 @@ class _EventOrEpoch(BaseProxy):
         annotations = {}
         for k in ('name', 'id'):
             annotations[k] = self._rawio.header['event_channels'][event_channel_index][k]
-        ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][event_channel_index]
-        annotations.update(ann)
 
-
-        ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][event_channel_index]
+        seg_ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]
+        ann = seg_ann['events'][event_channel_index]
         annotations = ann.copy()
         array_annotations = annotations.pop('__array_annotations__')
+        annotations.update(ann)
 
         BaseProxy.__init__(self, array_annotations=array_annotations, **annotations)
 

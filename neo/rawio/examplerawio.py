@@ -75,7 +75,8 @@ class ExampleRawIO(BaseRawIO):
                             i_start=0, i_stop=1024,  channel_names=channel_names)
         >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
                             channel_indexes=[0, 3, 6])
-        >>> spike_timestamp = reader.spike_timestamps(spike_channel_index=0, t_start=None, t_stop=None)
+        >>> spike_timestamp = reader.spike_timestamps(spike_channel_index=0,
+                            t_start=None, t_stop=None)
         >>> spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
         >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
 
@@ -218,7 +219,7 @@ class ExampleRawIO(BaseRawIO):
                     num_spikes = self.spike_count(block_index, seg_index, c)
                     spiketrain_an['__array_annotations__']['amplitudes'] = \
                                                         np.random.randn(num_spikes)
-                    
+
                 for c in range(2):
                     event_an = seg_ann['events'][c]
                     if c == 0:

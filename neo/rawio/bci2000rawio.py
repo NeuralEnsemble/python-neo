@@ -139,7 +139,8 @@ class BCI2000RawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index,channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index,channel_indexes):
         assert stream_index == 0
         if i_start is None:
             i_start = 0
