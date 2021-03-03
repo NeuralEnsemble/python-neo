@@ -400,12 +400,12 @@ class BaseRawIO:
             characteristics = signal_channels[mask][_common_sig_characteristics]
             unique_characteristics = np.unique(characteristics)
             assert unique_characteristics.size == 1, \
-                f'Some channel in stream_id {stream_id} '
+                f'Some channel in stream_id {stream_id} ' \
                 f'do not have same {_common_sig_characteristics} {unique_characteristics}'
 
             # also check that id is unique inside a stream
             channel_ids = signal_channels[mask]['id']
-            assert np.unique(channel_ids).size == channel_ids.size,
+            assert np.unique(channel_ids).size == channel_ids.size, \
                 f'signal_channels dont have unique ids for stream {stream_index}'
 
         self._several_channel_groups = signal_streams.size > 1
