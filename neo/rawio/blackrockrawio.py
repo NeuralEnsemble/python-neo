@@ -335,9 +335,6 @@ class BlackrockRawIO(BaseRawIO):
             for nsx_nb in self.nsx_to_load:
                 self.__match_nsx_and_nev_segment_ids(nsx_nb)
 
-        # usefull to get local channel index in nsX from the global channel index
-        #~ local_sig_indexes = []
-
         self.nsx_datas = {}
         self.sig_sampling_rates = {}
         if len(self.nsx_to_load) > 0:
@@ -386,9 +383,7 @@ class BlackrockRawIO(BaseRawIO):
                     stream_id = str(nsx_nb)
                     signal_channels.append((ch_name, ch_id, sr, sig_dtype,
                                          units, gain, offset, stream_id))
-                #~ local_sig_indexes.extend(range(len(ext_header)))
 
-            #~ self._local_sig_indexes = np.array(local_sig_indexes)
 
             # check nb segment per nsx
             nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]

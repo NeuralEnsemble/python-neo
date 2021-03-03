@@ -393,7 +393,6 @@ class Spike2RawIO(BaseRawIO):
             # the file for each channel. The loop should be reversed.
             # But there is no garanty that channels shared the same data block
             # indexes. So this make the job too difficult.
-            
             data_blocks = self._by_seg_data_blocks[chan_id][seg_index]
 
             # loop over data blocks and get chunks

@@ -136,26 +136,12 @@ class BaseFromRaw(BaseIO):
 
         # Group for AnalogSignals come from signal_streams
         if create_group_across_segment['AnalogSignal']:
-            #~ all_channels = self.header['signal_channels']
-            #~ channel_indexes_list = self.get_group_signal_channel_indexes()
-            #~ sig_groups = []
-            #~ for channel_index in channel_indexes_list:
-                #~ for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
-                        #~ channel_index, signal_group_mode=signal_group_mode).items():
-                        #~ group = Group(name='AnalogSignal group {}'.format(i))
-                        #~ # @andrew @ julia @michael : do we annotate group across segment with this arrays ?
-                        #~ group.annotate(ch_names=all_channels[ind_abs]['name'].astype('U'))  # ??
-                        #~ group.annotate(channel_ids=all_channels[ind_abs]['id'])  # ??
-                        #~ bl.groups.append(group)
-                        #~ sig_groups.append(group)
-
             signal_streams = self.header['signal_streams']
             sub_streams = self.get_sub_signal_streams(signal_group_mode)
             sub_stream_groups = []
             for sub_stream in sub_streams:
                 stream_index, inner_stream_channels, name = sub_stream
-                group = Group(name=name,
-                                           stream_id=signal_streams[stream_index]['id'])
+                group = Group(name=name, stream_id=signal_streams[stream_index]['id'])
                 bl.groups.append(group)
                 sub_stream_groups.append(group)
 
@@ -286,7 +272,7 @@ class BaseFromRaw(BaseIO):
             anasig.name = name
 
             if not lazy:
-                # ... and get the real AnalogSIgnal if not lazy
+                # ... and get the real AnalogSignal if not lazy
                 anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
 
             anasig.segment = seg
@@ -350,10 +336,11 @@ class BaseFromRaw(BaseIO):
             mask = signal_channels['stream_id'] == stream_id
             channels = signal_channels[mask]
             if signal_group_mode == 'group-by-same-units':
-                # standard behavior
+                # default behavior
                 
-                ## this do not keep the original order
-                ## all_units = np.unique(channels['units'])
+                ## this does not keep the original order
+               _, idx = np.unique(channels['units'], return_index=True)
+               all_units = channels['units'][np.sort(idx)]
                 # so python loop
                 all_units = []
                 for units in channels['units']:

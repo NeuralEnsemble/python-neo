@@ -6,9 +6,8 @@ This is to be used when coding a new RawIO.
 Rules for creating a new class:
   1. Step 1: Create the main class
     * Create a file in **neo/rawio/** that endith with "rawio.py"
-    * Create the class that inherits BaseRawIO
+    * Create the class that inherits from BaseRawIO
     * copy/paste all methods that need to be implemented.
-      See the end a neo.rawio.baserawio.BaseRawIO
     * code hard! The main difficulty is `_parse_header()`.
       In short you have a create a mandatory dict than
       contains channel informations::
@@ -61,7 +60,7 @@ class ExampleRawIO(BaseRawIO):
     This fake IO:
         * has 2 blocks
         * blocks have 2 and 3 segments
-        * has  2 signals stream  of 8 channel each (sample_rate = 10000) so 16 channels in total
+        * has  2 signals streams  of 8 channel each (sample_rate = 10000) so 16 channels in total
         * has 3 spike_channels
         * has 2 event channels: one has *type=event*, the other has
           *type=epoch*
@@ -98,13 +97,13 @@ class ExampleRawIO(BaseRawIO):
 
     def _parse_header(self):
         # This is the central part of a RawIO
-        # we need to collect in the original format all
-        # informations needed for further fast access
+        # we need to collect from the original format all
+        # information required for fast access
         # at any place in the file
-        # In short _parse_header can be slow but
-        # _get_analogsignal_chunk need to be as fast as possible
+        # In short `_parse_header()` can be slow but
+        # `_get_analogsignal_chunk()` need to be as fast as possible
         
-        # create signals stream information
+        # create fake signals stream information
         signal_streams = []
         for c in range(2):
             name = f'stream {c}'
@@ -113,11 +112,11 @@ class ExampleRawIO(BaseRawIO):
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         
         
-        # create signals channels information
+        # create fake signals channels information
         # This is mandatory!!!!
         # gain/offset/units are really important because
         # the scaling to real value will be done with that
-        # at the end real_signal = (raw_signal * gain + offset) * pq.Quantity(units)
+        # The real signal will be evaluated as `(raw_signal * gain + offset) * pq.Quantity(units)`
         signal_channels = []
         for c in range(16):
             ch_name = 'ch{}'.format(c)
@@ -131,19 +130,20 @@ class ExampleRawIO(BaseRawIO):
             units = 'uV'
             gain = 1000. / 2 ** 16
             offset = 0.
-            # stream_id indicate how to group channels
-            # channels insisde a "stream" share same characteritics (sampling rate/dtype/t_start/units/...)
+            # stream_id indicates how to group channels
+            # channels inside a "stream" share same characteristics (sampling rate/dtype/t_start/units/...)
             stream_id = str(c // 8)
             signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        # add some difficulties in the second signal stream 2 channels have other units (pA)
-        # this will have no impact in neo.rawio. A stream with several units is valid.
-        # but for neo.io this stream will be splited in 2 parts so this ends with 3 AnalogSignals per segment.
-        #  this is because an AnalogSignal must have the same stream across channel
+        # A stream can contain signals with different physical units.
+        # Here, the two last channels will have different units (pA)
+        # Since AnalogSignals must have consistent units across channels, 
+        # this stream will be split in 2 parts on the neo.io level and finally 3 AnalogSignals 
+        # will be generated per Segment.
         signal_channels[-2:]['units'] = 'pA'
 
-        # creating units channels
+        # create fake units channels
         # This is mandatory!!!!
         # Note that if there is no waveform at all in the file
         # then wf_units/wf_gain/wf_offset/wf_left_sweep/wf_sampling_rate
@@ -180,20 +180,21 @@ class ExampleRawIO(BaseRawIO):
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
-        # insert some annotation/array_annotations at some place
-        # at neo.io level IO are free to add some annoations
+        # insert some annotations/array_annotations at some place
+        # at neo.io level. IOs can add annotations
         # to any object. To keep this functionality with the wrapper
-        # BaseFromRaw you can add annoations in a nested dict.
+        # BaseFromRaw you can add annotations in a nested dict.
         
-        # this be must call alaways !!! This generate the complicated nested dict of annotations/array_annotations
+        # `_generate_minimal_annotations()` must be called to generate the nested 
+        # dict of annotations/array_annotations
         self._generate_minimal_annotations()
         # this pprint lines really help for understand the nested (and complicated sometimes) dict
         # from pprint import pprint
         # pprint(self.raw_annotations)
         
-        # If you are a lazy dev you can stop here.
-        # if you want to inject more annotations/array_annotations
-        # please have a look to the following loops:
+        # Until here all mandatory operations for setting up a rawio are implemented.
+        # The following lines provide additional, recommended annotations for the
+        # final neo objects.
         for block_index in range(2):
             bl_ann = self.raw_annotations['blocks'][block_index]
             bl_ann['name'] = 'Block #{}'.format(block_index)
@@ -238,8 +239,8 @@ class ExampleRawIO(BaseRawIO):
         return all_stops[block_index][seg_index]
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        # we are lucky: two stream signals in all segment have the same shape!! (10.0 seconds)
-        # it is not always the case
+        # We generate fake data in which the two stream signals have the same shape across all segments (10.0 seconds)
+        # This is not the case for real data, instead you should return the signal size depending on the block_index and segment_index
         # this must return an int = the number of sample
 
         # Note that channel_indexes can be ignored for most cases
@@ -266,7 +267,7 @@ class ExampleRawIO(BaseRawIO):
         # This must return a numpy array 2D (even with one channel).
         # This must return the orignal dtype. No conversion here.
         # This must as fast as possible.
-        # Everything that can be done in _parse_header() must not be before to speedup this call.
+        # To speed up this call all preparatory calculations should be implemented in _parse_header().
 
         # Here we are lucky:  our signals is always zeros!!
         # it is not always the case :)
@@ -280,7 +281,6 @@ class ExampleRawIO(BaseRawIO):
 
         assert i_start >= 0, "I don't like your jokes"
         assert i_stop <= 100000, "I don't like your jokes"
-        
         if channel_indexes is None:
             nb_chan = 8
         elif isinstance(channel_indexes, slice):
@@ -303,7 +303,7 @@ class ExampleRawIO(BaseRawIO):
         return nb_spikes
 
     def _get_spike_timestamps(self, block_index, seg_index, spike_channel_index, t_start, t_stop):
-        # In our IO, timstamp are internally coded 'int64' and they
+        # In our IO, timestamp are internally coded 'int64' and they
         # represent the index of the signals 10kHz
         # we are lucky: spikes have the same discharge in all segments!!
         # incredible neuron!! This is not always the case

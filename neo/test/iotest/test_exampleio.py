@@ -22,10 +22,10 @@ class TestExampleIO(BaseTestIO, unittest.TestCase, ):
                      ]
     files_to_download = []
 
-# If he io is rawio based you can stop here
-
-# you can also if necessary check specific behavrio of the IO.
-# here an example even it is not specific
+# This is the minimal variables that are required
+# to run the common IO tests.  IO specific tests
+# can be added here and will be run automatically
+# in addition to the common tests.
 class Specific_TestExampleIO(unittest.TestCase):
     def test_read_segment_lazy(self):
         r = ExampleIO(filename=None)

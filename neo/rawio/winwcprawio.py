@@ -5,7 +5,6 @@ John Dempster.
 WinWCP is free:
 http://spider.science.strath.ac.uk/sipbs/software.htm
 
-Author : sgarcia
 Author: Samuel Garcia
 """
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,

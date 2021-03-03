@@ -474,7 +474,6 @@ class _EventOrEpoch(BaseProxy):
         t_start, t_stop = consolidate_time_slice(time_slice, self.t_start,
                                                                     self.t_stop, strict_slicing)
         _t_start, _t_stop = prepare_time_slice(time_slice)
-    
         
         timestamp, durations, labels = self._rawio.get_event_timestamps(block_index=self._block_index,
                         seg_index=self._seg_index, event_channel_index=self._event_channel_index,
@@ -486,8 +485,6 @@ class _EventOrEpoch(BaseProxy):
 
         if durations is not None:
             durations = self._rawio.rescale_epoch_duration(durations, dtype=dtype) * pq.s
-        
-        
         
         h = self._rawio.header['event_channels'][self._event_channel_index]
         if h['type'] == b'event':

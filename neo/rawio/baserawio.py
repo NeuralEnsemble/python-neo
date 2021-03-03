@@ -8,10 +8,10 @@ Classes
 BaseRawIO
 abstract class which should be overridden to write a RawIO.
 
-RawIO is a low level API in neo that is supposed to acces as fast as possible
-raw data. All IO with theses characteristics should/could be rewritten:
-  * internally use of memmap (or hdf5)
-  * reading header is quite cheap (not read all the file)
+RawIO is a low level API in neo that provides fast  access to the raw data.
+When possible, all IOs should/implement this level following these guidelines:
+  * internal use of memmap (or hdf5)
+  * fast reading of the header (do not read the complete file)
   * neo tree object is symetric and logical: same channel/units/event
     along all block and segments.
 
@@ -69,7 +69,7 @@ _signal_stream_dtype = [
 ]
 
 _signal_channel_dtype = [
-    ('name', 'U64'), # not necessary unique
+    ('name', 'U64'), # not necessarily unique
     ('id', 'U64'), # must be unique
     ('sampling_rate', 'float64'),
     ('dtype', 'U16'),
@@ -94,8 +94,8 @@ _spike_channel_dtype = [
     ('wf_sampling_rate', 'float64'),
 ]
 
-# in rawio event and epoch are handle the same way
-# duration is None for event
+# in rawio event and epoch are handled the same way
+# except, that duration is `None` for events
 _event_channel_dtype = [
     ('name', 'U64'),
     ('id', 'U64'),
@@ -199,14 +199,14 @@ class BaseRawIO:
           * spike_channels_count()
           * event_channels_count()
         
-        There are here several place and kind of annotations that will
-        be routed at neo.io level into neo objects:
-            * stable annotations for object accros segment (easy to do)
+        There are several sources and kinds of annotations that will
+        be forwarded to the neo.io level and used to enrich neo objects:
+            * annotations of objects common across segments
                 * signal_streams > neo.AnalogSignal annotations
                 * signal_channels > neo.AnalogSignal array_annotations split by stream
                 * spike_channels > neo.SpikeTrain
                 * event_channels > neo.Event and neo.Epoch
-            * annotations that depend of the block/segment for th object:
+            * annotations that depend of the block_id/segment_id of the object:
               * nested in raw_annotations['blocks'][block_index]['segments'][seg_index]['signals']
             
                 
@@ -371,7 +371,7 @@ class BaseRawIO:
 
     def signal_channels_count(self, stream_index):
         """Return the number of signal channels for a given stream
-        Same along all Blocks and Segments.
+        This number is constant across Blocks and Segments.
         """
         stream_id = self.header['signal_streams'][stream_index]['id']
         channels = self.header['signal_channels']

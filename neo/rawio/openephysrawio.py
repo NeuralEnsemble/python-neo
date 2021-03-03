@@ -163,7 +163,7 @@ class OpenEphysRawIO(BaseRawIO):
         self._sig_sampling_rate = signal_channels['sampling_rate'][0]  # unique for channel
         
         # split channels in stream depending the name CHxxx ADCxxx
-        stream_ids = [ name[:2] if name.startswith('CH') else name[:3] for name in signal_channels['name']]
+        stream_ids = [name[:2] if name.startswith('CH') else name[:3] for name in signal_channels['name']]
         signal_channels['stream_id'] = stream_ids
         
         # and create streams channels

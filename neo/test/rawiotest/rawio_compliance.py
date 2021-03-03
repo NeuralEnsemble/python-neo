@@ -37,8 +37,8 @@ def header_is_total(reader):
     """
     h = reader.header
     
-    assert 'nb_block' in h
-    assert 'nb_segment' in h
+    assert 'nb_block' in h, "`nb_block`missing in header"
+    assert 'nb_segment' in h, "`nb_segment`missing in header"
     assert len(h['nb_segment']) == h['nb_block']
     
     assert 'signal_streams' in h, 'signal_streams missing in header'
@@ -181,7 +181,7 @@ def read_analogsignals(reader):
                                                    channel_ids=channel_ids2)
         np.testing.assert_array_equal(raw_chunk0, raw_chunk2)
         
-        # channel names ar not always unique inside a stream
+        # channel names are not always unique inside a stream
         unique_chan_name = (np.unique(channel_names).size == channel_names.size)
         if unique_chan_name:
             raw_chunk1 = reader.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,

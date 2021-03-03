@@ -31,7 +31,7 @@ print(raw_sigs.shape, raw_sigs.dtype)
 print(float_sigs.shape, float_sigs.dtype)
 print(sampling_rate, t_start, units)
 
-# Count unit and spike per units
+# Count units and spikes per unit
 nb_unit = reader.spike_channels_count()
 print('nb_unit', nb_unit)
 for unit_index in range(nb_unit):
