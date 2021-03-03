@@ -29,6 +29,7 @@ Classes:
 * :attr:`RawBinarySignalRawIO`
 * :attr:`RawMCSRawIO`
 * :attr:`Spike2RawIO`
+* :attr:`SpikeGadgetsRawIO`
 * :attr:`SpikeGLXRawIO`
 * :attr:`TdtRawIO`
 * :attr:`WinEdrRawIO`
@@ -103,6 +104,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.SpikeGadgetsRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.SpikeGLXRawIO
 
     .. autoattribute:: extensions
@@ -140,6 +145,7 @@ from neo.rawio.plexonrawio import PlexonRawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 from neo.rawio.rawmcsrawio import RawMCSRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
+from neo.rawio.spikegadgetsrawio import SpikeGadgetsRawIO
 from neo.rawio.spikeglxrawio import SpikeGLXRawIO
 from neo.rawio.tdtrawio import TdtRawIO
 from neo.rawio.winedrrawio import WinEdrRawIO
@@ -163,6 +169,7 @@ rawiolist = [
     RawBinarySignalRawIO,
     RawMCSRawIO,
     Spike2RawIO,
+    SpikeGadgetsRawIO,
     SpikeGLXRawIO,
     TdtRawIO,
     WinEdrRawIO,
