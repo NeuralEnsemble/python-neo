@@ -43,8 +43,6 @@ or vector can be store somewhere (near the file, /tmp, any path)
 
 """
 
-# from __future__ import unicode_literals, print_function, division, absolute_import
-
 import logging
 import numpy as np
 import os
@@ -78,10 +76,10 @@ _signal_channel_dtype = [
     ('offset', 'float64'),
     ('stream_id', 'U64'),
 ]
-# TODO add t_start and length here this would simplify all st_start/t_stop stuff for each RawIO class
+# TODO for later: add t_start and length in _signal_channel_dtype
+# this would simplify all t_start/t_stop stuff for each RawIO class
 
 _common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id']
-# _common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id', 'units']
 
 _spike_channel_dtype = [
     ('name', 'U64'),
@@ -294,23 +292,6 @@ class BaseRawIO:
 
         self.raw_annotations = ann
 
-    #~ def _raw_annotate(self, obj_name, chan_index=0, block_index=0, seg_index=0, **kargs):
-        #~ """
-        #~ Annotate an object in the list/dict tree annotations.
-        #~ """
-        #~ bl_annotations = self.raw_annotations['blocks'][block_index]
-        #~ seg_annotations = bl_annotations['segments'][seg_index]
-        #~ if obj_name == 'blocks':
-            #~ bl_annotations.update(kargs)
-        #~ elif obj_name == 'segments':
-            #~ seg_annotations.update(kargs)
-        #~ elif obj_name in ['signals', 'events', 'spikes']:
-            #~ obj_annotations = seg_annotations[obj_name][chan_index]
-            #~ obj_annotations.update(kargs)
-        #~ elif obj_name in ['signal_channels', 'spike_channels', 'event_channel']:
-            #~ obj_annotations = self.raw_annotations[obj_name][chan_index]
-            #~ obj_annotations.update(kargs)
-
     def _repr_annotations(self):
         txt = 'Raw annotations\n'
         for block_index in range(self.block_count()):
@@ -432,41 +413,6 @@ class BaseRawIO:
             assert np.unique(channel_ids).size == channel_ids.size, f'signal_channels dont have unique ids for stream {stream_index}'
         
         self._several_channel_groups = signal_streams.size > 1
-        
-    #~ def _check_common_characteristics(self, channel_indexes):
-        #~ """
-        #~ Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
-
-        #~ Check that a set a signal channel_indexes share common
-        #~ characteristics (**sampling_rate/t_start/size**).
-        #~ Useful only when RawIO propose differents channels groups
-        #~ with different sampling_rate for instance.
-        #~ """
-        #~ # ~ print('_check_common_characteristics', channel_indexes)
-
-        #~ assert channel_indexes is not None, \
-            #~ 'You must specify channel_indexes'
-        #~ characteristics = self.header['signal_channels'][_common_sig_characteristics]
-        #~ # ~ print(characteristics[channel_indexes])
-        #~ assert np.unique(characteristics[channel_indexes]).size == 1, \
-            #~ 'This channel set has varied characteristics'
-
-    #~ def get_group_signal_channel_indexes(self):
-        #~ """
-        #~ Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
-
-        #~ Return a list of channel_indexes than have same characteristics
-        #~ """
-        #~ if self._several_channel_groups:
-            #~ characteristics = self.header['signal_channels'][_common_sig_characteristics]
-            #~ unique_characteristics = np.unique(characteristics)
-            #~ channel_indexes_list = []
-            #~ for e in unique_characteristics:
-                #~ channel_indexes, = np.nonzero(characteristics == e)
-                #~ channel_indexes_list.append(channel_indexes)
-            #~ return channel_indexes_list
-        #~ else:
-            #~ return [None]
 
     def channel_name_to_index(self, stream_index, channel_names):
         """
@@ -516,25 +462,14 @@ class BaseRawIO:
         return stream_index
     
     def get_signal_size(self, block_index, seg_index, stream_index=None):
-        #~ if self._several_channel_groups:
-            #~ self._check_common_characteristics(channel_indexes)
         stream_index = self._get_stream_index(stream_index)
         return self._get_signal_size(block_index, seg_index, stream_index)
 
     def get_signal_t_start(self, block_index, seg_index, stream_index=None):
-        #~ if self._several_channel_groups:
-            #~ self._check_common_characteristics(channel_indexes)
         stream_index = self._get_stream_index(stream_index)
         return self._get_signal_t_start(block_index, seg_index, stream_index)
 
     def get_signal_sampling_rate(self, stream_index=None):
-        #~ if self._several_channel_groups:
-            #~ self._check_common_characteristics(channel_indexes)
-            #~ chan_index0 = channel_indexes[0]
-        #~ else:
-            #~ chan_index0 = 0
-        #~ sr = self.header['signal_channels'][chan_index0]['sampling_rate']
-        #~ return float(sr)
         stream_index = self._get_stream_index(stream_index)
         stream_id = self.header['signal_streams'][stream_index]['id']
         mask = self.header['signal_channels']['stream_id'] == stream_id
@@ -644,7 +579,7 @@ class BaseRawIO:
             block_index, seg_index, event_channel_index, t_start, t_stop)
         return timestamp, durations, labels
 
-    def rescale_event_timestamp(self, event_timestamps, dtype='float64',
+    def rescale_event_timestamp(self, event_timestamps, dtype='float64', 
                     event_channel_index=0):
         """
         Rescale event timestamps to s

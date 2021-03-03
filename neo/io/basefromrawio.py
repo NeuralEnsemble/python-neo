@@ -232,36 +232,6 @@ class BaseFromRaw(BaseIO):
         seg = Segment(index=seg_index, **seg_annotations)
 
         # AnalogSignal
-        #~ signal_channels = self.header['signal_channels']
-        #~ if signal_channels.size > 0:
-            #~ channel_indexes_list = self.get_group_signal_channel_indexes()
-            #~ for channel_indexes in channel_indexes_list:
-                #~ for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
-                        #~ channel_indexes,
-                        #~ signal_group_mode=signal_group_mode).items():
-                    #~ # make a proxy...
-                    #~ anasig = AnalogSignalProxy(rawio=self, global_channel_indexes=ind_abs,
-                                    #~ block_index=block_index, seg_index=seg_index)
-
-                    #~ if not lazy:
-                        #~ # ... and get the real AnalogSIgnal if not lazy
-                        #~ anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
-                        #~ # TODO magnitude_mode='rescaled'/'raw'
-
-                    #~ anasig.segment = seg
-                    #~ seg.analogsignals.append(anasig)
-        
-        # AnalogSignal
-        #~ signal_streams = self.header['signal_streams']
-        #~ for stream_index in range(len(signal_streams)):
-            #~ anasig = AnalogSignalProxy(rawio=self, stream_index=stream_index,
-                            #~ block_index=block_index, seg_index=seg_index)
-            #~ if not lazy:
-                #~ # ... and get the real AnalogSIgnal if not lazy
-                #~ anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
-
-            #~ anasig.segment = seg
-            #~ seg.analogsignals.append(anasig)
         signal_streams = self.header['signal_streams']
         sub_streams = self.get_sub_signal_streams(signal_group_mode)
         for sub_stream in sub_streams:
@@ -277,8 +247,6 @@ class BaseFromRaw(BaseIO):
 
             anasig.segment = seg
             seg.analogsignals.append(anasig)
-            
-
 
         # SpikeTrain and waveforms (optional)
         spike_channels = self.header['spike_channels']
@@ -324,7 +292,6 @@ class BaseFromRaw(BaseIO):
         
         They function also help to split each channel into one AnalogSignal like in 
         old neo (<=0.5).
-        
         """
         signal_streams = self.header['signal_streams']
         signal_channels = self.header['signal_channels']
@@ -371,39 +338,3 @@ class BaseFromRaw(BaseIO):
                 raise (NotImplementedError)
 
         return sub_streams
-
-
-    #~ def _make_signal_channel_subgroups(self, channel_indexes,
-                                       #~ signal_group_mode='group-by-same-units'):
-        #~ """
-        #~ For some RawIO channel are already splitted in groups.
-        #~ But in any cases, channel need to be splitted again in sub groups
-        #~ because they do not have the same units.
-
-        #~ They can also be splitted one by one to match previous behavior for
-        #~ some IOs in older version of neo (<=0.5).
-
-        #~ This method aggregate signal channels with same units or split them all.
-        #~ """
-        #~ all_channels = self.header['signal_channels']
-        #~ if channel_indexes is None:
-            #~ channel_indexes = np.arange(all_channels.size, dtype=int)
-        #~ channels = all_channels[channel_indexes]
-
-        #~ groups = collections.OrderedDict()
-        #~ if signal_group_mode == 'group-by-same-units':
-            #~ all_units = np.unique(channels['units'])
-
-            #~ for i, unit in enumerate(all_units):
-                #~ ind_within, = np.nonzero(channels['units'] == unit)
-                #~ ind_abs = channel_indexes[ind_within]
-                #~ groups[i] = (ind_within, ind_abs)
-
-        #~ elif signal_group_mode == 'split-all':
-            #~ for i, chan_index in enumerate(channel_indexes):
-                #~ ind_within = [i]
-                #~ ind_abs = channel_indexes[ind_within]
-                #~ groups[i] = (ind_within, ind_abs)
-        #~ else:
-            #~ raise (NotImplementedError)
-        #~ return groups

@@ -97,7 +97,8 @@ class TdtRawIO(BaseRawIO):
             tsq_filename = os.path.join(path, tankname + '_' + segment_name + '.tsq')
             tsq = np.fromfile(tsq_filename, dtype=tsq_dtype)
             self._tsq.append(tsq)
-            # Start and stop times are only found in the second and last header row, respectively.
+            # Start and stop times are only found in the second
+            #  and last header row, respectively.
             if tsq[1]['evname'] == chr(EVMARK_STARTBLOCK).encode():
                 self._seg_t_starts.append(tsq[1]['timestamp'])
             else:
@@ -297,9 +298,8 @@ class TdtRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sigs_t_start[seg_index][stream_index] - self._global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        #~ group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
-
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:

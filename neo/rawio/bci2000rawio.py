@@ -193,7 +193,6 @@ class BCI2000RawIO(BaseRawIO):
             event_annotations = self.raw_annotations['blocks'][0]['segments'][0]['events']
             
             self._my_events = []
-            #~ for s_ix, sd in enumerate(self.raw_annotations['event_channels']):
             for event_channel_index in range(self.event_channels_count()):
                 sd = event_annotations[event_channel_index]
                 ev_times = durs = vals = np.array([])

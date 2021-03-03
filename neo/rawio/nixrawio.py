@@ -231,12 +231,6 @@ class NIXRawIO(BaseRawIO):
                             event_ann.update(self._filter_properties(props, 'event'))
                             ev_idx += 1
 
-                #~ # populate ChannelIndex annotations
-                #~ for srcidx, source in enumerate(blk.sources):
-                    #~ chx_ann = self.raw_annotations["signal_channels"][srcidx]
-                    #~ props = source.metadata.inherited_properties()
-                    #~ chx_ann.update(self._filter_properties(props, "channelindex"))
-
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
         for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:

@@ -88,6 +88,10 @@ class AnalogSignalProxy(BaseProxy):
 
     def __init__(self, rawio=None, stream_index=None, inner_stream_channels=None,
                                             block_index=0, seg_index=0):
+        # stream_index:  indicate the stream stream_id can be retreive easily
+        # inner_stream_channels: are channel index inside the stream None means all channels
+        # if inner_stream_channels is not None then this is a "substream"
+        
         self._rawio = rawio
         self._block_index = block_index
         self._seg_index = seg_index
@@ -95,12 +99,7 @@ class AnalogSignalProxy(BaseProxy):
         if inner_stream_channels is None:
             inner_stream_channels = slice(inner_stream_channels)
         self._inner_stream_channels = inner_stream_channels
-        #~ if global_channel_indexes is None:
-            #~ global_channel_indexes = slice(None)
-        #~ total_nb_chan = self._rawio.header['signal_channels'].size
-        #~ self._global_channel_indexes = np.arange(total_nb_chan)[global_channel_indexes]
-        #~ self._nb_chan = self._global_channel_indexes.size
-        
+
         signal_streams = self._rawio.header['signal_streams']
         stream_id = signal_streams[stream_index]['id']
         signal_channels = self._rawio.header['signal_channels']
@@ -142,39 +141,8 @@ class AnalogSignalProxy(BaseProxy):
         annotations = ann.copy()
         array_annotations = annotations.pop('__array_annotations__')
         array_annotations = {k:v[inner_stream_channels] for k, v in array_annotations.items()}
-        
-        #~ annotations['name'] = self._make_name(None)
-        #~ if len(sig_chans) == 1:
-            #~ # when only one channel raw_annotations are set to standart annotations
-            #~ d = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index][
-                #~ 'signals'][self._global_channel_indexes[0]]
-            #~ annotations.update(d)
-
-        #~ array_annotations = {
-            #~ 'channel_names': np.array(sig_chans['name'], copy=True),
-            #~ 'channel_ids': np.array(sig_chans['id'], copy=True),
-        #~ }
-        #~ # array annotations for signal can be at 2 places
-        #~ # global at signal channel level
-        #~ d = self._rawio.raw_annotations['signal_channels']
-        #~ array_annotations.update(create_analogsignal_array_annotations(
-                                                #~ d, self._global_channel_indexes))
-        #~ # or specific to block/segment/signals
-        #~ d = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals']
-        #~ array_annotations.update(create_analogsignal_array_annotations(
-                                                #~ d, self._global_channel_indexes))
 
         BaseProxy.__init__(self, array_annotations=array_annotations, **annotations)
-
-    #~ def _make_name(self, channel_indexes):
-        #~ sig_chans = self._rawio.header['signal_channels'][self._global_channel_indexes]
-        #~ if channel_indexes is not None:
-            #~ sig_chans = sig_chans[channel_indexes]
-        #~ if len(sig_chans) == 1:
-            #~ name = sig_chans['name'][0]
-        #~ else:
-            #~ name = 'Channel bundle ({}) '.format(','.join(sig_chans['name']))
-        #~ return name
 
     @property
     def duration(self):
@@ -290,7 +258,6 @@ class AnalogSignalProxy(BaseProxy):
                 dtype = 'float32'
             sig = self._rawio.rescale_signal_raw_to_float(raw_signal, dtype=dtype, 
                                     stream_index=self._stream_index, channel_indexes=fixed_channel_indexes)
-                                    #~ channel_indexes=self._global_channel_indexes[channel_indexes])
             units = self.units
 
         anasig = AnalogSignal(sig, units=units, copy=False, t_start=sig_t_start,
@@ -661,33 +628,3 @@ def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop, strict_slicing):
     t_stop = ensure_second(t_stop)
 
     return (t_start, t_stop)
-
-
-#~ def create_analogsignal_array_annotations(sig_annotations, global_channel_indexes):
-    #~ """
-    #~ Create array_annotations from raw_annoations.
-    #~ Since raw_annotation are not np.array but nested dict, this func
-    #~ try to find keys in raw_annotation that are shared by all channel
-    #~ and make array_annotation with it.
-    #~ """
-    #~ # intersection of keys across channels
-    #~ common_keys = None
-    #~ for ind in global_channel_indexes:
-        #~ keys = [k for k, v in sig_annotations[ind].items() if not \
-                    #~ isinstance(v, (list, tuple, np.ndarray))]
-        #~ if common_keys is None:
-            #~ common_keys = keys
-        #~ else:
-            #~ common_keys = [k for k in common_keys if k in keys]
-
-    #~ # this is redundant and done with other name
-    #~ for k in ['name', 'channel_id']:
-        #~ if k in common_keys:
-            #~ common_keys.remove(k)
-
-    #~ array_annotations = {}
-    #~ for k in common_keys:
-        #~ values = [sig_annotations[ind][k] for ind in global_channel_indexes]
-        #~ array_annotations[k] = np.array(values)
-
-    #~ return array_annotations
