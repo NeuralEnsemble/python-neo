@@ -11,8 +11,8 @@ The file ".rec" have :
 
 Author: Samuel Garcia
 """
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype,  _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 
@@ -39,9 +39,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
                 if b"</Configuration>" in line:
                     header_size = f.tell()
                     break
+
             if header_size is None:
                 ValueError("SpikeGadgets : the xml header do not contain </Configuration>")
-            print(header_size)
+            
             f.seek(0)
             header_txt = f.read(header_size).decode('utf8')
         
@@ -52,21 +53,53 @@ class SpikeGadgetsRawIO(BaseRawIO):
         hconf = root.find('HardwareConfiguration')
         self._sampling_rate = float(hconf.attrib['samplingRate'])
         
+        # explore sub stream
+        # the raw part is a complex vector of struct that depend on channel maps.
+        # the "main_dtype" represent it
+        main_dtype = []
+        for device in hconf:
+            bytes = int(device.attrib['numBytes'])
+            name = device.attrib['name']
+            sub_dtype = (name, 'u1', (bytes, ))
+            main_dtype.append(sub_dtype)
+        self._main_dtype = np.dtype(main_dtype)
+        
+        self._raw_memmap = np.memmap(self.filename, mode='r', offset=header_size, dtype=self._main_dtype)
+        print(self._raw_memmap[:3])
+        
+        # wlak channels and keep only "analog" one
+        stream_ids = []
+        signal_streams = []
         signal_channels = []
-        for chan_ind, child in enumerate(hconf.find('Device')):
-            name = child.attrib['id']
-            chan_id = chan_ind  #TODO change this to str with new rawio refactoring
-            dtype = 'int16' # TODO check this
-            units = 'uV' # TODO check where is the info
-            gain = 1. # TODO check where is the info
-            offset = 0. # TODO check where is the info
-            group_id = 0
-            signal_channels.append((name, chan_id, self._sampling_rate, 'int16',
-                                 units, gain, offset, group_id))            
-        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        for device in hconf:
+            stream_id = device.attrib['name']
+            for channel in device:
+                #~ print(channel, channel.attrib)
+                
+                if channel.attrib['dataType'] == 'analog':
+                    
+                    if stream_id not in stream_ids:
+                        stream_ids.append(stream_id)
+                        stream_name = stream_id
+                        signal_streams.append((stream_name, stream_id))
+                    
+                    name = channel.attrib['id']
+                    chan_id = channel.attrib['id']
+                    dtype = 'uint8' # TODO check this
+                    units = 'uV' # TODO check where is the info
+                    gain = 1. # TODO check where is the info
+                    offset = 0. # TODO check where is the info
+                    signal_channels.append((name, chan_id, self._sampling_rate, 'int16',
+                                         units, gain, offset, stream_id))            
 
-        self._raw_memmap = np.memmap(self.filename, mode='r', offset=header_size, dtype='int16')
-        self._raw_memmap = self._raw_memmap.reshape(-1, signal_channels.size)
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        print(signal_channels)
+        print(signal_streams)
+        
+        exit()
+
+        print(self._raw_memmap[:3])
 
         # No events
         event_channels = []
@@ -94,14 +127,14 @@ class SpikeGadgetsRawIO(BaseRawIO):
         t_stop = size / self._sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         size = self._raw_memmap.shape[0]
         return size
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_memmap[slice(i_start, i_stop), :][:, channel_indexes]
