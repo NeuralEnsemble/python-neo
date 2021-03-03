@@ -134,31 +134,38 @@ class BaseFromRaw(BaseIO):
 
         bl = Block(**bl_annotations)
 
-        # Group for AnalogSignals
+        # Group for AnalogSignals come from signal_streams
         if create_group_across_segment['AnalogSignal']:
-            all_channels = self.header['signal_channels']
-            channel_indexes_list = self.get_group_signal_channel_indexes()
-            sig_groups = []
-            for channel_index in channel_indexes_list:
-                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
-                        channel_index, signal_group_mode=signal_group_mode).items():
-                        group = Group(name='AnalogSignal group {}'.format(i))
-                        # @andrew @ julia @michael : do we annotate group across segment with this arrays ?
-                        group.annotate(ch_names=all_channels[ind_abs]['name'].astype('U'))  # ??
-                        group.annotate(channel_ids=all_channels[ind_abs]['id'])  # ??
-                        bl.groups.append(group)
-                        sig_groups.append(group)
+            #~ all_channels = self.header['signal_channels']
+            #~ channel_indexes_list = self.get_group_signal_channel_indexes()
+            #~ sig_groups = []
+            #~ for channel_index in channel_indexes_list:
+                #~ for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
+                        #~ channel_index, signal_group_mode=signal_group_mode).items():
+                        #~ group = Group(name='AnalogSignal group {}'.format(i))
+                        #~ # @andrew @ julia @michael : do we annotate group across segment with this arrays ?
+                        #~ group.annotate(ch_names=all_channels[ind_abs]['name'].astype('U'))  # ??
+                        #~ group.annotate(channel_ids=all_channels[ind_abs]['id'])  # ??
+                        #~ bl.groups.append(group)
+                        #~ sig_groups.append(group)
+
+            signal_streams = self.header['signal_streams']
+            sub_streams = self.get_sub_signal_streams(signal_group_mode)
+            sub_stream_groups = []
+            for sub_stream in sub_streams:
+                stream_index, inner_stream_channels, name = sub_stream
+                group = Group(name=name,
+                                           stream_id=signal_streams[stream_index]['id'])
+                bl.groups.append(group)
+                sub_stream_groups.append(group)
 
         if create_group_across_segment['SpikeTrain']:
-            unit_channels = self.header['unit_channels']
+            spike_channels = self.header['spike_channels']
             st_groups = []
-            for c in range(unit_channels.size):
+            for c in range(spike_channels.size):
                 group = Group(name='SpikeTrain group {}'.format(c))
-                group.annotate(unit_name=unit_channels[c]['name'])
-                group.annotate(unit_id=unit_channels[c]['id'])
-                unit_annotations = self.raw_annotations['unit_channels'][c]
-                unit_annotations = check_annotations(unit_annotations)
-                group.annotate(**unit_annotations)
+                group.annotate(unit_name=spike_channels[c]['name'])
+                group.annotate(unit_id=spike_channels[c]['id'])
                 bl.groups.append(group)
                 st_groups.append(group)
 
@@ -183,7 +190,7 @@ class BaseFromRaw(BaseIO):
         for seg in bl.segments:
             if create_group_across_segment['AnalogSignal']:
                 for c, anasig in enumerate(seg.analogsignals):
-                    sig_groups[c].add(anasig)
+                    sub_stream_groups[c].add(anasig)
 
             if create_group_across_segment['SpikeTrain']:
                 for c, sptr in enumerate(seg.spiketrains):
@@ -231,38 +238,67 @@ class BaseFromRaw(BaseIO):
             signal_group_mode = self._prefered_signal_group_mode
 
         # annotations
-        seg_annotations = dict(self.raw_annotations['blocks'][block_index]['segments'][seg_index])
-        for k in ('signals', 'units', 'events'):
+        seg_annotations = self.raw_annotations['blocks'][block_index]['segments'][seg_index].copy()
+        for k in ('signals', 'spikes', 'events'):
             seg_annotations.pop(k)
         seg_annotations = check_annotations(seg_annotations)
 
         seg = Segment(index=seg_index, **seg_annotations)
 
         # AnalogSignal
-        signal_channels = self.header['signal_channels']
-        if signal_channels.size > 0:
-            channel_indexes_list = self.get_group_signal_channel_indexes()
-            for channel_indexes in channel_indexes_list:
-                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
-                        channel_indexes,
-                        signal_group_mode=signal_group_mode).items():
-                    # make a proxy...
-                    anasig = AnalogSignalProxy(rawio=self, global_channel_indexes=ind_abs,
-                                    block_index=block_index, seg_index=seg_index)
+        #~ signal_channels = self.header['signal_channels']
+        #~ if signal_channels.size > 0:
+            #~ channel_indexes_list = self.get_group_signal_channel_indexes()
+            #~ for channel_indexes in channel_indexes_list:
+                #~ for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
+                        #~ channel_indexes,
+                        #~ signal_group_mode=signal_group_mode).items():
+                    #~ # make a proxy...
+                    #~ anasig = AnalogSignalProxy(rawio=self, global_channel_indexes=ind_abs,
+                                    #~ block_index=block_index, seg_index=seg_index)
 
-                    if not lazy:
-                        # ... and get the real AnalogSIgnal if not lazy
-                        anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
-                        # TODO magnitude_mode='rescaled'/'raw'
+                    #~ if not lazy:
+                        #~ # ... and get the real AnalogSIgnal if not lazy
+                        #~ anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
+                        #~ # TODO magnitude_mode='rescaled'/'raw'
 
-                    anasig.segment = seg
-                    seg.analogsignals.append(anasig)
+                    #~ anasig.segment = seg
+                    #~ seg.analogsignals.append(anasig)
+        
+        # AnalogSignal
+        #~ signal_streams = self.header['signal_streams']
+        #~ for stream_index in range(len(signal_streams)):
+            #~ anasig = AnalogSignalProxy(rawio=self, stream_index=stream_index,
+                            #~ block_index=block_index, seg_index=seg_index)
+            #~ if not lazy:
+                #~ # ... and get the real AnalogSIgnal if not lazy
+                #~ anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
+
+            #~ anasig.segment = seg
+            #~ seg.analogsignals.append(anasig)
+        signal_streams = self.header['signal_streams']
+        sub_streams = self.get_sub_signal_streams(signal_group_mode)
+        for sub_stream in sub_streams:
+            stream_index, inner_stream_channels, name = sub_stream
+            anasig = AnalogSignalProxy(rawio=self, stream_index=stream_index,
+                            inner_stream_channels=inner_stream_channels,
+                            block_index=block_index, seg_index=seg_index)
+            anasig.name = name
+
+            if not lazy:
+                # ... and get the real AnalogSIgnal if not lazy
+                anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
+
+            anasig.segment = seg
+            seg.analogsignals.append(anasig)
+            
+
 
         # SpikeTrain and waveforms (optional)
-        unit_channels = self.header['unit_channels']
-        for unit_index in range(len(unit_channels)):
+        spike_channels = self.header['spike_channels']
+        for spike_channel_index in range(len(spike_channels)):
             # make a proxy...
-            sptr = SpikeTrainProxy(rawio=self, unit_index=unit_index,
+            sptr = SpikeTrainProxy(rawio=self, spike_channel_index=spike_channel_index,
                                                 block_index=block_index, seg_index=seg_index)
 
             if not lazy:
@@ -295,37 +331,92 @@ class BaseFromRaw(BaseIO):
         seg.create_many_to_one_relationship()
         return seg
 
-    def _make_signal_channel_subgroups(self, channel_indexes,
-                                       signal_group_mode='group-by-same-units'):
+    def get_sub_signal_streams(self, signal_group_mode='group-by-same-units'):
         """
-        For some RawIO channel are already splitted in groups.
-        But in any cases, channel need to be splitted again in sub groups
-        because they do not have the same units.
-
-        They can also be splitted one by one to match previous behavior for
-        some IOs in older version of neo (<=0.5).
-
-        This method aggregate signal channels with same units or split them all.
+        When a signal streams don't have homogeneous si units accros channels.
+        They have to be splitted in sub streams to construct AnalogSignal (unique units).
+        
+        They function also help to split each channel into one AnalogSignal like in 
+        old neo (<=0.5).
+        
         """
-        all_channels = self.header['signal_channels']
-        if channel_indexes is None:
-            channel_indexes = np.arange(all_channels.size, dtype=int)
-        channels = all_channels[channel_indexes]
+        signal_streams = self.header['signal_streams']
+        signal_channels = self.header['signal_channels']
 
-        groups = collections.OrderedDict()
-        if signal_group_mode == 'group-by-same-units':
-            all_units = np.unique(channels['units'])
+        sub_streams = []
+        for stream_index in range(len(signal_streams)):
+            stream_id = signal_streams[stream_index]['id']
+            stream_name = signal_streams[stream_index]['name']
+            mask = signal_channels['stream_id'] == stream_id
+            channels = signal_channels[mask]
+            if signal_group_mode == 'group-by-same-units':
+                # standard behavior
+                
+                ## this do not keep the original order
+                ## all_units = np.unique(channels['units'])
+                # so python loop
+                all_units = []
+                for units in channels['units']:
+                    if units not in all_units:
+                        all_units.append(units)
+                
+                if len(all_units) == 1:
+                    #no substream
+                    inner_stream_channels = None  # None iwill be transform as slice later
+                    name = stream_name
+                    sub_stream = (stream_index, inner_stream_channels, name)
+                    sub_streams.append(sub_stream)
+                else:
+                    for units in all_units:
+                        inner_stream_channels, = np.nonzero(channels['units'] == units)
+                        chan_names = channels[inner_stream_channels]['name']
+                        name =  'Channels: (' + ' '.join(chan_names) + ')'
+                        sub_stream = (stream_index, inner_stream_channels, name)
+                        sub_streams.append(sub_stream)
+            elif signal_group_mode == 'split-all':
+                # mimic all neo <= 0.5 behavior
+                for i, channel in enumerate(channels):
+                    inner_stream_channels = [i]
+                    name = channels[i]['name']
+                    sub_stream = (stream_index, inner_stream_channels, name)
+                    sub_streams.append(sub_stream)
+            else:
+                raise (NotImplementedError)
 
-            for i, unit in enumerate(all_units):
-                ind_within, = np.nonzero(channels['units'] == unit)
-                ind_abs = channel_indexes[ind_within]
-                groups[i] = (ind_within, ind_abs)
+        return sub_streams
 
-        elif signal_group_mode == 'split-all':
-            for i, chan_index in enumerate(channel_indexes):
-                ind_within = [i]
-                ind_abs = channel_indexes[ind_within]
-                groups[i] = (ind_within, ind_abs)
-        else:
-            raise (NotImplementedError)
-        return groups
+
+    #~ def _make_signal_channel_subgroups(self, channel_indexes,
+                                       #~ signal_group_mode='group-by-same-units'):
+        #~ """
+        #~ For some RawIO channel are already splitted in groups.
+        #~ But in any cases, channel need to be splitted again in sub groups
+        #~ because they do not have the same units.
+
+        #~ They can also be splitted one by one to match previous behavior for
+        #~ some IOs in older version of neo (<=0.5).
+
+        #~ This method aggregate signal channels with same units or split them all.
+        #~ """
+        #~ all_channels = self.header['signal_channels']
+        #~ if channel_indexes is None:
+            #~ channel_indexes = np.arange(all_channels.size, dtype=int)
+        #~ channels = all_channels[channel_indexes]
+
+        #~ groups = collections.OrderedDict()
+        #~ if signal_group_mode == 'group-by-same-units':
+            #~ all_units = np.unique(channels['units'])
+
+            #~ for i, unit in enumerate(all_units):
+                #~ ind_within, = np.nonzero(channels['units'] == unit)
+                #~ ind_abs = channel_indexes[ind_within]
+                #~ groups[i] = (ind_within, ind_abs)
+
+        #~ elif signal_group_mode == 'split-all':
+            #~ for i, chan_index in enumerate(channel_indexes):
+                #~ ind_within = [i]
+                #~ ind_abs = channel_indexes[ind_within]
+                #~ groups[i] = (ind_within, ind_abs)
+        #~ else:
+            #~ raise (NotImplementedError)
+        #~ return groups

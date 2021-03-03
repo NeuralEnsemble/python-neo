@@ -77,11 +77,11 @@ Then browse the internal header and display information::
     nb_block: 1
     nb_segment:  [1]
     signal_channels: [V1]
-    unit_channels: [Wspk1u, Wspk2u, Wspk4u, Wspk5u ... Wspk29u Wspk30u Wspk31u Wspk32u]
+    spike_channels: [Wspk1u, Wspk2u, Wspk4u, Wspk5u ... Wspk29u Wspk30u Wspk31u Wspk32u]
     event_channels: []
 
 You get the number of blocks and segments per block. You have information
-about channels: **signal_channels**, **unit_channels**, **event_channels**.
+about channels: **signal_channels**, **spike_channels**, **event_channels**.
 
 All this information is internally available in the *header* dict::
 
@@ -91,7 +91,7 @@ All this information is internally available in the *header* dict::
     event_channels []
     nb_segment [1]
     nb_block 1
-    unit_channels [('Wspk1u', 'ch1#0', '',  0.00146484,  0., 0,  30000.)
+    spike_channels [('Wspk1u', 'ch1#0', '',  0.00146484,  0., 0,  30000.)
     ('Wspk2u', 'ch2#0', '',  0.00146484,  0., 0,  30000.)
     ...
 
@@ -141,7 +141,7 @@ Inspect units channel. Each channel gives a SpikeTrain for each Segment.
 Note that for many formats a physical channel can have several units after spike
 sorting. So the nb_unit could be more than physical channel or signal channels.
 
-    >>> nb_unit = reader.unit_channels_count()
+    >>> nb_unit = reader.spike_channels_count()
     >>> print('nb_unit', nb_unit)
     nb_unit 30
     >>> for unit_index in range(nb_unit):

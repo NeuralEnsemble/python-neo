@@ -5,7 +5,7 @@ See https://billkarsh.github.io/SpikeGLX/
 
 Here an adaptation of the spikeglx tools into the neo rawio API.
 
-Note that each pair of ".bin"/."meta" files is represented as a group of channels
+Note that each pair of ".bin"/."meta" files is represented as a stream of channels
 that share the same sampling rate.
 It will be one AnalogSignal multi channel at neo.io level.
 
@@ -39,7 +39,8 @@ https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/ex
 Author : Samuel Garcia
 """
 
-from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 from pathlib import Path
 import os
@@ -84,52 +85,35 @@ class SpikeGLXRawIO(BaseRawIO):
             self._memmaps[key] = data
 
         # create channel header
-        self._global_channel_to_stream = {}
-        self._global_channel_to_local_channel = []
-        self._channel_location = {}
-        sig_channels = []
-        global_chan = 0
-        signal_annotations = []
+        signal_streams = []
+        signal_channels = []
         for stream_name in stream_names:
             # take first segment
             info = self.signals_info_dict[0, stream_name]
-
-            group_id = stream_names.index(info['stream_name'])
+            
+            stream_id = stream_name
+            stream_index = stream_names.index(info['stream_name'])
+            signal_streams.append((stream_name, stream_id))
 
             # add channels to global list
             for local_chan in range(info['num_chan']):
-                self._global_channel_to_stream[global_chan] = info['stream_name']
-                self._global_channel_to_local_channel.append(local_chan)
                 chan_name = info['channel_names'][local_chan]
-                sig_channels.append((chan_name, global_chan, info['sampling_rate'], 'int16',
+                chan_id= f'{stream_name}#{chan_name}'
+                signal_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16',
                                     info['units'], info['channel_gains'][local_chan],
-                                    info['channel_offsets'][local_chan], group_id))
+                                    info['channel_offsets'][local_chan], stream_id))
 
-                # annotation
-                ann = {}
-                ann['stream'] = info['stream_name']
-                signal_annotations.append(ann)
-
-                # channel location
-                if 'channel_location' in info:
-                    self._channel_location[info['seg_index'], info['device']] = \
-                                                                info['channel_location']
-
-                # the channel id is a global counter and so equivalent to channel_index
-                # this is bad and should rather be changed to a string based id
-                global_chan += 1
-
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        self._global_channel_to_local_channel = np.array(self._global_channel_to_local_channel,
-                                                                             dtype='int64')
+        
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         # No events
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # deal with nb_segment and t_start/t_stop per segment
         self._t_starts = {seg_index: 0. for seg_index in range(nb_segment)}
@@ -144,24 +128,32 @@ class SpikeGLXRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # insert some annotation at some place
         self._generate_minimal_annotations()
         self._generate_minimal_annotations()
         block_ann = self.raw_annotations['blocks'][0]
-        block_ann['file_origin'] = self.dirname
 
         for seg_index in range(nb_segment):
-            seg_ann = block_ann['segments'][seg_index]
-            seg_ann['file_origin'] = self.dirname
+            seg_ann = self.raw_annotations['blocks'][0]['segments'][seg_index]
             seg_ann['name'] = "Segment {}".format(seg_index)
-
-            for c in range(sig_channels.size):
-                anasig_an = seg_ann['signals'][c]
-                anasig_an.update(signal_annotations[c])
+            
+            for c, signal_stream in enumerate(signal_streams):
+                stream_name = signal_stream['name']
+                sig_ann = self.raw_annotations['blocks'][0]['segments'][seg_index]['signals'][c]
+                
+                # channel location
+                info = self.signals_info_dict[seg_index, stream_name]
+                if 'channel_location' in info:
+                    loc = info['channel_location']
+                    # one fake channel  for "sys0"
+                    loc = np.concatenate((loc, [[0., 0.]]), axis=0)
+                    for ndim in range(loc.shape[1]):
+                        sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = loc[:, ndim]
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
@@ -169,44 +161,30 @@ class SpikeGLXRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._t_stops[seg_index]
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        assert channel_indexes is not None
-        stream_name = self._global_channel_to_stream[channel_indexes[0]]
-        memmap = self._memmaps[seg_index, stream_name]
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        memmap = self._memmaps[seg_index, stream_id]
         return int(memmap.shape[0])
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        assert channel_indexes is not None
-        stream_name = self._global_channel_to_stream[channel_indexes[0]]
-        memmap = self._memmaps[seg_index, stream_name]
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        memmap = self._memmaps[seg_index, stream_id]
+        
+        if channel_indexes is None:
+            channel_indexes = slice(channel_indexes)
 
-        local_chans = self._global_channel_to_local_channel[channel_indexes]
-        if np.all(np.diff(local_chans) == 1):
-            # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
-            # and so keep the underlying memmap
-            local_chans = slice(local_chans[0], local_chans[0] + len(local_chans))
+        if not isinstance(channel_indexes, slice):
+            if np.all(np.diff(channel_indexes) == 1):
+                # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
+                # and so keep the underlying memmap
+                local_chans = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
 
-        raw_signals = memmap[slice(i_start, i_stop), local_chans]
+        raw_signals = memmap[slice(i_start, i_stop), :][:, channel_indexes]
 
         return raw_signals
-
-    def get_channel_location(self, seg_index=0, device=None, x_pitch=21, y_pitch=20):
-        # x_pitch=21, y_pitch=2 are taken from spikeinterface implementation.
-        # See also  `_parse_spikeglx_metafile` in spikeglxrecordingextractor.py
-        # in https://github.com/SpikeInterface/spikeextractors
-        # This need to be check.
-        if device is None:
-            if len(self._channel_location) == 1:
-                locations = list(self._channel_location.values())[0]
-            else:
-                raise ValueError('device must specified')
-        else:
-            locations = self._channel_location[seg_index, device]
-        locations = locations * [[x_pitch, y_pitch]]
-        return locations
 
 
 def scan_files(dirname):
