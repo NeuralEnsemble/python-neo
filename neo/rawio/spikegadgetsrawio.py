@@ -66,12 +66,13 @@ class SpikeGadgetsRawIO(BaseRawIO):
         self._main_dtype = np.dtype(main_dtype)
         
         self._raw_memmap = np.memmap(self.filename, mode='r', offset=header_size, dtype=self._main_dtype)
-        print(self._raw_memmap[:3])
+        #~ print(self._raw_memmap[:3])
         
         # wlak channels and keep only "analog" one
         stream_ids = []
         signal_streams = []
         signal_channels = []
+        self._bytes_in_streams  = {}
         for device in hconf:
             stream_id = device.attrib['name']
             for channel in device:
@@ -83,20 +84,24 @@ class SpikeGadgetsRawIO(BaseRawIO):
                         stream_ids.append(stream_id)
                         stream_name = stream_id
                         signal_streams.append((stream_name, stream_id))
+                        self._bytes_in_streams[stream_id] = []
                     
                     name = channel.attrib['id']
                     chan_id = channel.attrib['id']
-                    dtype = 'uint8' # TODO check this
+                    dtype = 'uint16' # TODO check this
                     units = 'uV' # TODO check where is the info
                     gain = 1. # TODO check where is the info
                     offset = 0. # TODO check where is the info
                     signal_channels.append((name, chan_id, self._sampling_rate, 'int16',
-                                         units, gain, offset, stream_id))            
+                                         units, gain, offset, stream_id))
+                    
+                    self._bytes_in_streams[stream_id].append(int(channel.attrib['startByte']))
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        print(signal_channels)
-        print(signal_streams)
+        #~ print(signal_channels)
+        #~ print(signal_streams)
+        print(self._bytes_in_streams)
         
 
         # No events
@@ -137,15 +142,31 @@ class SpikeGadgetsRawIO(BaseRawIO):
         stream_id = self.header['signal_streams'][stream_index]['id']
         print(stream_id)
         
-        raw = self._raw_memmap[i_start:i_stop]
-        print(raw.dtype)
+        raw_unit8 = self._raw_memmap[stream_id][i_start:i_stop]
+        print('raw_unit8', raw_unit8.shape, raw_unit8.dtype)
         
-        print(raw[stream_id])
+        if channel_indexes is None:
+            channel_indexes = slice(channel_indexes)
+            
+        nb = len(self._bytes_in_streams[stream_id])
+        chan_inds = np.arange(nb)[channel_indexes]
+        print('chan_inds', chan_inds)
         
+        byte_mask = np.zeros(raw_unit8.shape[1], dtype='bool')
+        for chan_ind in chan_inds:
+            bytes = self._bytes_in_streams[stream_id][chan_ind]
+            # int16
+            byte_mask[bytes] = True
+            byte_mask[bytes+1] = True
         
+        print(byte_mask)
         
-        #~ if channel_indexes is None:
-            #~ channel_indexes = slice(None)
-        #~ raw_signals = [:, channel_indexes]
-        #~ return raw_signals
+        raw_unit8_mask = raw_unit8[:, byte_mask]
+        print('raw_unit8_mask', raw_unit8_mask.shape)
+        shape = raw_unit8_mask.shape
+        shape = (shape[0], shape[1] // 2)
+        raw_unit16 = raw_unit8_mask.flatten().view('int16').reshape(shape)
+        print(raw_unit16.shape)
+        
+        return raw_unit16
 
