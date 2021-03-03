@@ -4,6 +4,7 @@ Only signals ability at the moment.
 
 https://spikegadgets.com/spike-products/
 
+Some doc here: https://bitbucket.org/mkarlsso/trodes/wiki/Configuration
 
 The file ".rec" have :
   * a fist part in text with xml informations
@@ -97,24 +98,22 @@ class SpikeGadgetsRawIO(BaseRawIO):
         print(signal_channels)
         print(signal_streams)
         
-        exit()
-
-        print(self._raw_memmap[:3])
 
         # No events
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = signal_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
@@ -135,8 +134,18 @@ class SpikeGadgetsRawIO(BaseRawIO):
         return 0.
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        raw_signals = self._raw_memmap[slice(i_start, i_stop), :][:, channel_indexes]
-        return raw_signals
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        print(stream_id)
+        
+        raw = self._raw_memmap[i_start:i_stop]
+        print(raw.dtype)
+        
+        print(raw[stream_id])
+        
+        
+        
+        #~ if channel_indexes is None:
+            #~ channel_indexes = slice(None)
+        #~ raw_signals = [:, channel_indexes]
+        #~ return raw_signals
 
