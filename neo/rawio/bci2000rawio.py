@@ -37,11 +37,11 @@ class BCI2000RawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
-        
+
         # one unique stream
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
         self.header['signal_streams'] = signal_streams
-        
+
         sig_channels = []
         for chan_ix in range(file_info['SourceCh']):
             ch_name = param_defs['ChannelNames']['value'][chan_ix] \
@@ -191,7 +191,7 @@ class BCI2000RawIO(BaseRawIO):
     def _event_arrays_list(self):
         if self._my_events is None:
             event_annotations = self.raw_annotations['blocks'][0]['segments'][0]['events']
-            
+
             self._my_events = []
             for event_channel_index in range(self.event_channels_count()):
                 sd = event_annotations[event_channel_index]

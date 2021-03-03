@@ -319,12 +319,12 @@ class Spike2RawIO(BaseRawIO):
         for seg_index in range(nb_segment):
             seg_ann =  self.raw_annotations['blocks'][0]['segments'][seg_index]
             seg_ann['system_id'] = info['system_id']
-            
+
             for c, stream_channel in enumerate(signal_streams):
                 stream_id = stream_channel['id']
                 signal_an = self.raw_annotations['blocks'][0]['segments'][seg_index]['signals'][c]
                 mask = (signal_channels['stream_id'] == stream_id)
-                
+
                 for key in ('phy_chan', 'comment'):
                     values = []
                     for chan_id in signal_channels[mask]['id']:
@@ -369,7 +369,8 @@ class Spike2RawIO(BaseRawIO):
         chan_id0 = int(chan_ids[0])
         return self._sig_t_starts[chan_id0][seg_index] * self._time_factor
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -380,10 +381,10 @@ class Spike2RawIO(BaseRawIO):
         signal_channels = self.header['signal_channels'][mask]
         chan_ids = signal_channels['id']
         self._sig_dtypes[stream_id]
-        
+
         if channel_indexes is not None:
             chan_ids = chan_ids[channel_indexes]
-        
+
         dt = self._sig_dtypes[stream_id]
 
         raw_signals = np.zeros((i_stop - i_start, len(chan_ids)), dtype=dt)

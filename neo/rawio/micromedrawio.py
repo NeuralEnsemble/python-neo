@@ -113,7 +113,7 @@ class MicromedRawIO(BaseRawIO):
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
             signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-            
+
             assert np.unique(signal_channels['sampling_rate']).size == 1
             self._sampling_rate = float(np.unique(signal_channels['sampling_rate'])[0])
 
@@ -167,7 +167,7 @@ class MicromedRawIO(BaseRawIO):
                 d['firstname'] = firstname
                 d['surname'] = surname
                 d['header_version'] = header_version
-            
+
             sig_annotations = self.raw_annotations['blocks'][0]['segments'][0]['signals'][0]
             sig_annotations['__array_annotations__']['ground'] = np.array(sig_grounds)
 
@@ -189,7 +189,8 @@ class MicromedRawIO(BaseRawIO):
         assert stream_index == 0
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(channel_indexes)
         raw_signals = self._raw_signals[slice(i_start, i_stop), :][:, channel_indexes]

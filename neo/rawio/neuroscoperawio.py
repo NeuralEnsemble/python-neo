@@ -66,10 +66,10 @@ class NeuroScopeRawIO(BaseRawIO):
 
         self._raw_signals = np.memmap(filename + '.dat', dtype=sig_dtype,
                                       mode='r', offset=0).reshape(-1, nb_channel)
-        
+
         # one unique stream
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-        
+
         # signals
         sig_channels = []
         for c in range(nb_channel):
@@ -116,7 +116,8 @@ class NeuroScopeRawIO(BaseRawIO):
         assert stream_index == 0
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), :][:, channel_indexes]

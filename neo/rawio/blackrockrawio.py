@@ -221,7 +221,7 @@ class BlackrockRawIO(BaseRawIO):
     def _parse_header(self):
 
         main_sampling_rate = 30000.
-        
+
         event_channels = []
         spike_channels = []
         signal_streams = []
@@ -474,8 +474,7 @@ class BlackrockRawIO(BaseRawIO):
         # Put annotations at some places for compatibility
         # with previous BlackrockIO version
         self._generate_minimal_annotations()
-        
-        
+
         block_ann = self.raw_annotations['blocks'][0]
         block_ann['description'] = 'Block of data from Blackrock file set.'
         block_ann['file_origin'] = self.filename
@@ -488,7 +487,7 @@ class BlackrockRawIO(BaseRawIO):
         # block_ann['avail_sif'] = self._avail_files['sif']
         # block_ann['avail_ccf'] = self._avail_files['ccf']
         block_ann['rec_pauses'] = False
-        
+
         # this is not used anymore because not more ChannelIndex
         """
         flt_type = {0: 'None', 1: 'Butterworth'}

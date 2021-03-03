@@ -103,7 +103,6 @@ class SpikeGLXRawIO(BaseRawIO):
                                     info['units'], info['channel_gains'][local_chan],
                                     info['channel_offsets'][local_chan], stream_id))
 
-        
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -169,10 +168,11 @@ class SpikeGLXRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
         memmap = self._memmaps[seg_index, stream_id]
-        
+
         if channel_indexes is None:
             channel_indexes = slice(channel_indexes)
 

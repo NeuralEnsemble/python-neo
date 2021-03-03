@@ -196,10 +196,9 @@ class AxonRawIO(BaseRawIO):
                                  sig_dtype, units, gain, offset, stream_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        
+
         # one unique signal stream
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-
 
         # only one events channel : tag
         # In ABF timstamps are not attached too any particular segment
@@ -267,7 +266,8 @@ class AxonRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._t_starts[seg_index]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index,
+                                channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), :][:, channel_indexes]

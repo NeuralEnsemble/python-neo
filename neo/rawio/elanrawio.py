@@ -123,12 +123,12 @@ class ElanRawIO(BaseRawIO):
             for c in range(nb_channel + 2):
                 channel_infos[c]['info_filter'] = f.readline()[:-1]
 
-        n = int(round(np.log(channel_infos[0]['max_logic'] -
-                             channel_infos[0]['min_logic']) / np.log(2)) / 8)
+        n = int(round(np.log(channel_infos[0]['max_logic']
+                            - channel_infos[0]['min_logic']) / np.log(2)) / 8)
         sig_dtype = np.dtype('>i' + str(n))
 
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-        
+
         sig_channels = []
         for c, chan_info in enumerate(channel_infos[:-2]):
             chan_name = chan_info['label']
@@ -188,12 +188,12 @@ class ElanRawIO(BaseRawIO):
         block_annotations.update(extra_info)
         seg_annotations = self.raw_annotations['blocks'][0]['segments'][0]
         seg_annotations.update(extra_info)
-        
+
         sig_annotations = self.raw_annotations['blocks'][0]['segments'][0]['signals'][0]
         for key in ('info_filter', 'kind'):
             values = [channel_infos[c][key] for c in range(nb_channel)]
             sig_annotations['__array_annotations__'][key] = np.array(values)
-        
+
         event_annotations = self.raw_annotations['blocks'][0]['segments'][0]['events'][0]
         event_annotations['__array_annotations__']['reject_codes'] = self._reject_codes
 
@@ -215,7 +215,8 @@ class ElanRawIO(BaseRawIO):
         assert stream_index == 0
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), :][:, channel_indexes]
@@ -227,7 +228,8 @@ class ElanRawIO(BaseRawIO):
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._raw_event_timestamps.size
 
-    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index,
+                              event_channel_index, t_start, t_stop):
         timestamp = self._raw_event_timestamps
         labels = self._event_labels
         durations = None

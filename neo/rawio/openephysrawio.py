@@ -161,11 +161,12 @@ class OpenEphysRawIO(BaseRawIO):
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         self._sig_sampling_rate = signal_channels['sampling_rate'][0]  # unique for channel
-        
+
         # split channels in stream depending the name CHxxx ADCxxx
-        stream_ids = [name[:2] if name.startswith('CH') else name[:3] for name in signal_channels['name']]
+        stream_ids = [name[:2] if name.startswith('CH') else name[:3]
+                      for name in signal_channels['name']]
         signal_channels['stream_id'] = stream_ids
-        
+
         # and create streams channels
         stream_ids = []
         for stream_id in signal_channels['stream_id']:
@@ -173,7 +174,7 @@ class OpenEphysRawIO(BaseRawIO):
             if stream_id not in stream_ids:
                 stream_ids.append(stream_id)
         signal_streams = [(f'Signals {stream_id}', f'{stream_id}') for stream_id in stream_ids]
-        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype) 
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # scan for spikes files
         spike_channels = []

@@ -102,7 +102,7 @@ class ExampleRawIO(BaseRawIO):
         # at any place in the file
         # In short `_parse_header()` can be slow but
         # `_get_analogsignal_chunk()` need to be as fast as possible
-        
+
         # create fake signals stream information
         signal_streams = []
         for c in range(2):
@@ -110,8 +110,7 @@ class ExampleRawIO(BaseRawIO):
             stream_id = c
             signal_streams.append((name, stream_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
-        
-        
+
         # create fake signals channels information
         # This is mandatory!!!!
         # gain/offset/units are really important because
@@ -131,15 +130,16 @@ class ExampleRawIO(BaseRawIO):
             gain = 1000. / 2 ** 16
             offset = 0.
             # stream_id indicates how to group channels
-            # channels inside a "stream" share same characteristics (sampling rate/dtype/t_start/units/...)
+            # channels inside a "stream" share same characteristics
+            #  (sampling rate/dtype/t_start/units/...)
             stream_id = str(c // 8)
             signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         # A stream can contain signals with different physical units.
         # Here, the two last channels will have different units (pA)
-        # Since AnalogSignals must have consistent units across channels, 
-        # this stream will be split in 2 parts on the neo.io level and finally 3 AnalogSignals 
+        # Since AnalogSignals must have consistent units across channels,
+        # this stream will be split in 2 parts on the neo.io level and finally 3 AnalogSignals
         # will be generated per Segment.
         signal_channels[-2:]['units'] = 'pA'
 
@@ -184,14 +184,14 @@ class ExampleRawIO(BaseRawIO):
         # at neo.io level. IOs can add annotations
         # to any object. To keep this functionality with the wrapper
         # BaseFromRaw you can add annotations in a nested dict.
-        
-        # `_generate_minimal_annotations()` must be called to generate the nested 
+
+        # `_generate_minimal_annotations()` must be called to generate the nested
         # dict of annotations/array_annotations
         self._generate_minimal_annotations()
         # this pprint lines really help for understand the nested (and complicated sometimes) dict
         # from pprint import pprint
         # pprint(self.raw_annotations)
-        
+
         # Until here all mandatory operations for setting up a rawio are implemented.
         # The following lines provide additional, recommended annotations for the
         # final neo objects.
@@ -206,15 +206,18 @@ class ExampleRawIO(BaseRawIO):
                 seg_ann['seg_extra_info'] = 'This is the seg {} of block {}'.format(
                     seg_index, block_index)
                 for c in range(2):
-                    sig_an = seg_ann['signals'][c]['nickname'] = f'This stream {c} is from a subdevice'
+                    sig_an = seg_ann['signals'][c]['nickname'] = \
+                                f'This stream {c} is from a subdevice'
                     # add some array annotations (8 channels)
-                    sig_an = seg_ann['signals'][c]['__array_annotations__']['impedance'] = np.random.rand(8) * 10000
+                    sig_an = seg_ann['signals'][c]['__array_annotations__']['impedance'] =\
+                                                                    np.random.rand(8) * 10000
                 for c in range(3):
                     spiketrain_an = seg_ann['spikes'][c]
                     spiketrain_an['quality'] = 'Good!!'
                     # add some array annotations
                     num_spikes = self.spike_count(block_index, seg_index, c)
-                    spiketrain_an['__array_annotations__']['amplitudes'] = np.random.randn(num_spikes)
+                    spiketrain_an['__array_annotations__']['amplitudes'] = \
+                                                        np.random.randn(num_spikes)
                     
                 for c in range(2):
                     event_an = seg_ann['events'][c]
@@ -239,8 +242,10 @@ class ExampleRawIO(BaseRawIO):
         return all_stops[block_index][seg_index]
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        # We generate fake data in which the two stream signals have the same shape across all segments (10.0 seconds)
-        # This is not the case for real data, instead you should return the signal size depending on the block_index and segment_index
+        # We generate fake data in which the two stream signals have the same shape
+        # across all segments (10.0 seconds)
+        # This is not the case for real data, instead you should return the signal
+        # size depending on the block_index and segment_index
         # this must return an int = the number of sample
 
         # Note that channel_indexes can be ignored for most cases
@@ -260,14 +265,16 @@ class ExampleRawIO(BaseRawIO):
         # this is not always the case
         return self._segment_t_start(block_index, seg_index)
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         # this must return a signal chunk in a signal stream
         # limited with i_start/i_stop (can be None)
         # channel_indexes can be None (=all channel in the stream) or a list or numpy.array
         # This must return a numpy array 2D (even with one channel).
         # This must return the orignal dtype. No conversion here.
         # This must as fast as possible.
-        # To speed up this call all preparatory calculations should be implemented in _parse_header().
+        # To speed up this call all preparatory calculations should be implemented
+        # in _parse_header().
 
         # Here we are lucky:  our signals is always zeros!!
         # it is not always the case :)
@@ -291,7 +298,7 @@ class ExampleRawIO(BaseRawIO):
             assert np.all(channel_indexes >= 0), 'bad boy'
             assert np.all(channel_indexes < 8), 'big bad wolf'
             nb_chan = len(channel_indexes)
-            
+
         raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
         return raw_signals
 
@@ -330,7 +337,8 @@ class ExampleRawIO(BaseRawIO):
         spike_times /= 10000.  # because 10kHz
         return spike_times
 
-    def _get_spike_raw_waveforms(self, block_index, seg_index, spike_channel_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, spike_channel_index,
+                                 t_start, t_stop):
         # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
         # in the original dtype
         # this must be as fast as possible.
@@ -347,7 +355,8 @@ class ExampleRawIO(BaseRawIO):
         # we 20 spikes with a sweep of 50 (5ms)
 
         # trick to get how many spike in the slice
-        ts = self._get_spike_timestamps(block_index, seg_index, spike_channel_index, t_start, t_stop)
+        ts = self._get_spike_timestamps(block_index, seg_index,
+                                        spike_channel_index, t_start, t_stop)
         nb_spike = ts.size
 
         np.random.seed(2205)  # a magic number (my birthday)

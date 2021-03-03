@@ -87,11 +87,11 @@ class AnalogSignalProxy(BaseProxy):
     proxy_for = AnalogSignal
 
     def __init__(self, rawio=None, stream_index=None, inner_stream_channels=None,
-                                            block_index=0, seg_index=0):
+                 block_index=0, seg_index=0):
         # stream_index:  indicate the stream stream_id can be retreive easily
         # inner_stream_channels: are channel index inside the stream None means all channels
         # if inner_stream_channels is not None then this is a "substream"
-        
+
         self._rawio = rawio
         self._block_index = block_index
         self._seg_index = seg_index
@@ -122,7 +122,7 @@ class AnalogSignalProxy(BaseProxy):
         sigs_size = self._rawio.get_signal_size(block_index=block_index, seg_index=seg_index,
                                         stream_index=stream_index)
         self.shape = (sigs_size, self._nb_chan)
-        self.t_start = self._rawio.get_signal_t_start(block_index, seg_index,stream_index) * pq.s
+        self.t_start = self._rawio.get_signal_t_start(block_index, seg_index, stream_index) * pq.s
 
         # magnitude_mode='raw' is supported only if all offset=0
         # and all gain are the same
@@ -137,8 +137,8 @@ class AnalogSignalProxy(BaseProxy):
             self._raw_units = None
 
         # retrieve annotations and array annotations
-        ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][stream_index]
-        annotations = ann.copy()
+        seg_ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]
+        annotations = seg_ann['signals'][stream_index].copy()
         array_annotations = annotations.pop('__array_annotations__')
         array_annotations = {k:v[inner_stream_channels] for k, v in array_annotations.items()}
 
@@ -174,7 +174,7 @@ class AnalogSignalProxy(BaseProxy):
                 Control if an error is raise or not when one of  time_slice member
                 (t_start or t_stop) is outside the real time range of the segment.
         '''
-        
+
         # fixed_channel_indexes is channel index (or slice) in the stream
         # channel_indexes is channel index (or slice) in the substream
         if isinstance(self._inner_stream_channels, slice):
@@ -329,7 +329,7 @@ class SpikeTrainProxy(BaseProxy):
         else:
             self.sampling_rate = None
             self.left_sweep = None
-        
+
         BaseProxy.__init__(self, array_annotations=array_annotations, **annotations)
 
     def load(self, time_slice=None, strict_slicing=True,
@@ -385,7 +385,7 @@ class SpikeTrainProxy(BaseProxy):
                 t_start=t_start, copy=False, sampling_rate=self.sampling_rate,
                 waveforms=waveforms, left_sweep=self.left_sweep, name=self.name,
                 file_origin=self.file_origin, description=self.description, **self.annotations)
-        
+
         if time_slice is None:
             sptr.array_annotate(**self.array_annotations)
         else:
@@ -425,7 +425,7 @@ class _EventOrEpoch(BaseProxy):
         ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][event_channel_index]
         annotations = ann.copy()
         array_annotations = annotations.pop('__array_annotations__')
-        
+
         BaseProxy.__init__(self, array_annotations=array_annotations, **annotations)
 
     def load(self, time_slice=None, strict_slicing=True):
@@ -441,7 +441,7 @@ class _EventOrEpoch(BaseProxy):
         t_start, t_stop = consolidate_time_slice(time_slice, self.t_start,
                                                                     self.t_stop, strict_slicing)
         _t_start, _t_stop = prepare_time_slice(time_slice)
-        
+
         timestamp, durations, labels = self._rawio.get_event_timestamps(block_index=self._block_index,
                         seg_index=self._seg_index, event_channel_index=self._event_channel_index,
                         t_start=_t_start, t_stop=_t_stop)
@@ -452,7 +452,7 @@ class _EventOrEpoch(BaseProxy):
 
         if durations is not None:
             durations = self._rawio.rescale_epoch_duration(durations, dtype=dtype) * pq.s
-        
+
         h = self._rawio.header['event_channels'][self._event_channel_index]
         if h['type'] == b'event':
             ret = Event(times=times, labels=labels, units='s',
@@ -469,7 +469,7 @@ class _EventOrEpoch(BaseProxy):
         else:
             # TODO handle array_annotations with time_slice
             pass
-        
+
         return ret
 
 

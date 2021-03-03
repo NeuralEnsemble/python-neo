@@ -102,7 +102,7 @@ class NeuroExplorerRawIO(BaseRawIO):
 
             elif entity_header['type'] == 6:  # Markers
                 event_channels.append((name, _id, 'event'))
-        
+
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
@@ -145,7 +145,8 @@ class NeuroExplorerRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sig_t_starts[stream_index]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         channel_index = stream_index
         entity_index = int(self.header['signal_channels'][channel_index]['id'])
         entity_header = self._entity_headers[entity_index]

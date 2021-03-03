@@ -276,7 +276,7 @@ class BaseFromRaw(BaseIO):
                 seg.events.append(e)
             elif event_channels['type'][chan_ind] == b'epoch':
                 e = EpochProxy(rawio=self, event_channel_index=chan_ind,
-                                        block_index=block_index, seg_index=seg_index)
+                               block_index=block_index, seg_index=seg_index)
                 if not lazy:
                     e = e.load(time_slice=time_slice, strict_slicing=strict_slicing)
                 e.segment = seg
@@ -289,8 +289,8 @@ class BaseFromRaw(BaseIO):
         """
         When a signal streams don't have homogeneous si units accros channels.
         They have to be splitted in sub streams to construct AnalogSignal (unique units).
-        
-        They function also help to split each channel into one AnalogSignal like in 
+
+        They function also help to split each channel into one AnalogSignal like in
         old neo (<=0.5).
         """
         signal_streams = self.header['signal_streams']
@@ -306,11 +306,11 @@ class BaseFromRaw(BaseIO):
                 # this does not keep the original order
                 _, idx = np.unique(channels['units'], return_index=True)
                 all_units = channels['units'][np.sort(idx)]
-                
+
                 if len(all_units) == 1:
                     # no substream
                     #  None iwill be transform as slice later
-                    inner_stream_channels = None  
+                    inner_stream_channels = None
                     name = stream_name
                     sub_stream = (stream_index, inner_stream_channels, name)
                     sub_streams.append(sub_stream)

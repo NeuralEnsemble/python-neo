@@ -71,13 +71,13 @@ class IntanRawIO(BaseRawIO):
                                 sig_dtype, chan_info['units'], chan_info['gain'],
                                 chan_info['offset'], stream_id))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        
+
         stream_ids = np.unique(signal_channels['stream_id'])
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
         signal_streams['id'] = stream_ids
         for stream_index, stream_id in enumerate(stream_ids):
             signal_streams['name'][stream_index] = stream_type_to_name.get(int(stream_id), '')
-        
+
         self._max_sampling_rate = np.max(signal_channels['sampling_rate'])
         self._max_sigs_length = self._raw_data.size * self._block_size
 
@@ -119,7 +119,8 @@ class IntanRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
 
         if i_start is None:
             i_start = 0
@@ -410,8 +411,6 @@ rhd_signal_channel_header = [
     ('electrode_impedance_phase', 'float32'),
 ]
 
-
-
 stream_type_to_name = {
     0: 'RHD2000 amplifier channel',
     1: 'RHD2000 auxiliary input channel',
@@ -420,6 +419,7 @@ stream_type_to_name = {
     4: 'USB board digital input channel',
     5: 'USB board digital output channel',
 }
+
 
 def read_rhd(filename):
     with open(filename, mode='rb') as f:

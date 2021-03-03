@@ -1308,7 +1308,6 @@ class AxographRawIO(BaseRawIO):
         event_channels = []
         event_channels.append(('AxoGraph Tags', '', 'event'))
         event_channels.append(('AxoGraph Intervals', '', 'epoch'))
-        
 
         # organize header
         self.header['nb_block'] = 1

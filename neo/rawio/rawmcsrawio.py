@@ -43,7 +43,6 @@ class RawMCSRawIO(BaseRawIO):
 
         # one unique stream
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-        
 
         self._raw_signals = np.memmap(self.filename, dtype=self.dtype, mode='r',
                                       offset=info['header_size']).reshape(-1, self.nb_channel)
@@ -90,7 +89,8 @@ class RawMCSRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), :][:, channel_indexes]
