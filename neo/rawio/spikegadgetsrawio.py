@@ -46,7 +46,11 @@ class SpikeGadgetsRawIO(BaseRawIO):
             
             f.seek(0)
             header_txt = f.read(header_size).decode('utf8')
+            print(header_txt[-10:])
+            f.seek(header_size)
+            print(f.read(10))
         
+        #~ exit()
         # explore xml header
         root = ElementTree.fromstring(header_txt)
 
@@ -64,9 +68,11 @@ class SpikeGadgetsRawIO(BaseRawIO):
             sub_dtype = (name, 'u1', (bytes, ))
             main_dtype.append(sub_dtype)
         self._main_dtype = np.dtype(main_dtype)
+        #~ print(self._main_dtype)
+        
+        #~ print(self._main_dtype.itemsize)
         
         self._raw_memmap = np.memmap(self.filename, mode='r', offset=header_size, dtype=self._main_dtype)
-        #~ print(self._raw_memmap[:3])
         
         # wlak channels and keep only "analog" one
         stream_ids = []
@@ -122,6 +128,11 @@ class SpikeGadgetsRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
+        # info from GlobalConfiguration in xml are copied to block and seg annotations
+        bl_ann = self.raw_annotations['blocks'][0]
+        seg_ann =  self.raw_annotations['blocks'][0]['segments'][0]
+        for ann in (bl_ann, seg_ann):
+            ann.update(gconf.attrib)
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
@@ -162,11 +173,12 @@ class SpikeGadgetsRawIO(BaseRawIO):
         print(byte_mask)
         
         raw_unit8_mask = raw_unit8[:, byte_mask]
-        print('raw_unit8_mask', raw_unit8_mask.shape)
+        print('raw_unit8_mask', raw_unit8_mask.shape, raw_unit8_mask.strides)
+        
         shape = raw_unit8_mask.shape
         shape = (shape[0], shape[1] // 2)
-        raw_unit16 = raw_unit8_mask.flatten().view('int16').reshape(shape)
-        print(raw_unit16.shape)
+        raw_unit16 = raw_unit8_mask.flatten().view('uint16').reshape(shape)
+        print(raw_unit16.shape,raw_unit16.strides)
         
         return raw_unit16
 
