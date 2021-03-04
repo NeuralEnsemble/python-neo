@@ -46,43 +46,63 @@ class SpikeGadgetsRawIO(BaseRawIO):
             
             f.seek(0)
             header_txt = f.read(header_size).decode('utf8')
-            print(header_txt[-10:])
-            f.seek(header_size)
-            print(f.read(10))
+            
+            #~ print(header_txt[-10:])
+            #~ f.seek(header_size)
+            #~ print(f.read(10))
         
         #~ exit()
         # explore xml header
         root = ElementTree.fromstring(header_txt)
-
         gconf = sr = root.find('GlobalConfiguration')
         hconf = root.find('HardwareConfiguration')
+        sconf = root.find('SpikeConfiguration')
+        
         self._sampling_rate = float(hconf.attrib['samplingRate'])
         
-        # explore sub stream
-        # the raw part is a complex vector of struct that depend on channel maps.
-        # the "main_dtype" represent it
-        main_dtype = []
+        # explore sub stream and count packet size
+        # first bytes is 0x55
+        packet_size = 1
+        
+        #~ main_dtype = []
+        stream_bytes = {}
         for device in hconf:
-            bytes = int(device.attrib['numBytes'])
-            name = device.attrib['name']
-            sub_dtype = (name, 'u1', (bytes, ))
-            main_dtype.append(sub_dtype)
-        self._main_dtype = np.dtype(main_dtype)
-        #~ print(self._main_dtype)
+            stream_id = device.attrib['name']
+            num_bytes = int(device.attrib['numBytes'])
+            stream_bytes[stream_id] = packet_size
+            packet_size += num_bytes
+        print('packet_size', packet_size)
+        #~ print(stream_bytes)
+        #~ exit()
         
-        #~ print(self._main_dtype.itemsize)
+        # timesteamps 4 uint32
+        self._timestamp_byte = packet_size
+        packet_size += 4
         
-        self._raw_memmap = np.memmap(self.filename, mode='r', offset=header_size, dtype=self._main_dtype)
+        num_ephy_channels = len(sconf)
+        packet_size += 2 * num_ephy_channels
         
-        # wlak channels and keep only "analog" one
+        raw_memmap = np.memmap(self.filename, mode='r', offset=header_size, dtype='<u1')
+        
+        num_packet = raw_memmap.size // packet_size
+        raw_memmap = raw_memmap[:num_packet*packet_size]
+        self._raw_memmap = raw_memmap.reshape(-1, packet_size)
+        
+
         stream_ids = []
         signal_streams = []
         signal_channels = []
-        self._bytes_in_streams  = {}
+        
+        # walk deveice and keep only "analog" one
+        self._mask_channels_bytes  = {}
         for device in hconf:
             stream_id = device.attrib['name']
             for channel in device:
                 #~ print(channel, channel.attrib)
+                
+                if 'interleavedDataIDByte' in channel.attrib:
+                    # TODO deal with "headstageSensor" wich have interleaved
+                    continue
                 
                 if channel.attrib['dataType'] == 'analog':
                     
@@ -90,24 +110,58 @@ class SpikeGadgetsRawIO(BaseRawIO):
                         stream_ids.append(stream_id)
                         stream_name = stream_id
                         signal_streams.append((stream_name, stream_id))
-                        self._bytes_in_streams[stream_id] = []
+                        self._mask_channels_bytes[stream_id] = []
                     
                     name = channel.attrib['id']
                     chan_id = channel.attrib['id']
-                    dtype = 'uint16' # TODO check this
+                    dtype = 'int16' # TODO check this
                     units = 'uV' # TODO check where is the info
                     gain = 1. # TODO check where is the info
                     offset = 0. # TODO check where is the info
                     signal_channels.append((name, chan_id, self._sampling_rate, 'int16',
                                          units, gain, offset, stream_id))
                     
-                    self._bytes_in_streams[stream_id].append(int(channel.attrib['startByte']))
+                    #~ self._bytes_in_streams[stream_id].append()
+                    num_bytes = stream_bytes[stream_id] + int(channel.attrib['startByte'])
+                    chan_mask = np.zeros(packet_size, dtype='bool')
+                    # int6: 2 bytes
+                    chan_mask[num_bytes] = True
+                    chan_mask[num_bytes+1] = True
+                    self._mask_channels_bytes[stream_id].append(chan_mask)
+        
+        if num_ephy_channels > 0:
+            stream_id = 'trodes'
+            stream_name = stream_id
+            signal_streams.append((stream_name, stream_id))
+            self._mask_channels_bytes[stream_id] = []
+            for chan_ind, trode in enumerate(sconf):
+                name = trode.attrib['id']
+                chan_id = trode.attrib['id']
+                units = 'uV' # TODO check where is the info
+                gain = 1. # TODO check where is the info
+                offset = 0. # TODO check where is the info
+                signal_channels.append((name, chan_id, self._sampling_rate, 'int16',
+                                     units, gain, offset, stream_id))
+                
+                chan_mask = np.zeros(packet_size, dtype='bool')
+                
+                num_bytes = packet_size - 2 * num_ephy_channels + 2 * chan_ind
+                chan_mask[num_bytes] = True
+                chan_mask[num_bytes+1] = True
+                self._mask_channels_bytes[stream_id].append(chan_mask)
+        
+        # make mask as array
+        self._mask_channels_bytes[stream_id]
+        self._mask_streams = {}
+        for stream_id, l in self._mask_channels_bytes.items():
+            mask = np.array(l)
+            self._mask_channels_bytes[stream_id] = mask
+            self._mask_streams[stream_id] = np.any(mask, axis=0)
+
+
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        #~ print(signal_channels)
-        #~ print(signal_streams)
-        print(self._bytes_in_streams)
         
 
         # No events
@@ -151,34 +205,37 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
-        print(stream_id)
+
+        raw_unit8 = self._raw_memmap[i_start:i_stop]
+        #~ print('raw_unit8', raw_unit8.shape, raw_unit8.dtype)
         
-        raw_unit8 = self._raw_memmap[stream_id][i_start:i_stop]
-        print('raw_unit8', raw_unit8.shape, raw_unit8.dtype)
-        
+        num_chan = len(self._mask_channels_bytes[stream_id])
         if channel_indexes is None:
-            channel_indexes = slice(channel_indexes)
-            
-        nb = len(self._bytes_in_streams[stream_id])
-        chan_inds = np.arange(nb)[channel_indexes]
-        print('chan_inds', chan_inds)
+            # no loop
+            stream_mask = self._mask_streams[stream_id]
+        else:
+            #~ print('channel_indexes', channel_indexes)
+            #~ print('chan_inds', chan_inds)
+
+            if  instance(channel_indexes, slice):
+                chan_inds = np.arange(num_chan)[channel_indexes]
+            else:
+                chan_inds = channel_indexes
+            stream_mask = np.zeros(raw_unit8.shape[1], dtype='bool')
+            for chan_ind in chan_inds:
+                chan_mask = self._mask_channels_bytes[stream_id][chan_ind]
+                stream_mask |= chan_mask
+
         
-        byte_mask = np.zeros(raw_unit8.shape[1], dtype='bool')
-        for chan_ind in chan_inds:
-            bytes = self._bytes_in_streams[stream_id][chan_ind]
-            # int16
-            byte_mask[bytes] = True
-            byte_mask[bytes+1] = True
         
-        print(byte_mask)
+        #~ print(stream_mask)
         
-        raw_unit8_mask = raw_unit8[:, byte_mask]
-        print('raw_unit8_mask', raw_unit8_mask.shape, raw_unit8_mask.strides)
-        
+        # thisi fo a copy
+        raw_unit8_mask = raw_unit8[:, stream_mask]
         shape = raw_unit8_mask.shape
         shape = (shape[0], shape[1] // 2)
-        raw_unit16 = raw_unit8_mask.flatten().view('uint16').reshape(shape)
-        print(raw_unit16.shape,raw_unit16.strides)
+        raw_unit16 = raw_unit8_mask.flatten().view('int16').reshape(shape)
+        #~ print(raw_unit16.shape,raw_unit16.strides)
         
         return raw_unit16
 
