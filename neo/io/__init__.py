@@ -272,7 +272,6 @@ from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
 from neo.io.neuralynxio import NeuralynxIO
-from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
