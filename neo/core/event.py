@@ -65,8 +65,8 @@ class Event(DataObject):
 
     '''
 
-    _single_parent_objects = ('Segment',)
-    _single_parent_attrs = ('segment',)
+    _parent_objects = ('Segment',)
+    _parent_attrs = ('segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('labels', np.ndarray, 1, np.dtype('U')))
 

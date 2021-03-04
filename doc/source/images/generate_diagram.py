@@ -29,7 +29,6 @@ def get_rect_height(name, obj):
     nlines += len(getattr(obj, '_all_attrs', []))
     nlines += len(getattr(obj, '_single_child_objects', []))
     nlines += len(getattr(obj, '_multi_child_objects', []))
-    nlines += len(getattr(obj, '_multi_parent_objects', []))
     return nlines * line_heigth
 
 
@@ -100,8 +99,7 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
     for name, pos in rect_pos.items():
         htotal = all_h[name]
         obj = objs[name]
-        allrelationship = (list(getattr(obj, '_child_containers', []))
-                           + list(getattr(obj, '_multi_parent_containers', [])))
+        allrelationship = list(getattr(obj, '_child_containers', []))
 
         rect = Rectangle(pos, rect_width, htotal,
                          facecolor='w', edgecolor='k', linewidth=2.)
@@ -123,8 +121,7 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         ax.add_patch(rect)
 
         # multi relationship
-        relationship = (list(getattr(obj, '_multi_child_objects', []))
-                        + list(getattr(obj, '_multi_parent_containers', [])))
+        relationship = list(getattr(obj, '_multi_child_objects', []))
         pos2 = (pos[1] + htotal - line_heigth * (1.5 + len(relationship))
                 - rect_height)
         rect_height = len(relationship) * line_heigth
