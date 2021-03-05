@@ -23,9 +23,21 @@ class SpikeGadgetsRawIO(BaseRawIO):
     extensions = ['rec']
     rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename='', selected_streams=None):
+        """
+        
+        filename: str
+            filename ".rec"
+        
+        streams: None, list, str
+            sublist of streams to load/expose to API
+            uselfull for spikeextractor when one stream isneed.
+            For instance streams = ['ECU', 'trodes']
+            'trodes' is name for ephy channel (ntrodes)
+        """
         BaseRawIO.__init__(self)
         self.filename = filename
+        self.selected_streams = selected_streams
 
     def _source_name(self):
         return self.filename
@@ -71,9 +83,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
         packet_size += 4
         
         packet_size += 2 * num_ephy_channels
-        
+
         # read the binary part lazily
         raw_memmap = np.memmap(self.filename, mode='r', offset=header_size, dtype='<u1')
+
         num_packet = raw_memmap.size // packet_size
         raw_memmap = raw_memmap[:num_packet*packet_size]
         self._raw_memmap = raw_memmap.reshape(-1, packet_size)
@@ -151,6 +164,19 @@ class SpikeGadgetsRawIO(BaseRawIO):
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         
+        
+        # remove some stream if no wanted
+        if self.selected_streams is not None:
+            if isinstance(self.selected_streams, str):
+                self.selected_streams = [self.selected_streams]
+            assert isinstance(self.selected_streams, list)
+            
+            keep = np.in1d(signal_streams['id'], self.selected_streams)
+            signal_streams = signal_streams[keep]
+
+            keep = np.in1d(signal_channels['stream_id'], self.selected_streams)
+            signal_channels = signal_channels[keep]
+        
         # No events channels
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
@@ -201,7 +227,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
             stream_mask = self._mask_streams[stream_id]
         else:
             # acculate mask
-            if  instance(channel_indexes, slice):
+            if  isinstance(channel_indexes, slice):
                 chan_inds = np.arange(num_chan)[channel_indexes]
             else:
                 chan_inds = channel_indexes
