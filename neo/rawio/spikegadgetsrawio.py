@@ -59,6 +59,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
         sconf = root.find('SpikeConfiguration')
         
         self._sampling_rate = float(hconf.attrib['samplingRate'])
+        num_ephy_channels = int(hconf .attrib['numChannels'])
         
         # explore sub stream and count packet size
         # first bytes is 0x55
@@ -71,7 +72,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
             num_bytes = int(device.attrib['numBytes'])
             stream_bytes[stream_id] = packet_size
             packet_size += num_bytes
-        print('packet_size', packet_size)
+        #~ print('packet_size', packet_size)
         #~ print(stream_bytes)
         #~ exit()
         
@@ -79,12 +80,35 @@ class SpikeGadgetsRawIO(BaseRawIO):
         self._timestamp_byte = packet_size
         packet_size += 4
         
-        num_ephy_channels = len(sconf)
         packet_size += 2 * num_ephy_channels
+        
+        print('packet_size', packet_size)
+        
+        #~ num_ephy_channels = num_ephy_channels * 4
+        #~ num_ephy_channels = 0
+        #~ chan_ids = []
+        #~ for chan_ind, trode in enumerate(sconf):
+            #~ for  spikechan in trode:
+                #~ print(spikechan, spikechan.attrib)
+                #~ num_ephy_channels += 1
+                #~ chan_ids.append(int(spikechan.attrib['hwChan']))
+        #~ print('num_ephy_channels', num_ephy_channels)
+        #~ print(np.sort(chan_ids))
+        
+        
+        
+        
         
         raw_memmap = np.memmap(self.filename, mode='r', offset=header_size, dtype='<u1')
         
+        inds, = np.nonzero(raw_memmap == 0x55)
+        #~ print(inds)
+        #~ print(np.diff(inds))
+        #~ exit()
+        
+        
         num_packet = raw_memmap.size // packet_size
+        #~ print(num_packet, num_packet*packet_size, raw_memmap.size)
         raw_memmap = raw_memmap[:num_packet*packet_size]
         self._raw_memmap = raw_memmap.reshape(-1, packet_size)
         
@@ -134,24 +158,28 @@ class SpikeGadgetsRawIO(BaseRawIO):
             stream_name = stream_id
             signal_streams.append((stream_name, stream_id))
             self._mask_channels_bytes[stream_id] = []
-            for chan_ind, trode in enumerate(sconf):
-                name = trode.attrib['id']
-                chan_id = trode.attrib['id']
-                units = 'uV' # TODO check where is the info
-                gain = 1. # TODO check where is the info
-                offset = 0. # TODO check where is the info
-                signal_channels.append((name, chan_id, self._sampling_rate, 'int16',
-                                     units, gain, offset, stream_id))
-                
-                chan_mask = np.zeros(packet_size, dtype='bool')
-                
-                num_bytes = packet_size - 2 * num_ephy_channels + 2 * chan_ind
-                chan_mask[num_bytes] = True
-                chan_mask[num_bytes+1] = True
-                self._mask_channels_bytes[stream_id].append(chan_mask)
+            
+            chan_ind = 0
+            for trode in sconf:
+                for  schan in trode:
+                    name = 'trode' + trode.attrib['id'] + 'chan' + schan.attrib['hwChan']
+                    chan_id = schan.attrib['hwChan']
+                    units = 'uV' # TODO check where is the info
+                    gain = 1. # TODO check where is the info
+                    offset = 0. # TODO check where is the info
+                    signal_channels.append((name, chan_id, self._sampling_rate, 'int16',
+                                         units, gain, offset, stream_id))
+                    
+                    chan_mask = np.zeros(packet_size, dtype='bool')
+                    
+                    num_bytes = packet_size - 2 * num_ephy_channels + 2 * chan_ind
+                    chan_mask[num_bytes] = True
+                    chan_mask[num_bytes+1] = True
+                    self._mask_channels_bytes[stream_id].append(chan_mask)
+                    
+                    chan_ind += 1
         
         # make mask as array
-        self._mask_channels_bytes[stream_id]
         self._mask_streams = {}
         for stream_id, l in self._mask_channels_bytes.items():
             mask = np.array(l)
@@ -238,4 +266,5 @@ class SpikeGadgetsRawIO(BaseRawIO):
         #~ print(raw_unit16.shape,raw_unit16.strides)
         
         return raw_unit16
+
 
