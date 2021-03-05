@@ -20,7 +20,7 @@ from neo.core import Block, Segment, AnalogSignal
 try:
     import igor.binarywave as bw
     import igor.packed as pxp
-
+    from igor.record.wave import WaveRecord
     HAVE_IGOR = True
 except ImportError:
     HAVE_IGOR = False
@@ -71,9 +71,10 @@ class IgorIO(BaseIO):
         self.filename = filename
         self.extension = filename.split('.')[-1]
         self.parse_notes = parse_notes
+        self._filesystem = None
 
     def read_block(self, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, 'This IO does not support lazy mode'
 
         block = Block(file_origin=self.filename)
         block.segments.append(self.read_segment(lazy=lazy))
@@ -81,16 +82,28 @@ class IgorIO(BaseIO):
         return block
 
     def read_segment(self, lazy=False):
-        assert not lazy, 'Do not support lazy'
-
+        assert not lazy, 'This IO does not support lazy mode'
         segment = Segment(file_origin=self.filename)
-        segment.analogsignals.append(
-            self.read_analogsignal(lazy=lazy))
-        segment.analogsignals[-1].segment = segment
+
+        if self.extension == 'pxp':
+            if not self._filesystem:
+                _, self.filesystem = pxp.load(self.filename)
+
+            def callback(dirpath, key, value):
+                if isinstance(value, WaveRecord):
+                    signal = self._wave_to_analogsignal(value.wave['wave'], dirpath)
+                    signal.segment = segment
+                    segment.analogsignals.append(signal)
+
+            pxp.walk(self.filesystem, callback)
+        else:
+            segment.analogsignals.append(
+                self.read_analogsignal(lazy=lazy))
+            segment.analogsignals[-1].segment = segment
         return segment
 
     def read_analogsignal(self, path=None, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, 'This IO does not support lazy mode'
 
         if not HAVE_IGOR:
             raise Exception("`igor` package not installed. "
@@ -104,14 +117,18 @@ class IgorIO(BaseIO):
         elif self.extension == 'pxp':
             assert type(path) is str, \
                 "A colon-separated Igor-style path must be provided."
-            _, filesystem = pxp.load(self.filename)
-            path = path.split(':')
-            location = filesystem['root']
-            for element in path:
-                if element != 'root':
-                    location = location[element.encode('utf8')]
+            if not self._filesystem:
+                _, self.filesystem = pxp.load(self.filename)
+                path = path.split(':')
+                location = self.filesystem['root']
+                for element in path:
+                    if element != 'root':
+                        location = location[element.encode('utf8')]
             data = location.wave
-        content = data['wave']
+
+        return self._wave_to_analogsignal(data['wave'], [])
+
+    def _wave_to_analogsignal(self, content, dirpath):
         if "padding" in content:
             assert content['padding'].size == 0, \
                 "Cannot handle non-empty padding"
@@ -141,6 +158,7 @@ class IgorIO(BaseIO):
                 annotations = {'note': note}
         else:
             annotations = {'note': note}
+        annotations["igor_path"] = ":".join(item.decode('utf-8') for item in dirpath)
 
         signal = AnalogSignal(signal, units=units, copy=False, t_start=t_start,
                               sampling_period=sampling_period, name=name,

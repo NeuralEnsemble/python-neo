@@ -80,7 +80,7 @@ class AnalogSignalProxy(BaseProxy):
     >>> some_channel_of_anasig = proxy_anasig.load(channel_indexes=[0,5,10])
 
     '''
-    _single_parent_objects = ('Segment', 'ChannelIndex')
+    _parent_objects = ('Segment', 'ChannelIndex')
     _necessary_attrs = (('sampling_rate', pq.Quantity, 0),
                                     ('t_start', pq.Quantity, 0))
     _recommended_attrs = BaseNeo._recommended_attrs
@@ -296,7 +296,7 @@ class SpikeTrainProxy(BaseProxy):
 
     '''
 
-    _single_parent_objects = ('Segment', 'Unit')
+    _parent_objects = ('Segment', 'Unit')
     _quantity_attr = 'times'
     _necessary_attrs = (('t_start', pq.Quantity, 0),
                         ('t_stop', pq.Quantity, 0))
@@ -397,7 +397,7 @@ class SpikeTrainProxy(BaseProxy):
 
 
 class _EventOrEpoch(BaseProxy):
-    _single_parent_objects = ('Segment',)
+    _parent_objects = ('Segment',)
     _quantity_attr = 'times'
 
     def __init__(self, rawio=None, event_channel_index=None, block_index=0, seg_index=0):

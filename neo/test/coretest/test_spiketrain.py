@@ -2054,11 +2054,9 @@ class TestPropertiesMethods(unittest.TestCase):
         unit.spiketrains = [self.train1]
         unit.create_many_to_one_relationship()
 
-        self.assertEqual(self.train1._single_parent_objects, ('Segment', 'Unit'))
-        self.assertEqual(self.train1._multi_parent_objects, ())
+        self.assertEqual(self.train1._parent_objects, ('Segment', 'Unit'))
 
-        self.assertEqual(self.train1._single_parent_containers, ('segment', 'unit'))
-        self.assertEqual(self.train1._multi_parent_containers, ())
+        self.assertEqual(self.train1._parent_containers, ('segment', 'unit'))
 
         self.assertEqual(self.train1._parent_objects, ('Segment', 'Unit'))
         self.assertEqual(self.train1._parent_containers, ('segment', 'unit'))
