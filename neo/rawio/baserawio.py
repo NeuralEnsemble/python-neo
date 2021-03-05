@@ -173,14 +173,16 @@ class BaseRawIO:
             nb_seg = [self.segment_count(i) for i in range(nb_block)]
             txt += 'nb_segment:  {}\n'.format(nb_seg)
 
+            # signal streams
+            v = [s['name'] + f' (chans: {self.signal_channels_count(i)})'
+                for i, s in enumerate(self.header['signal_streams'])]
+            v = pprint_vector(v)
+            txt += f'signal_streams: {v}\n'
+
             for k in ('signal_channels', 'spike_channels', 'event_channels'):
                 ch = self.header[k]
-                if len(ch) > 8:
-                    chantxt = "[{} ... {}]".format(', '.join(e for e in ch['name'][:4]),
-                                                   ' '.join(e for e in ch['name'][-4:]))
-                else:
-                    chantxt = "[{}]".format(', '.join(e for e in ch['name']))
-                txt += '{}: {}\n'.format(k, chantxt)
+                v = pprint_vector(self.header[k]['name'])
+                txt += f'{k}: {v}\n'
 
         return txt
 
@@ -760,3 +762,16 @@ class BaseRawIO:
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
         raise (NotImplementedError)
+
+
+def pprint_vector(vector, lim=8):
+    vector = np.asarray(vector)
+    assert vector.ndim == 1
+    if len(vector) > lim:
+        part1 = ', '.join(e for e in vector[:lim // 2])
+        part2 = ' , '.join(e for e in vector[-lim // 2:])
+        txt = f"[{part1} ... {part2}]"
+    else:
+        part1 = ', '.join(e for e in vector[:lim // 2])
+        txt = f"[{part1}]"
+    return txt
