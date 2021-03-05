@@ -69,7 +69,8 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         stream_index = 0
         self.assertGreater(reader.signal_channels_count(stream_index), 0)
         for c in range(0, 8):
-            raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c], stream_index=stream_index)
+            raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c],
+                                                     stream_index=stream_index)
             raw_sigs = raw_sigs.flatten()
             assert_equal(raw_sigs[:-1], lfp_ml[c, :])
 

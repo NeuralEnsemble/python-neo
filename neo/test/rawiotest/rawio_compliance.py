@@ -211,8 +211,10 @@ def read_analogsignals(reader):
                                         stream_index=stream_index,
                                         channel_ids=channel_ids2)
             if unique_chan_name:
-                float_chunk1 = reader.rescale_signal_raw_to_float(raw_chunk1, dtype=dt,
-                                            stream_index=stream_index, channel_names=channel_names2)
+                float_chunk1 = reader.rescale_signal_raw_to_float(raw_chunk1,
+                                        dtype=dt,
+                                        stream_index=stream_index,
+                                        channel_names=channel_names2)
 
             assert float_chunk0.dtype == dt
             np.testing.assert_array_equal(float_chunk0, float_chunk2)
@@ -308,9 +310,9 @@ def read_spike_times(reader):
                     t_stop = spike_times[1] + 0.001
 
                     spike_timestamp2 = reader.get_spike_timestamps(block_index=block_index,
-                                                            seg_index=seg_index,
-                                                            spike_channel_index=spike_channel_index,
-                                                            t_start=t_start, t_stop=t_stop)
+                                                    seg_index=seg_index,
+                                                    spike_channel_index=spike_channel_index,
+                                                    t_start=t_start, t_stop=t_stop)
                     assert spike_timestamp2.shape[0] == 1
 
                     spike_times2 = reader.rescale_spike_timestamp(spike_timestamp2, 'float64')
