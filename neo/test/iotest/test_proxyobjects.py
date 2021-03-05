@@ -91,8 +91,6 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert 'impedance' in anasig_float.array_annotations
         assert anasig_float.array_annotations['impedance'].size == 8
 
-        
-
     def test_global_local_channel_indexes(self):
         proxy_anasig = AnalogSignalProxy(rawio=self.reader,
                     stream_index=0, inner_stream_channels=slice(0, 8, 2),
@@ -166,7 +164,7 @@ class TestSpikeTrainProxy(BaseProxyTest):
         # slice waveforms
         sptr = proxy_sptr.load(load_waveforms=True, time_slice=(250 * pq.ms, 500 * pq.ms))
         assert sptr.waveforms.shape == (6, 1, 50)
-        
+
         # test array_annotations
         assert '__array_annotations__' not in proxy_sptr.annotations
         assert 'amplitudes' in proxy_sptr.array_annotations
@@ -201,7 +199,6 @@ class TestEventProxy(BaseProxyTest):
         assert '__array_annotations__' not in proxy_event.annotations
         assert 'nickname' in proxy_event.annotations
         assert 'button' in proxy_event.array_annotations
-
 
 
 class TestEpochProxy(BaseProxyTest):

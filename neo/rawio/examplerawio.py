@@ -208,17 +208,17 @@ class ExampleRawIO(BaseRawIO):
                     seg_index, block_index)
                 for c in range(2):
                     sig_an = seg_ann['signals'][c]['nickname'] = \
-                             f'This stream {c} is from a subdevice'
+                        f'This stream {c} is from a subdevice'
                     # add some array annotations (8 channels)
-                    sig_an = seg_ann['signals'][c]['__array_annotations__']['impedance'] =\
-                             np.random.rand(8) * 10000
+                    sig_an = seg_ann['signals'][c]['__array_annotations__']['impedance'] = \
+                        np.random.rand(8) * 10000
                 for c in range(3):
                     spiketrain_an = seg_ann['spikes'][c]
                     spiketrain_an['quality'] = 'Good!!'
                     # add some array annotations
                     num_spikes = self.spike_count(block_index, seg_index, c)
                     spiketrain_an['__array_annotations__']['amplitudes'] = \
-                                                    np.random.randn(num_spikes)
+                        np.random.randn(num_spikes)
 
                 for c in range(2):
                     event_an = seg_ann['events'][c]

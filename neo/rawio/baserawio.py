@@ -506,14 +506,14 @@ class BaseRawIO:
         if isinstance(channel_indexes, np.ndarray):
             if channel_indexes.dtype == 'bool':
                 assert self.signal_channels_count(stream_index) == channel_indexes.size
-                channel_indexes,  = np.nonzero(channel_indexes)
+                channel_indexes, = np.nonzero(channel_indexes)
 
         if prefer_slice and isinstance(channel_indexes, np.ndarray):
             # check if channel_indexes are coninuous and transform to slice
             # this is usefull for memmap or hdf5 where slice make read lazy
             # contrary to indexes that make a copy (like numpy.take())
             if np.all(np.diff(channel_indexes) == 1):
-                channel_indexes = slice(channel_indexes[0], channel_indexes[-1] +1)
+                channel_indexes = slice(channel_indexes[0], channel_indexes[-1] + 1)
 
         raw_chunk = self._get_analogsignal_chunk(
             block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)

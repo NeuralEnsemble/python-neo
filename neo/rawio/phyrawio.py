@@ -86,7 +86,7 @@ class PhyRawIO(BaseRawIO):
 
         signal_streams = []
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
-        
+
         signal_channels = []
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -183,8 +183,7 @@ class PhyRawIO(BaseRawIO):
 
         if t_start is not None:
             start_frame = int(t_start * self._sampling_frequency)
-            spike_timestamps = spike_timestamps[spike_timestamps >=
-                                                start_frame]
+            spike_timestamps = spike_timestamps[spike_timestamps >= start_frame]
         if t_stop is not None:
             end_frame = int(t_stop * self._sampling_frequency)
             spike_timestamps = spike_timestamps[spike_timestamps < end_frame]

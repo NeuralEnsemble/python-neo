@@ -59,8 +59,8 @@ class ElanRawIO(BaseRawIO):
             # line1
             line = f.readline()
             r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', line)
-            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
-            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
+            r2 = re.findall(r'(\d+):(\d+):(\d+)', line)
+            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', line)
             YY, MM, DD, hh, mm, ss = (None,) * 6
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
@@ -72,8 +72,8 @@ class ElanRawIO(BaseRawIO):
             # line2
             line = f.readline()
             r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', line)
-            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
-            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
+            r2 = re.findall(r'(\d+):(\d+):(\d+)', line)
+            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', line)
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
             elif len(r2) != 0:
@@ -92,11 +92,11 @@ class ElanRawIO(BaseRawIO):
 
             # sampling rate sample
             line = f.readline()
-            self._sampling_rate = 1. / float(l)
+            self._sampling_rate = 1. / float(line)
 
             # nb channel
             line = f.readline()
-            nb_channel = int(l) - 2
+            nb_channel = int(line) - 2
 
             channel_infos = [{} for c in range(nb_channel + 2)]
             # channel label
