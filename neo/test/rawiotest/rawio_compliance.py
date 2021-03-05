@@ -189,6 +189,13 @@ def read_analogsignals(reader):
                                                        channel_names=channel_names2)
             np.testing.assert_array_equal(raw_chunk0, raw_chunk1)
 
+        # test prefer_slice=True/False
+        if nb_chan >= 3:
+            for prefer_slice in (True, False):
+                raw_chunk3 = reader.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
+                                                           i_start=i_start, i_stop=i_stop, stream_index=stream_index,
+                                                           channel_indexes=[1,2])
+
         # convert to float32/float64
         for dt in ('float32', 'float64'):
             float_chunk0 = reader.rescale_signal_raw_to_float(raw_chunk0, dtype=dt,
