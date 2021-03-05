@@ -90,7 +90,7 @@ class SpikeGLXRawIO(BaseRawIO):
         for stream_name in stream_names:
             # take first segment
             info = self.signals_info_dict[0, stream_name]
-            
+
             stream_id = stream_name
             stream_index = stream_names.index(info['stream_name'])
             signal_streams.append((stream_name, stream_id))
@@ -98,7 +98,7 @@ class SpikeGLXRawIO(BaseRawIO):
             # add channels to global list
             for local_chan in range(info['num_chan']):
                 chan_name = info['channel_names'][local_chan]
-                chan_id= f'{stream_name}#{chan_name}'
+                chan_id = f'{stream_name}#{chan_name}'
                 signal_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16',
                                     info['units'], info['channel_gains'][local_chan],
                                     info['channel_offsets'][local_chan], stream_id))
@@ -140,11 +140,11 @@ class SpikeGLXRawIO(BaseRawIO):
         for seg_index in range(nb_segment):
             seg_ann = self.raw_annotations['blocks'][0]['segments'][seg_index]
             seg_ann['name'] = "Segment {}".format(seg_index)
-            
+
             for c, signal_stream in enumerate(signal_streams):
                 stream_name = signal_stream['name']
                 sig_ann = self.raw_annotations['blocks'][0]['segments'][seg_index]['signals'][c]
-                
+
                 # channel location
                 info = self.signals_info_dict[seg_index, stream_name]
                 if 'channel_location' in info:

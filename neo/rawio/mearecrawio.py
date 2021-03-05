@@ -150,7 +150,7 @@ class MEArecRawIO(BaseRawIO):
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         return spike_timestamps.astype(dtype)
-    
-    def _get_spike_raw_waveforms(self, block_index, seg_index, 
+
+    def _get_spike_raw_waveforms(self, block_index, seg_index,
                                  spike_channel_index, t_start, t_stop):
         return None

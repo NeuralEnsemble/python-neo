@@ -617,6 +617,7 @@ def safe_decode_units(s):
     s = s.decode('utf-8')
     return s
 
+
 BLOCKSIZE = 512
 
 headerDescriptionV1 = [

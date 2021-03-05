@@ -138,7 +138,7 @@ class TdtRawIO(BaseRawIO):
         self._global_t_start = self._seg_t_starts[0]
 
         # signal channels EVTYPE_STREAM
-        signal_streams =[]
+        signal_streams = []
         signal_channels = []
         self._sigs_data_buf = {seg_index: {} for seg_index in range(nb_segment)}
         self._sigs_index = {seg_index: {} for seg_index in range(nb_segment)}
@@ -156,7 +156,7 @@ class TdtRawIO(BaseRawIO):
             stream_name = str(info['StoreName'])
             stream_id = f'{stream_index}'
             signal_streams.append((stream_name, stream_id))
-            
+
             for c in range(info['NumChan']):
                 global_chan_index = len(signal_channels)
                 chan_id = c + 1  # several StoreName can have same chan_id: this is ok
@@ -304,7 +304,7 @@ class TdtRawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = self._sigs_lengths[seg_index][stream_index]
-        
+
         stream_id = self.header['signal_streams'][stream_index]['id']
         signal_channels = self.header['signal_channels']
         mask = signal_channels['stream_id'] == stream_id

@@ -423,8 +423,6 @@ class _EventOrEpoch(BaseProxy):
         ann = seg_ann['events'][event_channel_index]
         annotations = ann.copy()
         array_annotations = annotations.pop('__array_annotations__')
-        annotations.update(ann)
-
         BaseProxy.__init__(self, array_annotations=array_annotations, **annotations)
 
     def load(self, time_slice=None, strict_slicing=True):

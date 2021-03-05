@@ -150,11 +150,11 @@ class OpenEphysRawIO(BaseRawIO):
 
             # chech that all signals have the same lentgh and timestamp0 for this segment
             assert all(all_sigs_length[0] == e for e in all_sigs_length),\
-                        'All signals do not have the same lentgh'
+                       'All signals do not have the same lentgh'
             assert all(all_first_timestamps[0] == e for e in all_first_timestamps),\
-                        'All signals do not have the same first timestamp'
+                       'All signals do not have the same first timestamp'
             assert all(all_samplerate[0] == e for e in all_samplerate),\
-                        'All signals do not have the same sample rate'
+                       'All signals do not have the same sample rate'
 
             self._sig_length[seg_index] = all_sigs_length[0]
             self._sig_timestamp0[seg_index] = all_first_timestamps[0]
@@ -250,7 +250,7 @@ class OpenEphysRawIO(BaseRawIO):
             event_info = read_file_header(fullname)
             self._event_sampling_rate = event_info['sampleRate']
             data_event = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
-                                    dtype=events_dtype)
+                                   dtype=events_dtype)
             self._events_memmap[seg_index] = data_event
 
         event_channels.append(('all_channels', '', 'event'))
@@ -293,7 +293,8 @@ class OpenEphysRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sig_timestamp0[seg_index] / self._sig_sampling_rate
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -305,7 +306,8 @@ class OpenEphysRawIO(BaseRawIO):
         sl1 = sl0 + (i_stop - i_start)
 
         stream_id = self.header['signal_streams'][stream_index]['id']
-        global_channel_indexes, = np.nonzero(self.header['signal_channels']['stream_id'] == stream_id)
+        mask = self.header['signal_channels']['stream_id']
+        global_channel_indexes, = np.nonzero(mask == stream_id)
         if channel_indexes is None:
             channel_indexes = slice(None)
         global_channel_indexes = global_channel_indexes[channel_indexes]

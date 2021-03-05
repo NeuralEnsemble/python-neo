@@ -44,8 +44,10 @@ class BCI2000RawIO(BaseRawIO):
 
         sig_channels = []
         for chan_ix in range(file_info['SourceCh']):
-            ch_name = param_defs['ChannelNames']['value'][chan_ix] \
-                if 'ChannelNames' in param_defs and param_defs['ChannelNames']['value'] is not np.nan else 'ch' + str(chan_ix)
+            if 'ChannelNames' in param_defs and not np.isnan(param_defs['ChannelNames']['value']):
+                ch_name = param_defs['ChannelNames']['value'][chan_ix]
+            else:
+                ch_name = 'ch' + str(chan_ix)
             chan_id = str(chan_ix + 1)
             sr = param_defs['SamplingRate']['value']  # Hz
             dtype = file_info['DataFormat']
@@ -140,7 +142,7 @@ class BCI2000RawIO(BaseRawIO):
         return 0.
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
-                                stream_index,channel_indexes):
+                                stream_index, channel_indexes):
         assert stream_index == 0
         if i_start is None:
             i_start = 0

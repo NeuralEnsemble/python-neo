@@ -92,7 +92,7 @@ class WinWcpRawIO(BaseRawIO):
                                  units, gain, offset, stream_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        
+
         characteristics = signal_channels[_common_sig_characteristics]
         unique_characteristics = np.unique(characteristics)
         signal_streams = []

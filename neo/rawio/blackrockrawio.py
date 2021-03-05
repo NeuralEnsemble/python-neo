@@ -312,7 +312,7 @@ class BlackrockRawIO(BaseRawIO):
             raise(ValueError('nsx_to_load is wrong'))
 
         assert all(nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load),\
-                                    'nsx_to_load do not match available nsx list'
+               'nsx_to_load do not match available nsx list'
 
         # check that all files come from the same specification
         all_spec = [self.__nsx_spec[nsx_nb] for nsx in self.nsx_to_load]
@@ -384,11 +384,10 @@ class BlackrockRawIO(BaseRawIO):
                     signal_channels.append((ch_name, ch_id, sr, sig_dtype,
                                          units, gain, offset, stream_id))
 
-
             # check nb segment per nsx
             nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]
             assert all(nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx),\
-                                                    'Segment nb not consistanent across nsX files'
+                   'Segment nb not consistanent across nsX files'
             self._nb_segment = nb_segments_for_nsx[0]
 
             self.__delete_empty_segments()
@@ -526,7 +525,6 @@ class BlackrockRawIO(BaseRawIO):
                         chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
                             get_idx]]
         """
-
 
         for seg_index in range(self._nb_segment):
             seg_ann = block_ann['segments'][seg_index]

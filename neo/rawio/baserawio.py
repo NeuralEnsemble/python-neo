@@ -210,13 +210,29 @@ class BaseRawIO:
         Usage after a call to this function we can do this to populate more annotations:
 
         raw_annotations['blocks'][block_index][ 'nickname'] = 'super block'
-        raw_annotations['blocks'][block_index]['segments']['important_key'] = 'important value'
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['signals']['nickname'] = 'super signals stream'
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['signals']['__array_annotations__']['channels_quality'] = ['bad', 'good', 'medium', 'good']
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['spikes'][spike_chan]['nickname'] =  'super neuron'
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['spikes'][spike_chan]['__array_annotations__']['spike_amplitudes'] = [-1.2, -10., ...]
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][ev_chan]['nickname'] = 'super trigger'
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][ev_chan]['__array_annotations__']['additional_label'] = ['A', 'B', 'A', 'C', ...]
+        raw_annotations['blocks'][block_index]
+                        ['segments']['important_key'] = 'important value'
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['signals']['nickname'] = 'super signals stream'
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['signals']['__array_annotations__']
+                        ['channels_quality'] = ['bad', 'good', 'medium', 'good']
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['spikes'][spike_chan]['nickname'] =  'super neuron'
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['spikes'][spike_chan]
+                        ['__array_annotations__']['spike_amplitudes'] = [-1.2, -10., ...]
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['events'][ev_chan]['nickname'] = 'super trigger'
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['events'][ev_chan]
+                        Z['__array_annotations__']['additional_label'] = ['A', 'B', 'A', 'C', ...]
 
 
         Theses annotations will be used at the neo.io API directly in objects.
@@ -579,7 +595,7 @@ class BaseRawIO:
             block_index, seg_index, event_channel_index, t_start, t_stop)
         return timestamp, durations, labels
 
-    def rescale_event_timestamp(self, event_timestamps, dtype='float64', 
+    def rescale_event_timestamp(self, event_timestamps, dtype='float64',
                     event_channel_index=0):
         """
         Rescale event timestamps to s

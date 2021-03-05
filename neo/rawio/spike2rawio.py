@@ -33,7 +33,7 @@ class Spike2RawIO(BaseRawIO):
     rawmode = 'one-file'
 
     def __init__(self, filename='', take_ideal_sampling_rate=False, ced_units=True,
-                            try_signal_grouping=True):
+                 try_signal_grouping=True):
         BaseRawIO.__init__(self)
         self.filename = filename
 
@@ -218,7 +218,7 @@ class Spike2RawIO(BaseRawIO):
                     gain = 1.
                     offset = 0.
                     sig_dtype = 'float32'
-                stream_id = '0' # set it after the loop
+                stream_id = '0'  # set it after the loop
                 signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype,
                                      units, gain, offset, stream_id))
 
@@ -287,8 +287,8 @@ class Spike2RawIO(BaseRawIO):
                             sig_sizes.append(sig_size)
                         sig_sizes = np.array(sig_sizes)
                         assert np.all(sig_sizes == sig_sizes[0]),\
-                                    'Signal channel in groups do not have same size'\
-                                    ', use try_signal_grouping=False'
+                                      'Signal channel in groups do not have same size,'\
+                                      'use try_signal_grouping=False'
                     self._sig_dtypes[stream_id] = np.dtype(charact['dtype'])
                     signal_streams.append((f'Signal stream {stream_id}', stream_id))
                 signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
@@ -317,7 +317,7 @@ class Spike2RawIO(BaseRawIO):
         bl_ann = self.raw_annotations['blocks'][0]
         bl_ann['system_id'] = info['system_id']
         for seg_index in range(nb_segment):
-            seg_ann =  self.raw_annotations['blocks'][0]['segments'][seg_index]
+            seg_ann = self.raw_annotations['blocks'][0]['segments'][seg_index]
             seg_ann['system_id'] = info['system_id']
 
             for c, stream_channel in enumerate(signal_streams):
@@ -589,8 +589,8 @@ def read_as_dict(fid, dtype):
         if dt[k].kind == 'S':
             v = v.decode('iso-8859-1')
             if len(v) > 0:
-                l = ord(v[0])
-                v = v[1:l + 1]
+                length = ord(v[0])
+                v = v[1:length + 1]
 
         info[k] = v
     return info
@@ -628,8 +628,8 @@ def get_sample_interval(info, chan_info):
     Get sample interval for one channel
     """
     if info['system_id'] in [1, 2, 3, 4, 5]:  # Before version 5
-        sample_interval = (int(chan_info['divide']) * info['us_per_time'] *
-                           info['time_per_adc']) * 1e-6
+        sample_interval = (int(chan_info['divide']) * info['us_per_time']
+                           * info['time_per_adc']) * 1e-6
     else:
         sample_interval = (int(chan_info['l_chan_dvd']) *
                            info['us_per_time'] * info['dtime_base'])

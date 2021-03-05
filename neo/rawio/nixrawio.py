@@ -174,7 +174,7 @@ class NIXRawIO(BaseRawIO):
                         segment['spiketrains_id'].append(st.id)
                         wftypestr = "neo.waveforms"
                         if (st.features
-                                and st.features[0].data.type == wftypestr):
+                            and st.features[0].data.type == wftypestr):
                             waveforms = st.features[0].data
                             stdict = segment['spiketrains_unit'][st_idx]
                             if waveforms:
@@ -201,10 +201,11 @@ class NIXRawIO(BaseRawIO):
                 seg_ann = bl_ann['segments'][grp_idx]
                 props = group.metadata.inherited_properties()
                 seg_ann.update(self._filter_properties(props, "segment"))
+                #
                 # TODO handle annotation at stream level
-                # sig_idx = 0
-                # groupdas = NixIO._group_signals(grp.data_arrays)
-                # for nix_name, signals in groupdas.items():
+                # sig_idx = 0
+                # groupdas = NixIO._group_signals(grp.data_arrays)
+                # for nix_name, signals in groupdas.items():
                 #    da = signals[0]
                 #     if da.type == 'neo.analogsignal' and seg_ann['signals']:
                 #         # collect and group DataArrays
@@ -361,7 +362,7 @@ class NIXRawIO(BaseRawIO):
                 labels.append(mt.positions.dimensions[0].labels)
                 po = mt.positions
                 if (po.type == "neo.event.times"
-                        or po.type == "neo.epoch.times"):
+                    or po.type == "neo.epoch.times"):
                     timestamp.append(po)
                 channel = self.header['event_channels'][event_channel_index]
                 if channel['type'] == b'epoch' and mt.extents:
