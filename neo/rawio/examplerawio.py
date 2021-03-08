@@ -287,8 +287,10 @@ class ExampleRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = 100000
 
-        assert i_start >= 0, "I don't like your jokes"
-        assert i_stop <= 100000, "I don't like your jokes"
+        if i_start < 0 or i_stop > 100000:
+            # some check
+            raise IndexError("I don't like your jokes")
+
         if channel_indexes is None:
             nb_chan = 8
         elif isinstance(channel_indexes, slice):
@@ -296,8 +298,10 @@ class ExampleRawIO(BaseRawIO):
             nb_chan = len(channel_indexes)
         else:
             channel_indexes = np.asarray(channel_indexes)
-            assert np.all(channel_indexes >= 0), 'bad boy'
-            assert np.all(channel_indexes < 8), 'big bad wolf'
+            if any(channel_indexes < 0):
+                raise IndexError('bad boy')
+            if any(channel_indexes >= 8):
+                raise IndexError('big bad wolf')
             nb_chan = len(channel_indexes)
 
         raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
