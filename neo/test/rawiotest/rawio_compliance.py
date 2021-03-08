@@ -45,25 +45,25 @@ def header_is_total(reader):
     if h['signal_streams'] is not None:
         dt = h['signal_streams'].dtype
         for k, _ in _signal_stream_dtype:
-            assert k in dt.fields, '%s not in signal_streams.dtype' % k
+            assert k in dt.fields, f'{k} not in signal_streams.dtype'
 
     assert 'signal_channels' in h, 'signal_channels missing in header'
     if h['signal_channels'] is not None:
         dt = h['signal_channels'].dtype
         for k, _ in _signal_channel_dtype:
-            assert k in dt.fields, '%s not in signal_channels.dtype' % k
+            assert k in dt.fields, f'{k} not in signal_channels.dtype'
 
     assert 'spike_channels' in h, 'spike_channels missing in header'
     if h['spike_channels'] is not None:
         dt = h['spike_channels'].dtype
         for k, _ in _spike_channel_dtype:
-            assert k in dt.fields, '%s not in spike_channels.dtype' % k
+            assert k in dt.fields, f'{k} not in spike_channels.dtype'
 
     assert 'event_channels' in h, 'event_channels missing in header'
     if h['event_channels'] is not None:
         dt = h['event_channels'].dtype
         for k, _ in _event_channel_dtype:
-            assert k in dt.fields, '%s not in event_channels.dtype' % k
+            assert k in dt.fields, f'{k} not in event_channels.dtype'
 
 
 def count_element(reader):

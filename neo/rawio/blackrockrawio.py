@@ -611,7 +611,7 @@ class BlackrockRawIO(BaseRawIO):
         memmap_data = self.nsx_datas[nsx_nb][seg_index]
         if channel_indexes is None:
             channel_indexes = slice(None)
-        sig_chunk = memmap_data[i_start:i_stop, :][:, channel_indexes]
+        sig_chunk = memmap_data[i_start:i_stop, channel_indexes]
         return sig_chunk
 
     def _spike_count(self, block_index, seg_index, unit_index):

@@ -270,7 +270,7 @@ class AxonRawIO(BaseRawIO):
                                 channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
-        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), :][:, channel_indexes]
+        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_indexes]
         return raw_signals
 
     def _event_count(self, block_index, seg_index, event_channel_index):

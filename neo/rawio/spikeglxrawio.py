@@ -182,7 +182,7 @@ class SpikeGLXRawIO(BaseRawIO):
                 # and so keep the underlying memmap
                 local_chans = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
 
-        raw_signals = memmap[slice(i_start, i_stop), :][:, channel_indexes]
+        raw_signals = memmap[slice(i_start, i_stop), channel_indexes]
 
         return raw_signals
 

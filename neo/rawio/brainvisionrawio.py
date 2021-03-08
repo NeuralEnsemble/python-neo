@@ -152,7 +152,7 @@ class BrainVisionRawIO(BaseRawIO):
                                 stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), :][:, channel_indexes]
+        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals
 
     ###

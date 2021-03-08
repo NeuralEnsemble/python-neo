@@ -163,16 +163,13 @@ class OpenEphysRawIO(BaseRawIO):
         self._sig_sampling_rate = signal_channels['sampling_rate'][0]  # unique for channel
 
         # split channels in stream depending the name CHxxx ADCxxx
-        stream_ids = [name[:2] if name.startswith('CH') else name[:3]
+        chan_stream_ids = [name[:2] if name.startswith('CH') else name[:3]
                       for name in signal_channels['name']]
-        signal_channels['stream_id'] = stream_ids
+        signal_channels['stream_id'] = chan_stream_ids
 
-        # and create streams channels
-        stream_ids = []
-        for stream_id in signal_channels['stream_id']:
-            # keep natural order 'CH' first
-            if stream_id not in stream_ids:
-                stream_ids.append(stream_id)
+        # and create streams channels (keep natural order 'CH' first)
+        stream_ids, order = np.unique(chan_stream_ids)
+        stream_ids = stream_ids[order]
         signal_streams = [(f'Signals {stream_id}', f'{stream_id}') for stream_id in stream_ids]
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 

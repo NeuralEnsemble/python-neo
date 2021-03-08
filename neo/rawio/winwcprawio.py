@@ -143,7 +143,7 @@ class WinWcpRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(None)
         inds = global_channel_indexes[channel_indexes]
-        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), :][:, inds]
+        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), inds]
         return raw_signals
 
 

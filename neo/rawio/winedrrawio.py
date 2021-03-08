@@ -125,5 +125,5 @@ class WinEdrRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(None)
         global_channel_indexes = global_channel_indexes[channel_indexes]
-        raw_signals = self._raw_signals[slice(i_start, i_stop), :][:, global_channel_indexes]
+        raw_signals = self._raw_signals[slice(i_start, i_stop), global_channel_indexes]
         return raw_signals
