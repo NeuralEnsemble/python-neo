@@ -134,7 +134,7 @@ class BaseFromRaw(BaseIO):
 
         bl = Block(**bl_annotations)
 
-        # Group for AnalogSignals come from signal_streams
+        # Group for AnalogSignals coming from signal_streams
         if create_group_across_segment['AnalogSignal']:
             signal_streams = self.header['signal_streams']
             sub_streams = self.get_sub_signal_streams(signal_group_mode)
@@ -287,11 +287,11 @@ class BaseFromRaw(BaseIO):
 
     def get_sub_signal_streams(self, signal_group_mode='group-by-same-units'):
         """
-        When a signal streams don't have homogeneous si units accros channels.
-        They have to be splitted in sub streams to construct AnalogSignal (unique units).
+        When signal streams don't have homogeneous SI units across channels,
+        they have to be split in sub streams to construct AnalogSignal objects with unique units.
 
-        They function also help to split each channel into one AnalogSignal like in
-        old neo (<=0.5).
+        For backward compatibility (neo version <= 0.5) sub-streams can also be 
+        used to generate one AnalogSignal per channel.
         """
         signal_streams = self.header['signal_streams']
         signal_channels = self.header['signal_channels']
