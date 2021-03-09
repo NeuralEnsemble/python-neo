@@ -62,7 +62,6 @@ Author: Steffen Buergers
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
-
 import numpy as np
 import os
 import mmap
@@ -176,38 +175,15 @@ class AxonaRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
-        self.header['signal_channels'] = get_signal_chan_header(self)
-        self.header['unit_channels'] = get_unit_chan_header(self)
-        self.header['event_channels'] = get_event_chan_header(self)
+        self.header['signal_channels'] = self.get_signal_chan_header()
+        self.header['unit_channels'] = self.get_unit_chan_header()
+        self.header['event_channels'] = self.get_event_chan_header()
 
         # insert some annotation at some place
         # at neo.io level IO are free to add some annoations
         # to any object. To keep this functionality with the wrapper
         # BaseFromRaw you can add annoations in a nested dict.
         self._generate_minimal_annotations()
-        # If you are a lazy dev you can stop here.
-        for block_index in range(2):
-            bl_ann = self.raw_annotations['blocks'][block_index]
-            bl_ann['name'] = 'Block #{}'.format(block_index)
-            bl_ann['block_extra_info'] = 'This is the block {}'.format(block_index)
-            for seg_index in range([2, 3][block_index]):
-                seg_ann = bl_ann['segments'][seg_index]
-                seg_ann['name'] = 'Seg #{} Block #{}'.format(
-                    seg_index, block_index)
-                seg_ann['seg_extra_info'] = 'This is the seg {} of block {}'.format(
-                    seg_index, block_index)
-                for c in range(16):
-                    anasig_an = seg_ann['signals'][c]
-                    anasig_an['info'] = 'This is a good signals'
-                for c in range(3):
-                    spiketrain_an = seg_ann['units'][c]
-                    spiketrain_an['quality'] = 'Good!!'
-                for c in range(2):
-                    event_an = seg_ann['events'][c]
-                    if c == 0:
-                        event_an['nickname'] = 'Miss Event 0'
-                    elif c == 1:
-                        event_an['nickname'] = 'MrEpoch 1'
 
     def _segment_t_start(self, block_index, seg_index):
         # this must return an float scale in second
@@ -485,16 +461,16 @@ class AxonaRawIO(BaseRawIO):
             "%d %b %Y, %H:%M:%S")
 
     def get_channel_gain(self):
-    """ Read gain for each channel from .set file and return in list of integers """
+        """ Read gain for each channel from .set file and return in list of integers """
 
-    gain_list = []
+        gain_list = []
 
-    with open(self.set_file, encoding='cp1252') as f:
-        for line in f:
-            if line.startswith('gain_ch'):
-                gain_list.append(int(re.findall(r'\d*', line.split(' ')[1])[0]))
-                
-    return gain_list
+        with open(self.set_file, encoding='cp1252') as f:
+            for line in f:
+                if line.startswith('gain_ch'):
+                    gain_list.append(int(re.findall(r'\d*', line.split(' ')[1])[0]))
+                    
+        return gain_list
 
     def get_signal_chan_header(self):
         """
@@ -510,14 +486,14 @@ class AxonaRawIO(BaseRawIO):
         offset, 
         group id
         """
-        active_tetrode_set = self.get_active_tetrode(self.set_file)
+        active_tetrode_set = self.get_active_tetrode()
         num_active_tetrode = len(active_tetrode_set)
 
         elec_per_tetrode = 4
         letters = ['a', 'b', 'c', 'd']
         dtype = 'int16'
         units = 'uV'
-        gain_list = self.get_channel_gain(self.set_file)
+        gain_list = self.get_channel_gain()
         offset = 0  # What is the offset? 
 
         sig_channels = []
