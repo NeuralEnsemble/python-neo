@@ -148,13 +148,13 @@ class OpenEphysRawIO(BaseRawIO):
                     all_first_timestamps.append(data_chan[0]['timestamp'])
                     all_last_timestamps.append(data_chan[-1]['timestamp'])
 
-            # chech that all signals have the same lentgh and timestamp0 for this segment
+            # check that all signals have the same lentgh and timestamp0 for this segment
             assert all(all_sigs_length[0] == e for e in all_sigs_length),\
-                       'All signals do not have the same lentgh'
+                       'Not all signals have the same length'
             assert all(all_first_timestamps[0] == e for e in all_first_timestamps),\
-                       'All signals do not have the same first timestamp'
+                       'Not all signals have the same first timestamp'
             assert all(all_samplerate[0] == e for e in all_samplerate),\
-                       'All signals do not have the same sample rate'
+                       'Not all signals have the same sample rate'
 
             self._sig_length[seg_index] = all_sigs_length[0]
             self._sig_timestamp0[seg_index] = all_first_timestamps[0]

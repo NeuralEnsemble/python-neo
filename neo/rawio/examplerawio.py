@@ -308,7 +308,7 @@ class ExampleRawIO(BaseRawIO):
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, spike_channel_index):
-        # Must return the nb of spike for given (block_index, seg_index, spike_channel_index)
+        # Must return the nb of spikes for given (block_index, seg_index, spike_channel_index)
         # we are lucky:  our units have all the same nb of spikes!!
         # it is not always the case
         nb_spikes = 20
