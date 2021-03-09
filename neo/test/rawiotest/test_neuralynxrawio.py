@@ -135,6 +135,39 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertListEqual(rawio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561])
         self.assertEqual(len(rawio._sigs_memmaps), 3)  # check only that there are 3 memmaps
 
+    def test_single_file_mode(self):
+        """
+        Tests reading of single files.
+        """
+
+        # test single analog signal channel
+        fname = self.get_filename_path('Cheetah_v5.6.3/original_data/CSC1.ncs')
+        rawio = NeuralynxRawIO(filename=fname)
+        rawio.parse_header()
+
+        self.assertEqual(rawio._nb_segment, 2)
+        self.assertEqual(len(rawio.ncs_filenames), 1)
+        sigHdrs = rawio.header['signal_channels']
+        self.assertEqual(sigHdrs.size, 1)
+        self.assertEqual(sigHdrs[0][0], 'CSC1')
+        self.assertEqual(sigHdrs[0][1], 58)
+        self.assertEqual(len(rawio.header['unit_channels']), 0)
+        self.assertEqual(len(rawio.header['event_channels']), 0)
+
+        # test one single electrode channel
+        fname = self.get_filename_path('Cheetah_v5.5.1/original_data/STet3a.nse')
+        rawio = NeuralynxRawIO(filename=fname)
+        rawio.parse_header()
+
+        self.assertEqual(rawio._nb_segment, 1)
+        self.assertEqual(len(rawio.ncs_filenames), 0)
+        seHdrs = rawio.header['unit_channels']
+        self.assertEqual(len(seHdrs), 1)
+        self.assertEqual(seHdrs[0][0], 'chSTet3a#8#0')
+        self.assertEqual(seHdrs[0][1], '0')
+        self.assertEqual(len(rawio.header['signal_channels']), 0)
+        self.assertEqual(len(rawio.header['event_channels']), 0)
+
 
 class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
     """
