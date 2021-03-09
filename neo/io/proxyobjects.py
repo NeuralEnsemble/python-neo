@@ -92,7 +92,7 @@ class AnalogSignalProxy(BaseProxy):
         # inner_stream_channels: are channel index inside the stream None means all channels
         # if inner_stream_channels is not None:
         #     * then this is a "substream"
-        #     * handle the case where channels have diffrents units inside a stream
+        #     * handle the case where channels have different units inside a stream
         #     * is related to BaseFromRaw.get_sub_signal_streams()
 
         self._rawio = rawio
