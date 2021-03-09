@@ -1,4 +1,27 @@
 """
+
+File format overview:
+http://space-memory-navigation.org/DacqUSBFileFormats.pdf
+
+In brief:
+ data.set setup file containing all hardware setups related to the trial
+ data.1 spike times and waveforms for tetrode 1, or stereotrodes 1 and 2
+ data.2 spikes times and waveforms for tetrode 2, or stereotrodes 3 and 4
+ …
+ data.32 spikes times and waveforms for tetrode 32
+ data.spk spikes times and waveforms for monotrodes (single electrodes) 1 to 16
+ data.eeg continuous 250 Hz EEG signal, primary channel
+ data.eegX continuous 250 Hz EEG signal, secondary channel (X = 1..16)
+ data.egf high resolution 4800 Hz version of primary EEG channel
+ data.egfX high resolution 4800 Hz version of primary EEG channel (X = 1..16)
+ data.pos tracker position data
+ data.inp digital input and keypress timestamps
+ data.stm stimulation pulse timestamps
+ data.bin raw data file
+ data.epp field potential parameters
+ data.epw field potential waveforms
+ data.log DACQBASIC script optional user-defined output files 
+
 ExampleRawIO is a class of a  fake example.
 This is to be used when coding a new RawIO.
 
@@ -33,15 +56,19 @@ Rules for creating a new class:
     * create a file in neo/test/iotest with the same previous name with "test_" prefix
     * copy/paste from neo/test/iotest/test_exampleio.py
 
-
+Author: Steffen Buergers
 
 """
 
-# TODO: change back to relative import (.baserawio)
-from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
 
 import numpy as np
+import os
+import mmap
+import re
+import contextlib
+import datetime
 
 
 class AxonaRawIO(BaseRawIO):
@@ -84,13 +111,26 @@ class AxonaRawIO(BaseRawIO):
         >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
 
     """
+    # TODO Why do I need these?
     extensions = ['bin']
     rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename='', sr=48000):
         BaseRawIO.__init__(self)
-        # note that this filename is ued in self._source_name
+
+        # note that this filename is used in self._source_name
         self.filename = filename
+        self.bin_file = os.path.join(self.filename + '.bin') 
+        self.set_file = os.path.join(self.filename + '.set')
+        self.set_file_encoding = 'cp1252'
+
+        # Useful num. bytes per continuous data packet (.bin file)
+        self.bytes_packet = 432
+        self.bytes_data = 384
+        self.bytes_head = 32
+        self.bytes_tail = 16
+
+        self.sr = sr
 
     def _source_name(self):
         # this function is used by __repr__
@@ -105,68 +145,40 @@ class AxonaRawIO(BaseRawIO):
         # informations needed for further fast acces
         # at any place in the file
         # In short _parse_header can be slow but
-        # _get_analogsignal_chunk need to be as fast as possible
+        # _get_analogsignal_chunk need to be as fast as possible        
 
-        # create signals channels information
-        # This is mandatory!!!!
-        # gain/offset/units are really important because
-        # the scaling to real value will be done with that
-        # at the end real_signal = (raw_signal* gain + offset) * pq.Quantity(units)
-        sig_channels = []
-        for c in range(16):
-            ch_name = 'ch{}'.format(c)
-            # our channel id is c+1 just for fun
-            # Note that chan_id should be realated to
-            # original channel id in the file format
-            # so that the end user should not be lost when reading datasets
-            chan_id = c + 1
-            sr = 10000.  # Hz
-            dtype = 'int16'
-            units = 'uV'
-            gain = 1000. / 2 ** 16
-            offset = 0.
-            # group_id isonly for special cases when channel have diferents
-            # sampling rate for instance. See TdtIO for that.
-            # Here this is the general case :all channel have the same characteritics
-            group_id = 0
-            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        # How many 432 byte packets does this data contain (<=> num. samples / 3)?
+        with open(self.bin_file, 'rb') as f:
+            with contextlib.closing(mmap.mmap(f.fileno(), 0, 
+                                    access=mmap.ACCESS_READ)) as mmap_obj:
 
-        # creating units channels
-        # This is mandatory!!!!
-        # Note that if there is no waveform at all in the file
-        # then wf_units/wf_gain/wf_offset/wf_left_sweep/wf_sampling_rate
-        # can be set to any value because _spike_raw_waveforms
-        # will return None
-        unit_channels = []
-        for c in range(3):
-            unit_name = 'unit{}'.format(c)
-            unit_id = '#{}'.format(c)
-            wf_units = 'uV'
-            wf_gain = 1000. / 2 ** 16
-            wf_offset = 0.
-            wf_left_sweep = 20
-            wf_sampling_rate = 10000.
-            unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
-                                  wf_offset, wf_left_sweep, wf_sampling_rate))
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+                num_packets = int(len(mmap_obj)/self.bytes_packet)
 
-        # creating event/epoch channel
-        # This is mandatory!!!!
-        # In RawIO epoch and event they are dealt the same way.
-        event_channels = []
-        event_channels.append(('Some events', 'ev_0', 'event'))
-        event_channels.append(('Some epochs', 'ep_1', 'epoch'))
-        event_channels = np.array(event_channels, dtype=_event_channel_dtype)
+
+        # Raw signals in np.ndarray (only channels with data)
+        # This loads data into memory already though...
+        num_samples = 48000 // 3 #TODO use num_packets for production
+
+        with open(self.bin_file, 'rb') as f:
+            with contextlib.closing(mmap.mmap(f.fileno(), 0, 
+                                    access=mmap.ACCESS_READ)) as mmap_obj:
+
+                self._raw_signals = np.ndarray(
+                    shape=(num_samples,), 
+                    dtype=(np.int16, (self.bytes_data//2)),
+                    buffer=mmap_obj[0:self.bytes_packet*num_samples],
+                    offset=self.bytes_head, 
+                    strides=(self.bytes_packet,)
+                ).reshape((-1, 1)).flatten()
 
         # fille into header dict
         # This is mandatory!!!!!
         self.header = {}
-        self.header['nb_block'] = 2
-        self.header['nb_segment'] = [2, 3]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
-        self.header['event_channels'] = event_channels
+        self.header['nb_block'] = 1
+        self.header['nb_segment'] = [1]
+        self.header['signal_channels'] = get_signal_chan_header(self)
+        self.header['unit_channels'] = get_unit_chan_header(self)
+        self.header['event_channels'] = get_event_chan_header(self)
 
         # insert some annotation at some place
         # at neo.io level IO are free to add some annoations
@@ -373,3 +385,192 @@ class AxonaRawIO(BaseRawIO):
         # really easy here because in our case it is already seconds
         durations = raw_duration.astype(dtype)
         return durations
+
+    # ------------------ HELPER METHODS --------------------
+    # These are credited to Geoff Barrett from the Hussaini lab:
+    # https://github.com/GeoffBarrett/BinConverter
+    # Possibly modified by Steffen B
+    def get_active_tetrode(self):
+        """ 
+        In the .set files it will say collectMask_X Y for each tetrode number to tell 
+        you if it is active or not. T1 = ch1-ch4, T2 = ch5-ch8, etc.
+        """
+        active_tetrode = []
+        active_tetrode_str = 'collectMask_'
+
+        with open(self.set_file, encoding=self.set_file_encoding) as f:
+            for line in f:
+
+                # collectMask_X Y, where x is the tetrode number, and Y is eitehr on or off (1 or 0)
+                if active_tetrode_str in line:
+                    tetrode_str, tetrode_status = line.split(' ')
+                    if int(tetrode_status) == 1:
+                        # then the tetrode is saved
+                        tetrode_str.find('_')
+                        tet_number = int(tetrode_str[tetrode_str.find('_') + 1:])
+                        active_tetrode.append(tet_number)
+
+        return active_tetrode
+
+    def get_channel_from_tetrode(self, tetrode):
+        """ 
+        This function will take the tetrode number and return the Axona channel numbers
+        i.e. Tetrode 1 = Ch1 -Ch4, Tetrode 2 = Ch5-Ch8, etc
+        """
+        tetrode = int(tetrode)  # just in case the user gave a string as the tetrode
+
+        return np.arange(1, 5) + 4 * (tetrode - 1)
+
+    def get_sample_indices(self, channel_number, samples):
+        remap_channel = self.get_remap_chan(channel_number)
+
+        indices_scalar = np.multiply(np.arange(samples), 64)
+        sample_indices = indices_scalar + np.multiply(np.ones(samples), remap_channel)
+
+        # return np.array([remap_channel, 64 + remap_channel, 64*2 + remap_channel])
+        return (indices_scalar + np.multiply(np.ones(samples), remap_channel)).astype(int)
+
+    def get_remap_chan(self, chan_num):
+        """ 
+        There is re-mapping, thus to get the correct channel data, you need to 
+        incorporate re-mapping input will be a channel from 1 to 64, and will return 
+        the remapped channel.
+        """
+
+        remap_channels = np.array([32, 33, 34, 35, 36, 37, 38, 39, 0, 1, 2, 3, 4, 5,
+                                6, 7, 40, 41, 42, 43, 44, 45, 46, 47, 8, 9, 10, 11,
+                                12, 13, 14, 15, 48, 49, 50, 51, 52, 53, 54, 55, 16, 17,
+                                18, 19, 20, 21, 22, 23, 56, 57, 58, 59, 60, 61, 62, 63,
+                                24, 25, 26, 27, 28, 29, 30, 31])
+
+        return remap_channels[chan_num - 1]
+
+    def samples_to_array(self, A, channels=[]):
+        """ 
+        This will take data matrix A, and convert it into a numpy array, 
+        there are three samples of 64 channels in this matrix, however their 
+        channels do need to be re-mapped
+        """
+
+        if channels == []:
+            channels = np.arange(64) + 1
+        else:
+            channels = np.asarray(channels)
+
+        A = np.asarray(A)
+
+        sample_num = int(len(A) / 64)  # get the sample numbers
+
+        # creating a 64x3 array of zeros (64 channels, 3 samples)
+        sample_array = np.zeros((len(channels), sample_num))  
+
+        for i, channel in enumerate(channels):
+            sample_array[i, :] = A[self.get_sample_indices(channel, sample_num)]
+
+        return sample_array
+
+    def read_datetime(self):
+        """ 
+        Creates datetime object (y, m, d, h, m, s) from .set file header 
+        """
+
+        with open(self.set_file, 'r', encoding=self.set_file_encoding) as f:
+            for line in f:
+                if line.startswith('trial_date'):
+                    date_string = re.findall(r'\d+\s\w+\s\d{4}$', line)[0]
+                if line.startswith('trial_time'):
+                    time_string = line[len('trial_time')+1::].replace('\n', '')
+
+        return datetime.datetime.strptime(date_string + ', ' + time_string, \
+            "%d %b %Y, %H:%M:%S")
+
+    def get_channel_gain(self):
+    """ Read gain for each channel from .set file and return in list of integers """
+
+    gain_list = []
+
+    with open(self.set_file, encoding='cp1252') as f:
+        for line in f:
+            if line.startswith('gain_ch'):
+                gain_list.append(int(re.findall(r'\d*', line.split(' ')[1])[0]))
+                
+    return gain_list
+
+    def get_signal_chan_header(self):
+        """
+        Returns a 1 dimensional np.array of tuples with one entry for each channel
+        that recorded data. Each tuple contains the following information:
+
+        channel name (1a, 1b, 1c, 1d, 2a, 2b, ...; with num=tetrode, letter=electrode), 
+        channel id (1, 2, 3, 4, 5, ... N), 
+        sampling rate, 
+        data type (int16), 
+        unit (uV), 
+        gain,
+        offset, 
+        group id
+        """
+        active_tetrode_set = self.get_active_tetrode(self.set_file)
+        num_active_tetrode = len(active_tetrode_set)
+
+        elec_per_tetrode = 4
+        letters = ['a', 'b', 'c', 'd']
+        dtype = 'int16'
+        units = 'uV'
+        gain_list = self.get_channel_gain(self.set_file)
+        offset = 0  # What is the offset? 
+
+        sig_channels = []
+        for itetr in range(num_active_tetrode):
+
+            for ielec in range(elec_per_tetrode):
+                
+                cntr = (itetr*elec_per_tetrode) + ielec
+                ch_name = '{}{}'.format(itetr, letters[ielec])
+                chan_id = cntr + 1
+                gain = gain_list[cntr]
+                group_id = 0
+
+                sig_channels.append((ch_name, chan_id, self.sr, dtype, 
+                    units, gain, offset, group_id))
+                
+        return np.array(sig_channels, dtype=_signal_channel_dtype) 
+
+    def get_unit_chan_header(self):
+        """
+        TODO 
+        placeholder function, filled with example code
+        """
+        # creating units channels
+        # This is mandatory!!!!
+        # Note that if there is no waveform at all in the file
+        # then wf_units/wf_gain/wf_offset/wf_left_sweep/wf_sampling_rate
+        # can be set to any value because _spike_raw_waveforms
+        # will return None
+        unit_channels = []
+        for c in range(3):
+            unit_name = 'unit{}'.format(c)
+            unit_id = '#{}'.format(c)
+            wf_units = 'uV'
+            wf_gain = 1000. / 2 ** 16
+            wf_offset = 0.
+            wf_left_sweep = 20
+            wf_sampling_rate = 10000.
+            unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
+                                  wf_offset, wf_left_sweep, wf_sampling_rate))
+        
+        return  np.array(unit_channels, dtype=_unit_channel_dtype)
+
+    def get_event_chan_header(self):
+        """
+        TODO
+        placeholder function, filled with example code
+        """
+        # creating event/epoch channel
+        # This is mandatory!!!!
+        # In RawIO epoch and event they are dealt the same way.
+        event_channels = []
+        event_channels.append(('Some events', 'ev_0', 'event'))
+        event_channels.append(('Some epochs', 'ep_1', 'epoch'))
+
+        return np.array(event_channels, dtype=_event_channel_dtype)
