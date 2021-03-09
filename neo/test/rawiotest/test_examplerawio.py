@@ -33,11 +33,10 @@ class TestExampleRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = ExampleRawIO
     # here obsvisously there is nothing to download:
     files_to_download = []
-    # here we will test 2 fake files
-    # not that IO base on dirname you can put the dirname here.
-    entities_to_test = ['fake1',
-                        'fake2',
-                        ]
+    # here we will test 1 fake files
+    # note that for IOs based on directory names you can put the directory
+    # name here instead of the file name.
+    entities_to_test = ['fake1']
 
 
 if __name__ == "__main__":

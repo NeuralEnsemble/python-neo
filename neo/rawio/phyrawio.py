@@ -8,8 +8,8 @@ extractors/phyextractors/phyextractors.py
 Author: Regimantas Jurkus
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 from pathlib import Path
@@ -28,7 +28,7 @@ class PhyRawIO(BaseRawIO):
         >>> r.parse_header()
         >>> print(r)
         >>> spike_timestamp = r.get_spike_timestamps(block_index=0,
-        ... seg_index=0, unit_index=0, t_start=None, t_stop=None)
+        ... seg_index=0, spike_channel_index=0, t_start=None, t_stop=None)
         >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, 'float64')
 
     """
@@ -84,10 +84,13 @@ class PhyRawIO(BaseRawIO):
         self._t_start = 0.
         self._t_stop = max(self._spike_times).item() / self._sampling_frequency
 
-        sig_channels = []
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        signal_streams = []
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
-        unit_channels = []
+        signal_channels = []
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+
+        spike_channels = []
         for i, clust_id in enumerate(clust_ids):
             unit_name = f'unit {clust_id}'
             unit_id = f'{clust_id}'
@@ -96,9 +99,9 @@ class PhyRawIO(BaseRawIO):
             wf_offset = 0.
             wf_left_sweep = 0
             wf_sampling_rate = 0
-            unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
+            spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                   wf_offset, wf_left_sweep, wf_sampling_rate))
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
@@ -106,8 +109,9 @@ class PhyRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
@@ -126,7 +130,7 @@ class PhyRawIO(BaseRawIO):
         seg_ann = bl_ann['segments'][0]
         seg_ann['name'] = 'Seg #0 Block #0'
         for index, clust_id in enumerate(clust_ids):
-            spiketrain_an = seg_ann['units'][index]
+            spiketrain_an = seg_ann['spikes'][index]
 
             # Loop over list of list of dict and annotate each st
             for annotation_list in annotation_lists:
@@ -160,27 +164,26 @@ class PhyRawIO(BaseRawIO):
                                 channel_indexes):
         return None
 
-    def _spike_count(self, block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, spike_channel_index):
         assert block_index == 0
         spikes = self._spike_clusters
-        unit_label = self.unit_labels[unit_index]
+        unit_label = self.unit_labels[spike_channel_index]
         mask = spikes == unit_label
         nb_spikes = np.sum(mask)
         return nb_spikes
 
-    def _get_spike_timestamps(self, block_index, seg_index, unit_index,
+    def _get_spike_timestamps(self, block_index, seg_index, spike_channel_index,
                               t_start, t_stop):
         assert block_index == 0
         assert seg_index == 0
 
-        unit_label = self.unit_labels[unit_index]
+        unit_label = self.unit_labels[spike_channel_index]
         mask = self._spike_clusters == unit_label
         spike_timestamps = self._spike_times[mask]
 
         if t_start is not None:
             start_frame = int(t_start * self._sampling_frequency)
-            spike_timestamps = spike_timestamps[spike_timestamps >=
-                                                start_frame]
+            spike_timestamps = spike_timestamps[spike_timestamps >= start_frame]
         if t_stop is not None:
             end_frame = int(t_stop * self._sampling_frequency)
             spike_timestamps = spike_timestamps[spike_timestamps < end_frame]
@@ -192,7 +195,7 @@ class PhyRawIO(BaseRawIO):
         spike_times /= self._sampling_frequency
         return spike_times
 
-    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
+    def _get_spike_raw_waveforms(self, block_index, seg_index, spike_channel_index,
                                  t_start, t_stop):
         return None
 

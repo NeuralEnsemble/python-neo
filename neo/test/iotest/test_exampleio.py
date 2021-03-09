@@ -15,8 +15,6 @@ import numpy as np
 
 
 # This run standart tests, this is mandatory for all IO
-
-
 class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ExampleIO
     files_to_test = ['fake1',
@@ -24,7 +22,10 @@ class TestExampleIO(BaseTestIO, unittest.TestCase, ):
                      ]
     files_to_download = []
 
-
+# This is the minimal variables that are required
+# to run the common IO tests.  IO specific tests
+# can be added here and will be run automatically
+# in addition to the common tests.
 class Specific_TestExampleIO(unittest.TestCase):
     def test_read_segment_lazy(self):
         r = ExampleIO(filename=None)

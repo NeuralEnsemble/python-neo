@@ -33,8 +33,8 @@ Note: j.s.nowacki@gmail.com has a C++ library with SWIG bindings which also
 reads abf files - would be good to cross-check
 
 """
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 
@@ -149,7 +149,7 @@ class AxonRawIO(BaseRawIO):
         else:
             channel_ids = list(range(nbchannel))
 
-        sig_channels = []
+        signal_channels = []
         adc_nums = []
         for chan_index, chan_id in enumerate(channel_ids):
             if version < 2.:
@@ -191,12 +191,14 @@ class AxonRawIO(BaseRawIO):
                     offset -= info['listADCInfo'][chan_id]['fSignalOffset']
             else:
                 gain, offset = 1., 0.
-            group_id = 0
-            sig_channels.append((name, chan_id, self._sampling_rate,
-                                 sig_dtype, units, gain, offset, group_id))
+            stream_id = '0'
+            signal_channels.append((name, str(chan_id), self._sampling_rate,
+                                 sig_dtype, units, gain, offset, stream_id))
 
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
+        # one unique signal stream
+        signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
 
         # only one events channel : tag
         # In ABF timstamps are not attached too any particular segment
@@ -215,15 +217,16 @@ class AxonRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # insert some annotation at some place
@@ -237,9 +240,9 @@ class AxonRawIO(BaseRawIO):
             seg_annotations = bl_annotations['segments'][seg_index]
             seg_annotations['abf_version'] = version
 
-            for c in range(sig_channels.size):
-                anasig_an = seg_annotations['signals'][c]
-                anasig_an['nADCNum'] = adc_nums[c]
+            signal_an = self.raw_annotations['blocks'][0]['segments'][seg_index]['signals'][0]
+            nADCNum = np.array([adc_nums[c] for c in range(signal_channels.size)])
+            signal_an['__array_annotations__']['nADCNum'] = nADCNum
 
             for c in range(event_channels.size):
                 ev_ann = seg_annotations['events'][c]
@@ -256,14 +259,15 @@ class AxonRawIO(BaseRawIO):
             self._raw_signals[seg_index].shape[0] / self._sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         shape = self._raw_signals[seg_index].shape
         return shape[0]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._t_starts[seg_index]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index,
+                                channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_indexes]
@@ -291,7 +295,7 @@ class AxonRawIO(BaseRawIO):
 
         return timestamp, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
         return event_times
 
@@ -612,6 +616,7 @@ def safe_decode_units(s):
     s = s.replace(b'\xb0', b'\xc2\xb0')  # \xb0 is °
     s = s.decode('utf-8')
     return s
+
 
 BLOCKSIZE = 512
 

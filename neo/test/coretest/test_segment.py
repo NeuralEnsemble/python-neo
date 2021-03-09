@@ -239,11 +239,12 @@ class TestSegment(unittest.TestCase):
         reader = ExampleRawIO(filename='my_filename.fake')
         reader.parse_header()
 
-        proxy_anasig = AnalogSignalProxy(rawio=reader, global_channel_indexes=None, block_index=0,
-                                         seg_index=0)
+        proxy_anasig = AnalogSignalProxy(rawio=reader,
+                        stream_index=0, inner_stream_channels=None,
+                        block_index=0, seg_index=0)
         seg.analogsignals.append(proxy_anasig)
 
-        proxy_st = SpikeTrainProxy(rawio=reader, unit_index=0, block_index=0, seg_index=0)
+        proxy_st = SpikeTrainProxy(rawio=reader, spike_channel_index=0, block_index=0, seg_index=0)
         seg.spiketrains.append(proxy_st)
 
         proxy_event = EventProxy(rawio=reader, event_channel_index=0, block_index=0, seg_index=0)
@@ -939,11 +940,11 @@ class TestSegment(unittest.TestCase):
         reader.parse_header()
 
         proxy_anasig = AnalogSignalProxy(rawio=reader,
-                                         global_channel_indexes=None,
-                                         block_index=0, seg_index=0)
+                                        stream_index=0, inner_stream_channels=None,
+                                        block_index=0, seg_index=0)
         seg.analogsignals.append(proxy_anasig)
 
-        proxy_st = SpikeTrainProxy(rawio=reader, unit_index=0,
+        proxy_st = SpikeTrainProxy(rawio=reader, spike_channel_index=0,
                                    block_index=0, seg_index=0)
         seg.spiketrains.append(proxy_st)
 

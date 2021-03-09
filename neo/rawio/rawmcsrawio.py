@@ -14,8 +14,8 @@ could be written instead of this ersatz.
 Author: Samuel Garcia
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 
@@ -41,16 +41,19 @@ class RawMCSRawIO(BaseRawIO):
         self.sampling_rate = info['sampling_rate']
         self.nb_channel = len(info['channel_names'])
 
+        # one unique stream
+        signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
+
         self._raw_signals = np.memmap(self.filename, dtype=self.dtype, mode='r',
                                       offset=info['header_size']).reshape(-1, self.nb_channel)
 
         sig_channels = []
         for c in range(self.nb_channel):
-            chan_id = c
-            group_id = 0
+            chan_id = str(c)
+            stream_id = '0'
             sig_channels.append((info['channel_names'][c], chan_id, self.sampling_rate,
                                 self.dtype, info['signal_units'], info['signal_gain'],
-                                info['signal_offset'], group_id))
+                                info['signal_offset'], stream_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No events
@@ -58,15 +61,16 @@ class RawMCSRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # insert some annotation at some place
@@ -79,17 +83,17 @@ class RawMCSRawIO(BaseRawIO):
         t_stop = self._raw_signals.shape[0] / self.sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         return self._raw_signals.shape[0]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
-
         return raw_signals
 
 

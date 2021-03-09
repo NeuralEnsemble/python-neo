@@ -561,11 +561,11 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
         seg = Segment()
 
         proxy_anasig = AnalogSignalProxy(rawio=self.reader,
-                                         global_channel_indexes=None,
-                                         block_index=0, seg_index=0)
+                                        stream_index=0, inner_stream_channels=None,
+                                        block_index=0, seg_index=0)
         seg.analogsignals.append(proxy_anasig)
 
-        proxy_st = SpikeTrainProxy(rawio=self.reader, unit_index=0,
+        proxy_st = SpikeTrainProxy(rawio=self.reader, spike_channel_index=0,
                                      block_index=0, seg_index=0)
         seg.spiketrains.append(proxy_st)
 

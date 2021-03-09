@@ -16,10 +16,9 @@ See:
 Author: Samuel Garcia
 
 """
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype, _common_sig_characteristics)
 
 import numpy as np
 from collections import OrderedDict
@@ -58,22 +57,28 @@ class IntanRawIO(BaseRawIO):
         assert np.all(np.diff(timestamp) == 1), 'timestamp have gaps'
 
         # signals
-        sig_channels = []
+        signal_channels = []
         for c, chan_info in enumerate(self._ordered_channels):
             name = chan_info['native_channel_name']
-            chan_id = c  # the chan_id have no meaning in intan
+            chan_id = str(c)  # the chan_id have no meaning in intan
             if chan_info['signal_type'] == 20:
                 # exception for temperature
                 sig_dtype = 'int16'
             else:
                 sig_dtype = 'uint16'
-            group_id = 0
-            sig_channels.append((name, chan_id, chan_info['sampling_rate'],
+            stream_id = str(chan_info['signal_type'])
+            signal_channels.append((name, chan_id, chan_info['sampling_rate'],
                                 sig_dtype, chan_info['units'], chan_info['gain'],
-                                chan_info['offset'], chan_info['signal_type']))
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+                                chan_info['offset'], stream_id))
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        self._max_sampling_rate = np.max(sig_channels['sampling_rate'])
+        stream_ids = np.unique(signal_channels['stream_id'])
+        signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
+        signal_streams['id'] = stream_ids
+        for stream_index, stream_id in enumerate(stream_ids):
+            signal_streams['name'][stream_index] = stream_type_to_name.get(int(stream_id), '')
+
+        self._max_sampling_rate = np.max(signal_channels['sampling_rate'])
         self._max_sigs_length = self._raw_data.size * self._block_size
 
         # No events
@@ -81,15 +86,16 @@ class IntanRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
@@ -101,27 +107,32 @@ class IntanRawIO(BaseRawIO):
         t_stop = self._max_sigs_length / self._max_sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        assert channel_indexes is not None, 'channel_indexes cannot be None, several signal size'
-        assert np.unique(self.header['signal_channels'][channel_indexes]['group_id']).size == 1
-        channel_names = self.header['signal_channels'][channel_indexes]['name']
-        chan_name = channel_names[0]
-        size = self._raw_data[chan_name].size
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
+        channel_names = signal_channels['name']
+        chan_name0 = channel_names[0]
+        size = self._raw_data[chan_name0].size
         return size
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
 
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._get_signal_size(block_index, seg_index, channel_indexes)
+            i_stop = self._get_signal_size(block_index, seg_index, stream_index)
 
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
         if channel_indexes is None:
             channel_indexes = slice(None)
-        channel_names = self.header['signal_channels'][channel_indexes]['name']
+        channel_names = signal_channels['name'][channel_indexes]
 
         shape = self._raw_data[channel_names[0]].shape
 
@@ -399,6 +410,15 @@ rhd_signal_channel_header = [
     ('electrode_impedance_magnitude', 'float32'),
     ('electrode_impedance_phase', 'float32'),
 ]
+
+stream_type_to_name = {
+    0: 'RHD2000 amplifier channel',
+    1: 'RHD2000 auxiliary input channel',
+    2: 'RHD2000 supply voltage channel',
+    3: 'USB board ADC input channel',
+    4: 'USB board digital input channel',
+    5: 'USB board digital output channel',
+}
 
 
 def read_rhd(filename):
