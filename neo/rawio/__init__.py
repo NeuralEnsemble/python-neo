@@ -128,6 +128,7 @@ Classes:
 import os
 
 from neo.rawio.axographrawio import AxographRawIO
+from neo.rawio.axonarawio import AxonaRawIO
 from neo.rawio.axonrawio import AxonRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
