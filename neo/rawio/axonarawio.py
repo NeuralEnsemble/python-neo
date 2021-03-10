@@ -237,10 +237,9 @@ class AxonaRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = [i+1 for i in range(self.num_channels)]
 
-        # Each packet has three samples for each channel
-        # Note this means you can only read out multiples of 3
+        # Each packet has three samples for each channel, so for user_offset
+        # we move i_start//3 packets + whatever remainder is left * 64
         num_samples = (i_stop-i_start)
-        user_offset = i_start*(self.bytes_packet//2)
 
         # Read one channel at a time
         raw_signals = np.ndarray(shape=(len(channel_indexes), num_samples))
@@ -248,8 +247,7 @@ class AxonaRawIO(BaseRawIO):
         for i, ch_idx in enumerate(channel_indexes):
 
             chan_offset = self.get_remap_chan(ch_idx)
-            raw_signals[i,:] = self._raw_signals[self.sig_ids[0:num_samples] + \
-                                                 chan_offset+user_offset]
+            raw_signals[i,:] = self._raw_signals[self.sig_ids[i_start:i_stop] + chan_offset]
         
         return raw_signals
 
