@@ -155,6 +155,17 @@ class AxonaRawIO(BaseRawIO):
         # Create np.memmap to .bin file
         self._raw_signals = np.memmap(self.bin_file, dtype='int16', mode='r', 
                                       offset=self.global_header_size)
+        
+        # Create base index vector for _raw_signals
+        sample1 = np.linspace(self.bytes_head//2, self.num_packets*self.bytes_packet, 
+                              self.num_packets, dtype=int)
+        sample2 = sample1 + 64
+        sample3 = sample2 + 64
+
+        self.sig_ids = np.empty((sample1.size+sample2.size+sample3.size,), dtype=sample1.dtype)
+        self.sig_ids[0::3] = sample1
+        self.sig_ids[1::3] = sample2
+        self.sig_ids[2::3] = sample3
 
         # fille into header dict
         # This is mandatory!!!!!
@@ -229,24 +240,16 @@ class AxonaRawIO(BaseRawIO):
         # Each packet has three samples for each channel
         # Note this means you can only read out multiples of 3
         num_samples = (i_stop-i_start)
+        user_offset = i_start*(self.bytes_packet//2)
 
         # Read one channel at a time
-        raw_signals = np.ndarray(shape=(num_samples, len(channel_indexes)))
-        offset = self.bytes_head // 2
+        raw_signals = np.ndarray(shape=(len(channel_indexes), num_samples))
 
         for i, ch_idx in enumerate(channel_indexes):
+
             chan_offset = self.get_remap_chan(ch_idx)
-
-            # Create id vector to read data for this channel
-            # Note we only consider multiples of three for now
-            cur_ids = []
-            for isamp in range(num_samples//3):
-
-                cur_ids.extend([isamp*(self.bytes_packet//2) + offset + chan_offset, 
-                                isamp*(self.bytes_packet//2) + offset + 64 + chan_offset,
-                                isamp*(self.bytes_packet//2) + offset + 64*2 + chan_offset])
-
-            raw_signals[:,i] = self._raw_signals[cur_ids]
+            raw_signals[i,:] = self._raw_signals[self.sig_ids[0:num_samples] + \
+                                                 chan_offset+user_offset]
         
         return raw_signals
 
