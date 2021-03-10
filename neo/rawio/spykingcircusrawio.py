@@ -31,7 +31,11 @@ def _load_sample_rate(params_file):
 
 class SpykingCircusRawIO(BaseRawIO):
     """
+    RawIO reader to load results that have been obtained via SpyKING CIRCUS
+    http://spyking-circus.rtfd.org
 
+    You simply need to specify the output folder created by SpyKING CIRCUS where
+    the results have been stored.
     """
     extensions = []
     rawmode = 'one-folder'
