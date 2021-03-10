@@ -12,7 +12,7 @@ from pathlib import Path
 
 try:
     import h5py
-    HAVE_HDF5= True
+    HAVE_HDF5 = True
 except ImportError:
     HAVE_HDF5 = False
 
@@ -44,9 +44,7 @@ class SpykingCircusRawIO(BaseRawIO):
         return self.dirname
 
     def _parse_header(self):
-        assert HAVE_HDF5, self.installation_mes
         spykingcircus_folder = Path(self.dirname)
-        #SpykingCircusRawIO.__init__(self, spykingcircus_folder)
         listfiles = spykingcircus_folder.iterdir()
         results = None
         sample_rate = None
@@ -66,7 +64,8 @@ class SpykingCircusRawIO(BaseRawIO):
                     if any([f_.suffix == '.hdf5' for f_ in f.iterdir()]):
                         result_folder = spykingcircus_folder
 
-        assert isinstance(parent_folder, Path) and isinstance(result_folder, Path), "Not a valid spyking circus folder"
+        assert isinstance(parent_folder, Path) and \
+            isinstance(result_folder, Path), "Not a valid spyking circus folder"
 
         # load files
         for f in result_folder.iterdir():
@@ -80,6 +79,8 @@ class SpykingCircusRawIO(BaseRawIO):
         for f in parent_folder.iterdir():
             if f.suffix == '.params':
                 sample_rate = _load_sample_rate(f)
+            else:
+                raise Exception('Can not find the .params file')
 
         if sample_rate is not None:
             self._sampling_frequency = sample_rate
@@ -96,7 +97,7 @@ class SpykingCircusRawIO(BaseRawIO):
 
         sig_channels = []
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        
+
         unit_channels = []
         for unit_index in range(len(self._all_spikes)):
             unit_name = f'unit{unit_index} #{unit_index}'
@@ -123,7 +124,6 @@ class SpykingCircusRawIO(BaseRawIO):
         self._duration = f_results['info']['duration'][0]
         self._generate_minimal_annotations()
 
-
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
@@ -148,14 +148,14 @@ class SpykingCircusRawIO(BaseRawIO):
         assert seg_index == 0
 
         spike_timestamps = self._all_spikes[unit_index].copy()
-        
+
         if t_start is not None:
             start_frame = int(t_start * self._sampling_rate)
             spike_timestamps = spike_timestamps[spike_timestamps >= start_frame]
         if t_stop is not None:
             end_frame = int(t_stop * self._sampling_rate)
             spike_timestamps = spike_timestamps[spike_timestamps < end_frame]
-        
+
         return spike_timestamps
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
@@ -168,13 +168,11 @@ class SpykingCircusRawIO(BaseRawIO):
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         return None
 
-
     def _event_count(self, block_index, seg_index, event_channel_index):
         return None
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         return None
-
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         return None
