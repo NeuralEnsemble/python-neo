@@ -157,7 +157,7 @@ class AxonaRawIO(BaseRawIO):
                                       offset=self.global_header_size)
         
         # Create base index vector for _raw_signals
-        sample1 = np.linspace(self.bytes_head//2, self.num_packets*self.bytes_packet, 
+        sample1 = np.linspace(self.bytes_head//2, self.num_packets*(self.bytes_packet//2), 
                               self.num_packets, dtype=int)
         sample2 = sample1 + 64
         sample3 = sample2 + 64
