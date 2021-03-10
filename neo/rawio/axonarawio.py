@@ -64,7 +64,6 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
 import numpy as np
 import os
-import mmap
 import re
 import contextlib
 import datetime
@@ -129,7 +128,11 @@ class AxonaRawIO(BaseRawIO):
         self.bytes_head = 32
         self.bytes_tail = 16
 
+        # There is no global header for .bin files
+        self.global_header_size = 0
+
         self.sr = sr
+        self.num_channels = len(self.get_active_tetrode()) * 4
 
     def _source_name(self):
         # this function is used by __repr__
@@ -147,28 +150,11 @@ class AxonaRawIO(BaseRawIO):
         # _get_analogsignal_chunk need to be as fast as possible        
 
         # How many 432 byte packets does this data contain (<=> num. samples / 3)?
-        with open(self.bin_file, 'rb') as f:
-            with contextlib.closing(mmap.mmap(f.fileno(), 0, 
-                                    access=mmap.ACCESS_READ)) as mmap_obj:
+        self.num_packets = int(os.path.getsize(self.bin_file)/self.bytes_packet)
 
-                num_packets = int(len(mmap_obj)/self.bytes_packet)
-
-
-        # Raw signals in np.ndarray (only channels with data)
-        # This loads data into memory already though...
-        num_samples = 48000 // 3 #TODO use num_packets for production
-
-        with open(self.bin_file, 'rb') as f:
-            with contextlib.closing(mmap.mmap(f.fileno(), 0, 
-                                    access=mmap.ACCESS_READ)) as mmap_obj:
-
-                self._raw_signals = np.ndarray(
-                    shape=(num_samples,), 
-                    dtype=(np.int16, (self.bytes_data//2)),
-                    buffer=mmap_obj[0:self.bytes_packet*num_samples],
-                    offset=self.bytes_head, 
-                    strides=(self.bytes_packet,)
-                ).reshape((-1, 1)).flatten()
+        # Create np.memmap to .bin file
+        self._raw_signals = np.memmap(self.bin_file, dtype='int16', mode='r', 
+                                      offset=self.global_header_size)
 
         # fille into header dict
         # This is mandatory!!!!!
@@ -220,32 +206,48 @@ class AxonaRawIO(BaseRawIO):
         return self._segment_t_start(block_index, seg_index)
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        # this must return a signal chunk limited with
-        # i_start/i_stop (can be None)
-        # channel_indexes can be None (=all channel) or a list or numpy.array
-        # This must return a numpy array 2D (even with one channel).
-        # This must return the orignal dtype. No conversion here.
-        # This must as fast as possible.
-        # Everything that can be done in _parse_header() must not be here.
-
-        # Here we are lucky:  our signals is always zeros!!
-        # it is not always the case
-        # internally signals are int16
-        # convertion to real units is done with self.header['signal_channels']
-
-        if i_start is None:
-            i_start = 0
-        if i_stop is None:
-            i_stop = 100000
-
-        assert i_start >= 0, "I don't like your jokes"
-        assert i_stop <= 100000, "I don't like your jokes"
-
+        """
+        Return raw (continuous) signals as 2d numpy array (chan x time).
+        Note that block_index and seg_index are always 1 (regardless of input).
+        
+        The raw data is in a single vector np.memmap with the following structure:
+        
+        Each byte packet (432 bytes) has a header (32 bytes), a footer (16 bytes)
+        and three samples of 2 bytes each for 64 channels (384 bytes), which are 
+        jumbled up in a strange order. Each channel is remapped to a certain position
+        (see get_remap_chan), and a channel's samples are allcoated as follows
+        (example for channel 7):
+        
+        sample 1: 32b (head) + 2*38b (remappedID) and 2*38b + 1b (second byte of sample)
+        sample 2: 32b (head) + 128 (all channels 1st entry) + 2*38b (remappedID) and ...
+        sample 3: 32b (head) + 128*2 (all channels 1st and 2nd entry) + ...
+        """
+        
         if channel_indexes is None:
-            nb_chan = 16
-        else:
-            nb_chan = len(channel_indexes)
-        raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
+            channel_indexes = [i+1 for i in range(self.num_channels)]
+
+        # Each packet has three samples for each channel
+        # Note this means you can only read out multiples of 3
+        num_samples = (i_stop-i_start)
+
+        # Read one channel at a time
+        raw_signals = np.ndarray(shape=(num_samples, len(channel_indexes)))
+        offset = self.bytes_head // 2
+
+        for i, ch_idx in enumerate(channel_indexes):
+            chan_offset = self.get_remap_chan(ch_idx)
+
+            # Create id vector to read data for this channel
+            # Note we only consider multiples of three for now
+            cur_ids = []
+            for isamp in range(num_samples//3):
+
+                cur_ids.extend([isamp*(self.bytes_packet//2) + offset + chan_offset, 
+                                isamp*(self.bytes_packet//2) + offset + 64 + chan_offset,
+                                isamp*(self.bytes_packet//2) + offset + 64*2 + chan_offset])
+
+            raw_signals[:,i] = self._raw_signals[cur_ids]
+        
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
