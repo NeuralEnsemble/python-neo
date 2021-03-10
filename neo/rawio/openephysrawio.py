@@ -148,32 +148,30 @@ class OpenEphysRawIO(BaseRawIO):
                     all_first_timestamps.append(data_chan[0]['timestamp'])
                     all_last_timestamps.append(data_chan[-1]['timestamp'])
 
-            # chech that all signals have the same lentgh and timestamp0 for this segment
+            # check that all signals have the same lentgh and timestamp0 for this segment
             assert all(all_sigs_length[0] == e for e in all_sigs_length),\
-                        'All signals do not have the same lentgh'
+                       'Not all signals have the same length'
             assert all(all_first_timestamps[0] == e for e in all_first_timestamps),\
-                        'All signals do not have the same first timestamp'
+                       'Not all signals have the same first timestamp'
             assert all(all_samplerate[0] == e for e in all_samplerate),\
-                        'All signals do not have the same sample rate'
+                       'Not all signals have the same sample rate'
 
             self._sig_length[seg_index] = all_sigs_length[0]
             self._sig_timestamp0[seg_index] = all_first_timestamps[0]
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         self._sig_sampling_rate = signal_channels['sampling_rate'][0]  # unique for channel
-        
+
         # split channels in stream depending the name CHxxx ADCxxx
-        stream_ids = [ name[:2] if name.startswith('CH') else name[:3] for name in signal_channels['name']]
-        signal_channels['stream_id'] = stream_ids
-        
-        # and create streams channels
-        stream_ids = []
-        for stream_id in signal_channels['stream_id']:
-            # keep natural order 'CH' first
-            if stream_id not in stream_ids:
-                stream_ids.append(stream_id)
+        chan_stream_ids = [name[:2] if name.startswith('CH') else name[:3]
+                      for name in signal_channels['name']]
+        signal_channels['stream_id'] = chan_stream_ids
+
+        # and create streams channels (keep natural order 'CH' first)
+        stream_ids, order = np.unique(chan_stream_ids, return_index=True)
+        stream_ids = stream_ids[order]
         signal_streams = [(f'Signals {stream_id}', f'{stream_id}') for stream_id in stream_ids]
-        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype) 
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # scan for spikes files
         spike_channels = []
@@ -249,7 +247,7 @@ class OpenEphysRawIO(BaseRawIO):
             event_info = read_file_header(fullname)
             self._event_sampling_rate = event_info['sampleRate']
             data_event = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
-                                    dtype=events_dtype)
+                                   dtype=events_dtype)
             self._events_memmap[seg_index] = data_event
 
         event_channels.append(('all_channels', '', 'event'))
@@ -292,7 +290,8 @@ class OpenEphysRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sig_timestamp0[seg_index] / self._sig_sampling_rate
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -304,7 +303,8 @@ class OpenEphysRawIO(BaseRawIO):
         sl1 = sl0 + (i_stop - i_start)
 
         stream_id = self.header['signal_streams'][stream_index]['id']
-        global_channel_indexes, = np.nonzero(self.header['signal_channels']['stream_id'] == stream_id)
+        mask = self.header['signal_channels']['stream_id']
+        global_channel_indexes, = np.nonzero(mask == stream_id)
         if channel_indexes is None:
             channel_indexes = slice(None)
         global_channel_indexes = global_channel_indexes[channel_indexes]

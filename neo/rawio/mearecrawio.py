@@ -57,7 +57,7 @@ class MEArecRawIO(BaseRawIO):
         self._sampling_rate = self._recgen.info['recordings']['fs']
         self._recordings = self._recgen.recordings
         self._num_frames, self._num_channels = self._recordings.shape
-        
+
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
 
         sig_channels = []
@@ -122,7 +122,8 @@ class MEArecRawIO(BaseRawIO):
         assert stream_index == 0
         return self._segment_t_start(block_index, seg_index)
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -131,7 +132,7 @@ class MEArecRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(self._num_channels)
 
-        raw_signals = self._recgen.recordings[i_start:i_stop, :][:, channel_indexes]
+        raw_signals = self._recgen.recordings[i_start:i_stop, channel_indexes]
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
@@ -149,6 +150,7 @@ class MEArecRawIO(BaseRawIO):
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         return spike_timestamps.astype(dtype)
-    
-    def _get_spike_raw_waveforms(self, block_index, seg_index, spike_channel_index, t_start, t_stop):
+
+    def _get_spike_raw_waveforms(self, block_index, seg_index,
+                                 spike_channel_index, t_start, t_stop):
         return None

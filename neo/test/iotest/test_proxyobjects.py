@@ -85,6 +85,7 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert_arrays_almost_equal(anasig_float, anasig_int.rescale('uV'), 1e-9)
 
         # test array_annotations
+        assert '__array_annotations__' not in proxy_anasig.annotations
         assert 'impedance' in proxy_anasig.array_annotations
         assert proxy_anasig.array_annotations['impedance'].size == 8
         assert 'impedance' in anasig_float.array_annotations
@@ -96,13 +97,13 @@ class TestAnalogSignalProxy(BaseProxyTest):
                     block_index=0, seg_index=0)
 
         assert proxy_anasig.shape == (100000, 4)
-        assert np.array_equal(proxy_anasig.array_annotations['channel_names'], 
+        assert np.array_equal(proxy_anasig.array_annotations['channel_names'],
                         ['ch0', 'ch2', 'ch4', 'ch6'])
 
         # should be channel ch0 and ch6
         anasig = proxy_anasig.load(channel_indexes=[0, 3])
         assert anasig.shape == (100000, 2)
-        assert np.array_equal(anasig.array_annotations['channel_names'], 
+        assert np.array_equal(anasig.array_annotations['channel_names'],
                         ['ch0', 'ch6'])
 
 
@@ -164,6 +165,10 @@ class TestSpikeTrainProxy(BaseProxyTest):
         sptr = proxy_sptr.load(load_waveforms=True, time_slice=(250 * pq.ms, 500 * pq.ms))
         assert sptr.waveforms.shape == (6, 1, 50)
 
+        # test array_annotations
+        assert '__array_annotations__' not in proxy_sptr.annotations
+        assert 'amplitudes' in proxy_sptr.array_annotations
+
 
 class TestEventProxy(BaseProxyTest):
     def test_EventProxy(self):
@@ -189,6 +194,11 @@ class TestEventProxy(BaseProxyTest):
         with self.assertRaises(AssertionError):
             event = proxy_event.load(time_slice=(2 * pq.s, 15 * pq.s))
         event = proxy_event.load(time_slice=(2 * pq.s, 15 * pq.s), strict_slicing=False)
+
+        # test annotations/array_annotations
+        assert '__array_annotations__' not in proxy_event.annotations
+        assert 'nickname' in proxy_event.annotations
+        assert 'button' in proxy_event.array_annotations
 
 
 class TestEpochProxy(BaseProxyTest):
@@ -216,6 +226,10 @@ class TestEpochProxy(BaseProxyTest):
         with self.assertRaises(AssertionError):
             epoch = proxy_epoch.load(time_slice=(2 * pq.s, 15 * pq.s))
         epoch = proxy_epoch.load(time_slice=(2 * pq.s, 15 * pq.s), strict_slicing=False)
+
+        # test annotations/array_annotations
+        assert '__array_annotations__' not in proxy_epoch.annotations
+        assert 'nickname' in proxy_epoch.annotations
 
 
 class TestSegmentWithProxy(BaseProxyTest):

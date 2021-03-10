@@ -117,11 +117,13 @@ class WinEdrRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
-        global_channel_indexes, = np.nonzero(self.header['signal_channels']['stream_id'] == stream_id)
+        global_channel_indexes, = np.nonzero(self.header['signal_channels']
+                                    ['stream_id'] == stream_id)
         if channel_indexes is None:
             channel_indexes = slice(None)
         global_channel_indexes = global_channel_indexes[channel_indexes]
-        raw_signals = self._raw_signals[slice(i_start, i_stop), :][:, global_channel_indexes]
+        raw_signals = self._raw_signals[slice(i_start, i_stop), global_channel_indexes]
         return raw_signals

@@ -5,7 +5,6 @@ John Dempster.
 WinWCP is free:
 http://spider.science.strath.ac.uk/sipbs/software.htm
 
-Author : sgarcia
 Author: Samuel Garcia
 """
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
@@ -75,10 +74,7 @@ class WinWcpRawIO(BaseRawIO):
 
         assert np.unique(all_sampling_interval).size == 1
 
-
         self._sampling_rate = 1. / all_sampling_interval[0]
-
-        
 
         signal_channels = []
         for c in range(header['NC']):
@@ -96,7 +92,7 @@ class WinWcpRawIO(BaseRawIO):
                                  units, gain, offset, stream_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        
+
         characteristics = signal_channels[_common_sig_characteristics]
         unique_characteristics = np.unique(characteristics)
         signal_streams = []
@@ -105,7 +101,6 @@ class WinWcpRawIO(BaseRawIO):
             signal_channels['stream_id'][mask] = str(i)
             signal_streams.append((f'stream {i}', str(i)))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
-        
 
         # No events
         event_channels = []
@@ -140,13 +135,15 @@ class WinWcpRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
-        global_channel_indexes, = np.nonzero(self.header['signal_channels']['stream_id'] == stream_id)
+        global_channel_indexes, = np.nonzero(self.header['signal_channels']
+                                    ['stream_id'] == stream_id)
         if channel_indexes is None:
             channel_indexes = slice(None)
-        global_channel_indexes = global_channel_indexes[channel_indexes]
-        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), :][:, global_channel_indexes]
+        inds = global_channel_indexes[channel_indexes]
+        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), inds]
         return raw_signals
 
 

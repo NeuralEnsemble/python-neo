@@ -216,7 +216,6 @@ class NeuralynxRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # require all sampled signals, ncs files, to have same sampling rate
-        
         if signal_channels.size > 0:
             sampling_rate = np.unique(signal_channels['sampling_rate'])
             assert sampling_rate.size == 1
@@ -225,7 +224,7 @@ class NeuralynxRawIO(BaseRawIO):
         else:
             signal_streams = []
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
-        
+
         # set 2 attributes needed later for header in case there are no ncs files in dataset,
         #   e.g. Pegasus
         self._timestamp_limits = None
@@ -296,7 +295,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         for seg_index in range(self._nb_segment):
             seg_annotations = bl_annotations['segments'][seg_index]
-            
+
             for c in range(signal_streams.size):
                 # one or no signal stream
                 sig_ann = seg_annotations['signals'][c]
@@ -341,7 +340,8 @@ class NeuralynxRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sigs_t_start[seg_index] - self.global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         """
         Retrieve chunk of analog signal, a chunk being a set of contiguous samples.
 
@@ -519,8 +519,8 @@ class NeuralynxRawIO(BaseRawIO):
             nlxHeader = NlxHeader(ncs_filename)
 
             if not chanSectMap or (chanSectMap and
-                                    not NcsSectionsFactory._verifySectionsStructure(data,
-                                                                                lastNcsSections)):
+                    not NcsSectionsFactory._verifySectionsStructure(data,
+                    lastNcsSections)):
                 lastNcsSections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
 
             chanSectMap[chan_uid] = [lastNcsSections, nlxHeader, data]

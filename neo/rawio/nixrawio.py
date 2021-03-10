@@ -173,8 +173,7 @@ class NIXRawIO(BaseRawIO):
                         segment['spiketrains'].append(st.positions)
                         segment['spiketrains_id'].append(st.id)
                         wftypestr = "neo.waveforms"
-                        if (st.features
-                                and st.features[0].data.type == wftypestr):
+                        if (st.features and st.features[0].data.type == wftypestr):
                             waveforms = st.features[0].data
                             stdict = segment['spiketrains_unit'][st_idx]
                             if waveforms:
@@ -201,19 +200,22 @@ class NIXRawIO(BaseRawIO):
                 seg_ann = bl_ann['segments'][grp_idx]
                 props = group.metadata.inherited_properties()
                 seg_ann.update(self._filter_properties(props, "segment"))
+
                 # TODO handle annotation at stream level
-                # sig_idx = 0
-                # groupdas = NixIO._group_signals(grp.data_arrays)
-                # for nix_name, signals in groupdas.items():
-                #    da = signals[0]
-                #     if da.type == 'neo.analogsignal' and seg_ann['signals']:
-                #         # collect and group DataArrays
-                #         sig_ann = seg_ann['signals'][sig_idx]
-                #         sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
-                #         props = da.metadata.inherited_properties()
-                #         sig_ann.update(self._filter_properties(props, 'analogsignal'))
-                #         sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
-                #         sig_idx += 1
+                '''
+                 sig_idx = 0
+                 groupdas = NixIO._group_signals(grp.data_arrays)
+                 for nix_name, signals in groupdas.items():
+                    da = signals[0]
+                     if da.type == 'neo.analogsignal' and seg_ann['signals']:
+                         # collect and group DataArrays
+                         sig_ann = seg_ann['signals'][sig_idx]
+                         sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
+                         props = da.metadata.inherited_properties()
+                         sig_ann.update(self._filter_properties(props, 'analogsignal'))
+                         sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
+                         sig_idx += 1
+                '''
                 sp_idx = 0
                 ev_idx = 0
                 for mt in group.multi_tags:
@@ -230,12 +232,6 @@ class NIXRawIO(BaseRawIO):
                             props = mt.metadata.inherited_properties()
                             event_ann.update(self._filter_properties(props, 'event'))
                             ev_idx += 1
-
-                #~ # populate ChannelIndex annotations
-                #~ for srcidx, source in enumerate(blk.sources):
-                    #~ chx_ann = self.raw_annotations["signal_channels"][srcidx]
-                    #~ props = source.metadata.inherited_properties()
-                    #~ chx_ann.update(self._filter_properties(props, "channelindex"))
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
@@ -366,8 +362,7 @@ class NIXRawIO(BaseRawIO):
             if mt.type == "neo.event" or mt.type == "neo.epoch":
                 labels.append(mt.positions.dimensions[0].labels)
                 po = mt.positions
-                if (po.type == "neo.event.times"
-                        or po.type == "neo.epoch.times"):
+                if (po.type == "neo.event.times" or po.type == "neo.epoch.times"):
                     timestamp.append(po)
                 channel = self.header['event_channels'][event_channel_index]
                 if channel['type'] == b'epoch' and mt.extents:

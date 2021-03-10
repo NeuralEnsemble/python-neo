@@ -170,7 +170,7 @@ class PlexonRawIO(BaseRawIO):
         if len(all_sig_length) > 0:
             self._signal_length = min(all_sig_length)
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        
+
         if sig_channels.size > 0:
             signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
         else:
@@ -261,7 +261,8 @@ class PlexonRawIO(BaseRawIO):
         assert stream_index == 0
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:

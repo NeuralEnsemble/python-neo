@@ -97,7 +97,8 @@ class TdtRawIO(BaseRawIO):
             tsq_filename = os.path.join(path, tankname + '_' + segment_name + '.tsq')
             tsq = np.fromfile(tsq_filename, dtype=tsq_dtype)
             self._tsq.append(tsq)
-            # Start and stop times are only found in the second and last header row, respectively.
+            # Start and stop times are only found in the second
+            #  and last header row, respectively.
             if tsq[1]['evname'] == chr(EVMARK_STARTBLOCK).encode():
                 self._seg_t_starts.append(tsq[1]['timestamp'])
             else:
@@ -137,7 +138,7 @@ class TdtRawIO(BaseRawIO):
         self._global_t_start = self._seg_t_starts[0]
 
         # signal channels EVTYPE_STREAM
-        signal_streams =[]
+        signal_streams = []
         signal_channels = []
         self._sigs_data_buf = {seg_index: {} for seg_index in range(nb_segment)}
         self._sigs_index = {seg_index: {} for seg_index in range(nb_segment)}
@@ -155,7 +156,7 @@ class TdtRawIO(BaseRawIO):
             stream_name = str(info['StoreName'])
             stream_id = f'{stream_index}'
             signal_streams.append((stream_name, stream_id))
-            
+
             for c in range(info['NumChan']):
                 global_chan_index = len(signal_channels)
                 chan_id = c + 1  # several StoreName can have same chan_id: this is ok
@@ -297,14 +298,13 @@ class TdtRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sigs_t_start[seg_index][stream_index] - self._global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        #~ group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
-
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
             i_stop = self._sigs_lengths[seg_index][stream_index]
-        
+
         stream_id = self.header['signal_streams'][stream_index]['id']
         signal_channels = self.header['signal_channels']
         mask = signal_channels['stream_id'] == stream_id

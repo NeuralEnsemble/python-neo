@@ -69,7 +69,8 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         stream_index = 0
         self.assertGreater(reader.signal_channels_count(stream_index), 0)
         for c in range(0, 8):
-            raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c], stream_index=stream_index)
+            raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c],
+                                                     stream_index=stream_index)
             raw_sigs = raw_sigs.flatten()
             assert_equal(raw_sigs[:-1], lfp_ml[c, :])
 
@@ -89,7 +90,8 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
 
             # Check waveforms of channel 1, unit 0
             if channel_id == 1 and unit_id == 0:
-                io_waveforms = reader.get_spike_raw_waveforms(spike_channel_index=spike_channel_index)
+                io_waveforms = reader.get_spike_raw_waveforms(
+                    spike_channel_index=spike_channel_index)
                 io_waveforms = io_waveforms[:, 0, :]  # remove dim 1
                 assert_equal(io_waveforms, wf_ml)
 
@@ -144,7 +146,7 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
 
             # Check if analog data are equal
             stream_index = 0
-            self.assertGreater(reader.signal_channels_count(stream_index ), 0)
+            self.assertGreater(reader.signal_channels_count(stream_index), 0)
 
             for c in range(0, param[2]):
                 raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c])
@@ -166,7 +168,8 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
                 assert_equal(io_spikes, matlab_spikes)
 
                 # Check all waveforms
-                io_waveforms = reader.get_spike_raw_waveforms(spike_channel_index=spike_channel_index)
+                io_waveforms = reader.get_spike_raw_waveforms(
+                    spike_channel_index=spike_channel_index)
                 io_waveforms = io_waveforms[:, 0, :]  # remove dim 1
                 matlab_wf = wf_ml[np.nonzero(
                     np.logical_and(elec_ml == channel_id, unit_ml == unit_id)), :][0]

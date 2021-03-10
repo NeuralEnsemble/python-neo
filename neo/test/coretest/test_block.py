@@ -258,9 +258,8 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(self.blk1._container_child_objects,
                          ('Segment', 'ChannelIndex', 'Group'))
         self.assertEqual(self.blk1._data_child_objects, ())
-        self.assertEqual(self.blk1._single_parent_objects, ())
+        self.assertEqual(self.blk1._parent_objects, ())
         self.assertEqual(self.blk1._multi_child_objects, ())
-        self.assertEqual(self.blk1._multi_parent_objects, ())
         self.assertEqual(self.blk1._child_properties,
                          ('Unit',))
 
@@ -272,9 +271,8 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(self.blk1._data_child_containers, ())
         self.assertEqual(self.blk1._single_child_containers,
                          ('segments', 'channel_indexes', 'groups'))
-        self.assertEqual(self.blk1._single_parent_containers, ())
+        self.assertEqual(self.blk1._parent_containers, ())
         self.assertEqual(self.blk1._multi_child_containers, ())
-        self.assertEqual(self.blk1._multi_parent_containers, ())
 
         self.assertEqual(self.blk1._child_objects,
                          ('Segment', 'ChannelIndex', 'Group'))

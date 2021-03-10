@@ -1308,23 +1308,19 @@ class AxographRawIO(BaseRawIO):
         event_channels = []
         event_channels.append(('AxoGraph Tags', '', 'event'))
         event_channels.append(('AxoGraph Intervals', '', 'epoch'))
-        
+
+        if len(sig_channels) > 0:
+            signal_streams = [('Signals', '0')]
+        else:
+            signal_streams = []
 
         # organize header
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
-        if len(sig_channels) > 0:
-            self.header['signal_streams'] = \
-            np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-        else:
-            self.header['signal_streams'] =\
-            np.array([], dtype=_signal_stream_dtype)
-        self.header['signal_channels'] = \
-            np.array(sig_channels, dtype=_signal_channel_dtype)
-        self.header['event_channels'] = \
-            np.array(event_channels, dtype=_event_channel_dtype)
-        self.header['spike_channels'] = \
-            np.array([], dtype=_spike_channel_dtype)
+        self.header['signal_streams'] = np.array(signal_streams, dtype=_signal_stream_dtype)
+        self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
+        self.header['event_channels'] = np.array(event_channels, dtype=_event_channel_dtype)
+        self.header['spike_channels'] = np.array([], dtype=_spike_channel_dtype)
 
         ##############################################
         # DATA OBJECTS

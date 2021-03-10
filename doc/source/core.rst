@@ -191,7 +191,7 @@ Relationship:
 
 :download:`Click here for a better quality SVG diagram <./images/simple_generated_diagram.svg>`
 
-.. note:: This figure has not yet been updated to include :class:`ImageSequence` and :class:`RegionOfInterest`.
+.. note:: This figure do not include :class:`ChannelView` and :class:`RegionOfInterest`.
 
 For more details, see the :doc:`api_reference`.
 

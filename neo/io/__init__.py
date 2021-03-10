@@ -34,7 +34,6 @@ Classes:
 * :attr:`KlustaKwikIO`
 * :attr:`KwikIO`
 * :attr:`MicromedIO`
-* :attr:`NeoHdf5IO`
 * :attr:`NeoMatlabIO`
 * :attr:`NestIO`
 * :attr:`NeuralynxIO`
@@ -44,6 +43,7 @@ Classes:
 * :attr:`NixIO`
 * :attr:`NSDFIO`
 * :attr:`OpenEphysIO`
+* :attr:`PhyIO`
 * :attr:`PickleIO`
 * :attr:`PlexonIO`
 * :attr:`RawBinarySignalIO`
@@ -142,10 +142,6 @@ Classes:
 
     .. autoattribute:: extensions
 
-.. autoclass:: neo.io.NeoHdf5IO
-
-    .. autoattribute:: extensions
-
 .. autoclass:: neo.io.NeoMatlabIO
 
     .. autoattribute:: extensions
@@ -179,6 +175,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.OpenEphysIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.PhyIO
 
     .. autoattribute:: extensions
 
@@ -257,7 +257,6 @@ from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axographio import AxographIO
 from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
-from neo.io.blackrockio_v4 import BlackrockIO as OldBlackrockIO
 from neo.io.blkio import BlkIO
 from neo.io.bci2000io import BCI2000IO
 from neo.io.brainvisionio import BrainVisionIO
@@ -273,17 +272,16 @@ from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.mearecio import MEArecIO
 from neo.io.micromedio import MicromedIO
-from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
 from neo.io.neuralynxio import NeuralynxIO
-from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
 from neo.io.nixio_fr import NixIO as NixIOFr
 from neo.io.nsdfio import NSDFIO
 from neo.io.openephysio import OpenEphysIO
+from neo.io.phyio import PhyIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
@@ -320,8 +318,7 @@ iolist = [
     KwikIO,
     MEArecIO,
     MicromedIO,
-    NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
-    NeoHdf5IO,
+    NixIO,  # place NixIO before other IOs that use HDF5 to make it the default for .h5 files
     NeoMatlabIO,
     NestIO,
     NeuralynxIO,
@@ -330,6 +327,7 @@ iolist = [
     NeuroshareIO,
     NSDFIO,
     OpenEphysIO,
+    PhyIO,
     PickleIO,
     PlexonIO,
     RawBinarySignalIO,

@@ -57,10 +57,10 @@ class ElanRawIO(BaseRawIO):
 
             # strange 2 line for datetime
             # line1
-            l = f.readline()
-            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
-            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
-            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
+            line = f.readline()
+            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', line)
+            r2 = re.findall(r'(\d+):(\d+):(\d+)', line)
+            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', line)
             YY, MM, DD, hh, mm, ss = (None,) * 6
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
@@ -70,10 +70,10 @@ class ElanRawIO(BaseRawIO):
                 DD, MM, YY = r3[0]
 
             # line2
-            l = f.readline()
-            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
-            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
-            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
+            line = f.readline()
+            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', line)
+            r2 = re.findall(r'(\d+):(\d+):(\d+)', line)
+            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', line)
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
             elif len(r2) != 0:
@@ -86,17 +86,17 @@ class ElanRawIO(BaseRawIO):
             except:
                 fulldatetime = None
 
-            l = f.readline()
-            l = f.readline()
-            l = f.readline()
+            line = f.readline()
+            line = f.readline()
+            line = f.readline()
 
             # sampling rate sample
-            l = f.readline()
-            self._sampling_rate = 1. / float(l)
+            line = f.readline()
+            self._sampling_rate = 1. / float(line)
 
             # nb channel
-            l = f.readline()
-            nb_channel = int(l) - 2
+            line = f.readline()
+            nb_channel = int(line) - 2
 
             channel_infos = [{} for c in range(nb_channel + 2)]
             # channel label
@@ -123,12 +123,12 @@ class ElanRawIO(BaseRawIO):
             for c in range(nb_channel + 2):
                 channel_infos[c]['info_filter'] = f.readline()[:-1]
 
-        n = int(round(np.log(channel_infos[0]['max_logic'] -
-                             channel_infos[0]['min_logic']) / np.log(2)) / 8)
+        n = int(round(np.log(channel_infos[0]['max_logic']
+                            - channel_infos[0]['min_logic']) / np.log(2)) / 8)
         sig_dtype = np.dtype('>i' + str(n))
 
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-        
+
         sig_channels = []
         for c, chan_info in enumerate(channel_infos[:-2]):
             chan_name = chan_info['label']
@@ -153,8 +153,8 @@ class ElanRawIO(BaseRawIO):
             self._raw_event_timestamps = []
             self._event_labels = []
             self._reject_codes = []
-            for l in f.readlines():
-                r = re.findall(r' *(\d+)\s* *(\d+)\s* *(\d+) *', l)
+            for line in f.readlines():
+                r = re.findall(r' *(\d+)\s* *(\d+)\s* *(\d+) *', line)
                 self._raw_event_timestamps.append(int(r[0][0]))
                 self._event_labels.append(str(r[0][1]))
                 self._reject_codes.append(str(r[0][2]))
@@ -188,12 +188,12 @@ class ElanRawIO(BaseRawIO):
         block_annotations.update(extra_info)
         seg_annotations = self.raw_annotations['blocks'][0]['segments'][0]
         seg_annotations.update(extra_info)
-        
+
         sig_annotations = self.raw_annotations['blocks'][0]['segments'][0]['signals'][0]
         for key in ('info_filter', 'kind'):
             values = [channel_infos[c][key] for c in range(nb_channel)]
             sig_annotations['__array_annotations__'][key] = np.array(values)
-        
+
         event_annotations = self.raw_annotations['blocks'][0]['segments'][0]['events'][0]
         event_annotations['__array_annotations__']['reject_codes'] = self._reject_codes
 
@@ -215,10 +215,11 @@ class ElanRawIO(BaseRawIO):
         assert stream_index == 0
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), :][:, channel_indexes]
+        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
@@ -227,7 +228,8 @@ class ElanRawIO(BaseRawIO):
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._raw_event_timestamps.size
 
-    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index,
+                              event_channel_index, t_start, t_stop):
         timestamp = self._raw_event_timestamps
         labels = self._event_labels
         durations = None
