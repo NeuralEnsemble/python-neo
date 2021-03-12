@@ -18,8 +18,8 @@ from pathlib import Path
 
 import numpy as np
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 
 class OpenEphysBinaryRawIO(BaseRawIO):
@@ -50,49 +50,55 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         
         
         # first loop to reasign stream by "stream_index" instead of "stream_name"
-        self.signal_streams = {}
-        self.event_streams = {}
+        self._sig_streams = {}
+        self._evt_streams = {}
         for block_index in range(nb_block):
-            self.signal_streams[block_index] = {}
-            self.event_streams[block_index] = {}
+            self._sig_streams[block_index] = {}
+            self._evt_streams[block_index] = {}
             for seg_index in range(nb_segment_per_block[block_index]):
-                self.signal_streams[block_index][seg_index] = {}
-                self.event_streams[block_index][seg_index] = {}
-                for i, stream_name in enumerate(sig_stream_names):
+                self._sig_streams[block_index][seg_index] = {}
+                self._evt_streams[block_index][seg_index] = {}
+                for stream_index, stream_name in enumerate(sig_stream_names):
                     d = all_streams[block_index][seg_index]['continuous'][stream_name]
-                    self.signal_streams[block_index][seg_index][i] = d
+                    d['stream_name'] = stream_name
+                    self._sig_streams[block_index][seg_index][stream_index] = d
                 for i, stream_name in enumerate(event_stream_names):
                     d = all_streams[block_index][seg_index]['events'][stream_name]
-                    self.event_streams[block_index][seg_index][i] = d
-        
+                    d['stream_name'] = stream_name
+                    self._evt_streams[block_index][seg_index][i] = d
+
         ## signals zone
-        
         # create signals channel map: several channel per stream
-        sig_channels = []
-        for group_id, stream_name in enumerate(sig_stream_names):
-            # group_id is the index in vector sytream names
-            d = self.signal_streams[0][0][group_id]
+        signal_channels = []
+        for stream_index, stream_name in enumerate(sig_stream_names):
+            # stream_index is the index in vector sytream names
+            stream_id = str(stream_index)
+            d = self._sig_streams[0][0][stream_index]
             new_channels = []
             for chan_info in d['channels']:
-                chan_id = 0 # generate it after loop
+                chan_id = chan_info['channel_name']
                 new_channels.append((chan_info['channel_name'],
                     chan_id, float(d['sample_rate']), d['dtype'], chan_info['units'],
-                    chan_info['bit_volts'], 0., group_id))
-            sig_channels.extend(new_channels)
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        # final global id
-        sig_channels['id'] = np.arange(sig_channels.size, dtype='int')
+                    chan_info['bit_volts'], 0., stream_id))
+            signal_channels.extend(new_channels)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        
+        signal_streams = []
+        for stream_index, stream_name in enumerate(sig_stream_names):
+            stream_id = str(stream_index)
+            signal_streams.append((stream_name, stream_id))
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         
         # make an array global to local channel
-        self._global_channel_to_local_channel = np.zeros(sig_channels.size, dtype='int64')
-        for group_id, stream_name in enumerate(sig_stream_names):
-            loc_chans, = np.nonzero(sig_channels['group_id'] == group_id)
-            self._global_channel_to_local_channel[loc_chans] = np.arange(loc_chans.size)
+        #~ self._global_channel_to_local_channel = np.zeros(signal_channels.size, dtype='int64')
+        #~ for stream_index, stream_name in enumerate(sig_stream_names):
+            #~ loc_chans, = np.nonzero(signal_channels['stream_id'] == stream_index)
+            #~ self._global_channel_to_local_channel[loc_chans] = np.arange(loc_chans.size)
         
         # create memmap for signals
         for block_index in range(nb_block):
             for seg_index in range(nb_segment_per_block[block_index]):
-                for group_id, d in self.signal_streams[block_index][seg_index].items():
+                for stream_index, d in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(d['channels'])
                     memmap_sigs = np.memmap(d['raw_filename'], d['dtype'],
                                  order='C', mode='r').reshape(-1, num_channels)
@@ -103,7 +109,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         # channel map: one channel one stream
         event_channels = []
         for stream_ind, stream_name in enumerate(event_stream_names):
-            d = self.event_streams[0][0][stream_ind]
+            d = self._evt_streams[0][0][stream_ind]
             event_channels.append((d['channel_name'], stream_ind, 'event'))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         
@@ -112,13 +118,12 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             # inject memmap loaded into main dict structure
             #~ print()
             #~ print(stream_ind, stream_name)
-            d = self.event_streams[0][0][stream_ind]
+            d = self._evt_streams[0][0][stream_ind]
 
             for name in _possible_event_stream_names:
                 if name+'_npy' in d:
                     data = np.load(d[name+'_npy'], mmap_mode='r')
                     d[name] = data
-                    print('  ', name, d[name])
             
             # check that events have timestamps
             assert 'timestamps' in d
@@ -140,7 +145,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
         # no spike read yet
         # can be implemented on user demand
-        unit_channels = np.array([], dtype=_unit_channel_dtype)
+        spike_channels = np.array([], dtype=_spike_channel_dtype)
         
         # loop for t_start/t_stop on segment browse all object
         self._t_start_segments = {}
@@ -153,7 +158,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 global_t_stop = None
                 
                 # loop over signals
-                for group_id, d in self.signal_streams[block_index][seg_index].items():
+                for stream_index, d in self._sig_streams[block_index][seg_index].items():
                     t_start = d['t_start']
                     dur = d['memmap'].shape[0] / float(d['sample_rate'])
                     t_stop = t_start + dur
@@ -163,8 +168,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         global_t_stop = t_stop
 
                 # loop over events
-                for stream_ind, stream_name in enumerate(event_stream_names):
-                    d = self.event_streams[0][0][stream_ind]
+                for stream_index, stream_name in enumerate(event_stream_names):
+                    d = self._evt_streams[0][0][stream_index]
+                    if d['timestamps'].size == 0:
+                        continue
                     t_start = d['timestamps'][0] / d['sample_rate']
                     t_stop = d['timestamps'][-1] / d['sample_rate']
                     if global_t_start is None or global_t_start > t_start:
@@ -185,8 +192,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = nb_block
         self.header['nb_segment'] = nb_segment_per_block
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotate some objects from continuous files
@@ -218,29 +226,19 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         group_id = group_ids[0]
         return group_id
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        group_id = self._channels_to_group_id(channel_indexes)
-        #~ sigs = self._memmap_sigs[block_index][seg_index][group_id]
-        sigs = self.signal_streams[block_index][seg_index][group_id]['memmap']
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        sigs = self._sig_streams[block_index][seg_index][stream_index]['memmap']
         return sigs.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        group_id = self._channels_to_group_id(channel_indexes)
-        #~ t_start = self._t_start_sigs[block_index][seg_index][group_id]
-        t_start = self.signal_streams[block_index][seg_index][group_id]['t_start']
+        t_start = self._sig_streams[block_index][seg_index][stream_index]['t_start']
         return t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        group_id = self._channels_to_group_id(channel_indexes)
-        #~ sigs = self._memmap_sigs[block_index][seg_index][group_id]
-        sigs = self.signal_streams[block_index][seg_index][group_id]['memmap']
-        
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        sigs = self._sig_streams[block_index][seg_index][stream_index]['memmap']
         sigs = sigs[i_start:i_stop, :]
-        
         if channel_indexes is not None:
-            local_chans = self._global_channel_to_local_channel[channel_indexes]
-            sigs = sigs[:, local_chans]
-
+            sigs = sigs[:, channel_indexes]
         return sigs
     
     def _spike_count(self, block_index, seg_index, unit_index):
@@ -256,11 +254,11 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         pass
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        d = self.event_streams[0][0][event_channel_index]
+        d = self._evt_streams[0][0][event_channel_index]
         return d['timestamps'].size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        d = self.event_streams[0][0][event_channel_index]
+        d = self._evt_streams[0][0][event_channel_index]
         timestamps = d['timestamps']
         durations = None
         labels = d['labels']
@@ -274,8 +272,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         
         # TODO depend on rawio refactoring #949
         event_channel_index = 0
-        d = self.event_streams[0][0][event_channel_index]
-        # d = self.event_streams[0][0][event_channel_index]
+        d = self._evt_streams[0][0][event_channel_index]
+        # d = self._evt_streams[0][0][event_channel_index]
         event_times = event_timestamps.astype(dtype) / float(d['sample_rate'])
         return event_times
 
