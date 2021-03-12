@@ -124,7 +124,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             # check that events have timestamps
             assert 'timestamps' in d
 
-            # for event the neo "label" will change depending the nature of event (ttl, text, binary)
+            # for event the neo "label" will change depending the nature
+            #  of event (ttl, text, binary)
             # and this is transform into unicode
             # all theses data are put in event array annotations
             if 'text' in d:
@@ -198,7 +199,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 for stream_index, stream_name in enumerate(sig_stream_names):
                     sig_ann = seg_ann['signals'][stream_index]
                     d = self._sig_streams[0][0][stream_index]
-                    for k in ('identifier', 'history', 'source_processor_index', 'recorded_processor_index'):
+                    for k in ('identifier', 'history', 'source_processor_index',
+                              'recorded_processor_index'):
                         if k in d['channels'][0]:
                             values = np.array([chan_info[k] for chan_info in d['channels']])
                             sig_ann['__array_annotations__'][k] = values
@@ -237,7 +239,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         t_start = self._sig_streams[block_index][seg_index][stream_index]['t_start']
         return t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         sigs = self._sig_streams[block_index][seg_index][stream_index]['memmap']
         sigs = sigs[i_start:i_stop, :]
         if channel_indexes is not None:
@@ -354,7 +357,8 @@ def explore_folder(dirname):
                     t_start = timestamp0 / d['sample_rate']
 
                     # sync_timestamp is -1 for all elements in our dataset
-                    # sync_timestamp_file = root / 'continuous' / d['folder_name'] / 'synchronized_timestamps.npy'
+                    # sync_timestamp_file = root / 'continuous' /
+                    #                       d['folder_name'] / 'synchronized_timestamps.npy'
                     # sync_timestamps = np.load(str(sync_timestamp_file), mmap_mode='r')
                     # t_start =  sync_timestamps[0]
 
