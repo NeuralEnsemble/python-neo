@@ -31,6 +31,11 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     Neo          OpenEphys
     block[n-1]   experiment[n]    New device start/stop
     segment[s-1] recording[s]     New recording start/stop
+
+    handle several signals stream
+    handle events special npy data are respresented as array_annotations
+    do not handle spikes at the moment can be implemented if user demand
+
     """
     extensions = []
     rawmode = 'one-dir'
@@ -173,12 +178,6 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 self._t_start_segments[block_index][seg_index] = global_t_start
                 self._t_stop_segments[block_index][seg_index] = global_t_stop
 
-        # handle segment t_start
-        # update t_start/t_stop with events
-        # for block_index in range(nb_block):
-        #     for seg_index in range(nb_segment_per_block[block_index]):
-        #         pass
-
         # main header
         self.header = {}
         self.header['nb_block'] = nb_block
@@ -267,6 +266,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         durations = None
         labels = d['labels']
         # TODO make the time slice
+        # DO NOT MERGE BEFORE THIS!!!!!
         return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
@@ -361,7 +361,6 @@ def explore_folder(dirname):
                     # TODO for later : gap checking
                     signal_stream = d.copy()
                     signal_stream['raw_filename'] = str(raw_filename)
-                    # signal_stream['name'] = raw_filename.parents[0]
                     signal_stream['dtype'] = 'int16'
                     signal_stream['timestamp0'] = timestamp0
                     signal_stream['t_start'] = t_start
