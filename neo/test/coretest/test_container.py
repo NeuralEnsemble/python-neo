@@ -47,11 +47,9 @@ class TestContainerNeo(unittest.TestCase):
 
     def test__children(self):
         container = Container()
-        self.assertEqual(container._single_parent_objects, ())
-        self.assertEqual(container._multi_parent_objects, ())
+        self.assertEqual(container._parent_objects, ())
 
-        self.assertEqual(container._single_parent_containers, ())
-        self.assertEqual(container._multi_parent_containers, ())
+        self.assertEqual(container._parent_containers, ())
 
         self.assertEqual(container._parent_objects, ())
         self.assertEqual(container._parent_containers, ())

@@ -66,16 +66,18 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         reader.parse_header()
 
         # Check if analog data on channels 1-8 are equal
-        self.assertGreater(reader.signal_channels_count(), 0)
+        stream_index = 0
+        self.assertGreater(reader.signal_channels_count(stream_index), 0)
         for c in range(0, 8):
-            raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c])
+            raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c],
+                                                     stream_index=stream_index)
             raw_sigs = raw_sigs.flatten()
             assert_equal(raw_sigs[:-1], lfp_ml[c, :])
 
         # Check if spikes in channels are equal
-        nb_unit = reader.unit_channels_count()
-        for unit_index in range(nb_unit):
-            unit_name = reader.header['unit_channels'][unit_index]['name']
+        nb_unit = reader.spike_channels_count()
+        for spike_channel_index in range(nb_unit):
+            unit_name = reader.header['spike_channels'][spike_channel_index]['name']
             # name is chXX#YY where XX is channel_id and YY is unit_id
             channel_id, unit_id = unit_name.split('#')
             channel_id = int(channel_id.replace('ch', ''))
@@ -83,12 +85,13 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
 
             matlab_spikes = ts_ml[(elec_ml == channel_id) & (unit_ml == unit_id)]
 
-            io_spikes = reader.get_spike_timestamps(unit_index=unit_index)
+            io_spikes = reader.get_spike_timestamps(spike_channel_index=spike_channel_index)
             assert_equal(io_spikes, matlab_spikes)
 
             # Check waveforms of channel 1, unit 0
             if channel_id == 1 and unit_id == 0:
-                io_waveforms = reader.get_spike_raw_waveforms(unit_index=unit_index)
+                io_waveforms = reader.get_spike_raw_waveforms(
+                    spike_channel_index=spike_channel_index)
                 io_waveforms = io_waveforms[:, 0, :]  # remove dim 1
                 assert_equal(io_waveforms, wf_ml)
 
@@ -142,7 +145,8 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
             reader.parse_header()
 
             # Check if analog data are equal
-            self.assertGreater(reader.signal_channels_count(), 0)
+            stream_index = 0
+            self.assertGreater(reader.signal_channels_count(stream_index), 0)
 
             for c in range(0, param[2]):
                 raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c])
@@ -150,9 +154,9 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
                 assert_equal(raw_sigs[:], lfp_ml[c, :])
 
             # Check if spikes in channels are equal
-            nb_unit = reader.unit_channels_count()
-            for unit_index in range(nb_unit):
-                unit_name = reader.header['unit_channels'][unit_index]['name']
+            nb_unit = reader.spike_channels_count()
+            for spike_channel_index in range(nb_unit):
+                unit_name = reader.header['spike_channels'][spike_channel_index]['name']
                 # name is chXX#YY where XX is channel_id and YY is unit_id
                 channel_id, unit_id = unit_name.split('#')
                 channel_id = int(channel_id.replace('ch', ''))
@@ -160,11 +164,12 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
 
                 matlab_spikes = ts_ml[(elec_ml == channel_id) & (unit_ml == unit_id)]
 
-                io_spikes = reader.get_spike_timestamps(unit_index=unit_index)
+                io_spikes = reader.get_spike_timestamps(spike_channel_index=spike_channel_index)
                 assert_equal(io_spikes, matlab_spikes)
 
                 # Check all waveforms
-                io_waveforms = reader.get_spike_raw_waveforms(unit_index=unit_index)
+                io_waveforms = reader.get_spike_raw_waveforms(
+                    spike_channel_index=spike_channel_index)
                 io_waveforms = io_waveforms[:, 0, :]  # remove dim 1
                 matlab_wf = wf_ml[np.nonzero(
                     np.logical_and(elec_ml == channel_id, unit_ml == unit_id)), :][0]

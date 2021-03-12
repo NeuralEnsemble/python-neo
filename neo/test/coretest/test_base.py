@@ -116,11 +116,9 @@ class TestBaseNeo(unittest.TestCase):
     def test__children(self):
         base = BaseNeo()
 
-        self.assertEqual(base._single_parent_objects, ())
-        self.assertEqual(base._multi_parent_objects, ())
+        self.assertEqual(base._parent_objects, ())
 
-        self.assertEqual(base._single_parent_containers, ())
-        self.assertEqual(base._multi_parent_containers, ())
+        self.assertEqual(base._parent_containers, ())
 
         self.assertEqual(base._parent_objects, ())
         self.assertEqual(base._parent_containers, ())

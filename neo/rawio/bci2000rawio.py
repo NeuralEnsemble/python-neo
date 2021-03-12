@@ -3,7 +3,9 @@ BCI2000RawIO is a class to read BCI2000 .dat files.
 https://www.bci2000.org/mediawiki/index.php/Technical_Reference:BCI2000_File_Format
 """
 
-from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
+
 
 import numpy as np
 import re
@@ -36,11 +38,17 @@ class BCI2000RawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
 
+        # one unique stream
+        signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
+        self.header['signal_streams'] = signal_streams
+
         sig_channels = []
         for chan_ix in range(file_info['SourceCh']):
-            ch_name = param_defs['ChannelNames']['value'][chan_ix] \
-                if 'ChannelNames' in param_defs and param_defs['ChannelNames']['value'] is not np.nan else 'ch' + str(chan_ix)
-            chan_id = chan_ix + 1
+            if 'ChannelNames' in param_defs and not np.isnan(param_defs['ChannelNames']['value']):
+                ch_name = param_defs['ChannelNames']['value'][chan_ix]
+            else:
+                ch_name = 'ch' + str(chan_ix)
+            chan_id = str(chan_ix + 1)
             sr = param_defs['SamplingRate']['value']  # Hz
             dtype = file_info['DataFormat']
             units = 'uV'
@@ -58,11 +66,11 @@ class BCI2000RawIO(BaseRawIO):
             if isinstance(offset, str):
                 offset = float(offset)
 
-            group_id = 0
-            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
+            stream_id = '0'
+            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
         self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
 
-        self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
+        self.header['spike_channels'] = np.array([], dtype=_spike_channel_dtype)
 
         # creating event channel for each state variable
         event_channels = []
@@ -79,7 +87,8 @@ class BCI2000RawIO(BaseRawIO):
             'file_info': file_info,
             'param_defs': param_defs
         })
-        for ev_ix, ev_dict in enumerate(self.raw_annotations['event_channels']):
+        event_annotations = self.raw_annotations['blocks'][0]['segments'][0]['events']
+        for ev_ix, ev_dict in enumerate(event_annotations):
             ev_dict.update({
                 'length': state_defs[ev_ix][1],
                 'startVal': state_defs[ev_ix][2],
@@ -125,13 +134,16 @@ class BCI2000RawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._read_info['n_samps'] / self._read_info['sampling_rate']
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return self._read_info['n_samps']
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
+        assert stream_index == 0
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -170,19 +182,22 @@ class BCI2000RawIO(BaseRawIO):
             keep = np.logical_and(keep, ts <= t_stop)
         return ts[keep], dur[keep], labels[keep]
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = (event_timestamps / float(self._read_info['sampling_rate'])).astype(dtype)
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         durations = (raw_duration / float(self._read_info['sampling_rate'])).astype(dtype)
         return durations
 
     @property
     def _event_arrays_list(self):
         if self._my_events is None:
+            event_annotations = self.raw_annotations['blocks'][0]['segments'][0]['events']
+
             self._my_events = []
-            for s_ix, sd in enumerate(self.raw_annotations['event_channels']):
+            for event_channel_index in range(self.event_channels_count()):
+                sd = event_annotations[event_channel_index]
                 ev_times = durs = vals = np.array([])
                 # Skip these big but mostly useless (?) states.
                 if sd['name'] not in ['SourceTime', 'StimulusTime']:

@@ -160,8 +160,8 @@ class AnalogSignal(BaseSignal):
 
     '''
 
-    _single_parent_objects = ('Segment', 'ChannelIndex')
-    _single_parent_attrs = ('segment', 'channel_index')
+    _parent_objects = ('Segment', 'ChannelIndex')
+    _parent_attrs = ('segment', 'channel_index')
     _quantity_attr = 'signal'
     _necessary_attrs = (('signal', pq.Quantity, 2),
                         ('sampling_rate', pq.Quantity, 0),

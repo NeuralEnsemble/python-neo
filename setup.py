@@ -7,7 +7,6 @@ long_description = open("README.rst").read()
 install_requires = ['numpy>=1.13.0,!=1.16.0',
                     'quantities>=0.12.1']
 extras_require = {
-    'hdf5io': ['h5py'],
     'igorproio': ['igor'],
     'kwikio': ['scipy', 'klusta'],
     'neomatlabio': ['scipy>=1.0.0'],

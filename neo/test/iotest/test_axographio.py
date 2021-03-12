@@ -259,8 +259,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(len(blk.groups), 1)
         assert_equal(len(blk.segments[0].analogsignals), 1)
 
-        names = [sig.name for sig in blk.segments[0].analogsignals]
-        assert_equal(names, ['Channel bundle (CAP,STIM) '])
+        chan_names = blk.segments[0].analogsignals[0].array_annotations['channel_names']
+        assert_equal(chan_names, ['CAP', 'STIM'])
 
         sig = blk.segments[0].analogsignals[0][:5]
         arr = sig.as_array('V')

@@ -30,8 +30,8 @@ class ChannelView(BaseNeo):
     Note: Any other additional arguments are assumed to be user-specific
             metadata and stored in :attr:`annotations`.
     """
-    _single_parent_objects = ('Segment',)
-    _single_parent_attrs = ('segment',)
+    _parent_objects = ('Segment',)
+    _parent_attrs = ('segment',)
     _necessary_attrs = (
         ('index', np.ndarray, 1, np.dtype('i')),
         ('obj', ('AnalogSignal', 'IrregularlySampledSignal'), 1)

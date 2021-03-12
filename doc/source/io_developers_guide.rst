@@ -71,7 +71,7 @@ Logging
 =======
 
 All IO classes by default have logging using the standard :mod:`logging` module: already set up.
-The logger name is the same as the fully qualified class name, e.g. :class:`neo.io.hdf5io.NeoHdf5IO`.
+The logger name is the same as the fully qualified class name, e.g. :class:`neo.io.nixio.NixIO`.
 The :attr:`class.logger` attribute holds the logger for easy access.
 
 There are generally 3 types of situations in which an IO class should use a logger
