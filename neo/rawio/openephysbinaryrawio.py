@@ -130,7 +130,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             
             # for event the neo "label" will change depending the nature of event (ttl, text, binary)
             # and this is transform into unicode
-            # TODO : find a way to offer all possible arrays with array_annotations
+            # all theses data are put in event array annotations
             if 'text' in d:
                 # text case
                 d['labels'] = d['text'].astype('U')
@@ -199,17 +199,30 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
         # Annotate some objects from continuous files
         self._generate_minimal_annotations()
-        '''
-            "channel_name": "CH0",
-            "description": "Headstage data channel",
-            "identifier": "genericdata.continuous",
-            "history": "File Reader -> Splitter -> Bandpass Filter -> Record Node",
-            "bit_volts": 0.050000000745058059692,
-            "units": "uV",
-            "source_processor_index": 0,
-            "recorded_processor_index": 0
-        '''
-        # TODO annotations + array_annotations depend on rawio refactoring #949
+        for block_index in range(nb_block):
+            bl_ann = self.raw_annotations['blocks'][block_index]
+            for seg_index in range(nb_segment_per_block[block_index]):
+                seg_ann = bl_ann['segments'][seg_index]
+
+                # array annotations for signal channels
+                for stream_index, stream_name in enumerate(sig_stream_names):
+                    sig_ann = seg_ann['signals'][stream_index]
+                    d = self._sig_streams[0][0][stream_index]
+                    for k in ('identifier', 'history', 'source_processor_index', 'recorded_processor_index'):
+                        if k in d['channels'][0]:
+                            values = np.array([chan_info[k] for chan_info in d['channels']])
+                            sig_ann['__array_annotations__'][k] = values
+
+                # array annotations for event channels
+                # use other possible datat in _possible_event_stream_names
+                for stream_index, stream_name in enumerate(event_stream_names):
+                    ev_ann = seg_ann['events'][stream_index]
+                    d = self._evt_streams[0][0][stream_index]
+                    for k in _possible_event_stream_names:
+                        if k in('timestamps', ):
+                            continue
+                        if k in d:
+                            ev_ann['__array_annotations__'][k] = d[k]
 
     def _segment_t_start(self, block_index, seg_index):
         return self._t_start_segments[block_index][seg_index]
@@ -263,17 +276,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         durations = None
         labels = d['labels']
         # TODO make the time slice
-        
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
-        # here we have a problem because we don't known from which channel the event is from.
-        # lets take the first but this could be wrong
-        
-        # TODO depend on rawio refactoring #949
-        event_channel_index = 0
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         d = self._evt_streams[0][0][event_channel_index]
-        # d = self._evt_streams[0][0][event_channel_index]
         event_times = event_timestamps.astype(dtype) / float(d['sample_rate'])
         return event_times
 
@@ -304,12 +310,7 @@ def explore_folder(dirname):
     Returns
     -------
     nested dictionaries containing structure and stream information:
-   
     """
-    
-    # TODO make code stronger in case of experimentX and recordingY
-    # are not consecutive numbers (one missing)
-
     nb_block = 0
     nb_segment_per_block = []
     # nested node_name / seg_index
@@ -367,7 +368,7 @@ def explore_folder(dirname):
                     # sync_timestamps = np.load(str(sync_timestamp_file), mmap_mode='r')
                     # t_start =  sync_timestamps[0]
                     
-                    # TODO gap checking
+                    # TODO for later : gap checking
                     signal_stream = d.copy()
                     signal_stream['raw_filename'] =  str(raw_filename)
                     # signal_stream['name'] = raw_filename.parents[0]
