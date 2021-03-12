@@ -3,7 +3,7 @@ This module implement the "new" binary OpenEphys format.
 In this format channels are interleaved in one file.
 
 
-See 
+See
 https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html
 
 Author: Julia Sprenger and Samuel Garcia
@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+    _spike_channel_dtype, _event_channel_dtype)
 
 
 class OpenEphysBinaryRawIO(BaseRawIO):
@@ -44,11 +44,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
     def _parse_header(self):
         all_streams, nb_block, nb_segment_per_block = explore_folder(self.dirname)
-        
+
         sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
         event_stream_names = sorted(list(all_streams[0][0]['events'].keys()))
-        
-        
+
         # first loop to reasign stream by "stream_index" instead of "stream_name"
         self._sig_streams = {}
         self._evt_streams = {}
@@ -67,7 +66,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     d['stream_name'] = stream_name
                     self._evt_streams[block_index][seg_index][i] = d
 
-        ## signals zone
+        # signals zone
         # create signals channel map: several channel per stream
         signal_channels = []
         for stream_index, stream_name in enumerate(sig_stream_names):
@@ -82,52 +81,44 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     chan_info['bit_volts'], 0., stream_id))
             signal_channels.extend(new_channels)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        
+
         signal_streams = []
         for stream_index, stream_name in enumerate(sig_stream_names):
             stream_id = str(stream_index)
             signal_streams.append((stream_name, stream_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
-        
-        # make an array global to local channel
-        #~ self._global_channel_to_local_channel = np.zeros(signal_channels.size, dtype='int64')
-        #~ for stream_index, stream_name in enumerate(sig_stream_names):
-            #~ loc_chans, = np.nonzero(signal_channels['stream_id'] == stream_index)
-            #~ self._global_channel_to_local_channel[loc_chans] = np.arange(loc_chans.size)
-        
+
         # create memmap for signals
         for block_index in range(nb_block):
             for seg_index in range(nb_segment_per_block[block_index]):
                 for stream_index, d in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(d['channels'])
+                    print(d['raw_filename'])
                     memmap_sigs = np.memmap(d['raw_filename'], d['dtype'],
                                  order='C', mode='r').reshape(-1, num_channels)
                     d['memmap'] = memmap_sigs
-        
-        ## events zone
-        
+
+        # events zone
         # channel map: one channel one stream
         event_channels = []
         for stream_ind, stream_name in enumerate(event_stream_names):
             d = self._evt_streams[0][0][stream_ind]
             event_channels.append((d['channel_name'], stream_ind, 'event'))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
-        
+
         # create memmap
         for stream_ind, stream_name in enumerate(event_stream_names):
             # inject memmap loaded into main dict structure
-            #~ print()
-            #~ print(stream_ind, stream_name)
             d = self._evt_streams[0][0][stream_ind]
 
             for name in _possible_event_stream_names:
-                if name+'_npy' in d:
-                    data = np.load(d[name+'_npy'], mmap_mode='r')
+                if name + '_npy' in d:
+                    data = np.load(d[name + '_npy'], mmap_mode='r')
                     d[name] = data
-            
+
             # check that events have timestamps
             assert 'timestamps' in d
-            
+
             # for event the neo "label" will change depending the nature of event (ttl, text, binary)
             # and this is transform into unicode
             # all theses data are put in event array annotations
@@ -146,7 +137,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         # no spike read yet
         # can be implemented on user demand
         spike_channels = np.array([], dtype=_spike_channel_dtype)
-        
+
         # loop for t_start/t_stop on segment browse all object
         self._t_start_segments = {}
         self._t_stop_segments = {}
@@ -156,7 +147,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             for seg_index in range(nb_segment_per_block[block_index]):
                 global_t_start = None
                 global_t_stop = None
-                
+
                 # loop over signals
                 for stream_index, d in self._sig_streams[block_index][seg_index].items():
                     t_start = d['t_start']
@@ -181,13 +172,13 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
                 self._t_start_segments[block_index][seg_index] = global_t_start
                 self._t_stop_segments[block_index][seg_index] = global_t_stop
-        
+
         # handle segment t_start
         # update t_start/t_stop with events
         # for block_index in range(nb_block):
         #     for seg_index in range(nb_segment_per_block[block_index]):
         #         pass
-        
+
         # main header
         self.header = {}
         self.header['nb_block'] = nb_block
@@ -219,7 +210,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     ev_ann = seg_ann['events'][stream_index]
                     d = self._evt_streams[0][0][stream_index]
                     for k in _possible_event_stream_names:
-                        if k in('timestamps', ):
+                        if k in ('timestamps', ):
                             continue
                         if k in d:
                             ev_ann['__array_annotations__'][k] = d[k]
@@ -253,7 +244,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         if channel_indexes is not None:
             sigs = sigs[:, channel_indexes]
         return sigs
-    
+
     def _spike_count(self, block_index, seg_index, unit_index):
         pass
 
@@ -290,10 +281,11 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 _possible_event_stream_names = ('timestamps', 'channels', 'text',
         'full_word', 'channel_states', 'data_array', 'metadata')
 
+
 def explore_folder(dirname):
     """
     Exploring the OpenEphys folder structure and structure.oebin
-    
+
     Returns nested dictionary structure:
     [block_index][seg_index][stream_type][stream_information]
     where
@@ -302,11 +294,11 @@ def explore_folder(dirname):
     - segment_index is the neo Segment index
     - stream_type can be 'continuous'/'events'/'spikes'
     - stream_information is a dictionionary containing e.g. the sampling rate
-    
+
     Parmeters
     ---------
     dirname (str): Root folder of the dataset
-    
+
     Returns
     -------
     nested dictionaries containing structure and stream information:
@@ -320,14 +312,13 @@ def explore_folder(dirname):
             if not file == 'structure.oebin':
                 continue
             root = Path(root)
-            
+
             node_name = root.parents[1].stem
             if not node_name.startswith('Record'):
                 # before version 5.x.x there was not multi Node recording
                 # so no node_name
                 node_name = ''
 
-            
             block_index = int(root.parents[0].stem.replace('experiment', '')) - 1
             if block_index not in all_streams:
                 all_streams[block_index] = {}
@@ -335,17 +326,16 @@ def explore_folder(dirname):
                     nb_block = block_index + 1
                     nb_segment_per_block.append(0)
 
-            
             seg_index = int(root.stem.replace('recording', '')) - 1
             if seg_index not in all_streams[block_index]:
                 all_streams[block_index][seg_index] = {
-                            'continuous':{},
-                            'events':{},
-                            'spikes':{},
+                    'continuous': {},
+                    'events': {},
+                    'spikes': {},
                 }
                 if seg_index >= nb_segment_per_block[block_index]:
                     nb_segment_per_block[block_index] = seg_index + 1
-            
+
             # metadata
             with open(root / 'structure.oebin', encoding='utf8', mode='r') as f:
                 structure = json.load(f)
@@ -357,40 +347,39 @@ def explore_folder(dirname):
                     stream_name = node_name + '#' + d['folder_name']
 
                     raw_filename = root / 'continuous' / d['folder_name'] / 'continuous.dat'
-                    
+
                     timestamp_file = root / 'continuous' / d['folder_name'] / 'timestamps.npy'
                     timestamps = np.load(str(timestamp_file), mmap_mode='r')
-                    timestamp0 =  timestamps[0]
+                    timestamp0 = timestamps[0]
                     t_start = timestamp0 / d['sample_rate']
 
                     # sync_timestamp is -1 for all elements in our dataset
                     # sync_timestamp_file = root / 'continuous' / d['folder_name'] / 'synchronized_timestamps.npy'
                     # sync_timestamps = np.load(str(sync_timestamp_file), mmap_mode='r')
                     # t_start =  sync_timestamps[0]
-                    
+
                     # TODO for later : gap checking
                     signal_stream = d.copy()
-                    signal_stream['raw_filename'] =  str(raw_filename)
+                    signal_stream['raw_filename'] = str(raw_filename)
                     # signal_stream['name'] = raw_filename.parents[0]
                     signal_stream['dtype'] = 'int16'
                     signal_stream['timestamp0'] = timestamp0
                     signal_stream['t_start'] = t_start
 
                     all_streams[block_index][seg_index]['continuous'][stream_name] = signal_stream
-            
+
             if (root / 'events').exists() and len(structure['events']) > 0:
                 for d in structure['events']:
                     stream_name = node_name + '#' + d['folder_name']
-                    
+
                     event_stream = d.copy()
                     for name in _possible_event_stream_names:
                         npz_filename = root / 'events' / d['folder_name'] / f'{name}.npy'
                         if npz_filename.is_file():
                             event_stream[f'{name}_npy'] = str(npz_filename)
-                    
+
                     all_streams[block_index][seg_index]['events'][stream_name] = event_stream
 
     # TODO for later: check stream / channel consistency across segment
 
     return all_streams, nb_block, nb_segment_per_block
-
