@@ -33,6 +33,10 @@ class BaseProxy(BaseNeo):
             # used to be str so raw bytes
             annotations['file_origin'] = str(self._rawio.source_name())
 
+        # clean annotations that are not 1D
+        # TODO change array_annotations handling to avoid that
+        array_annotations = {k: v for k, v in array_annotations.items() if v.ndim==1}
+
         # this mock the array annotaions to avoid inherits DataObject
         self.array_annotations = ArrayDict(self.shape[-1])
         if array_annotations is not None:

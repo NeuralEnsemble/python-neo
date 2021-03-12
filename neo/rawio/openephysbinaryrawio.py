@@ -235,7 +235,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         sigs = self._sig_streams[block_index][seg_index][stream_index]['memmap']
         return sigs.shape[0]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         t_start = self._sig_streams[block_index][seg_index][stream_index]['t_start']
         return t_start
 
