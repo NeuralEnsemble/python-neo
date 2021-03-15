@@ -147,6 +147,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
 
         self.assertEqual(rawio._nb_segment, 2)
         self.assertEqual(len(rawio.ncs_filenames), 1)
+        self.assertEqual(len(rawio.nev_filenames), 0)
         sigHdrs = rawio.header['signal_channels']
         self.assertEqual(sigHdrs.size, 1)
         self.assertEqual(sigHdrs[0][0], 'CSC1')
@@ -161,6 +162,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
 
         self.assertEqual(rawio._nb_segment, 1)
         self.assertEqual(len(rawio.ncs_filenames), 0)
+        self.assertEqual(len(rawio.nev_filenames), 0)
         seHdrs = rawio.header['unit_channels']
         self.assertEqual(len(seHdrs), 1)
         self.assertEqual(seHdrs[0][0], 'chSTet3a#8#0')
