@@ -134,6 +134,10 @@ class AxonaRawIO(BaseRawIO):
         self.sr = sr
         self.num_channels = len(self.get_active_tetrode()) * 4
 
+        # How many 432 byte packets does this data contain (<=> num. samples / 3)?
+        self.num_total_packets = int(os.path.getsize(self.bin_file)/self.bytes_packet)
+        self.num_total_samples = self.num_total_packets * 3
+
     def _source_name(self):
         # this function is used by __repr__
         # for general cases self.filename is good
@@ -147,10 +151,7 @@ class AxonaRawIO(BaseRawIO):
         # informations needed for further fast acces
         # at any place in the file
         # In short _parse_header can be slow but
-        # _get_analogsignal_chunk need to be as fast as possible        
-
-        # How many 432 byte packets does this data contain (<=> num. samples / 3)?
-        self.num_packets = int(os.path.getsize(self.bin_file)/self.bytes_packet)
+        # _get_analogsignal_chunk need to be as fast as possible
 
         # Create np.memmap to .bin file
         self._raw_signals = np.memmap(self.bin_file, dtype='int16', mode='r', 
@@ -159,13 +160,8 @@ class AxonaRawIO(BaseRawIO):
         # fille into header dict
         # This is mandatory!!!!!
 
-        # create fake signals stream information
-        signal_streams = []
-        for c in range(1):
-            name = f'stream {c}'
-            stream_id = c
-            signal_streams.append((name, stream_id))
-        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # create signals stream information (we always expect a single stream)
+        signal_streams = np.array([('stream 0', 0)], dtype=_signal_stream_dtype)
 
         self.header = {}
         self.header['nb_block'] = 1
@@ -226,7 +222,7 @@ class AxonaRawIO(BaseRawIO):
         Each byte packet (432 bytes) has a header (32 bytes), a footer (16 bytes)
         and three samples of 2 bytes each for 64 channels (384 bytes), which are 
         jumbled up in a strange order. Each channel is remapped to a certain position
-        (see get_remap_chan), and a channel's samples are allcoated as follows
+        (see get_channel_offset), and a channel's samples are allcoated as follows
         (example for channel 7):
         
         sample 1: 32b (head) + 2*38b (remappedID) and 2*38b + 1b (second byte of sample)
@@ -262,7 +258,7 @@ class AxonaRawIO(BaseRawIO):
 
         for i, ch_idx in enumerate(channel_indexes):
 
-            chan_offset = self.get_remap_chan(ch_idx)
+            chan_offset = self.get_channel_offset(ch_idx)
             raw_signals[i,:] = self._raw_signals[sig_ids + chan_offset]
 
         return raw_signals
@@ -382,87 +378,51 @@ class AxonaRawIO(BaseRawIO):
         return durations
 
     # ------------------ HELPER METHODS --------------------
-    # These are credited to Geoff Barrett from the Hussaini lab:
+    # These are credited largely to Geoff Barrett from the Hussaini lab:
     # https://github.com/GeoffBarrett/BinConverter
-    # Possibly modified by Steffen B
+    # Adapted or modified by Steffen Buergers
+    
     def get_active_tetrode(self):
         """ 
-        In the .set files it will say collectMask_X Y for each tetrode number to tell 
-        you if it is active or not. T1 = ch1-ch4, T2 = ch5-ch8, etc.
+        Returns the ID numbers of the active tetrodes (those with recorded data)
+        as a list. E.g.: [1,2,3,4] for a recording with 4 tetrodes (16 channels).
         """
-        active_tetrode = []
-        active_tetrode_str = 'collectMask_'
+        active_tetrodes = []
 
         with open(self.set_file, encoding=self.set_file_encoding) as f:
             for line in f:
 
-                # collectMask_X Y, where x is the tetrode number, and Y is eitehr on or off (1 or 0)
-                if active_tetrode_str in line:
+                # The pattern to look for is collectMask_X Y, 
+                # where X is the tetrode number, and Y is true or false (1, 0)
+                if 'collectMask_' in line:
                     tetrode_str, tetrode_status = line.split(' ')
                     if int(tetrode_status) == 1:
-                        # then the tetrode is saved
-                        tetrode_str.find('_')
-                        tet_number = int(tetrode_str[tetrode_str.find('_') + 1:])
-                        active_tetrode.append(tet_number)
+                        tetrode_id = int(re.findall(r'\d+', tetrode_str)[0])
+                        active_tetrodes.append(tetrode_id)
 
-        return active_tetrode
+        return active_tetrodes
 
     def get_channel_from_tetrode(self, tetrode):
         """ 
         This function will take the tetrode number and return the Axona channel numbers
-        i.e. Tetrode 1 = Ch1 -Ch4, Tetrode 2 = Ch5-Ch8, etc
+        i.e. Tetrode 1 = Ch1-Ch4, Tetrode 2 = Ch5-Ch8, etc.
         """
-        tetrode = int(tetrode)  # just in case the user gave a string as the tetrode
+        return np.arange(1, 5) + 4 * (int(tetrode) - 1)
 
-        return np.arange(1, 5) + 4 * (tetrode - 1)
-
-    def get_sample_indices(self, channel_number, samples):
-        remap_channel = self.get_remap_chan(channel_number)
-
-        indices_scalar = np.multiply(np.arange(samples), 64)
-        sample_indices = indices_scalar + np.multiply(np.ones(samples), remap_channel)
-
-        # return np.array([remap_channel, 64 + remap_channel, 64*2 + remap_channel])
-        return (indices_scalar + np.multiply(np.ones(samples), remap_channel)).astype(int)
-
-    def get_remap_chan(self, chan_num):
+    def get_channel_offset(self, chan_id):
         """ 
-        There is re-mapping, thus to get the correct channel data, you need to 
-        incorporate re-mapping input will be a channel from 1 to 64, and will return 
-        the remapped channel.
+        In the .bin file, channels are arranged in a strange order. This method takes
+        a channel index as input and returns the actual offset for the channel in the
+        memory map (self._raw_signals).
         """
-
-        remap_channels = np.array([32, 33, 34, 35, 36, 37, 38, 39, 0, 1, 2, 3, 4, 5,
-                                6, 7, 40, 41, 42, 43, 44, 45, 46, 47, 8, 9, 10, 11,
-                                12, 13, 14, 15, 48, 49, 50, 51, 52, 53, 54, 55, 16, 17,
-                                18, 19, 20, 21, 22, 23, 56, 57, 58, 59, 60, 61, 62, 63,
-                                24, 25, 26, 27, 28, 29, 30, 31])
-
-        return remap_channels[chan_num - 1]
-
-    def samples_to_array(self, A, channels=[]):
-        """ 
-        This will take data matrix A, and convert it into a numpy array, 
-        there are three samples of 64 channels in this matrix, however their 
-        channels do need to be re-mapped
-        """
-
-        if channels == []:
-            channels = np.arange(64) + 1
-        else:
-            channels = np.asarray(channels)
-
-        A = np.asarray(A)
-
-        sample_num = int(len(A) / 64)  # get the sample numbers
-
-        # creating a 64x3 array of zeros (64 channels, 3 samples)
-        sample_array = np.zeros((len(channels), sample_num))  
-
-        for i, channel in enumerate(channels):
-            sample_array[i, :] = A[self.get_sample_indices(channel, sample_num)]
-
-        return sample_array
+        channnel_memory_offset = np.array(
+            [32, 33, 34, 35, 36, 37, 38, 39, 0, 1, 2, 3, 4, 5,
+             6, 7, 40, 41, 42, 43, 44, 45, 46, 47, 8, 9, 10, 11,
+             12, 13, 14, 15, 48, 49, 50, 51, 52, 53, 54, 55, 16, 17,
+             18, 19, 20, 21, 22, 23, 56, 57, 58, 59, 60, 61, 62, 63,
+             24, 25, 26, 27, 28, 29, 30, 31]
+        )
+        return channnel_memory_offset[chan_id - 1]
 
     def read_datetime(self):
         """ 
@@ -503,7 +463,7 @@ class AxonaRawIO(BaseRawIO):
         unit (uV), 
         gain,
         offset, 
-        group id
+        stream id
         """
         active_tetrode_set = self.get_active_tetrode()
         num_active_tetrode = len(active_tetrode_set)
