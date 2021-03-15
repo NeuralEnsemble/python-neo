@@ -36,7 +36,7 @@ class BaseProxy(BaseNeo):
         if array_annotations is None:
             array_annotations = {}
         for k, v in array_annotations.items():
-            array_annotations[k] = np.asarray(k)
+            array_annotations[k] = np.asarray(v)
 
         # clean array annotations that are not 1D
         # TODO remove this once multi-dimensional array_annotations are possible
