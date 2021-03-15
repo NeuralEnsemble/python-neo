@@ -60,8 +60,8 @@ Author: Steffen Buergers
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype, _common_sig_characteristics)
 import numpy as np
 import os
 import re
@@ -169,11 +169,21 @@ class AxonaRawIO(BaseRawIO):
 
         # fille into header dict
         # This is mandatory!!!!!
+
+        # create fake signals stream information
+        signal_streams = []
+        for c in range(1):
+            name = f'stream {c}'
+            stream_id = c
+            signal_streams.append((name, stream_id))
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = self.get_signal_chan_header()
-        self.header['unit_channels'] = self.get_unit_chan_header()
+        self.header['spike_channels'] = self.get_spike_chan_header()
         self.header['event_channels'] = self.get_event_chan_header()
 
         # insert some annotation at some place
@@ -216,7 +226,8 @@ class AxonaRawIO(BaseRawIO):
         # this is not always the case
         return self._segment_t_start(block_index, seg_index)
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         """
         Return raw (continuous) signals as 2d numpy array (chan x time).
         Note that block_index and seg_index are always 1 (regardless of input).
@@ -232,6 +243,8 @@ class AxonaRawIO(BaseRawIO):
         sample 1: 32b (head) + 2*38b (remappedID) and 2*38b + 1b (second byte of sample)
         sample 2: 32b (head) + 128 (all channels 1st entry) + 2*38b (remappedID) and ...
         sample 3: 32b (head) + 128*2 (all channels 1st and 2nd entry) + ...
+
+        NOTE: I believe there is always a single stream (all channels have the same SR)
         """
         
         if channel_indexes is None:
@@ -508,14 +521,13 @@ class AxonaRawIO(BaseRawIO):
                 ch_name = '{}{}'.format(itetr, letters[ielec])
                 chan_id = cntr + 1
                 gain = gain_list[cntr]
-                group_id = 0
-
+                stream_id = 0
                 sig_channels.append((ch_name, chan_id, self.sr, dtype, 
-                    units, gain, offset, group_id))
+                    units, gain, offset, stream_id))
                 
         return np.array(sig_channels, dtype=_signal_channel_dtype) 
 
-    def get_unit_chan_header(self):
+    def get_spike_chan_header(self):
         """
         TODO 
         placeholder function, filled with example code
@@ -538,7 +550,7 @@ class AxonaRawIO(BaseRawIO):
             unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                   wf_offset, wf_left_sweep, wf_sampling_rate))
         
-        return  np.array(unit_channels, dtype=_unit_channel_dtype)
+        return  np.array(unit_channels, dtype=_spike_channel_dtype)
 
     def get_event_chan_header(self):
         """
