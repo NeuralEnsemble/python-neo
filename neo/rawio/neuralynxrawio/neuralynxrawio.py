@@ -52,12 +52,16 @@ class NeuralynxRawIO(BaseRawIO):
 
     def __init__(self, dirname='', filename='', keep_original_times=False, **kargs):
         """
+        Initialize io for either a directory of Ncs files or a single Ncs file.
+
         Parameters
         ----------
         dirname: str
-            name of directory containing all files for dataset
+            name of directory containing all files for dataset. If provided, filename is
+            ignored.
         filename: str
-            name of single ncs, nse, nev, or ntt file to include in dataset
+            name of a single ncs, nse, nev, or ntt file to include in dataset. If used,
+            dirname must not be provided.
         keep_original_times:
             if True, keep original start time as in files,
             otherwise set 0 of time to first time in dataset
