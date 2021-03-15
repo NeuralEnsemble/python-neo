@@ -155,17 +155,6 @@ class AxonaRawIO(BaseRawIO):
         # Create np.memmap to .bin file
         self._raw_signals = np.memmap(self.bin_file, dtype='int16', mode='r', 
                                       offset=self.global_header_size)
-        
-        # Create base index vector for _raw_signals
-        sample1 = np.linspace(self.bytes_head//2, self.num_packets*(self.bytes_packet//2), 
-                              self.num_packets, dtype=int)
-        sample2 = sample1 + 64
-        sample3 = sample2 + 64
-
-        self.sig_ids = np.empty((sample1.size+sample2.size+sample3.size,), dtype=sample1.dtype)
-        self.sig_ids[0::3] = sample1
-        self.sig_ids[1::3] = sample2
-        self.sig_ids[2::3] = sample3
 
         # fille into header dict
         # This is mandatory!!!!!
@@ -246,13 +235,27 @@ class AxonaRawIO(BaseRawIO):
 
         NOTE: I believe there is always a single stream (all channels have the same SR)
         """
-        
+
         if channel_indexes is None:
             channel_indexes = [i+1 for i in range(self.num_channels)]
 
-        # Each packet has three samples for each channel, so for user_offset
-        # we move i_start//3 packets + whatever remainder is left * 64
         num_samples = (i_stop-i_start)
+
+        # Create base index vector for _raw_signals for time period of interest
+        num_packets_oi = (num_samples+2) // 3
+        offset = i_start//3 * (self.bytes_packet//2) 
+        rem = (i_start % 3)
+
+        sample1 = np.arange(num_packets_oi+1, dtype=np.uint32)*(self.bytes_packet//2) + \
+                    self.bytes_head//2 + offset
+        sample2 = sample1 + 64
+        sample3 = sample2 + 64
+
+        sig_ids = np.empty((sample1.size+sample2.size+sample3.size,), dtype=sample1.dtype)
+        sig_ids[0::3] = sample1
+        sig_ids[1::3] = sample2
+        sig_ids[2::3] = sample3
+        sig_ids = sig_ids[rem:(rem+num_samples)]
 
         # Read one channel at a time
         raw_signals = np.ndarray(shape=(len(channel_indexes), num_samples))
@@ -260,8 +263,8 @@ class AxonaRawIO(BaseRawIO):
         for i, ch_idx in enumerate(channel_indexes):
 
             chan_offset = self.get_remap_chan(ch_idx)
-            raw_signals[i,:] = self._raw_signals[self.sig_ids[i_start:i_stop] + chan_offset]
-        
+            raw_signals[i,:] = self._raw_signals[sig_ids + chan_offset]
+
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
