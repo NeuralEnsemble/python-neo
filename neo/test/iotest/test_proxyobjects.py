@@ -29,8 +29,9 @@ class BaseProxyTest(unittest.TestCase):
 class TestAnalogSignalProxy(BaseProxyTest):
 
     def test_AnalogSignalProxy(self):
-        proxy_anasig = AnalogSignalProxy(rawio=self.reader, global_channel_indexes=None,
-                        block_index=0, seg_index=0,)
+        proxy_anasig = AnalogSignalProxy(rawio=self.reader,
+                    stream_index=0, inner_stream_channels=None,
+                    block_index=0, seg_index=0,)
 
         assert proxy_anasig.sampling_rate == 10 * pq.kHz
         assert proxy_anasig.t_start == 0 * pq.s
@@ -47,14 +48,14 @@ class TestAnalogSignalProxy(BaseProxyTest):
         anasig = proxy_anasig.load(time_slice=(2. * pq.s, 5 * pq.s))
         assert anasig.t_start == 2. * pq.s
         assert anasig.duration == 3. * pq.s
-        assert anasig.shape == (30000, 16)
+        assert anasig.shape == (30000, 8)
         assert_same_attributes(proxy_anasig.time_slice(2. * pq.s, 5 * pq.s), anasig)
 
         # ceil next sample when slicing
         anasig = proxy_anasig.load(time_slice=(1.99999 * pq.s, 5.000001 * pq.s))
         assert anasig.t_start == 2. * pq.s
         assert anasig.duration == 3. * pq.s
-        assert anasig.shape == (30000, 16)
+        assert anasig.shape == (30000, 8)
 
         # buggy time slice
         with self.assertRaises(AssertionError):
@@ -63,11 +64,11 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert proxy_anasig.t_stop == 10 * pq.s
 
         # select channels
-        anasig = proxy_anasig.load(channel_indexes=[3, 4, 9])
+        anasig = proxy_anasig.load(channel_indexes=[3, 4, 5])
         assert anasig.shape[1] == 3
 
         # select channels and slice times
-        anasig = proxy_anasig.load(time_slice=(2. * pq.s, 5 * pq.s), channel_indexes=[3, 4, 9])
+        anasig = proxy_anasig.load(time_slice=(2. * pq.s, 5 * pq.s), channel_indexes=[3, 4, 5])
         assert anasig.shape == (30000, 3)
 
         # magnitude mode rescaled
@@ -84,27 +85,31 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert_arrays_almost_equal(anasig_float, anasig_int.rescale('uV'), 1e-9)
 
         # test array_annotations
-        assert 'info' in proxy_anasig.array_annotations
-        assert proxy_anasig.array_annotations['info'].size == 16
-        assert 'info' in anasig_float.array_annotations
-        assert anasig_float.array_annotations['info'].size == 16
+        assert '__array_annotations__' not in proxy_anasig.annotations
+        assert 'impedance' in proxy_anasig.array_annotations
+        assert proxy_anasig.array_annotations['impedance'].size == 8
+        assert 'impedance' in anasig_float.array_annotations
+        assert anasig_float.array_annotations['impedance'].size == 8
 
     def test_global_local_channel_indexes(self):
         proxy_anasig = AnalogSignalProxy(rawio=self.reader,
-                    global_channel_indexes=slice(0, 10, 2), block_index=0, seg_index=0)
+                    stream_index=0, inner_stream_channels=slice(0, 8, 2),
+                    block_index=0, seg_index=0)
 
-        assert proxy_anasig.shape == (100000, 5)
-        assert '(ch0,ch2,ch4,ch6,ch8)' in proxy_anasig.name
+        assert proxy_anasig.shape == (100000, 4)
+        assert np.array_equal(proxy_anasig.array_annotations['channel_names'],
+                        ['ch0', 'ch2', 'ch4', 'ch6'])
 
         # should be channel ch0 and ch6
         anasig = proxy_anasig.load(channel_indexes=[0, 3])
         assert anasig.shape == (100000, 2)
-        assert '(ch0,ch6)' in anasig.name
+        assert np.array_equal(anasig.array_annotations['channel_names'],
+                        ['ch0', 'ch6'])
 
 
 class TestSpikeTrainProxy(BaseProxyTest):
     def test_SpikeTrainProxy(self):
-        proxy_sptr = SpikeTrainProxy(rawio=self.reader, unit_index=0,
+        proxy_sptr = SpikeTrainProxy(rawio=self.reader, spike_channel_index=0,
                         block_index=0, seg_index=0)
 
         assert proxy_sptr.name == 'unit0'
@@ -160,6 +165,10 @@ class TestSpikeTrainProxy(BaseProxyTest):
         sptr = proxy_sptr.load(load_waveforms=True, time_slice=(250 * pq.ms, 500 * pq.ms))
         assert sptr.waveforms.shape == (6, 1, 50)
 
+        # test array_annotations
+        assert '__array_annotations__' not in proxy_sptr.annotations
+        assert 'amplitudes' in proxy_sptr.array_annotations
+
 
 class TestEventProxy(BaseProxyTest):
     def test_EventProxy(self):
@@ -185,6 +194,11 @@ class TestEventProxy(BaseProxyTest):
         with self.assertRaises(AssertionError):
             event = proxy_event.load(time_slice=(2 * pq.s, 15 * pq.s))
         event = proxy_event.load(time_slice=(2 * pq.s, 15 * pq.s), strict_slicing=False)
+
+        # test annotations/array_annotations
+        assert '__array_annotations__' not in proxy_event.annotations
+        assert 'nickname' in proxy_event.annotations
+        assert 'button' in proxy_event.array_annotations
 
 
 class TestEpochProxy(BaseProxyTest):
@@ -213,17 +227,21 @@ class TestEpochProxy(BaseProxyTest):
             epoch = proxy_epoch.load(time_slice=(2 * pq.s, 15 * pq.s))
         epoch = proxy_epoch.load(time_slice=(2 * pq.s, 15 * pq.s), strict_slicing=False)
 
+        # test annotations/array_annotations
+        assert '__array_annotations__' not in proxy_epoch.annotations
+        assert 'nickname' in proxy_epoch.annotations
+
 
 class TestSegmentWithProxy(BaseProxyTest):
     def test_segment_with_proxy(self):
         seg = Segment()
 
         proxy_anasig = AnalogSignalProxy(rawio=self.reader,
-                        global_channel_indexes=None,
+                        stream_index=0, inner_stream_channels=None,
                         block_index=0, seg_index=0,)
         seg.analogsignals.append(proxy_anasig)
 
-        proxy_sptr = SpikeTrainProxy(rawio=self.reader, unit_index=0,
+        proxy_sptr = SpikeTrainProxy(rawio=self.reader, spike_channel_index=0,
                         block_index=0, seg_index=0)
         seg.spiketrains.append(proxy_sptr)
 

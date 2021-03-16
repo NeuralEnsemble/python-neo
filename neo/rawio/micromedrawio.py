@@ -9,8 +9,8 @@ Author: Samuel Garcia
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 
@@ -83,7 +83,7 @@ class MicromedRawIO(BaseRawIO):
 
             units_code = {-1: 'nV', 0: 'uV', 1: 'mV', 2: 1, 100: 'percent',
                           101: 'dimensionless', 102: 'dimensionless'}
-            sig_channels = []
+            signal_channels = []
             sig_grounds = []
             for c in range(Num_Chan):
                 zname2, pos, length = zones['LABCOD']
@@ -105,14 +105,17 @@ class MicromedRawIO(BaseRawIO):
                 f.seek(8, 1)
                 sampling_rate, = f.read_f('H')
                 sampling_rate *= Rate_Min
-                chan_id = c
-                group_id = 0
-                sig_channels.append((chan_name, chan_id, sampling_rate, sig_dtype,
-                                     units, gain, offset, group_id))
+                chan_id = str(c)
+                stream_id = '0'
+                signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype,
+                                     units, gain, offset, stream_id))
 
-            sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-            assert np.unique(sig_channels['sampling_rate']).size == 1
-            self._sampling_rate = float(np.unique(sig_channels['sampling_rate'])[0])
+            signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+
+            signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
+
+            assert np.unique(signal_channels['sampling_rate']).size == 1
+            self._sampling_rate = float(np.unique(signal_channels['sampling_rate'])[0])
 
             # Event channels
             event_channels = []
@@ -142,15 +145,16 @@ class MicromedRawIO(BaseRawIO):
                 self._raw_events.append(rawevent)
 
             # No spikes
-            unit_channels = []
-            unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+            spike_channels = []
+            spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
             # fille into header dict
             self.header = {}
             self.header['nb_block'] = 1
             self.header['nb_segment'] = [1]
-            self.header['signal_channels'] = sig_channels
-            self.header['unit_channels'] = unit_channels
+            self.header['signal_streams'] = signal_streams
+            self.header['signal_channels'] = signal_channels
+            self.header['spike_channels'] = spike_channels
             self.header['event_channels'] = event_channels
 
             # insert some annotation at some place
@@ -164,11 +168,8 @@ class MicromedRawIO(BaseRawIO):
                 d['surname'] = surname
                 d['header_version'] = header_version
 
-            for c in range(sig_channels.size):
-                anasig_an = seg_annotations['signals'][c]
-                anasig_an['ground'] = sig_grounds[c]
-                channel_an = self.raw_annotations['signal_channels'][c]
-                channel_an['ground'] = sig_grounds[c]
+            sig_annotations = self.raw_annotations['blocks'][0]['segments'][0]['signals'][0]
+            sig_annotations['__array_annotations__']['ground'] = np.array(sig_grounds)
 
     def _source_name(self):
         return self.filename
@@ -180,13 +181,16 @@ class MicromedRawIO(BaseRawIO):
         t_stop = self._raw_signals.shape[0] / self._sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return self._raw_signals.shape[0]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(channel_indexes)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
@@ -225,10 +229,10 @@ class MicromedRawIO(BaseRawIO):
 
         return timestamp, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
-        durations = raw_duration.astype(dtype) // self._sampling_rate
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
+        durations = raw_duration.astype(dtype) / self._sampling_rate
         return durations

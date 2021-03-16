@@ -8,10 +8,10 @@ Classes
 BaseRawIO
 abstract class which should be overridden to write a RawIO.
 
-RawIO is a new API in neo that is supposed to acces as fast as possible
-raw data. All IO with theses characteristics should/could be rewritten:
-  * internally use of memmap (or hdf5)
-  * reading header is quite cheap (not read all the file)
+RawIO is a low level API in neo that provides fast  access to the raw data.
+When possible, all IOs should/implement this level following these guidelines:
+  * internal use of memmap (or hdf5)
+  * fast reading of the header (do not read the complete file)
   * neo tree object is symetric and logical: same channel/units/event
     along all block and segments.
 
@@ -21,25 +21,27 @@ So this handles **only** one simplified but very frequent case of dataset:
     * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
     * AnalogSignal have all the same sampling_rate acroos all Segment
     * t_start/t_stop are the same for many object (SpikeTrain, Event) inside a Segment
-    * AnalogSignal should all have the same sampling_rate otherwise the won't be read
-      a the same time. So signal_group_mode=='split-all' in BaseFromRaw
+
+signal channels  are handled by group of  "stream".
+one stream will at neo.io level one AnalogSignal with multi-channel.
 
 
-A helper class `neo.io.basefromrawio.BaseFromRaw` should transform a RawIO to
-neo legacy IO from free.
+A helper class `neo.io.basefromrawio.BaseFromRaw` transform a RawIO to
+neo legacy IO. In short all "neo.rawio" classes are also "neo.io"
+with lazy reading capability.
+
 
 With this API the IO have an attributes `header` with necessary keys.
+This  `header` attribute is done in `_parse_header(...)` method.
 See ExampleRawIO as example.
 
 
 BaseRawIO implement a possible presistent cache system that can be used
 by some IOs to avoid very long parse_header(). The idea is that some variable
-or vector can be store somewhere (near the fiel, /tmp, any path)
+or vector can be store somewhere (near the file, /tmp, any path)
 
 
 """
-
-# from __future__ import unicode_literals, print_function, division, absolute_import
 
 import logging
 import numpy as np
@@ -59,20 +61,27 @@ possible_raw_modes = ['one-file', 'multi-file', 'one-dir', ]  # 'multi-dir', 'ur
 
 error_header = 'Header is not read yet, do parse_header() first'
 
+_signal_stream_dtype = [
+    ('name', 'U64'),  # not necessary unique
+    ('id', 'U64'),  # must be unique
+]
+
 _signal_channel_dtype = [
-    ('name', 'U64'),
-    ('id', 'int64'),
+    ('name', 'U64'),  # not necessarily unique
+    ('id', 'U64'),  # must be unique
     ('sampling_rate', 'float64'),
     ('dtype', 'U16'),
     ('units', 'U64'),
     ('gain', 'float64'),
     ('offset', 'float64'),
-    ('group_id', 'int64'),
+    ('stream_id', 'U64'),
 ]
+# TODO for later: add t_start and length in _signal_channel_dtype
+# this would simplify all t_start/t_stop stuff for each RawIO class
 
-_common_sig_characteristics = ['sampling_rate', 'dtype', 'group_id']
+_common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id']
 
-_unit_channel_dtype = [
+_spike_channel_dtype = [
     ('name', 'U64'),
     ('id', 'U64'),
     # for waveform
@@ -83,10 +92,12 @@ _unit_channel_dtype = [
     ('wf_sampling_rate', 'float64'),
 ]
 
+# in rawio event and epoch are handled the same way
+# except, that duration is `None` for events
 _event_channel_dtype = [
     ('name', 'U64'),
     ('id', 'U64'),
-    ('type', 'S5'),  # epoch ot event
+    ('type', 'S5'),  # epoch or event
 ]
 
 
@@ -139,15 +150,16 @@ class BaseRawIO:
         This must create
         self.header['nb_block']
         self.header['nb_segment']
+        self.header['signal_streams']
         self.header['signal_channels']
-        self.header['units_channels']
+        self.header['spike_channels']
         self.header['event_channels']
 
 
 
         """
         self._parse_header()
-        self._group_signal_channel_characteristics()
+        self._check_stream_signal_channel_characteristics()
 
     def source_name(self):
         """Return fancy name of file source"""
@@ -161,117 +173,136 @@ class BaseRawIO:
             nb_seg = [self.segment_count(i) for i in range(nb_block)]
             txt += 'nb_segment:  {}\n'.format(nb_seg)
 
-            for k in ('signal_channels', 'unit_channels', 'event_channels'):
+            # signal streams
+            v = [s['name'] + f' (chans: {self.signal_channels_count(i)})'
+                for i, s in enumerate(self.header['signal_streams'])]
+            v = pprint_vector(v)
+            txt += f'signal_streams: {v}\n'
+
+            for k in ('signal_channels', 'spike_channels', 'event_channels'):
                 ch = self.header[k]
-                if len(ch) > 8:
-                    chantxt = "[{} ... {}]".format(', '.join(e for e in ch['name'][:4]),
-                                                   ' '.join(e for e in ch['name'][-4:]))
-                else:
-                    chantxt = "[{}]".format(', '.join(e for e in ch['name']))
-                txt += '{}: {}\n'.format(k, chantxt)
+                v = pprint_vector(self.header[k]['name'])
+                txt += f'{k}: {v}\n'
 
         return txt
 
     def _generate_minimal_annotations(self):
         """
-        Helper function that generate a nested dict
-        of all annotations.
-        must be called when these are Ok:
+        Helper function that generate a nested dict for annotations.
+
+        Must be called when these are Ok after self.header is done
+        And so when theses function are ready:
           * block_count()
           * segment_count()
+          * signal_streams_count()
           * signal_channels_count()
-          * unit_channels_count()
+          * spike_channels_count()
           * event_channels_count()
 
-        Usage:
-        raw_annotations['blocks'][block_index] = { 'nickname' : 'super block', 'segments' : ...}
-        raw_annotations['blocks'][block_index] = { 'nickname' : 'super block', 'segments' : ...}
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][channel_index] = {'nickname': 'super channel'}
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index] = {'nickname': 'super neuron'}
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][ev_chan] = {'nickname': 'super trigger'}
+        There are several sources and kinds of annotations that will
+        be forwarded to the neo.io level and used to enrich neo objects:
+            * annotations of objects common across segments
+                * signal_streams > neo.AnalogSignal annotations
+                * signal_channels > neo.AnalogSignal array_annotations split by stream
+                * spike_channels > neo.SpikeTrain
+                * event_channels > neo.Event and neo.Epoch
+            * annotations that depend of the block_id/segment_id of the object:
+              * nested in raw_annotations['blocks'][block_index]['segments'][seg_index]['signals']
+
+        Usage after a call to this function we can do this to populate more annotations:
+
+        raw_annotations['blocks'][block_index][ 'nickname'] = 'super block'
+        raw_annotations['blocks'][block_index]
+                        ['segments']['important_key'] = 'important value'
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['signals']['nickname'] = 'super signals stream'
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['signals']['__array_annotations__']
+                        ['channels_quality'] = ['bad', 'good', 'medium', 'good']
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['spikes'][spike_chan]['nickname'] =  'super neuron'
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['spikes'][spike_chan]
+                        ['__array_annotations__']['spike_amplitudes'] = [-1.2, -10., ...]
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['events'][ev_chan]['nickname'] = 'super trigger'
+        raw_annotations['blocks'][block_index]
+                        ['segments'][seg_index]
+                        ['events'][ev_chan]
+                        Z['__array_annotations__']['additional_label'] = ['A', 'B', 'A', 'C', ...]
+
 
         Theses annotations will be used at the neo.io API directly in objects.
 
         Standard annotation like name/id/file_origin are already generated here.
         """
+        signal_streams = self.header['signal_streams']
         signal_channels = self.header['signal_channels']
-        unit_channels = self.header['unit_channels']
+        spike_channels = self.header['spike_channels']
         event_channels = self.header['event_channels']
 
-        a = {'blocks': [], 'signal_channels': [], 'unit_channels': [], 'event_channels': []}
-        for block_index in range(self.block_count()):
-            d = {'segments': []}
-            d['file_origin'] = self.source_name()
-            a['blocks'].append(d)
-            for seg_index in range(self.segment_count(block_index)):
-                d = {'signals': [], 'units': [], 'events': []}
-                d['file_origin'] = self.source_name()
-                a['blocks'][block_index]['segments'].append(d)
-
-                for c in range(signal_channels.size):
-                    # use for AnalogSignal.annotations
-                    d = {}
-                    d['name'] = signal_channels['name'][c]
-                    d['channel_id'] = signal_channels['id'][c]
-                    a['blocks'][block_index]['segments'][seg_index]['signals'].append(d)
-
-                for c in range(unit_channels.size):
-                    # use for SpikeTrain.annotations
-                    d = {}
-                    d['name'] = unit_channels['name'][c]
-                    d['id'] = unit_channels['id'][c]
-                    a['blocks'][block_index]['segments'][seg_index]['units'].append(d)
-
-                for c in range(event_channels.size):
-                    # use for Event.annotations
-                    d = {}
-                    d['name'] = event_channels['name'][c]
-                    d['id'] = event_channels['id'][c]
-                    d['file_origin'] = self._source_name()
-                    a['blocks'][block_index]['segments'][seg_index]['events'].append(d)
-
-        for c in range(signal_channels.size):
-            # use for ChannelIndex.annotations
+        # use for AnalogSignal.annotations and AnalogSignal.array_annotations
+        signal_stream_annotations = []
+        for c in range(signal_streams.size):
+            stream_id = signal_streams[c]['id']
+            channels = signal_channels[signal_channels['stream_id'] == stream_id]
             d = {}
-            d['name'] = signal_channels['name'][c]
-            d['channel_id'] = signal_channels['id'][c]
+            d['name'] = signal_streams['name'][c]
+            d['stream_id'] = stream_id
             d['file_origin'] = self._source_name()
-            a['signal_channels'].append(d)
+            d['__array_annotations__'] = {}
+            for key in ('name', 'id'):
+                values = np.array([channels[key][chan] for chan in range(channels.size)])
+                d['__array_annotations__']['channel_' + key + 's'] = values
+            signal_stream_annotations.append(d)
 
-        for c in range(unit_channels.size):
+        # used for SpikeTrain.annotations and SpikeTrain.array_annotations
+        spike_annotations = []
+        for c in range(spike_channels.size):
             # use for Unit.annotations
             d = {}
-            d['name'] = unit_channels['name'][c]
-            d['id'] = unit_channels['id'][c]
+            d['name'] = spike_channels['name'][c]
+            d['id'] = spike_channels['id'][c]
             d['file_origin'] = self._source_name()
-            a['unit_channels'].append(d)
+            d['__array_annotations__'] = {}
+            spike_annotations.append(d)
 
+        # used for Event/Epoch.annotations and Event/Epoch.array_annotations
+        event_annotations = []
         for c in range(event_channels.size):
             # not used in neo.io at the moment could usefull one day
             d = {}
             d['name'] = event_channels['name'][c]
             d['id'] = event_channels['id'][c]
             d['file_origin'] = self._source_name()
-            a['event_channels'].append(d)
+            d['__array_annotations__'] = {}
+            event_annotations.append(d)
 
-        self.raw_annotations = a
+        # duplicate this signal_stream_annotations/spike_annotations/event_annotations
+        # accros blocks and segments and create annotations
+        ann = {}
+        ann['blocks'] = []
+        for block_index in range(self.block_count()):
+            d = {}
+            d['file_origin'] = self.source_name()
+            d['segments'] = []
+            ann['blocks'].append(d)
 
-    def _raw_annotate(self, obj_name, chan_index=0, block_index=0, seg_index=0, **kargs):
-        """
-        Annotate an object in the list/dict tree annotations.
-        """
-        bl_annotations = self.raw_annotations['blocks'][block_index]
-        seg_annotations = bl_annotations['segments'][seg_index]
-        if obj_name == 'blocks':
-            bl_annotations.update(kargs)
-        elif obj_name == 'segments':
-            seg_annotations.update(kargs)
-        elif obj_name in ['signals', 'events', 'units']:
-            obj_annotations = seg_annotations[obj_name][chan_index]
-            obj_annotations.update(kargs)
-        elif obj_name in ['signal_channels', 'unit_channels', 'event_channel']:
-            obj_annotations = self.raw_annotations[obj_name][chan_index]
-            obj_annotations.update(kargs)
+            for seg_index in range(self.segment_count(block_index)):
+                d = {}
+                d['file_origin'] = self.source_name()
+                # copy nested
+                d['signals'] = signal_stream_annotations.copy()
+                d['spikes'] = spike_annotations.copy()
+                d['events'] = event_annotations.copy()
+                ann['blocks'][block_index]['segments'].append(d)
+
+        self.raw_annotations = ann
 
     def _repr_annotations(self):
         txt = 'Raw annotations\n'
@@ -286,19 +317,30 @@ class BaseRawIO:
                 seg_a = bl_a['segments'][seg_index]
                 txt += '  *Segment {}\n'.format(seg_index)
                 for k, v in seg_a.items():
-                    if k in ('signals', 'units', 'events',):
+                    if k in ('signals', 'spikes', 'events',):
                         continue
                     txt += '    -{}: {}\n'.format(k, v)
 
-                for child in ('signals', 'units', 'events'):
-                    n = self.header[child[:-1] + '_channels'].shape[0]
+                # annotations by channels for spikes/events/epochs
+                for child in ('signals', 'events', 'spikes', ):
+                    if child == 'signals':
+                        n = self.header['signal_streams'].shape[0]
+                    else:
+                        n = self.header[child[:-1] + '_channels'].shape[0]
                     for c in range(n):
                         neo_name = {'signals': 'AnalogSignal',
-                                    'units': 'SpikeTrain', 'events': 'Event/Epoch'}[child]
-                        txt += '    *{} {}\n'.format(neo_name, c)
+                                    'spikes': 'SpikeTrain',
+                                    'events': 'Event/Epoch'}[child]
+                        txt += f'    *{neo_name} {c}\n'
                         child_a = seg_a[child][c]
                         for k, v in child_a.items():
-                            txt += '      -{}: {}\n'.format(k, v)
+                            if k == '__array_annotations__':
+                                continue
+                            txt += f'      -{k}: {v}\n'
+                        for k, values in child_a['__array_annotations__'].items():
+                            values = ', '.join([str(v) for v in values[:4]])
+                            values = '[ ' + values + ' ...'
+                            txt += f'      -{k}: {values}\n'
 
         return txt
 
@@ -314,17 +356,26 @@ class BaseRawIO:
         """return number of segment for a given block"""
         return self.header['nb_segment'][block_index]
 
-    def signal_channels_count(self):
-        """Return the number of signal channels.
+    def signal_streams_count(self):
+        """Return the number of signal  stream channels.
         Same along all Blocks and Segments.
         """
-        return len(self.header['signal_channels'])
+        return len(self.header['signal_streams'])
 
-    def unit_channels_count(self):
+    def signal_channels_count(self, stream_index):
+        """Return the number of signal channels for a given stream
+        This number is constant across Blocks and Segments.
+        """
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        channels = self.header['signal_channels']
+        channels = channels[channels['stream_id'] == stream_id]
+        return len(channels)
+
+    def spike_channels_count(self):
         """Return the number of unit (aka spike) channels.
         Same along all Blocks and Segment.
         """
-        return len(self.header['unit_channels'])
+        return len(self.header['spike_channels'])
 
     def event_channels_count(self):
         """Return the number of event/epoch channels.
@@ -347,152 +398,144 @@ class BaseRawIO:
     ###
     # signal and channel zone
 
-    def _group_signal_channel_characteristics(self):
+    def _check_stream_signal_channel_characteristics(self):
         """
-        Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
-
-        Group signals channels by same characteristics:
+        This check that all channel that belong to the same stream_id
+        have common characteristics:
+          * stream_id (explicite channel group)
           * sampling_rate (global along block and segment)
-          * group_id (explicite channel group)
-
-        If all channels have the same characteristics then
-        `get_analogsignal_chunk` can be call wihtout restriction.
-        If not, then **channel_indexes** must be specified
-        in `get_analogsignal_chunk` and only channels with same
-        characteristics can be read at the same time.
-
-        This is useful for some IO  than
-        have internally several signals channels family.
-
-        For many RawIO all channels have the same
-        sampling_rate/size/t_start. In that cases, internal flag
-        **self._several_channel_groups will be set to False, so
-        `get_analogsignal_chunk(..)` won't suffer in performance.
-
-        Note that at neo.io level this have an impact on
-        `signal_group_mode`. 'split-all'  will work in any situation
-        But grouping channel in the same AnalogSignal
-        with 'group-by-XXX' will depend on common characteristics
-        of course.
-
+          * units
+          * dtype
         """
+        signal_streams = self.header['signal_streams']
+        signal_channels = self.header['signal_channels']
+        if signal_streams.size > 0:
+            assert signal_channels.size > 0, 'Signal stream but no signal_channels!!!'
 
-        characteristics = self.header['signal_channels'][_common_sig_characteristics]
-        unique_characteristics = np.unique(characteristics)
-        if len(unique_characteristics) == 1:
-            self._several_channel_groups = False
-        else:
-            self._several_channel_groups = True
-
-    def _check_common_characteristics(self, channel_indexes):
-        """
-        Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
-
-        Check that a set a signal channel_indexes share common
-        characteristics (**sampling_rate/t_start/size**).
-        Useful only when RawIO propose differents channels groups
-        with different sampling_rate for instance.
-        """
-        # ~ print('_check_common_characteristics', channel_indexes)
-
-        assert channel_indexes is not None, \
-            'You must specify channel_indexes'
-        characteristics = self.header['signal_channels'][_common_sig_characteristics]
-        # ~ print(characteristics[channel_indexes])
-        assert np.unique(characteristics[channel_indexes]).size == 1, \
-            'This channel set has varied characteristics'
-
-    def get_group_signal_channel_indexes(self):
-        """
-        Useful for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
-
-        Return a list of channel_indexes than have same characteristics
-        """
-        if self._several_channel_groups:
-            characteristics = self.header['signal_channels'][_common_sig_characteristics]
+        for stream_index in range(signal_streams.size):
+            stream_id = signal_streams[stream_index]['id']
+            mask = signal_channels['stream_id'] == stream_id
+            characteristics = signal_channels[mask][_common_sig_characteristics]
             unique_characteristics = np.unique(characteristics)
-            channel_indexes_list = []
-            for e in unique_characteristics:
-                channel_indexes, = np.nonzero(characteristics == e)
-                channel_indexes_list.append(channel_indexes)
-            return channel_indexes_list
-        else:
-            return [None]
+            assert unique_characteristics.size == 1, \
+                f'Some channel in stream_id {stream_id} ' \
+                f'do not have same {_common_sig_characteristics} {unique_characteristics}'
 
-    def channel_name_to_index(self, channel_names):
+            # also check that id is unique inside a stream
+            channel_ids = signal_channels[mask]['id']
+            assert np.unique(channel_ids).size == channel_ids.size, \
+                f'signal_channels dont have unique ids for stream {stream_index}'
+
+        self._several_channel_groups = signal_streams.size > 1
+
+    def channel_name_to_index(self, stream_index, channel_names):
         """
-        Transform channel_names to channel_indexes.
+        Inside a stream, transform channel_names to channel_indexes.
         Based on self.header['signal_channels']
+        channel_indexes is local to stream
         """
-        ch = self.header['signal_channels']
-        channel_indexes, = np.nonzero(np.in1d(ch['name'], channel_names))
-        assert len(channel_indexes) == len(channel_names), 'not match'
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
+        chan_names = list(signal_channels['name'])
+        assert signal_channels.size == np.unique(chan_names).size, 'Channel names not unique'
+        channel_indexes = np.array([chan_names.index(name) for name in channel_names])
         return channel_indexes
 
-    def channel_id_to_index(self, channel_ids):
+    def channel_id_to_index(self, stream_index, channel_ids):
         """
-        Transform channel_ids to channel_indexes.
+        Inside a stream,  transform channel_ids to channel_indexes.
         Based on self.header['signal_channels']
+        channel_indexes is local to stream
         """
-        ch = self.header['signal_channels']
-        channel_indexes, = np.nonzero(np.in1d(ch['id'], channel_ids))
-        assert len(channel_indexes) == len(channel_ids), 'not match'
+        # unique ids is already check in _check_stream_signal_channel_characteristics
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
+        chan_ids = list(signal_channels['id'])
+        channel_indexes = np.array([chan_ids.index(chan_id) for chan_id in channel_ids])
         return channel_indexes
 
-    def _get_channel_indexes(self, channel_indexes, channel_names, channel_ids):
+    def _get_channel_indexes(self, stream_index, channel_indexes, channel_names, channel_ids):
         """
         Select channel_indexes from channel_indexes/channel_names/channel_ids
         depending which is not None.
         """
         if channel_indexes is None and channel_names is not None:
-            channel_indexes = self.channel_name_to_index(channel_names)
-
-        if channel_indexes is None and channel_ids is not None:
-            channel_indexes = self.channel_id_to_index(channel_ids)
-
+            channel_indexes = self.channel_name_to_index(stream_index, channel_names)
+        elif channel_indexes is None and channel_ids is not None:
+            channel_indexes = self.channel_id_to_index(stream_index, channel_ids)
         return channel_indexes
 
-    def get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        if self._several_channel_groups:
-            self._check_common_characteristics(channel_indexes)
-        return self._get_signal_size(block_index, seg_index, channel_indexes)
-
-    def get_signal_t_start(self, block_index, seg_index, channel_indexes=None):
-        if self._several_channel_groups:
-            self._check_common_characteristics(channel_indexes)
-        return self._get_signal_t_start(block_index, seg_index, channel_indexes)
-
-    def get_signal_sampling_rate(self, channel_indexes=None):
-        if self._several_channel_groups:
-            self._check_common_characteristics(channel_indexes)
-            chan_index0 = channel_indexes[0]
+    def _get_stream_index(self, stream_index):
+        if stream_index is None:
+            assert self.header['signal_streams'].size == 1
+            stream_index = 0
         else:
-            chan_index0 = 0
-        sr = self.header['signal_channels'][chan_index0]['sampling_rate']
+            assert 0 <= stream_index < self.header['signal_streams'].size
+        return stream_index
+
+    def get_signal_size(self, block_index, seg_index, stream_index=None):
+        stream_index = self._get_stream_index(stream_index)
+        return self._get_signal_size(block_index, seg_index, stream_index)
+
+    def get_signal_t_start(self, block_index, seg_index, stream_index=None):
+        stream_index = self._get_stream_index(stream_index)
+        return self._get_signal_t_start(block_index, seg_index, stream_index)
+
+    def get_signal_sampling_rate(self, stream_index=None):
+        stream_index = self._get_stream_index(stream_index)
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
+        sr = signal_channels[0]['sampling_rate']
         return float(sr)
 
     def get_analogsignal_chunk(self, block_index=0, seg_index=0, i_start=None, i_stop=None,
-                               channel_indexes=None, channel_names=None, channel_ids=None):
+                               stream_index=None, channel_indexes=None, channel_names=None,
+                               channel_ids=None, prefer_slice=False):
         """
         Return a chunk of raw signal.
         """
-        channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
-        if self._several_channel_groups:
-            self._check_common_characteristics(channel_indexes)
+        stream_index = self._get_stream_index(stream_index)
+        channel_indexes = self._get_channel_indexes(stream_index, channel_indexes,
+                                                    channel_names, channel_ids)
+
+        # some check on channel_indexes
+        if isinstance(channel_indexes, list):
+            channel_indexes = np.asarray(channel_indexes)
+
+        if isinstance(channel_indexes, np.ndarray):
+            if channel_indexes.dtype == 'bool':
+                assert self.signal_channels_count(stream_index) == channel_indexes.size
+                channel_indexes, = np.nonzero(channel_indexes)
+
+        if prefer_slice and isinstance(channel_indexes, np.ndarray):
+            # check if channel_indexes are coninuous and transform to slice
+            # this is usefull for memmap or hdf5 where slice make read lazy
+            # contrary to indexes that make a copy (like numpy.take())
+            if np.all(np.diff(channel_indexes) == 1):
+                channel_indexes = slice(channel_indexes[0], channel_indexes[-1] + 1)
 
         raw_chunk = self._get_analogsignal_chunk(
-            block_index, seg_index, i_start, i_stop, channel_indexes)
+            block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
 
         return raw_chunk
 
-    def rescale_signal_raw_to_float(self, raw_signal, dtype='float32',
+    def rescale_signal_raw_to_float(self, raw_signal, dtype='float32', stream_index=None,
                                     channel_indexes=None, channel_names=None, channel_ids=None):
-
-        channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
+        stream_index = self._get_stream_index(stream_index)
+        channel_indexes = self._get_channel_indexes(stream_index, channel_indexes,
+                                                    channel_names, channel_ids)
         if channel_indexes is None:
             channel_indexes = slice(None)
 
-        channels = self.header['signal_channels'][channel_indexes]
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        channels = self.header['signal_channels'][mask]
+        if channel_indexes is None:
+            channel_indexes = slice(None)
+        channels = channels[channel_indexes]
 
         float_signal = raw_signal.astype(dtype)
 
@@ -505,10 +548,10 @@ class BaseRawIO:
         return float_signal
 
     # spiketrain and unit zone
-    def spike_count(self, block_index=0, seg_index=0, unit_index=0):
-        return self._spike_count(block_index, seg_index, unit_index)
+    def spike_count(self, block_index=0, seg_index=0, spike_channel_index=0):
+        return self._spike_count(block_index, seg_index, spike_channel_index)
 
-    def get_spike_timestamps(self, block_index=0, seg_index=0, unit_index=0,
+    def get_spike_timestamps(self, block_index=0, seg_index=0, spike_channel_index=0,
                              t_start=None, t_stop=None):
         """
         The timestamp is as close to the format itself. Sometimes float/int32/int64.
@@ -516,9 +559,9 @@ class BaseRawIO:
         The conversion to second or index_on_signal is done outside here.
 
         t_start/t_sop are limits in seconds.
-
         """
-        timestamp = self._get_spike_timestamps(block_index, seg_index, unit_index, t_start, t_stop)
+        timestamp = self._get_spike_timestamps(block_index, seg_index,
+                                               spike_channel_index, t_start, t_stop)
         return timestamp
 
     def rescale_spike_timestamp(self, spike_timestamps, dtype='float64'):
@@ -528,14 +571,16 @@ class BaseRawIO:
         return self._rescale_spike_timestamp(spike_timestamps, dtype)
 
     # spiketrain waveform zone
-    def get_spike_raw_waveforms(self, block_index=0, seg_index=0, unit_index=0,
+    def get_spike_raw_waveforms(self, block_index=0, seg_index=0, spike_channel_index=0,
                                 t_start=None, t_stop=None):
-        wf = self._get_spike_raw_waveforms(block_index, seg_index, unit_index, t_start, t_stop)
+        wf = self._get_spike_raw_waveforms(block_index, seg_index,
+                                           spike_channel_index, t_start, t_stop)
         return wf
 
-    def rescale_waveforms_to_float(self, raw_waveforms, dtype='float32', unit_index=0):
-        wf_gain = self.header['unit_channels']['wf_gain'][unit_index]
-        wf_offset = self.header['unit_channels']['wf_offset'][unit_index]
+    def rescale_waveforms_to_float(self, raw_waveforms, dtype='float32',
+                                   spike_channel_index=0):
+        wf_gain = self.header['spike_channels']['wf_gain'][spike_channel_index]
+        wf_offset = self.header['spike_channels']['wf_offset'][spike_channel_index]
 
         float_waveforms = raw_waveforms.astype(dtype)
 
@@ -569,17 +614,19 @@ class BaseRawIO:
             block_index, seg_index, event_channel_index, t_start, t_stop)
         return timestamp, durations, labels
 
-    def rescale_event_timestamp(self, event_timestamps, dtype='float64'):
+    def rescale_event_timestamp(self, event_timestamps, dtype='float64',
+                    event_channel_index=0):
         """
         Rescale event timestamps to s
         """
-        return self._rescale_event_timestamp(event_timestamps, dtype)
+        return self._rescale_event_timestamp(event_timestamps, dtype, event_channel_index)
 
-    def rescale_epoch_duration(self, raw_duration, dtype='float64'):
+    def rescale_epoch_duration(self, raw_duration, dtype='float64',
+                    event_channel_index=0):
         """
         Rescale epoch raw duration to s
         """
-        return self._rescale_epoch_duration(raw_duration, dtype)
+        return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
     def setup_cache(self, cache_path, **init_kargs):
         if self.rawmode in ('one-file', 'multi-file'):
@@ -653,21 +700,44 @@ class BaseRawIO:
 
     ###
     # signal and channel zone
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        """
+        Return the size of a set of AnalogSignals indexed by channel_indexes.
+
+        All channels indexed must have the same size and t_start.
+        """
         raise (NotImplementedError)
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        """
+        Return the t_start of a set of AnalogSignals indexed by channel_indexes.
+
+        All channels indexed must have the same size and t_start.
+        """
         raise (NotImplementedError)
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
+        """
+        Return the samples from a set of AnalogSignals indexed
+        by channel_indexes (local index inner stream).
+
+        All channels indexed must have the same size and t_start.
+
+        RETURNS
+        -------
+            array of samples, with each requested channel in a column
+        """
+
         raise (NotImplementedError)
 
     ###
     # spiketrain and unit zone
-    def _spike_count(self, block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, spike_channel_index):
         raise (NotImplementedError)
 
-    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index,
+                              spike_channel_index, t_start, t_stop):
         raise (NotImplementedError)
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
@@ -675,7 +745,8 @@ class BaseRawIO:
 
     ###
     # spike waveforms zone
-    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index,
+                                 spike_channel_index, t_start, t_stop):
         raise (NotImplementedError)
 
     ###
@@ -691,3 +762,16 @@ class BaseRawIO:
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
         raise (NotImplementedError)
+
+
+def pprint_vector(vector, lim=8):
+    vector = np.asarray(vector)
+    assert vector.ndim == 1
+    if len(vector) > lim:
+        part1 = ', '.join(e for e in vector[:lim // 2])
+        part2 = ' , '.join(e for e in vector[-lim // 2:])
+        txt = f"[{part1} ... {part2}]"
+    else:
+        part1 = ', '.join(e for e in vector[:lim // 2])
+        txt = f"[{part1}]"
+    return txt

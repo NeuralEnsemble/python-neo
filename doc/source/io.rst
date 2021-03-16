@@ -224,7 +224,7 @@ Logging
 
 :mod:`neo` uses the standard Python :mod:`logging` module for logging.
 All :mod:`neo.io` classes have logging set up by default, although not all classes produce log messages.
-The logger name is the same as the full qualified class name, e.g. :class:`neo.io.hdf5io.NeoHdf5IO`.
+The logger name is the same as the full qualified class name, e.g. :class:`neo.io.nixio.NixIO`.
 By default, only log messages that are critically important for users are displayed, so users should not disable log messages unless they are sure they know what they are doing.
 However, if you wish to disable the messages, you can do so::
 
@@ -264,7 +264,7 @@ This can also be done for individual IO classes::
 
     >>> import logging
     >>>
-    >>> logger = logging.getLogger('neo.io.hdf5io.NeoHdf5IO')
+    >>> logger = logging.getLogger('neo.io.nixio.NixIO')
     >>> handler = logging.FileHandler('filename.log')
     >>> logger.addHandler(handler)
 
@@ -272,14 +272,14 @@ Individual IO classes can have their loggers disabled as well::
 
     >>> import logging
     >>>
-    >>> logger = logging.getLogger('neo.io.hdf5io.NeoHdf5IO')
+    >>> logger = logging.getLogger('neo.io.nixio.NixIO')
     >>> logger.setLevel(100)
 
 And more detailed logging messages can be enabled for individual IO classes::
 
     >>> import logging
     >>>
-    >>> logger = logging.getLogger('neo.io.hdf5io.NeoHdf5IO')
+    >>> logger = logging.getLogger('neo.io.nixio.NixIO')
     >>> logger.setLevel(logging.INFO)
 
 The default handler, which is used to print logs to the command line, is stored in :attr:`neo.logging_handler`.

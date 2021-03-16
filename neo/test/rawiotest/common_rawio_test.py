@@ -132,7 +132,7 @@ class BaseTestRawIO:
             # ~ ax.plot(sigs[:, 0])
             # ~ plt.show()
 
-            # ~ nb_unit = reader.unit_channels_count()
+            # ~ nb_unit = reader.spike_channels_count()
             # ~ for unit_index in range(nb_unit):
             # ~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
             # ~ unit_index=unit_index)

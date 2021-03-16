@@ -18,12 +18,14 @@ Classes:
 * :attr:`BrainVisionRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
+* :attr:`MEArecRawIO`
 * :attr:`MicromedRawIO`
 * :attr:`NeuralynxRawIO`
 * :attr:`NeuroExplorerRawIO`
 * :attr:`NeuroScopeRawIO`
 * :attr:`NIXRawIO`
 * :attr:`OpenEphysRawIO`
+* :attr:'PhyRawIO'
 * :attr:`PlexonRawIO`
 * :attr:`RawBinarySignalRawIO`
 * :attr:`RawMCSRawIO`
@@ -59,6 +61,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.MEArecRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.MicromedRawIO
 
     .. autoattribute:: extensions
@@ -80,6 +86,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.OpenEphysRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.PhyRawIO
 
     .. autoattribute:: extensions
 
@@ -129,12 +139,14 @@ from neo.rawio.brainvisionrawio import BrainVisionRawIO
 from neo.rawio.elanrawio import ElanRawIO
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
+from neo.rawio.mearecrawio import MEArecRawIO
 from neo.rawio.micromedrawio import MicromedRawIO
-from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
+from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
 from neo.rawio.neuroscoperawio import NeuroScopeRawIO
 from neo.rawio.nixrawio import NIXRawIO
 from neo.rawio.openephysrawio import OpenEphysRawIO
+from neo.rawio.phyrawio import PhyRawIO
 from neo.rawio.plexonrawio import PlexonRawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 from neo.rawio.rawmcsrawio import RawMCSRawIO
@@ -153,11 +165,13 @@ rawiolist = [
     ElanRawIO,
     IntanRawIO,
     MicromedRawIO,
+    MEArecRawIO,
     NeuralynxRawIO,
     NeuroExplorerRawIO,
     NeuroScopeRawIO,
     NIXRawIO,
     OpenEphysRawIO,
+    PhyRawIO,
     PlexonRawIO,
     RawBinarySignalRawIO,
     RawMCSRawIO,

@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import os
 
 long_description = open("README.rst").read()
 install_requires = ['numpy>=1.13.0,!=1.16.0',
                     'quantities>=0.12.1']
 extras_require = {
-    'hdf5io': ['h5py'],
     'igorproio': ['igor'],
     'kwikio': ['scipy', 'klusta'],
     'neomatlabio': ['scipy>=1.0.0'],
@@ -24,9 +23,7 @@ with open("neo/version.py") as fp:
 setup(
     name="neo",
     version=neo_version,
-    packages=[
-        'neo', 'neo.core', 'neo.io', 'neo.rawio', 'neo.test',
-        'neo.test.coretest', 'neo.test.iotest', 'neo.test.rawiotest'],
+    packages=find_packages(),
     install_requires=install_requires,
     extras_require=extras_require,
     author="Neo authors and contributors",
