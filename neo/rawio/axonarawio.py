@@ -20,27 +20,24 @@ In brief:
  data.bin raw data file
  data.epp field potential parameters
  data.epw field potential waveforms
- data.log DACQBASIC script optional user-defined output files 
-
-ExampleRawIO is a class of a  fake example.
-This is to be used when coding a new RawIO.
+ data.log DACQBASIC script optional user-defined output files
 
 
 Rules for creating a new class:
   1. Step 1: Create the main class
     * Create a file in **neo/rawio/** that endith with "rawio.py"
-    * Create the class that inherits BaseRawIO
+    * Create the class that inherits from BaseRawIO
     * copy/paste all methods that need to be implemented.
-      See the end a neo.rawio.baserawio.BaseRawIO
-    * code hard! The main difficulty **is _parse_header()**.
+    * code hard! The main difficulty is `_parse_header()`.
       In short you have a create a mandatory dict than
       contains channel informations::
 
             self.header = {}
             self.header['nb_block'] = 2
             self.header['nb_segment'] = [2, 3]
-            self.header['signal_channels'] = sig_channels
-            self.header['unit_channels'] = unit_channels
+            self.header['signal_streams'] = signal_streams
+            self.header['signal_channels'] = signal_channels
+            self.header['spike_channels'] = spike_channels
             self.header['event_channels'] = event_channels
 
   2. Step 2: RawIO test:
@@ -48,8 +45,8 @@ Rules for creating a new class:
     * copy paste neo/rawio/tests/test_examplerawio.py and do the same
 
   3. Step 3 : Create the neo.io class with the wrapper
-    * Create a file in neo/io/ that endith with "io.py"
-    * Create a that inherits both your RawIO class and BaseFromRaw class
+    * Create a file in neo/io/ that ends with "io.py"
+    * Create a class that inherits both your RawIO class and BaseFromRaw class
     * copy/paste from neo/io/exampleio.py
 
   4.Step 4 : IO test
@@ -76,7 +73,7 @@ class AxonaRawIO(BaseRawIO):
 
     The raw data is save in .bin binary files. 
 
-    For the user, it give acces to raw data (signals, event, spikes) as they
+    For the user, it gives access to raw data (signals, event, spikes) as they
     are in the (fake) file int16 and int64.
 
     For a developer, it is just an example showing guidelines for someone who wants
@@ -87,13 +84,12 @@ class AxonaRawIO(BaseRawIO):
       * Follow the :ref:`io_guiline`
 
     This fake IO:
-        * have 2 blocks
+        * has 2 blocks
         * blocks have 2 and 3 segments
-        * have 16 signal_channel sample_rate = 10000
-        * have 3 unit_channel
-        * have 2 event channel: one have *type=event*, the other have
+        * has  2 signals streams  of 8 channel each (sample_rate = 10000) so 16 channels in total
+        * has 3 spike_channels
+        * has 2 event channels: one has *type=event*, the other has
           *type=epoch*
-
 
     Usage:
         >>> import neo.rawio
@@ -104,7 +100,8 @@ class AxonaRawIO(BaseRawIO):
                             i_start=0, i_stop=1024,  channel_names=channel_names)
         >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
                             channel_indexes=[0, 3, 6])
-        >>> spike_timestamp = reader.spike_timestamps(unit_index=0, t_start=None, t_stop=None)
+        >>> spike_timestamp = reader.spike_timestamps(spike_channel_index=0,
+                            t_start=None, t_stop=None)
         >>> spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
         >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
 
