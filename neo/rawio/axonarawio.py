@@ -68,32 +68,15 @@ import datetime
 
 class AxonaRawIO(BaseRawIO):
     """
-    Class for reading raw data from the Axona dacqUSB system:
+    Class for reading raw, continuous data from the Axona dacqUSB system:
     http://space-memory-navigation.org/DacqUSBFileFormats.pdf
 
-    The raw data is save in .bin binary files. 
-
-    For the user, it gives access to raw data (signals, event, spikes) as they
-    are in the (fake) file int16 and int64.
-
-    For a developer, it is just an example showing guidelines for someone who wants
-    to develop a new IO module.
-
-    Two rules for developers:
-      * Respect the :ref:`neo_rawio_API`
-      * Follow the :ref:`io_guiline`
-
-    This fake IO:
-        * has 2 blocks
-        * blocks have 2 and 3 segments
-        * has  2 signals streams  of 8 channel each (sample_rate = 10000) so 16 channels in total
-        * has 3 spike_channels
-        * has 2 event channels: one has *type=event*, the other has
-          *type=epoch*
+    The raw data is saved in .bin binary files with an accompanying
+    .set file about the recording setup (see the above manual for details).
 
     Usage:
         >>> import neo.rawio
-        >>> r = neo.rawio.ExampleRawIO(filename='itisafake.nof')
+        >>> r = neo.rawio.AxonaRawIO(filename=os.path.join(dir_name, base_filename))
         >>> r.parse_header()
         >>> print(r)
         >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
@@ -211,7 +194,7 @@ class AxonaRawIO(BaseRawIO):
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
         """
-        Return raw (continuous) signals as 2d numpy array (chan x time).
+        Return raw (continuous) signals as 2d numpy array (time x chan).
         Note that block_index and seg_index are always 1 (regardless of input).
         
         The raw data is in a single vector np.memmap with the following structure:
@@ -251,12 +234,12 @@ class AxonaRawIO(BaseRawIO):
         sig_ids = sig_ids[rem:(rem+num_samples)]
 
         # Read one channel at a time
-        raw_signals = np.ndarray(shape=(len(channel_indexes), num_samples))
+        raw_signals = np.ndarray(shape=(num_samples, len(channel_indexes)))
 
         for i, ch_idx in enumerate(channel_indexes):
 
             chan_offset = self.get_channel_offset(ch_idx)
-            raw_signals[i,:] = self._raw_signals[sig_ids + chan_offset]
+            raw_signals[:,i] = self._raw_signals[sig_ids + chan_offset]
 
         return raw_signals
 
@@ -437,14 +420,18 @@ class AxonaRawIO(BaseRawIO):
             "%d %b %Y, %H:%M:%S")
 
     def get_channel_gain(self):
-        """ Read gain for each channel from .set file and return in list of integers """
+        """ 
+        Read gain for each channel from .set file and return in list of integers 
+
+        TODO Verify that this is indeed correct (so far I guessed).
+        """
 
         gain_list = []
 
         with open(self.set_file, encoding='cp1252') as f:
             for line in f:
                 if line.startswith('gain_ch'):
-                    gain_list.append(int(re.findall(r'\d*', line.split(' ')[1])[0]))
+                    gain_list.append(1 / np.float32(re.findall(r'\d*', line.split(' ')[1])[0]))
                     
         return gain_list
 
