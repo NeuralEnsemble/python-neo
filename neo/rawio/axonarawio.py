@@ -230,7 +230,7 @@ class AxonaRawIO(BaseRawIO):
         sample 3: 32b (head) + 128*2 (all channels 1st and 2nd entry) + ...
 
         NOTE: I believe there is always a single stream (all channels have the same SR)
-        """
+        """            
 
         if channel_indexes is None:
             channel_indexes = [i+1 for i in range(self.num_channels)]
@@ -381,7 +381,7 @@ class AxonaRawIO(BaseRawIO):
     # These are credited largely to Geoff Barrett from the Hussaini lab:
     # https://github.com/GeoffBarrett/BinConverter
     # Adapted or modified by Steffen Buergers
-    
+
     def get_active_tetrode(self):
         """ 
         Returns the ID numbers of the active tetrodes (those with recorded data)
