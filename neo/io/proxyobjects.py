@@ -45,8 +45,7 @@ class BaseProxy(BaseNeo):
 
         # this mock the array annotations to avoid inherits DataObject
         self.array_annotations = ArrayDict(self.shape[-1])
-        if array_annotations is not None:
-            self.array_annotations.update(array_annotations)
+        self.array_annotations.update(array_annotations)
 
         BaseNeo.__init__(self, **annotations)
 
