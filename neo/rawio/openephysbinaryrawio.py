@@ -268,8 +268,18 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         timestamps = d['timestamps']
         durations = None
         labels = d['labels']
-        # TODO make the time slice
-        # DO NOT MERGE BEFORE THIS!!!!!
+
+        # slice it if needed
+        if t_start is not None:
+            ind_start = int(t_start * d['sample_rate'])
+            mask = timestamps >= ind_start
+            timestamps = timestamps[mask]
+            labels = labels[mask]
+        if t_stop is not None:
+            ind_stop = int(t_stop * d['sample_rate'])
+            mask = timestamps < ind_stop
+            timestamps = timestamps[mask]
+            labels = labels[mask]
         return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
