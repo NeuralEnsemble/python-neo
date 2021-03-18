@@ -24,6 +24,25 @@ Additional formats that are NOT implemented:
  data.epw field potential waveforms
  data.log DACQBASIC script optional user-defined output files
 
+More detailed description of the data
+
+ We want to support the following scenarios:
+ a.) We have only .set and .bin data. From this we can derive spike times (.X),
+     lfp/eeg data (.eeg) and position data (.pos). 
+ b.) We have only spike times (.X), lfp/eeg (.eeg) and position data (.pos). 
+ c.) We have both .set and .bin, and .X, .eeg and .pos data.
+
+ In scenario a.) get_analogsignal_chunk will refer to the raw high frequency data
+ and we will derive spike times for header['spike_channels']. Is there a place for
+ position data? We will have to leave unit information blank (there was no spike
+ sorting yet). EEG data could be retrieved with a custom method.
+
+ In scenario b.) get_analogsignal_chunk should probably be empty, whereas the other
+ types of data are similar to a.), but will have simply been read from file.
+
+ In scenario c.) we combine a.) and b.), without re-deriving derivatives of the raw
+ data.
+
 Rules for creating a new class:
   1. Step 1: Create the main class
     * Create a file in **neo/rawio/** that endith with "rawio.py"
