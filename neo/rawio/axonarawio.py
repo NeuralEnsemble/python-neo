@@ -5,23 +5,24 @@ http://space-memory-navigation.org/DacqUSBFileFormats.pdf
 
 In brief:
  data.set setup file containing all hardware setups related to the trial
+ data.bin raw data file
  data.1 spike times and waveforms for tetrode 1, or stereotrodes 1 and 2
  data.2 spikes times and waveforms for tetrode 2, or stereotrodes 3 and 4
  …
  data.32 spikes times and waveforms for tetrode 32
- data.spk spikes times and waveforms for monotrodes (single electrodes) 1 to 16
  data.eeg continuous 250 Hz EEG signal, primary channel
  data.eegX continuous 250 Hz EEG signal, secondary channel (X = 1..16)
  data.egf high resolution 4800 Hz version of primary EEG channel
  data.egfX high resolution 4800 Hz version of primary EEG channel (X = 1..16)
  data.pos tracker position data
+
+Additional formats that are NOT implemented:
  data.inp digital input and keypress timestamps
  data.stm stimulation pulse timestamps
- data.bin raw data file
+ data.spk spikes times and waveforms for monotrodes (single electrodes) 1 to 16
  data.epp field potential parameters
  data.epw field potential waveforms
  data.log DACQBASIC script optional user-defined output files
-
 
 Rules for creating a new class:
   1. Step 1: Create the main class
