@@ -214,7 +214,12 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         if k in ('timestamps', ):
                             continue
                         if k in d:
-                            ev_ann['__array_annotations__'][k] = d[k]
+                            # split custom dtypes into separate annotations
+                            if d[k].dtype.names:
+                                for name in d[k].dtype.names:
+                                    ev_ann['__array_annotations__'][name] = d[k][name].flatten()
+                            else:
+                                ev_ann['__array_annotations__'][k] = d[k]
 
     def _segment_t_start(self, block_index, seg_index):
         return self._t_start_segments[block_index][seg_index]
