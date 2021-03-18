@@ -43,6 +43,9 @@ More detailed description of the data
  In scenario c.) we combine a.) and b.), without re-deriving derivatives of the raw
  data.
 
+ Note: We might want to also allow incorporation of spike sorted data (.cut files). 
+ But not for now. 
+
 Rules for creating a new class:
   1. Step 1: Create the main class
     * Create a file in **neo/rawio/** that endith with "rawio.py"
@@ -178,38 +181,16 @@ class AxonaRawIO(BaseRawIO):
         self._generate_minimal_annotations()
 
     def _segment_t_start(self, block_index, seg_index):
-        # this must return an float scale in second
-        # this t_start will be shared by all object in the segment
-        # except AnalogSignal
-        all_starts = [[0., 15.], [0., 20., 60.]]
-        return all_starts[block_index][seg_index]
+        return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
-        # this must return an float scale in second
-        all_stops = [[10., 25.], [10., 30., 70.]]
-        return all_stops[block_index][seg_index]
+        return self.num_total_samples / self.sr
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        # we are lucky: signals in all segment have the same shape!! (10.0 seconds)
-        # it is not always the case
-        # this must return an int = the number of sample
+        return self.num_total_samples
 
-        # Note that channel_indexes can be ignored for most cases
-        # except for several sampling rate.
-        return 100000
-
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        # This give the t_start of signals.
-        # Very often this equal to _segment_t_start but not
-        # always.
-        # this must return an float scale in second
-
-        # Note that channel_indexes can be ignored for most cases
-        # except for several sampling rate.
-
-        # Here this is the same.
-        # this is not always the case
-        return self._segment_t_start(block_index, seg_index)
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        return 0.
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
