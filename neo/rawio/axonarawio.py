@@ -15,8 +15,6 @@ In brief:
  data.egf high resolution 4800 Hz version of primary EEG channel
  data.egfX high resolution 4800 Hz version of primary EEG channel (X = 1..16)
  data.pos tracker position data
-
-Additional formats that are NOT implemented:
  data.inp digital input and keypress timestamps
  data.stm stimulation pulse timestamps
  data.spk spikes times and waveforms for monotrodes (single electrodes) 1 to 16
@@ -24,48 +22,13 @@ Additional formats that are NOT implemented:
  data.epw field potential waveforms
  data.log DACQBASIC script optional user-defined output files
 
-More detailed description of the data
-
- We want to support the following scenarios:
- a.) We have only .set and .bin data. From this we can derive spike times (.X),
-     lfp/eeg data (.eeg) and position data (.pos). 
- b.) We have only spike times (.X), lfp/eeg (.eeg) and position data (.pos). 
- c.) We have both .set and .bin, and .X, .eeg and .pos data.
-
- In scenario a.) get_analogsignal_chunk will refer to the raw high frequency data
- and we will derive spike times for header['spike_channels']. Is there a place for
- position data? We will have to leave unit information blank (there was no spike
- sorting yet). EEG data could be retrieved with a custom method.
-
- In scenario b.) get_analogsignal_chunk should probably be empty, whereas the other
- types of data are similar to a.), but will have simply been read from file.
-
- In scenario c.) we combine a.) and b.), without re-deriving derivatives of the raw
- data.
-
- Note: We might want to also allow incorporation of spike sorted data (.cut files). 
- But not for now. 
+Here we are only going to support .set and .bin files for now (raw cont. data). 
+ At least the following could be derived from it: .eeg, .egf, .X, .pos.
 
 Rules for creating a new class:
   1. Step 1: Create the main class
-    * Create a file in **neo/rawio/** that endith with "rawio.py"
-    * Create the class that inherits from BaseRawIO
-    * copy/paste all methods that need to be implemented.
-    * code hard! The main difficulty is `_parse_header()`.
-      In short you have a create a mandatory dict than
-      contains channel informations::
-
-            self.header = {}
-            self.header['nb_block'] = 2
-            self.header['nb_segment'] = [2, 3]
-            self.header['signal_streams'] = signal_streams
-            self.header['signal_channels'] = signal_channels
-            self.header['spike_channels'] = spike_channels
-            self.header['event_channels'] = event_channels
 
   2. Step 2: RawIO test:
-    * create a file in neo/rawio/tests with the same name with "test_" prefix
-    * copy paste neo/rawio/tests/test_examplerawio.py and do the same
 
   3. Step 3 : Create the neo.io class with the wrapper
     * Create a file in neo/io/ that ends with "io.py"
@@ -160,16 +123,15 @@ class AxonaRawIO(BaseRawIO):
         self._raw_signals = np.memmap(self.bin_file, dtype='int16', mode='r', 
                                       offset=self.global_header_size)
 
-        # fille into header dict
+        # fill into header dict
         # This is mandatory!!!!!
 
-        # create signals stream information (we always expect a single stream)
-        signal_streams = np.array([('stream 0', 0)], dtype=_signal_stream_dtype)
+        
 
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
-        self.header['signal_streams'] = signal_streams
+        self.header['signal_streams'] = self.get_signal_streams_header()
         self.header['signal_channels'] = self.get_signal_chan_header()
         self.header['spike_channels'] = self.get_spike_chan_header()
         self.header['event_channels'] = self.get_event_chan_header()
@@ -179,6 +141,12 @@ class AxonaRawIO(BaseRawIO):
         # to any object. To keep this functionality with the wrapper
         # BaseFromRaw you can add annoations in a nested dict.
         self._generate_minimal_annotations()
+
+    def get_signal_streams_header(self):
+        '''
+        create signals stream information (we always expect a single stream)
+        '''
+        return np.array([('stream 0', 0)], dtype=_signal_stream_dtype)
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
@@ -245,118 +213,28 @@ class AxonaRawIO(BaseRawIO):
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        # Must return the nb of spike for given (block_index, seg_index, unit_index)
-        # we are lucky:  our units have all the same nb of spikes!!
-        # it is not always the case
-        nb_spikes = 20
-        return nb_spikes
+        return None
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        # In our IO, timstamp are internally coded 'int64' and they
-        # represent the index of the signals 10kHz
-        # we are lucky: spikes have the same discharge in all segments!!
-        # incredible neuron!! This is not always the case
-
-        # the same clip t_start/t_start must be used in _spike_raw_waveforms()
-
-        ts_start = (self._segment_t_start(block_index, seg_index) * 10000)
-
-        spike_timestamps = np.arange(0, 10000, 500) + ts_start
-
-        if t_start is not None or t_stop is not None:
-            # restricte spikes to given limits (in seconds)
-            lim0 = int(t_start * 10000)
-            lim1 = int(t_stop * 10000)
-            mask = (spike_timestamps >= lim0) & (spike_timestamps <= lim1)
-            spike_timestamps = spike_timestamps[mask]
-
-        return spike_timestamps
+        return None
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        # must rescale to second a particular spike_timestamps
-        # with a fixed dtype so the user can choose the precisino he want.
-        spike_times = spike_timestamps.astype(dtype)
-        spike_times /= 10000.  # because 10kHz
-        return spike_times
+        return None
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
-        # in the original dtype
-        # this must be as fast as possible.
-        # the same clip t_start/t_start must be used in _spike_timestamps()
-
-        # If there there is no waveform supported in the
-        # IO them _spike_raw_waveforms must return None
-
-        # In our IO waveforms come from all channels
-        # they are int16
-        # convertion to real units is done with self.header['unit_channels']
-        # Here, we have a realistic case: all waveforms are only noise.
-        # it is not always the case
-        # we 20 spikes with a sweep of 50 (5ms)
-
-        # trick to get how many spike in the slice
-        ts = self._get_spike_timestamps(block_index, seg_index, unit_index, t_start, t_stop)
-        nb_spike = ts.size
-
-        np.random.seed(2205)  # a magic number (my birthday)
-        waveforms = np.random.randint(low=-2**4, high=2**4, size=nb_spike * 50, dtype='int16')
-        waveforms = waveforms.reshape(nb_spike, 1, 50)
-        return waveforms
+        return None
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        # event and spike are very similar
-        # we have 2 event channels
-        if event_channel_index == 0:
-            # event channel
-            return 6
-        elif event_channel_index == 1:
-            # epoch channel
-            return 10
+        return None
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        # the main difference between spike channel and event channel
-        # is that for here we have 3 numpy array timestamp, durations, labels
-        # durations must be None for 'event'
-        # label must a dtype ='U'
-
-        # in our IO event are directly coded in seconds
-        seg_t_start = self._segment_t_start(block_index, seg_index)
-        if event_channel_index == 0:
-            timestamp = np.arange(0, 6, dtype='float64') + seg_t_start
-            durations = None
-            labels = np.array(['trigger_a', 'trigger_b'] * 3, dtype='U12')
-        elif event_channel_index == 1:
-            timestamp = np.arange(0, 10, dtype='float64') + .5 + seg_t_start
-            durations = np.ones((10), dtype='float64') * .25
-            labels = np.array(['zoneX'] * 5 + ['zoneZ'] * 5, dtype='U12')
-
-        if t_start is not None:
-            keep = timestamp >= t_start
-            timestamp, labels = timestamp[keep], labels[keep]
-            if durations is not None:
-                durations = durations[keep]
-
-        if t_stop is not None:
-            keep = timestamp <= t_stop
-            timestamp, labels = timestamp[keep], labels[keep]
-            if durations is not None:
-                durations = durations[keep]
-
-        return timestamp, durations, labels
+        return None
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        # must rescale to second a particular event_timestamps
-        # with a fixed dtype so the user can choose the precisino he want.
-
-        # really easy here because in our case it is already seconds
-        event_times = event_timestamps.astype(dtype)
-        return event_times
+        return None
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
-        # really easy here because in our case it is already seconds
-        durations = raw_duration.astype(dtype)
-        return durations
+        return None
 
     # ------------------ HELPER METHODS --------------------
     # These are credited largely to Geoff Barrett from the Hussaini lab:
@@ -409,7 +287,6 @@ class AxonaRawIO(BaseRawIO):
         """ 
         Creates datetime object (y, m, d, h, m, s) from .set file header 
         """
-
         with open(self.set_file, 'r', encoding=self.set_file_encoding) as f:
             for line in f:
                 if line.startswith('trial_date'):
@@ -426,7 +303,6 @@ class AxonaRawIO(BaseRawIO):
 
         TODO Verify that this is indeed correct (so far I guessed).
         """
-
         gain_list = []
 
         with open(self.set_file, encoding='cp1252') as f:
@@ -477,39 +353,15 @@ class AxonaRawIO(BaseRawIO):
 
     def get_spike_chan_header(self):
         """
-        TODO 
-        placeholder function, filled with example code
+        No spikes currently
         """
-        # creating units channels
-        # This is mandatory!!!!
-        # Note that if there is no waveform at all in the file
-        # then wf_units/wf_gain/wf_offset/wf_left_sweep/wf_sampling_rate
-        # can be set to any value because _spike_raw_waveforms
-        # will return None
-        unit_channels = []
-        for c in range(3):
-            unit_name = 'unit{}'.format(c)
-            unit_id = '#{}'.format(c)
-            wf_units = 'uV'
-            wf_gain = 1000. / 2 ** 16
-            wf_offset = 0.
-            wf_left_sweep = 20
-            wf_sampling_rate = 10000.
-            unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
-                                  wf_offset, wf_left_sweep, wf_sampling_rate))
-        
-        return  np.array(unit_channels, dtype=_spike_channel_dtype)
+        return  np.array([], dtype=_spike_channel_dtype)
 
     def get_event_chan_header(self):
         """
-        TODO
-        placeholder function, filled with example code
+        No events currently
         """
-        # creating event/epoch channel
-        # This is mandatory!!!!
-        # In RawIO epoch and event they are dealt the same way.
-        event_channels = []
-        event_channels.append(('Some events', 'ev_0', 'event'))
-        event_channels.append(('Some epochs', 'ep_1', 'epoch'))
+        return np.array([], dtype=_event_channel_dtype)
 
-        return np.array(event_channels, dtype=_event_channel_dtype)
+# eof
+
