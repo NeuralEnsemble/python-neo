@@ -301,16 +301,21 @@ class AxonaRawIO(BaseRawIO):
         """ 
         Read gain for each channel from .set file and return in list of integers 
 
-        TODO Verify that this is indeed correct (so far I guessed).
+        This is actually not the gain_ch value from the .set file, but the conversion
+        factor from raw data to uV.
+
+        Formula:    1000*adc_fullscale_mv*(gain_ch*128)
         """
         gain_list = []
 
         with open(self.set_file, encoding='cp1252') as f:
             for line in f:
+                if line.startswith('ADC_fullscale_mv'):
+                    adc_fullscale_mv = int(line.split(" ")[1])
                 if line.startswith('gain_ch'):
-                    gain_list.append(1 / np.float32(re.findall(r'\d*', line.split(' ')[1])[0]))
-                    
-        return gain_list
+                    gain_list.append(np.float32(re.findall(r'\d*', line.split(' ')[1])[0]))
+        
+        return [1000*adc_fullscale_mv/(gain*128) for gain in gain_list]
 
     def get_signal_chan_header(self):
         """
