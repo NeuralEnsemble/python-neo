@@ -10,6 +10,14 @@ from neo.rawio.mearecrawio import MEArecRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
+try:
+    import MEArec as mr
+    HAVE_MEAREC = True
+except ImportError:
+    HAVE_MEAREC = False
+
+
+@unittest.skipUnless(HAVE_MEAREC, "requires MEArec package")
 class TestMEArecRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = MEArecRawIO
     files_to_download = ['mearec_test_10s.h5']
