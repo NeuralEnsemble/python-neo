@@ -304,7 +304,9 @@ class AxonaRawIO(BaseRawIO):
         This is actually not the gain_ch value from the .set file, but the conversion
         factor from raw data to uV.
 
-        Formula:    1000*adc_fullscale_mv*(gain_ch*128)
+        Formula for .eeg and .X files, presumably also .bin files:    
+        
+        1000*adc_fullscale_mv / (gain_ch*128)
         """
         gain_list = []
 
