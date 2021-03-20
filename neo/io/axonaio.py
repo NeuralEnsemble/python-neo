@@ -11,9 +11,8 @@ class AxonaIO(AxonaRawIO, BaseFromRaw):
     #   'group-by-same-units' : one 2D AnalogSignal for each group of channel with same units
     _prefered_signal_group_mode = 'group-by-same-units'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename):
         AxonaRawIO.__init__(self, filename=filename)
         BaseFromRaw.__init__(self, filename)
 
 # eof
-
