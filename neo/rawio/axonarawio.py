@@ -79,7 +79,7 @@ class AxonaRawIO(BaseRawIO):
     extensions = ['bin']
     rawmode = 'one-file'
 
-    def __init__(self, filename='', sr=48000):
+    def __init__(self, filename, sr=48000):
         BaseRawIO.__init__(self)
 
         # note that this filename is used in self._source_name
