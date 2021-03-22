@@ -34,14 +34,12 @@ import quantities as pq
 from neo.core.baseneo import MergeError, merge_annotations, intersect_annotations
 from neo.core.basesignal import BaseSignal
 from neo.core.analogsignal import AnalogSignal
-from neo.core.channelindex import ChannelIndex
 from neo.core.dataobject import DataObject
 
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
-                                  array_annotations=None, annotations=None, segment=None,
-                                  channel_index=None):
+                                  array_annotations=None, annotations=None, segment=None):
     '''
     A function to map IrregularlySampledSignal.__new__ to a function that
     does not do the unit checking. This is needed for pickle to work.
@@ -50,7 +48,6 @@ def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=Non
               copy=copy, name=name, file_origin=file_origin, description=description,
               array_annotations=array_annotations, **annotations)
     iss.segment = segment
-    iss.channel_index = channel_index
     return iss
 
 
@@ -123,8 +120,8 @@ class IrregularlySampledSignal(BaseSignal):
 
     '''
 
-    _parent_objects = ('Segment', 'ChannelIndex')
-    _parent_attrs = ('segment', 'channel_index')
+    _parent_objects = ('Segment',)
+    _parent_attrs = ('segment',)
     _quantity_attr = 'signal'
     _necessary_attrs = (('times', pq.Quantity, 1), ('signal', pq.Quantity, 2))
 
@@ -155,7 +152,6 @@ class IrregularlySampledSignal(BaseSignal):
                              "have same length")
         obj.times = pq.Quantity(times, units=time_units, dtype=float, copy=copy)
         obj.segment = None
-        obj.channel_index = None
 
         return obj
 
@@ -178,7 +174,7 @@ class IrregularlySampledSignal(BaseSignal):
                                                self.units, self.times.units, self.dtype, True,
                                                self.name, self.file_origin, self.description,
                                                self.array_annotations, self.annotations,
-                                               self.segment, self.channel_index)
+                                               self.segment)
 
     def _array_finalize_spec(self, obj):
         '''
@@ -219,7 +215,7 @@ class IrregularlySampledSignal(BaseSignal):
                 else:
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, (int, np.integer)):
-                    obj = obj.reshape(-1, 1)  # add if channel_index
+                    obj = obj.reshape(-1, 1)
                 obj.array_annotations = deepcopy(self.array_annotations_at_index(k))
         elif isinstance(i, slice):
             obj = super().__getitem__(i)
@@ -501,18 +497,6 @@ class IrregularlySampledSignal(BaseSignal):
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape
 
-        # merge channel_index (move to ChannelIndex.merge()?)
-        if self.channel_index and other.channel_index:
-            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]),
-                                                channel_ids=np.hstack(
-                                                    [self.channel_index.channel_ids,
-                                                     other.channel_index.channel_ids]),
-                                                channel_names=np.hstack(
-                                                    [self.channel_index.channel_names,
-                                                     other.channel_index.channel_names]))
-        else:
-            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
-
         return signal
 
     def concatenate(self, other, allow_overlap=False):
@@ -599,7 +583,6 @@ class IrregularlySampledSignal(BaseSignal):
                                           units=self.units, dtype=self.dtype, copy=False,
                                           t_start=t_start, t_stop=t_stop, **kwargs)
         signal.segment = None
-        signal.channel_index = None
 
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape

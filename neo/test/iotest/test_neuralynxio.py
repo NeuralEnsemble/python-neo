@@ -253,10 +253,8 @@ class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertGreater(len(block.segments[0].events), 1)
 
         block = nio.read_block(signal_group_mode='split-all')
-        self.assertEqual(len(block.channel_indexes), 0)
 
         block = nio.read_block(signal_group_mode='group-by-same-units')
-        self.assertEqual(len(block.channel_indexes), 0)
 
 
 class TestData(CommonNeuralynxIOTest, unittest.TestCase):

@@ -144,10 +144,7 @@ def _reference_name(class_name):
     `segment.block`. The attribute name `block` is obtained by calling
     `_container_name("Block")`.
     """
-    name_map = {
-        "ChannelIndex": "channel_index"
-    }
-    return name_map.get(class_name, class_name.lower())
+    return class_name.lower()
 
 
 def _container_name(class_name):
@@ -159,10 +156,7 @@ def _container_name(class_name):
     referenced by `block.segments`. The attribute name `segments` is
     obtained by calling `_container_name_plural("Segment")`.
     """
-    name_map = {
-        "ChannelIndex": "channel_indexes"
-    }
-    return name_map.get(class_name, _reference_name(class_name) + 's')
+    return _reference_name(class_name) + 's'
 
 
 class BaseNeo:

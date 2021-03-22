@@ -32,7 +32,7 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import Block, Group, Segment, SpikeTrain, Unit
+from neo.core import Block, Group, Segment, SpikeTrain
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -80,7 +80,7 @@ class BrainwareF32IO(BaseIO):
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
     supported_objects = [Block, Group,
-                         Segment, SpikeTrain, Unit]
+                         Segment, SpikeTrain]
 
     readable_objects = [Block]
     writeable_objects = []
