@@ -76,6 +76,8 @@ class AxonaRawIO(BaseRawIO):
         self.bytes_head = 32
         self.bytes_tail = 16
 
+        self.data_dtype = np.int16
+
         # There is no global header for .bin files
         self.global_header_size = 0
 
@@ -93,7 +95,7 @@ class AxonaRawIO(BaseRawIO):
         self.num_total_samples = self.num_total_packets * 3
 
         # Create np.memmap to .bin file
-        self._raw_signals = np.memmap(self.bin_file, dtype='int16', mode='r', 
+        self._raw_signals = np.memmap(self.bin_file, dtype=self.data_dtype, mode='r', 
                                       offset=self.global_header_size)
         
         # Header dict
@@ -145,7 +147,7 @@ class AxonaRawIO(BaseRawIO):
         sample 3: 32b (head) + 128*2 (all channels 1st and 2nd entry) + ...
         """            
 
-        # Set default values (TODO: Can I not do this in fun def?)
+        # Set default values
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -172,7 +174,8 @@ class AxonaRawIO(BaseRawIO):
         sig_ids = sig_ids[rem:(rem+num_samples)]
 
         # Read one channel at a time
-        raw_signals = np.ndarray(shape=(num_samples, len(channel_indexes)), dtype=sample1.dtype)
+        raw_signals = np.ndarray(shape=(num_samples, len(channel_indexes)), 
+                                 dtype=self.data_dtype)
 
         for i, ch_idx in enumerate(channel_indexes):
 
@@ -292,7 +295,7 @@ class AxonaRawIO(BaseRawIO):
 
         elec_per_tetrode = 4
         letters = ['a', 'b', 'c', 'd']
-        dtype = 'int16'
+        dtype = self.data_dtype
         units = 'uV'
         gain_list = self.get_channel_gain()
         offset = 0  # What is the offset? 
