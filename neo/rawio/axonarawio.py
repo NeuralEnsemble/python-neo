@@ -5,8 +5,8 @@ File format overview:
 http://space-memory-navigation.org/DacqUSBFileFormats.pdf
 
 In brief:
- data.set setup file containing all hardware setups related to the trial
- data.bin raw data file
+ data.set - setup file containing all hardware setups related to the trial
+ data.bin - raw data file
 
 There are many other data formats from Axona, which we do not consider (yet).
 These are derivative from the raw continuous data (.bin) and could in principle
@@ -42,11 +42,6 @@ class AxonaRawIO(BaseRawIO):
                             i_start=0, i_stop=1024,  channel_names=channel_names)
         >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
                             channel_indexes=[0, 3, 6])
-        >>> spike_timestamp = reader.spike_timestamps(spike_channel_index=0,
-                            t_start=None, t_stop=None)
-        >>> spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
-        >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
-
     """
 
     extensions = ['bin']  # Never used?
@@ -76,6 +71,7 @@ class AxonaRawIO(BaseRawIO):
         self.bytes_head = 32
         self.bytes_tail = 16
 
+        # All ephys data has this data type
         self.data_dtype = np.int16
 
         # There is no global header for .bin files
@@ -89,6 +85,10 @@ class AxonaRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
+        '''
+        Read important information from .set header file, create memory map
+        to raw data (.bin file) and prepare header dictionary in neo format.
+        '''
 
         # How many 432 byte packets does this data contain (<=> num. samples / 3)?
         self.num_total_packets = int(os.path.getsize(self.bin_file)/self.bytes_packet)
