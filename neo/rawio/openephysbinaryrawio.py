@@ -1,5 +1,5 @@
 """
-This module implement the "new" binary OpenEphys format.
+This module implements the "new" binary OpenEphys format.
 In this format channels are interleaved in one file.
 
 
@@ -24,7 +24,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 class OpenEphysBinaryRawIO(BaseRawIO):
     """
-    Handle several Block and several Segment.
+    Handle several Blocks and several Segments.
 
 
     # Correspondencies
@@ -32,9 +32,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     block[n-1]   experiment[n]    New device start/stop
     segment[s-1] recording[s]     New recording start/stop
 
-    handle several signals stream
-    handle events special npy data are respresented as array_annotations
-    do not handle spikes at the moment can be implemented if user demand
+    This IO handles several signal streams.
+    Special event (npy) data are represented as array_annotations.
+    The current implementation does not handle spiking data, this will be added upon user request
 
     """
     extensions = []
@@ -206,7 +206,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                             sig_ann['__array_annotations__'][k] = values
 
                 # array annotations for event channels
-                # use other possible datat in _possible_event_stream_names
+                # use other possible data in _possible_event_stream_names
                 for stream_index, stream_name in enumerate(event_stream_names):
                     ev_ann = seg_ann['events'][stream_index]
                     d = self._evt_streams[0][0][stream_index]
@@ -319,11 +319,11 @@ def explore_folder(dirname):
 
     Returns
     -------
-    nested dictionaries containing structure and stream information:
+    nested dictionaries containing structure and stream information
     """
     nb_block = 0
     nb_segment_per_block = []
-    # nested node_name / seg_index
+    # nested dictionary: block_index > seg_index > data_type > stream_name
     all_streams = {}
     for root, dirs, files in os.walk(dirname):
         for file in files:
@@ -360,7 +360,7 @@ def explore_folder(dirname):
 
             if (root / 'continuous').exists() and len(structure['continuous']) > 0:
                 for d in structure['continuous']:
-                    # when multi Record Node the stream name also contain
+                    # when multi Record Node the stream name also contains
                     # the node name to make it unique
                     stream_name = node_name + '#' + d['folder_name']
 
@@ -370,12 +370,6 @@ def explore_folder(dirname):
                     timestamps = np.load(str(timestamp_file), mmap_mode='r')
                     timestamp0 = timestamps[0]
                     t_start = timestamp0 / d['sample_rate']
-
-                    # sync_timestamp is -1 for all elements in our dataset
-                    # sync_timestamp_file = root / 'continuous' /
-                    #                       d['folder_name'] / 'synchronized_timestamps.npy'
-                    # sync_timestamps = np.load(str(sync_timestamp_file), mmap_mode='r')
-                    # t_start =  sync_timestamps[0]
 
                     # TODO for later : gap checking
                     signal_stream = d.copy()
