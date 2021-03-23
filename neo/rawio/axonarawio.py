@@ -153,7 +153,7 @@ class AxonaRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self.num_total_samples
         if channel_indexes is None:
-            channel_indexes = [i+1 for i in range(self.num_channels)]
+            channel_indexes = [i for i in range(self.num_channels)]
 
         num_samples = (i_stop-i_start)
 
@@ -179,7 +179,7 @@ class AxonaRawIO(BaseRawIO):
 
         for i, ch_idx in enumerate(channel_indexes):
 
-            chan_offset = self.channel_memory_offset[ch_idx-1]
+            chan_offset = self.channel_memory_offset[ch_idx]
             raw_signals[:,i] = self._raw_signals[sig_ids + chan_offset]
 
         return raw_signals
