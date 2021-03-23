@@ -175,7 +175,7 @@ class AxonaRawIO(BaseRawIO):
 
         for i, ch_idx in enumerate(channel_indexes):
 
-            chan_offset = self.get_channel_offset(ch_idx)
+            chan_offset = channnel_memory_offset[ch_idx]
             raw_signals[:,i] = self._raw_signals[sig_ids + chan_offset]
 
         return raw_signals
