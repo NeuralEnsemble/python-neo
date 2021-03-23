@@ -1,4 +1,5 @@
 """
+This class reads .set and .bin file data from the Axona acquisition system.
 
 File format overview:
 http://space-memory-navigation.org/DacqUSBFileFormats.pdf
@@ -6,38 +7,10 @@ http://space-memory-navigation.org/DacqUSBFileFormats.pdf
 In brief:
  data.set setup file containing all hardware setups related to the trial
  data.bin raw data file
- data.1 spike times and waveforms for tetrode 1, or stereotrodes 1 and 2
- data.2 spikes times and waveforms for tetrode 2, or stereotrodes 3 and 4
- …
- data.32 spikes times and waveforms for tetrode 32
- data.eeg continuous 250 Hz EEG signal, primary channel
- data.eegX continuous 250 Hz EEG signal, secondary channel (X = 1..16)
- data.egf high resolution 4800 Hz version of primary EEG channel
- data.egfX high resolution 4800 Hz version of primary EEG channel (X = 1..16)
- data.pos tracker position data
- data.inp digital input and keypress timestamps
- data.stm stimulation pulse timestamps
- data.spk spikes times and waveforms for monotrodes (single electrodes) 1 to 16
- data.epp field potential parameters
- data.epw field potential waveforms
- data.log DACQBASIC script optional user-defined output files
 
-Here we are only going to support .set and .bin files for now (raw cont. data). 
- At least the following could be derived from it: .eeg, .egf, .X, .pos.
-
-Rules for creating a new class:
-  1. Step 1: Create the main class
-
-  2. Step 2: RawIO test:
-
-  3. Step 3 : Create the neo.io class with the wrapper
-    * Create a file in neo/io/ that ends with "io.py"
-    * Create a class that inherits both your RawIO class and BaseFromRaw class
-    * copy/paste from neo/io/exampleio.py
-
-  4.Step 4 : IO test
-    * create a file in neo/test/iotest with the same previous name with "test_" prefix
-    * copy/paste from neo/test/iotest/test_exampleio.py
+There are many other data formats from Axona, which we do not consider (yet).
+These are derivative from the raw continuous data (.bin) and could in principle
+be extracted from it (see file format overview for details).
 
 Author: Steffen Buergers
 
