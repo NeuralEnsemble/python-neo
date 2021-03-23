@@ -48,6 +48,17 @@ class AxonaRawIO(BaseRawIO):
         >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
 
     """
+    extensions = ['bin']  # Never used?
+    rawmode = 'one-file'
+
+    # In the .bin file, channels are arranged in a strange order. This list takes
+    # a channel index as input and returns the actual offset for the channel in the
+    # memory map (self._raw_signals).
+    channnel_memory_offset = [None, 32, 33, 34, 35, 36, 37, 38, 39, 0, 1, 2, 3, 4, 5,
+                              6, 7, 40, 41, 42, 43, 44, 45, 46, 47, 8, 9, 10, 11,
+                              12, 13, 14, 15, 48, 49, 50, 51, 52, 53, 54, 55, 16, 17,
+                              18, 19, 20, 21, 22, 23, 56, 57, 58, 59, 60, 61, 62, 63,
+                              24, 25, 26, 27, 28, 29, 30, 31]
 
     def __init__(self, filename, sr=48000):
         BaseRawIO.__init__(self)
@@ -67,37 +78,24 @@ class AxonaRawIO(BaseRawIO):
         # There is no global header for .bin files
         self.global_header_size = 0
 
+        # Generally useful information
         self.sr = sr
         self.num_channels = len(self.get_active_tetrode()) * 4
+
+    def _source_name(self):
+        return self.filename
+
+    def _parse_header(self):
 
         # How many 432 byte packets does this data contain (<=> num. samples / 3)?
         self.num_total_packets = int(os.path.getsize(self.bin_file)/self.bytes_packet)
         self.num_total_samples = self.num_total_packets * 3
 
-    def _source_name(self):
-        # this function is used by __repr__
-        # for general cases self.filename is good
-        # But for URL you could mask some part of the URL to keep
-        # the main part.
-        return self.filename
-
-    def _parse_header(self):
-        # This is the central of a RawIO
-        # we need to collect in the original format all
-        # informations needed for further fast acces
-        # at any place in the file
-        # In short _parse_header can be slow but
-        # _get_analogsignal_chunk need to be as fast as possible
-
         # Create np.memmap to .bin file
         self._raw_signals = np.memmap(self.bin_file, dtype='int16', mode='r', 
                                       offset=self.global_header_size)
-
-        # fill into header dict
-        # This is mandatory!!!!!
-
         
-
+        # Header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
@@ -106,17 +104,14 @@ class AxonaRawIO(BaseRawIO):
         self.header['spike_channels'] = self.get_spike_chan_header()
         self.header['event_channels'] = self.get_event_chan_header()
 
-        # insert some annotation at some place
-        # at neo.io level IO are free to add some annoations
-        # to any object. To keep this functionality with the wrapper
-        # BaseFromRaw you can add annoations in a nested dict.
+        # Annotations
         self._generate_minimal_annotations()
 
     def get_signal_streams_header(self):
         '''
         create signals stream information (we always expect a single stream)
         '''
-        return np.array([('stream 0', 0)], dtype=_signal_stream_dtype)
+        return np.array([('stream 0', '0')], dtype=_signal_stream_dtype)
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
@@ -147,10 +142,13 @@ class AxonaRawIO(BaseRawIO):
         sample 1: 32b (head) + 2*38b (remappedID) and 2*38b + 1b (second byte of sample)
         sample 2: 32b (head) + 128 (all channels 1st entry) + 2*38b (remappedID) and ...
         sample 3: 32b (head) + 128*2 (all channels 1st and 2nd entry) + ...
-
-        NOTE: I believe there is always a single stream (all channels have the same SR)
         """            
 
+        # Set default values (TODO: Can I not do this in fun def?)
+        if i_start is None:
+            i_start = 0
+        if i_stop is None:
+            i_stop = self.num_total_samples
         if channel_indexes is None:
             channel_indexes = [i+1 for i in range(self.num_channels)]
 
@@ -173,7 +171,7 @@ class AxonaRawIO(BaseRawIO):
         sig_ids = sig_ids[rem:(rem+num_samples)]
 
         # Read one channel at a time
-        raw_signals = np.ndarray(shape=(num_samples, len(channel_indexes)))
+        raw_signals = np.ndarray(shape=(num_samples, len(channel_indexes)), dtype=sample1.dtype)
 
         for i, ch_idx in enumerate(channel_indexes):
 
@@ -222,7 +220,7 @@ class AxonaRawIO(BaseRawIO):
             for line in f:
 
                 # The pattern to look for is collectMask_X Y, 
-                # where X is the tetrode number, and Y is true or false (1, 0)
+                # where X is the tetrode number, and Y is 1 or 0
                 if 'collectMask_' in line:
                     tetrode_str, tetrode_status = line.split(' ')
                     if int(tetrode_status) == 1:
@@ -237,21 +235,6 @@ class AxonaRawIO(BaseRawIO):
         i.e. Tetrode 1 = Ch1-Ch4, Tetrode 2 = Ch5-Ch8, etc.
         """
         return np.arange(1, 5) + 4 * (int(tetrode) - 1)
-
-    def get_channel_offset(self, chan_id):
-        """ 
-        In the .bin file, channels are arranged in a strange order. This method takes
-        a channel index as input and returns the actual offset for the channel in the
-        memory map (self._raw_signals).
-        """
-        channnel_memory_offset = np.array(
-            [32, 33, 34, 35, 36, 37, 38, 39, 0, 1, 2, 3, 4, 5,
-             6, 7, 40, 41, 42, 43, 44, 45, 46, 47, 8, 9, 10, 11,
-             12, 13, 14, 15, 48, 49, 50, 51, 52, 53, 54, 55, 16, 17,
-             18, 19, 20, 21, 22, 23, 56, 57, 58, 59, 60, 61, 62, 63,
-             24, 25, 26, 27, 28, 29, 30, 31]
-        )
-        return channnel_memory_offset[chan_id - 1]
 
     def read_datetime(self):
         """ 
