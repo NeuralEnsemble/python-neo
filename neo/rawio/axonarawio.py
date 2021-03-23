@@ -48,15 +48,12 @@ class AxonaRawIO(BaseRawIO):
         >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
 
     """
-    # TODO Why do I need these?
-    extensions = ['bin']
-    rawmode = 'one-file'
 
     def __init__(self, filename, sr=48000):
         BaseRawIO.__init__(self)
 
-        # note that this filename is used in self._source_name
-        self.filename = filename
+        # We accept base filenames, .bin and .set extensions
+        self.filename = filename.replace('.bin', '').replace('.set', '')
         self.bin_file = os.path.join(self.filename + '.bin') 
         self.set_file = os.path.join(self.filename + '.set')
         self.set_file_encoding = 'cp1252'
