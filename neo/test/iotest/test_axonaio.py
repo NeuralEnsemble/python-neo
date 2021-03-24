@@ -18,7 +18,10 @@ import numpy as np
 class TestAxonaIO(BaseTestIO, unittest.TestCase, ):
     ioclass = AxonaIO
 
-    files_to_download = ['axona_raw']
+    files_to_download = [
+        'axona_raw.set', 
+        'axona_raw.bin'
+    ]
     files_to_test = files_to_download
 
 
