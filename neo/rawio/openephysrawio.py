@@ -1,5 +1,9 @@
 """
-This module implement OpenEphys format.
+This module implement the "old" OpenEphys format.
+In this format channels are split into several files
+
+https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Open-Ephys-format.html
+
 
 Author: Samuel Garcia
 """
