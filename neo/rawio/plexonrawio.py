@@ -265,7 +265,7 @@ class PlexonRawIO(BaseRawIO):
             for stream_id in self._signal_length:
                 t_stop_sig = self._signal_length[stream_id] / self._sig_sampling_rate[stream_id]
                 t_stop = max(t_stop, t_stop_sig)
-        return t_stop1
+        return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
         return self._signal_length[stream_index]
@@ -290,7 +290,7 @@ class PlexonRawIO(BaseRawIO):
             signal_channels = signal_channels[channel_indexes]
         channel_ids = signal_channels['id']
 
-        raw_signals = np.zeros((i_stop - i_start, global_channels.size), dtype='int16')
+        raw_signals = np.zeros((i_stop - i_start, channel_ids.size), dtype='int16')
         for c, channel_id in enumerate(channel_ids):
             chan_id = np.int32(channel_id)
 
