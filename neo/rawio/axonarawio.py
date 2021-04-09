@@ -34,27 +34,33 @@ class AxonaRawIO(BaseRawIO):
     .set file about the recording setup (see the above manual for details).
 
     Usage:
-        >>> import neo.rawio
-        >>> r = neo.rawio.AxonaRawIO(filename=os.path.join(dir_name, base_filename))
-        >>> r.parse_header()
-        >>> print(r)
-        >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            i_start=0, i_stop=1024,  channel_names=channel_names)
-        >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
-                            channel_indexes=[0, 3, 6])
+        import neo.rawio
+        r = neo.rawio.AxonaRawIO(
+            filename=os.path.join(dir_name, base_filename)
+        )
+        r.parse_header()
+        print(r)
+        raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
+                      i_start=0, i_stop=1024,  channel_names=channel_names)
+        float_chunk = reader.rescale_signal_raw_to_float(
+            raw_chunk, dtype='float64',
+            channel_indexes=[0, 3, 6]
+        )
     """
 
     extensions = ['bin']  # Never used?
     rawmode = 'one-file'
 
-    # In the .bin file, channels are arranged in a strange order. This list takes
-    # a channel index as input and returns the actual offset for the channel in the
-    # memory map (self._raw_signals).
-    channel_memory_offset = [32, 33, 34, 35, 36, 37, 38, 39, 0, 1, 2, 3, 4, 5,
-                             6, 7, 40, 41, 42, 43, 44, 45, 46, 47, 8, 9, 10, 11,
-                             12, 13, 14, 15, 48, 49, 50, 51, 52, 53, 54, 55, 16, 17,
-                             18, 19, 20, 21, 22, 23, 56, 57, 58, 59, 60, 61, 62, 63,
-                             24, 25, 26, 27, 28, 29, 30, 31]
+    # In the .bin file, channels are arranged in a strange order. 
+    # This list takes a channel index as input and returns the actual
+    # offset for the channel in the memory map (self._raw_signals).
+    channel_memory_offset = [
+        32, 33, 34, 35, 36, 37, 38, 39, 0, 1, 2, 3, 4, 5,
+        6, 7, 40, 41, 42, 43, 44, 45, 46, 47, 8, 9, 10, 11,
+        12, 13, 14, 15, 48, 49, 50, 51, 52, 53, 54, 55, 16, 17,
+        18, 19, 20, 21, 22, 23, 56, 57, 58, 59, 60, 61, 62, 63,
+        24, 25, 26, 27, 28, 29, 30, 31
+    ]
 
     def __init__(self, filename):
         BaseRawIO.__init__(self)
@@ -78,7 +84,7 @@ class AxonaRawIO(BaseRawIO):
 
         # Get useful parameters from .set file
         params = ['rawRate']
-        params = get_set_file_parameters(filename, params)
+        params = self.get_set_file_parameters(params)
 
         # Useful num. bytes per continuous data packet (.bin file)
         self.bytes_packet = 432
@@ -200,14 +206,13 @@ class AxonaRawIO(BaseRawIO):
     # https://github.com/GeoffBarrett/BinConverter
     # Adapted or modified by Steffen Buergers
 
-    def get_set_file_parameters(filename, params):
+    def get_set_file_parameters(self, params):
         """
-        Given a binary (.set) file with phrases and line breaks, enters the
-        first word of a phrase as dictionary key and the following
-        string (without linebreaks) as value. Returns the dictionary.
+        Given a list of parameters, looks for each in first word of a phrase 
+        in the .set file. Adds found paramters as dictionary keys and
+        following phrases as values (strings). 
         
         INPUT
-        filename (str): .set file path and name.
         params (list or set): parameter names to search for. 
         
         OUTPUT
@@ -215,11 +220,11 @@ class AxonaRawIO(BaseRawIO):
                        were found & values being strings of the data.
                     
         EXAMPLE
-        get_set_file_parameters('myset_file.set', ['experimenter', 'trial_time'])
+        self.get_set_file_parameters(['experimenter', 'trial_time'])
         """
         header = {}
         params = set(params)
-        with open(filename, 'rb') as f:
+        with open(self.set_file, 'rb') as f:
             for bin_line in f:
                 if b'data_start' in bin_line:
                     break
