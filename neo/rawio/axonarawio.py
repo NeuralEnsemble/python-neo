@@ -120,8 +120,8 @@ class AxonaRawIO(BaseRawIO):
         bl_ann = self.raw_annotations['blocks'][0]
         seg_ann = bl_ann['segments'][0]
         seg_ann['rec_datetime'] = self.read_datetime()
-        # signal stream 0
-        # sig_an = seg_ann['signals'][0]['__array_annotations__']['tetrod_id'] = ...
+        sig_an = seg_ann['signals'][0]['__array_annotations__']['tetrode_id'] = \
+            [tetr for tetr in self.get_active_tetrode() for _ in range(4)]
 
     def _get_signal_streams_header(self):
         # create signals stream information (we always expect a single stream)
