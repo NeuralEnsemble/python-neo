@@ -183,7 +183,7 @@ class AxonaRawIO(BaseRawIO):
         offset = i_start // 3 * (self.bytes_packet // 2)
         rem = (i_start % 3)
 
-        sample1 = np.arange(num_packets_oi+1, dtype=np.uint32) * \
+        sample1 = np.arange(num_packets_oi + 1, dtype=np.uint32) * \
             (self.bytes_packet // 2) + self.bytes_head // 2 + offset
         sample2 = sample1 + 64
         sample3 = sample2 + 64
