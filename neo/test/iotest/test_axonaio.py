@@ -4,7 +4,7 @@ Tests of neo.io.axonaio
 
 import unittest
 
-from neo.io.axonaio import AxonaIO  # , HAVE_SCIPY
+from neo.io.axonaio import AxonaIO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io.proxyobjects import (AnalogSignalProxy,
                 SpikeTrainProxy, EventProxy, EpochProxy)
@@ -14,7 +14,7 @@ import quantities as pq
 import numpy as np
 
 
-# This run standart tests, this is mandatory for all IO
+
 class TestAxonaIO(BaseTestIO, unittest.TestCase, ):
     ioclass = AxonaIO
 
@@ -22,11 +22,11 @@ class TestAxonaIO(BaseTestIO, unittest.TestCase, ):
         'axona_raw.set', 
         'axona_raw.bin'
     ]
-    files_to_test = files_to_download
+    files_to_test = [
+        'axona_raw.set'
+    ]
 
 
 if __name__ == "__main__":
     unittest.main()
-
-# eof
 

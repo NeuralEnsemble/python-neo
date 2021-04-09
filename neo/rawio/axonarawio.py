@@ -56,14 +56,27 @@ class AxonaRawIO(BaseRawIO):
                              18, 19, 20, 21, 22, 23, 56, 57, 58, 59, 60, 61, 62, 63,
                              24, 25, 26, 27, 28, 29, 30, 31]
 
-    def __init__(self, filename, sr=48000):
+    def __init__(self, filename):
         BaseRawIO.__init__(self)
+
 
         # We accept base filenames, .bin and .set extensions
         self.filename = filename.replace('.bin', '').replace('.set', '')
         self.bin_file = os.path.join(self.filename + '.bin') 
         self.set_file = os.path.join(self.filename + '.set')
         self.set_file_encoding = 'cp1252'
+
+
+    def _source_name(self):
+        return self.filename
+
+    def _parse_header(self):
+        '''
+        Read important information from .set header file, create memory map
+        to raw data (.bin file) and prepare header dictionary in neo format.
+        '''
+        # TODO retrieve automatically
+        sr = 48000
 
         # Useful num. bytes per continuous data packet (.bin file)
         self.bytes_packet = 432
@@ -81,14 +94,6 @@ class AxonaRawIO(BaseRawIO):
         self.sr = sr
         self.num_channels = len(self.get_active_tetrode()) * 4
 
-    def _source_name(self):
-        return self.filename
-
-    def _parse_header(self):
-        '''
-        Read important information from .set header file, create memory map
-        to raw data (.bin file) and prepare header dictionary in neo format.
-        '''
 
         # How many 432 byte packets does this data contain (<=> num. samples / 3)?
         self.num_total_packets = int(os.path.getsize(self.bin_file)/self.bytes_packet)
@@ -102,18 +107,22 @@ class AxonaRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
-        self.header['signal_streams'] = self.get_signal_streams_header()
-        self.header['signal_channels'] = self.get_signal_chan_header()
-        self.header['spike_channels'] = self.get_spike_chan_header()
-        self.header['event_channels'] = self.get_event_chan_header()
+        self.header['signal_streams'] = self._get_signal_streams_header()
+        self.header['signal_channels'] = self._get_signal_chan_header()
+        self.header['spike_channels'] = np.array([], dtype=_spike_channel_dtype)
+        self.header['event_channels'] = np.array([], dtype=_event_channel_dtype)
 
         # Annotations
         self._generate_minimal_annotations()
 
-    def get_signal_streams_header(self):
-        '''
-        create signals stream information (we always expect a single stream)
-        '''
+        bl_ann = self.raw_annotations['blocks'][0]
+        seg_ann = bl_ann['segments'][0]
+        seg_ann['rec_datetime'] = self.read_datetime()
+        # signal stream 0
+        # sig_an = seg_ann['signals'][0]['__array_annotations__']['tetrod_id'] = ...
+
+    def _get_signal_streams_header(self):
+        # create signals stream information (we always expect a single stream)
         return np.array([('stream 0', '0')], dtype=_signal_stream_dtype)
 
     def _segment_t_start(self, block_index, seg_index):
@@ -184,30 +193,6 @@ class AxonaRawIO(BaseRawIO):
 
         return raw_signals
 
-    def _spike_count(self, block_index, seg_index, unit_index):
-        return None
-
-    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        return None
-
-    def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        return None
-
-    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        return None
-
-    def _event_count(self, block_index, seg_index, event_channel_index):
-        return None
-
-    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        return None
-
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
-        return None
-
-    def _rescale_epoch_duration(self, raw_duration, dtype):
-        return None
-
     # ------------------ HELPER METHODS --------------------
     # These are credited largely to Geoff Barrett from the Hussaini lab:
     # https://github.com/GeoffBarrett/BinConverter
@@ -233,7 +218,7 @@ class AxonaRawIO(BaseRawIO):
 
         return active_tetrodes
 
-    def get_channel_from_tetrode(self, tetrode):
+    def _get_channel_from_tetrode(self, tetrode):
         """ 
         This function will take the tetrode number and return the Axona channel numbers
         i.e. Tetrode 1 = Ch1-Ch4, Tetrode 2 = Ch5-Ch8, etc.
@@ -254,7 +239,7 @@ class AxonaRawIO(BaseRawIO):
         return datetime.datetime.strptime(date_string + ', ' + time_string, \
             "%d %b %Y, %H:%M:%S")
 
-    def get_channel_gain(self):
+    def _get_channel_gain(self):
         """ 
         Read gain for each channel from .set file and return in list of integers 
 
@@ -276,7 +261,7 @@ class AxonaRawIO(BaseRawIO):
         
         return [1000*adc_fullscale_mv/(gain*128) for gain in gain_list]
 
-    def get_signal_chan_header(self):
+    def _get_signal_chan_header(self):
         """
         Returns a 1 dimensional np.array of tuples with one entry for each channel
         that recorded data. Each tuple contains the following information:
@@ -297,7 +282,7 @@ class AxonaRawIO(BaseRawIO):
         letters = ['a', 'b', 'c', 'd']
         dtype = self.data_dtype
         units = 'uV'
-        gain_list = self.get_channel_gain()
+        gain_list = self._get_channel_gain()
         offset = 0  # What is the offset? 
 
         sig_channels = []
@@ -309,23 +294,8 @@ class AxonaRawIO(BaseRawIO):
                 ch_name = '{}{}'.format(itetr, letters[ielec])
                 chan_id = str(cntr + 1)
                 gain = gain_list[cntr]
-                stream_id = str(0)
+                stream_id = '0'
                 sig_channels.append((ch_name, chan_id, self.sr, dtype, 
                     units, gain, offset, stream_id))
                 
         return np.array(sig_channels, dtype=_signal_channel_dtype) 
-
-    def get_spike_chan_header(self):
-        """
-        No spikes currently
-        """
-        return  np.array([], dtype=_spike_channel_dtype)
-
-    def get_event_chan_header(self):
-        """
-        No events currently
-        """
-        return np.array([], dtype=_event_channel_dtype)
-
-# eof
-
