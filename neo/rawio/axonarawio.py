@@ -75,8 +75,10 @@ class AxonaRawIO(BaseRawIO):
         Read important information from .set header file, create memory map
         to raw data (.bin file) and prepare header dictionary in neo format.
         '''
-        # TODO retrieve automatically
-        sr = 48000
+
+        # Get useful parameters from .set file
+        params = ['rawRate']
+        params = get_set_file_parameters(filename, params)
 
         # Useful num. bytes per continuous data packet (.bin file)
         self.bytes_packet = 432
@@ -91,7 +93,7 @@ class AxonaRawIO(BaseRawIO):
         self.global_header_size = 0
 
         # Generally useful information
-        self.sr = sr
+        self.sr = int(params['rawRate'])
         self.num_channels = len(self.get_active_tetrode()) * 4
 
 
@@ -197,6 +199,37 @@ class AxonaRawIO(BaseRawIO):
     # These are credited largely to Geoff Barrett from the Hussaini lab:
     # https://github.com/GeoffBarrett/BinConverter
     # Adapted or modified by Steffen Buergers
+
+    def get_set_file_parameters(filename, params):
+        """
+        Given a binary (.set) file with phrases and line breaks, enters the
+        first word of a phrase as dictionary key and the following
+        string (without linebreaks) as value. Returns the dictionary.
+        
+        INPUT
+        filename (str): .set file path and name.
+        params (list or set): parameter names to search for. 
+        
+        OUTPUT
+        header (dict): dictionary with keys being the parameters that
+                       were found & values being strings of the data.
+                    
+        EXAMPLE
+        get_set_file_parameters('myset_file.set', ['experimenter', 'trial_time'])
+        """
+        header = {}
+        params = set(params)
+        with open(filename, 'rb') as f:
+            for bin_line in f:
+                if b'data_start' in bin_line:
+                    break
+                line = bin_line.decode('cp1252').replace('\r\n', '').replace('\r', '').strip()
+                parts = line.split(' ')
+                key = parts[0]
+                if key in params:
+                    header[key] = ' '.join(parts[1:])
+                
+        return header
 
     def get_active_tetrode(self):
         """ 
