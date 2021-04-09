@@ -176,24 +176,24 @@ class AxonaRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = [i for i in range(self.num_channels)]
 
-        num_samples = (i_stop-i_start)
+        num_samples = (i_stop - i_start)
 
         # Create base index vector for _raw_signals for time period of interest
-        num_packets_oi = (num_samples+2) // 3
-        offset = i_start//3 * (self.bytes_packet//2)
+        num_packets_oi = (num_samples + 2) // 3
+        offset = i_start // 3 * (self.bytes_packet // 2)
         rem = (i_start % 3)
 
         sample1 = np.arange(num_packets_oi+1, dtype=np.uint32) * \
-            (self.bytes_packet//2) + self.bytes_head//2 + offset
+            (self.bytes_packet // 2) + self.bytes_head // 2 + offset
         sample2 = sample1 + 64
         sample3 = sample2 + 64
 
-        sig_ids = np.empty((sample1.size+sample2.size+sample3.size,),
+        sig_ids = np.empty((sample1.size + sample2.size + sample3.size,),
                            dtype=sample1.dtype)
         sig_ids[0::3] = sample1
         sig_ids[1::3] = sample2
         sig_ids[2::3] = sample3
-        sig_ids = sig_ids[rem:(rem+num_samples)]
+        sig_ids = sig_ids[rem:(rem + num_samples)]
 
         # Read one channel at a time
         raw_signals = np.ndarray(shape=(num_samples,
@@ -279,7 +279,7 @@ class AxonaRawIO(BaseRawIO):
                 if line.startswith('trial_date'):
                     date_string = re.findall(r'\d+\s\w+\s\d{4}$', line)[0]
                 if line.startswith('trial_time'):
-                    time_string = line[len('trial_time')+1::].replace('\n', '')
+                    time_string = line[len('trial_time') + 1::].replace('\n', '')
 
         return datetime.datetime.strptime(date_string + ', ' + time_string,
                                           "%d %b %Y, %H:%M:%S")
@@ -306,7 +306,7 @@ class AxonaRawIO(BaseRawIO):
                         np.float32(re.findall(r'\d*', line.split(' ')[1])[0])
                     )
 
-        return [1000*adc_fullscale_mv/(gain*128) for gain in gain_list]
+        return [1000 * adc_fullscale_mv / (gain * 128) for gain in gain_list]
 
     def _get_signal_chan_header(self):
         """
@@ -337,7 +337,7 @@ class AxonaRawIO(BaseRawIO):
 
             for ielec in range(elec_per_tetrode):
 
-                cntr = (itetr*elec_per_tetrode) + ielec
+                cntr = (itetr * elec_per_tetrode) + ielec
                 ch_name = '{}{}'.format(itetr, letters[ielec])
                 chan_id = str(cntr + 1)
                 gain = gain_list[cntr]

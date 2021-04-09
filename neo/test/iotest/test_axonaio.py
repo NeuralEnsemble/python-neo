@@ -14,12 +14,11 @@ import quantities as pq
 import numpy as np
 
 
-
 class TestAxonaIO(BaseTestIO, unittest.TestCase, ):
     ioclass = AxonaIO
 
     files_to_download = [
-        'axona_raw.set', 
+        'axona_raw.set',
         'axona_raw.bin'
     ]
     files_to_test = [
@@ -29,4 +28,3 @@ class TestAxonaIO(BaseTestIO, unittest.TestCase, ):
 
 if __name__ == "__main__":
     unittest.main()
-
