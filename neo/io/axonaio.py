@@ -9,5 +9,3 @@ class AxonaIO(AxonaRawIO, BaseFromRaw):
     def __init__(self, filename):
         AxonaRawIO.__init__(self, filename=filename)
         BaseFromRaw.__init__(self, filename)
-
-# eof
