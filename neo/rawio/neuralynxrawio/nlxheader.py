@@ -89,6 +89,14 @@ class NlxHeader(OrderedDict):
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
             datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
+        # Cheetah version 5.4.0
+        'v5.4.0': dict(
+            datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)'
+                            r'  At Time: (?P<time>\S+)',
+            datetime2_regex=r'## Time Closed \(m/d/y\): (?P<date>\S+)'
+                            r'  At Time: (?P<time>\S+)',
+            filename_regex=r'## File Name: (?P<filename>\S+)',
+            datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
         # Cheetah version 5 before and including v 5.6.4 as well as version 1
         'bv5.6.4': dict(
             datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)'
@@ -199,6 +207,8 @@ class NlxHeader(OrderedDict):
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
             elif av < '5':
                 hpd = NlxHeader.header_pattern_dicts['bv5']
+            elif av <= '5.4.0':
+                hpd = NlxHeader.header_pattern_dicts['v5.4.0']
             elif av <= '5.6.4':
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
             else:
