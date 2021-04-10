@@ -33,29 +33,18 @@ class TestTdtIO(BaseTestIO, unittest.TestCase, ):
                                           filename='aep_05', directory=self.local_test_dir,
                                           clean=False)
 
-        # TdtIO is a hard case they are 3 groups at rawio level
-        # there are 3 groups of signals
-        nb_sigs_by_group = [1, 16, 16]
+        # In this TDT dataset there are 3 signal streams
+        nb_sigs_by_stream = [16, 1, 16]
 
-        signal_group_mode = 'group-by-same-units'
         reader = TdtIO(dirname=dirname)
-        bl = reader.read_block(signal_group_mode=signal_group_mode)
+        bl = reader.read_block()
         for seg in bl.segments:
             assert len(seg.analogsignals) == 3
             i = 0
             for anasig in seg.analogsignals:
-                # print(anasig.shape, anasig.sampling_rate)
-                assert anasig.shape[1] == nb_sigs_by_group[i]
+                # print(anasig.shape, anasig.sampling_rate, nb_sigs_by_stream[i])
+                assert anasig.shape[1] == nb_sigs_by_stream[i]
                 i += 1
-
-        signal_group_mode = 'split-all'
-        reader = TdtIO(dirname=dirname)
-        bl = reader.read_block(signal_group_mode=signal_group_mode)
-        for seg in bl.segments:
-            assert len(seg.analogsignals) == np.sum(nb_sigs_by_group)
-            for anasig in seg.analogsignals:
-                # print(anasig.shape, anasig.sampling_rate)
-                assert anasig.shape[1] == 1
 
 
 if __name__ == "__main__":

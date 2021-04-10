@@ -6,7 +6,6 @@ tqdm
 nixio>=1.5.0b2
 matplotlib
 ipython
-https://github.com/nsdf/nsdf/archive/0.1.tar.gz
 coverage
 coveralls
 pillow

@@ -16,8 +16,8 @@ Author: Samuel Garcia
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 
@@ -31,13 +31,21 @@ class ElanRawIO(BaseRawIO):
     extensions = ['eeg']
     rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename=None, entfile=None, posfile=None):
         BaseRawIO.__init__(self)
         self.filename = filename
 
+        # check whether ent and pos files are defined
+        if entfile is None:
+            entfile = self.filename + '.ent'
+        if posfile is None:
+            posfile = self.filename + '.pos'
+        self.entfile = entfile
+        self.posfile = posfile
+
     def _parse_header(self):
 
-        with open(self.filename + '.ent', mode='rt', encoding='ascii', newline=None) as f:
+        with open(self.entfile, mode='rt', encoding='ascii', newline=None) as f:
 
             # version
             version = f.readline()[:-1]
@@ -49,10 +57,10 @@ class ElanRawIO(BaseRawIO):
 
             # strange 2 line for datetime
             # line1
-            l = f.readline()
-            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
-            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
-            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
+            line = f.readline()
+            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', line)
+            r2 = re.findall(r'(\d+):(\d+):(\d+)', line)
+            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', line)
             YY, MM, DD, hh, mm, ss = (None,) * 6
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
@@ -62,10 +70,10 @@ class ElanRawIO(BaseRawIO):
                 DD, MM, YY = r3[0]
 
             # line2
-            l = f.readline()
-            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
-            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
-            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
+            line = f.readline()
+            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', line)
+            r2 = re.findall(r'(\d+):(\d+):(\d+)', line)
+            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', line)
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
             elif len(r2) != 0:
@@ -78,17 +86,17 @@ class ElanRawIO(BaseRawIO):
             except:
                 fulldatetime = None
 
-            l = f.readline()
-            l = f.readline()
-            l = f.readline()
+            line = f.readline()
+            line = f.readline()
+            line = f.readline()
 
             # sampling rate sample
-            l = f.readline()
-            self._sampling_rate = 1. / float(l)
+            line = f.readline()
+            self._sampling_rate = 1. / float(line)
 
             # nb channel
-            l = f.readline()
-            nb_channel = int(l) - 2
+            line = f.readline()
+            nb_channel = int(line) - 2
 
             channel_infos = [{} for c in range(nb_channel + 2)]
             # channel label
@@ -115,21 +123,23 @@ class ElanRawIO(BaseRawIO):
             for c in range(nb_channel + 2):
                 channel_infos[c]['info_filter'] = f.readline()[:-1]
 
-        n = int(round(np.log(channel_infos[0]['max_logic'] -
-                             channel_infos[0]['min_logic']) / np.log(2)) / 8)
+        n = int(round(np.log(channel_infos[0]['max_logic']
+                            - channel_infos[0]['min_logic']) / np.log(2)) / 8)
         sig_dtype = np.dtype('>i' + str(n))
+
+        signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
 
         sig_channels = []
         for c, chan_info in enumerate(channel_infos[:-2]):
             chan_name = chan_info['label']
-            chan_id = c
+            chan_id = str(c)
 
             gain = (chan_info['max_physic'] - chan_info['min_physic']) / \
                    (chan_info['max_logic'] - chan_info['min_logic'])
             offset = - chan_info['min_logic'] * gain + chan_info['min_physic']
-            gourp_id = 0
+            stream_id = '0'
             sig_channels.append((chan_name, chan_id, self._sampling_rate, sig_dtype,
-                                 chan_info['units'], gain, offset, gourp_id))
+                                 chan_info['units'], gain, offset, stream_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -139,12 +149,12 @@ class ElanRawIO(BaseRawIO):
         self._raw_signals = self._raw_signals[:, :-2]
 
         # triggers
-        with open(self.filename + '.pos', mode='rt', encoding='ascii', newline=None) as f:
+        with open(self.posfile, mode='rt', encoding='ascii', newline=None) as f:
             self._raw_event_timestamps = []
             self._event_labels = []
             self._reject_codes = []
-            for l in f.readlines():
-                r = re.findall(r' *(\d+) *(\d+) *(\d+) *', l)
+            for line in f.readlines():
+                r = re.findall(r' *(\d+)\s* *(\d+)\s* *(\d+) *', line)
                 self._raw_event_timestamps.append(int(r[0][0]))
                 self._event_labels.append(str(r[0][1]))
                 self._reject_codes.append(str(r[0][2]))
@@ -158,28 +168,34 @@ class ElanRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # insert some annotation at some place
         self._generate_minimal_annotations()
         extra_info = dict(rec_datetime=fulldatetime, elan_version=version,
                           info1=info1, info2=info2)
-        for obj_name in ('blocks', 'segments'):
-            self._raw_annotate(obj_name, **extra_info)
-        for c in range(nb_channel):
-            d = channel_infos[c]
-            self._raw_annotate('signals', chan_index=c, info_filter=d['info_filter'])
-            self._raw_annotate('signals', chan_index=c, kind=d['kind'])
-        self._raw_annotate('events', chan_index=0, reject_codes=self._reject_codes)
+        block_annotations = self.raw_annotations['blocks'][0]
+        block_annotations.update(extra_info)
+        seg_annotations = self.raw_annotations['blocks'][0]['segments'][0]
+        seg_annotations.update(extra_info)
+
+        sig_annotations = self.raw_annotations['blocks'][0]['segments'][0]['signals'][0]
+        for key in ('info_filter', 'kind'):
+            values = [channel_infos[c][key] for c in range(nb_channel)]
+            sig_annotations['__array_annotations__'][key] = np.array(values)
+
+        event_annotations = self.raw_annotations['blocks'][0]['segments'][0]['events'][0]
+        event_annotations['__array_annotations__']['reject_codes'] = self._reject_codes
 
     def _source_name(self):
         return self.filename
@@ -191,13 +207,16 @@ class ElanRawIO(BaseRawIO):
         t_stop = self._raw_signals.shape[0] / self._sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return self._raw_signals.shape[0]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes=None):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
@@ -209,7 +228,8 @@ class ElanRawIO(BaseRawIO):
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._raw_event_timestamps.size
 
-    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index,
+                              event_channel_index, t_start, t_stop):
         timestamp = self._raw_event_timestamps
         labels = self._event_labels
         durations = None
@@ -226,6 +246,6 @@ class ElanRawIO(BaseRawIO):
 
         return timestamp, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
         return event_times

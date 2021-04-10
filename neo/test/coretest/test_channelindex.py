@@ -218,9 +218,8 @@ class TestChannelIndex(unittest.TestCase):
         self.assertEqual(self.chx1._container_child_objects, ('Unit',))
         self.assertEqual(self.chx1._data_child_objects,
                          ('AnalogSignal', 'IrregularlySampledSignal'))
-        self.assertEqual(self.chx1._single_parent_objects, ('Block',))
+        self.assertEqual(self.chx1._parent_objects, ('Block',))
         self.assertEqual(self.chx1._multi_child_objects, tuple())
-        self.assertEqual(self.chx1._multi_parent_objects, ())
         self.assertEqual(self.chx1._child_properties, ())
 
         self.assertEqual(self.chx1._single_child_objects,
@@ -231,10 +230,9 @@ class TestChannelIndex(unittest.TestCase):
                          ('analogsignals', 'irregularlysampledsignals'))
         self.assertEqual(self.chx1._single_child_containers,
                          ('units', 'analogsignals', 'irregularlysampledsignals'))
-        self.assertEqual(self.chx1._single_parent_containers, ('block',))
+        self.assertEqual(self.chx1._parent_containers, ('block',))
         self.assertEqual(self.chx1._multi_child_containers,
                          tuple())
-        self.assertEqual(self.chx1._multi_parent_containers, ())
 
         self.assertEqual(self.chx1._child_objects,
                          ('Unit', 'AnalogSignal', 'IrregularlySampledSignal'))

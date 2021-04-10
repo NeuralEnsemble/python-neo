@@ -14,8 +14,6 @@ from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import *
 
 from neo.io.neuralynxio import NeuralynxIO
-from neo.io.neuralynxio import NeuralynxIO as NewNeuralynxIO
-from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo import AnalogSignal
 
 
@@ -382,51 +380,6 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), n_gaps + 1)
-
-
-def compare_old_and_new_neuralynxio():
-    base = '/tmp/files_for_testing_neo/neuralynx/'
-    dirname = base + 'Cheetah_v5.5.1/original_data/'
-    # ~ dirname = base+'Cheetah_v5.7.4/original_data/'
-
-    t0 = time.perf_counter()
-    newreader = NewNeuralynxIO(dirname)
-    t1 = time.perf_counter()
-    bl1 = newreader.read_block(load_waveforms=True)
-    t2 = time.perf_counter()
-    print('newreader header', t1 - t0, 's')
-    print('newreader data', t2 - t1, 's')
-    print('newreader toal', t2 - t0, 's')
-    for seg in bl1.segments:
-        print('seg', seg.index)
-        for anasig in seg.analogsignals:
-            print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
-        for st in seg.spiketrains:
-            print(' SpikeTrain', st.name, st.shape, st.waveforms.shape, st[:5])
-        for ev in seg.events:
-            print(' Event', ev.name, ev.times.shape)
-
-    print('*' * 10)
-
-    t0 = time.perf_counter()
-    oldreader = OldNeuralynxIO(sessiondir=dirname, use_cache='never')
-    t1 = time.perf_counter()
-    bl2 = oldreader.read_block(waveforms=True, events=True)
-    t2 = time.perf_counter()
-    print('oldreader header', t1 - t0, 's')
-    print('oldreader data', t2 - t1, 's')
-    print('oldreader toal', t2 - t0, 's')
-    for seg in bl2.segments:
-        print('seg', seg.index)
-        for anasig in seg.analogsignals:
-            print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
-        for st in seg.spiketrains:
-            print(' SpikeTrain', st.name, st.shape, st.waveforms.shape, st[:5])
-        for ev in seg.events:
-            print(' Event', ev.name, ev.times.shape)
-
-    print('*' * 10)
-    compare_neo_content(bl1, bl2)
 
 
 def compare_neo_content(bl1, bl2):

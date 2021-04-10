@@ -144,10 +144,9 @@ class TestUnit(unittest.TestCase):
 
         self.assertEqual(self.unit1._container_child_objects, ())
         self.assertEqual(self.unit1._data_child_objects, ('SpikeTrain',))
-        self.assertEqual(self.unit1._single_parent_objects,
+        self.assertEqual(self.unit1._parent_objects,
                          ('ChannelIndex',))
         self.assertEqual(self.unit1._multi_child_objects, ())
-        self.assertEqual(self.unit1._multi_parent_objects, ())
         self.assertEqual(self.unit1._child_properties, ())
 
         self.assertEqual(self.unit1._single_child_objects, ('SpikeTrain',))
@@ -155,10 +154,9 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(self.unit1._container_child_containers, ())
         self.assertEqual(self.unit1._data_child_containers, ('spiketrains',))
         self.assertEqual(self.unit1._single_child_containers, ('spiketrains',))
-        self.assertEqual(self.unit1._single_parent_containers,
+        self.assertEqual(self.unit1._parent_containers,
                          ('channel_index',))
         self.assertEqual(self.unit1._multi_child_containers, ())
-        self.assertEqual(self.unit1._multi_parent_containers, ())
 
         self.assertEqual(self.unit1._child_objects, ('SpikeTrain',))
         self.assertEqual(self.unit1._child_containers, ('spiketrains',))
