@@ -19,6 +19,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'BML_unfilledsplit/original_data',
         'Cheetah_v1.1.0/original_data',
         'Cheetah_v4.0.2/original_data',
+        'Cheetah_v5.4.0/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
@@ -36,6 +37,8 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
         'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
         'Cheetah_v4.0.2/README.txt',
+        'Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs',
+        'Cheetah_v5.4.0/plain_data/CSC5_trunc.txt',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
         'Cheetah_v5.5.1/original_data/Events.nev',
@@ -79,7 +82,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
         'Cheetah_v6.3.2/incomplete_blocks/README.txt']
 
-    def test_read_ncs_files_sideeffects(self):
+    def test_scan_ncs_files(self):
 
         # Test BML style of Ncs files, similar to PRE4 but with fractional frequency
         # in the header and fractional microsPerSamp, which is then rounded as appropriate
@@ -179,6 +182,7 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
 
     ncsTypeTestFiles = [
         ('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs', 'PRE4'),
+        ('Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs', 'DIGITALLYNX'),
         ('Cheetah_v5.5.1/original_data/STet3a.nse', 'DIGITALLYNXSX'),
         ('Cheetah_v5.5.1/original_data/Tet3a.ncs', 'DIGITALLYNXSX'),
         ('Cheetah_v5.6.3/original_data/CSC1.ncs', 'DIGITALLYNXSX'),
