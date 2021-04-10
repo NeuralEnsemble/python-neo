@@ -215,19 +215,32 @@ class NlxHeader(OrderedDict):
                 hpd = NlxHeader.header_pattern_dicts['def']
         elif an == 'BML':
             hpd = NlxHeader.header_pattern_dicts['bml']
+            av = "2"
         else:
+            an = "Unknown"
+            av = "NA"
             hpd = NlxHeader.header_pattern_dicts['def']
 
         # opening time
-        dt1 = re.search(hpd['datetime1_regex'], txt_header).groupdict()
-        self['recording_opened'] = datetime.datetime.strptime(
-            dt1['date'] + ' ' + dt1['time'], hpd['datetimeformat'])
+        sr = re.search(hpd['datetime1_regex'], txt_header)
+        if not sr:
+            raise IOError("No matching header open date/time for application {} " +
+                          "version {}. Please contact developers.".format(an, av))
+        else:
+            dt1 = sr.groupdict()
+            self['recording_opened'] = datetime.datetime.strptime(
+                dt1['date'] + ' ' + dt1['time'], hpd['datetimeformat'])
 
         # close time, if available
         if 'datetime2_regex' in hpd:
-            dt2 = re.search(hpd['datetime2_regex'], txt_header).groupdict()
-            self['recording_closed'] = datetime.datetime.strptime(
-                dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
+            sr = re.search(hpd['datetime2_regex'], txt_header)
+            if not sr:
+                raise IOError("No matching header close date/time for application {} " +
+                              "version {}. Please contact developers.".format(an, av))
+            else:
+                dt2 = sr.groupdict()
+                self['recording_closed'] = datetime.datetime.strptime(
+                    dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
 
     def type_of_recording(self):
         """

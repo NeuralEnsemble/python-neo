@@ -24,6 +24,7 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'BML_unfilledsplit/original_data',
         'Cheetah_v1.1.0/original_data',
         'Cheetah_v4.0.2/original_data',
+        'Cheetah_v5.4.0/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
@@ -42,6 +43,8 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
         'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
         'Cheetah_v4.0.2/README.txt',
+        'Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs',
+        'Cheetah_v5.4.0/plain_data/CSC5_trunc.txt',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
         'Cheetah_v5.5.1/original_data/Events.nev',
@@ -320,7 +323,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 filename = st.file_origin.replace('original_data', 'plain_data')
                 if '.nse' in st.file_origin:
                     filename = filename.replace('.nse', '.txt')
-                    times_column = 0
+                    times_column = 1
                     plain_data = np.loadtxt(filename)[:, times_column]
                 elif '.ntt' in st.file_origin:
                     filename = filename.replace('.ntt', '.txt')
