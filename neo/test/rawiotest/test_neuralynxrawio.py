@@ -154,8 +154,8 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         sigHdrs = rawio.header['signal_channels']
         self.assertEqual(sigHdrs.size, 1)
         self.assertEqual(sigHdrs[0][0], 'CSC1')
-        self.assertEqual(sigHdrs[0][1], 58)
-        self.assertEqual(len(rawio.header['unit_channels']), 0)
+        self.assertEqual(sigHdrs[0][1], '58')
+        self.assertEqual(len(rawio.header['spike_channels']), 0)
         self.assertEqual(len(rawio.header['event_channels']), 0)
 
         # test one single electrode channel
@@ -166,7 +166,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(rawio._nb_segment, 1)
         self.assertEqual(len(rawio.ncs_filenames), 0)
         self.assertEqual(len(rawio.nev_filenames), 0)
-        seHdrs = rawio.header['unit_channels']
+        seHdrs = rawio.header['spike_channels']
         self.assertEqual(len(seHdrs), 1)
         self.assertEqual(seHdrs[0][0], 'chSTet3a#8#0')
         self.assertEqual(seHdrs[0][1], '0')
