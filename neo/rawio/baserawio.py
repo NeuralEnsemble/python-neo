@@ -24,7 +24,7 @@ So this handles **only** one simplified but very frequent case of dataset:
 
 
 Groups of signal channels with the same sampling_rate, t_start, and length (and thus t_stop)
-all belong to one stream. At the neo.io level one AnalogSignal with multiple channels will be
+all belong to one stream. At the neo.io level one AnalogSignal with multiple channels can be
 created for each stream.
 
 
@@ -355,7 +355,7 @@ class BaseRawIO:
         return self.header['nb_block']
 
     def segment_count(self, block_index):
-        """return number of segment for a given block"""
+        """return number of segments for a given block"""
         return self.header['nb_segment'][block_index]
 
     def signal_streams_count(self):
@@ -366,7 +366,7 @@ class BaseRawIO:
 
     def signal_channels_count(self, stream_index):
         """Return the number of signal channels for a given stream
-        This number is constant across Blocks and Segments.
+        This number is the same for all Blocks and Segments.
         """
         stream_id = self.header['signal_streams'][stream_index]['id']
         channels = self.header['signal_channels']
@@ -375,13 +375,13 @@ class BaseRawIO:
 
     def spike_channels_count(self):
         """Return the number of unit (aka spike) channels.
-        Same along all Blocks and Segment.
+        Same for all Blocks and Segments.
         """
         return len(self.header['spike_channels'])
 
     def event_channels_count(self):
         """Return the number of event/epoch channels.
-        Same allong all Blocks and Segments.
+        Same for all Blocks and Segments.
         """
         return len(self.header['event_channels'])
 
@@ -402,7 +402,7 @@ class BaseRawIO:
 
     def _check_stream_signal_channel_characteristics(self):
         """
-        Check that all channels that belong to the same stream_id
+        Check that all channels that belonging to the same stream_id
         have the same stream id and _common_sig_characteristics. These
         presently include:
           * sampling_rate (global along block and segment)
@@ -470,6 +470,8 @@ class BaseRawIO:
         return channel_indexes
 
     def _get_stream_index(self, stream_index):
+        # :TODO: might be better named _get_stream_index_from_arg_ as the apparent null
+        # translation implied by this name is confusing. "
         if stream_index is None:
             assert self.header['signal_streams'].size == 1
             stream_index = 0
@@ -486,6 +488,9 @@ class BaseRawIO:
         return self._get_signal_t_start(block_index, seg_index, stream_index)
 
     def get_signal_sampling_rate(self, stream_index=None):
+        # :TODO: This method implies that the sampling rate is the same for all
+        # channels in a stream. Therefore, a stream cannot generally span multiple neo.Segments
+        # since those in principle can have different clocks.
         stream_index = self._get_stream_index(stream_index)
         stream_id = self.header['signal_streams'][stream_index]['id']
         mask = self.header['signal_channels']['stream_id'] == stream_id
@@ -498,6 +503,9 @@ class BaseRawIO:
                                channel_ids=None, prefer_slice=False):
         """
         Return a chunk of raw signal.
+
+        :TODO: The calling conventions here are unclear. What are the combinations required
+        and what is the difference between a channel_index and channel_id ?
         """
         stream_index = self._get_stream_index(stream_index)
         channel_indexes = self._get_channel_indexes(stream_index, channel_indexes,
@@ -513,8 +521,8 @@ class BaseRawIO:
                 channel_indexes, = np.nonzero(channel_indexes)
 
         if prefer_slice and isinstance(channel_indexes, np.ndarray):
-            # check if channel_indexes are coninuous and transform to slice
-            # this is usefull for memmap or hdf5 where slice make read lazy
+            # check if channel_indexes are contiguous and transform to slice
+            # this is useful for memmap or hdf5 where slice make read lazy
             # contrary to indexes that make a copy (like numpy.take())
             if np.all(np.diff(channel_indexes) == 1):
                 channel_indexes = slice(channel_indexes[0], channel_indexes[-1] + 1)
@@ -725,6 +733,7 @@ class BaseRawIO:
         by channel_indexes (local index inner stream).
 
         All channels indexed must have the same size and t_start.
+        :TODO: won't this be the case now if they are all part of the same stream?
 
         RETURNS
         -------
