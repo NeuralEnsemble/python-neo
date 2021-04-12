@@ -12,21 +12,23 @@ RawIO is a low level API in neo that provides fast  access to the raw data.
 When possible, all IOs should/implement this level following these guidelines:
   * internal use of memmap (or hdf5)
   * fast reading of the header (do not read the complete file)
-  * neo tree object is symetric and logical: same channel/units/event
+  * neo tree object is symmetric and logical: same channel/units/event
     along all block and segments.
 
 
 So this handles **only** one simplified but very frequent case of dataset:
-    * Only one channel set  for AnalogSignal (aka ChannelIndex) stable along Segment
+    * Only one set of AnalogSignal (aka ChannelIndex) stable along Segment
     * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
-    * AnalogSignal have all the same sampling_rate acroos all Segment
+    * AnalogSignal have all the same sampling_rate across all Segments.
     * t_start/t_stop are the same for many object (SpikeTrain, Event) inside a Segment
 
-signal channels  are handled by group of  "stream".
-one stream will at neo.io level one AnalogSignal with multi-channel.
+
+Groups of signal channels with the same sampling_rate, t_start, and length (and thus t_stop)
+all belong to one stream. At the neo.io level one AnalogSignal with multiple channels will be
+created for each stream.
 
 
-A helper class `neo.io.basefromrawio.BaseFromRaw` transform a RawIO to
+A helper class `neo.io.basefromrawio.BaseFromRaw` transforms a RawIO to
 neo legacy IO. In short all "neo.rawio" classes are also "neo.io"
 with lazy reading capability.
 
@@ -36,7 +38,7 @@ This  `header` attribute is done in `_parse_header(...)` method.
 See ExampleRawIO as example.
 
 
-BaseRawIO implement a possible presistent cache system that can be used
+BaseRawIO implement a possible persistent cache system that can be used
 by some IOs to avoid very long parse_header(). The idea is that some variable
 or vector can be store somewhere (near the file, /tmp, any path)
 
@@ -76,9 +78,10 @@ _signal_channel_dtype = [
     ('offset', 'float64'),
     ('stream_id', 'U64'),
 ]
-# TODO for later: add t_start and length in _signal_channel_dtype
-# this would simplify all t_start/t_stop stuff for each RawIO class
-
+# TODO: add t_start and length in _signal_channel_dtype
+# This would make explicit the implicit requirement that each
+# stream have the same t_start/t_stop stuff for all included channels,
+# which is implicit in the use of _common_sig_characteristics presently.
 _common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id']
 
 _spike_channel_dtype = [
@@ -156,7 +159,6 @@ class BaseRawIO:
         self.header['event_channels']
 
 
-
         """
         self._parse_header()
         self._check_stream_signal_channel_characteristics()
@@ -188,10 +190,10 @@ class BaseRawIO:
 
     def _generate_minimal_annotations(self):
         """
-        Helper function that generate a nested dict for annotations.
+        Helper function that generates a nested dict for annotations.
 
         Must be called when these are Ok after self.header is done
-        And so when theses function are ready:
+        and thus when these functions return the correct values:
           * block_count()
           * segment_count()
           * signal_streams_count()
@@ -275,7 +277,7 @@ class BaseRawIO:
         # used for Event/Epoch.annotations and Event/Epoch.array_annotations
         event_annotations = []
         for c in range(event_channels.size):
-            # not used in neo.io at the moment could usefull one day
+            # not used in neo.io at the moment could useful one day
             d = {}
             d['name'] = event_channels['name'][c]
             d['id'] = event_channels['id'][c]
@@ -284,7 +286,7 @@ class BaseRawIO:
             event_annotations.append(d)
 
         # duplicate this signal_stream_annotations/spike_annotations/event_annotations
-        # accros blocks and segments and create annotations
+        # across blocks and segments and create annotations
         ann = {}
         ann['blocks'] = []
         for block_index in range(self.block_count()):
@@ -345,7 +347,7 @@ class BaseRawIO:
         return txt
 
     def print_annotations(self):
-        """Print formated raw_annotations"""
+        """Print formatted raw_annotations"""
         print(self._repr_annotations())
 
     def block_count(self):
@@ -357,8 +359,8 @@ class BaseRawIO:
         return self.header['nb_segment'][block_index]
 
     def signal_streams_count(self):
-        """Return the number of signal  stream channels.
-        Same along all Blocks and Segments.
+        """Return the number of signal streams.
+        Same for all Blocks and Segments.
         """
         return len(self.header['signal_streams'])
 
@@ -400,9 +402,9 @@ class BaseRawIO:
 
     def _check_stream_signal_channel_characteristics(self):
         """
-        This check that all channel that belong to the same stream_id
-        have common characteristics:
-          * stream_id (explicite channel group)
+        Check that all channels that belong to the same stream_id
+        have the same stream id and _common_sig_characteristics. These
+        presently include:
           * sampling_rate (global along block and segment)
           * units
           * dtype
