@@ -15,33 +15,47 @@ When possible, all IOs should/implement this level following these guidelines:
   * neo tree object is symmetric and logical: same channel/units/event
     along all block and segments.
 
+For this level, datasets of recordings are mapped as follows:
 
-So this handles **only** one simplified but very frequent case of dataset:
-    * Only one set of AnalogSignal (aka ChannelIndex) stable along Segment
-    * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
-    * AnalogSignal have all the same sampling_rate across all Segments.
-    * t_start/t_stop are the same for many object (SpikeTrain, Event) inside a Segment
+A channel refers to a physical channel of recording in an experiment. It is identified by a
+channel_id. Recordings from a channel consist of sections of samples which are recorded
+contiguously in time; in other words, a section of a channel has a specific sampling_rate,
+start_time, and length (and thus also stop_time, which is the time of the sample which would
+lie one sampling interval beyond the last sample present in that section).
 
+A stream consists of a set of channels which all have the same structure of their sections of
+recording and the same data type of samples. Each stream has a unique stream_id and has a name,
+which does not need to be unique. A stream thus has multiple channels which all have the same
+sampling rate and are on the same clock, have the same sections with t_starts and lengths, and
+the same data type for their samples. The samples in a stream can thus be retrieved as an Numpy
+array, a chunk of samples.
 
-Groups of signal channels with the same sampling_rate, t_start, and length (and thus t_stop)
-all belong to one stream. At the neo.io level one AnalogSignal with multiple channels can be
-created for each stream.
+Channels within a stream can be accessed be either their channel_id, which must be unique within
+a stream, or by their channel_index, which is a 0 based index to all channels within the stream.
+Note that a single channel of recording may be represented within multiple streams, and such is
+the case for RawIOs which may have both unfiltered and filtered or downsampled versions of the
+signals from a single recording channel. In such a case, a single channel and channel_id may be
+represented by a different channel_index within different streams. Lists of channel_indexes are
+often convenient to pass around a selection of channels within a stream.
 
+At the neo.io level, one AnalogSignal with multiple channels can be created for each stream. Such
+an AnalogSignal may have multiple Segments, with each segment containing the sections from each
+channel with the same t_start and length. Such multiple Segments for a RawIO will have the
+same sampling rate. It is thus possible to retrieve the t_start and length
+of the sections of the channels for a Block and Segment of a stream.
 
 A helper class `neo.io.basefromrawio.BaseFromRaw` transforms a RawIO to
 neo legacy IO. In short all "neo.rawio" classes are also "neo.io"
 with lazy reading capability.
 
-
 With this API the IO have an attributes `header` with necessary keys.
 This  `header` attribute is done in `_parse_header(...)` method.
 See ExampleRawIO as example.
 
-
-BaseRawIO implement a possible persistent cache system that can be used
-by some IOs to avoid very long parse_header(). The idea is that some variable
-or vector can be store somewhere (near the file, /tmp, any path)
-
+BaseRawIO also implements a possible persistent cache system that can be used
+by some RawIOs to avoid a very long parse_header() call. The idea is that some variable
+or vector can be stored somewhere (near the file, /tmp, any path) for use across multiple
+constructions of a RawIO for a given set of data.
 
 """
 
@@ -64,7 +78,7 @@ possible_raw_modes = ['one-file', 'multi-file', 'one-dir', ]  # 'multi-dir', 'ur
 error_header = 'Header is not read yet, do parse_header() first'
 
 _signal_stream_dtype = [
-    ('name', 'U64'),  # not necessary unique
+    ('name', 'U64'),  # not necessarily unique
     ('id', 'U64'),  # must be unique
 ]
 
@@ -78,10 +92,6 @@ _signal_channel_dtype = [
     ('offset', 'float64'),
     ('stream_id', 'U64'),
 ]
-# TODO: add t_start and length in _signal_channel_dtype
-# This would make explicit the implicit requirement that each
-# stream have the same t_start/t_stop stuff for all included channels,
-# which is implicit in the use of _common_sig_characteristics presently.
 _common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id']
 
 _spike_channel_dtype = [
@@ -114,22 +124,22 @@ class BaseRawIO:
     description = ''
     extensions = []
 
-    rawmode = None  # one key in possible_raw_modes
+    rawmode = None  # one key from possible_raw_modes
 
     def __init__(self, use_cache=False, cache_path='same_as_resource', **kargs):
         """
+        :TODO: Why multi-file would have a single filename is confusing here - shouldn't
+        the name of this argument be filenames_list or filenames_base or similar?
 
         When rawmode=='one-file' kargs MUST contains 'filename' the filename
         When rawmode=='multi-file' kargs MUST contains 'filename' one of the filenames.
         When rawmode=='one-dir' kargs MUST contains 'dirname' the dirname.
 
-
         """
         # create a logger for the IO class
         fullname = self.__class__.__module__ + '.' + self.__class__.__name__
         self.logger = logging.getLogger(fullname)
-        # create a logger for 'neo' and add a handler to it if it doesn't
-        # have one already.
+        # Create a logger for 'neo' and add a handler to it if it doesn't have one already.
         # (it will also not add one if the root logger has a handler)
         corename = self.__class__.__module__.split('.')[0]
         corelogger = logging.getLogger(corename)
@@ -157,7 +167,6 @@ class BaseRawIO:
         self.header['signal_channels']
         self.header['spike_channels']
         self.header['event_channels']
-
 
         """
         self._parse_header()
@@ -365,7 +374,7 @@ class BaseRawIO:
         return len(self.header['signal_streams'])
 
     def signal_channels_count(self, stream_index):
-        """Return the number of signal channels for a given stream
+        """Return the number of signal channels for a given stream.
         This number is the same for all Blocks and Segments.
         """
         stream_id = self.header['signal_streams'][stream_index]['id']
@@ -405,7 +414,7 @@ class BaseRawIO:
         Check that all channels that belonging to the same stream_id
         have the same stream id and _common_sig_characteristics. These
         presently include:
-          * sampling_rate (global along block and segment)
+          * sampling_rate
           * units
           * dtype
         """
@@ -423,7 +432,7 @@ class BaseRawIO:
                 f'Some channel in stream_id {stream_id} ' \
                 f'do not have same {_common_sig_characteristics} {unique_characteristics}'
 
-            # also check that id is unique inside a stream
+            # also check that channel_id is unique inside a stream
             channel_ids = signal_channels[mask]['id']
             assert np.unique(channel_ids).size == channel_ids.size, \
                 f'signal_channels dont have unique ids for stream {stream_index}'
@@ -434,7 +443,7 @@ class BaseRawIO:
         """
         Inside a stream, transform channel_names to channel_indexes.
         Based on self.header['signal_channels']
-        channel_indexes is local to stream
+        channel_indexes are zero-based offsets within the stream
         """
         stream_id = self.header['signal_streams'][stream_index]['id']
         mask = self.header['signal_channels']['stream_id'] == stream_id
@@ -446,11 +455,11 @@ class BaseRawIO:
 
     def channel_id_to_index(self, stream_index, channel_ids):
         """
-        Inside a stream,  transform channel_ids to channel_indexes.
+        Inside a stream, transform channel_ids to channel_indexes.
         Based on self.header['signal_channels']
-        channel_indexes is local to stream
+        channel_indexes are zero-based offsets within the stream
         """
-        # unique ids is already check in _check_stream_signal_channel_characteristics
+        # unique ids is already checked in _check_stream_signal_channel_characteristics
         stream_id = self.header['signal_streams'][stream_index]['id']
         mask = self.header['signal_channels']['stream_id'] == stream_id
         signal_channels = self.header['signal_channels'][mask]
@@ -460,7 +469,7 @@ class BaseRawIO:
 
     def _get_channel_indexes(self, stream_index, channel_indexes, channel_names, channel_ids):
         """
-        Select channel_indexes from channel_indexes/channel_names/channel_ids
+        Select channel_indexes for a stream based on channel_indexes/channel_names/channel_ids
         depending which is not None.
         """
         if channel_indexes is None and channel_names is not None:
@@ -469,29 +478,43 @@ class BaseRawIO:
             channel_indexes = self.channel_id_to_index(stream_index, channel_ids)
         return channel_indexes
 
-    def _get_stream_index(self, stream_index):
-        # :TODO: might be better named _get_stream_index_from_arg_ as the apparent null
-        # translation implied by this name is confusing. "
-        if stream_index is None:
+    def _get_stream_index_from_arg(self, stream_index_arg):
+        if stream_index_arg is None:
             assert self.header['signal_streams'].size == 1
             stream_index = 0
         else:
-            assert 0 <= stream_index < self.header['signal_streams'].size
+            assert 0 <= stream_index_arg < self.header['signal_streams'].size
         return stream_index
 
     def get_signal_size(self, block_index, seg_index, stream_index=None):
-        stream_index = self._get_stream_index(stream_index)
+        """
+        Retrieve the length of a single section of the channels in a stream.
+        :param block_index:
+        :param seg_index:
+        :param stream_index:
+        :return: number of samples
+        """
+        stream_index = self._get_stream_index_from_arg(stream_index)
         return self._get_signal_size(block_index, seg_index, stream_index)
 
     def get_signal_t_start(self, block_index, seg_index, stream_index=None):
-        stream_index = self._get_stream_index(stream_index)
+        """
+        Retrieve the t_start of a single section of the channels in a stream.
+        :param block_index:
+        :param seg_index:
+        :param stream_index:
+        :return: start time of section
+        """
+        stream_index = self._get_stream_index_from_arg(stream_index)
         return self._get_signal_t_start(block_index, seg_index, stream_index)
 
     def get_signal_sampling_rate(self, stream_index=None):
-        # :TODO: This method implies that the sampling rate is the same for all
-        # channels in a stream. Therefore, a stream cannot generally span multiple neo.Segments
-        # since those in principle can have different clocks.
-        stream_index = self._get_stream_index(stream_index)
+        """
+        Retrieve sampling rate for a stream and all channels in that stream.
+        :param stream_index:
+        :return: sampling rate
+        """
+        stream_index = self._get_stream_index_from_arg(stream_index)
         stream_id = self.header['signal_streams'][stream_index]['id']
         mask = self.header['signal_channels']['stream_id'] == stream_id
         signal_channels = self.header['signal_channels'][mask]
@@ -502,12 +525,23 @@ class BaseRawIO:
                                stream_index=None, channel_indexes=None, channel_names=None,
                                channel_ids=None, prefer_slice=False):
         """
-        Return a chunk of raw signal.
+        Return a chunk of raw signal as a Numpy array. columns correspond to samples from a
+        section of a single channel of recording. The channels are chosen either by channel_names,
+        if provided, otherwise by channel_ids, if provided, otherwise by channel_indexes, if
+        provided, otherwise all channels are selected.
 
-        :TODO: The calling conventions here are unclear. What are the combinations required
-        and what is the difference between a channel_index and channel_id ?
+        :param block_index: block containing segment with section
+        :param seg_index: segment containing section
+        :param i_start: index of first sample to retrieve within section
+        :param i_stop: index of one past last sample to retrieve within section
+        :param stream_index: index of stream containing channels
+        :param channel_indexes: list of indexes of channels to retrieve or None
+        :param channel_names: list of channels names to retrieve, or None
+        :param channel_ids: list of channel ids to retrieve, or None
+        :param prefer_slice: use rapid slice if channel_indexes are contiguous
+        :return: array with raw signal samples
         """
-        stream_index = self._get_stream_index(stream_index)
+        stream_index = self._get_stream_index_from_arg(stream_index)
         channel_indexes = self._get_channel_indexes(stream_index, channel_indexes,
                                                     channel_names, channel_ids)
 
@@ -521,9 +555,11 @@ class BaseRawIO:
                 channel_indexes, = np.nonzero(channel_indexes)
 
         if prefer_slice and isinstance(channel_indexes, np.ndarray):
-            # check if channel_indexes are contiguous and transform to slice
-            # this is useful for memmap or hdf5 where slice make read lazy
-            # contrary to indexes that make a copy (like numpy.take())
+            # Check if channel_indexes are contiguous and transform to slice argument if possible.
+            # This is useful for memmap or hdf5 where providing a slice causes a lazy read,
+            # rather than a list of indexes that make a copy (like numpy.take()).
+            # :TODO: Why would the user ever want to use the slower method? And should the
+            # default by True? Perhaps the name of this argument should reflect copying or not?
             if np.all(np.diff(channel_indexes) == 1):
                 channel_indexes = slice(channel_indexes[0], channel_indexes[-1] + 1)
 
@@ -534,7 +570,21 @@ class BaseRawIO:
 
     def rescale_signal_raw_to_float(self, raw_signal, dtype='float32', stream_index=None,
                                     channel_indexes=None, channel_names=None, channel_ids=None):
-        stream_index = self._get_stream_index(stream_index)
+        """
+        Rescale a chunk of raw signals which are provided as a Numpy array. These are normally
+        returned by a call to get_analog_signal_chunk. The channels are specified either by
+        channel_names, if provided, otherwise by channel_ids, if provided, otherwise by
+        channel_indexes, if provided, otherwise all channels are selected.
+
+        :param raw_signal: Numpy array of samples. columns are samples for a single channel
+        :param dtype: data type for returned scaled samples
+        :param stream_index: index of stream containing channels
+        :param channel_indexes: list of indexes of channels to retrieve or None
+        :param channel_names: list of channels names to retrieve, or None
+        :param channel_ids: list of channel ids to retrieve, or None
+        :return: array of scaled sample values
+        """
+        stream_index = self._get_stream_index_from_arg(stream_index)
         channel_indexes = self._get_channel_indexes(stream_index, channel_indexes,
                                                     channel_names, channel_ids)
         if channel_indexes is None:
@@ -564,11 +614,11 @@ class BaseRawIO:
     def get_spike_timestamps(self, block_index=0, seg_index=0, spike_channel_index=0,
                              t_start=None, t_stop=None):
         """
-        The timestamp is as close to the format itself. Sometimes float/int32/int64.
+        The timestamp datatype is as close to the format itself. Sometimes float/int32/int64.
         Sometimes it is the index on the signal but not always.
-        The conversion to second or index_on_signal is done outside here.
+        The conversion to second or index_on_signal is done outside this method.
 
-        t_start/t_sop are limits in seconds.
+        t_start/t_stop are limits in seconds.
         """
         timestamp = self._get_spike_timestamps(block_index, seg_index,
                                                spike_channel_index, t_start, t_stop)
@@ -608,9 +658,9 @@ class BaseRawIO:
     def get_event_timestamps(self, block_index=0, seg_index=0, event_channel_index=0,
                              t_start=None, t_stop=None):
         """
-        The timestamp is as close to the format itself. Sometimes float/int32/int64.
+        The timestamp datatype is as close to the format itself. Sometimes float/int32/int64.
         Sometimes it is the index on the signal but not always.
-        The conversion to second or index_on_signal is done outside here.
+        The conversion to second or index_on_signal is done outside this method.
 
         t_start/t_sop are limits in seconds.
 
@@ -627,14 +677,14 @@ class BaseRawIO:
     def rescale_event_timestamp(self, event_timestamps, dtype='float64',
                     event_channel_index=0):
         """
-        Rescale event timestamps to s
+        Rescale event timestamps to seconds.
         """
         return self._rescale_event_timestamp(event_timestamps, dtype, event_channel_index)
 
     def rescale_epoch_duration(self, raw_duration, dtype='float64',
                     event_channel_index=0):
         """
-        Rescale epoch raw duration to s
+        Rescale epoch raw duration to seconds.
         """
         return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
