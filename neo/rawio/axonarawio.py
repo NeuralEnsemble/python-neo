@@ -33,11 +33,13 @@ class AxonaRawIO(BaseRawIO):
 
     The raw data is saved in .bin binary files with an accompanying
     .set file about the recording setup (see the above manual for details).
+    .bin and .set files have to have the same name. Either can be provided
+    as "filename".
 
     Usage:
         import neo.rawio
         r = neo.rawio.AxonaRawIO(
-            filename=os.path.join(dir_name, base_filename)
+            filename=os.path.join(dir_name, filename)
         )
         r.parse_header()
         print(r)
@@ -66,10 +68,13 @@ class AxonaRawIO(BaseRawIO):
     def __init__(self, filename):
         BaseRawIO.__init__(self)
 
-        # We accept base filenames, .bin and .set extensions
+        # We accept .bin and .set extensions
+        assert any([ext in filename for ext in ['.set', '.bin']]),\
+            "filename needs to either have '.set' or '.bin' extension."
+
         self.filename = filename.replace('.bin', '').replace('.set', '')
-        self.bin_file = os.path.join(self.filename + '.bin')
-        self.set_file = os.path.join(self.filename + '.set')
+        self.bin_file = self.filename + '.bin'
+        self.set_file = self.filename + '.set'
         self.set_file_encoding = 'cp1252'
 
     def _source_name(self):
