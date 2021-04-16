@@ -8,9 +8,35 @@ NEV contains events
 NSE contains spikes and waveforms for mono electrodes
 NTT contains spikes and waveforms for tetrodes
 
-NCS files can contains gaps that can be detected in irregularity
-in timestamps of data records. Each gap leads to one new segment being defined.
-Some NCS files may need to be read entirely to detect those gaps, which can be slow.
+All Neuralynx files contain a 16 kilobyte text header followed by 0 or more fixed length records.
+The format of the header has never been formally specified, however, the Neuralynx programs which
+write them have followed a set of conventions which have varied over the years. Additionally,
+other programs like Pegasus write files with somewhat varying headers. This variation requires
+parsing to determine the exact version and type which is handled within this RawIO by the
+NlxHeader class.
+
+Ncs files contain a series of 1044 byte records, each of which contains 512 16 byte samples and
+header information which includes a 64 bit timestamp in microseconds, a 16 bit channel number,
+the sampling frequency in integral Hz, and the number of the 512 samples which are considered
+valid samples (the remaining samples within the record are invalid). The Ncs file header usually
+contains a specification of the sampling frequency, which may be rounded to an integral number
+of Hz or may be fractional. The actual sampling frequency in terms of the underlying clock is
+physically determined by the spacing of the timestamps between records.
+
+These variations of header format and possible differences between the stated sampling frequency
+and actual sampling frequency can create apparent time discrepancies in .Ncs files. Additionally,
+the Neuralynx recording software can start and stop recording while continuing to write samples
+to a single .Ncs file, which creates larger gaps in the time sequences of the samples.
+
+This RawIO attempts to correct for these deviations where possible and present a single section of
+contiguous samples with one sampling frequency, t_start, and length for each .Ncs file. These
+sections are determined by the NcsSectionsFactory class. In the
+event the gaps are larger, this RawIO only provides the samples from the first section as belonging
+to one Segment.
+
+This RawIO presents only a single Block and Segment.
+:TODO: This should likely be changed to provide multiple segments and allow for
+multiple .Ncs files in a directory with differing section structures.
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
 """
@@ -31,7 +57,8 @@ class NeuralynxRawIO(BaseRawIO):
     """"
     Class for reading datasets recorded by Neuralynx.
 
-    This version only works with rawmode of one-dir for a single directory.
+    This version works with rawmode of one-dir for a single directory of files or one-file for
+    a single file.
 
     Examples:
         >>> reader = NeuralynxRawIO(dirname='Cheetah_v5.5.1/original_data')
@@ -44,7 +71,7 @@ class NeuralynxRawIO(BaseRawIO):
             Display all information about signal channels, units, segment size....
     """
     extensions = ['nse', 'ncs', 'nev', 'ntt']
-    rawmode = 'one-dir'
+    rawmode = 'one-dir'  # :TODO: remove this line as now set in __init__
 
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
                   ('nb_valid', 'uint32'), ('samples', 'int16', (NcsSection._RECORD_SIZE))]
@@ -239,7 +266,7 @@ class NeuralynxRawIO(BaseRawIO):
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        # require all sampled signals, ncs files, to have same sampling rate
+        # require all sampled signals, ncs files, to have the same sampling rate
         if signal_channels.size > 0:
             sampling_rate = np.unique(signal_channels['sampling_rate'])
             assert sampling_rate.size == 1
