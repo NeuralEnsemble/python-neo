@@ -7,8 +7,8 @@ S. More.
 Author: Samuel Garcia
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 
@@ -57,6 +57,8 @@ class BrainVisionRawIO(BaseRawIO):
             sigs = sigs[:-sigs.size % nb_channel]
         self._raw_signals = sigs.reshape(-1, nb_channel)
 
+        signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
+
         sig_channels = []
         channel_infos = vhdr_header['Channel Infos']
         for c in range(nb_channel):
@@ -66,20 +68,20 @@ class BrainVisionRawIO(BaseRawIO):
                 channel_desc = channel_infos['ch%d' % (c + 1,)]
             name, ref, res, units = channel_desc.split(',')
             units = units.replace('µ', 'u')
-            chan_id = c + 1
+            chan_id = str(c + 1)
             if sig_dtype == np.int16 or sig_dtype == np.int32:
                 gain = float(res)
             else:
                 gain = 1
             offset = 0
-            group_id = 0
+            stream_id = '0'
             sig_channels.append((name, chan_id, self._sampling_rate, sig_dtype,
-                                 units, gain, offset, group_id))
+                                 units, gain, offset, stream_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # read all markers in memory
 
@@ -112,18 +114,21 @@ class BrainVisionRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
         if 'Coordinates' in vhdr_header:
+            sig_annotations = self.raw_annotations['blocks'][0]['segments'][0]['signals'][0]
+            all_coords = []
             for c in range(sig_channels.size):
                 coords = vhdr_header['Coordinates']['Ch{}'.format(c + 1)]
-                coords = [float(v) for v in coords.split(',')]
-                if coords[0] > 0.:
-                    # if radius is 0 we do not have coordinates.
-                    self.raw_annotations['signal_channels'][c]['coordinates'] = coords
+                all_coords.append([float(v) for v in coords.split(',')])
+            all_coords = np.array(all_coords)
+            for dim in range(all_coords.shape[1]):
+                sig_annotations['__array_annotations__'][f'coordinates_{dim}'] = all_coords[:, dim]
 
     def _source_name(self):
         return self.filename
@@ -136,13 +141,15 @@ class BrainVisionRawIO(BaseRawIO):
         return t_stop
 
     ###
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        assert stream_index == 0
         return self._raw_signals.shape[0]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
@@ -177,7 +184,7 @@ class BrainVisionRawIO(BaseRawIO):
 
         raise (NotImplementedError)
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
         return event_times
 

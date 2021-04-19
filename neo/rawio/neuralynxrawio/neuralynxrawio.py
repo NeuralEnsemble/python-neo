@@ -14,11 +14,10 @@ Some NCS files may need to be read entirely to detect those gaps, which can be s
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
 """
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 
-from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                                 _event_channel_dtype)
+from ..baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 import os
@@ -50,27 +49,45 @@ class NeuralynxRawIO(BaseRawIO):
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
                   ('nb_valid', 'uint32'), ('samples', 'int16', (NcsSection._RECORD_SIZE))]
 
-    def __init__(self, dirname='', keep_original_times=False, **kargs):
+    def __init__(self, dirname='', filename='', keep_original_times=False, **kargs):
         """
+        Initialize io for either a directory of Ncs files or a single Ncs file.
+
         Parameters
         ----------
         dirname: str
-            name of directory containing all files for dataset
+            name of directory containing all files for dataset. If provided, filename is
+            ignored.
+        filename: str
+            name of a single ncs, nse, nev, or ntt file to include in dataset. If used,
+            dirname must not be provided.
         keep_original_times:
             if True, keep original start time as in files,
             otherwise set 0 of time to first time in dataset
         """
-        self.dirname = dirname
+        if dirname != '':
+            self.dirname = dirname
+            self.rawmode = 'one-dir'
+        elif filename != '':
+            self.filename = filename
+            self.rawmode = 'one-file'
+        else:
+            raise ValueError("One of dirname or filename must be provided.")
+
         self.keep_original_times = keep_original_times
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
-        return self.dirname
+        if self.rawmode == 'one-file':
+            return self.filename
+        else:
+            return self.dirname
 
     def _parse_header(self):
 
-        sig_channels = []
-        unit_channels = []
+        stream_channels = []
+        signal_channels = []
+        spike_channels = []
         event_channels = []
 
         self.ncs_filenames = OrderedDict()  # (chan_name, chan_id): filename
@@ -91,8 +108,15 @@ class NeuralynxRawIO(BaseRawIO):
         unit_annotations = []
         event_annotations = []
 
-        for filename in sorted(os.listdir(self.dirname)):
-            filename = os.path.join(self.dirname, filename)
+        if self.rawmode == 'one-dir':
+            filenames = sorted(os.listdir(self.dirname))
+            dirname = self.dirname
+        else:
+            dirname, fname = os.path.split(self.filename)
+            filenames = [fname]
+
+        for filename in filenames:
+            filename = os.path.join(dirname, filename)
 
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot
@@ -122,9 +146,9 @@ class NeuralynxRawIO(BaseRawIO):
                     if info.get('input_inverted', False):
                         gain *= -1
                     offset = 0.
-                    group_id = 0
-                    sig_channels.append((chan_name, chan_id, info['sampling_rate'],
-                                         'int16', units, gain, offset, group_id))
+                    stream_id = 0
+                    signal_channels.append((chan_name, str(chan_id), info['sampling_rate'],
+                                         'int16', units, gain, offset, stream_id))
                     self.ncs_filenames[chan_uid] = filename
                     keys = [
                         'DspFilterDelay_µs',
@@ -183,7 +207,7 @@ class NeuralynxRawIO(BaseRawIO):
                         wf_offset = 0.
                         wf_left_sweep = -1  # NOT KNOWN
                         wf_sampling_rate = info['sampling_rate']
-                        unit_channels.append(
+                        spike_channels.append(
                             (unit_name, '{}'.format(unit_id), wf_units, wf_gain,
                              wf_offset, wf_left_sweep, wf_sampling_rate))
                         unit_annotations.append(dict(file_origin=filename))
@@ -211,15 +235,19 @@ class NeuralynxRawIO(BaseRawIO):
 
                     self._nev_memmap[chan_id] = data
 
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # require all sampled signals, ncs files, to have same sampling rate
-        if sig_channels.size > 0:
-            sampling_rate = np.unique(sig_channels['sampling_rate'])
+        if signal_channels.size > 0:
+            sampling_rate = np.unique(signal_channels['sampling_rate'])
             assert sampling_rate.size == 1
             self._sigs_sampling_rate = sampling_rate[0]
+            signal_streams = [('signals', '0')]
+        else:
+            signal_streams = []
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # set 2 attributes needed later for header in case there are no ncs files in dataset,
         #   e.g. Pegasus
@@ -280,8 +308,9 @@ class NeuralynxRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [self._nb_segment]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotations
@@ -291,12 +320,22 @@ class NeuralynxRawIO(BaseRawIO):
         for seg_index in range(self._nb_segment):
             seg_annotations = bl_annotations['segments'][seg_index]
 
-            for c in range(sig_channels.size):
+            for c in range(signal_streams.size):
+                # one or no signal stream
                 sig_ann = seg_annotations['signals'][c]
-                sig_ann.update(signal_annotations[c])
+                # handle array annotations
+                for key in signal_annotations[0].keys():
+                    values = []
+                    for c in range(signal_channels.size):
+                        value = signal_annotations[0][key]
+                        values.append(value)
+                    values = np.array(values)
+                    if values.ndim == 1:
+                        # 'InputRange': is 2D and make bugs
+                        sig_ann['__array_annotations__'][key] = values
 
-            for c in range(unit_channels.size):
-                unit_ann = seg_annotations['units'][c]
+            for c in range(spike_channels.size):
+                unit_ann = seg_annotations['spikes'][c]
                 unit_ann.update(unit_annotations[c])
 
             for c in range(event_channels.size):
@@ -319,13 +358,14 @@ class NeuralynxRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._seg_t_stops[seg_index] - self.global_t_start
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         return self._sigs_length[seg_index]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sigs_t_start[seg_index] - self.global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         """
         Retrieve chunk of analog signal, a chunk being a set of contiguous samples.
 
@@ -359,7 +399,7 @@ class NeuralynxRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(None)
 
-        channel_ids = self.header['signal_channels'][channel_indexes]['id']
+        channel_ids = self.header['signal_channels'][channel_indexes]['id'].astype(int)
         channel_names = self.header['signal_channels'][channel_indexes]['name']
 
         # create buffer for samples
@@ -461,7 +501,7 @@ class NeuralynxRawIO(BaseRawIO):
         durations = None
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype)
         event_times /= 1e6
         event_times -= self.global_t_start
@@ -503,8 +543,8 @@ class NeuralynxRawIO(BaseRawIO):
             nlxHeader = NlxHeader(ncs_filename)
 
             if not chanSectMap or (chanSectMap and
-                                    not NcsSectionsFactory._verifySectionsStructure(data,
-                                                                                lastNcsSections)):
+                    not NcsSectionsFactory._verifySectionsStructure(data,
+                    lastNcsSections)):
                 lastNcsSections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
 
             chanSectMap[chan_uid] = [lastNcsSections, nlxHeader, data]

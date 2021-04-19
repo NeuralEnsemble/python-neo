@@ -75,7 +75,7 @@ class Segment(Container):
     _data_child_objects = ('AnalogSignal',
                            'Epoch', 'Event',
                            'IrregularlySampledSignal', 'SpikeTrain', 'ImageSequence')
-    _single_parent_objects = ('Block',)
+    _parent_objects = ('Block',)
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
                            ('index', int)) +

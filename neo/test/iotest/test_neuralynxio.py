@@ -14,8 +14,6 @@ from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import *
 
 from neo.io.neuralynxio import NeuralynxIO
-from neo.io.neuralynxio import NeuralynxIO as NewNeuralynxIO
-from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo import AnalogSignal
 
 
@@ -26,6 +24,7 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'BML_unfilledsplit/original_data',
         'Cheetah_v1.1.0/original_data',
         'Cheetah_v4.0.2/original_data',
+        'Cheetah_v5.4.0/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
@@ -44,6 +43,8 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
         'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
         'Cheetah_v4.0.2/README.txt',
+        'Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs',
+        'Cheetah_v5.4.0/plain_data/CSC5_trunc.txt',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
         'Cheetah_v5.5.1/original_data/Events.nev',
@@ -311,7 +312,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
             #     np.testing.assert_allclose(plain_data[:numToTest],
             #                                anasig.magnitude[:numToTest, 0] * gain_factor_0,
             #                                rtol=0.01, err_msg=" for file " + filename)
-    @unittest.skip
+    @unittest.skip("nse failing for now as per issue #907")
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
             dirname = self.get_filename_path(session)
@@ -322,7 +323,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 filename = st.file_origin.replace('original_data', 'plain_data')
                 if '.nse' in st.file_origin:
                     filename = filename.replace('.nse', '.txt')
-                    times_column = 0
+                    times_column = 1
                     plain_data = np.loadtxt(filename)[:, times_column]
                 elif '.ntt' in st.file_origin:
                     filename = filename.replace('.ntt', '.txt')
@@ -349,9 +350,11 @@ class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
 
-        for t, gt in zip(nio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561]):
+        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_start, [8408.806811, 8427.832053,
+                                                                 8487.768561]):
             self.assertEqual(np.round(t, 4), np.round(gt, 4))
-        for t, gt in zip(nio._sigs_t_stop, [8427.831990, 8487.768498, 8515.816549]):
+        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_stop, [8427.831990, 8487.768498,
+                                                                8515.816549]):
             self.assertEqual(np.round(t, 4), np.round(gt, 4))
 
 
@@ -380,51 +383,6 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), n_gaps + 1)
-
-
-def compare_old_and_new_neuralynxio():
-    base = '/tmp/files_for_testing_neo/neuralynx/'
-    dirname = base + 'Cheetah_v5.5.1/original_data/'
-    # ~ dirname = base+'Cheetah_v5.7.4/original_data/'
-
-    t0 = time.perf_counter()
-    newreader = NewNeuralynxIO(dirname)
-    t1 = time.perf_counter()
-    bl1 = newreader.read_block(load_waveforms=True)
-    t2 = time.perf_counter()
-    print('newreader header', t1 - t0, 's')
-    print('newreader data', t2 - t1, 's')
-    print('newreader toal', t2 - t0, 's')
-    for seg in bl1.segments:
-        print('seg', seg.index)
-        for anasig in seg.analogsignals:
-            print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
-        for st in seg.spiketrains:
-            print(' SpikeTrain', st.name, st.shape, st.waveforms.shape, st[:5])
-        for ev in seg.events:
-            print(' Event', ev.name, ev.times.shape)
-
-    print('*' * 10)
-
-    t0 = time.perf_counter()
-    oldreader = OldNeuralynxIO(sessiondir=dirname, use_cache='never')
-    t1 = time.perf_counter()
-    bl2 = oldreader.read_block(waveforms=True, events=True)
-    t2 = time.perf_counter()
-    print('oldreader header', t1 - t0, 's')
-    print('oldreader data', t2 - t1, 's')
-    print('oldreader toal', t2 - t0, 's')
-    for seg in bl2.segments:
-        print('seg', seg.index)
-        for anasig in seg.analogsignals:
-            print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
-        for st in seg.spiketrains:
-            print(' SpikeTrain', st.name, st.shape, st.waveforms.shape, st[:5])
-        for ev in seg.events:
-            print(' Event', ev.name, ev.times.shape)
-
-    print('*' * 10)
-    compare_neo_content(bl1, bl2)
 
 
 def compare_neo_content(bl1, bl2):

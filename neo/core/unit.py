@@ -56,7 +56,7 @@ class Unit(Container):
     '''
 
     _data_child_objects = ('SpikeTrain',)
-    _single_parent_objects = ('ChannelIndex',)
+    _parent_objects = ('ChannelIndex',)
     _recommended_attrs = Container._recommended_attrs
 
     def __init__(self, name=None, description=None, file_origin=None,

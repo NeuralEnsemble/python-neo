@@ -86,8 +86,8 @@ class ImageSequence(BaseSignal):
             (:attr:`t_start` + :attr:`duration`)
      """
 
-    _single_parent_objects = ("Segment",)
-    _single_parent_attrs = ("segment",)
+    _parent_objects = ("Segment",)
+    _parent_attrs = ("segment",)
     _quantity_attr = "image_data"
     _necessary_attrs = (
         ("image_data", pq.Quantity, 3),

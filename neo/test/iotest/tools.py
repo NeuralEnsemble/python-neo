@@ -13,7 +13,7 @@ def close_object_safe(obj):
     """
     Close an object safely, ignoring errors
 
-    For some io types, like HDF5IO, the file should be closed before being
+    For some io types the file should be closed before being
     opened again in a test.  Call this after the test is done to make sure
     the file is closed.
     """

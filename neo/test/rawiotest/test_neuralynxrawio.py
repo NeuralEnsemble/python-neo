@@ -19,6 +19,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'BML_unfilledsplit/original_data',
         'Cheetah_v1.1.0/original_data',
         'Cheetah_v4.0.2/original_data',
+        'Cheetah_v5.4.0/original_data',
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
@@ -36,6 +37,8 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
         'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
         'Cheetah_v4.0.2/README.txt',
+        'Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs',
+        'Cheetah_v5.4.0/plain_data/CSC5_trunc.txt',
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
         'Cheetah_v5.5.1/original_data/Events.nev',
@@ -79,7 +82,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
         'Cheetah_v6.3.2/incomplete_blocks/README.txt']
 
-    def test_read_ncs_files_sideeffects(self):
+    def test_scan_ncs_files(self):
 
         # Test BML style of Ncs files, similar to PRE4 but with fractional frequency
         # in the header and fractional microsPerSamp, which is then rounded as appropriate
@@ -124,7 +127,8 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         # three blocks of records. Gaps are on the order of 60 microseconds or so.
         rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks'))
         rawio.parse_header()
-        # test values here from direct inspection of .ncs file
+        # test values here from direct inspection of .ncs file, except for 3rd block
+        # t_stop, which is extended due to events past the last block of ncs records.
         self.assertEqual(rawio._nb_segment, 3)
         self.assertListEqual(rawio._timestamp_limits, [(8408806811, 8427831990),
                                                        (8427832053, 8487768498),
@@ -133,6 +137,41 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertListEqual(rawio._sigs_t_stop, [8427.831990, 8487.768498, 8515.816549])
         self.assertListEqual(rawio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561])
         self.assertEqual(len(rawio._sigs_memmaps), 3)  # check only that there are 3 memmaps
+
+    def test_single_file_mode(self):
+        """
+        Tests reading of single files.
+        """
+
+        # test single analog signal channel
+        fname = self.get_filename_path('Cheetah_v5.6.3/original_data/CSC1.ncs')
+        rawio = NeuralynxRawIO(filename=fname)
+        rawio.parse_header()
+
+        self.assertEqual(rawio._nb_segment, 2)
+        self.assertEqual(len(rawio.ncs_filenames), 1)
+        self.assertEqual(len(rawio.nev_filenames), 0)
+        sigHdrs = rawio.header['signal_channels']
+        self.assertEqual(sigHdrs.size, 1)
+        self.assertEqual(sigHdrs[0][0], 'CSC1')
+        self.assertEqual(sigHdrs[0][1], '58')
+        self.assertEqual(len(rawio.header['spike_channels']), 0)
+        self.assertEqual(len(rawio.header['event_channels']), 0)
+
+        # test one single electrode channel
+        fname = self.get_filename_path('Cheetah_v5.5.1/original_data/STet3a.nse')
+        rawio = NeuralynxRawIO(filename=fname)
+        rawio.parse_header()
+
+        self.assertEqual(rawio._nb_segment, 1)
+        self.assertEqual(len(rawio.ncs_filenames), 0)
+        self.assertEqual(len(rawio.nev_filenames), 0)
+        seHdrs = rawio.header['spike_channels']
+        self.assertEqual(len(seHdrs), 1)
+        self.assertEqual(seHdrs[0][0], 'chSTet3a#8#0')
+        self.assertEqual(seHdrs[0][1], '0')
+        self.assertEqual(len(rawio.header['signal_channels']), 0)
+        self.assertEqual(len(rawio.header['event_channels']), 0)
 
 
 class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
@@ -143,6 +182,7 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
 
     ncsTypeTestFiles = [
         ('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs', 'PRE4'),
+        ('Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs', 'DIGITALLYNX'),
         ('Cheetah_v5.5.1/original_data/STet3a.nse', 'DIGITALLYNXSX'),
         ('Cheetah_v5.5.1/original_data/Tet3a.ncs', 'DIGITALLYNXSX'),
         ('Cheetah_v5.6.3/original_data/CSC1.ncs', 'DIGITALLYNXSX'),
