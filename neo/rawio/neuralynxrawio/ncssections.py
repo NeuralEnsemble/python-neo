@@ -403,10 +403,12 @@ class NcsSectionsFactory:
         """
         for blki in range(0, len(ncsSects.sects)):
             if ncsMemMap['timestamp'][ncsSects.sects[blki].startRec] != \
-                    ncsSects.sects[blki].startTime: return False
+                    ncsSects.sects[blki].startTime:
+                return False
             ets = ncsMemMap['timestamp'][ncsSects.sects[blki].endRec]
             enb = ncsMemMap['nb_valid'][ncsSects.sects[blki].endRec]
             endTime = NcsSectionsFactory.calc_sample_time(ncsSects.sampFreqUsed, ets, enb)
-            if endTime != ncsSects.sects[blki].endTime: return False
+            if endTime != ncsSects.sects[blki].endTime:
+                return False
 
         return True
