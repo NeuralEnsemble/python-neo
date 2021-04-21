@@ -338,7 +338,7 @@ class AxonaRawIO(BaseRawIO):
             for ielec in range(elec_per_tetrode):
 
                 cntr = (itetr * elec_per_tetrode) + ielec
-                ch_name = '{}{}'.format(itetr, letters[ielec])
+                ch_name = '{}{}'.format(itetr+1, letters[ielec])
                 chan_id = str(cntr + 1)
                 gain = gain_list[cntr]
                 stream_id = '0'
