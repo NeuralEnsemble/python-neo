@@ -339,7 +339,7 @@ class AxonaRawIO(BaseRawIO):
 
                 cntr = (itetr * elec_per_tetrode) + ielec
                 ch_name = '{}{}'.format(itetr+1, letters[ielec])
-                chan_id = str(cntr + 1)
+                chan_id = str(cntr)
                 gain = gain_list[cntr]
                 stream_id = '0'
                 sig_channels.append((ch_name, chan_id, self.sr, dtype,
