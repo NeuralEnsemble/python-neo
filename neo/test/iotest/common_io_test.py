@@ -29,8 +29,9 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_sub_schema_is_lazy_loaded,
                             assert_children_empty)
 
-from neo.test.rawiotest.tools import (can_use_network, make_all_directories,
-                                   download_test_file, create_local_temp_dir)
+from neo.test.rawiotest.tools import can_use_network
+from neo.test.rawiotest.common_rawio_test import repo_for_test
+from neo.utils import download_dataset, get_local_testing_data_folder
 
 from neo.test.iotest.tools import (cleanup_test_file,
                                    close_object_safe, create_generic_io_object,
@@ -40,11 +41,8 @@ from neo.test.iotest.tools import (cleanup_test_file,
                                    iter_generic_readers, iter_read_objects,
                                    read_generic,
                                    write_generic)
+
 from neo.test.generate_datasets import generate_from_supported_objects
-
-
-# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
 class BaseTestIO:
@@ -67,8 +65,8 @@ class BaseTestIO:
     # all IO test need to modify this:
     ioclass = None  # the IOclass to be tested
 
-    files_to_test = []  # list of files to test compliances
-    files_to_download = []  # when files are at G-Node
+    entities_to_test = []  # list of files to test compliances
+    entities_to_download = []  # when files are at gin
 
     # when reading then writing produces files with identical hashes
     hash_conserved_when_write_read = False
@@ -84,7 +82,6 @@ class BaseTestIO:
         '''
         Set up the test fixture.  This is run for every test
         '''
-        self.files_to_test = copy(self.__class__.files_to_test)
         self.higher = self.ioclass.supported_objects[0]
         self.shortname = self.ioclass.__name__.lower().rstrip('io')
         # these objects can both be written and read
@@ -93,11 +90,16 @@ class BaseTestIO:
         # these objects can be either written or read
         self.io_readorwrite = list(set(self.ioclass.readable_objects) |
                                    set(self.ioclass.writeable_objects))
-        self.create_local_dir_if_not_exists()
-        self.download_test_files_if_not_present()
+        
+        for remote_path in self.entities_to_download:
+            download_dataset(repo=repo_for_test, remote_path=remote_path)
+
         self.files_generated = []
         self.generate_files_for_io_able_to_write()
-        self.files_to_test.extend(self.files_generated)
+        
+        # be carefull self.entities_to_test is class attributes
+        self.files_to_test = [self.get_local_path(e) for e in self.entities_to_test]
+        self.entities_to_test += self.files_generated
 
     def create_local_dir_if_not_exists(self):
         '''
@@ -169,11 +171,33 @@ class BaseTestIO:
 
         return True
 
+    #~ def get_filename_path(self, filename):
+        #~ '''
+        #~ Get the path to a filename in the current temporary file directory
+        #~ '''
+        #~ return os.path.join(self.local_test_dir, filename)
+
+    def get_local_base_folder(self):
+        return get_local_testing_data_folder()
+
+    def get_local_path(self, sub_path):
+        root_local_path = self.get_local_base_folder()
+        local_path = root_local_path / sub_path
+        # TODO later : remove the str when all IOs handle the Path stuff
+        local_path = str(local_path)
+        return local_path
+    
     def get_filename_path(self, filename):
-        '''
-        Get the path to a filename in the current temporary file directory
-        '''
-        return os.path.join(self.local_test_dir, filename)
+        # keep for backward compatibility
+        # will be removed soon
+        root_local_path = self.get_local_base_folder()
+        local_path = root_local_path / self.shortname / filename
+        # TODO later : remove the str when all IOs handle the Path stuff
+        local_path = str(local_path)
+        print('get_filename_path will be removed (use get_local_path() instead)', self.__class__.__name__, local_path)
+        return local_path
+
+
 
     def generic_io_object(self, filename=None, return_path=False, clean=False):
         '''

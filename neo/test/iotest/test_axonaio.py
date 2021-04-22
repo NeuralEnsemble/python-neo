@@ -16,13 +16,11 @@ import numpy as np
 
 class TestAxonaIO(BaseTestIO, unittest.TestCase, ):
     ioclass = AxonaIO
-
-    files_to_download = [
-        'axona_raw.set',
-        'axona_raw.bin'
+    entities_to_download = [
+        'axona'
     ]
-    files_to_test = [
-        'axona_raw.set'
+    entities_to_test = [
+        'axona/axona_raw.set'
     ]
 
 

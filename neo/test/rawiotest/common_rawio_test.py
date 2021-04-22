@@ -21,8 +21,6 @@ import os
 import logging
 import unittest
 
-#~ from neo.test.rawiotest.tools import (can_use_network, make_all_directories,
-                                   #~ download_test_file, create_local_temp_dir)
 from neo.utils import download_dataset, get_local_testing_data_folder
 
 from neo.test.rawiotest.tools import can_use_network
@@ -31,7 +29,7 @@ from neo.test.rawiotest import rawio_compliance as compliance
 
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-#~ url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
+# url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 repo_for_test = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
 class BaseTestRawIO:
@@ -64,50 +62,6 @@ class BaseTestRawIO:
         for remote_path in self.entities_to_download:
             download_dataset(repo=repo_for_test, remote_path=remote_path)
 
-        #~ self.create_local_dir_if_not_exists()
-        #~ self.download_test_files_if_not_present()
-
-    #~ def create_local_dir_if_not_exists(self):
-        #~ '''
-        #~ Create a local directory to store testing files and return it.
-
-        #~ The directory path is also written to self.local_test_dir
-        #~ '''
-        #~ self.local_test_dir = create_local_temp_dir(self.shortname)
-        #~ return self.local_test_dir
-
-    #~ def download_test_files_if_not_present(self):
-        #~ '''
-        #~ Download %s file at G-node for testing
-        #~ url_for_tests is global at beginning of this file.
-
-        #~ ''' % self.rawioclass.__name__
-
-        #~ if not self.use_network:
-            #~ raise unittest.SkipTest("Requires download of data from the web")
-
-        #~ url = url_for_tests + self.shortname
-        #~ try:
-            #~ make_all_directories(self.files_to_download, self.local_test_dir)
-            #~ download_test_file(self.files_to_download,
-                               #~ self.local_test_dir, url)
-        #~ except OSError as exc:
-            #~ raise unittest.SkipTest(exc)
-
-    #~ download_test_files_if_not_present.__test__ = False
-
-    #~ def cleanup_file(self, path):
-        #~ '''
-        #~ Remove test files or directories safely.
-        #~ '''
-        #~ cleanup_test_file(self.rawioclass, path, directory=self.local_test_dir)
-
-    #~ def get_filename_path(self, filename):
-        #~ '''
-        #~ Get the path to a filename in the current temporary file directory
-        #~ '''
-        #~ return os.path.join(self.local_test_dir, filename)
-    
     def get_local_base_folder(self):
         return get_local_testing_data_folder()
         
@@ -118,18 +72,6 @@ class BaseTestRawIO:
         local_path = str(local_path)
         return local_path
     
-    def get_filename_path(self, filename):
-        # keep for backward compatibility
-        # will be removed soon
-        classname = self.__class__.__name__
-        classname = classname.replace('Test', '').replace('RawIO', '').lower()
-        root_local_path = self.get_local_base_folder()
-        local_path = root_local_path / classname / filename
-        # TODO later : remove the str when all IOs handle the Path stuff
-        local_path = str(local_path)
-        print('get_filename_path will be removed (use get_local_path() instead)', self.__class__.__name__, local_path)
-        return local_path
-
     def test_read_all(self):
         # Read all file in self.entities_to_test
 
@@ -150,28 +92,11 @@ class BaseTestRawIO:
 
             txt = reader.__repr__()
             assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
-            # ~ print(txt)
+            # print(txt)
 
             #
             txt = reader._repr_annotations()
-            # ~ reader.print_annotations()
-
-            # ~ sigs = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
-            # ~ i_start=None, i_stop=None, channel_indexes=[1])
-            # ~ import matplotlib.pyplot as plt
-            # ~ fig, ax = plt.subplots()
-            # ~ ax.plot(sigs[:, 0])
-            # ~ plt.show()
-
-            # ~ nb_unit = reader.spike_channels_count()
-            # ~ for unit_index in range(nb_unit):
-            # ~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
-            # ~ unit_index=unit_index)
-            # ~ if wfs is not None:
-            # ~ import matplotlib.pyplot as plt
-            # ~ fig, ax = plt.subplots()
-            # ~ ax.plot(wfs[:, 0, :50].T)
-            # ~ plt.show()
+            # reader.print_annotations()
 
             # lanch a series of test compliance
             compliance.header_is_total(reader)

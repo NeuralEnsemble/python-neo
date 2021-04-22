@@ -23,8 +23,10 @@ from neo.test.iotest.common_io_test import BaseTestIO
 @unittest.skipUnless(sys.platform.startswith("win"), "Only works on Windows")
 class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
     ioclass = NeuroshareIO
-    files_to_test = []
-    files_to_download = ['Multichannel_fil_1.mcd', ]
+    entities_to_download = [
+        'neuroshare/Multichannel_fil_1.mcd'
+    ]
+    entities_to_test = []
 
     def setUp(self):
         BaseTestIO.setUp(self)

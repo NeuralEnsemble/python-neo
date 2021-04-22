@@ -18,27 +18,31 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant)
 from neo.test.iotest.tools import create_generic_reader
 
-FILES_TO_TEST = ['block_300ms_4rep_1clust_part_ch1.src',
-                 'block_500ms_5rep_empty_fullclust_ch1.src',
-                 'block_500ms_5rep_empty_partclust_ch1.src',
-                 'interleaved_500ms_5rep_ch2.src',
-                 'interleaved_500ms_5rep_nospikes_ch1.src',
-                 'interleaved_500ms_7rep_noclust_ch1.src',
-                 'long_170s_1rep_1clust_ch2.src',
-                 'multi_500ms_mulitrep_ch1.src',
-                 'random_500ms_12rep_noclust_part_ch2.src',
-                 'sequence_500ms_5rep_ch2.src']
+FILES_TO_TEST = [
+    'brainwaresrc/block_300ms_4rep_1clust_part_ch1.src',
+    'brainwaresrcblock_500ms_5rep_empty_fullclust_ch1.src',
+    'brainwaresrcblock_500ms_5rep_empty_partclust_ch1.src',
+    'brainwaresrcinterleaved_500ms_5rep_ch2.src',
+    'brainwaresrcinterleaved_500ms_5rep_nospikes_ch1.src',
+    'brainwaresrcinterleaved_500ms_7rep_noclust_ch1.src',
+    'brainwaresrclong_170s_1rep_1clust_ch2.src',
+    'brainwaresrcmulti_500ms_mulitrep_ch1.src',
+    'brainwaresrcrandom_500ms_12rep_noclust_part_ch2.src',
+    'brainwaresrcsequence_500ms_5rep_ch2.src'
+]
 
-FILES_TO_COMPARE = ['block_300ms_4rep_1clust_part_ch1',
-                    'block_500ms_5rep_empty_fullclust_ch1',
-                    'block_500ms_5rep_empty_partclust_ch1',
-                    'interleaved_500ms_5rep_ch2',
-                    'interleaved_500ms_5rep_nospikes_ch1',
-                    'interleaved_500ms_7rep_noclust_ch1',
-                    '',
-                    'multi_500ms_mulitrep_ch1',
-                    'random_500ms_12rep_noclust_part_ch2',
-                    'sequence_500ms_5rep_ch2']
+FILES_TO_COMPARE = [
+    'brainwaresrc/block_300ms_4rep_1clust_part_ch1',
+    'brainwaresrc/block_500ms_5rep_empty_fullclust_ch1',
+    'brainwaresrc/block_500ms_5rep_empty_partclust_ch1',
+    'brainwaresrc/interleaved_500ms_5rep_ch2',
+    'brainwaresrc/interleaved_500ms_5rep_nospikes_ch1',
+    'brainwaresrc/interleaved_500ms_7rep_noclust_ch1',
+    '',
+    'brainwaresrc/multi_500ms_mulitrep_ch1',
+    'brainwaresrc/random_500ms_12rep_noclust_part_ch2',
+    'brainwaresrc/sequence_500ms_5rep_ch2'
+]
 
 
 def proc_src(filename):
@@ -263,6 +267,10 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
     ioclass = BrainwareSrcIO
     read_and_write_is_bijective = False
 
+    entities_to_download = [
+        'brainwaresrc'
+    ]
+    
     # These are the files it tries to read and test for compliance
     files_to_test = FILES_TO_TEST
 
@@ -273,10 +281,6 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
     for i, fname in enumerate(files_to_compare):
         if fname:
             files_to_compare[i] += '_src_py3.npz'
-
-    # Will fetch from g-node if they don't already exist locally
-    # How does it know to do this before any of the other tests?
-    files_to_download = files_to_test + files_to_compare
 
     def setUp(self):
         super().setUp()

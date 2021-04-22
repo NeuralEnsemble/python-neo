@@ -22,14 +22,17 @@ import os
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class TestNixfr(BaseTestIO, unittest.TestCase, ):
     ioclass = NixIOfr
-
-    files_to_test = ['nixio_fr.nix']
-
-    files_to_download = ['nixio_fr.nix']
+    
+    entities_to_download = [
+        'nix/nixio_fr.nix'
+    ]
+    entities_to_test = [
+        'nix/nixio_fr.nix'
+    ]
 
     def setUp(self):
         super().setUp()
-        self.testfilename = self.get_filename_path('nixio_fr.nix')
+        self.testfilename = self.get_local_path('nix/nixio_fr.nix')
         self.reader_fr = NixIOfr(filename=self.testfilename)
         self.reader_norm = NixIO(filename=self.testfilename, mode='ro')
         self.blk = self.reader_fr.read_block(block_index=1, load_waveforms=True)
@@ -101,7 +104,7 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
         assert np.all(epoch1.labels == epoch2.labels)
 
     def test_annotations(self):
-        self.testfilename = self.get_filename_path('nixio_fr_ann.nix')
+        self.testfilename = self.get_local_path('nix/nixio_fr_ann.nix')
         with NixIO(filename=self.testfilename, mode='ow') as io:
             annotations = {'my_custom_annotation': 'hello block'}
             bl = Block(**annotations)

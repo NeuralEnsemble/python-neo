@@ -1930,6 +1930,8 @@ class NixIOVerTests(NixIOTest):
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = NixIO
     read_and_write_is_bijective = False
+    entities_to_download = []
+    entities_to_est = []
 
 
 if __name__ == "__main__":

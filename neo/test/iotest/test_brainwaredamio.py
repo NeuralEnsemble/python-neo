@@ -83,31 +83,33 @@ class BrainwareDamIOTestCase(BaseTestIO, unittest.TestCase):
     '''
     ioclass = BrainwareDamIO
     read_and_write_is_bijective = False
-
+    
+    entities_to_download = [
+        'brainwaredam'
+    ]
+    
     # These are the files it tries to read and test for compliance
-    files_to_test = ['block_300ms_4rep_1clust_part_ch1.dam',
-                     'interleaved_500ms_5rep_ch2.dam',
-                     'long_170s_1rep_1clust_ch2.dam',
-                     'multi_500ms_mulitrep_ch1.dam',
-                     'random_500ms_12rep_noclust_part_ch2.dam',
-                     'sequence_500ms_5rep_ch2.dam']
+    entities_to_test = [
+        'brainwaredam/block_300ms_4rep_1clust_part_ch1.dam',
+        'brainwaredam/interleaved_500ms_5rep_ch2.dam',
+        'brainwaredam/long_170s_1rep_1clust_ch2.dam',
+        'brainwaredam/multi_500ms_mulitrep_ch1.dam',
+        'brainwaredam/random_500ms_12rep_noclust_part_ch2.dam',
+        'brainwaredam/sequence_500ms_5rep_ch2.dam'
+    ]
 
     # these are reference files to compare to
-    files_to_compare = ['block_300ms_4rep_1clust_part_ch1',
-                        'interleaved_500ms_5rep_ch2',
+    files_to_compare = ['brainwaredam/block_300ms_4rep_1clust_part_ch1',
+                        'brainwaredam/interleaved_500ms_5rep_ch2',
                         '',
-                        'multi_500ms_mulitrep_ch1',
-                        'random_500ms_12rep_noclust_part_ch2',
-                        'sequence_500ms_5rep_ch2']
+                        'brainwaredam/multi_500ms_mulitrep_ch1',
+                        'brainwaredam/random_500ms_12rep_noclust_part_ch2',
+                        'brainwaredam/sequence_500ms_5rep_ch2']
 
     # add the suffix
     for i, fname in enumerate(files_to_compare):
         if fname:
             files_to_compare[i] += '_dam_py3.npz'
-
-    # Will fetch from g-node if they don't already exist locally
-    # How does it know to do this before any of the other tests?
-    files_to_download = files_to_test + files_to_compare
 
     def test_reading_same(self):
         for ioobj, path in self.iter_io_objects(return_path=True):
@@ -129,7 +131,7 @@ class BrainwareDamIOTestCase(BaseTestIO, unittest.TestCase):
             if not refname:
                 continue
             obj = self.read_file(filename=filename)
-            refobj = proc_dam(self.get_filename_path(refname))
+            refobj = proc_dam(self.get_local_path(refname))
 
             try:
                 assert_neo_object_is_compliant(obj)
