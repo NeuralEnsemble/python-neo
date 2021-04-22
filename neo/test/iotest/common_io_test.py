@@ -104,6 +104,7 @@ class BaseTestIO:
             self.files_to_test = [self.get_local_path(e) for e in self.entities_to_test]
         else:
             self.files_to_test = []
+            raise unittest.SkipTest("Requires datalad download of data from the web")
 
     def create_local_dir_if_not_exists(self):
         '''

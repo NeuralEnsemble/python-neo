@@ -63,6 +63,8 @@ class BaseTestRawIO:
         if HAVE_DATALAD:
             for remote_path in self.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
+        else:
+            raise unittest.SkipTest("Requires datalad download of data from the web")
 
     def get_local_base_folder(self):
         return get_local_testing_data_folder()
