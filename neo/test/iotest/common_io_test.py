@@ -99,7 +99,7 @@ class BaseTestIO:
 
             self.files_generated = []
             self.generate_files_for_io_able_to_write()
-            
+
             # be carefull self.entities_to_test is class attributes
             self.files_to_test = [self.get_local_path(e) for e in self.entities_to_test]
         else:

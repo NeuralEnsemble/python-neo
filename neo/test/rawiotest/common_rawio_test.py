@@ -78,7 +78,7 @@ class BaseTestRawIO:
         # Read all file in self.entities_to_test
         if not HAVE_DATALAD:
             return
-        
+
         for entity_name in self.entities_to_test:
             # entity_name = self.get_filename_path(entity_name)
             # local path is a folder or a file
