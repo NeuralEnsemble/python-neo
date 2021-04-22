@@ -56,4 +56,3 @@ jobs:
         run: |
           source ./test_env/bin/activate
           pytest --cov=neo neo/test
-
