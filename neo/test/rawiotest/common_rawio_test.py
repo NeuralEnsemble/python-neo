@@ -76,7 +76,7 @@ class BaseTestRawIO:
     
     def test_read_all(self):
         # Read all file in self.entities_to_test
-        if not if HAVE_DATALAD:
+        if not HAVE_DATALAD:
             return
         
         for entity_name in self.entities_to_test:
