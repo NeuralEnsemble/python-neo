@@ -32,7 +32,7 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 class TestExampleRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = ExampleRawIO
     # here obsvisously there is nothing to download:
-    files_to_download = []
+    entities_to_download = []
     # here we will test 1 fake files
     # note that for IOs based on directory names you can put the directory
     # name here instead of the file name.

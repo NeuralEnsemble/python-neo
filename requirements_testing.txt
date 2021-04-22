@@ -1,5 +1,6 @@
 pytest
 pytest-cov
+datalad
 scipy>=1.0.0
 h5py
 igor
