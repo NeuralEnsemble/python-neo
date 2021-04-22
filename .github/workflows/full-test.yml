@@ -25,7 +25,7 @@ jobs:
         id: cache-venv
         with:
           path: ./test_env
-          key: $venv-{{ runner.os }}-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/requirements_testing.txt') }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/requirements_testing.txt') }}
           restore-keys: |
             ${{ runner.os }}-venv-
       - name: Install dependencies
@@ -49,11 +49,13 @@ jobs:
           HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
         with:
           path: ~/ephy_testing_data
-          key: ${{ runner.os }}-datasets-${HASH_EPHY_DATASET}
+          key: ${{ runner.os }}-datasets-${{ env.HASH_EPHY_DATASET }}
           restore-keys: |
             ${{ runner.os }}-datasets
       - name: Test with pytest
         run: |
           source ./test_env/bin/activate
-          pytest --cov=neo neo/test
-
+          # onbly rawiotest is tested at the moment
+          pytest --cov=neo neo/test/rawiotest
+          # TODO uncomment this soon
+          # pytest --cov=neo neo/test/iotest
