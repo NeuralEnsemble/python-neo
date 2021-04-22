@@ -31,7 +31,9 @@ from neo.test.tools import (assert_same_sub_schema,
 
 from neo.test.rawiotest.tools import can_use_network
 from neo.test.rawiotest.common_rawio_test import repo_for_test
-from neo.utils import download_dataset, get_local_testing_data_folder
+from neo.utils import (download_dataset,
+    get_local_testing_data_folder, HAVE_DATALAD)
+
 
 from neo.test.iotest.tools import (cleanup_test_file,
                                    close_object_safe, create_generic_io_object,
@@ -91,15 +93,17 @@ class BaseTestIO:
         self.io_readorwrite = list(set(self.ioclass.readable_objects) |
                                    set(self.ioclass.writeable_objects))
         
-        for remote_path in self.entities_to_download:
-            download_dataset(repo=repo_for_test, remote_path=remote_path)
+        if HAVE_DATALAD:
+            for remote_path in self.entities_to_download:
+                download_dataset(repo=repo_for_test, remote_path=remote_path)
 
-        self.files_generated = []
-        self.generate_files_for_io_able_to_write()
-        
-        # be carefull self.entities_to_test is class attributes
-        self.files_to_test = [self.get_local_path(e) for e in self.entities_to_test]
-        self.entities_to_test += self.files_generated
+            self.files_generated = []
+            self.generate_files_for_io_able_to_write()
+            
+            # be carefull self.entities_to_test is class attributes
+            self.files_to_test = [self.get_local_path(e) for e in self.entities_to_test]
+        else:
+            self.files_to_test = []
 
     def create_local_dir_if_not_exists(self):
         '''

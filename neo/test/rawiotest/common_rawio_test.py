@@ -21,7 +21,8 @@ import os
 import logging
 import unittest
 
-from neo.utils import download_dataset, get_local_testing_data_folder
+from neo.utils import (download_dataset,
+    get_local_testing_data_folder, HAVE_DATALAD)
 
 from neo.test.rawiotest.tools import can_use_network
 
@@ -59,8 +60,9 @@ class BaseTestRawIO:
         '''
         self.shortname = self.rawioclass.__name__.lower().replace('rawio', '')
         
-        for remote_path in self.entities_to_download:
-            download_dataset(repo=repo_for_test, remote_path=remote_path)
+        if HAVE_DATALAD:
+            for remote_path in self.entities_to_download:
+                download_dataset(repo=repo_for_test, remote_path=remote_path)
 
     def get_local_base_folder(self):
         return get_local_testing_data_folder()
@@ -74,7 +76,9 @@ class BaseTestRawIO:
     
     def test_read_all(self):
         # Read all file in self.entities_to_test
-
+        if not if HAVE_DATALAD:
+            return
+        
         for entity_name in self.entities_to_test:
             # entity_name = self.get_filename_path(entity_name)
             # local path is a folder or a file
