@@ -19,6 +19,7 @@ Author: Steffen Buergers
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                         _spike_channel_dtype, _event_channel_dtype,
                         _common_sig_characteristics)
+import pathlib
 import numpy as np
 import os
 import re
@@ -49,8 +50,8 @@ class AxonaRawIO(BaseRawIO):
         )
     """
 
-    extensions = ['bin']  # Never used?
-    rawmode = 'one-file'
+    extensions = ['bin', 'set']  # Never used?
+    rawmode = 'multi-file'
 
     # In the .bin file, channels are arranged in a strange order.
     # This list takes a channel index as input and returns the actual
@@ -66,11 +67,29 @@ class AxonaRawIO(BaseRawIO):
     def __init__(self, filename):
         BaseRawIO.__init__(self)
 
-        filename = pathlib.Path(filename)
-        # We accept base filenames, .bin and .set extensions
-        self.filename = filename.with_suffix('')
-        self.bin_file = self.filename.with_suffix('.bin')
+        # Accepting filename with arbitrary suffix as input
+        self.filename = pathlib.Path(filename).with_suffix('')
         self.set_file = self.filename.with_suffix('.set')
+        self.bin_file = None
+        self.unit_files = []
+
+        # set file is required for all recordings
+        if not self.set_file.exists():
+            raise ValueError(f'Could not locate ".set" file. '
+                             f'{self.filename.with_suffix(".set")} does not '
+                             f'exist.')
+
+        # detecting available files
+        if self.filename.with_suffix('.bin').exists():
+            self.bin_file = self.filename.with_suffix('.bin')
+
+        for i in range(1, 33):
+            unit_file = self.filename.with_suffix(f'.{i}')
+            if unit_file.exists():
+                self.unit_files.append(unit_file)
+            else:
+                break
+
         self.set_file_encoding = 'cp1252'
 
     def _source_name(self):
@@ -84,42 +103,98 @@ class AxonaRawIO(BaseRawIO):
 
         # Get useful parameters from .set file
         params = ['rawRate']
-        params = self.get_set_file_parameters(params)
+        global_params = self.get_header_parameters(self.set_file, params)
 
-        # Useful num. bytes per continuous data packet (.bin file)
-        self.bytes_packet = 432
-        self.bytes_data = 384
-        self.bytes_head = 32
-        self.bytes_tail = 16
+        unit_dtype = np.dtype([('spiketime', '>i4'), ('samples', 'int8', (50,))])
+        # dt0 = [
+            # ('file_id', 'S8'),
+            # # label of sampling groun (e.g. "1kS/s" or "LFP Low")
+            # ('label', 'S16'),
+            # # number of 1/30000 seconds between data points
+            # # (e.g., if sampling rate "1 kS/s", period equals "30")
+            # ('period', 'uint32'),
+            # ('channel_count', 'uint32')]
 
-        # All ephys data has this data type
-        self.data_dtype = np.int16
+        # Useful num. bytes per continuous data packet
+        self.file_parameters = {'bin': {'bytes_packet': 432,
+                                        'bytes_data': 384,
+                                        'bytes_head': 32,
+                                        'bytes_tail': 16,
+                                        'data_type': np.int16,
+                                        'header_size': 0,
+                                        'sampling_rate': int(global_params['rawRate']),
+                                        'num_channels': len(self.get_active_tetrode()) * 4},
+                                'set': {},
+                                'unit': {'data_type': unit_dtype,
+                                         'wf_left_sweep_us': 200}}
 
-        # There is no global header for .bin files
-        self.global_header_size = 0
 
-        # Generally useful information
-        self.sr = int(params['rawRate'])
-        self.num_channels = len(self.get_active_tetrode()) * 4
+        if self.bin_file:
+            # add derived parameters
+            num_tot_packets = int(
+                self.bin_file.stat().st_size / self.file_parameters['bin'][
+                    'bytes_packet'])
+            self.file_parameters['bin']['num_total_packets'] = num_tot_packets
+            self.file_parameters['bin']['num_total_samples'] = num_tot_packets * 3
 
-        # How many 432byte packets does this data contain (<=> num. samples/3)?
-        self.num_total_packets = int(os.path.getsize(self.bin_file)
-                                     / self.bytes_packet)
-        self.num_total_samples = self.num_total_packets * 3
+            # Create np.memmap to .bin file
+            self._raw_signals = np.memmap(
+                self.bin_file, dtype=self.file_parameters['bin']['data_type'],
+                mode='r', offset=self.file_parameters['bin']['header_size']
+            )
 
-        # Create np.memmap to .bin file
-        self._raw_signals = np.memmap(
-            self.bin_file, dtype=self.data_dtype, mode='r',
-            offset=self.global_header_size
-        )
+        self._raw_spikes = []
+        spike_channels = []
+        if self.unit_files:
+            for i, unit_file in enumerate(self.unit_files):
+                # collecting more unit parameters
 
-        # Header dict
+                unit_dict = self.get_header_parameters(unit_file, None)
+                unit_dict['timebase_hz'] = int(unit_dict['timebase'].replace(' hz',''))
+                unit_dict['sample_rate_hz'] = int(unit_dict['sample_rate'].replace(' hz',''))
+                unit_dict['num_chans'] = int(unit_dict['num_chans'])
+                unit_dict.update(
+                    {'header_size': self.get_header_lenth(unit_file),
+                    'num_spikes': int(unit_dict['num_spikes']),
+                    'wf_left_sweep': self.file_parameters['unit']['wf_left_sweep_us'] * unit_dict['timebase_hz'] * 10**-6})
+
+                # memory mapping spiking data
+                spikes = np.memmap(unit_file, dtype=self.file_parameters['unit']['data_type'],
+                                   mode='r', offset=unit_dict['header_size'],
+                                   shape=(unit_dict['num_spikes']))
+                self._raw_spikes.append(spikes)
+
+
+                # create fake units channels
+                # This is mandatory!!!!
+                # Note that if there is no waveform at all in the file
+                # then wf_units/wf_gain/wf_offset/wf_left_sweep/wf_sampling_rate
+                # can be set to any value because _spike_raw_waveforms
+                # will return None
+                for n_chan in range(1, unit_dict['num_chans']+1):
+                    unit_name = f'tetrode-{i}_chan-{n_chan}'
+                    unit_id = f'#{i}-{n_chan}'
+                    wf_units = 'dimensionless'
+                    wf_gain = 1
+                    wf_offset = 0.
+                    wf_left_sweep = unit_dict['wf_left_sweep']
+                    wf_sampling_rate = float(unit_dict['sample_rate_hz'])
+                    spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
+                                           wf_offset, wf_left_sweep,
+                                           wf_sampling_rate))
+
+
+                self.file_parameters['unit'][i+1] = unit_dict
+
+
+
+            # Header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
         self.header['signal_streams'] = self._get_signal_streams_header()
         self.header['signal_channels'] = self._get_signal_chan_header()
-        self.header['spike_channels'] = np.array([],
+        self.header['spike_channels'] = np.array(spike_channels,
                                                  dtype=_spike_channel_dtype)
         self.header['event_channels'] = np.array([],
                                                  dtype=_event_channel_dtype)
@@ -142,10 +217,10 @@ class AxonaRawIO(BaseRawIO):
         return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
-        return self.num_total_samples / self.sr
+        return self.file_parameters['bin']['num_total_samples'] / self.file_parameters['bin']['sampling_rate']
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        return self.num_total_samples
+        return self.file_parameters['bin']['num_total_samples']
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
@@ -173,19 +248,19 @@ class AxonaRawIO(BaseRawIO):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self.num_total_samples
+            i_stop = self.file_parameters['bin']['num_total_samples']
         if channel_indexes is None:
-            channel_indexes = [i for i in range(self.num_channels)]
+            channel_indexes = [i for i in range(self.file_parameters['bin']['num_channels'])]
 
         num_samples = (i_stop - i_start)
 
         # Create base index vector for _raw_signals for time period of interest
         num_packets_oi = (num_samples + 2) // 3
-        offset = i_start // 3 * (self.bytes_packet // 2)
+        offset = i_start // 3 * (self.file_parameters['bin']['bytes_packet'] // 2)
         rem = (i_start % 3)
 
         sample1 = np.arange(num_packets_oi + 1, dtype=np.uint32) * \
-            (self.bytes_packet // 2) + self.bytes_head // 2 + offset
+            (self.file_parameters['bin']['bytes_packet'] // 2) + self.file_parameters['bin']['bytes_head'] // 2 + offset
         sample2 = sample1 + 64
         sample3 = sample2 + 64
 
@@ -199,7 +274,7 @@ class AxonaRawIO(BaseRawIO):
         # Read one channel at a time
         raw_signals = np.ndarray(shape=(num_samples,
                                  len(channel_indexes)),
-                                 dtype=self.data_dtype)
+                                 dtype=self.file_parameters['bin']['data_type'])
 
         for i, ch_idx in enumerate(channel_indexes):
 
@@ -208,18 +283,44 @@ class AxonaRawIO(BaseRawIO):
 
         return raw_signals
 
+
+    def get_header_lenth(self, file):
+        """
+        Scan file for the occurrence of 'data_start' and return the length
+        of the header in bytes
+
+        INPUT
+        file (str or path): file to be loaded
+
+        OUTPUT
+        n_bytes (int): number of bytes occupied by the header
+        """
+        header = b''
+        with open(file, 'rb') as f:
+            for bin_line in f:
+                if b'data_start' in bin_line:
+                    header += b'data_start'
+                    break
+                else:
+                    header += bin_line
+
+        # adding arbitrary 12 bytes here -> need to confirm
+        return len(header)
+
     # ------------------ HELPER METHODS --------------------
     # These are credited largely to Geoff Barrett from the Hussaini lab:
     # https://github.com/GeoffBarrett/BinConverter
     # Adapted or modified by Steffen Buergers
 
-    def get_set_file_parameters(self, params):
+    def get_header_parameters(self, file, params):
         """
         Given a list of param., looks for each in first word of a phrase
         in the .set file. Adds found paramters as dictionary keys and
-        following phrases as values (strings).
+        following phrases as values (strings). If params is None all key
+        are returned.
 
         INPUT
+        file (str or path): file to be loaded
         params (list or set): parameter names to search for
 
         OUTPUT
@@ -227,11 +328,12 @@ class AxonaRawIO(BaseRawIO):
                        were found & values being strings of the data.
 
         EXAMPLE
-        self.get_set_file_parameters(['experimenter', 'trial_time'])
+        self.get_header_parameters('file.set', ['experimenter', 'trial_time'])
         """
         header = {}
-        params = set(params)
-        with open(self.set_file, 'rb') as f:
+        if params is not None:
+            params = set(params)
+        with open(file, 'rb') as f:
             for bin_line in f:
                 if b'data_start' in bin_line:
                     break
@@ -239,7 +341,7 @@ class AxonaRawIO(BaseRawIO):
                     replace('\r', '').strip()
                 parts = line.split(' ')
                 key = parts[0]
-                if key in params:
+                if (params is None) or (key in params):
                     header[key] = ' '.join(parts[1:])
 
         return header
@@ -328,7 +430,7 @@ class AxonaRawIO(BaseRawIO):
 
         elec_per_tetrode = 4
         letters = ['a', 'b', 'c', 'd']
-        dtype = self.data_dtype
+        dtype = self.file_parameters['bin']['data_type']
         units = 'uV'
         gain_list = self._get_channel_gain()
         offset = 0  # What is the offset?
@@ -343,7 +445,7 @@ class AxonaRawIO(BaseRawIO):
                 chan_id = str(cntr)
                 gain = gain_list[cntr]
                 stream_id = '0'
-                sig_channels.append((ch_name, chan_id, self.sr, dtype,
+                sig_channels.append((ch_name, chan_id, self.file_parameters['bin']['sampling_rate'], dtype,
                                      units, gain, offset, stream_id))
 
         return np.array(sig_channels, dtype=_signal_channel_dtype)
