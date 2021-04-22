@@ -55,4 +55,7 @@ jobs:
       - name: Test with pytest
         run: |
           source ./test_env/bin/activate
-          pytest --cov=neo neo/test
+          # onbly rawiotest is tested at the moment
+          pytest --cov=neo neo/test/rawiotest
+          # TODO uncomment this soon
+          # pytest --cov=neo neo/test/iotest
