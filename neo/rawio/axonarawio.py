@@ -9,21 +9,25 @@ In brief:
  data.bin - raw data file
 
 There are many other data formats from Axona, which we do not consider (yet).
-These are derivative from the raw continuous data (.bin) and could in principle
-be extracted from it (see file format overview for details).
+These are derivatives from the raw continuous data (.bin) and could in
+principle be extracted from it (see file format overview for details).
+
+Every recording contains extracellular electrophysiology (ecephy) data in
+stream 0. When available video tracking (pos) data is in stream 1.
 
 Author: Steffen Buergers
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                        _spike_channel_dtype, _event_channel_dtype,
-                        _common_sig_characteristics)
+from neo.rawio.baserawio import (
+    BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+    _spike_channel_dtype, _event_channel_dtype
+)
 import numpy as np
 import os
 import re
-import contextlib
 import datetime
+import contextlib
 
 
 class AxonaRawIO(BaseRawIO):
@@ -35,18 +39,26 @@ class AxonaRawIO(BaseRawIO):
     .set file about the recording setup (see the above manual for details).
 
     Usage:
-        import neo.rawio
+        import neo
+
         r = neo.rawio.AxonaRawIO(
-            filename=os.path.join(dir_name, base_filename)
+            filename=os.path.join(dir_name, set_filename)
         )
         r.parse_header()
-        print(r)
-        raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                      i_start=0, i_stop=1024,  channel_names=channel_names)
-        float_chunk = reader.rescale_signal_raw_to_float(
-            raw_chunk, dtype='float64',
-            channel_indexes=[0, 3, 6]
+        print('Header information:\n', r)
+
+        raw_chunk = r.get_analogsignal_chunk(
+            block_index=0, seg_index=0, i_start=0, i_stop=5,
+            stream_index=0, channel_indexes=[0, 3, 6]
         )
+        print('Raw acquisition traces:\n', raw_chunk)
+
+        float_chunk = r.rescale_signal_raw_to_float(
+            raw_chunk, dtype=np.float64,
+            channel_indexes=[0, 3, 6], 
+            stream_index=0
+        )
+        print('\nRaw acquisition traces in uV:\n', float_chunk)
     """
 
     extensions = ['bin']  # Never used?
@@ -81,36 +93,49 @@ class AxonaRawIO(BaseRawIO):
         to raw data (.bin file) and prepare header dictionary in neo format.
         '''
 
-        # Get useful parameters from .set file
+        # Ecephys
         params = ['rawRate']
         params = self.get_set_file_parameters(params)
 
-        # Useful num. bytes per continuous data packet (.bin file)
         self.bytes_packet = 432
         self.bytes_data = 384
         self.bytes_head = 32
         self.bytes_tail = 16
 
-        # All ephys data has this data type
         self.data_dtype = np.int16
 
-        # There is no global header for .bin files
         self.global_header_size = 0
 
-        # Generally useful information
-        self.sr = int(params['rawRate'])
+        self.sr_ecephys = int(params['rawRate'])
         self.num_channels = len(self.get_active_tetrode()) * 4
 
-        # How many 432byte packets does this data contain (<=> num. samples/3)?
         self.num_total_packets = int(os.path.getsize(self.bin_file)
                                      / self.bytes_packet)
-        self.num_total_samples = self.num_total_packets * 3
+        self.num_ecephys_samples = self.num_total_packets * 3
+        # TODO: self.dur_ecephys = 100000
 
-        # Create np.memmap to .bin file
         self._raw_signals = np.memmap(
             self.bin_file, dtype=self.data_dtype, mode='r',
             offset=self.global_header_size
         )
+
+        # Pos (video) tracking
+        self.sr_pos = 50
+        with open(self.bin_file, 'rb') as f:
+            with contextlib.closing(
+                mmap.mmap(f.fileno(), self.sr_ecephys // 3 // self.sr_pos
+                          * self.bytes_packet, access=mmap.ACCESS_READ)
+            ) as mmap_obj:
+                self.contains_pos_tracking = mmap_obj.find(b'ADU2') > -1
+
+        if self.contains_pos_tracking:
+            self.num_pos_samples = self.num_total_packets // \
+                               (self.sr_ecephys // 3 // self.sr_pos)
+            self.dur_pos = np.ceil(self.num_ecephys_samples / self.sr_ecephys)
+            self.num_pos_samples = int(self.dur_pos * self.sr_pos)
+
+            fbin = open(self.bin_file, 'rb')
+            self.mmpos = mmap.mmap(fbin.fileno(), 0, access=mmap.ACCESS_READ)
 
         # Header dict
         self.header = {}
@@ -134,17 +159,23 @@ class AxonaRawIO(BaseRawIO):
             [tetr for tetr in self.get_active_tetrode() for _ in range(4)]
 
     def _get_signal_streams_header(self):
-        # create signals stream information (we always expect a single stream)
+        if self.contains_pos_tracking:
+            return np.array([('stream 0', '0'), ('stream 1', '1')], 
+                            dtype=_signal_stream_dtype)
         return np.array([('stream 0', '0')], dtype=_signal_stream_dtype)
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
-        return self.num_total_samples / self.sr
+        return self.num_ecephys_samples / self.sr_ecephys
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        return self.num_total_samples
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        if stream_index == 0:
+            return self.num_ecephys_samples
+        elif (stream_index == 1) and (self.contains_pos_tracking):
+            return self.num_pos_samples
+        return None
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
@@ -152,8 +183,27 @@ class AxonaRawIO(BaseRawIO):
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
         """
+        Return raw (continuous) signals as 2d numpy array for ecephys
+        data (stream 0; time x chan) or video tracking (stream 1; time x 9)
+        """
+        if stream_index == 1:
+            if self.contains_pos_tracking:
+                raw_signals = self._get_pos_analogsignal_chunk(i_start, i_stop)
+
+        elif stream_index == 0:
+            raw_signals = self._get_ecephys_analogsignal_chunk(
+                i_start, i_stop, channel_indexes
+            )
+        return raw_signals
+
+    # ------------------ HELPER METHODS --------------------
+    # These are credited largely to Geoff Barrett from the Hussaini lab:
+    # https://github.com/GeoffBarrett/BinConverter
+    # Adapted or modified by Steffen Buergers
+
+    def _get_ecephys_analogsignal_chunk(self, i_start, i_stop, channel_indexes):
+        """
         Return raw (continuous) signals as 2d numpy array (time x chan).
-        Note that block_index and seg_index are always 1 (regardless of input).
 
         Raw data is in a single vector np.memmap with the following structure:
 
@@ -172,7 +222,7 @@ class AxonaRawIO(BaseRawIO):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self.num_total_samples
+            i_stop = self.num_ecephys_samples
         if channel_indexes is None:
             channel_indexes = [i for i in range(self.num_channels)]
 
@@ -207,10 +257,93 @@ class AxonaRawIO(BaseRawIO):
 
         return raw_signals
 
-    # ------------------ HELPER METHODS --------------------
-    # These are credited largely to Geoff Barrett from the Hussaini lab:
-    # https://github.com/GeoffBarrett/BinConverter
-    # Adapted or modified by Steffen Buergers
+    def _get_pos_analogsignal_chunk(self, i_start=None, i_stop=None):
+        """
+        Return np.array of video position tracking (Nsamp x 9 columns),
+        with columns being the following:
+
+        timestamp, x1, y1, x2, y2, numpix1, numpix2, total_pix, unused
+
+        TODO: There are multiple position recording modes, this is meant
+        for only one of them. From the fileFormat manual of Axona:
+
+        The format of the “.pos” file depends on the tracking mode. Each position sample is 20 
+        bytes long, and consists of a 4-byte frame counter (incremented at around 50 Hz, 
+        according to the camera sync signal), and then 8 2-byte words. In four-spot mode, the 8 
+        words are redx, redy, greenx, greeny, bluex, bluey, whitex, whitey. In two-spot mode, they 
+        are big_spotx, big_spoty, little_spotx, little_spoty, number_of_pixels_in_big_spot, 
+        number_of_pixels_in_little_spot, total_tracked_pixels, and the 8th word is unused. Each 
+        word is MSB-first. If a position wasn't tracked (e.g., the light was obscured), then the 
+        values for x and y will both be 0x3ff (= 1023). The header contains things like the limits of 
+        the tracking window in pixels, etc. 
+
+        Note: the frame counter is NOT a timestamp for the position samples. It should be 
+        ignored in analyses. The samples are obtained at regular intervals so the Xth sample in
+        the file was taken at time X/50 seconds since the start of the recording session. 
+        """
+        pos = np.array([]).astype(float)
+
+        flags = np.ndarray(
+            (self.num_total_packets,), 'S4',
+            self.mmpos, 0, self.bytes_packet
+        )
+        ADU2_idx = np.where(flags == b'ADU2')
+
+        timestamp = np.ndarray(
+            (self.num_total_packets,), np.int32, self.mmpos, 12, 
+            self.bytes_packet
+        )[ADU2_idx].reshape((-1, 1))
+
+        pos = np.ndarray(
+            (self.num_total_packets,), (np.int16, (1, 8)), self.mmpos, 16,
+            (self.bytes_packet,)
+        ).reshape((-1, 8))[ADU2_idx][:]
+
+        pos = np.hstack(
+            (ADU2_idx[0].reshape((-1, 1)), timestamp, pos)
+        ).astype(float)
+
+        # the X and Y values are in an awkward order, let's swap from
+        # packet#, timestamp, y1, x1, y2, x2, numpix1, numpix2, total_pix, unused
+        # to
+        # packet#, timestamp, x1, y1, x2, y2, numpix1, numpix2, total_pix, unused
+        # TODO: This swapping does not align the fileFormat manual, why?!
+        pos[:, 2:6] = pos[:, [3, 2, 5, 4]]
+
+        # Disregard first samples, which are not evenly spaced.
+        # TODO : Why is it 320? Should we not start at the last sample below 160?
+        first_sample_index = len(np.where(pos[:, 0] <= 320 - 1)[0]) - 1
+        pos = pos[first_sample_index:, :]
+
+        # Interpolate to 100 Hz exactly by appending last frame until
+        # desired number of samples is reached
+        if pos.shape[0] < 2 * self.num_pos_samples:
+            missing_n = int(2 * self.num_pos_samples - pos.shape[0])
+            last_location = pos[-1, :]
+            missing_samples = np.tile(last_location, (missing_n, 1))
+
+            pos = np.vstack((pos, missing_samples))
+
+        # Downsample to 50 Hz
+        indices = np.arange(0, pos.shape[0], 2)
+        if indices[-1] >= pos.shape[0]:
+            indices = indices[:-1]
+
+        pos = pos[indices, :]
+
+        # discard sample index
+        pos = pos[:, 1:]
+
+        # TODO: Should we index earlier to not read in all pos data if it is not
+        # requested? There may be discrepancies between different calls of this
+        # method depending on the interpolation and rounding up of the recording
+        # duration (is that even needed?). 
+        # In any case, loading all data is not a problem at 50 or even 100Hz, so
+        # this should basically be ok, too.
+
+        # TODO: If the timestamp is meaningless for analyses as the fileFormat
+        # manual claims, why return it in the output?
+        return pos[i_start:i_stop, :]
 
     def get_set_file_parameters(self, params):
         """
@@ -293,7 +426,7 @@ class AxonaRawIO(BaseRawIO):
 
         Formula for .eeg and .X files, presumably also .bin files:
 
-        1000*adc_fullscale_mv / (gain_ch*128)
+        1000 * adc_fullscale_mv / (gain_ch*128)
         """
         gain_list = []
 
@@ -321,7 +454,11 @@ class AxonaRawIO(BaseRawIO):
         gain,
         offset,
         stream id
+
+        When available, video tracking data is appended after the ecephys data.
         """
+
+        # Ecephys data
         active_tetrode_set = self.get_active_tetrode()
         num_active_tetrode = len(active_tetrode_set)
 
@@ -338,11 +475,29 @@ class AxonaRawIO(BaseRawIO):
             for ielec in range(elec_per_tetrode):
 
                 cntr = (itetr * elec_per_tetrode) + ielec
-                ch_name = '{}{}'.format(itetr, letters[ielec])
-                chan_id = str(cntr + 1)
+                ch_name = '{}{}'.format(itetr + 1, letters[ielec])
+                chan_id = str(cntr)
                 gain = gain_list[cntr]
                 stream_id = '0'
-                sig_channels.append((ch_name, chan_id, self.sr, dtype,
+                sig_channels.append((ch_name, chan_id, self.sr_ecephys, dtype,
                                      units, gain, offset, stream_id))
+        
+        # Append video tracking data
+        if self.contains_pos_tracking:
 
+            # NOTE: In the fileFormat Manual there are two recording format for 
+            # video tracking: Four-spot mode and two-spot mode. Here we are following
+            # the code from https://github.com/HussainiLab/BinConverter/blob/master/BinConverter/core/readBin.py
+            # which suggests two-spot mode data.
+            # TODO: Add check for type of data and whether this schema fits
+            pos_channel_names = 't,x1,y1,x2,y2,numpix1,numpix2,unused'.split(',')
+            pos_units = ['', '', '', '', '', 'pix', 'pix', '']
+            for i, (name, unit) in enumerate(zip(pos_channel_names, pos_units)):
+                sig_channels.append(
+                    (name, str(int(chan_id) + 1 + i), r.sr_pos, np.float64,
+                     unit, 1, 0, '1')
+                )
+        
+        # TODO: _signal_channel_dtype does not match the pos data currently
+        # numbers there are all np.float64, they shoul dbe U16
         return np.array(sig_channels, dtype=_signal_channel_dtype)
