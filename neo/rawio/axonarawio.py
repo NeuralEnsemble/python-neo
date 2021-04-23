@@ -108,12 +108,12 @@ class AxonaRawIO(BaseRawIO):
         self.global_header_size = 0
 
         self.sr_ecephys = int(params['rawRate'])
-        self.num_channels = len(self.get_active_tetrode()) * 4
+        self.num_channels_ecephys = len(self.get_active_tetrode()) * 4
 
         self.num_total_packets = int(os.path.getsize(self.bin_file)
                                      / self.bytes_packet)
         self.num_ecephys_samples = self.num_total_packets * 3
-        # TODO: self.dur_ecephys = 100000
+        self.dur_ecephys = self.num_ecephys_samples / self.sr_ecephys
 
         self._raw_signals = np.memmap(
             self.bin_file, dtype=self.data_dtype, mode='r',
@@ -121,7 +121,7 @@ class AxonaRawIO(BaseRawIO):
         )
 
         # Pos (video) tracking
-        self.sr_pos = 50
+        self.sr_pos = 100  # ideal SR, empirical SR might differ
         with open(self.bin_file, 'rb') as f:
             with contextlib.closing(
                 mmap.mmap(f.fileno(), self.sr_ecephys // 3 // self.sr_pos
@@ -130,9 +130,8 @@ class AxonaRawIO(BaseRawIO):
                 self.contains_pos_tracking = mmap_obj.find(b'ADU2') > -1
 
         if self.contains_pos_tracking:
-            self.num_pos_samples = self.num_total_packets // \
-                               (self.sr_ecephys // 3 // self.sr_pos)
-            self.dur_pos = np.ceil(self.num_ecephys_samples / self.sr_ecephys)
+            self.num_channels_pos = 8
+            self.dur_pos = self.dur_ecephys
             self.num_pos_samples = int(self.dur_pos * self.sr_pos)
 
             fbin = open(self.bin_file, 'rb')
@@ -221,13 +220,12 @@ class AxonaRawIO(BaseRawIO):
         sample 3: 32b (head) + 128*2 (all channels 1st and 2nd entry) + ...
         """
 
-        # Set default values
         if i_start is None:
             i_start = 0
         if i_stop is None:
             i_stop = self.num_ecephys_samples
         if channel_indexes is None:
-            channel_indexes = [i for i in range(self.num_channels)]
+            channel_indexes = [i for i in range(self.num_channels_ecephys)]
 
         num_samples = (i_stop - i_start)
 
@@ -260,31 +258,20 @@ class AxonaRawIO(BaseRawIO):
 
         return raw_signals
 
-    def _get_pos_analogsignal_chunk(self, i_start=None, i_stop=None,
+    def _get_pos_analogsignal_chunk(self, i_start=0, i_stop=None,
                                     channel_indexes=None):
         """
-        Return np.array of video position tracking (Nsamp x 9 columns),
+        Return np.array of video position tracking (Nsamp x 8 columns),
         with columns being the following:
 
-        timestamp, x1, y1, x2, y2, numpix1, numpix2, total_pix, unused
+        timestamp, x1, y1, x2, y2, npix1, npix2, total_pix, unused
 
-        TODO: There are multiple position recording modes, this is meant
-        for only one of them. From the fileFormat manual of Axona:
-
-        The format of the “.pos” file depends on the tracking mode. Each position sample is 20 
-        bytes long, and consists of a 4-byte frame counter (incremented at around 50 Hz, 
-        according to the camera sync signal), and then 8 2-byte words. In four-spot mode, the 8 
-        words are redx, redy, greenx, greeny, bluex, bluey, whitex, whitey. In two-spot mode, they 
-        are big_spotx, big_spoty, little_spotx, little_spoty, number_of_pixels_in_big_spot, 
-        number_of_pixels_in_little_spot, total_tracked_pixels, and the 8th word is unused. Each 
-        word is MSB-first. If a position wasn't tracked (e.g., the light was obscured), then the 
-        values for x and y will both be 0x3ff (= 1023). The header contains things like the limits of 
-        the tracking window in pixels, etc. 
-
-        Note: the frame counter is NOT a timestamp for the position samples. It should be 
-        ignored in analyses. The samples are obtained at regular intervals so the Xth sample in
-        the file was taken at time X/50 seconds since the start of the recording session. 
+        Position samples are saved in the header of packets with the
+        flag 'ADU2'.
         """
+        if channel_indexes is None:
+            channel_indexes = [i for i in range(self.num_channels_pos)]
+
         pos = np.array([]).astype(float)
 
         flags = np.ndarray(
@@ -293,60 +280,20 @@ class AxonaRawIO(BaseRawIO):
         )
         ADU2_idx = np.where(flags == b'ADU2')
 
-        timestamp = np.ndarray(
-            (self.num_total_packets,), np.int32, self.mmpos, 12,
-            self.bytes_packet
-        )[ADU2_idx].reshape((-1, 1))
-
         pos = np.ndarray(
             (self.num_total_packets,), (np.int16, (1, 8)), self.mmpos, 16,
             (self.bytes_packet,)
         ).reshape((-1, 8))[ADU2_idx][:]
 
         pos = np.hstack(
-            (ADU2_idx[0].reshape((-1, 1)), timestamp, pos)
+            (ADU2_idx[0].reshape((-1, 1)), pos)
         ).astype(float)
 
-        # the X and Y values are in an awkward order, let's swap from
-        # packet#, timestamp, y1, x1, y2, x2, numpix1, numpix2, total_pix, unused
-        # to
-        # packet#, timestamp, x1, y1, x2, y2, numpix1, numpix2, total_pix, unused
-        # TODO: This swapping does not align the fileFormat manual, why?!
-        pos[:, 2:6] = pos[:, [3, 2, 5, 4]]
+        # The timestamp from the recording is dubious, create our own
+        packets_per_ms = self.sr_ecephys / 3000
+        pos[:, 0] = pos[:, 0] / packets_per_ms
+        pos = np.delete(pos, 1, 1)
 
-        # Disregard first samples, which are not evenly spaced.
-        # TODO : Why is it 320? Should we not start at the last sample below 160?
-        first_sample_index = len(np.where(pos[:, 0] <= 320 - 1)[0]) - 1
-        pos = pos[first_sample_index:, :]
-
-        # Interpolate to 100 Hz exactly by appending last frame until
-        # desired number of samples is reached
-        if pos.shape[0] < 2 * self.num_pos_samples:
-            missing_n = int(2 * self.num_pos_samples - pos.shape[0])
-            last_location = pos[-1, :]
-            missing_samples = np.tile(last_location, (missing_n, 1))
-
-            pos = np.vstack((pos, missing_samples))
-
-        # Downsample to 50 Hz
-        indices = np.arange(0, pos.shape[0], 2)
-        if indices[-1] >= pos.shape[0]:
-            indices = indices[:-1]
-
-        pos = pos[indices, :]
-
-        # discard sample index
-        pos = pos[:, 1:]
-
-        # TODO: Should we index earlier to not read in all pos data if it is not
-        # requested? There may be discrepancies between different calls of this
-        # method depending on the interpolation and rounding up of the recording
-        # duration (is that even needed?). 
-        # In any case, loading all data is not a problem at 50 or even 100Hz, so
-        # this should basically be ok, too.
-
-        # TODO: If the timestamp is meaningless for analyses as the fileFormat
-        # manual claims, why return it in the output?
         return pos[i_start:i_stop, channel_indexes]
 
     def get_set_file_parameters(self, params):
@@ -471,7 +418,7 @@ class AxonaRawIO(BaseRawIO):
         dtype = self.data_dtype
         units = 'uV'
         gain_list = self._get_channel_gain()
-        offset = 0  # What is the offset?
+        offset = 0
 
         sig_channels = []
         for itetr in range(num_active_tetrode):
@@ -489,19 +436,15 @@ class AxonaRawIO(BaseRawIO):
         # Append video tracking data
         if self.contains_pos_tracking:
 
-            # NOTE: In the fileFormat Manual there are two recording format for 
-            # video tracking: Four-spot mode and two-spot mode. Here we are following
-            # the code from https://github.com/HussainiLab/BinConverter/blob/master/BinConverter/core/readBin.py
-            # which suggests two-spot mode data.
-            # TODO: Add check for type of data and whether this schema fits
+            # NOTE: In the file format Manual there are two recording modes
+            # for video tracking: Four-spot mode and two-spot mode. Here we
+            # only consider two-spot mode!
             pos_chan_names = 't,x1,y1,x2,y2,numpix1,numpix2,unused'.split(',')
             pos_units = ['', '', '', '', '', 'pix', 'pix', '']
             for i, (name, unit) in enumerate(zip(pos_chan_names, pos_units)):
                 sig_channels.append(
-                    (name, str(int(chan_id) + 1 + i), self.sr_pos, np.float64,
+                    (name, str(i), self.sr_pos, np.float64,
                      unit, 1, 0, '1')
                 )
 
-        # TODO: _signal_channel_dtype does not match the pos data currently
-        # numbers there are all np.float64, they shoul dbe U16
         return np.array(sig_channels, dtype=_signal_channel_dtype)
