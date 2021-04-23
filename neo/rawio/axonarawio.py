@@ -291,7 +291,7 @@ class AxonaRawIO(BaseRawIO):
         ADU2_idx = np.where(flags == b'ADU2')
 
         timestamp = np.ndarray(
-            (self.num_total_packets,), np.int32, self.mmpos, 12, 
+            (self.num_total_packets,), np.int32, self.mmpos, 12,
             self.bytes_packet
         )[ADU2_idx].reshape((-1, 1))
 
