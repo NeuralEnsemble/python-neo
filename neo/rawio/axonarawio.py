@@ -189,7 +189,9 @@ class AxonaRawIO(BaseRawIO):
         """
         if stream_index == 1:
             if self.contains_pos_tracking:
-                raw_signals = self._get_pos_analogsignal_chunk(i_start, i_stop)
+                raw_signals = self._get_pos_analogsignal_chunk(
+                    i_start, i_stop, channel_indexes
+                )
 
         elif stream_index == 0:
             raw_signals = self._get_ecephys_analogsignal_chunk(
@@ -258,7 +260,8 @@ class AxonaRawIO(BaseRawIO):
 
         return raw_signals
 
-    def _get_pos_analogsignal_chunk(self, i_start=None, i_stop=None):
+    def _get_pos_analogsignal_chunk(self, i_start=None, i_stop=None,
+                                    channel_indexes=None):
         """
         Return np.array of video position tracking (Nsamp x 9 columns),
         with columns being the following:
@@ -344,7 +347,7 @@ class AxonaRawIO(BaseRawIO):
 
         # TODO: If the timestamp is meaningless for analyses as the fileFormat
         # manual claims, why return it in the output?
-        return pos[i_start:i_stop, :]
+        return pos[i_start:i_stop, channel_indexes]
 
     def get_set_file_parameters(self, params):
         """
