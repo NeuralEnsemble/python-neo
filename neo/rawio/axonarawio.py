@@ -56,7 +56,7 @@ class AxonaRawIO(BaseRawIO):
 
         float_chunk = r.rescale_signal_raw_to_float(
             raw_chunk, dtype=np.float64,
-            channel_indexes=[0, 3, 6], 
+            channel_indexes=[0, 3, 6],
             stream_index=0
         )
         print('\nRaw acquisition traces in uV:\n', float_chunk)
@@ -161,7 +161,7 @@ class AxonaRawIO(BaseRawIO):
 
     def _get_signal_streams_header(self):
         if self.contains_pos_tracking:
-            return np.array([('stream 0', '0'), ('stream 1', '1')], 
+            return np.array([('stream 0', '0'), ('stream 1', '1')],
                             dtype=_signal_stream_dtype)
         return np.array([('stream 0', '0')], dtype=_signal_stream_dtype)
 
@@ -482,7 +482,7 @@ class AxonaRawIO(BaseRawIO):
                 stream_id = '0'
                 sig_channels.append((ch_name, chan_id, self.sr_ecephys, dtype,
                                      units, gain, offset, stream_id))
-        
+
         # Append video tracking data
         if self.contains_pos_tracking:
 
@@ -491,14 +491,14 @@ class AxonaRawIO(BaseRawIO):
             # the code from https://github.com/HussainiLab/BinConverter/blob/master/BinConverter/core/readBin.py
             # which suggests two-spot mode data.
             # TODO: Add check for type of data and whether this schema fits
-            pos_channel_names = 't,x1,y1,x2,y2,numpix1,numpix2,unused'.split(',')
+            pos_chan_names = 't,x1,y1,x2,y2,numpix1,numpix2,unused'.split(',')
             pos_units = ['', '', '', '', '', 'pix', 'pix', '']
-            for i, (name, unit) in enumerate(zip(pos_channel_names, pos_units)):
+            for i, (name, unit) in enumerate(zip(pos_chan_names, pos_units)):
                 sig_channels.append(
-                    (name, str(int(chan_id) + 1 + i), r.sr_pos, np.float64,
+                    (name, str(int(chan_id) + 1 + i), self.sr_pos, np.float64,
                      unit, 1, 0, '1')
                 )
-        
+
         # TODO: _signal_channel_dtype does not match the pos data currently
         # numbers there are all np.float64, they shoul dbe U16
         return np.array(sig_channels, dtype=_signal_channel_dtype)
