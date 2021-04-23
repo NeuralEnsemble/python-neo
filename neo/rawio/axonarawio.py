@@ -28,6 +28,7 @@ import os
 import re
 import datetime
 import contextlib
+import mmap
 
 
 class AxonaRawIO(BaseRawIO):
