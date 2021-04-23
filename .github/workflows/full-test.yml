@@ -60,4 +60,4 @@ jobs:
           # onbly rawiotest is tested at the moment
           pytest --cov=neo neo/test/rawiotest
           # TODO uncomment this soon
-          # pytest --cov=neo neo/test/iotest
+          pytest --cov=neo neo/test/iotest
