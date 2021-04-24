@@ -13,7 +13,8 @@ These are derivatives from the raw continuous data (.bin) and could in
 principle be extracted from it (see file format overview for details).
 
 Every recording contains extracellular electrophysiology (ecephy) data in
-stream 0. When available video tracking (pos) data is in stream 1.
+stream 0. When available video tracking (pos) data is in stream 1. Currently
+two-spot tracking mode is assumed and implemented (not four-spot mode).
 
 Author: Steffen Buergers
 
@@ -62,7 +63,7 @@ class AxonaRawIO(BaseRawIO):
         print('\nRaw acquisition traces in uV:\n', float_chunk)
     """
 
-    extensions = ['bin']  # Never used?
+    extensions = ['bin']
     rawmode = 'one-file'
 
     # In the .bin file, channels are arranged in a strange order.
@@ -120,7 +121,10 @@ class AxonaRawIO(BaseRawIO):
             offset=self.global_header_size
         )
 
-        # Pos (video) tracking
+        # Pos (video tracked animal position)
+        # NOTE: In the file format Manual there are two recording modes
+        # for video tracking: Four-spot mode and two-spot mode. Here we
+        # only consider two-spot mode!
         self.sr_pos = 100  # ideal SR, empirical SR might differ
         with open(self.bin_file, 'rb') as f:
             with contextlib.closing(
@@ -363,7 +367,8 @@ class AxonaRawIO(BaseRawIO):
                 if line.startswith('trial_date'):
                     date_string = re.findall(r'\d+\s\w+\s\d{4}$', line)[0]
                 if line.startswith('trial_time'):
-                    time_string = line[len('trial_time') + 1::].replace('\n', '')
+                    time_string = line[len('trial_time') + 1::]\
+                        .replace('\n', '')
 
         return datetime.datetime.strptime(date_string + ', ' + time_string,
                                           "%d %b %Y, %H:%M:%S")
@@ -398,13 +403,13 @@ class AxonaRawIO(BaseRawIO):
         that recorded data. Each tuple contains the following information:
 
         channel name (1a, 1b, 1c, 1d, 2a, 2b, ...; num=tetrode, letter=elec),
-        channel id (1, 2, 3, 4, 5, ... N),
-        sampling rate,
+        channel id (0, 1, 2, 3, 4, ... N),
+        sampling rate (48000),
         data type (int16),
         unit (uV),
         gain,
         offset,
-        stream id
+        stream id (0)
 
         When available, video tracking data is appended after the ecephys data.
         """
@@ -433,12 +438,9 @@ class AxonaRawIO(BaseRawIO):
                 sig_channels.append((ch_name, chan_id, self.sr_ecephys, dtype,
                                      units, gain, offset, stream_id))
 
-        # Append video tracking data
+        # Append video tracking data (two-spot mode)
         if self.contains_pos_tracking:
 
-            # NOTE: In the file format Manual there are two recording modes
-            # for video tracking: Four-spot mode and two-spot mode. Here we
-            # only consider two-spot mode!
             pos_chan_names = 't,x1,y1,x2,y2,numpix1,numpix2,unused'.split(',')
             pos_units = ['', '', '', '', '', 'pix', 'pix', '']
             for i, (name, unit) in enumerate(zip(pos_chan_names, pos_units)):
