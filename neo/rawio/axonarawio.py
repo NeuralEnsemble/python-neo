@@ -207,7 +207,8 @@ class AxonaRawIO(BaseRawIO):
     # https://github.com/GeoffBarrett/BinConverter
     # Adapted or modified by Steffen Buergers
 
-    def _get_ecephys_analogsignal_chunk(self, i_start, i_stop, channel_indexes):
+    def _get_ecephys_analogsignal_chunk(self, i_start, i_stop,
+                                        channel_indexes):
         """
         Return raw (continuous) signals as 2d numpy array (time x chan).
 
@@ -341,8 +342,6 @@ class AxonaRawIO(BaseRawIO):
         with open(self.set_file, encoding=self.set_file_encoding) as f:
             for line in f:
 
-                # The pattern to look for is collectMask_X Y,
-                # where X is the tetrode number, and Y is 1 or 0
                 if 'collectMask_' in line:
                     tetrode_str, tetrode_status = line.split(' ')
                     if int(tetrode_status) == 1:
