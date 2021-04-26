@@ -549,7 +549,7 @@ class Spike2RawIO(BaseRawIO):
         event_header = self.header['event_channels'][event_channel_index]
         chan_id = int(event_header['id'])  # because set to string in header
         chan_info = self._channel_infos[chan_id]
-        
+
         if chan_info['kind'] == 5:
             timestamps, labels = self._get_internal_timestamp_(seg_index,
                                                                chan_id, t_start, t_stop,
