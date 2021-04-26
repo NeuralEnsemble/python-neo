@@ -549,15 +549,19 @@ class Spike2RawIO(BaseRawIO):
         event_header = self.header['event_channels'][event_channel_index]
         chan_id = int(event_header['id'])  # because set to string in header
         chan_info = self._channel_infos[chan_id]
-
+        
         if chan_info['kind'] == 5:
             timestamps, labels = self._get_internal_timestamp_(seg_index,
                                                                chan_id, t_start, t_stop,
                                                                other_field='marker')
+            # the real encoding is unknown ASCII make it safe
+            labels = np.char.decode(labels, 'ascii', errors='ignore')
         elif chan_info['kind'] == 8:
             timestamps, labels = self._get_internal_timestamp_(seg_index,
                                                                chan_id, t_start, t_stop,
                                                                other_field='label')
+            # the real encoding is unknown ASCII make it safe
+            labels = np.char.decode(labels, 'ascii', errors='ignore')
         else:
             timestamps = self._get_internal_timestamp_(seg_index,
                                                        chan_id, t_start, t_stop, other_field=None)
