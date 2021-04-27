@@ -12,8 +12,8 @@ except:
 
 
 global local_testing_data_folder
-if os.getenv('TESTING_DATA_FOLDER', default=None) is not None:
-    local_testing_data_folder = Path(os.getenv('TESTING_DATA_FOLDER'))
+if os.getenv('EPHY_TESTING_DATA_FOLDER', default=None) is not None:
+    local_testing_data_folder = Path(os.getenv('EPHY_TESTING_DATA_FOLDER'))
 else:
     # set in home
     local_testing_data_folder = Path.home() / 'ephy_testing_data'
@@ -52,6 +52,8 @@ def download_dataset(repo=None, remote_path=None, local_folder=None):
     local_path:
         The local path of the downloaded file or folder
     """
+    assert HAVE_DATALAD, 'You need to install datalad'
+
     if repo is None:
         # Use gin NeuralEnsemble/ephy_testing_data
         repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
@@ -72,10 +74,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None):
         return
 
     dataset.get(remote_path)
-    
+
     local_path = local_folder / remote_path
 
     return local_path
-
-
-
