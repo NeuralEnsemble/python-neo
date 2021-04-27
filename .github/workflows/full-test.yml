@@ -60,6 +60,6 @@ jobs:
       - name: Test with pytest
         run: |
           source ~/test_env/bin/activate
-          # onbly neo.rawio and neo.io
+          # only neo.rawio and neo.io
           pytest --cov=neo neo/test/rawiotest
           pytest --cov=neo neo/test/iotest
