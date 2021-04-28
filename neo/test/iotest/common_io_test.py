@@ -176,12 +176,6 @@ class BaseTestIO:
 
         return True
 
-    #~ def get_filename_path(self, filename):
-        #~ '''
-        #~ Get the path to a filename in the current temporary file directory
-        #~ '''
-        #~ return os.path.join(self.local_test_dir, filename)
-
     def get_local_base_folder(self):
         return get_local_testing_data_folder()
 
