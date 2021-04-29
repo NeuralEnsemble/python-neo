@@ -779,10 +779,7 @@ class BaseRawIO:
                                 stream_index, channel_indexes):
         """
         Return the samples from a set of AnalogSignals indexed
-        by channel_indexes (local index inner stream).
-
-        All channels indexed must have the same size and t_start.
-        :TODO: won't this be the case now if they are all part of the same stream?
+        by stream_index and channel_indexes (local index inner stream).
 
         RETURNS
         -------
