@@ -83,11 +83,11 @@ class BrainwareDamIOTestCase(BaseTestIO, unittest.TestCase):
     '''
     ioclass = BrainwareDamIO
     read_and_write_is_bijective = False
-    
+
     entities_to_download = [
         'brainwaredam'
     ]
-    
+
     # These are the files it tries to read and test for compliance
     entities_to_test = [
         'brainwaredam/block_300ms_4rep_1clust_part_ch1.dam',

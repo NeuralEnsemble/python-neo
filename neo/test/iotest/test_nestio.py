@@ -599,10 +599,6 @@ class TestColumnIO(BaseTestIO, unittest.TestCase):
 
     def setUp(self):
         BaseTestIO.setUp(self)
-        #~ filename = get_test_file_full_path(
-            #~ ioclass=NestIO,
-            #~ filename='0gid-1time-2Vm-3gex-4gin-1260-0.dat',
-            #~ directory=self.local_test_dir, clean=False)
         filename = self.get_local_path('nest/0gid-1time-2Vm-3gex-4gin-1260-0.dat')
         self.testIO = ColumnIO(filename=filename)
 

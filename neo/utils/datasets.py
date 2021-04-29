@@ -18,24 +18,26 @@ else:
     # set in home
     local_testing_data_folder = Path.home() / 'ephy_testing_data'
 
+
 def get_local_testing_data_folder():
     global local_testing_data_folder
     return local_testing_data_folder
 
+
 def download_dataset(repo=None, remote_path=None, local_folder=None):
     """
     Download a dataset with datalad client.
-    
+
     By default it download the "NeuralEnsemble/ephy_testing_data" on gin platform
     which is used for neo testing.
-    
+
     Usage:
-    
+
         download_dataset(
                 repo='https://gin.g-node.org/NeuralEnsemble/ephy_testing_data',
                 remote_path='blackrock/blackrock_2_1',
                 local_folder='/home/myname/Documents/')
-    
+
     Parameters
     ----------
     repo: str
@@ -57,7 +59,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None):
     if repo is None:
         # Use gin NeuralEnsemble/ephy_testing_data
         repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-    
+
     if local_folder is None:
         global local_testing_data_folder
         local_folder = local_testing_data_folder
@@ -67,7 +69,8 @@ def download_dataset(repo=None, remote_path=None, local_folder=None):
         dataset = datalad.api.Dataset(path=local_folder)
         # TODO : some kind git pull to update distant change ??
     else:
-        dataset = datalad.api.install(path=local_folder, source='https://gin.g-node.org/NeuralEnsemble/ephy_testing_data')
+        dataset = datalad.api.install(path=local_folder,
+            source=repo)
 
     if remote_path is None:
         print('Bad boy: you have to provide "remote_path"')

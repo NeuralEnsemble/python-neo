@@ -30,7 +30,6 @@ class TestStimfitIO(BaseTestIO, unittest.TestCase):
         'stimfit/File_stimfit_5.h5',
         'stimfit/File_stimfit_6.h5',
     ]
-    
 
 
 if __name__ == "__main__":

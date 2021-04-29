@@ -744,7 +744,7 @@ class NixIOTest(unittest.TestCase):
         event.annotate(**cls.rdict(4))
         seg.events.append(event)
 
-        spiketrain = SpikeTrain(times=times, t_stop=10*pq.s,
+        spiketrain = SpikeTrain(times=times, t_stop=10 * pq.s,
                         units=pq.s, array_annotations=times_ann)
         d = cls.rdict(6)
         d["quantity"] = pq.Quantity(10, "mV")

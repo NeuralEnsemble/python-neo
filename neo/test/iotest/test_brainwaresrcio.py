@@ -270,7 +270,7 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
     entities_to_download = [
         'brainwaresrc'
     ]
-    
+
     # These are the files it tries to read and test for compliance
     files_to_test = FILES_TO_TEST
 
@@ -315,7 +315,7 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
             if not refname:
                 continue
             obj = self.read_file(filename=filename, readall=True)[0]
-            refobj = proc_src(self.get_filename_path(refname))
+            refobj = proc_src(self.get_local_path(refname))
             try:
                 assert_neo_object_is_compliant(obj)
                 assert_neo_object_is_compliant(refobj)

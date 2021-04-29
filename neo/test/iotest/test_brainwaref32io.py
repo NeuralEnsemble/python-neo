@@ -89,7 +89,7 @@ class BrainwareF32IOTestCase(BaseTestIO, unittest.TestCase):
     '''
     ioclass = BrainwareF32IO
     read_and_write_is_bijective = False
-    
+
     entities_to_download = [
         'brainwaref32'
     ]

@@ -22,7 +22,7 @@ import os
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class TestNixfr(BaseTestIO, unittest.TestCase, ):
     ioclass = NixIOfr
-    
+
     entities_to_download = [
         'nix/nixio_fr.nix'
     ]

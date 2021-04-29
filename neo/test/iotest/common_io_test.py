@@ -92,7 +92,7 @@ class BaseTestIO:
         # these objects can be either written or read
         self.io_readorwrite = list(set(self.ioclass.readable_objects) |
                                    set(self.ioclass.writeable_objects))
-        
+
         if HAVE_DATALAD:
             for remote_path in self.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
@@ -185,18 +185,6 @@ class BaseTestIO:
         # TODO later : remove the str when all IOs handle the Path stuff
         local_path = str(local_path)
         return local_path
-    
-    def get_filename_path(self, filename):
-        # keep for backward compatibility
-        # will be removed soon
-        root_local_path = self.get_local_base_folder()
-        local_path = root_local_path / self.shortname / filename
-        # TODO later : remove the str when all IOs handle the Path stuff
-        local_path = str(local_path)
-        print('get_filename_path will be removed (use get_local_path() instead)', self.__class__.__name__, local_path)
-        return local_path
-
-
 
     def generic_io_object(self, filename=None, return_path=False, clean=False):
         '''

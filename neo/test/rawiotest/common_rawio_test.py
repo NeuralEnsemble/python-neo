@@ -48,7 +48,7 @@ class BaseTestRawIO:
 
     entities_to_test = []  # list of files to test compliances
     entities_to_download = []  # when files are at gin
-    
+
     # allow environment to tell avoid using network
     use_network = can_use_network()
 
@@ -59,7 +59,7 @@ class BaseTestRawIO:
         Set up the test fixture.  This is run for every test
         '''
         self.shortname = self.rawioclass.__name__.lower().replace('rawio', '')
-        
+
         if HAVE_DATALAD:
             for remote_path in self.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
@@ -68,14 +68,14 @@ class BaseTestRawIO:
 
     def get_local_base_folder(self):
         return get_local_testing_data_folder()
-        
+
     def get_local_path(self, sub_path):
         root_local_path = self.get_local_base_folder()
         local_path = root_local_path / sub_path
         # TODO later : remove the str when all IOs handle the Path stuff
         local_path = str(local_path)
         return local_path
-    
+
     def test_read_all(self):
         # Read all file in self.entities_to_test
         if not HAVE_DATALAD:

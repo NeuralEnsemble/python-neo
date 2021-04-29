@@ -224,7 +224,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
     # def test_ncs(self):
         # for session in self.files_to_test:
-        #     dirname = self.get_filename_path(session)
+        #     dirname = self.get_local_path(session)
         #     nio = NeuralynxIO(dirname=dirname, use_cache=False)
         #     block = nio.read_block()
 
@@ -247,7 +247,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
     @unittest.skip("nse failing for now as per issue #907")
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
-            dirname = self.get_filename_path(session)
+            dirname = self.get_local_path(session)
             nio = NeuralynxIO(dirname=dirname, keep_original_times=True)
             block = nio.read_block()
 
