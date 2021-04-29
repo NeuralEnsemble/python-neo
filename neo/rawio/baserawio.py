@@ -535,7 +535,8 @@ class BaseRawIO:
         :param i_start: index of first sample to retrieve within section
         :param i_stop: index of one past last sample to retrieve within section
         :param stream_index: index of stream containing channels
-        :param channel_indexes: list of indexes of channels to retrieve or None
+        :param channel_indexes: list of indexes of channels to retrieve. Can be a list, slice,
+                                  np.array of int, or None
         :param channel_names: list of channels names to retrieve, or None
         :param channel_ids: list of channel ids to retrieve, or None
         :param prefer_slice: use slicing with lazy read if channel_indexes are provided as an
