@@ -538,7 +538,8 @@ class BaseRawIO:
         :param channel_indexes: list of indexes of channels to retrieve or None
         :param channel_names: list of channels names to retrieve, or None
         :param channel_ids: list of channel ids to retrieve, or None
-        :param prefer_slice: use rapid slice if channel_indexes are contiguous
+        :param prefer_slice: use slicing with lazy read if channel_indexes are provided as an
+                              np.ndarray and are contiguous
         :return: array with raw signal samples
         """
         stream_index = self._get_stream_index_from_arg(stream_index)
@@ -558,8 +559,6 @@ class BaseRawIO:
             # Check if channel_indexes are contiguous and transform to slice argument if possible.
             # This is useful for memmap or hdf5 where providing a slice causes a lazy read,
             # rather than a list of indexes that make a copy (like numpy.take()).
-            # :TODO: Why would the user ever want to use the slower method? And should the
-            # default by True? Perhaps the name of this argument should reflect copying or not?
             if np.all(np.diff(channel_indexes) == 1):
                 channel_indexes = slice(channel_indexes[0], channel_indexes[-1] + 1)
 
