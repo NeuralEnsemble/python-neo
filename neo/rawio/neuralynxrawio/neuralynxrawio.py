@@ -71,7 +71,7 @@ class NeuralynxRawIO(BaseRawIO):
             Display all information about signal channels, units, segment size....
     """
     extensions = ['nse', 'ncs', 'nev', 'ntt']
-    rawmode = 'one-dir'  # :TODO: remove this line as now set in __init__
+    rawmode = 'one-dir'
 
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
                   ('nb_valid', 'uint32'), ('samples', 'int16', (NcsSection._RECORD_SIZE))]
