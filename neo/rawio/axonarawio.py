@@ -130,7 +130,8 @@ class AxonaRawIO(BaseRawIO):
                 self.bin_file.stat().st_size / self.file_parameters['bin'][
                     'bytes_packet'])
             self.file_parameters['bin']['num_total_packets'] = num_tot_packets
-            self.file_parameters['bin']['num_total_samples'] = num_tot_packets * 3
+            self.file_parameters['bin'][
+                'num_total_samples'] = num_tot_packets * 3
 
             # Create np.memmap to .bin file
             self._raw_signals = np.memmap(
@@ -168,8 +169,8 @@ class AxonaRawIO(BaseRawIO):
                     shape=(tdict['num_spikes']))
                 self._raw_spikes.append(spikes)
 
-                unit_name = f'tetrode {i+1}'
-                unit_id = f'{i+1}'
+                unit_name = f'tetrode {i + 1}'
+                unit_id = f'{i + 1}'
                 wf_units = 'dimensionless'
                 wf_gain = 1
                 wf_offset = 0.
@@ -179,8 +180,8 @@ class AxonaRawIO(BaseRawIO):
                                        wf_offset, wf_left_sweep,
                                        wf_sampling_rate))
 
-                self.file_parameters['unit']['tetrode_ids'].append(i+1)
-                self.file_parameters['unit'][i+1] = tdict
+                self.file_parameters['unit']['tetrode_ids'].append(i + 1)
+                self.file_parameters['unit'][i + 1] = tdict
 
             # propagate common tetrode parameters to global unit level
             units_dict = self.file_parameters['unit']
@@ -189,9 +190,8 @@ class AxonaRawIO(BaseRawIO):
                 for key, value in units_dict[ids[0]].items():
                     # copy key-value pair if present across all tetrodes
                     if all([key in units_dict[t] for t in ids]) and \
-                       all([units_dict[t][key] == value for t in ids]):
+                            all([units_dict[t][key] == value for t in ids]):
                         self.file_parameters['unit'][key] = value
-
 
         # Create RawIO header dict
         self.header = {}
@@ -217,8 +217,6 @@ class AxonaRawIO(BaseRawIO):
             seg_ann['signals'][0]['__array_annotations__']['tetrode_id'] = \
                 [tetr for tetr in self.get_active_tetrode() for _ in range(4)]
 
-
-
     def _get_signal_streams_header(self):
         # create signals stream information (we always expect a single stream)
         return np.array([('stream 0', '0')], dtype=_signal_stream_dtype)
@@ -235,9 +233,10 @@ class AxonaRawIO(BaseRawIO):
 
         if 'unit' in self.file_parameters:
             # get tetrode recording durations in seconds
-            tetrode_durations = [int(self.file_parameters['unit'][i]['duration'])
-                                 for i in range(1, 33) if i in
-                                 self.file_parameters['unit']]
+            tetrode_durations = [
+                int(self.file_parameters['unit'][i]['duration'])
+                for i in range(1, 33) if i in
+                self.file_parameters['unit']]
             t_stop = max(t_stop, max(tetrode_durations))
 
         return t_stop
@@ -273,17 +272,20 @@ class AxonaRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self.file_parameters['bin']['num_total_samples']
         if channel_indexes is None:
-            channel_indexes = [i for i in range(self.file_parameters['bin']['num_channels'])]
+            channel_indexes = [i for i in range(
+                self.file_parameters['bin']['num_channels'])]
 
         num_samples = (i_stop - i_start)
 
         # Create base index vector for _raw_signals for time period of interest
         num_packets_oi = (num_samples + 2) // 3
-        offset = i_start // 3 * (self.file_parameters['bin']['bytes_packet'] // 2)
+        offset = i_start // 3 * (
+                    self.file_parameters['bin']['bytes_packet'] // 2)
         rem = (i_start % 3)
 
         sample1 = np.arange(num_packets_oi + 1, dtype=np.uint32) * \
-            (self.file_parameters['bin']['bytes_packet'] // 2) + self.file_parameters['bin']['bytes_head'] // 2 + offset
+                  (self.file_parameters['bin']['bytes_packet'] // 2) + \
+                  self.file_parameters['bin']['bytes_head'] // 2 + offset
         sample2 = sample1 + 64
         sample3 = sample2 + 64
 
@@ -296,16 +298,14 @@ class AxonaRawIO(BaseRawIO):
 
         # Read one channel at a time
         raw_signals = np.ndarray(shape=(num_samples,
-                                 len(channel_indexes)),
+                                        len(channel_indexes)),
                                  dtype=self.file_parameters['bin']['data_type'])
 
         for i, ch_idx in enumerate(channel_indexes):
-
             chan_offset = self.channel_memory_offset[ch_idx]
             raw_signals[:, i] = self._raw_signals[sig_ids + chan_offset]
 
         return raw_signals
-
 
     def _spike_count(self, block_index, seg_index, unit_index):
         tetrode_id = unit_index
@@ -316,8 +316,8 @@ class AxonaRawIO(BaseRawIO):
         nb_unit_spikes = int(np.ceil(nb_tetrode_spikes / 4))
         return nb_unit_spikes
 
-
-    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index,
+                              t_start, t_stop):
         assert block_index == 0
         assert seg_index == 0
 
@@ -361,7 +361,7 @@ class AxonaRawIO(BaseRawIO):
         assert block_index == 0
         assert seg_index == 0
 
-        tetrode_id =unit_index
+        tetrode_id = unit_index
 
         # spike times are repeated for each contact -> use only first contact
         unit_spikes = self._raw_spikes[tetrode_id]['spiketime'][::4]
@@ -456,7 +456,7 @@ class AxonaRawIO(BaseRawIO):
             for raw_line in f:
                 if b'data_start' in raw_line:
                     break
-                line = raw_line.decode('cp1252').replace('\r\n', '').\
+                line = raw_line.decode('cp1252').replace('\r\n', ''). \
                     replace('\r', '').strip()
                 parts = line.split(' ')
                 key = parts[0]
@@ -495,12 +495,14 @@ class AxonaRawIO(BaseRawIO):
         """
         Creates datetime object (y, m, d, h, m, s) from .set file header
         """
-        with open(self.set_file, 'r', encoding=self.file_parameters['set']['header_encoding']) as f:
+        with open(self.set_file, 'r',
+                  encoding=self.file_parameters['set']['header_encoding']) as f:
             for line in f:
                 if line.startswith('trial_date'):
                     date_string = re.findall(r'\d+\s\w+\s\d{4}$', line)[0]
                 if line.startswith('trial_time'):
-                    time_string = line[len('trial_time') + 1::].replace('\n', '')
+                    time_string = line[len('trial_time') + 1::].replace('\n',
+                                                                        '')
 
         return datetime.datetime.strptime(date_string + ', ' + time_string,
                                           "%d %b %Y, %H:%M:%S")
@@ -557,7 +559,6 @@ class AxonaRawIO(BaseRawIO):
         for itetr in range(num_active_tetrode):
 
             for ielec in range(elec_per_tetrode):
-
                 cntr = (itetr * elec_per_tetrode) + ielec
                 ch_name = '{}{}'.format(itetr, letters[ielec])
                 chan_id = str(cntr + 1)
