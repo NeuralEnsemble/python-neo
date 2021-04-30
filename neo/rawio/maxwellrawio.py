@@ -68,9 +68,9 @@ class MaxwellRawIO(BaseRawIO):
             for stream_id in stream_ids:
                 rec_names = list(h5['wells'][stream_id].keys())
                 if len(rec_names) > 1:
-                    if self.rec_name is not None:
-                        #~ print(self.get_rec_list())
-                        raise ValueError('several recording need select with rec_name="rec0000"')
+                    if self.rec_name is None:
+                        raise ValueError('several recording need select with rec_name="rec0000"'\
+                            f'\nPossible rec_name {rec_names}')
                 else:
                     self.rec_name = rec_names[0]
                 signal_streams.append((stream_id, stream_id))
