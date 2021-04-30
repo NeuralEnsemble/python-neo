@@ -16,15 +16,13 @@ Author: Steffen Buergers
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                        _spike_channel_dtype, _event_channel_dtype,
-                        _common_sig_characteristics)
-import pathlib
-import numpy as np
-import os
-import re
-import pathlib
 import datetime
+import pathlib
+import re
+import numpy as np
+
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                        _spike_channel_dtype, _event_channel_dtype)
 
 
 class AxonaRawIO(BaseRawIO):
@@ -50,7 +48,7 @@ class AxonaRawIO(BaseRawIO):
         )
     """
 
-    extensions = ['bin', 'set']  # Never used?
+    extensions = ['bin', 'set'] + [str(i) for i in range(1, 33)]  # Never used?
     rawmode = 'multi-file'
 
     # In the .bin file, channels are arranged in a strange order.
@@ -73,7 +71,7 @@ class AxonaRawIO(BaseRawIO):
         self.bin_file = None
         self.tetrode_files = []
 
-        # set file is required for all recordings
+        # set file is mandatory for any recording
         if not self.set_file.exists():
             raise ValueError(f'Could not locate ".set" file. '
                              f'{self.filename.with_suffix(".set")} does not '
@@ -90,8 +88,6 @@ class AxonaRawIO(BaseRawIO):
             else:
                 break
 
-        self.set_file_encoding = 'cp1252'
-
     def _source_name(self):
         return self.filename
 
@@ -105,36 +101,30 @@ class AxonaRawIO(BaseRawIO):
         params = ['rawRate']
         global_params = self.get_header_parameters(self.set_file, params)
 
-        unit_dtype = np.dtype([('spiketime', '>i4'), ('samples', 'int8', (50,))])
-        # dt0 = [
-            # ('file_id', 'S8'),
-            # # label of sampling groun (e.g. "1kS/s" or "LFP Low")
-            # ('label', 'S16'),
-            # # number of 1/30000 seconds between data points
-            # # (e.g., if sampling rate "1 kS/s", period equals "30")
-            # ('period', 'uint32'),
-            # ('channel_count', 'uint32')]
+        unit_dtype = np.dtype([('spiketime', '>i4'),
+                               ('samples', 'int8', (50,))])
 
-        # Useful num. bytes per continuous data packet
-        self.file_parameters = {'bin': {'bytes_packet': 432,
-                                        'bytes_data': 384,
-                                        'bytes_head': 32,
-                                        'bytes_tail': 16,
-                                        'data_type': np.int16,
-                                        'header_size': 0,
-                                        'sampling_rate': int(global_params['rawRate']),
-                                        'num_channels': len(self.get_active_tetrode()) * 4},
-                                'set': {},
-                                'unit': {'data_type': unit_dtype,
-                                         'wf_left_sweep_us': 200,
-                                         'tetrode_ids':[]}}
+        # Utility collection of file parameters (general info and header data)
+        params = {'bin': {'bytes_packet': 432,
+                          'bytes_data': 384,
+                          'bytes_head': 32,
+                          'bytes_tail': 16,
+                          'data_type': np.int16,
+                          'header_size': 0,
+                          'header_encoding': 'cp1252',
+                          'sampling_rate': int(global_params['rawRate']),
+                          'num_channels': len(self.get_active_tetrode()) * 4},
+                  'set': {'header_encoding': 'cp1252'},
+                  'unit': {'data_type': unit_dtype,
+                           'wf_left_sweep_us': 200,
+                           'tetrode_ids': []}}
+        self.file_parameters = params
 
-
-
+        # SCAN BIN FILE
         signal_streams = []
         signal_channels = []
         if self.bin_file:
-            # add derived parameters
+            # add derived parameters from bin file
             num_tot_packets = int(
                 self.bin_file.stat().st_size / self.file_parameters['bin'][
                     'bytes_packet'])
@@ -150,57 +140,66 @@ class AxonaRawIO(BaseRawIO):
             signal_streams = self._get_signal_streams_header()
             signal_channels = self._get_signal_chan_header()
 
+        # SCAN TETRODE FILES
+        # In this IO one tetrode corresponds to one unit
         self._raw_spikes = []
         spike_channels = []
         if self.tetrode_files:
-            for i, tetrode_file in enumerate(self.tetrode_files):
-                # collecting more unit parameters
 
-                tetrode_dict = self.get_header_parameters(tetrode_file, None)
-                tetrode_dict['timebase_hz'] = int(tetrode_dict['timebase'].replace(' hz',''))
-                tetrode_dict['sample_rate_hz'] = int(tetrode_dict['sample_rate'].replace(' hz',''))
-                tetrode_dict['num_chans'] = int(tetrode_dict['num_chans'])
-                tetrode_dict.update(
-                    {'header_size': self.get_header_lenth(tetrode_file),
-                    'num_spikes': int(tetrode_dict['num_spikes']),
-                    'wf_left_sweep': self.file_parameters['unit']['wf_left_sweep_us'] * tetrode_dict['timebase_hz'] * 10**-6})
+            for i, tetrode_file in enumerate(self.tetrode_files):
+                # collecting tetrode specific parameters and dtype conversions
+                tdict = self.get_header_parameters(tetrode_file, None)
+                tdict['timebase_hz'] = int(tdict['timebase'].replace(' hz', ''))
+                tdict['sample_rate_hz'] = int(
+                    tdict['sample_rate'].replace(' hz', ''))
+                tdict['num_chans'] = int(tdict['num_chans'])
+                tdict['num_spikes'] = int(tdict['num_spikes'])
+                tdict['header_size'] = self.get_header_lenth(tetrode_file)
+                ls = self.file_parameters['unit']['wf_left_sweep_us'] * tdict[
+                    'timebase_hz'] * 10 ** -6
+                tdict['wf_left_sweep'] = ls
 
                 # memory mapping spiking data
-                spikes = np.memmap(tetrode_file, dtype=self.file_parameters['unit']['data_type'],
-                                   mode='r', offset=tetrode_dict['header_size'],
-                                   shape=(tetrode_dict['num_spikes']))
+                spikes = np.memmap(
+                    tetrode_file,
+                    dtype=self.file_parameters['unit']['data_type'],
+                    mode='r', offset=tdict['header_size'],
+                    shape=(tdict['num_spikes']))
                 self._raw_spikes.append(spikes)
 
-                for unit_id in range(1, tetrode_dict['num_chans']+1):
-                    unit_name = f'tetrode-{i}_chan-{unit_id}'
-                    unit_id = f'{i}-{unit_id}'
-                    wf_units = 'dimensionless'
-                    wf_gain = 1
-                    wf_offset = 0.
-                    wf_left_sweep = tetrode_dict['wf_left_sweep']
-                    wf_sampling_rate = float(tetrode_dict['sample_rate_hz'])
-                    spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
-                                           wf_offset, wf_left_sweep,
-                                           wf_sampling_rate))
+                unit_name = f'tetrode {i+1}'
+                unit_id = f'{i+1}'
+                wf_units = 'dimensionless'
+                wf_gain = 1
+                wf_offset = 0.
+                wf_left_sweep = tdict['wf_left_sweep']
+                wf_sampling_rate = float(tdict['sample_rate_hz'])
+                spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
+                                       wf_offset, wf_left_sweep,
+                                       wf_sampling_rate))
 
                 self.file_parameters['unit']['tetrode_ids'].append(i+1)
-                self.file_parameters['unit'][i+1] = tetrode_dict
+                self.file_parameters['unit'][i+1] = tdict
 
-            # propagate common tetrode parameters to higher level
-            tetrode_ids = self.file_parameters['unit']['tetrode_ids']
-            if tetrode_ids:
-                for key, value in self.file_parameters['unit'][tetrode_ids[0]].items():
-                    if all([key in self.file_parameters['unit'][t] for t in tetrode_ids]) and \
-                       all([self.file_parameters['unit'][t][key]==value for t in tetrode_ids]):
+            # propagate common tetrode parameters to global unit level
+            units_dict = self.file_parameters['unit']
+            ids = units_dict['tetrode_ids']
+            if ids:
+                for key, value in units_dict[ids[0]].items():
+                    # copy key-value pair if present across all tetrodes
+                    if all([key in units_dict[t] for t in ids]) and \
+                       all([units_dict[t][key] == value for t in ids]):
                         self.file_parameters['unit'][key] = value
 
 
-        # Header dict
+        # Create RawIO header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
-        self.header['signal_streams'] = np.array(signal_streams, dtype=_signal_stream_dtype)
-        self.header['signal_channels'] = np.array(signal_channels, dtype=_signal_channel_dtype)
+        self.header['signal_streams'] = np.array(signal_streams,
+                                                 dtype=_signal_stream_dtype)
+        self.header['signal_channels'] = np.array(signal_channels,
+                                                  dtype=_signal_channel_dtype)
         self.header['spike_channels'] = np.array(spike_channels,
                                                  dtype=_spike_channel_dtype)
         self.header['event_channels'] = np.array([],
@@ -209,12 +208,15 @@ class AxonaRawIO(BaseRawIO):
         # Annotations
         self._generate_minimal_annotations()
 
+        # Adding custom annotations
         bl_ann = self.raw_annotations['blocks'][0]
         seg_ann = bl_ann['segments'][0]
         seg_ann['rec_datetime'] = self.read_datetime()
-        # sig_an = \
-        #     seg_ann['signals'][0]['__array_annotations__']['tetrode_id'] = \
-        #     [tetr for tetr in self.get_active_tetrode() for _ in range(4)]
+        if seg_ann['signals']:
+            seg_ann['signals'][0]['__array_annotations__']['tetrode_id'] = \
+                [tetr for tetr in self.get_active_tetrode() for _ in range(4)]
+
+
 
     def _get_signal_streams_header(self):
         # create signals stream information (we always expect a single stream)
@@ -305,14 +307,12 @@ class AxonaRawIO(BaseRawIO):
 
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        unit_id = self.header['spike_channels'][unit_index][1]
-        tetrode_id, uid = np.asarray(unit_id.split('-'), dtype=int)
+        tetrode_id = unit_index
 
         raw_spikes = self._raw_spikes[tetrode_id]
         nb_tetrode_spikes = raw_spikes.shape[0]
-        # adding one extra spike if last set of spikes is incomplete
-        nb_unit_spikes = nb_tetrode_spikes / 4 + int((nb_tetrode_spikes % 4) >= uid)
-
+        # also take into account last, potentially incomplete set of spikes
+        nb_unit_spikes = int(np.ceil(nb_tetrode_spikes / 4))
         return nb_unit_spikes
 
 
@@ -320,12 +320,12 @@ class AxonaRawIO(BaseRawIO):
         assert block_index == 0
         assert seg_index == 0
 
-        unit_id = self.header['spike_channels'][unit_index][1]
-        tetrode_id, uid = np.asarray(unit_id.split('-'), dtype=int)
+        tetrode_id = unit_index
 
         raw_spikes = self._raw_spikes[tetrode_id]
 
-        unit_spikes = raw_spikes['spiketime'][uid::4]
+        # spike times are repeated for each contact -> use only first contact
+        unit_spikes = raw_spikes['spiketime'][::4]
 
         # slice spike times only if needed
         if t_start is None or t_stop is None:
@@ -337,8 +337,8 @@ class AxonaRawIO(BaseRawIO):
 
             # convert to t_start and t_stop to sampling frequency
             # Note: this assumes no time offset!
-            lim0 = t_start * self.file_parameters['unit'][uid]['timebase_hz']
-            lim1 = t_stop * self.file_parameters['unit'][uid]['timebase_hz']
+            lim0 = t_start * self.file_parameters['unit']['timebase_hz']
+            lim1 = t_stop * self.file_parameters['unit']['timebase_hz']
 
             # slice spike times
             mask = (unit_spikes >= lim0) & (unit_spikes <= lim1)
@@ -360,47 +360,44 @@ class AxonaRawIO(BaseRawIO):
         assert block_index == 0
         assert seg_index == 0
 
-        unit_id = self.header['spike_channels'][unit_index][1]
-        tetrode_id, uid = np.asarray(unit_id.split('-'), dtype=int)
+        tetrode_id =unit_index
 
-        raw_spikes = self._raw_spikes[tetrode_id]
+        # spike times are repeated for each contact -> use only first contact
+        unit_spikes = self._raw_spikes[tetrode_id]['spiketime'][::4]
+        waveforms = self._raw_spikes[tetrode_id]['samples']
+        nb_spikes = len(unit_spikes)
+        nb_samples_per_waveform = waveforms.shape[-1]
 
-        unit_spikes = raw_spikes['samples'][uid::4]
+        # slice timestamps / waveforms only when necessary
+        if t_start is None or t_stop is None:
+            if t_start is None:
+                t_start = self._segment_t_start(block_index, seg_index)
+            if t_stop is None:
+                t_stop = self._segment_t_stop(block_index, seg_index)
 
-        waveforms = waveforms.reshape(nb_spike, 1, 50)
+            # convert to t_start and t_stop to sampling frequency
+            # Note: this assumes no time offset!
+            lim0 = t_start * self.file_parameters['unit']['timebase_hz']
+            lim1 = t_stop * self.file_parameters['unit']['timebase_hz']
 
+            # slice spike times
+            mask = (unit_spikes >= lim0) & (unit_spikes <= lim1)
+            # unwrap mask to match waveform dimension
+            mask = np.repeat(mask, 4)
+            mask = mask[:len(waveforms)]
+            waveforms = waveforms[mask]
 
+        # pad waveforms with zeros if not all traces are present
+        # Note: This will cause loading of the waveforms into working memory
+        if waveforms.shape[0] % 4 != 0:
+            n_pad = 4 - waveforms.shape[0] % 4
+            pad = np.zeros((n_pad, waveforms.shape[1]))
+            waveforms = np.vstack((waveforms, pad))
 
+        # waveforms must be a 3D numpy array (nb_spike, nb_channel, nb_sample)
+        waveforms = waveforms.reshape(nb_spikes, 4, nb_samples_per_waveform)
 
-
-        # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
-        # in the original dtype
-        # this must be as fast as possible.
-        # the same clip t_start/t_start must be used in _spike_timestamps()
-
-        # If there there is no waveform supported in the
-        # IO them _spike_raw_waveforms must return None
-
-        # In our IO waveforms come from all channels
-        # they are int16
-        # convertion to real units is done with self.header['spike_channels']
-        # Here, we have a realistic case: all waveforms are only noise.
-        # it is not always the case
-        # we 20 spikes with a sweep of 50 (5ms)
-
-        # trick to get how many spike in the slice
-        ts = self._get_spike_timestamps(block_index, seg_index,
-                                        spike_channel_index, t_start, t_stop)
-        nb_spike = ts.size
-
-        np.random.seed(2205)  # a magic number (my birthday)
-        waveforms = np.random.randint(low=-2**4, high=2**4, size=nb_spike * 50, dtype='int16')
-        waveforms = waveforms.reshape(nb_spike, 1, 50)
         return waveforms
-
-
-
-
 
     def get_header_lenth(self, file):
         """
@@ -437,11 +434,14 @@ class AxonaRawIO(BaseRawIO):
         following phrases as values (strings). If params is None all key
         are returned.
 
-        INPUT
+        Parameters
+        ----------
         file (str or path): file to be loaded
-        params (list or set): parameter names to search for
+        params (list, set or None): parameter names to search for.
+            If None, all available parameters will be returned.
 
-        OUTPUT
+        Returns
+        -------
         header (dict): dictionary with keys being the parameters that
                        were found & values being strings of the data.
 
@@ -452,16 +452,15 @@ class AxonaRawIO(BaseRawIO):
         if params is not None:
             params = set(params)
         with open(file, 'rb') as f:
-            for bin_line in f:
-                if b'data_start' in bin_line:
+            for raw_line in f:
+                if b'data_start' in raw_line:
                     break
-                line = bin_line.decode('cp1252').replace('\r\n', '').\
+                line = raw_line.decode('cp1252').replace('\r\n', '').\
                     replace('\r', '').strip()
                 parts = line.split(' ')
                 key = parts[0]
                 if (params is None) or (key in params):
                     header[key] = ' '.join(parts[1:])
-
         return header
 
     def get_active_tetrode(self):
@@ -471,7 +470,7 @@ class AxonaRawIO(BaseRawIO):
         """
         active_tetrodes = []
 
-        with open(self.set_file, encoding=self.set_file_encoding) as f:
+        with open(self.set_file, encoding='cp1252') as f:
             for line in f:
 
                 # The pattern to look for is collectMask_X Y,
@@ -495,7 +494,7 @@ class AxonaRawIO(BaseRawIO):
         """
         Creates datetime object (y, m, d, h, m, s) from .set file header
         """
-        with open(self.set_file, 'r', encoding=self.set_file_encoding) as f:
+        with open(self.set_file, 'r', encoding=self.file_parameters['set']['header_encoding']) as f:
             for line in f:
                 if line.startswith('trial_date'):
                     date_string = re.findall(r'\d+\s\w+\s\d{4}$', line)[0]
@@ -563,7 +562,8 @@ class AxonaRawIO(BaseRawIO):
                 chan_id = str(cntr)
                 gain = gain_list[cntr]
                 stream_id = '0'
-                sig_channels.append((ch_name, chan_id, self.file_parameters['bin']['sampling_rate'], dtype,
+                sr = self.file_parameters['bin']['sampling_rate']
+                sig_channels.append((ch_name, chan_id, sr, dtype,
                                      units, gain, offset, stream_id))
 
         return np.array(sig_channels, dtype=_signal_channel_dtype)
