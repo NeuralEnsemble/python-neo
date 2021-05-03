@@ -53,12 +53,12 @@ class CedRawIO(BaseRawIO):
         smrx = self.smrx_file
         
         channel_infos = []
-        sig_channels = []
+        signal_channels = []
         for chan_ind in range(smrx.MaxChannels()):
-            print()
-            print('chan_ind', chan_ind)
+            #~ print()
+            #~ print('chan_ind', chan_ind)
             chan_type = smrx.ChannelType(chan_ind)
-            print(chan_type)
+            #~ print(chan_type)
             if chan_type == sonpy.lib.DataType.Adc:
                 physical_chan = smrx.PhysicalChannel(chan_ind)
                 #~ print(chan_type)
@@ -68,15 +68,15 @@ class CedRawIO(BaseRawIO):
                 #~ print(devide)
 
                 max_time = smrx.ChannelMaxTime(chan_ind)
-                print('max_time', max_time)
+                #~ print('max_time', max_time)
                 first_time = smrx.FirstTime(chan_ind, 0, max_time)
-                print('first_time', first_time)
-                print('divide', divide)
-                print((max_time - first_time)/divide)
+                #~ print('first_time', first_time)
+                #~ print('divide', divide)
+                #~ print((max_time - first_time)/divide)
                 
                 # max_times is include so +1
                 size_size = (max_time - first_time) /divide +1 
-                print('size_size', size_size)
+                #~ print('size_size', size_size)
                 channel_infos.append((first_time, max_time, divide, size_size))
                 
                 #~ after_time = smrx.FirstTime(chan_ind, first_time+1, max_time)
@@ -98,20 +98,24 @@ class CedRawIO(BaseRawIO):
                 chan_id = str(chan_ind)
                 dtype = 'int16'
                 stream_id = '0'
-                sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+                signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
                 
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         
+        # cahnnel are group into stream if same start/stop/size/divide
         channel_infos = np.array(channel_infos,
-                    dtype=[('first_time', 'i8'), ('max_time', 'i8'), ('divide', 'i8'), ('size_size', 'i8')])
-        
-        # group depend on the signal size
-        print(sig_channels)
-        print(channel_infos)
-        
-        
-        signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-
+                    dtype=[('first_time', 'i8'), ('max_time', 'i8'), ('divide', 'i8'), ('size', 'i8')])
+        unique_info = np.unique(channel_infos)
+        self.stream_info = unique_info
+        signal_streams = []
+        for i, info in enumerate(unique_info):
+            stream_id = str(i)
+            mask = channel_infos == info
+            signal_channels['stream_id'][mask] = stream_id
+            num_chans = np.sum(mask)
+            stream_name = f'{stream_id} {num_chans}chans'
+            signal_streams.append((stream_name, stream_id))
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # spike channels not handled
         spike_channels = []
@@ -128,7 +132,7 @@ class CedRawIO(BaseRawIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
         self.header['signal_streams'] = signal_streams
-        self.header['signal_channels'] = sig_channels
+        self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
@@ -141,7 +145,8 @@ class CedRawIO(BaseRawIO):
         return self._t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        return self._num_frames
+        size = self.stream_info[stream_index]['size']
+        return size
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
@@ -151,17 +156,28 @@ class CedRawIO(BaseRawIO):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._num_frames
-            
-        #~ self.smrx_file.ReadInts(chan=chan_ind, 
-                #~ nMax=int(f.ChannelMaxTime(smrx_ch_ind) / f.ChannelDivide(smrx_ch_ind)),
-                #~ tFrom=int(start_frame * f.ChannelDivide(smrx_ch_ind)),
-                #~ tUpto=int(end_frame * f.ChannelDivide(smrx_ch_ind))
-                #~ )
+            i_stop = self.stream_info[stream_index]['size']
         
-        #~ if channel_indexes is None:
-            #~ channel_indexes = slice(self._num_channels)
-
-        #~ raw_signals = self._recgen.recordings[i_start:i_stop, channel_indexes]
-        #~ return raw_signals
+        stream_id = self.header['signal_streams']['id'][stream_index]
+        signal_channels = self.header['signal_channels']
+        mask = signal_channels['stream_id'] == stream_id
+        signal_channels = signal_channels[mask]
+        if channel_indexes is not None:
+            signal_channels = signal_channels[channel_indexes]
+        
+        num_chans = len(signal_channels)
+        
+        info = self.stream_info[stream_index]
+        
+        size = i_stop - i_start
+        tFrom = info['first_time'] + info['divide'] * i_start
+        tUpto = info['first_time'] + info['divide'] * (i_stop )
+        sigs = np.zeros((size, num_chans), dtype='int16')
+        for i, chan_id in enumerate(signal_channels['id']):
+            chan_ind = int(chan_id)
+            sig = self.smrx_file.ReadInts(chan=chan_ind, 
+                    nMax=size, tFrom=tFrom, tUpto=tUpto )
+            sigs[:, i] = sig
+        
+        return sigs
 
