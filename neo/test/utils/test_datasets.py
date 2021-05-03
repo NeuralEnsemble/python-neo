@@ -1,12 +1,12 @@
 import unittest
 
-from neo.utils import download_dataset
+from neo.utils.datasets import download_dataset, default_testing_repo
 
 
 class TestDownloadDataset(unittest.TestCase):
     def test_download_dataset(self):
         local_path = download_dataset(
-            repo='https://gin.g-node.org/NeuralEnsemble/ephy_testing_data',
+            repo=default_testing_repo,
             remote_path='blackrock/blackrock_2_1')
         assert local_path.is_dir()
 

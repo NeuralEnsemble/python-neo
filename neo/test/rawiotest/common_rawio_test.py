@@ -21,8 +21,8 @@ import os
 import logging
 import unittest
 
-from neo.utils import (download_dataset,
-    get_local_testing_data_folder, HAVE_DATALAD)
+from neo.utils.datasets import (download_dataset,
+    get_local_testing_data_folder, HAVE_DATALAD, default_testing_repo)
 
 from neo.test.rawiotest.tools import can_use_network
 
@@ -30,7 +30,8 @@ from neo.test.rawiotest import rawio_compliance as compliance
 
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-repo_for_test = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+repo_for_test = default_testing_repo
+
 
 class BaseTestRawIO:
     '''
