@@ -30,7 +30,6 @@ from neo.test.rawiotest import rawio_compliance as compliance
 
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-# url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 repo_for_test = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
 class BaseTestRawIO:
@@ -72,7 +71,7 @@ class BaseTestRawIO:
     def get_local_path(self, sub_path):
         root_local_path = self.get_local_base_folder()
         local_path = root_local_path / sub_path
-        # TODO later : remove the str when all IOs handle the Path stuff
+        # TODO later : remove the str when all IOs handle the pathlib.Path objects
         local_path = str(local_path)
         return local_path
 

@@ -38,7 +38,7 @@ jobs:
           # needed for correct operation of git/git-annex/DataLad
           git config --global user.email "neo_ci@fake_mail.com"
           git config --global user.name "neo CI"
-          # create an environement and install everything
+          # create an environment and install everything
           python -m venv ~/test_env
           source ~/test_env/bin/activate
           python -m pip install --upgrade pip

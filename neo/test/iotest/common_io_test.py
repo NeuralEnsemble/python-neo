@@ -182,7 +182,7 @@ class BaseTestIO:
     def get_local_path(self, sub_path):
         root_local_path = self.get_local_base_folder()
         local_path = root_local_path / sub_path
-        # TODO later : remove the str when all IOs handle the Path stuff
+        # TODO later : remove the str when all IOs handle the pathlib.Path objects
         local_path = str(local_path)
         return local_path
 

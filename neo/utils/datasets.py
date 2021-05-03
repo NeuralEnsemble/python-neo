@@ -1,5 +1,5 @@
 """
-Some simple function to retrieve public datasets.
+Utility functions to retrieve public datasets.
 """
 from pathlib import Path
 import os
@@ -48,6 +48,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None):
         The distant path to retrieve (file or folder)
     local_folder: str or Path or None
         The local folder where to download the data.
+        If None, a default project testing folder is used. Default: None
 
     Returns:
     --------
