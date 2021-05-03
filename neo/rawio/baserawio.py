@@ -484,6 +484,7 @@ class BaseRawIO:
             stream_index = 0
         else:
             assert 0 <= stream_index_arg < self.header['signal_streams'].size
+            stream_index = stream_index_arg
         return stream_index
 
     def get_signal_size(self, block_index, seg_index, stream_index=None):
