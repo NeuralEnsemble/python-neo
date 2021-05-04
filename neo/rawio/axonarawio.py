@@ -12,7 +12,7 @@ There are many other data formats from Axona, which we do not consider (yet).
 These are derivative from the raw continuous data (.bin) and could in principle
 be extracted from it (see file format overview for details).
 
-Author: Steffen Buergers
+Author: Steffen Buergers, Julia Sprenger
 
 """
 
@@ -98,40 +98,43 @@ class AxonaRawIO(BaseRawIO):
         to raw data (.bin file) and prepare header dictionary in neo format.
         '''
 
-        # Get useful parameters from .set file
-        params = ['rawRate']
-        global_params = self.get_header_parameters(self.set_file, params)
-
         unit_dtype = np.dtype([('spiketime', '>i4'),
                                ('samples', 'int8', (50,))])
 
         # Utility collection of file parameters (general info and header data)
-        params = {'bin': {'bytes_packet': 432,
+        params = {'bin': {'filename': self.bin_file,
+                          'bytes_packet': 432,
                           'bytes_data': 384,
                           'bytes_head': 32,
                           'bytes_tail': 16,
                           'data_type': np.int16,
                           'header_size': 0,
-                          'header_encoding': 'cp1252',
-                          'sampling_rate': int(global_params['rawRate']),
-                          'num_channels': len(self.get_active_tetrode()) * 4},
-                  'set': {'header_encoding': 'cp1252'},
+                          # bin files don't contain a file header
+                          'header_encoding': None},
+                  'set': {'filename': self.set_file,
+                          'header_encoding': 'cp1252'},
                   'unit': {'data_type': unit_dtype,
                            'wf_left_sweep_us': 200,
-                           'tetrode_ids': []}}
+                           'tetrode_ids': [],
+                           'header_encoding': 'cp1252'}}
         self.file_parameters = params
+
+        # SCAN SET FILE
+        set_dict = self.get_header_parameters(self.set_file, 'set')
+        params['set']['file_header'] = set_dict
+        params['set']['sampling_rate'] = int(set_dict['rawRate'])
 
         # SCAN BIN FILE
         signal_streams = []
         signal_channels = []
         if self.bin_file:
+            bin_dict = self.file_parameters['bin']
             # add derived parameters from bin file
-            num_tot_packets = int(
-                self.bin_file.stat().st_size / self.file_parameters['bin'][
-                    'bytes_packet'])
-            self.file_parameters['bin']['num_total_packets'] = num_tot_packets
-            self.file_parameters['bin'][
-                'num_total_samples'] = num_tot_packets * 3
+            bin_dict['num_channels'] = len(self.get_active_tetrode()) * 4
+            num_tot_packets = int(self.bin_file.stat().st_size
+                                  / bin_dict['bytes_packet'])
+            bin_dict['num_total_packets'] = num_tot_packets
+            bin_dict['num_total_samples'] = num_tot_packets * 3
 
             # Create np.memmap to .bin file
             self._raw_signals = np.memmap(
@@ -150,13 +153,15 @@ class AxonaRawIO(BaseRawIO):
 
             for i, tetrode_file in enumerate(self.tetrode_files):
                 # collecting tetrode specific parameters and dtype conversions
-                tdict = self.get_header_parameters(tetrode_file, None)
+                tdict = self.get_header_parameters(tetrode_file, 'unit')
+                tdict['filename'] = tetrode_file
                 tdict['timebase_hz'] = int(tdict['timebase'].replace(' hz', ''))
                 tdict['sample_rate_hz'] = int(
                     tdict['sample_rate'].replace(' hz', ''))
                 tdict['num_chans'] = int(tdict['num_chans'])
                 tdict['num_spikes'] = int(tdict['num_spikes'])
-                tdict['header_size'] = self.get_header_lenth(tetrode_file)
+                tdict['header_size'] = len(
+                    self.get_header_bstring(tetrode_file))
                 ls = self.file_parameters['unit']['wf_left_sweep_us'] * tdict[
                     'timebase_hz'] * 10 ** -6
                 tdict['wf_left_sweep'] = ls
@@ -217,6 +222,13 @@ class AxonaRawIO(BaseRawIO):
             seg_ann['signals'][0]['__array_annotations__']['tetrode_id'] = \
                 [tetr for tetr in self.get_active_tetrode() for _ in range(4)]
 
+        if seg_ann['spikes']:
+            # adding segment annotations
+            seg_keys = ['experimenter', 'comments', 'sw_version']
+            for seg_key in seg_keys:
+                if seg_key in self.file_parameters['unit']:
+                    seg_ann[seg_key] = self.file_parameters['unit'][seg_key]
+
     def _get_signal_streams_header(self):
         # create signals stream information (we always expect a single stream)
         return np.array([('stream 0', '0')], dtype=_signal_stream_dtype)
@@ -228,16 +240,17 @@ class AxonaRawIO(BaseRawIO):
         t_stop = 0.
 
         if 'num_total_packets' in self.file_parameters['bin']:
-            t_stop = self.file_parameters['bin']['num_total_samples'] / \
-                     self.file_parameters['bin']['sampling_rate']
+            sr = self.file_parameters['set']['sampling_rate']
+            t_stop = self.file_parameters['bin']['num_total_samples'] / sr
 
-        if 'unit' in self.file_parameters:
+        if self.file_parameters['unit']['tetrode_ids']:
             # get tetrode recording durations in seconds
-            tetrode_durations = [
-                int(self.file_parameters['unit'][i]['duration'])
-                for i in range(1, 33) if i in
-                self.file_parameters['unit']]
-            t_stop = max(t_stop, max(tetrode_durations))
+            if 'duration' not in self.file_parameters['unit']:
+                raise ValueError('Can not determine common tetrode recording'
+                                 'duration.')
+
+            tetrode_duration = int(self.file_parameters['unit']['duration'])
+            t_stop = max(t_stop, tetrode_duration)
 
         return t_stop
 
@@ -266,26 +279,26 @@ class AxonaRawIO(BaseRawIO):
         sample 3: 32b (head) + 128*2 (all channels 1st and 2nd entry) + ...
         """
 
+        bin_dict = self.file_parameters['bin']
+
         # Set default values
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self.file_parameters['bin']['num_total_samples']
+            i_stop = bin_dict['num_total_samples']
         if channel_indexes is None:
-            channel_indexes = [i for i in range(
-                self.file_parameters['bin']['num_channels'])]
+            channel_indexes = [i for i in range(bin_dict['num_channels'])]
 
         num_samples = (i_stop - i_start)
 
         # Create base index vector for _raw_signals for time period of interest
         num_packets_oi = (num_samples + 2) // 3
-        offset = i_start // 3 * (
-                    self.file_parameters['bin']['bytes_packet'] // 2)
+        offset = i_start // 3 * (bin_dict['bytes_packet'] // 2)
         rem = (i_start % 3)
 
-        sample1 = np.arange(num_packets_oi + 1, dtype=np.uint32) * \
-                  (self.file_parameters['bin']['bytes_packet'] // 2) + \
-                  self.file_parameters['bin']['bytes_head'] // 2 + offset
+        raw_samples = np.arange(num_packets_oi + 1, dtype=np.uint32)
+        sample1 = raw_samples * (bin_dict['bytes_packet'] // 2) + \
+                  bin_dict['bytes_head'] // 2 + offset
         sample2 = sample1 + 64
         sample3 = sample2 + 64
 
@@ -299,7 +312,7 @@ class AxonaRawIO(BaseRawIO):
         # Read one channel at a time
         raw_signals = np.ndarray(shape=(num_samples,
                                         len(channel_indexes)),
-                                 dtype=self.file_parameters['bin']['data_type'])
+                                 dtype=bin_dict['data_type'])
 
         for i, ch_idx in enumerate(channel_indexes):
             chan_offset = self.channel_memory_offset[ch_idx]
@@ -357,7 +370,6 @@ class AxonaRawIO(BaseRawIO):
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
                                  t_start, t_stop):
-
         assert block_index == 0
         assert seg_index == 0
 
@@ -400,17 +412,20 @@ class AxonaRawIO(BaseRawIO):
 
         return waveforms
 
-    def get_header_lenth(self, file):
+    def get_header_bstring(self, file):
         """
-        Scan file for the occurrence of 'data_start' and return the length
-        of the header in bytes
+        Scan file for the occurrence of 'data_start' and return the header
+        as byte string
 
-        INPUT
+        Parameters
+        ----------
         file (str or path): file to be loaded
 
-        OUTPUT
-        n_bytes (int): number of bytes occupied by the header
+        Returns
+        -------
+        str: header byte content
         """
+
         header = b''
         with open(file, 'rb') as f:
             for bin_line in f:
@@ -419,27 +434,22 @@ class AxonaRawIO(BaseRawIO):
                     break
                 else:
                     header += bin_line
-
-        # adding arbitrary 12 bytes here -> need to confirm
-        return len(header)
+        return header
 
     # ------------------ HELPER METHODS --------------------
-    # These are credited largely to Geoff Barrett from the Hussaini lab:
+    # This is largely based on code by Geoff Barrett from the Hussaini lab:
     # https://github.com/GeoffBarrett/BinConverter
-    # Adapted or modified by Steffen Buergers
+    # Adapted or modified by Steffen Buergers, Julia Sprenger
 
-    def get_header_parameters(self, file, params):
+    def get_header_parameters(self, file, file_type):
         """
-        Given a list of param., looks for each in first word of a phrase
-        in the .set file. Adds found paramters as dictionary keys and
-        following phrases as values (strings). If params is None all key
-        are returned.
+        Extract header parameters as dictionary keys and
+        following phrases as values (strings).
 
         Parameters
         ----------
         file (str or path): file to be loaded
-        params (list, set or None): parameter names to search for.
-            If None, all available parameters will be returned.
+        file_type (str): type of file to be loaded ('set' or 'unit')
 
         Returns
         -------
@@ -447,22 +457,18 @@ class AxonaRawIO(BaseRawIO):
                        were found & values being strings of the data.
 
         EXAMPLE
-        self.get_header_parameters('file.set', ['experimenter', 'trial_time'])
+        self.get_header_parameters('file.set', 'set')
         """
-        header = {}
-        if params is not None:
-            params = set(params)
-        with open(file, 'rb') as f:
-            for raw_line in f:
-                if b'data_start' in raw_line:
-                    break
-                line = raw_line.decode('cp1252').replace('\r\n', ''). \
-                    replace('\r', '').strip()
-                parts = line.split(' ')
-                key = parts[0]
-                if (params is None) or (key in params):
-                    header[key] = ' '.join(parts[1:])
-        return header
+
+        params = {}
+        encoding = self.file_parameters[file_type]['header_encoding']
+        header_string = self.get_header_bstring(file).decode(encoding)
+
+        # omit the last line as this contains only `data_start` key
+        for line in header_string.splitlines()[:-1]:
+            key, value = line.split(' ', 1)
+            params[key] = value
+        return params
 
     def get_active_tetrode(self):
         """
@@ -471,17 +477,13 @@ class AxonaRawIO(BaseRawIO):
         """
         active_tetrodes = []
 
-        with open(self.set_file, encoding='cp1252') as f:
-            for line in f:
-
-                # The pattern to look for is collectMask_X Y,
-                # where X is the tetrode number, and Y is 1 or 0
-                if 'collectMask_' in line:
-                    tetrode_str, tetrode_status = line.split(' ')
-                    if int(tetrode_status) == 1:
-                        tetrode_id = int(re.findall(r'\d+', tetrode_str)[0])
-                        active_tetrodes.append(tetrode_id)
-
+        for key, status in self.file_parameters['set']['file_header'].items():
+            # The pattern to look for is collectMask_X Y,
+            # where X is the tetrode number, and Y is 1 or 0
+            if key.startswith('collectMask_'):
+                if int(status):
+                    tetrode_id = int(key.strip('collectMask_'))
+                    active_tetrodes.append(tetrode_id)
         return active_tetrodes
 
     def _get_channel_from_tetrode(self, tetrode):
@@ -495,16 +497,14 @@ class AxonaRawIO(BaseRawIO):
         """
         Creates datetime object (y, m, d, h, m, s) from .set file header
         """
-        with open(self.set_file, 'r',
-                  encoding=self.file_parameters['set']['header_encoding']) as f:
-            for line in f:
-                if line.startswith('trial_date'):
-                    date_string = re.findall(r'\d+\s\w+\s\d{4}$', line)[0]
-                if line.startswith('trial_time'):
-                    time_string = line[len('trial_time') + 1::].replace('\n',
-                                                                        '')
 
-        return datetime.datetime.strptime(date_string + ', ' + time_string,
+        date_str = self.file_parameters['set']['file_header']['trial_date']
+        time_str = self.file_parameters['set']['file_header']['trial_time']
+
+        # extract core date string
+        date_str = re.findall(r'\d+\s\w+\s\d{4}$', date_str)[0]
+
+        return datetime.datetime.strptime(date_str + ', ' + time_str,
                                           "%d %b %Y, %H:%M:%S")
 
     def _get_channel_gain(self):
@@ -520,16 +520,16 @@ class AxonaRawIO(BaseRawIO):
         """
         gain_list = []
 
-        with open(self.set_file, encoding='cp1252') as f:
-            for line in f:
-                if line.startswith('ADC_fullscale_mv'):
-                    adc_fullscale_mv = int(line.split(" ")[1])
-                if line.startswith('gain_ch'):
-                    gain_list.append(
-                        np.float32(re.findall(r'\d*', line.split(' ')[1])[0])
-                    )
+        adc_fm = int(
+            self.file_parameters['set']['file_header']['ADC_fullscale_mv'])
+        for key, value in self.file_parameters['set']['file_header'].items():
+            if key.startswith('gain_ch'):
+                gain_list.append(np.float32(value))
 
-        return [1000 * adc_fullscale_mv / (gain * 128) for gain in gain_list]
+        # rescaling gain factors
+        gain_list = [1000 * adc_fm / (gain * 128) for gain in gain_list]
+
+        return gain_list
 
     def _get_signal_chan_header(self):
         """
@@ -564,7 +564,9 @@ class AxonaRawIO(BaseRawIO):
                 chan_id = str(cntr + 1)
                 gain = gain_list[cntr]
                 stream_id = '0'
-                sr = self.file_parameters['bin']['sampling_rate']
+                # the sampling rate information is stored in the set header
+                # and not in the bin file
+                sr = self.file_parameters['set']['sampling_rate']
                 sig_channels.append((ch_name, chan_id, sr, dtype,
                                      units, gain, offset, stream_id))
 
