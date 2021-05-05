@@ -10,8 +10,12 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestRawBinarySignalIO(BaseTestIO, unittest.TestCase, ):
     ioclass = WinWcpIO
-    files_to_test = ['File_winwcp_1.wcp']
-    files_to_download = files_to_test
+    entities_to_download = [
+        'winwcp'
+    ]
+    entities_to_test = [
+        'winwcp/File_winwcp_1.wcp'
+    ]
 
 
 if __name__ == "__main__":

@@ -17,10 +17,11 @@ import numpy as np
 # This run standart tests, this is mandatory for all IO
 class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ExampleIO
-    files_to_test = ['fake1',
-                     'fake2',
-                     ]
-    files_to_download = []
+    entities_to_download = []
+    entities_to_test = [
+        'fake1',
+        'fake2',
+    ]
 
 # This is the minimal variables that are required
 # to run the common IO tests.  IO specific tests

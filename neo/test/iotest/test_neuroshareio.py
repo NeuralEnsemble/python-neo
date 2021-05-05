@@ -23,8 +23,10 @@ from neo.test.iotest.common_io_test import BaseTestIO
 @unittest.skipUnless(sys.platform.startswith("win"), "Only works on Windows")
 class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
     ioclass = NeuroshareIO
-    files_to_test = []
-    files_to_download = ['Multichannel_fil_1.mcd', ]
+    entities_to_download = [
+        'neuroshare/Multichannel_fil_1.mcd'
+    ]
+    entities_to_test = []
 
     def setUp(self):
         BaseTestIO.setUp(self)
@@ -69,7 +71,7 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
             raise unittest.SkipTest("Not currently supported on OS X")
 
     def test_with_multichannel(self):
-        filename0 = self.get_filename_path(self.files_to_download[0])
+        filename0 = self.get_local_path(self.files_to_download[0])
         reader = NeuroshareIO(filename0, self.dllname)
         blocks = reader.read()
         n = len(blocks[0].segments[0].analogsignals)

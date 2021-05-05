@@ -14,80 +14,26 @@ logging.getLogger().setLevel(logging.INFO)
 
 class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
+    entities_to_download = [
+        'neuralynx'
+    ]
     entities_to_test = [
-        'BML/original_data',
-        'BML_unfilledsplit/original_data',
-        'Cheetah_v1.1.0/original_data',
-        'Cheetah_v4.0.2/original_data',
-        'Cheetah_v5.4.0/original_data',
-        'Cheetah_v5.5.1/original_data',
-        'Cheetah_v5.6.3/original_data',
-        'Cheetah_v5.7.4/original_data',
-        'Cheetah_v6.3.2/incomplete_blocks']
-    files_to_download = [
-        'BML/original_data/CSC1_trunc.Ncs',
-        'BML/plain_data/CSC1_trunc.txt',
-        'BML/README.txt',
-        'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs',
-        'BML_unfilledsplit/plain_data/unfilledSplitRecords.txt',
-        'BML_unfilledsplit/README.txt',
-        'Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs',
-        'Cheetah_v1.1.0/README.txt',
-        'Cheetah_v1.1.0/plain_data/CSC67_trunc.txt',
-        'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
-        'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
-        'Cheetah_v4.0.2/README.txt',
-        'Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs',
-        'Cheetah_v5.4.0/plain_data/CSC5_trunc.txt',
-        'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
-        'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
-        'Cheetah_v5.5.1/original_data/Events.nev',
-        'Cheetah_v5.5.1/original_data/STet3a.nse',
-        'Cheetah_v5.5.1/original_data/STet3b.nse',
-        'Cheetah_v5.5.1/original_data/Tet3a.ncs',
-        'Cheetah_v5.5.1/original_data/Tet3b.ncs',
-        'Cheetah_v5.5.1/plain_data/STet3a.txt',
-        'Cheetah_v5.5.1/plain_data/STet3b.txt',
-        'Cheetah_v5.5.1/plain_data/Tet3a.txt',
-        'Cheetah_v5.5.1/plain_data/Tet3b.txt',
-        'Cheetah_v5.5.1/plain_data/Events.txt',
-        'Cheetah_v5.5.1/README.txt',
-        'Cheetah_v5.6.3/original_data/CheetahLogFile.txt',
-        'Cheetah_v5.6.3/original_data/CheetahLostADRecords.txt',
-        'Cheetah_v5.6.3/original_data/Events.nev',
-        'Cheetah_v5.6.3/original_data/CSC1.ncs',
-        'Cheetah_v5.6.3/original_data/CSC2.ncs',
-        'Cheetah_v5.6.3/original_data/TT1.ntt',
-        'Cheetah_v5.6.3/original_data/TT2.ntt',
-        'Cheetah_v5.6.3/original_data/VT1.nvt',
-        'Cheetah_v5.6.3/plain_data/Events.txt',
-        'Cheetah_v5.6.3/plain_data/CSC1.txt',
-        'Cheetah_v5.6.3/plain_data/CSC2.txt',
-        'Cheetah_v5.6.3/plain_data/TT1.txt',
-        'Cheetah_v5.6.3/plain_data/TT2.txt',
-        'Cheetah_v5.7.4/original_data/CSC1.ncs',
-        'Cheetah_v5.7.4/original_data/CSC2.ncs',
-        'Cheetah_v5.7.4/original_data/CSC3.ncs',
-        'Cheetah_v5.7.4/original_data/CSC4.ncs',
-        'Cheetah_v5.7.4/original_data/CSC5.ncs',
-        'Cheetah_v5.7.4/original_data/Events.nev',
-        'Cheetah_v5.7.4/plain_data/CSC1.txt',
-        'Cheetah_v5.7.4/plain_data/CSC2.txt',
-        'Cheetah_v5.7.4/plain_data/CSC3.txt',
-        'Cheetah_v5.7.4/plain_data/CSC4.txt',
-        'Cheetah_v5.7.4/plain_data/CSC5.txt',
-        'Cheetah_v5.7.4/plain_data/Events.txt',
-        'Cheetah_v5.7.4/README.txt',
-        'Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs',
-        'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
-        'Cheetah_v6.3.2/incomplete_blocks/README.txt']
+        'neuralynx/BML/original_data',
+        'neuralynx/BML_unfilledsplit/original_data',
+        'neuralynx/Cheetah_v1.1.0/original_data',
+        'neuralynx/Cheetah_v4.0.2/original_data',
+        'neuralynx/Cheetah_v5.4.0/original_data',
+        'neuralynx/Cheetah_v5.5.1/original_data',
+        'neuralynx/Cheetah_v5.6.3/original_data',
+        'neuralynx/Cheetah_v5.7.4/original_data',
+        'neuralynx/Cheetah_v6.3.2/incomplete_blocks']
 
     def test_scan_ncs_files(self):
 
         # Test BML style of Ncs files, similar to PRE4 but with fractional frequency
         # in the header and fractional microsPerSamp, which is then rounded as appropriate
         # in each record.
-        rawio = NeuralynxRawIO(self.get_filename_path('BML/original_data'))
+        rawio = NeuralynxRawIO(self.get_local_path('neuralynx/BML/original_data'))
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 1)
@@ -100,7 +46,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         # Test Cheetah 4.0.2, which is PRE4 type with frequency in header and
         # no microsPerSamp. Number of microseconds per sample in file is inverse of
         # sampling frequency in header trucated to microseconds.
-        rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v4.0.2/original_data'))
+        rawio = NeuralynxRawIO(self.get_local_path('neuralynx/Cheetah_v4.0.2/original_data'))
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 1)
@@ -112,7 +58,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
 
         # Test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap.
-        rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v5.5.1/original_data'))
+        rawio = NeuralynxRawIO(self.get_local_path('neuralynx/Cheetah_v5.5.1/original_data'))
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 2)
@@ -125,7 +71,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
 
         # Test Cheetah 6.3.2, the incomplete_blocks test. This is a DigitalLynxSX with
         # three blocks of records. Gaps are on the order of 60 microseconds or so.
-        rawio = NeuralynxRawIO(self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks'))
+        rawio = NeuralynxRawIO(self.get_local_path('neuralynx/Cheetah_v6.3.2/incomplete_blocks'))
         rawio.parse_header()
         # test values here from direct inspection of .ncs file, except for 3rd block
         # t_stop, which is extended due to events past the last block of ncs records.
@@ -144,7 +90,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         """
 
         # test single analog signal channel
-        fname = self.get_filename_path('Cheetah_v5.6.3/original_data/CSC1.ncs')
+        fname = self.get_local_path('neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs')
         rawio = NeuralynxRawIO(filename=fname)
         rawio.parse_header()
 
@@ -159,7 +105,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(len(rawio.header['event_channels']), 0)
 
         # test one single electrode channel
-        fname = self.get_filename_path('Cheetah_v5.5.1/original_data/STet3a.nse')
+        fname = self.get_local_path('neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse')
         rawio = NeuralynxRawIO(filename=fname)
         rawio.parse_header()
 
@@ -181,20 +127,20 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
     entities_to_test = []
 
     ncsTypeTestFiles = [
-        ('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs', 'PRE4'),
-        ('Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs', 'DIGITALLYNX'),
-        ('Cheetah_v5.5.1/original_data/STet3a.nse', 'DIGITALLYNXSX'),
-        ('Cheetah_v5.5.1/original_data/Tet3a.ncs', 'DIGITALLYNXSX'),
-        ('Cheetah_v5.6.3/original_data/CSC1.ncs', 'DIGITALLYNXSX'),
-        ('Cheetah_v5.6.3/original_data/TT1.ntt', 'DIGITALLYNXSX'),
-        ('Cheetah_v5.7.4/original_data/CSC1.ncs', 'DIGITALLYNXSX'),
-        ('Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs', 'DIGITALLYNXSX')]
+        ('neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs', 'PRE4'),
+        ('neuralynx/Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs', 'DIGITALLYNX'),
+        ('neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse', 'DIGITALLYNXSX'),
+        ('neuralynx/Cheetah_v5.5.1/original_data/Tet3a.ncs', 'DIGITALLYNXSX'),
+        ('neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs', 'DIGITALLYNXSX'),
+        ('neuralynx/Cheetah_v5.6.3/original_data/TT1.ntt', 'DIGITALLYNXSX'),
+        ('neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs', 'DIGITALLYNXSX'),
+        ('neuralynx/Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs', 'DIGITALLYNXSX')]
 
     def test_recording_types(self):
 
         for typeTest in self.ncsTypeTestFiles:
 
-            filename = self.get_filename_path(typeTest[0])
+            filename = self.get_local_path(typeTest[0])
             hdr = NlxHeader(filename)
             self.assertEqual(hdr.type_of_recording(), typeTest[1])
 
@@ -206,7 +152,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
     entities_to_test = []
 
     def test_ncsblocks_partial(self):
-        filename = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
+        filename = self.get_local_path('neuralynx/Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         self.assertEqual(data0.shape[0], 6690)
@@ -223,7 +169,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
 
         # Test early files where the frequency listed in the header is
         # floor(1e6/(actual number of microseconds between samples)
-        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        filename = self.get_local_path('neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         ncsBlocks = NcsSections()
@@ -239,7 +185,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
 
         # Test early files where the frequency listed in the header is
         # floor(1e6/(actual number of microseconds between samples)
-        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        filename = self.get_local_path('neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
         hdr = NlxHeader(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
@@ -253,7 +199,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
 
         # test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap
-        filename = self.get_filename_path('Cheetah_v5.5.1/original_data/Tet3a.ncs')
+        filename = self.get_local_path('neuralynx/Cheetah_v5.5.1/original_data/Tet3a.ncs')
         hdr = NlxHeader(filename)
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
@@ -266,7 +212,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
 
     def test_block_start_and_end_times(self):
         # digitallynxsx version to exercise the _parseForMaxGap function with multiple blocks
-        filename = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
+        filename = self.get_local_path('neuralynx/Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader(filename)
@@ -277,7 +223,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
                                                                  8515816549])
 
         # digitallynxsx with single block of records to exercise path in _buildForMaxGap
-        filename = self.get_filename_path('Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs')
+        filename = self.get_local_path('neuralynx/Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader(filename)
@@ -287,7 +233,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(nb.sects[0].endTime, 253293349278)
 
         # PRE4 version with single block of records to exercise path in _buildGivenActualFrequency
-        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        filename = self.get_local_path('neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader(filename)
@@ -298,8 +244,8 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
 
         # BML style with two blocks of records and one partially filled record to exercise
         # _parseGivenActualFrequency
-        filename = self.get_filename_path(
-            'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
+        filename = self.get_local_path(
+            'neuralynx/BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         hdr = NlxHeader(filename)
@@ -310,7 +256,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
 
     def test_block_verify(self):
         # check that file verifies against itself for single block
-        filename = self.get_filename_path('Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
+        filename = self.get_local_path('neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs')
         data0 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         hdr0 = NlxHeader(filename)
@@ -319,8 +265,8 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertTrue(NcsSectionsFactory._verifySectionsStructure(data0, nb0))
 
         # check that fails against file with two blocks
-        filename = self.get_filename_path(
-            'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
+        filename = self.get_local_path(
+            'neuralynx/BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs')
         data1 = np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode='r',
                           offset=NlxHeader.HEADER_SIZE)
         hdr1 = NlxHeader(filename)

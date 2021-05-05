@@ -10,12 +10,14 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestBCI2000IO(BaseTestIO, unittest.TestCase, ):
     ioclass = BCI2000IO
-    files_to_test = [
-        'eeg1_1.dat',
-        'eeg1_2.dat',
-        'eeg1_3.dat',
+    entities_to_download = [
+        'bci2000'
     ]
-    files_to_download = files_to_test
+    entities_to_test = [
+        'bci2000/eeg1_1.dat',
+        'bci2000/eeg1_2.dat',
+        'bci2000/eeg1_3.dat',
+    ]
 
 
 if __name__ == "__main__":

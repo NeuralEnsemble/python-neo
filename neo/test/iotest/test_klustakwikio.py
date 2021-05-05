@@ -336,38 +336,13 @@ class testWriteWithFeatures(unittest.TestCase):
 @unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = KlustaKwikIO
-
-    # These are the files it tries to read and test for compliance
-    files_to_test = [
-        'test2/base',
-        'test2/base2',
+    entities_to_download = [
+        'klustakwik'
     ]
-
-    # Will fetch from g-node if they don't already exist locally
-    # How does it know to do this before any of the other tests?
-    files_to_download = [
-        'test1/basename.clu.0',
-        'test1/basename.fet.-1',
-        'test1/basename.fet.0',
-        'test1/basename.fet.1',
-        'test1/basename.fet.1a',
-        'test1/basename.fet.a1',
-        'test1/basename2.clu.1',
-        'test1/basename2.fet.1',
-        'test1/basename2.fet.1a',
-        'test2/base2.fet.5',
-        'test2/base.clu.0',
-        'test2/base.clu.1',
-        'test2/base.fet.0',
-        'test2/base.fet.1',
-        'test3/base1.clu.0',
-        'test3/base1.clu.1',
-        'test3/base1.clu.2',
-        'test3/base1.fet.0',
-        'test3/base1.fet.1',
-        'test3/base1.fet.2'
+    entities_to_test = [
+        'klustakwik/test2/base',
+        'klustakwik/test2/base2',
     ]
-
 
 def delete_test_session(dirname=None):
     """Removes all file in directory so we can test writing to it"""

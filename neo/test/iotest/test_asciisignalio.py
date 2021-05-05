@@ -16,11 +16,13 @@ from neo.core import AnalogSignal, Segment, Block
 
 class TestAsciiSignalIOWithTestFiles(BaseTestIO, unittest.TestCase):
     ioclass = AsciiSignalIO
-    files_to_download = [  # 'File_asciisignal_1.asc',
-        'File_asciisignal_2.txt',
-        'File_asciisignal_3.txt',
+    entities_to_download = [
+        'asciisignal'
     ]
-    files_to_test = files_to_download
+    entities_to_test = [
+        'asciisignal/File_asciisignal_2.txt',
+        'asciisignal/File_asciisignal_3.txt',
+    ]
 
 
 class TestAsciiSignalIO(unittest.TestCase):

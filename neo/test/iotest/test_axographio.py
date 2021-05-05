@@ -11,27 +11,19 @@ from neo.test.iotest.common_io_test import BaseTestIO
 import numpy as np
 from numpy.testing import assert_equal
 import quantities as pq
-
+from neo.test.rawiotest.test_axographrawio import TestAxographRawIO
 
 class TestAxographIO(BaseTestIO, unittest.TestCase):
-    files_to_test = [
-        'AxoGraph_Graph_File',      # version 1 file, provided with AxoGraph
-        'AxoGraph_Digitized_File',  # version 2 file, provided with AxoGraph
-        'AxoGraph_X_File.axgx',     # version 5 file, provided with AxoGraph
-        'File_axograph.axgd',       # version 6 file
-        'episodic.axgd',
-        'events_and_epochs.axgx',
-        'written-by-axographio-with-linearsequence.axgx',
-        'written-by-axographio-without-linearsequence.axgx',
-        'corrupt-comment.axgx',
+    entities_to_download = [
+        'axograph'
     ]
-    files_to_download = files_to_test
+    entities_to_test = TestAxographRawIO.entities_to_test
     ioclass = AxographIO
 
     def test_version_1(self):
         """Test reading a version 1 AxoGraph file"""
 
-        filename = self.get_filename_path('AxoGraph_Graph_File')
+        filename = self.get_local_path('axograph/AxoGraph_Graph_File')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 1)
@@ -55,7 +47,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_version_2(self):
         """Test reading a version 2 AxoGraph file"""
 
-        filename = self.get_filename_path('AxoGraph_Digitized_File')
+        filename = self.get_local_path('axograph/AxoGraph_Digitized_File')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 2)
@@ -85,7 +77,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_version_5(self):
         """Test reading a version 5 AxoGraph file"""
 
-        filename = self.get_filename_path('AxoGraph_X_File.axgx')
+        filename = self.get_local_path('axograph/AxoGraph_X_File.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 5)
@@ -109,7 +101,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_version_6(self):
         """Test reading a version 6 AxoGraph file"""
 
-        filename = self.get_filename_path('File_axograph.axgd')
+        filename = self.get_local_path('axograph/File_axograph.axgd')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 6)
@@ -133,7 +125,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_file_written_by_axographio_package_with_linearsequence(self):
         """Test reading file written by axographio package with linearsequence time column"""
 
-        filename = self.get_filename_path('written-by-axographio-with-linearsequence.axgx')
+        filename = self.get_local_path('axograph/written-by-axographio-with-linearsequence.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 6)
@@ -157,7 +149,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_file_written_by_axographio_package_without_linearsequence(self):
         """Test reading file written by axographio package without linearsequence time column"""
 
-        filename = self.get_filename_path('written-by-axographio-without-linearsequence.axgx')
+        filename = self.get_local_path('axograph/written-by-axographio-without-linearsequence.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 6)
@@ -181,7 +173,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_file_with_corrupt_comment(self):
         """Test reading a file with a corrupt comment"""
 
-        filename = self.get_filename_path('corrupt-comment.axgx')
+        filename = self.get_local_path('axograph/corrupt-comment.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.annotations['format_ver'], 6)
@@ -205,7 +197,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_multi_segment(self):
         """Test reading an episodic file into multiple Segments"""
 
-        filename = self.get_filename_path('episodic.axgd')
+        filename = self.get_local_path('axograph/episodic.axgd')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
 
@@ -228,7 +220,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_force_single_segment(self):
         """Test reading an episodic file into one Segment"""
 
-        filename = self.get_filename_path('episodic.axgd')
+        filename = self.get_local_path('axograph/episodic.axgd')
         reader = AxographIO(filename=filename, force_single_segment=True)
         blk = reader.read_block(signal_group_mode='split-all')
 
@@ -251,7 +243,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_group_by_same_units(self):
         """Test reading with group-by-same-units"""
 
-        filename = self.get_filename_path('episodic.axgd')
+        filename = self.get_local_path('axograph/episodic.axgd')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='group-by-same-units')
 
@@ -274,7 +266,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_events_and_epochs(self):
         """Test loading events and epochs"""
 
-        filename = self.get_filename_path('events_and_epochs.axgx')
+        filename = self.get_local_path('axograph/events_and_epochs.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
 
@@ -297,14 +289,14 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         # file obtained in episodic acquisition mode has date and time on
         # separate lines of notes
-        filename = self.get_filename_path('episodic.axgd')
+        filename = self.get_local_path('axograph/episodic.axgd')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.rec_datetime, datetime(2018, 6, 7, 15, 11, 36))
 
         # file obtained in continuous acquisition mode has date and time in
         # single line of notes
-        filename = self.get_filename_path('events_and_epochs.axgx')
+        filename = self.get_local_path('axograph/events_and_epochs.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block(signal_group_mode='split-all')
         assert_equal(blk.rec_datetime, datetime(2019, 5, 25, 20, 16, 25))

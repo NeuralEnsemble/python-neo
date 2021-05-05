@@ -198,8 +198,12 @@ class KwikIO(BaseIO):
             w = pq.Quantity(w, raw_data_units)
         else:
             w = None
+        if model.duration > 0.:
+            t_stop = model.duration
+        else:
+            t_stop = np.max(model.spike_times[idx])
         sptr = SpikeTrain(times=model.spike_times[idx],
-                          t_stop=model.duration, waveforms=w, units='s',
+                          t_stop=t_stop, waveforms=w, units='s',
                           sampling_rate=model.sample_rate * pq.Hz,
                           file_origin=self.filename,
                           **{'cluster_id': cluster_id})
