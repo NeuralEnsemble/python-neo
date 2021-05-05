@@ -2,11 +2,11 @@
 Class for reading data from maxwell biosystem device:
   * MaxOne
   * MaxTwo
-  
+
 https://www.mxwbio.com/resources/mea/
 
 The implementation is a mix between:
-  * the implementation in spikeextractors 
+  * the implementation in spikeextractors
      https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/maxwellextractors/maxwellextractors.py
  * the implementation in spyking-circus
     https://github.com/spyking-circus/spyking-circus/blob/master/circus/files/maxwell.py
@@ -36,8 +36,8 @@ class MaxwellRawIO(BaseRawIO):
     """
     extensions = ['h5']
     rawmode = 'one-file'
-    
-    def __init__(self, filename='',  rec_name=None):
+
+    def __init__(self, filename='', rec_name=None):
         BaseRawIO.__init__(self)
         self.filename = filename
         self.rec_name = rec_name
@@ -69,7 +69,7 @@ class MaxwellRawIO(BaseRawIO):
                 rec_names = list(h5['wells'][stream_id].keys())
                 if len(rec_names) > 1:
                     if self.rec_name is None:
-                        raise ValueError('several recording need select with rec_name="rec0000"'\
+                        raise ValueError('several recording need select with rec_name="rec0000"'
                             f'\nPossible rec_name {rec_names}')
                 else:
                     self.rec_name = rec_names[0]
@@ -96,17 +96,17 @@ class MaxwellRawIO(BaseRawIO):
                 channel_ids = channel_ids[mask]
                 electrode_ids = electrode_ids[mask]
                 sigs = h5['wells'][stream_id][self.rec_name]['groups']['routed']['raw']
-                
 
             for i, chan_id in enumerate(channel_ids):
                 elec_id = electrode_ids[i]
                 ch_name = f'ch{chan_id} elec{elec_id}'
                 offset_uV = 0
-                sig_channels.append((ch_name, str(chan_id), sr, 'uint16', 'uV', gain_uV, offset_uV, stream_id))
-            
+                sig_channels.append((ch_name, str(chan_id), sr, 'uint16', 'uV',
+                                     gain_uV, offset_uV, stream_id))
+
             self._signals[stream_id] = sigs
             max_sig_length = max(max_sig_length, sigs.shape[1])
-        
+
         self._t_stop = max_sig_length / sr
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -136,7 +136,7 @@ class MaxwellRawIO(BaseRawIO):
         return self._t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        stream_id =  self.header['signal_streams'][stream_index]['id']
+        stream_id = self.header['signal_streams'][stream_index]['id']
         sigs = self._signals[stream_id]
         return sigs.shape[1]
 
@@ -145,7 +145,7 @@ class MaxwellRawIO(BaseRawIO):
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
-        stream_id =  self.header['signal_streams'][stream_index]['id']
+        stream_id = self.header['signal_streams'][stream_index]['id']
         sigs = self._signals[stream_id]
 
         if i_start is None:
@@ -159,11 +159,11 @@ class MaxwellRawIO(BaseRawIO):
         try:
             sigs = sigs[channel_indexes, i_start:i_stop]
         except OSError as e:
-            print('*'*10)
+            print('*' * 10)
             print(_hdf_maxwell_error)
-            print('*'*10)
+            print('*' * 10)
             raise(e)
-        sigs =sigs.T
+        sigs = sigs.T
 
         return sigs
 
