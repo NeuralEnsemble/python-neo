@@ -10,8 +10,12 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestMicromedIO(BaseTestIO, unittest.TestCase, ):
     ioclass = MicromedIO
-    files_to_test = ['File_micromed_1.TRC']
-    files_to_download = files_to_test
+    entities_to_download = [
+        'micromed'
+    ]
+    entities_to_test = [
+        'micromed/File_micromed_1.TRC'
+    ]
 
 
 if __name__ == "__main__":

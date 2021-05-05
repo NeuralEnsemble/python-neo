@@ -17,8 +17,12 @@ except ImportError:
 
 @unittest.skipUnless(HAVE_MEAREC, "requires MEArec package")
 class TestMEArecIO(BaseTestIO, unittest.TestCase):
-    files_to_test = ['mearec_test_10s.h5']
-    files_to_download = ['mearec_test_10s.h5']
+    entities_to_download = [
+        'mearec'
+    ]
+    entities_to_test = [
+        'mearec/mearec_test_10s.h5'
+    ]
     ioclass = MEArecIO
 
 
