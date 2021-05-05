@@ -13,8 +13,8 @@ import quantities as pq
 from neo.io.blackrockio import BlackrockIO
 
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.test.iotest.tools import get_test_file_full_path
 from neo.test.tools import assert_neo_object_is_compliant
+from neo.test.rawiotest.test_blackrockrawio import TestBlackrockRawIO
 
 # check scipy
 try:
@@ -37,32 +37,16 @@ else:
 
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = BlackrockIO
-
-    files_to_test = ['FileSpec2.3001',
-        'blackrock_2_1/l101210-001']
-
-    files_to_download = [
-        'FileSpec2.3001.nev',
-        'FileSpec2.3001.ns5',
-        'FileSpec2.3001.ccf',
-        'FileSpec2.3001.mat',
-        'blackrock_2_1/l101210-001.mat',
-        'blackrock_2_1/l101210-001_nev-02_ns5.mat',
-        'blackrock_2_1/l101210-001.ns2',
-        'blackrock_2_1/l101210-001.ns5',
-        'blackrock_2_1/l101210-001.nev',
-        'blackrock_2_1/l101210-001-02.nev',
-        'segment/PauseCorrect/pause_correct.nev',
-        'segment/PauseCorrect/pause_correct.ns2',
-        'segment/PauseSpikesOutside/pause_spikes_outside_seg.nev',
-        'segment/ResetCorrect/reset.nev',
-        'segment/ResetCorrect/reset.ns2',
-        'segment/ResetFail/reset_fail.nev']
-
-    ioclass = BlackrockIO
+    entities_to_download = [
+        'blackrock'
+    ]
+    entities_to_test = [
+        'blackrock/FileSpec2.3001',
+        'blackrock/blackrock_2_1/l101210-001'
+    ]
 
     def test_load_waveforms(self):
-        filename = self.get_filename_path('FileSpec2.3001')
+        filename = self.get_local_path('blackrock/FileSpec2.3001')
         reader = BlackrockIO(filename=filename, verbose=False)
 
         bl = reader.read_block(load_waveforms=True)
@@ -73,7 +57,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         Test various inputs to BlackrockIO.read_block with version 2.3 file
         to check for parsing errors.
         """
-        filename = self.get_filename_path('FileSpec2.3001')
+        filename = self.get_local_path('blackrock/FileSpec2.3001')
         reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5)
 
         # Assert IOError is raised when no Blackrock files are available
@@ -124,7 +108,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         Test various inputs to BlackrockIO.read_block with version 2.3 file
         to check for parsing errors.
         """
-        filename = self.get_filename_path('blackrock_2_1/l101210-001')
+        filename = self.get_local_path('blackrock/blackrock_2_1/l101210-001')
         reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5)
 
         # Assert IOError is raised when no Blackrock files are available
@@ -176,7 +160,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         """
         Test if multiple nsx signals can be loaded at the same time.
         """
-        filename = self.get_filename_path('blackrock_2_1/l101210-001')
+        filename = self.get_local_path('blackrock/blackrock_2_1/l101210-001')
         reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load='all')
 
         # number of different sampling rates corresponds to number of nsx signals, because
@@ -231,20 +215,14 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         The function tests LFPs, spike times, and digital events.
         """
 
-        dirname = get_test_file_full_path(ioclass=BlackrockIO,
-                                          filename='blackrock_2_1/l101210-001',
-                                          directory=self.local_test_dir, clean=False)
+        dirname = self.get_local_path('blackrock/blackrock_2_1/l101210-001')
         # First run with parameters for ns5, then run with correct parameters for ns2
-        parameters = [('blackrock_2_1/l101210-001_nev-02_ns5.mat',
+        parameters = [('blackrock/blackrock_2_1/l101210-001_nev-02_ns5.mat',
                        {'nsx_to_load': 5, 'nev_override': '-'.join([dirname, '02'])}),
-                      ('blackrock_2_1/l101210-001.mat', {'nsx_to_load': 2})]
+                      ('blackrock/blackrock_2_1/l101210-001.mat', {'nsx_to_load': 2})]
         for index, param in enumerate(parameters):
             # Load data from matlab generated files
-            ml = scipy.io.loadmat(
-                get_test_file_full_path(
-                    ioclass=BlackrockIO,
-                    filename=param[0],
-                    directory=self.local_test_dir, clean=False))
+            ml = scipy.io.loadmat(self.get_local_path(param[0]))
             lfp_ml = ml['lfp']  # (channel x time) LFP matrix
             ts_ml = ml['ts']  # spike time stamps
             elec_ml = ml['el']  # spike electrodes
@@ -334,9 +312,9 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         """
 
         # Path to nev that will fail
-        filename_nev_fail = self.get_filename_path('segment/ResetFail/reset_fail')
+        filename_nev_fail = self.get_local_path('blackrock/segment/ResetFail/reset_fail')
         # Path to nsX and nev that will NOT fail
-        filename = self.get_filename_path('segment/ResetCorrect/reset')
+        filename = self.get_local_path('blackrock/segment/ResetCorrect/reset')
 
         # Warning filter needs to be set to always before first occurrence of this warning
         warnings.simplefilter("always", UserWarning)
@@ -391,10 +369,10 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         """
 
         # Path to nev that has spikes that don't fit nsX segment
-        filename_nev_outside_seg = self.get_filename_path(
-            'segment/PauseSpikesOutside/pause_spikes_outside_seg')
+        filename_nev_outside_seg = self.get_local_path(
+            'blackrock/segment/PauseSpikesOutside/pause_spikes_outside_seg')
         # Path to nsX and nev that are correct
-        filename = self.get_filename_path('segment/PauseCorrect/pause_correct')
+        filename = self.get_local_path('blackrock/segment/PauseCorrect/pause_correct')
 
         # This issues a warning, because there are spikes a long time after the last segment
         # And another one because there are spikes between segments

@@ -90,29 +90,29 @@ class BrainwareF32IOTestCase(BaseTestIO, unittest.TestCase):
     ioclass = BrainwareF32IO
     read_and_write_is_bijective = False
 
+    entities_to_download = [
+        'brainwaref32'
+    ]
     # These are the files it tries to read and test for compliance
-    files_to_test = ['block_300ms_4rep_1clust_part_ch1.f32',
-                     'block_500ms_5rep_empty_fullclust_ch1.f32',
-                     'block_500ms_5rep_empty_partclust_ch1.f32',
-                     'interleaved_500ms_5rep_ch2.f32',
-                     'interleaved_500ms_5rep_nospikes_ch1.f32',
-                     'multi_500ms_mulitrep_ch1.f32',
-                     'random_500ms_12rep_noclust_part_ch2.f32',
-                     'sequence_500ms_5rep_ch2.f32']
+    entities_to_test = [
+        'brainwaref32/block_300ms_4rep_1clust_part_ch1.f32',
+        'brainwaref32/block_500ms_5rep_empty_fullclust_ch1.f32',
+        'brainwaref32/block_500ms_5rep_empty_partclust_ch1.f32',
+        'brainwaref32/interleaved_500ms_5rep_ch2.f32',
+        'brainwaref32/interleaved_500ms_5rep_nospikes_ch1.f32',
+        'brainwaref32/multi_500ms_mulitrep_ch1.f32',
+        'brainwaref32/random_500ms_12rep_noclust_part_ch2.f32',
+        'brainwaref32/sequence_500ms_5rep_ch2.f32'
+    ]
 
     # add the appropriate suffix
     suffix = '_f32_py3.npz'
-    files_to_download = files_to_test[:]
 
     # add the reference files to the list of files to download
     files_to_compare = []
-    for fname in files_to_test:
+    for fname in entities_to_test:
         if fname:
             files_to_compare.append(os.path.splitext(fname)[0] + suffix)
-
-    # Will fetch from g-node if they don't already exist locally
-    # How does it know to do this before any of the other tests?
-    files_to_download = files_to_test + files_to_compare
 
     def test_reading_same(self):
         for ioobj, path in self.iter_io_objects(return_path=True):

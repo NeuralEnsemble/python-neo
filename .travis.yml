@@ -30,6 +30,7 @@ before_install:
   - pip install "numpy==$NUMPY_VERSION"
 install:
   - pip install -r requirements.txt
+  - pip install nose
   - pip install coveralls
   - pip install .
   - pip install pillow

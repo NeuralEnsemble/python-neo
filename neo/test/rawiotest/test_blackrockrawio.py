@@ -20,20 +20,13 @@ except ImportError:
 
 class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = BlackrockRawIO
-    entities_to_test = ['FileSpec2.3001',
-        'blackrock_2_1/l101210-001']
-
-    files_to_download = [
-        'FileSpec2.3001.nev',
-        'FileSpec2.3001.ns5',
-        'FileSpec2.3001.ccf',
-        'FileSpec2.3001.mat',
-        'blackrock_2_1/l101210-001.mat',
-        'blackrock_2_1/l101210-001_nev-02_ns5.mat',
-        'blackrock_2_1/l101210-001.ns2',
-        'blackrock_2_1/l101210-001.ns5',
-        'blackrock_2_1/l101210-001.nev',
-        'blackrock_2_1/l101210-001-02.nev']
+    entities_to_download = [
+        'blackrock'
+    ]
+    entities_to_test = [
+        'blackrock/FileSpec2.3001',
+        'blackrock/blackrock_2_1/l101210-001'
+    ]
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_compare_blackrockio_with_matlabloader(self):
@@ -50,7 +43,7 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         """
 
         # Load data from Matlab generated files
-        ml = scipy.io.loadmat(self.get_filename_path('FileSpec2.3001.mat'))
+        ml = scipy.io.loadmat(self.get_local_path('blackrock/FileSpec2.3001.mat'))
 
         lfp_ml = ml['lfp']  # (channel x time) LFP matrix
         ts_ml = ml['ts']  # spike time stamps
@@ -62,7 +55,7 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
 
         # Load data in channels 1-3 from original data files using the Neo
         # BlackrockIO
-        reader = BlackrockRawIO(filename=self.get_filename_path('FileSpec2.3001'))
+        reader = BlackrockRawIO(filename=self.get_local_path('blackrock/FileSpec2.3001'))
         reader.parse_header()
 
         # Check if analog data on channels 1-8 are equal
@@ -124,14 +117,14 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         Ported to the rawio API by Samuel Garcia.
         """
 
-        dirname = self.get_filename_path('blackrock_2_1/l101210-001')
+        dirname = self.get_local_path('blackrock/blackrock_2_1/l101210-001')
         # First run with parameters for ns5, then run with correct parameters for ns2
-        parameters = [('blackrock_2_1/l101210-001_nev-02_ns5.mat',
+        parameters = [('blackrock/blackrock_2_1/l101210-001_nev-02_ns5.mat',
                        {'nsx_to_load': 5, 'nev_override': '-'.join([dirname, '02'])}, 96),
-                      ('blackrock_2_1/l101210-001.mat', {'nsx_to_load': 2}, 6)]
+                      ('blackrock/blackrock_2_1/l101210-001.mat', {'nsx_to_load': 2}, 6)]
         for param in parameters:
             # Load data from Matlab generated files
-            ml = scipy.io.loadmat(self.get_filename_path(filename=param[0]))
+            ml = scipy.io.loadmat(self.get_local_path(param[0]))
             lfp_ml = ml['lfp']  # (channel x time) LFP matrix
             ts_ml = ml['ts']  # spike time stamps
             elec_ml = ml['el']  # spike electrodes
