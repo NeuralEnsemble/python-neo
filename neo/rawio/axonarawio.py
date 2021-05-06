@@ -154,15 +154,12 @@ class AxonaRawIO(BaseRawIO):
                 # collecting tetrode specific parameters and dtype conversions
                 tdict = self.get_header_parameters(tetrode_file, 'unit')
                 tdict['filename'] = tetrode_file
-                tdict['timebase_hz'] = int(tdict['timebase'].replace(' hz', ''))
-                tdict['sample_rate_hz'] = int(
-                    tdict['sample_rate'].replace(' hz', ''))
                 tdict['num_chans'] = int(tdict['num_chans'])
                 tdict['num_spikes'] = int(tdict['num_spikes'])
                 tdict['header_size'] = len(
                     self.get_header_bstring(tetrode_file))
-                ls = self.file_parameters['unit']['wf_left_sweep_us'] * tdict[
-                    'timebase_hz'] * 10 ** -6
+                ls = self.file_parameters['unit']['wf_left_sweep_us'] * \
+                     self._to_hz(tdict['timebase']) * 10 ** -6
                 tdict['wf_left_sweep'] = ls
 
                 # memory mapping spiking data
@@ -179,7 +176,8 @@ class AxonaRawIO(BaseRawIO):
                 wf_gain = 1
                 wf_offset = 0.
                 wf_left_sweep = tdict['wf_left_sweep']
-                wf_sampling_rate = float(tdict['sample_rate_hz'])
+                wf_sampling_rate = self._to_hz(tdict['sample_rate'],
+                                               dtype=float)
                 spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                        wf_offset, wf_left_sweep,
                                        wf_sampling_rate))
@@ -333,8 +331,9 @@ class AxonaRawIO(BaseRawIO):
         assert block_index == 0
         assert seg_index == 0
 
-        tetrode_id = unit_index
+        unit_params = self.file_parameters['unit']
 
+        tetrode_id = unit_index
         raw_spikes = self._raw_spikes[tetrode_id]
 
         # spike times are repeated for each contact -> use only first contact
@@ -350,8 +349,8 @@ class AxonaRawIO(BaseRawIO):
 
             # convert to t_start and t_stop to sampling frequency
             # Note: this assumes no time offset!
-            lim0 = t_start * self.file_parameters['unit']['timebase_hz']
-            lim1 = t_stop * self.file_parameters['unit']['timebase_hz']
+            lim0 = t_start * self._to_hz(unit_params['timebase'])
+            lim1 = t_stop * self._to_hz(unit_params['timebase'])
 
             # slice spike times
             mask = (unit_spikes >= lim0) & (unit_spikes <= lim1)
@@ -364,7 +363,7 @@ class AxonaRawIO(BaseRawIO):
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
-        spike_times /= self.file_parameters['unit']['timebase_hz']
+        spike_times /= self._to_hz(self.file_parameters['unit']['timebase'])
         return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
@@ -389,8 +388,8 @@ class AxonaRawIO(BaseRawIO):
 
             # convert to t_start and t_stop to sampling frequency
             # Note: this assumes no time offset!
-            lim0 = t_start * self.file_parameters['unit']['timebase_hz']
-            lim1 = t_stop * self.file_parameters['unit']['timebase_hz']
+            lim0 = t_start * self._to_hz(self.file_parameters['unit']['timebase'])
+            lim1 = t_stop * self._to_hz(self.file_parameters['unit']['timebase'])
 
             # slice spike times
             mask = (unit_spikes >= lim0) & (unit_spikes <= lim1)
@@ -570,3 +569,6 @@ class AxonaRawIO(BaseRawIO):
                                      units, gain, offset, stream_id))
 
         return np.array(sig_channels, dtype=_signal_channel_dtype)
+
+    def _to_hz(self, param, dtype=int):
+        return dtype(param.replace(' hz',''))
