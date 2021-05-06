@@ -20,7 +20,8 @@ class TestAxonaIO(BaseTestIO, unittest.TestCase, ):
         'axona'
     ]
     entities_to_test = [
-        'axona/axona_raw.set'
+        'axona/axona_raw.set',
+        'axona/dataset_unit_spikes/20140815-180secs.set'
     ]
 
 
