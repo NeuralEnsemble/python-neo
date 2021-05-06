@@ -189,12 +189,19 @@ class AxonaRawIO(BaseRawIO):
             # propagate common tetrode parameters to global unit level
             units_dict = self.file_parameters['unit']
             ids = units_dict['tetrode_ids']
+            copied_keys = []
             if ids:
                 for key, value in units_dict[ids[0]].items():
                     # copy key-value pair if present across all tetrodes
                     if all([key in units_dict[t] for t in ids]) and \
                             all([units_dict[t][key] == value for t in ids]):
                         self.file_parameters['unit'][key] = value
+                        copied_keys.append(key)
+
+                # remove key from individual tetrode parameters
+                for key in copied_keys:
+                    for t in ids:
+                        self.file_parameters['unit'][t].pop(key)
 
         # Create RawIO header dict
         self.header = {}
