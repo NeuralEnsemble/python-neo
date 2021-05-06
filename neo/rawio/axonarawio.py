@@ -113,7 +113,6 @@ class AxonaRawIO(BaseRawIO):
                   'set': {'filename': self.set_file,
                           'header_encoding': 'cp1252'},
                   'unit': {'data_type': unit_dtype,
-                           'wf_left_sweep_us': 200,
                            'tetrode_ids': [],
                            'header_encoding': 'cp1252'}}
         self.file_parameters = params
@@ -158,9 +157,6 @@ class AxonaRawIO(BaseRawIO):
                 tdict['num_spikes'] = int(tdict['num_spikes'])
                 tdict['header_size'] = len(
                     self.get_header_bstring(tetrode_file))
-                ls = self.file_parameters['unit']['wf_left_sweep_us'] * \
-                     self._to_hz(tdict['timebase']) * 10 ** -6
-                tdict['wf_left_sweep'] = ls
 
                 # memory mapping spiking data
                 spikes = np.memmap(
@@ -175,7 +171,9 @@ class AxonaRawIO(BaseRawIO):
                 wf_units = 'dimensionless'
                 wf_gain = 1
                 wf_offset = 0.
-                wf_left_sweep = tdict['wf_left_sweep']
+                # left sweep information is only stored in set file
+                wf_left_sweep = int(self.file_parameters['set']['file_header']
+                                    ['pretrigSamps'])
                 wf_sampling_rate = self._to_hz(tdict['sample_rate'],
                                                dtype=float)
                 spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
