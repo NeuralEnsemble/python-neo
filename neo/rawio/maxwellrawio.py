@@ -61,9 +61,11 @@ class MaxwellRawIO(BaseRawIO):
         # one stream per well
         signal_streams = []
         if int(version) == 20160704:
+            self._old_format = True
             signal_streams.append(('well000', 'well000'))
         elif int(version) > 20160704:
             # multi stream stream (one well is one stream)
+            self._old_format = False
             stream_ids = list(h5['wells'].keys())
             for stream_id in stream_ids:
                 rec_names = list(h5['wells'][stream_id].keys())
@@ -85,17 +87,22 @@ class MaxwellRawIO(BaseRawIO):
                 sr = 20000.
                 gain_uV = h5['settings']['lsb'][0] * 1e6
                 sigs = h5['sig']
+                mapping = h5["mapping"]
+                ids = np.array(mapping['channel'])
+                ids = ids[ids >= 0]
+                self._channel_slice = ids
             elif int(version) > 20160704:
                 settings = h5['wells'][stream_id][self.rec_name]['settings']
                 sr = settings['sampling'][:][0]
                 gain_uV = settings['lsb'][:][0] * 1e6
                 mapping = settings['mapping']
-                channel_ids = np.array(mapping['channel'])
-                electrode_ids = np.array(mapping['electrode'])
-                mask = channel_ids >= 0
-                channel_ids = channel_ids[mask]
-                electrode_ids = electrode_ids[mask]
                 sigs = h5['wells'][stream_id][self.rec_name]['groups']['routed']['raw']
+
+            channel_ids = np.array(mapping['channel'])
+            electrode_ids = np.array(mapping['electrode'])
+            mask = channel_ids >= 0
+            channel_ids = channel_ids[mask]
+            electrode_ids = electrode_ids[mask]
 
             for i, chan_id in enumerate(channel_ids):
                 elec_id = electrode_ids[i]
@@ -157,7 +164,11 @@ class MaxwellRawIO(BaseRawIO):
             channel_indexes = slice(None)
 
         try:
-            sigs = sigs[channel_indexes, i_start:i_stop]
+            if self._old_format:
+                sigs = sigs[self._channel_slice, i_start:i_stop]
+                sigs = sigs[channel_indexes]
+            else:
+                sigs = sigs[channel_indexes, i_start:i_stop]
         except OSError as e:
             print('*' * 10)
             print(_hdf_maxwell_error)
