@@ -175,8 +175,18 @@ class AxonaRawIO(BaseRawIO):
                 # left sweep information is only stored in set file
                 wf_left_sweep = int(self.file_parameters['set']['file_header']
                                     ['pretrigSamps'])
-                wf_sampling_rate = self._to_hz(tdict['sample_rate'],
+
+                # Extract waveform sample rate
+                # 1st priority source: Spike2msMode (0 -> 48kHz; 1 -> 24kHz)
+                # 2nd priority source: tetrode sample rate
+                spikemode_to_sr = {0: 48000, 1: 24000}  # spikemode->rate in Hz
+                sm = self.file_parameters['set']['file_header'].get(
+                    'Spike2msMode', -1)
+                wf_sampling_rate = spikemode_to_sr.get(int(sm), None)
+                if wf_sampling_rate is None:
+                    wf_sampling_rate = self._to_hz(tdict['sample_rate'],
                                                dtype=float)
+
                 spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                        wf_offset, wf_left_sweep,
                                        wf_sampling_rate))
