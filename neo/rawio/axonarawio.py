@@ -97,7 +97,7 @@ class AxonaRawIO(BaseRawIO):
         to raw data (.bin file) and prepare header dictionary in neo format.
         '''
 
-        unit_dtype = np.dtype([('spiketime', '>i4'),
+        unit_dtype = np.dtype([('spiketimes', '>i4'),
                                ('samples', 'int8', (50,))])
 
         # Utility collection of file parameters (general info and header data)
@@ -352,7 +352,7 @@ class AxonaRawIO(BaseRawIO):
         raw_spikes = self._raw_spikes[tetrode_id]
 
         # spike times are repeated for each contact -> use only first contact
-        unit_spikes = raw_spikes['spiketime'][::4]
+        unit_spikes = raw_spikes['spiketimes'][::4]
 
         # slice spike times only if needed
         if t_start is None or t_stop is None:
@@ -389,7 +389,7 @@ class AxonaRawIO(BaseRawIO):
         tetrode_id = unit_index
 
         # spike times are repeated for each contact -> use only first contact
-        unit_spikes = self._raw_spikes[tetrode_id]['spiketime'][::4]
+        unit_spikes = self._raw_spikes[tetrode_id]['spiketimes'][::4]
         waveforms = self._raw_spikes[tetrode_id]['samples']
         nb_spikes = len(unit_spikes)
         nb_samples_per_waveform = waveforms.shape[-1]
