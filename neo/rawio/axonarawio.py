@@ -164,7 +164,7 @@ class AxonaRawIO(BaseRawIO):
                     tetrode_file,
                     dtype=self.file_parameters['unit']['data_type'],
                     mode='r', offset=tdict['header_size'],
-                    shape=(tdict['num_spikes']))
+                    shape=(tdict['num_spikes'] * 4))
                 self._raw_spikes.append(spikes)
 
                 unit_name = f'tetrode {i + 1}'
@@ -413,13 +413,6 @@ class AxonaRawIO(BaseRawIO):
             mask = np.repeat(mask, 4)
             mask = mask[:len(waveforms)]
             waveforms = waveforms[mask]
-
-        # pad waveforms with zeros if not all traces are present
-        # Note: This will cause loading of the waveforms into working memory
-        if waveforms.shape[0] % 4 != 0:
-            n_pad = 4 - waveforms.shape[0] % 4
-            pad = np.zeros((n_pad, waveforms.shape[1]))
-            waveforms = np.vstack((waveforms, pad))
 
         # waveforms must be a 3D numpy array (nb_spike, nb_channel, nb_sample)
         waveforms = waveforms.reshape(nb_spikes, 4, nb_samples_per_waveform)
