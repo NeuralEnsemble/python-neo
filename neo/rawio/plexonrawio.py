@@ -189,7 +189,7 @@ class PlexonRawIO(BaseRawIO):
                 self._sig_sampling_rate[stream_index] = sr
                 self._signal_length[stream_index] = length
 
-                signal_streams.append(('Signals '+ stream_id, stream_id))
+                signal_streams.append(('Signals ' + stream_id, stream_id))
 
             signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
