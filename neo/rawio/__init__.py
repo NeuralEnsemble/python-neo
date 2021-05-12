@@ -13,6 +13,7 @@ Functions:
 Classes:
 
 * :attr:`AxographRawIO`
+* :attr:`AxonaRawIO`
 * :attr:`AxonRawIO`
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
@@ -38,6 +39,10 @@ Classes:
 
 
 .. autoclass:: neo.rawio.AxographRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.AxonaRawIO
 
     .. autoattribute:: extensions
 
@@ -133,6 +138,7 @@ Classes:
 import os
 
 from neo.rawio.axographrawio import AxographRawIO
+from neo.rawio.axonarawio import AxonaRawIO
 from neo.rawio.axonrawio import AxonRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
@@ -159,6 +165,7 @@ from neo.rawio.winwcprawio import WinWcpRawIO
 
 rawiolist = [
     AxographRawIO,
+    AxonaRawIO,
     AxonRawIO,
     BlackrockRawIO,
     BrainVisionRawIO,

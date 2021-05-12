@@ -10,10 +10,10 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestNeuroScopeIO(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuroScopeIO
-    files_to_test = ['test1/test1.xml']
-    files_to_download = ['test1/test1.xml',
-                         'test1/test1.dat',
-                         ]
+    entities_to_download = [
+        'neuroscope'
+    ]
+    entities_to_test = ['neuroscope/test1/test1.xml']
 
 
 if __name__ == "__main__":

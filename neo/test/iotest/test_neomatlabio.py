@@ -25,7 +25,7 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
         seg.spiketrains.append(spiketrain1)
 
         # write block
-        filename = BaseTestIO.get_filename_path(self, 'matlabiotestfile.mat')
+        filename = self.get_local_path('matlabiotestfile.mat')
         io1 = self.ioclass(filename)
         io1.write_block(block1)
 

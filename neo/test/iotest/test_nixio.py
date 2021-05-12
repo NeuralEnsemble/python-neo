@@ -711,7 +711,7 @@ class NixIOTest(unittest.TestCase):
 
     @classmethod
     def create_all_annotated(cls):
-        times = cls.rquant(10, pq.s)
+        times = cls.rquant(10, pq.s, incr=True)
         times_ann = {cls.rword(6): cls.rquant(10, pq.ms)}
         signal = cls.rquant((10, 10), pq.V)
         signal_ann = {cls.rword(6): cls.rquant(10, pq.uV)}
@@ -744,8 +744,8 @@ class NixIOTest(unittest.TestCase):
         event.annotate(**cls.rdict(4))
         seg.events.append(event)
 
-        spiketrain = SpikeTrain(times=times, t_stop=pq.s, units=pq.s,
-                                array_annotations=times_ann)
+        spiketrain = SpikeTrain(times=times, t_stop=10 * pq.s,
+                        units=pq.s, array_annotations=times_ann)
         d = cls.rdict(6)
         d["quantity"] = pq.Quantity(10, "mV")
         d["qarray"] = pq.Quantity(range(10), "mA")
@@ -859,7 +859,7 @@ class NixIOWriteTest(NixIOTest):
         anotherblock.segments.append(seg)
         irsig = IrregularlySampledSignal(
             signal=np.random.random((20, 30)),
-            times=self.rquant(20, pq.ms, True),
+            times=self.rquant(20, pq.ms, incr=True),
             units=pq.A
         )
         seg.irregularlysampledsignals.append(irsig)
@@ -875,7 +875,7 @@ class NixIOWriteTest(NixIOTest):
         self.write_and_compare([block, anotherblock])
 
         block.segments[0].irregularlysampledsignals.append(
-            IrregularlySampledSignal(times=np.random.random(10),
+            IrregularlySampledSignal(times=np.sort(np.random.random(10)),
                                      signal=np.random.random((10, 13)),
                                      units="mV", time_units="s",
                                      dtype=np.float,
@@ -1930,6 +1930,8 @@ class NixIOVerTests(NixIOTest):
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = NixIO
     read_and_write_is_bijective = False
+    entities_to_download = []
+    entities_to_est = []
 
 
 if __name__ == "__main__":

@@ -13,9 +13,8 @@ from neo.test.rawiotest.test_openephysbinaryrawio import TestOpenEphysBinaryRawI
 
 class TestOpenEphysBinaryIO(BaseTestIO, unittest.TestCase):
     ioclass = OpenEphysBinaryIO
-    files_to_test = TestOpenEphysBinaryRawIO.entities_to_test
-
-    files_to_download = TestOpenEphysBinaryRawIO.files_to_download
+    entities_to_download = TestOpenEphysBinaryRawIO.entities_to_download
+    entities_to_test = TestOpenEphysBinaryRawIO.entities_to_test
 
 
 if __name__ == "__main__":

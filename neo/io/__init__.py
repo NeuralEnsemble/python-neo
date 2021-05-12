@@ -19,6 +19,7 @@ Classes:
 * :attr:`AsciiSignalIO`
 * :attr:`AsciiSpikeTrainIO`
 * :attr:`AxographIO`
+* :attr:`AxonaIO`
 * :attr:`AxonIO`
 * :attr:`BCI2000IO`
 * :attr:`BlackrockIO`
@@ -74,6 +75,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.AxographIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.AxonaIO
 
     .. autoattribute:: extensions
 
@@ -250,6 +255,7 @@ from neo.io.asciiimageio import AsciiImageIO
 from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axographio import AxographIO
+from neo.io.axonaio import AxonaIO
 from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
 from neo.io.blkio import BlkIO
@@ -295,6 +301,7 @@ iolist = [
     AsciiSignalIO,
     AsciiSpikeTrainIO,
     AxographIO,
+    AxonaIO,
     AxonIO,
     BCI2000IO,
     BlackrockIO,

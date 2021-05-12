@@ -11,8 +11,14 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 class TestBCI2000RawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = BCI2000RawIO
 
-    files_to_download = ['eeg1_1.dat', 'eeg1_2.dat', 'eeg1_3.dat']
-    entities_to_test = files_to_download
+    entities_to_download = [
+        'bci2000/eeg1_1.dat',
+        'bci2000/eeg1_2.dat',
+        'bci2000/eeg1_3.dat']
+
+    entities_to_download = [
+        'bci2000',
+    ]
 
 
 if __name__ == "__main__":
