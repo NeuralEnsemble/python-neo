@@ -76,6 +76,7 @@ _signal_channel_dtype = [
     ('offset', 'float64'),
     ('stream_id', 'U64'),
 ]
+
 # TODO for later: add t_start and length in _signal_channel_dtype
 # this would simplify all t_start/t_stop stuff for each RawIO class
 

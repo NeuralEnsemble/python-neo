@@ -16,77 +16,12 @@ from neo.core import *
 from neo.io.neuralynxio import NeuralynxIO
 from neo import AnalogSignal
 
+from neo.test.rawiotest.test_neuralynxrawio import TestNeuralynxRawIO
 
 class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuralynxIO
-    files_to_test = [
-        'BML/original_data',
-        'BML_unfilledsplit/original_data',
-        'Cheetah_v1.1.0/original_data',
-        'Cheetah_v4.0.2/original_data',
-        'Cheetah_v5.5.1/original_data',
-        'Cheetah_v5.6.3/original_data',
-        'Cheetah_v5.7.4/original_data',
-        #  'Cheetah_v6.3.2/incomplete_blocks',
-        'Pegasus_v2.1.1']
-    files_to_download = [
-        'BML/original_data/CSC1_trunc.Ncs',
-        'BML/plain_data/CSC1_trunc.txt',
-        'BML/README.txt',
-        'BML_unfilledsplit/original_data/unfilledSplitRecords.Ncs',
-        'BML_unfilledsplit/plain_data/unfilledSplitRecords.txt',
-        'BML_unfilledsplit/README.txt',
-        'Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs',
-        'Cheetah_v1.1.0/README.txt',
-        'Cheetah_v1.1.0/plain_data/CSC67_trunc.txt',
-        'Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs',
-        'Cheetah_v4.0.2/plain_data/CSC14_trunc.txt',
-        'Cheetah_v4.0.2/README.txt',
-        'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
-        'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
-        'Cheetah_v5.5.1/original_data/Events.nev',
-        'Cheetah_v5.5.1/original_data/STet3a.nse',
-        'Cheetah_v5.5.1/original_data/STet3b.nse',
-        'Cheetah_v5.5.1/original_data/Tet3a.ncs',
-        'Cheetah_v5.5.1/original_data/Tet3b.ncs',
-        'Cheetah_v5.5.1/plain_data/STet3a.txt',
-        'Cheetah_v5.5.1/plain_data/STet3b.txt',
-        'Cheetah_v5.5.1/plain_data/Tet3a.txt',
-        'Cheetah_v5.5.1/plain_data/Tet3b.txt',
-        'Cheetah_v5.5.1/plain_data/Events.txt',
-        'Cheetah_v5.5.1/README.txt',
-        'Cheetah_v5.6.3/original_data/CheetahLogFile.txt',
-        'Cheetah_v5.6.3/original_data/CheetahLostADRecords.txt',
-        'Cheetah_v5.6.3/original_data/Events.nev',
-        'Cheetah_v5.6.3/original_data/CSC1.ncs',
-        'Cheetah_v5.6.3/original_data/CSC2.ncs',
-        'Cheetah_v5.6.3/original_data/TT1.ntt',
-        'Cheetah_v5.6.3/original_data/TT2.ntt',
-        'Cheetah_v5.6.3/original_data/VT1.nvt',
-        'Cheetah_v5.6.3/plain_data/Events.txt',
-        'Cheetah_v5.6.3/plain_data/CSC1.txt',
-        'Cheetah_v5.6.3/plain_data/CSC2.txt',
-        'Cheetah_v5.6.3/plain_data/TT1.txt',
-        'Cheetah_v5.6.3/plain_data/TT2.txt',
-        'Cheetah_v5.6.3/original_data/VT1.nvt',
-        'Cheetah_v5.7.4/original_data/CSC1.ncs',
-        'Cheetah_v5.7.4/original_data/CSC2.ncs',
-        'Cheetah_v5.7.4/original_data/CSC3.ncs',
-        'Cheetah_v5.7.4/original_data/CSC4.ncs',
-        'Cheetah_v5.7.4/original_data/CSC5.ncs',
-        'Cheetah_v5.7.4/original_data/Events.nev',
-        'Cheetah_v5.7.4/plain_data/CSC1.txt',
-        'Cheetah_v5.7.4/plain_data/CSC2.txt',
-        'Cheetah_v5.7.4/plain_data/CSC3.txt',
-        'Cheetah_v5.7.4/plain_data/CSC4.txt',
-        'Cheetah_v5.7.4/plain_data/CSC5.txt',
-        'Cheetah_v5.7.4/plain_data/Events.txt',
-        'Cheetah_v5.7.4/README.txt',
-        'Pegasus_v2.1.1/Events_0008.nev',
-        'Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs',
-        'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
-        'Cheetah_v6.3.2/incomplete_blocks/README.txt']
-
+    entities_to_download = TestNeuralynxRawIO.entities_to_download
+    entities_to_test = TestNeuralynxRawIO.entities_to_test
 
 class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
     cheetah_version = '5.5.1'
@@ -94,7 +29,7 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
 
     def test_read_block(self):
         """Read data in a certain time range into one block"""
-        dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
+        dirname = self.get_local_path('neuralynx/Cheetah_v5.5.1/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
         block = nio.read_block()
@@ -125,7 +60,7 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
         # self.assertEqual(len(block.channel_indexes[-1].units), 1)  # 1 units by ChannelIndex
 
     def test_read_segment(self):
-        dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
+        dirname = self.get_local_path('neuralynx/Cheetah_v5.5.1/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
         # read first segment entirely
@@ -149,7 +84,7 @@ class TestCheetah_v563(CommonNeuralynxIOTest, unittest.TestCase):
 
     def test_read_block(self):
         """Read data in a certain time range into one block"""
-        dirname = self.get_filename_path('Cheetah_v5.6.3/original_data')
+        dirname = self.get_local_path('neuralynx/Cheetah_v5.6.3/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
         block = nio.read_block()
@@ -182,7 +117,7 @@ class TestCheetah_v563(CommonNeuralynxIOTest, unittest.TestCase):
         # self.assertEqual(len(block.channel_indexes[-1].units), 1)  # 1 units by ChannelIndex
 
     def test_read_segment(self):
-        dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
+        dirname = self.get_local_path('neuralynx/Cheetah_v5.5.1/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
         # read first segment entirely
@@ -205,7 +140,7 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
     files_to_test = []
 
     def test_read_block(self):
-        dirname = self.get_filename_path('Cheetah_v5.7.4/original_data')
+        dirname = self.get_local_path('neuralynx/Cheetah_v5.7.4/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
         block = nio.read_block()
@@ -236,7 +171,7 @@ class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
     files_to_test = []
 
     def test_read_block(self):
-        dirname = self.get_filename_path('Pegasus_v2.1.1')
+        dirname = self.get_local_path('neuralynx/Pegasus_v2.1.1')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
         block = nio.read_block()
@@ -289,7 +224,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
     # def test_ncs(self):
         # for session in self.files_to_test:
-        #     dirname = self.get_filename_path(session)
+        #     dirname = self.get_local_path(session)
         #     nio = NeuralynxIO(dirname=dirname, use_cache=False)
         #     block = nio.read_block()
 
@@ -309,10 +244,10 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
             #     np.testing.assert_allclose(plain_data[:numToTest],
             #                                anasig.magnitude[:numToTest, 0] * gain_factor_0,
             #                                rtol=0.01, err_msg=" for file " + filename)
-    @unittest.skip
+    @unittest.skip("nse failing for now as per issue #907")
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
-            dirname = self.get_filename_path(session)
+            dirname = self.get_local_path(session)
             nio = NeuralynxIO(dirname=dirname, keep_original_times=True)
             block = nio.read_block()
 
@@ -320,7 +255,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 filename = st.file_origin.replace('original_data', 'plain_data')
                 if '.nse' in st.file_origin:
                     filename = filename.replace('.nse', '.txt')
-                    times_column = 0
+                    times_column = 1
                     plain_data = np.loadtxt(filename)[:, times_column]
                 elif '.ntt' in st.file_origin:
                     filename = filename.replace('.ntt', '.txt')
@@ -336,7 +271,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
 class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
     def test_incomplete_block_handling_v632(self):
-        dirname = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks')
+        dirname = self.get_local_path('neuralynx/Cheetah_v6.3.2/incomplete_blocks')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
         block = nio.read_block()
@@ -347,15 +282,17 @@ class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
 
-        for t, gt in zip(nio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561]):
+        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_start, [8408.806811, 8427.832053,
+                                                                 8487.768561]):
             self.assertEqual(np.round(t, 4), np.round(gt, 4))
-        for t, gt in zip(nio._sigs_t_stop, [8427.831990, 8487.768498, 8515.816549]):
+        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_stop, [8427.831990, 8487.768498,
+                                                                8515.816549]):
             self.assertEqual(np.round(t, 4), np.round(gt, 4))
 
 
 class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
     def test_gap_handling_v551(self):
-        dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
+        dirname = self.get_local_path('neuralynx/Cheetah_v5.5.1/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
         block = nio.read_block()
@@ -368,7 +305,7 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
         # self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), n_gaps + 1)
 
     def test_gap_handling_v563(self):
-        dirname = self.get_filename_path('Cheetah_v5.6.3/original_data')
+        dirname = self.get_local_path('neuralynx/Cheetah_v5.6.3/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
         block = nio.read_block()
 

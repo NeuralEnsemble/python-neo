@@ -19,6 +19,7 @@ Classes:
 * :attr:`AsciiSignalIO`
 * :attr:`AsciiSpikeTrainIO`
 * :attr:`AxographIO`
+* :attr:`AxonaIO`
 * :attr:`AxonIO`
 * :attr:`BCI2000IO`
 * :attr:`BlackrockIO`
@@ -41,8 +42,8 @@ Classes:
 * :attr:`NeuroScopeIO`
 * :attr:`NeuroshareIO`
 * :attr:`NixIO`
-* :attr:`NSDFIO`
 * :attr:`OpenEphysIO`
+* :attr:`OpenEphysBinaryIO`
 * :attr:`PhyIO`
 * :attr:`PickleIO`
 * :attr:`PlexonIO`
@@ -75,6 +76,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.AxographIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.AxonaIO
 
     .. autoattribute:: extensions
 
@@ -170,11 +175,11 @@ Classes:
 
     .. autoattribute:: extensions
 
-.. autoclass:: neo.io.NSDFIO
+.. autoclass:: neo.io.OpenEphysIO
 
     .. autoattribute:: extensions
 
-.. autoclass:: neo.io.OpenEphysIO
+.. autoclass:: neo.io.OpenEphysBinaryIO
 
     .. autoattribute:: extensions
 
@@ -255,6 +260,7 @@ from neo.io.asciiimageio import AsciiImageIO
 from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axographio import AxographIO
+from neo.io.axonaio import AxonaIO
 from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
 from neo.io.blkio import BlkIO
@@ -279,8 +285,8 @@ from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
 from neo.io.nixio_fr import NixIO as NixIOFr
-from neo.io.nsdfio import NSDFIO
 from neo.io.openephysio import OpenEphysIO
+from neo.io.openephysbinaryio import OpenEphysBinaryIO
 from neo.io.phyio import PhyIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
@@ -301,6 +307,7 @@ iolist = [
     AsciiSignalIO,
     AsciiSpikeTrainIO,
     AxographIO,
+    AxonaIO,
     AxonIO,
     BCI2000IO,
     BlackrockIO,
@@ -325,8 +332,8 @@ iolist = [
     NeuroExplorerIO,
     NeuroScopeIO,
     NeuroshareIO,
-    NSDFIO,
     OpenEphysIO,
+    OpenEphysBinaryIO,
     PhyIO,
     PickleIO,
     PlexonIO,

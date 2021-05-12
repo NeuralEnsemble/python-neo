@@ -49,22 +49,39 @@ class NeuralynxRawIO(BaseRawIO):
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
                   ('nb_valid', 'uint32'), ('samples', 'int16', (NcsSection._RECORD_SIZE))]
 
-    def __init__(self, dirname='', keep_original_times=False, **kargs):
+    def __init__(self, dirname='', filename='', keep_original_times=False, **kargs):
         """
+        Initialize io for either a directory of Ncs files or a single Ncs file.
+
         Parameters
         ----------
         dirname: str
-            name of directory containing all files for dataset
+            name of directory containing all files for dataset. If provided, filename is
+            ignored.
+        filename: str
+            name of a single ncs, nse, nev, or ntt file to include in dataset. If used,
+            dirname must not be provided.
         keep_original_times:
             if True, keep original start time as in files,
             otherwise set 0 of time to first time in dataset
         """
-        self.dirname = dirname
+        if dirname != '':
+            self.dirname = dirname
+            self.rawmode = 'one-dir'
+        elif filename != '':
+            self.filename = filename
+            self.rawmode = 'one-file'
+        else:
+            raise ValueError("One of dirname or filename must be provided.")
+
         self.keep_original_times = keep_original_times
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
-        return self.dirname
+        if self.rawmode == 'one-file':
+            return self.filename
+        else:
+            return self.dirname
 
     def _parse_header(self):
 
@@ -91,8 +108,15 @@ class NeuralynxRawIO(BaseRawIO):
         unit_annotations = []
         event_annotations = []
 
-        for filename in sorted(os.listdir(self.dirname)):
-            filename = os.path.join(self.dirname, filename)
+        if self.rawmode == 'one-dir':
+            filenames = sorted(os.listdir(self.dirname))
+            dirname = self.dirname
+        else:
+            dirname, fname = os.path.split(self.filename)
+            filenames = [fname]
+
+        for filename in filenames:
+            filename = os.path.join(dirname, filename)
 
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot

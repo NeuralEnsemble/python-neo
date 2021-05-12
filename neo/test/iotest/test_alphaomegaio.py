@@ -9,9 +9,13 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 
 class TestAlphaOmegaIO(BaseTestIO, unittest.TestCase):
-    files_to_test = ['File_AlphaOmega_1.map',
-                     'File_AlphaOmega_2.map']
-    files_to_download = files_to_test
+    entities_to_download =[
+        'alphaomega'
+    ]
+    entities_to_test = [
+        'alphaomega/File_AlphaOmega_1.map',
+        'alphaomega/File_AlphaOmega_2.map'
+    ]
     ioclass = AlphaOmegaIO
 
 
