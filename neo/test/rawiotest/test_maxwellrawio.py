@@ -1,9 +1,12 @@
 import unittest
+import os
 
 from neo.rawio.maxwellrawio import MaxwellRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
+in_gh_actions = os.getenv('GITHUB_ACTIONS', 'False') == True
 
+@unittest.skipUnless(not in_gh_actions, "Need specific hdf5 plugin")
 class TestMaxwellRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = MaxwellRawIO
     entities_to_download = [

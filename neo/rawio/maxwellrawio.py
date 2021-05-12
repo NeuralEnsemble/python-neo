@@ -26,7 +26,7 @@ import numpy as np
 try:
     import h5py
     HAVE_H5 = True
-except:
+except ImportError:
     HAVE_H5 = False
 
 
