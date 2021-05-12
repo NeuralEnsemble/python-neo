@@ -20,17 +20,12 @@ import sys
 
 class TestPhyRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = PhyRawIO
-    files_to_download = [
-        'phy_example_0/spike_times.npy',
-        'phy_example_0/spike_templates.npy',
-        'phy_example_0/spike_clusters.npy',
-        'phy_example_0/params.py',
-        'phy_example_0/cluster_KSLabel.tsv',
-        'phy_example_0/cluster_ContamPct.tsv',
-        'phy_example_0/cluster_Amplitude.tsv',
-        'phy_example_0/cluster_group.tsv',
+    entities_to_download = [
+        'phy'
     ]
-    entities_to_test = ['phy_example_0']
+    entities_to_test = [
+        'phy/phy_example_0'
+    ]
 
     def test_csv_tsv_parser_with_csv(self):
         csv_tempfile = Path(tempfile.gettempdir()).joinpath('test.csv')

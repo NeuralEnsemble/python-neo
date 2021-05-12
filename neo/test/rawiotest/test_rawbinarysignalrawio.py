@@ -6,8 +6,12 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 class TestRawBinarySignalRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = RawBinarySignalRawIO
-    entities_to_test = ['File_rawbinary_10kHz_2channels_16bit.raw']
-    files_to_download = entities_to_test
+    entities_to_download = [
+        'rawbinarysignal'
+    ]
+    entities_to_test = [
+        'rawbinarysignal/File_rawbinary_10kHz_2channels_16bit.raw'
+    ]
 
 
 if __name__ == "__main__":

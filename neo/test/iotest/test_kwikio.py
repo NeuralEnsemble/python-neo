@@ -18,10 +18,12 @@ from neo.test.iotest.common_io_test import BaseTestIO
 @unittest.skipUnless(kwikio.HAVE_KWIK, "requires klusta")
 class TestKwikIO(BaseTestIO, unittest.TestCase):
     ioclass = kwikio.KwikIO
-    files_to_test = ['neo.kwik']
-    files_to_download = ['neo.kwik',
-                         'neo.kwx',
-                         'neo.dat']
+    entities_to_download = [
+        'kwik'
+    ]
+    entities_to_test = [
+        'kwik/neo.kwik'
+    ]
 
 
 if __name__ == "__main__":

@@ -5,33 +5,20 @@ Tests of neo.io.tdtio
 import unittest
 from neo.io import TdtIO
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.test.iotest.tools import get_test_file_full_path
 import numpy as np
 
 
 class TestTdtIO(BaseTestIO, unittest.TestCase, ):
     ioclass = TdtIO
-    files_to_test = ['aep_05']
-    files_to_download = ['aep_05/Block-1/aep_05_Block-1.Tbk',
-                         'aep_05/Block-1/aep_05_Block-1.Tdx',
-                         'aep_05/Block-1/aep_05_Block-1.tev',
-                         'aep_05/Block-1/aep_05_Block-1.tsq',
-
-                         'aep_05/Block-2/aep_05_Block-2.Tbk',
-                         'aep_05/Block-2/aep_05_Block-2.Tdx',
-                         'aep_05/Block-2/aep_05_Block-2.tev',
-                         'aep_05/Block-2/aep_05_Block-2.tsq',
-
-                         # ~ 'aep_05/Block-3/aep_05_Block-3.Tbk',
-                         # ~ 'aep_05/Block-3/aep_05_Block-3.Tdx',
-                         # ~ 'aep_05/Block-3/aep_05_Block-3.tev',
-                         # ~ 'aep_05/Block-3/aep_05_Block-3.tsq',
-                         ]
+    entities_to_download = [
+        'tdt'
+    ]
+    entities_to_test = [
+        'tdt/aep_05'
+    ]
 
     def test_signal_group_mode(self):
-        dirname = get_test_file_full_path(ioclass=TdtIO,
-                                          filename='aep_05', directory=self.local_test_dir,
-                                          clean=False)
+        dirname = self.get_local_path('tdt/aep_05')
 
         # In this TDT dataset there are 3 signal streams
         nb_sigs_by_stream = [16, 1, 16]
