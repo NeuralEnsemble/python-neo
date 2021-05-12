@@ -1,11 +1,12 @@
 import unittest
 import os
 
-from neo.rawio.maxwellrawio import (MaxwellRawIO, 
+from neo.rawio.maxwellrawio import (MaxwellRawIO,
     auto_install_maxwell_hdf5_compression_plugin)
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
-in_gh_actions = os.getenv('GITHUB_ACTIONS', 'False') == True
+in_gh_actions = os.getenv('GITHUB_ACTIONS', 'False') == 'true'
+
 
 @unittest.skipUnless(not in_gh_actions, "Need specific hdf5 plugin")
 class TestMaxwellRawIO(BaseTestRawIO, unittest.TestCase, ):
@@ -20,8 +21,8 @@ class TestMaxwellRawIO(BaseTestRawIO, unittest.TestCase, ):
 
     def setUp(self):
         auto_install_maxwell_hdf5_compression_plugin()
-        print(os.environ['HDF5_PLUGIN_PATH'])
         BaseTestRawIO.setUp(self)
+
 
 if __name__ == "__main__":
     unittest.main()

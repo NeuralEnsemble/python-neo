@@ -4,7 +4,8 @@ import os
 from neo.io import MaxwellIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
-in_gh_actions = os.getenv('GITHUB_ACTIONS', 'False') == True
+in_gh_actions = os.getenv('GITHUB_ACTIONS', 'False') == 'true'
+
 
 @unittest.skipUnless(not in_gh_actions, "Need specific hdf5 plugin")
 class TestMaxwellIO(BaseTestIO, unittest.TestCase, ):

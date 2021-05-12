@@ -196,6 +196,7 @@ Alternatively, you can use the auto_install_maxwell_hdf5_compression_plugin()
 function that do it automamagically.
 """
 
+
 def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None):
     if hdf5_plugin_path is None:
         hdf5_plugin_path = os.getenv('HDF5_PLUGIN_PATH', None)
