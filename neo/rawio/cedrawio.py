@@ -109,8 +109,8 @@ class CedRawIO(BaseRawIO):
         self._seg_t_start = np.inf
         self._seg_t_stop = -np.inf
         for info in self.stream_info:
-            self._seg_t_start = min(self._seg_t_start, info['first_time'] / info['sampling_rate'])
-            self._seg_t_stop = max(self._seg_t_stop, info['max_time'] / info['sampling_rate'])
+            self._seg_t_start = min(self._seg_t_start, info['first_time'] / info['sampling_rate'] / info['divide'])
+            self._seg_t_stop = max(self._seg_t_stop, info['max_time'] / info['sampling_rate'] / info['divide'])
 
         self.header = {}
         self.header['nb_block'] = 1
@@ -134,7 +134,7 @@ class CedRawIO(BaseRawIO):
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         info = self.stream_info[stream_index]
-        t_start = info['first_time'] / info['sampling_rate']
+        t_start = info['first_time'] / info['sampling_rate'] / info['divide']
         return t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
