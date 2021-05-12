@@ -167,17 +167,17 @@ class PlexonRawIO(BaseRawIO):
             stream_id = '0'
             sig_channels.append((name, str(chan_id), sampling_rate, sig_dtype,
                                  units, gain, offset, stream_id))
-        
+
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         if sig_channels.size == 0:
             signal_streams = np.array([], dtype=_signal_stream_dtype)
-            
+
         else:
             # detect grousp (aka streams)
             all_sig_length = all_sig_length = np.array(all_sig_length)
             groups = set(zip(sig_channels['sampling_rate'], all_sig_length))
-            
+
             signal_streams = []
             self._signal_length = {}
             self._sig_sampling_rate = {}
@@ -185,13 +185,12 @@ class PlexonRawIO(BaseRawIO):
                 stream_id = str(stream_index)
                 mask = (sig_channels['sampling_rate'] == sr) & (all_sig_length == length)
                 sig_channels['stream_id'][mask] = stream_id
-                
+
                 self._sig_sampling_rate[stream_index] = sr
                 self._signal_length[stream_index] = length
-                
-                
-                signal_streams.append(('Signals '+stream_id, stream_id))
-            
+
+                signal_streams.append(('Signals '+ stream_id, stream_id))
+
             signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         self._global_ssampling_rate = global_header['ADFrequency']
@@ -279,10 +278,10 @@ class PlexonRawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = self._signal_length[stream_index]
-        
+
         signal_channels = self.header['signal_channels']
         signal_streams = self.header['signal_streams']
-        
+
         stream_id = signal_streams[stream_index]['id']
         mask = signal_channels['stream_id'] == stream_id
         signal_channels = signal_channels[mask]
