@@ -17,6 +17,10 @@ For maxtwo device, each well will be a different signal stream.
 
 Author : Samuel Garcia, Alessio Buccino, Pierre Yger
 """
+import os
+from pathlib import Path
+import platform
+from urllib.request import urlopen
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                 _spike_channel_dtype, _event_channel_dtype)
@@ -180,10 +184,37 @@ class MaxwellRawIO(BaseRawIO):
 
 
 _hdf_maxwell_error = """Maxwell file format is based on HDF5.
-The internal compression custum plugin!!!
+The internal compression need a custum plugin!!!
 This is a big pain for the end user.
 You, as a end user, should ask Maxwell company to change this.
 Please visit this page and install what is missing:
 https://share.mxwbio.com/d/4742248b2e674a85be97/
 Then, you will need to do something like this in your code
-os.environ['HDF5_PLUGIN_PATH'] = '/path/to/cutum/hdf5/plugin/'"""
+os.environ['HDF5_PLUGIN_PATH'] = '/path/to/cutum/hdf5/plugin/'
+
+Alternatively, you can use the auto_install_maxwell_hdf5_compression_plugin()
+function that do it automamagically.
+"""
+
+def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None):
+    if hdf5_plugin_path is None:
+        hdf5_plugin_path = os.getenv('HDF5_PLUGIN_PATH', None)
+        if hdf5_plugin_path is None:
+            hdf5_plugin_path = Path.home() / 'hdf5_plugin_path_maxwell'
+            os.environ['HDF5_PLUGIN_PATH'] = str(hdf5_plugin_path)
+    hdf5_plugin_path = Path(hdf5_plugin_path)
+    hdf5_plugin_path.mkdir(exist_ok=True)
+
+    if platform.system() == 'Linux':
+        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FLinux%2Flibcompression.so'
+        local_lib = hdf5_plugin_path / 'Flibcompression.so'
+    elif platform.system() == 'Darwin':
+        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FMacOS%2Flibcompression.dylib'
+        local_lib = hdf5_plugin_path / 'libcompression.dylib'
+    elif platform.system() == 'Windows':
+        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FWindows%2Fcompression.dll'
+        local_lib = hdf5_plugin_path / 'compression.dll'
+
+    dist = urlopen(remote_lib)
+    with open(local_lib, 'wb') as f:
+        f.write(dist.read())
