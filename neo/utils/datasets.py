@@ -66,7 +66,7 @@ def download_dataset(repo=default_testing_repo, remote_path=None, local_folder=N
 
     if local_folder.exists():
         dataset = datalad.api.Dataset(path=local_folder)
-        # TODO : some kind git pull to update distant change ??
+        dataset.update(merge=True)
     else:
         dataset = datalad.api.install(path=local_folder,
             source=repo)
