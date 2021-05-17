@@ -502,7 +502,7 @@ class AxonaRawIO(BaseRawIO):
     def _get_channel_from_tetrode(self, tetrode):
         """
         This function will take the tetrode number and return the Axona
-        channel numbers, i.e. Tetrode 1 = Ch1-Ch4, Tetrode 2 = Ch5-Ch8, etc.
+        channel numbers, i.e. Tetrode 1 = Ch0-Ch3, Tetrode 2 = Ch4-Ch7, etc.
         """
         return np.arange(0, 4) + 4 * (int(tetrode) - 1)
 
