@@ -437,7 +437,7 @@ class AxonaRawIO(BaseRawIO):
     # Adapted or modified by Steffen Buergers, Julia Sprenger
     
     def _get_temporal_mask(self, t_start, t_stop, tetrode_id):
-        # Conenience function for creating a temporal mask given
+        # Convenience function for creating a temporal mask given
         # start time (t_start) and stop time (t_stop)
         # Used by _get_spike_raw_waveforms and _get_spike_timestamps
 
