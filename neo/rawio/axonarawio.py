@@ -347,8 +347,6 @@ class AxonaRawIO(BaseRawIO):
         assert block_index == 0
         assert seg_index == 0
 
-        unit_params = self.file_parameters['unit']
-
         tetrode_id = unit_index
         raw_spikes = self._raw_spikes[tetrode_id]
 
@@ -356,26 +354,17 @@ class AxonaRawIO(BaseRawIO):
         unit_spikes = raw_spikes['spiketimes'][::4]
 
         # slice spike times only if needed
-        if t_start is None or t_stop is None:
+        if t_start is None and t_stop is None:
+            return unit_spikes
 
-            if t_start is None:
-                t_start = self._segment_t_start(block_index, seg_index)
-            if t_stop is None:
-                t_stop = self._segment_t_stop(block_index, seg_index)
+        if t_start is None:
+            t_start = self._segment_t_start(block_index, seg_index)
+        if t_stop is None:
+            t_stop = self._segment_t_stop(block_index, seg_index)
 
-            # convert to t_start and t_stop to sampling frequency
-            # Note: this assumes no time offset!
-            lim0 = t_start * self._to_hz(unit_params['timebase'])
-            lim1 = t_stop * self._to_hz(unit_params['timebase'])
+        mask = self._get_temporal_mask(t_start, t_stop, tetrode_id)
 
-            # slice spike times
-            mask = (unit_spikes >= lim0) & (unit_spikes <= lim1)
-            spike_timestamps = unit_spikes[mask]
-
-        else:
-            spike_timestamps = unit_spikes
-
-        return spike_timestamps
+        return unit_spikes[mask]
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
@@ -390,29 +379,28 @@ class AxonaRawIO(BaseRawIO):
         tetrode_id = unit_index
 
         # spike times are repeated for each contact -> use only first contact
-        unit_spikes = self._raw_spikes[tetrode_id]['spiketimes'][::4]
+        unit_spikes = self._get_spike_timestamps(block_index, seg_index,
+                                                 unit_index, t_start, t_stop)
         waveforms = self._raw_spikes[tetrode_id]['samples']
         nb_spikes = len(unit_spikes)
         nb_samples_per_waveform = waveforms.shape[-1]
 
         # slice timestamps / waveforms only when necessary
-        if t_start is None or t_stop is None:
-            if t_start is None:
-                t_start = self._segment_t_start(block_index, seg_index)
-            if t_stop is None:
-                t_stop = self._segment_t_stop(block_index, seg_index)
+        if t_start is None and t_stop is None:
+            waveforms = waveforms.reshape(nb_spikes, 4, nb_samples_per_waveform)
+            return waveforms
+        
+        if t_start is None:
+            t_start = self._segment_t_start(block_index, seg_index)
+        if t_stop is None:
+            t_stop = self._segment_t_stop(block_index, seg_index)
 
-            # convert to t_start and t_stop to sampling frequency
-            # Note: this assumes no time offset!
-            lim0 = t_start * self._to_hz(self.file_parameters['unit']['timebase'])
-            lim1 = t_stop * self._to_hz(self.file_parameters['unit']['timebase'])
-
-            # slice spike times
-            mask = (unit_spikes >= lim0) & (unit_spikes <= lim1)
-            # unwrap mask to match waveform dimension
-            mask = np.repeat(mask, 4)
-            mask = mask[:len(waveforms)]
-            waveforms = waveforms[mask]
+        mask = self._get_temporal_mask(t_start, t_stop, tetrode_id)
+        
+        # unwrap mask to match waveform dimension
+        mask = np.repeat(mask, 4)
+        mask = mask[:len(waveforms)]
+        waveforms = waveforms[mask]
 
         # waveforms must be a 3D numpy array (nb_spike, nb_channel, nb_sample)
         waveforms = waveforms.reshape(nb_spikes, 4, nb_samples_per_waveform)
@@ -447,6 +435,25 @@ class AxonaRawIO(BaseRawIO):
     # This is largely based on code by Geoff Barrett from the Hussaini lab:
     # https://github.com/GeoffBarrett/BinConverter
     # Adapted or modified by Steffen Buergers, Julia Sprenger
+    
+    def _get_temporal_mask(self, t_start, t_stop, tetrode_id):
+        # Convenience function for creating a temporal mask given
+        # start time (t_start) and stop time (t_stop)
+        # Used by _get_spike_raw_waveforms and _get_spike_timestamps
+
+        # spike times are repeated for each contact -> use only first contact
+        raw_spikes = self._raw_spikes[tetrode_id]
+        unit_spikes = raw_spikes['spiketimes'][::4]
+        
+        # convert t_start and t_stop to sampling frequency
+        # Note: this assumes no time offset!
+        unit_params = self.file_parameters['unit']
+        lim0 = t_start * self._to_hz(unit_params['timebase'])
+        lim1 = t_stop * self._to_hz(unit_params['timebase'])
+
+        mask = (unit_spikes >= lim0) & (unit_spikes <= lim1)
+        
+        return mask
 
     def get_header_parameters(self, file, file_type):
         """
@@ -496,9 +503,9 @@ class AxonaRawIO(BaseRawIO):
     def _get_channel_from_tetrode(self, tetrode):
         """
         This function will take the tetrode number and return the Axona
-        channel numbers, i.e. Tetrode 1 = Ch1-Ch4, Tetrode 2 = Ch5-Ch8, etc.
+        channel numbers, i.e. Tetrode 1 = Ch0-Ch3, Tetrode 2 = Ch4-Ch7, etc.
         """
-        return np.arange(1, 5) + 4 * (int(tetrode) - 1)
+        return np.arange(0, 4) + 4 * (int(tetrode) - 1)
 
     def read_datetime(self):
         """
@@ -567,8 +574,8 @@ class AxonaRawIO(BaseRawIO):
 
             for ielec in range(elec_per_tetrode):
                 cntr = (itetr * elec_per_tetrode) + ielec
-                ch_name = '{}{}'.format(itetr, letters[ielec])
-                chan_id = str(cntr + 1)
+                ch_name = '{}{}'.format(itetr + 1, letters[ielec])
+                chan_id = str(cntr)
                 gain = gain_list[cntr]
                 stream_id = '0'
                 # the sampling rate information is stored in the set header
