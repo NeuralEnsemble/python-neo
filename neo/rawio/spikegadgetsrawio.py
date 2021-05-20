@@ -6,13 +6,18 @@ https://spikegadgets.com/spike-products/
 
 Some doc here: https://bitbucket.org/mkarlsso/trodes/wiki/Configuration
 
+Note :
+  * this file format have multiple version. news version include the gain for scaling.
+     The actual implementation do not contain this feature because we don't have 
+     files to test this. So now the gain is "hardcoded"
+
 The file ".rec" have :
   * a fist part in text with xml informations
   * a second part for the binary buffer
 
 Author: Samuel Garcia
 """
-from .baserawio import (BaseRawIO, _signal_channel_dtype,  _signal_stream_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                 _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
@@ -29,7 +34,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
         filename: str
             filename ".rec"
         
-        streams: None, list, str
+        selected_streams: None, list, str
             sublist of streams to load/expose to API
             uselfull for spikeextractor when one stream isneed.
             For instance streams = ['ECU', 'trodes']
