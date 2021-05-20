@@ -154,7 +154,7 @@ class ChannelIndex(Container):
 
     _container_child_objects = ('Unit',)
     _data_child_objects = ('AnalogSignal', 'IrregularlySampledSignal')
-    _single_parent_objects = ('Block',)
+    _parent_objects = ('Block',)
     _necessary_attrs = (('index', np.ndarray, 1, np.dtype('i')),)
     _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('U')),
                            ('channel_ids', np.ndarray, 1, np.dtype('i')),

@@ -17,10 +17,9 @@ This IO support old (<v6) and new files (>v7) of spike2
 Author: Samuel Garcia
 
 """
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 from collections import OrderedDict
@@ -34,7 +33,7 @@ class Spike2RawIO(BaseRawIO):
     rawmode = 'one-file'
 
     def __init__(self, filename='', take_ideal_sampling_rate=False, ced_units=True,
-                            try_signal_grouping=True):
+                 try_signal_grouping=True):
         BaseRawIO.__init__(self)
         self.filename = filename
 
@@ -191,8 +190,8 @@ class Spike2RawIO(BaseRawIO):
                 self._seg_t_stops.append(t_stop)
 
         # create typed channels
-        sig_channels = []
-        unit_channels = []
+        signal_channels = []
+        spike_channels = []
         event_channels = []
 
         self.internal_unit_ids = {}
@@ -219,9 +218,9 @@ class Spike2RawIO(BaseRawIO):
                     gain = 1.
                     offset = 0.
                     sig_dtype = 'float32'
-                group_id = 0
-                sig_channels.append((name, chan_id, sampling_rate, sig_dtype,
-                                     units, gain, offset, group_id))
+                stream_id = '0'  # set it after the loop
+                signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype,
+                                     units, gain, offset, stream_id))
 
             elif chan_info['kind'] in [2, 3, 4, 5, 8]:
                 # Event
@@ -255,78 +254,94 @@ class Spike2RawIO(BaseRawIO):
                     # All spike from one channel are group in one SpikeTrain
                     unit_ids = ['all']
                 for unit_id in unit_ids:
-                    unit_index = len(unit_channels)
+                    unit_index = len(spike_channels)
                     self.internal_unit_ids[unit_index] = (chan_id, unit_id)
                     _id = "ch{}#{}".format(chan_id, unit_id)
-                    unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
+                    spike_channels.append((name, _id, wf_units, wf_gain, wf_offset,
                                           wf_left_sweep, wf_sampling_rate))
 
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        if len(sig_channels) > 0:
+        if len(signal_channels) > 0:
             if self.try_signal_grouping:
                 # try to group signals channel if same sampling_rate/dtype/...
                 # it can raise error for some files (when they do not have signal length)
                 common_keys = ['sampling_rate', 'dtype', 'units', 'gain', 'offset']
-                characteristics = sig_channels[common_keys]
+                characteristics = signal_channels[common_keys]
                 unique_characteristics = np.unique(characteristics)
                 self._sig_dtypes = {}
-                for group_id, charact in enumerate(unique_characteristics):
+                signal_streams = []
+                for stream_index, charact in enumerate(unique_characteristics):
                     chan_grp_indexes, = np.nonzero(characteristics == charact)
-                    sig_channels['group_id'][chan_grp_indexes] = group_id
+                    stream_id = str(stream_index)
+                    signal_channels['stream_id'][chan_grp_indexes] = stream_id
 
                     # check same size for channel in groups
                     for seg_index in range(nb_segment):
                         sig_sizes = []
                         for ind in chan_grp_indexes:
-                            chan_id = sig_channels[ind]['id']
+                            chan_id = int(signal_channels[ind]['id'])
                             sig_size = np.sum(self._by_seg_data_blocks[chan_id][seg_index]['size'])
                             sig_sizes.append(sig_size)
                         sig_sizes = np.array(sig_sizes)
                         assert np.all(sig_sizes == sig_sizes[0]),\
-                                    'Signal channel in groups do not have same size'\
-                                    ', use try_signal_grouping=False'
-                    self._sig_dtypes[group_id] = np.dtype(charact['dtype'])
+                                      'Signal channel in groups do not have same size,'\
+                                      'use try_signal_grouping=False'
+                    self._sig_dtypes[stream_id] = np.dtype(charact['dtype'])
+                    signal_streams.append((f'Signal stream {stream_id}', stream_id))
+                signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
             else:
                 # if try_signal_grouping fail the user can try to split each channel in
                 # separate group
-                sig_channels['group_id'] = np.arange(sig_channels.size)
-                self._sig_dtypes = {s['group_id']: np.dtype(s['dtype']) for s in sig_channels}
+                signal_channels['stream_id'] = np.arange(signal_channels.size)
+                signal_streams = np.zeros(signal_channels.size, dtype=_signal_stream_dtype)
+                signal_streams['id'] = signal_channels['stream_id']
+                signal_streams['name'] = signal_channels['name']
+                self._sig_dtypes = {s['stream_id']: np.dtype(s['dtype']) for s in signal_channels}
+        else:
+            signal_streams = np.array([], dtype=_signal_stream_dtype)
 
         # fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotations
         self._generate_minimal_annotations()
         bl_ann = self.raw_annotations['blocks'][0]
         bl_ann['system_id'] = info['system_id']
-        seg_ann = bl_ann['segments'][0]
-        seg_ann['system_id'] = info['system_id']
+        for seg_index in range(nb_segment):
+            seg_ann = self.raw_annotations['blocks'][0]['segments'][seg_index]
+            seg_ann['system_id'] = info['system_id']
 
-        for c, sig_channel in enumerate(sig_channels):
-            chan_id = sig_channel['id']
-            anasig_an = seg_ann['signals'][c]
-            anasig_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
-            anasig_an['comment'] = self._channel_infos[chan_id]['comment']
+            for c, stream_channel in enumerate(signal_streams):
+                stream_id = stream_channel['id']
+                signal_an = self.raw_annotations['blocks'][0]['segments'][seg_index]['signals'][c]
+                mask = (signal_channels['stream_id'] == stream_id)
 
-        for c, unit_channel in enumerate(unit_channels):
-            chan_id, unit_id = self.internal_unit_ids[c]
-            unit_an = seg_ann['units'][c]
-            unit_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
-            unit_an['comment'] = self._channel_infos[chan_id]['comment']
+                for key in ('phy_chan', 'comment'):
+                    values = []
+                    for chan_id in signal_channels[mask]['id']:
+                        values.append(self._channel_infos[int(chan_id)][key])
+                    signal_an['__array_annotations__'][key] = np.array(values)
 
-        for c, event_channel in enumerate(event_channels):
-            chan_id = int(event_channel['id'])
-            ev_an = seg_ann['events'][c]
-            ev_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
-            ev_an['comment'] = self._channel_infos[chan_id]['comment']
+            for c, unit_channel in enumerate(spike_channels):
+                chan_id, unit_id = self.internal_unit_ids[c]
+                unit_an = self.raw_annotations['blocks'][0]['segments'][seg_index]['spikes'][c]
+                unit_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
+                unit_an['comment'] = self._channel_infos[chan_id]['comment']
+
+            for c, event_channel in enumerate(event_channels):
+                chan_id = int(event_channel['id'])
+                ev_an = self.raw_annotations['blocks'][0]['segments'][seg_index]['events'][c]
+                ev_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
+                ev_an['comment'] = self._channel_infos[chan_id]['comment']
 
     def _source_name(self):
         return self.filename
@@ -337,43 +352,48 @@ class Spike2RawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._seg_t_stops[seg_index] * self._time_factor
 
-    def _check_channel_indexes(self, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
-        return channel_indexes
-
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        channel_indexes = self._check_channel_indexes(channel_indexes)
-        chan_id = self.header['signal_channels'][channel_indexes[0]]['id']
-        sig_size = np.sum(self._by_seg_data_blocks[chan_id][seg_index]['size'])
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
+        chan_ids = signal_channels['id']
+        chan_id0 = int(chan_ids[0])
+        sig_size = np.sum(self._by_seg_data_blocks[chan_id0][seg_index]['size'])
         return sig_size
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        channel_indexes = self._check_channel_indexes(channel_indexes)
-        chan_id = self.header['signal_channels'][channel_indexes[0]]['id']
-        return self._sig_t_starts[chan_id][seg_index] * self._time_factor
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
+        chan_ids = signal_channels['id']
+        chan_id0 = int(chan_ids[0])
+        return self._sig_t_starts[chan_id0][seg_index] * self._time_factor
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._get_signal_size(block_index, seg_index, channel_indexes)
+            i_stop = self._get_signal_size(block_index, seg_index, stream_index)
 
-        channel_indexes = self._check_channel_indexes(channel_indexes)
-        chan_index = channel_indexes[0]
-        chan_id = self.header['signal_channels'][chan_index]['id']
-        group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
-        dt = self._sig_dtypes[group_id]
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id'] == stream_id
+        signal_channels = self.header['signal_channels'][mask]
+        chan_ids = signal_channels['id']
+        self._sig_dtypes[stream_id]
 
-        raw_signals = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=dt)
-        for c, channel_index in enumerate(channel_indexes):
+        if channel_indexes is not None:
+            chan_ids = chan_ids[channel_indexes]
+
+        dt = self._sig_dtypes[stream_id]
+
+        raw_signals = np.zeros((i_stop - i_start, len(chan_ids)), dtype=dt)
+        for c, chan_id in enumerate(chan_ids):
+            chan_id = int(chan_id)
             # NOTE: this actual way is slow because we run throught
             # the file for each channel. The loop should be reversed.
             # But there is no garanty that channels shared the same data block
             # indexes. So this make the job too difficult.
-            chan_header = self.header['signal_channels'][channel_index]
-            chan_id = chan_header['id']
             data_blocks = self._by_seg_data_blocks[chan_id][seg_index]
 
             # loop over data blocks and get chunks
@@ -481,7 +501,7 @@ class Spike2RawIO(BaseRawIO):
                                          lim0, lim1, marker_filter=marker_filter)
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        unit_header = self.header['unit_channels'][unit_index]
+        unit_header = self.header['spike_channels'][unit_index]
         chan_id, unit_id = self.internal_unit_ids[unit_index]
 
         if self.ced_units:
@@ -501,7 +521,7 @@ class Spike2RawIO(BaseRawIO):
         return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        unit_header = self.header['unit_channels'][unit_index]
+        unit_header = self.header['spike_channels'][unit_index]
         chan_id, unit_id = self.internal_unit_ids[unit_index]
 
         if self.ced_units:
@@ -548,7 +568,7 @@ class Spike2RawIO(BaseRawIO):
 
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype)
         event_times *= self._time_factor
         return event_times
@@ -569,8 +589,8 @@ def read_as_dict(fid, dtype):
         if dt[k].kind == 'S':
             v = v.decode('iso-8859-1')
             if len(v) > 0:
-                l = ord(v[0])
-                v = v[1:l + 1]
+                length = ord(v[0])
+                v = v[1:length + 1]
 
         info[k] = v
     return info
@@ -608,8 +628,8 @@ def get_sample_interval(info, chan_info):
     Get sample interval for one channel
     """
     if info['system_id'] in [1, 2, 3, 4, 5]:  # Before version 5
-        sample_interval = (int(chan_info['divide']) * info['us_per_time'] *
-                           info['time_per_adc']) * 1e-6
+        sample_interval = (int(chan_info['divide']) * info['us_per_time']
+                           * info['time_per_adc']) * 1e-6
     else:
         sample_interval = (int(chan_info['l_chan_dvd']) *
                            info['us_per_time'] * info['dtime_base'])

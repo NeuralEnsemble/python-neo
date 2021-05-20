@@ -18,17 +18,22 @@ data repo.
 __test__ = False
 
 import os
+import inspect
 from copy import copy
 import unittest
 
 from neo.core import Block, Segment
+from neo.io.basefromrawio import BaseFromRaw
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant,
                             assert_sub_schema_is_lazy_loaded,
                             assert_children_empty)
 
-from neo.test.rawiotest.tools import (can_use_network, make_all_directories,
-                                   download_test_file, create_local_temp_dir)
+from neo.test.rawiotest.tools import can_use_network
+from neo.test.rawiotest.common_rawio_test import repo_for_test
+from neo.utils import (download_dataset,
+    get_local_testing_data_folder, HAVE_DATALAD)
+
 
 from neo.test.iotest.tools import (cleanup_test_file,
                                    close_object_safe, create_generic_io_object,
@@ -38,11 +43,8 @@ from neo.test.iotest.tools import (cleanup_test_file,
                                    iter_generic_readers, iter_read_objects,
                                    read_generic,
                                    write_generic)
+
 from neo.test.generate_datasets import generate_from_supported_objects
-
-
-# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
 class BaseTestIO:
@@ -65,8 +67,8 @@ class BaseTestIO:
     # all IO test need to modify this:
     ioclass = None  # the IOclass to be tested
 
-    files_to_test = []  # list of files to test compliances
-    files_to_download = []  # when files are at G-Node
+    entities_to_test = []  # list of files to test compliances
+    entities_to_download = []  # when files are at gin
 
     # when reading then writing produces files with identical hashes
     hash_conserved_when_write_read = False
@@ -82,7 +84,6 @@ class BaseTestIO:
         '''
         Set up the test fixture.  This is run for every test
         '''
-        self.files_to_test = copy(self.__class__.files_to_test)
         self.higher = self.ioclass.supported_objects[0]
         self.shortname = self.ioclass.__name__.lower().rstrip('io')
         # these objects can both be written and read
@@ -91,11 +92,19 @@ class BaseTestIO:
         # these objects can be either written or read
         self.io_readorwrite = list(set(self.ioclass.readable_objects) |
                                    set(self.ioclass.writeable_objects))
-        self.create_local_dir_if_not_exists()
-        self.download_test_files_if_not_present()
-        self.files_generated = []
-        self.generate_files_for_io_able_to_write()
-        self.files_to_test.extend(self.files_generated)
+
+        if HAVE_DATALAD:
+            for remote_path in self.entities_to_download:
+                download_dataset(repo=repo_for_test, remote_path=remote_path)
+
+            self.files_generated = []
+            self.generate_files_for_io_able_to_write()
+
+            # be carefull self.entities_to_test is class attributes
+            self.files_to_test = [self.get_local_path(e) for e in self.entities_to_test]
+        else:
+            self.files_to_test = []
+            raise unittest.SkipTest("Requires datalad download of data from the web")
 
     def create_local_dir_if_not_exists(self):
         '''
@@ -154,7 +163,7 @@ class BaseTestIO:
         # sampling_rate (RawBinaryIO...) the test is too much complex to design
         # genericaly.
         if (self.higher in self.ioclass.read_params and
-                    len(self.ioclass.read_params[self.higher]) != 0):
+                len(self.ioclass.read_params[self.higher]) != 0):
             return False
 
         # handle cases where the test should write then read
@@ -167,11 +176,15 @@ class BaseTestIO:
 
         return True
 
-    def get_filename_path(self, filename):
-        '''
-        Get the path to a filename in the current temporary file directory
-        '''
-        return os.path.join(self.local_test_dir, filename)
+    def get_local_base_folder(self):
+        return get_local_testing_data_folder()
+
+    def get_local_path(self, sub_path):
+        root_local_path = self.get_local_base_folder()
+        local_path = root_local_path / sub_path
+        # TODO later : remove the str when all IOs handle the pathlib.Path objects
+        local_path = str(local_path)
+        return local_path
 
     def generic_io_object(self, filename=None, return_path=False, clean=False):
         '''
@@ -511,3 +524,48 @@ class BaseTestIO:
                 # intercept exceptions and add more information
                 except BaseException as exc:
                     raise
+
+    def test_create_group_across_segment(self):
+        """
+        Read {io_name} files in 'files_to_test' with
+        create_group_across_segment test cases.
+
+        Test read_block method of BaseFromRaw with different test cases
+        for create_group_across_segment.
+
+        """.format(io_name=self.ioclass.__name__)
+
+        test_cases = [
+            {"SpikeTrain": True},
+            {"AnalogSignal": True},
+            {"Event": True},
+            {"Epoch": True},
+            {"SpikeTrain": True,
+             "AnalogSignal": True,
+             "Event": True,
+             "Epoch": True},
+            True
+        ]
+        expected_outcomes = [
+            None,
+            None,
+            NotImplementedError,
+            NotImplementedError,
+            NotImplementedError,
+            NotImplementedError,
+        ]
+
+        mock_test_case = unittest.TestCase()
+        if issubclass(self.ioclass, BaseFromRaw):
+            for obj, reader in self.iter_objects(target=Block,
+                                                 lazy=self.ioclass.support_lazy,
+                                                 return_reader=True):
+                if "create_group_across_segment" in inspect.signature(reader).parameters.keys():
+                    # Ignore testing readers for IOs where read_block is overridden to exclude
+                    # the create_group_across_segment functionality, for eg. NixIO_fr
+                    for case, outcome in zip(test_cases, expected_outcomes):
+                        if outcome is not None:
+                            with mock_test_case.assertRaises(outcome):
+                                reader(lazy=self.ioclass.support_lazy, create_group_across_segment=case)
+                        else:
+                            reader(lazy=self.ioclass.support_lazy, create_group_across_segment=case)

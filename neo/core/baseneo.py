@@ -18,12 +18,6 @@ ALLOWED_ANNOTATION_TYPES = (int, float, complex,
                             Number, Decimal,
                             np.number, np.bool_)
 
-# handle both Python 2 and Python 3
-try:
-    ALLOWED_ANNOTATION_TYPES += (long, unicode)
-except NameError:
-    pass
-
 logger = logging.getLogger("Neo")
 
 
@@ -179,20 +173,13 @@ class BaseNeo:
     and also sets up the :attr:`annotations` dict for additional arguments.
 
     Each class can define one or more of the following class attributes:
-        :_single_parent_objects: Neo objects that can be parents of this
-                                 object. This attribute is used in cases where
-                                 only one parent of this class is allowed.
-                                 An instance attribute named
-                                 class.__name__.lower() will be automatically
-                                 defined to hold this parent and will be
-                                 initialized to None.
-        :_multi_parent_objects: Neo objects that can be parents of this
-                                object. This attribute is used in cases where
-                                multiple parents of this class is allowed.
-                                An instance attribute named
-                                class.__name__.lower()+'s' will be
-                                automatically defined to hold this parent and
-                                will be initialized to an empty list.
+        :_parent_objects: Neo objects that can be parents of this
+                          object. Note that no Neo object can have
+                          more than one parent.
+                          An instance attribute named
+                          class.__name__.lower() will be automatically
+                          defined to hold this parent and will be
+                          initialized to None.
         :_necessary_attrs: A list of tuples containing the attributes that the
                            class must have. The tuple can have 2-4 elements.
                            The first element is the attribute name.
@@ -210,15 +197,8 @@ class BaseNeo:
                                    pretty-printing using iPython.
 
     The following helper properties are available:
-        :_parent_objects: All parent objects.
-                         :_single_parent_objects: + :_multi_parent_objects:
-        :_single_parent_containers: The names of the container attributes used
-                                   to store :_single_parent_objects:
-        :_multi_parent_containers: The names of the container attributes used
-                                   to store :_multi_parent_objects:
-        :_parent_containers: All parent container attributes.
-                            :_single_parent_containers: +
-                            :_multi_parent_containers:
+        :_parent_containers: The names of the container attributes used
+                             to store :_parent_objects:
         :parents: All objects that are parents of the current object.
         :_all_attrs: All required and optional attributes.
                      :_necessary_attrs: + :_recommended_attrs:
@@ -264,11 +244,9 @@ class BaseNeo:
     # these attributes control relationships, they need to be
     # specified in each child class
     # Parent objects whose children can have a single parent
-    _single_parent_objects = ()
-    # Attribute names corresponding to _single_parent_objects
-    _single_parent_attrs = ()
-    # Parent objects whose children can have multiple parents
-    _multi_parent_objects = ()
+    _parent_objects = ()
+    # Attribute names corresponding to _parent_objects
+    _parent_attrs = ()
 
     # Attributes that an instance is required to have defined
     _necessary_attrs = ()
@@ -298,10 +276,8 @@ class BaseNeo:
         self.file_origin = file_origin
 
         # initialize parent containers
-        for parent in self._single_parent_containers:
+        for parent in self._parent_containers:
             setattr(self, parent, None)
-        for parent in self._multi_parent_containers:
-            setattr(self, parent, [])
 
     def annotate(self, **annotations):
         """
@@ -342,45 +318,20 @@ class BaseNeo:
             self._repr_pretty_attrs_(pp, cycle)
 
     @property
-    def _single_parent_containers(self):
-        """
-        Containers for parent objects whose children can have a single parent.
-        """
-        return tuple([_reference_name(parent) for parent in
-                      self._single_parent_objects])
-
-    @property
-    def _multi_parent_containers(self):
-        """
-        Containers for parent objects whose children can have multiple parents.
-        """
-        return tuple([_container_name(parent) for parent in
-                      self._multi_parent_objects])
-
-    @property
-    def _parent_objects(self):
-        """
-        All types for parent objects.
-        """
-        return self._single_parent_objects + self._multi_parent_objects
-
-    @property
     def _parent_containers(self):
         """
-        All containers for parent objects.
+        Containers for parent objects.
         """
-        return self._single_parent_containers + self._multi_parent_containers
+        return tuple([_reference_name(parent) for parent in
+                      self._parent_objects])
 
     @property
     def parents(self):
         """
         All parent objects storing the current object.
         """
-        single = [getattr(self, attr) for attr in
-                  self._single_parent_containers]
-        multi = [list(getattr(self, attr)) for attr in
-                 self._multi_parent_containers]
-        return tuple(single + sum(multi, []))
+        return tuple([getattr(self, attr) for attr in
+                      self._parent_containers])
 
     @property
     def _all_attrs(self):
@@ -420,9 +371,9 @@ class BaseNeo:
         Set the appropriate "parent" attribute of this object
         according to the type of "obj"
         """
-        if obj.__class__.__name__ not in self._single_parent_objects:
+        if obj.__class__.__name__ not in self._parent_objects:
             raise TypeError("{} can only have parents of type {}, not {}".format(
-                self.__class__.__name__, self._single_parent_objects, obj.__class__.__name__))
-        loc = self._single_parent_objects.index(obj.__class__.__name__)
-        parent_attr = self._single_parent_attrs[loc]
+                self.__class__.__name__, self._parent_objects, obj.__class__.__name__))
+        loc = self._parent_objects.index(obj.__class__.__name__)
+        parent_attr = self._parent_attrs[loc]
         setattr(self, parent_attr, obj)

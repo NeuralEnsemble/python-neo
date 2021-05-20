@@ -31,13 +31,13 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 class TestExampleRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = ExampleRawIO
-    # here obsvisously there is nothing to download:
-    files_to_download = []
-    # here we will test 2 fake files
-    # not that IO base on dirname you can put the dirname here.
-    entities_to_test = ['fake1',
-                        'fake2',
-                        ]
+    # here obliviously there is nothing to download:
+    entities_to_download = []
+
+    # here we will test 1 fake file
+    # note that for IOs based on directory names you can put the directory
+    # name here instead of the filename.
+    entities_to_test = ['fake1']
 
 
 if __name__ == "__main__":
