@@ -47,14 +47,18 @@ class BiocamRawIO(BaseRawIO):
         except ImportError:
             HAVE_H5PY = False
         assert HAVE_H5PY, 'h5py is not installed'
-        self._rf, self._num_frames, self._sampling_rate, self._num_chanels, self._ch_indices, \
-        self._file_format, self._signal_inv, self._positions, self._read_function = openBiocamFile(
-            self.filename, self._mea_pitch, self._verbose)
+        self._header_dict = open_biocam_file_header(self.filename, self._mea_pitch, self._verbose)
+        self._num_channels = self._header_dict["num_channels"]
+        self._num_frames = self._header_dict["num_frames"]
+        self._sampling_rate = self._header_dict["sampling_rate"]
+        self._filehandle = self._header_dict["file_handle"]
+        self._read_function = self._header_dict["read_function"]
+        self._channel_locations - self._header_dict["locations"]
 
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
 
         sig_channels = []
-        for c in range(self._num_chanels):
+        for c in range(self._num_channels):
             ch_name = 'ch{}'.format(c)
             chan_id = str(c + 1)
             sr = self._sampling_rate  # Hz
@@ -108,14 +112,11 @@ class BiocamRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self._num_frames
 
-        data = self._read_function(self._rf, i_start, i_stop, self._num_chanels)
-        # transform to slice if possible
-        if sorted(channel_indexes) == channel_indexes and np.all(np.diff(channel_indexes) == 1):
-            channel_ids = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
+        data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
         return data[:, channel_indexes]
 
 
-def openBiocamFile(filename, mea_pitch, verbose=False):
+def open_biocam_file_header(filename, mea_pitch, verbose=False):
     """Open a Biocam hdf5 file, read and return the recording info, pick te correct method to access raw data,
     and return this to the caller."""
     try:
@@ -172,7 +173,9 @@ def openBiocamFile(filename, mea_pitch, verbose=False):
         read_function = readHDF5t_101_i
     else:
         raise RuntimeError("File format unknown.")
-    return rf, nFrames, samplingRate, nRecCh, chIndices, file_format, signalInv, rawIndices, read_function
+    return dict(file_handle=rf, num_frames=nFrames, sampling_rate=samplingRate, num_channels=nRecCh,
+                channel_inds=chIndices, file_format=file_format, signal_inv=signalInv,
+                locations=rawIndices, read_function=read_function)
 
 
 def readHDF5t_100(rf, t0, t1, nch):
