@@ -75,7 +75,7 @@ class MaxwellRawIO(BaseRawIO):
                 rec_names = list(h5['wells'][stream_id].keys())
                 if len(rec_names) > 1:
                     if self.rec_name is None:
-                        raise ValueError('several recording need select with rec_name="rec0000"'
+                        raise ValueError("Detected multiple recordings. Please select a single recording using the `rec_name` paramter."
                             f'\nPossible rec_name {rec_names}')
                 else:
                     self.rec_name = rec_names[0]
@@ -184,16 +184,16 @@ class MaxwellRawIO(BaseRawIO):
 
 
 _hdf_maxwell_error = """Maxwell file format is based on HDF5.
-The internal compression need a custum plugin!!!
+The internal compression requires a custom plugin!!!
 This is a big pain for the end user.
 You, as a end user, should ask Maxwell company to change this.
-Please visit this page and install what is missing:
+Please visit this page and install the missing decompression libraries:
 https://share.mxwbio.com/d/4742248b2e674a85be97/
-Then, you will need to do something like this in your code
+Then, link the decompression library by setting the `HDF5_PLUGIN_PATH` to your installation location, e.g. via
 os.environ['HDF5_PLUGIN_PATH'] = '/path/to/cutum/hdf5/plugin/'
 
-Alternatively, you can use the auto_install_maxwell_hdf5_compression_plugin()
-function that do it automamagically.
+Alternatively, you can use the auto_install_maxwell_hdf5_compression_plugin() below
+function that do it automagically.
 """
 
 
