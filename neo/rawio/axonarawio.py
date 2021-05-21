@@ -107,7 +107,7 @@ class AxonaRawIO(BaseRawIO):
                           'bytes_data': 384,
                           'bytes_head': 32,
                           'bytes_tail': 16,
-                          'data_type': np.int16,
+                          'data_type': 'int16',
                           'header_size': 0,
                           # bin files don't contain a file header
                           'header_encoding': None},
