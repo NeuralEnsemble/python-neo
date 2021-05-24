@@ -521,27 +521,30 @@ class AxonaRawIO(BaseRawIO):
         return datetime.datetime.strptime(date_str + ', ' + time_str,
                                           "%d %b %Y, %H:%M:%S")
 
-    def _get_channel_gain(self):
+    def _get_channel_gain(self, bytes_per_sample=2):
         """
-        Read gain for each channel from .set file and return list of integers
-
         This is actually not the gain_ch value from the .set file, but the
         conversion factor from raw data to uV.
 
-        Formula for .eeg and .X files, presumably also .bin files:
+        Formula for conversion to uV:
 
-        1000*adc_fullscale_mv / (gain_ch*128)
+        1000 * adc_fullscale_mv / (gain_ch * max-value), with
+        max_value = 2**(8 * bytes_per_sample - 1)
+
+        Adapted from
+        https://github.com/CINPLA/pyxona/blob/stable/pyxona/core.py
         """
         gain_list = []
 
         adc_fm = int(
             self.file_parameters['set']['file_header']['ADC_fullscale_mv'])
+
         for key, value in self.file_parameters['set']['file_header'].items():
             if key.startswith('gain_ch'):
                 gain_list.append(np.float32(value))
 
-        # rescaling gain factors
-        gain_list = [1000 * adc_fm / (gain * 128) for gain in gain_list]
+        max_value = 2**(8 * bytes_per_sample - 1)
+        gain_list = [1000 * adc_fm / (gain * max_value) for gain in gain_list]
 
         return gain_list
 
