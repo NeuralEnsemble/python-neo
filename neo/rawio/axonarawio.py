@@ -265,7 +265,11 @@ class AxonaRawIO(BaseRawIO):
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        return self.file_parameters['bin']['num_total_samples']
+        if 'num_total_packets' in self.file_parameters['bin']:
+            return self.file_parameters['bin']['num_total_samples']
+        else:
+            sr = self.file_parameters['set']['sampling_rate']
+            return int(self.file_parameters['unit']['duration']) * sr
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
@@ -386,14 +390,14 @@ class AxonaRawIO(BaseRawIO):
         if t_start is None and t_stop is None:
             waveforms = waveforms.reshape(nb_spikes, 4, nb_samples_per_waveform)
             return waveforms
-        
+
         if t_start is None:
             t_start = self._segment_t_start(block_index, seg_index)
         if t_stop is None:
             t_stop = self._segment_t_stop(block_index, seg_index)
 
         mask = self._get_temporal_mask(t_start, t_stop, tetrode_id)
-        
+
         # unwrap mask to match waveform dimension
         mask = np.repeat(mask, 4)
         mask = mask[:len(waveforms)]
@@ -432,7 +436,7 @@ class AxonaRawIO(BaseRawIO):
     # This is largely based on code by Geoff Barrett from the Hussaini lab:
     # https://github.com/GeoffBarrett/BinConverter
     # Adapted or modified by Steffen Buergers, Julia Sprenger
-    
+
     def _get_temporal_mask(self, t_start, t_stop, tetrode_id):
         # Convenience function for creating a temporal mask given
         # start time (t_start) and stop time (t_stop)
@@ -441,7 +445,7 @@ class AxonaRawIO(BaseRawIO):
         # spike times are repeated for each contact -> use only first contact
         raw_spikes = self._raw_spikes[tetrode_id]
         unit_spikes = raw_spikes['spiketimes'][::4]
-        
+
         # convert t_start and t_stop to sampling frequency
         # Note: this assumes no time offset!
         unit_params = self.file_parameters['unit']
@@ -449,7 +453,7 @@ class AxonaRawIO(BaseRawIO):
         lim1 = t_stop * self._to_hz(unit_params['timebase'])
 
         mask = (unit_spikes >= lim0) & (unit_spikes <= lim1)
-        
+
         return mask
 
     def get_header_parameters(self, file, file_type):
