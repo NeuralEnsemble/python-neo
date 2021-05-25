@@ -122,15 +122,16 @@ class AxonaRawIO(BaseRawIO):
         params['set']['file_header'] = set_dict
         params['set']['sampling_rate'] = int(set_dict['rawRate'])
 
+        signal_streams = self._get_signal_streams_header()
+        signal_channels = self._get_signal_chan_header()
+
         # SCAN BIN FILE
-        signal_streams = []
-        signal_channels = []
         if self.bin_file:
             bin_dict = self.file_parameters['bin']
             # add derived parameters from bin file
             bin_dict['num_channels'] = len(self.get_active_tetrode()) * 4
-            num_tot_packets = int(self.bin_file.stat().st_size
-                                  / bin_dict['bytes_packet'])
+            num_tot_packets = int(
+                self.bin_file.stat().st_size / bin_dict['bytes_packet'])
             bin_dict['num_total_packets'] = num_tot_packets
             bin_dict['num_total_samples'] = num_tot_packets * 3
 
@@ -139,9 +140,6 @@ class AxonaRawIO(BaseRawIO):
                 self.bin_file, dtype=self.file_parameters['bin']['data_type'],
                 mode='r', offset=self.file_parameters['bin']['header_size']
             )
-
-            signal_streams = self._get_signal_streams_header()
-            signal_channels = self._get_signal_chan_header()
 
         # SCAN TETRODE FILES
         # In this IO one tetrode corresponds to one unit
