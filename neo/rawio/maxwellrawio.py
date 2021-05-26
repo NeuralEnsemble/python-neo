@@ -207,13 +207,13 @@ def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None):
     hdf5_plugin_path.mkdir(exist_ok=True)
 
     if platform.system() == 'Linux':
-        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FLinux%2Flibcompression.so'
-        local_lib = hdf5_plugin_path / 'Flibcompression.so'
+        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FLinux%2Flibcompression.so&dl=1'
+        local_lib = hdf5_plugin_path / 'libcompression.so'
     elif platform.system() == 'Darwin':
-        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FMacOS%2Flibcompression.dylib'
+        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FMacOS%2Flibcompression.dylib&dl=1'
         local_lib = hdf5_plugin_path / 'libcompression.dylib'
     elif platform.system() == 'Windows':
-        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FWindows%2Fcompression.dll'
+        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FWindows%2Fcompression.dll&dl=1'
         local_lib = hdf5_plugin_path / 'compression.dll'
 
     dist = urlopen(remote_lib)
