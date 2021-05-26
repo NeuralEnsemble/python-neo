@@ -249,7 +249,7 @@ class SpikeTrain(DataObject):
 
         if dtype is None:
             if not hasattr(times, 'dtype'):
-                dtype = np.float
+                dtype = np.float_
         elif hasattr(times, 'dtype') and times.dtype != dtype:
             if not copy:
                 raise ValueError("cannot change dtype and return view")
@@ -310,7 +310,7 @@ class SpikeTrain(DataObject):
 
         return obj
 
-    def __init__(self, times, t_stop, units=None, dtype=np.float, copy=True,
+    def __init__(self, times, t_stop, units=None, dtype=None, copy=True,
                  sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None, left_sweep=None,
                  name=None, file_origin=None, description=None, array_annotations=None,
                  **annotations):

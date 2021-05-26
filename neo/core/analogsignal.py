@@ -448,7 +448,7 @@ class AnalogSignal(BaseSignal):
     def time_index(self, t):
         """Return the array index (or indices) corresponding to the time (or times) `t`"""
         i = (t - self.t_start) * self.sampling_rate
-        i = np.rint(i.simplified.magnitude).astype(np.int)
+        i = np.rint(i.simplified.magnitude).astype(np.int64)
         return i
 
     def time_slice(self, t_start, t_stop):

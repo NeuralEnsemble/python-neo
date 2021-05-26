@@ -261,7 +261,7 @@ class AlphaOmegaIO(BaseIO):
                         list_data[ind_chan].append(ind_block)
 
         # step 4: compute the length (number of samples) of the channels
-        chan_len = np.zeros(len(list_data), dtype=np.int)
+        chan_len = np.zeros(len(list_data), dtype=np.int64)
         for ind_chan, list_blocks in enumerate(list_data):
             for ind_block in list_blocks:
                 chan_len[ind_chan] += count_samples(
