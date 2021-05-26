@@ -270,7 +270,7 @@ class AxonaRawIO(BaseRawIO):
             return self.file_parameters['bin']['num_total_samples']
         else:
             sr = self.file_parameters['set']['sampling_rate']
-            return float(self.file_parameters['unit']['duration']) * sr
+            return int(self.file_parameters['unit']['duration'] * sr)
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
