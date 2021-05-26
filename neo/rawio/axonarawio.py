@@ -259,7 +259,7 @@ class AxonaRawIO(BaseRawIO):
                 raise ValueError('Can not determine common tetrode recording'
                                  'duration.')
 
-            tetrode_duration = int(self.file_parameters['unit']['duration'])
+            tetrode_duration = float(self.file_parameters['unit']['duration'])
             t_stop = max(t_stop, tetrode_duration)
 
         return t_stop
@@ -269,7 +269,7 @@ class AxonaRawIO(BaseRawIO):
             return self.file_parameters['bin']['num_total_samples']
         else:
             sr = self.file_parameters['set']['sampling_rate']
-            return int(self.file_parameters['unit']['duration']) * sr
+            return float(self.file_parameters['unit']['duration']) * sr
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
