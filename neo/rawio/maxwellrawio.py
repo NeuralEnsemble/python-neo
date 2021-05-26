@@ -197,7 +197,7 @@ function that do it automagically.
 """
 
 
-def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None):
+def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None, force_download=True):
     if hdf5_plugin_path is None:
         hdf5_plugin_path = os.getenv('HDF5_PLUGIN_PATH', None)
         if hdf5_plugin_path is None:
@@ -215,6 +215,10 @@ def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None):
     elif platform.system() == 'Windows':
         remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FWindows%2Fcompression.dll&dl=1'
         local_lib = hdf5_plugin_path / 'compression.dll'
+
+    if not force_download and local_lib.is_file():
+        print(f'lib h5 compression for maxwell already already in {local_lib}')
+        return
 
     dist = urlopen(remote_lib)
     with open(local_lib, 'wb') as f:

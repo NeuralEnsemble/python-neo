@@ -17,7 +17,7 @@ class TestMaxwellIO(BaseTestIO, unittest.TestCase, ):
         'maxwell/MaxTwo_data/Network/000028/data.raw.h5'
     ]
     def setUp(self):
-        auto_install_maxwell_hdf5_compression_plugin()
+        auto_install_maxwell_hdf5_compression_plugin(force_download=False)
         BaseTestIO.setUp(self)
 
 
