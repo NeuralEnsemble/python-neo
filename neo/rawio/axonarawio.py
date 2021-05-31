@@ -592,4 +592,4 @@ class AxonaRawIO(BaseRawIO):
         return np.array(sig_channels, dtype=_signal_channel_dtype)
 
     def _to_hz(self, param, dtype=int):
-        return dtype(param.replace(' hz',''))
+        return dtype(param.replace(' hz', ''))
