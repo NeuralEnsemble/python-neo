@@ -6,6 +6,7 @@ import os
 
 try:
     import datalad.api
+    from datalad.support.gitrepo import GitRepo
     HAVE_DATALAD = True
 except:
     HAVE_DATALAD = False
@@ -64,9 +65,12 @@ def download_dataset(repo=default_testing_repo, remote_path=None, local_folder=N
         local_folder = local_testing_data_folder
     local_folder = Path(local_folder)
 
-    if local_folder.exists():
+    if local_folder.exists() and GitRepo.is_valid_repo(local_folder):
         dataset = datalad.api.Dataset(path=local_folder)
-        # TODO : some kind git pull to update distant change ??
+        # make sure git repo is in clean state
+        repo = dataset.repo
+        repo.call_git(['checkout', '--force', 'master'])
+        dataset.update(merge=True)
     else:
         dataset = datalad.api.install(path=local_folder,
             source=repo)
