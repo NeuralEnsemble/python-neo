@@ -121,10 +121,11 @@ class TestSegment(unittest.TestCase):
 
         assert_same_sub_schema(orig_seg1.analogsignals + seg2.analogsignals,
                                seg1.analogsignals)
+        assert_same_sub_schema(orig_seg1.irregularlysampledsignals + seg2.irregularlysampledsignals,
+                               seg1.irregularlysampledsignals)
         assert_same_sub_schema(orig_seg1.epochs + seg2.epochs, seg1.epochs)
         assert_same_sub_schema(orig_seg1.events + seg2.events, seg1.events)
         assert_same_sub_schema(orig_seg1.spiketrains + seg2.spiketrains, seg1.spiketrains)
-
 
     def test__size(self):
         for segment in self.segments:
@@ -206,7 +207,7 @@ class TestSegment(unittest.TestCase):
     def test__filter_attribute_single(self):
         segment = simple_block().segments[1]
 
-        targ = [segment.analogsignals[0]]
+        targ = [segment.analogsignals[0], segment.irregularlysampledsignals[0]]
 
         name = targ[0].name
         res0 = segment.filter(name=name)
@@ -232,7 +233,7 @@ class TestSegment(unittest.TestCase):
     def test__filter_multi(self):
 
         segment = simple_block().segments[1]
-        targ = [segment.analogsignals[0]]
+        targ = [segment.analogsignals[0], segment.irregularlysampledsignals[0]]
 
         filter = {
             "name": targ[0].name,
@@ -266,7 +267,7 @@ class TestSegment(unittest.TestCase):
 
     def test__filter_multi_partres(self):
         segment = simple_block().segments[1]
-        targ = [segment.analogsignals[0]]
+        targ = [segment.analogsignals[0], segment.irregularlysampledsignals[0]]
 
         filter = {
             "name": targ[0].name,
@@ -358,7 +359,7 @@ class TestSegment(unittest.TestCase):
     def test__filter_single_attribute_container(self):
         segment = simple_block().segments[1]
 
-        targ = [segment.analogsignals[0]]
+        targ = [segment.analogsignals[0], segment.irregularlysampledsignals[0]]
         res0 = segment.filter(name=targ[0].name, container=True)
 
         self.assertEqual(res0, targ)
@@ -613,12 +614,11 @@ class TestSegment(unittest.TestCase):
             self.assertEqual(exp_t_stop, sliced.t_stop)
 
     def test__deepcopy(self):
+        childconts = ('analogsignals',
+                      'epochs', 'events',
+                      'irregularlysampledsignals',
+                      'spiketrains')
         for segment in self.segments:
-            childconts = ('analogsignals',
-                          'epochs', 'events',
-                          'irregularlysampledsignals',
-                          'spiketrains')
-
             seg1_copy = deepcopy(segment)
 
             # Same structure top-down, i.e. links from parents to children are correct

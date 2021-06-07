@@ -4,6 +4,7 @@ Tests of the neo.core.block.Block class
 
 from datetime import datetime
 from copy import deepcopy
+from neo.core.view import ChannelView
 
 import unittest
 
@@ -67,6 +68,13 @@ class TestBlock(unittest.TestCase):
                 targ.extend(seg.irregularlysampledsignals)
                 targ.extend(seg.spiketrains)
                 targ.extend(seg.imagesequences)
+            chv_names = set([])
+            for grp in block.groups:
+                for grp1 in grp.walk():
+                    for chv in grp1.channelviews:
+                        if chv.name not in chv_names:
+                            targ.append(chv)
+                            chv_names.add(chv.name)
 
             res1 = block.filter()
             res2 = block.filter({})
@@ -130,7 +138,7 @@ class TestBlock(unittest.TestCase):
     def test__filter_attribute_single(self):
         block = simple_block()
 
-        targ = [block.segments[1].analogsignals[0]]
+        targ = [block.segments[1].analogsignals[0], block.segments[1].irregularlysampledsignals[0]]
 
         name = targ[0].name
         res0 = block.filter(name=name)
@@ -156,7 +164,8 @@ class TestBlock(unittest.TestCase):
     def test__filter_multi(self):
 
         block = simple_block()
-        targ = [block.segments[1].analogsignals[0]]
+        targ = [block.segments[1].analogsignals[0],
+                block.segments[1].irregularlysampledsignals[0]]
 
         filter = {
             "name": targ[0].name,
@@ -267,6 +276,7 @@ class TestBlock(unittest.TestCase):
 
         targ = [
             block.segments[1].analogsignals[0],
+            block.segments[1].irregularlysampledsignals[0],
             block.segments[1]
         ]
 
@@ -352,6 +362,7 @@ class TestBlock(unittest.TestCase):
     def test__filterdata_multi(self):
         block = simple_block()
         targ = [block.segments[1].analogsignals[0],
+                block.segments[1].irregularlysampledsignals[0],
                 block.segments[1]]
         data = block.children_recur
 
@@ -429,7 +440,7 @@ class TestBlock(unittest.TestCase):
         blk1 = self.blocks[0]
         blk1_copy = deepcopy(blk1)
 
-        # Check links from parents to children
+        # Check links from parents to children and object attributes
         assert_same_sub_schema(blk1_copy, blk1)
 
         # Check links from children to parents
@@ -440,7 +451,6 @@ class TestBlock(unittest.TestCase):
             for sptr in segment.spiketrains:
                 self.assertEqual(id(sptr.segment), id(segment))
 
-        # todo: check all other block contents, especially Groups
 
 if __name__ == "__main__":
     unittest.main()

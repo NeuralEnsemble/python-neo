@@ -1418,7 +1418,10 @@ class NixIO(BaseIO):
             groups = []
             for grp in blk.groups:
                 groups.extend(list(grp.walk()))
-            check_unique(groups)
+            try:
+                check_unique(groups)
+            except ValueError as exc:
+                raise ValueError(f"{errmsg} in Group names of Block '{blk.name}'") from exc
 
         # names are OK: assign annotations
         for o in allobjs:

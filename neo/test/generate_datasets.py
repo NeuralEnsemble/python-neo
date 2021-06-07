@@ -10,7 +10,7 @@ from numpy.random import rand
 import quantities as pq
 
 from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, Group,
-                      Segment, SpikeTrain, ImageSequence, CircularRegionOfInterest,
+                      Segment, SpikeTrain, ImageSequence, CircularRegionOfInterest, ChannelView,
                       RectangularRegionOfInterest, PolygonRegionOfInterest, class_by_name)
 
 from neo.core.baseneo import _container_name
@@ -63,8 +63,24 @@ def random_signal(name=None, **annotations):
     return obj
 
 
-def random_irreg_signal():
-    pass  # todo
+def random_irreg_signal(name=None, **annotations):
+    n_channels = random.randint(1, 7)
+    sig_length = random.randint(20, 200)
+    if len(annotations) == 0:
+        annotations = random_annotations(5)
+    mean_firing_rate = np.random.uniform(0.1, 10) * pq.kHz
+    times = np.cumsum(np.random.uniform(1.0 / mean_firing_rate, size=(sig_length,))) * pq.ms
+    obj = IrregularlySampledSignal(
+        times,
+        np.random.uniform(size=(sig_length, n_channels)),
+        units=random.choice(("mV", "nA")),
+        name=name or random_string(),
+        file_origin=random_string(),
+        description=random_string(100),
+        array_annotations=None,   # todo
+        **annotations
+    )
+    return obj
 
 
 def random_event(name=None, **annotations):
@@ -131,8 +147,8 @@ def random_segment():
     for i in range(n_sigs):
         seg.analogsignals.append(random_signal())
     n_irrsigs = random.randint(0, 5)
-    # for i in range(n_irrsigs):
-    #    seg.irregularlysampledsignals.append(random_irreg_signal())
+    for i in range(n_irrsigs):
+       seg.irregularlysampledsignals.append(random_irreg_signal())
     n_events = random.randint(0, 3)
     for i in range(n_events):
         seg.events.append(random_event())
@@ -164,7 +180,19 @@ def random_group(candidates):
 
 
 def random_channelview(signal):
-    pass  # todo
+    n_channels = signal.shape[1]
+    if n_channels > 2:
+        view_size = np.random.randint(1, n_channels-1)
+        index = np.random.choice(np.arange(signal.shape[1]), view_size, replace=False)
+        obj = ChannelView(
+            signal,
+            index,
+            name=random_string(),
+            **random_annotations(3)
+        )
+        return obj
+    else:
+        return None
 
 
 def random_block():
@@ -181,9 +209,16 @@ def random_block():
         seg = random_segment()
         block.segments.append(seg)
         seg.block = block
-    # todo: generate some random_channelview()s
-    #       and include them in the groups
     children = list(block.data_children_recur)
+    views = []
+    for child in children:
+        if isinstance(child, (AnalogSignal, IrregularlySampledSignal)):
+            PROB_SIGNAL_HAS_VIEW = 0.5
+            if np.random.random_sample() < PROB_SIGNAL_HAS_VIEW:
+                chv = random_channelview(child)
+                if chv:
+                    views.append(chv)
+    children.extend(views)
     n_groups = random.randint(0, 5)
     for i in range(n_groups):
         group = random_group(children)
@@ -215,6 +250,9 @@ def simple_block():
     ))
     block.segments[1].analogsignals.extend((
         random_signal(name="signal #1 in segment #2", thing="amajig"),
+    ))
+    block.segments[1].irregularlysampledsignals.extend((
+        random_irreg_signal(name="signal #1 in segment #2", thing="amajig"),
     ))
     block.segments[0].events.extend((
         random_event(name="event array #1 in segment #1", thing="frooble"),
