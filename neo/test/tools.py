@@ -340,10 +340,11 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                 assert_arrays_almost_equal(attr1.magnitude, attr2.magnitude,
                                            threshold=threshold, dtype=dtype)
                 # Compare dimensionalities
-                dim1 = attr1.dimensionality.simplified
-                dim2 = attr2.dimensionality.simplified
-                assert dim1.simplified == dim2.simplified, 'Attribute %s of %s are not the same: %s != %s' \
-                                    '' % (attrname, classname, dim1.string, dim2.string)
+                dim1 = attr1.dimensionality
+                dim2 = attr2.dimensionality
+                errmsg = "Attribute {} of {} are not the same: {} != {}".format(
+                            attrname, classname, dim1.string, dim2.string)
+                assert dim1.simplified == dim2.simplified, errmsg
                 assert attr1.name == attr2.name
                 # todo: check annotations
         else:

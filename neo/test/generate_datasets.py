@@ -148,7 +148,7 @@ def random_segment():
         seg.analogsignals.append(random_signal())
     n_irrsigs = random.randint(0, 5)
     for i in range(n_irrsigs):
-       seg.irregularlysampledsignals.append(random_irreg_signal())
+        seg.irregularlysampledsignals.append(random_irreg_signal())
     n_events = random.randint(0, 3)
     for i in range(n_events):
         seg.events.append(random_event())
@@ -182,7 +182,7 @@ def random_group(candidates):
 def random_channelview(signal):
     n_channels = signal.shape[1]
     if n_channels > 2:
-        view_size = np.random.randint(1, n_channels-1)
+        view_size = np.random.randint(1, n_channels - 1)
         index = np.random.choice(np.arange(signal.shape[1]), view_size, replace=False)
         obj = ChannelView(
             signal,

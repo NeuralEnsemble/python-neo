@@ -121,8 +121,9 @@ class TestSegment(unittest.TestCase):
 
         assert_same_sub_schema(orig_seg1.analogsignals + seg2.analogsignals,
                                seg1.analogsignals)
-        assert_same_sub_schema(orig_seg1.irregularlysampledsignals + seg2.irregularlysampledsignals,
-                               seg1.irregularlysampledsignals)
+        assert_same_sub_schema(
+            orig_seg1.irregularlysampledsignals + seg2.irregularlysampledsignals,
+            seg1.irregularlysampledsignals)
         assert_same_sub_schema(orig_seg1.epochs + seg2.epochs, seg1.epochs)
         assert_same_sub_schema(orig_seg1.events + seg2.events, seg1.events)
         assert_same_sub_schema(orig_seg1.spiketrains + seg2.spiketrains, seg1.spiketrains)
