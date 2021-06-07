@@ -34,9 +34,9 @@ Code status
 .. image:: https://travis-ci.org/NeuralEnsemble/python-neo.png?branch=master
    :target: https://travis-ci.org/NeuralEnsemble/python-neo
    :alt: Unit Test Status (TravisCI)
-.. image:: https://circleci.com/gh/NeuralEnsemble/python-neo.svg?style=svg
-    :target: https://circleci.com/gh/NeuralEnsemble/python-neo
-    :alt: Unit Test Status (CircleCI)
+.. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/full-test.yml/badge.svg
+    :target: https://github.com/NeuralEnsemble/python-neo/actions/workflows/
+    :alt: IO Unit Test Status (Github Actions)
 .. image:: https://coveralls.io/repos/NeuralEnsemble/python-neo/badge.png
    :target: https://coveralls.io/r/NeuralEnsemble/python-neo
    :alt: Unit Test Coverage
