@@ -5,6 +5,10 @@ on:
     branches: [master, gh_actions_and_datalad]
     types: [synchronize, opened, reopened, ready_for_review]
 
+  # run checks on any change of master, including merge of PRs
+  push:
+    branches: [master]
+
 jobs:
   build-and-test:
     name: Test on (${{ matrix.os }})
