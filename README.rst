@@ -40,9 +40,6 @@ Code status
 .. image:: https://coveralls.io/repos/NeuralEnsemble/python-neo/badge.png
    :target: https://coveralls.io/r/NeuralEnsemble/python-neo
    :alt: Unit Test Coverage
-.. image:: https://requires.io/github/NeuralEnsemble/python-neo/requirements.png?branch=master
-   :target: https://requires.io/github/NeuralEnsemble/python-neo/requirements/?branch=master
-   :alt: Requirements Status
 
 More information
 ----------------
