@@ -2,7 +2,7 @@ name: neo.io and neo.rawio tests
 
 on:
   pull_request:
-    branches: [master, gh_actions_and_datalad]
+    branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
 
   # run checks on any change of master, including merge of PRs
