@@ -131,8 +131,16 @@ class MEArecRawIO(BaseRawIO):
 
         if channel_indexes is None:
             channel_indexes = slice(self._num_channels)
-
-        raw_signals = self._recgen.recordings[i_start:i_stop, channel_indexes]
+        if isinstance(channel_indexes, slice):
+            raw_signals = self._recgen.recordings[i_start:i_stop, channel_indexes]
+        else:
+            # sort channels because h5py neeeds sorted indexes
+            if np.any(np.diff(channel_indexes) < 0):
+                sorted_channel_indexes = np.sort(channel_indexes)
+                sorted_idx = np.array([list(sorted_channel_indexes).index(ch) for ch in channel_indexes])
+                raw_signals = self._recgen.recordings[i_start:i_stop, sorted_channel_indexes][:, sorted_idx]
+            else:
+                raw_signals = self._recgen.recordings[i_start:i_stop, channel_indexes]
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
