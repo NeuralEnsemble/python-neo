@@ -137,8 +137,10 @@ class MEArecRawIO(BaseRawIO):
             # sort channels because h5py neeeds sorted indexes
             if np.any(np.diff(channel_indexes) < 0):
                 sorted_channel_indexes = np.sort(channel_indexes)
-                sorted_idx = np.array([list(sorted_channel_indexes).index(ch) for ch in channel_indexes])
-                raw_signals = self._recgen.recordings[i_start:i_stop, sorted_channel_indexes][:, sorted_idx]
+                sorted_idx = np.array([list(sorted_channel_indexes).index(ch)
+                                       for ch in channel_indexes])
+                raw_signals = self._recgen.recordings[i_start:i_stop, sorted_channel_indexes]
+                raw_signals = raw_signals[:, sorted_idx]
             else:
                 raw_signals = self._recgen.recordings[i_start:i_stop, channel_indexes]
         return raw_signals
