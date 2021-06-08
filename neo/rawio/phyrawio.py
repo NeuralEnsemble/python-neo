@@ -215,6 +215,8 @@ class PhyRawIO(BaseRawIO):
     @staticmethod
     def _parse_tsv_or_csv_to_list_of_dict(filename):
         list_of_dict = list()
+        letter_pattern = re.compile('[a-zA-Z]')
+        float_pattern = re.compile('\d*\.')
         with open(filename) as csvfile:
             if filename.suffix == '.csv':
                 reader = csv.DictReader(csvfile, delimiter=',')
@@ -222,7 +224,21 @@ class PhyRawIO(BaseRawIO):
                 reader = csv.DictReader(csvfile, delimiter='\t')
             else:
                 raise ValueError("Function parses only .csv or .tsv files")
+            line = 0
+
             for row in reader:
+                if line == 0:
+                    key1, key2 = tuple(row.keys())
+                # Convert cluster ID to int
+                row[key1] = int(row[key1])
+                # Convert strings without letters
+                if letter_pattern.match(row[key2]) is None:
+                    if float_pattern.match(row[key2]) is None:
+                        row[key2] = int(row[key2])
+                    else:
+                        row[key2] = float(row[key2])
+
                 list_of_dict.append(row)
+                line += 1
 
         return list_of_dict
