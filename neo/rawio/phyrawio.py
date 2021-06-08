@@ -132,6 +132,9 @@ class PhyRawIO(BaseRawIO):
         for index, clust_id in enumerate(clust_ids):
             spiketrain_an = seg_ann['spikes'][index]
 
+            # Add cluster_id annotation
+            spiketrain_an['cluster_id'] = clust_id
+
             # Loop over list of list of dict and annotate each st
             for annotation_list in annotation_lists:
                 clust_key, property_name = tuple(annotation_list[0].
