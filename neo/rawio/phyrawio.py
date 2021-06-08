@@ -9,7 +9,7 @@ Author: Regimantas Jurkus
 """
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+                        _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 from pathlib import Path
@@ -88,7 +88,8 @@ class PhyRawIO(BaseRawIO):
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         signal_channels = []
-        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        signal_channels = np.array(signal_channels,
+                                   dtype=_signal_channel_dtype)
 
         spike_channels = []
         for i, clust_id in enumerate(clust_ids):
@@ -175,8 +176,8 @@ class PhyRawIO(BaseRawIO):
         nb_spikes = np.sum(mask)
         return nb_spikes
 
-    def _get_spike_timestamps(self, block_index, seg_index, spike_channel_index,
-                              t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index,
+                              spike_channel_index, t_start, t_stop):
         assert block_index == 0
         assert seg_index == 0
 
@@ -186,7 +187,8 @@ class PhyRawIO(BaseRawIO):
 
         if t_start is not None:
             start_frame = int(t_start * self._sampling_frequency)
-            spike_timestamps = spike_timestamps[spike_timestamps >= start_frame]
+            spike_timestamps = \
+                spike_timestamps[spike_timestamps >= start_frame]
         if t_stop is not None:
             end_frame = int(t_stop * self._sampling_frequency)
             spike_timestamps = spike_timestamps[spike_timestamps < end_frame]
@@ -198,8 +200,8 @@ class PhyRawIO(BaseRawIO):
         spike_times /= self._sampling_frequency
         return spike_times
 
-    def _get_spike_raw_waveforms(self, block_index, seg_index, spike_channel_index,
-                                 t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index,
+                                 spike_channel_index, t_start, t_stop):
         return None
 
     def _event_count(self, block_index, seg_index, event_channel_index):
@@ -219,7 +221,7 @@ class PhyRawIO(BaseRawIO):
     def _parse_tsv_or_csv_to_list_of_dict(filename):
         list_of_dict = list()
         letter_pattern = re.compile('[a-zA-Z]')
-        float_pattern = re.compile('\d*\.')
+        float_pattern = re.compile(r'\d*\.')
         with open(filename) as csvfile:
             if filename.suffix == '.csv':
                 reader = csv.DictReader(csvfile, delimiter=',')
