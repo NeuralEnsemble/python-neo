@@ -293,8 +293,13 @@ def read_meta_file(meta_file):
         lines = f.read().splitlines()
 
     info = {}
+    # Fix taken from: https://github.com/SpikeInterface/probeinterface/blob/
+    # 19d6518fbc67daca71aba5e99d8aa0d445b75eb7/probeinterface/io.py#L649-L662
     for line in lines:
-        k, v = line.split('=')
+        split_lines = line.split('=')
+        if len(split_lines) != 2:
+            continue
+        k, v = split_lines
         if k.startswith('~'):
             # replace by the list
             k = k[1:]
