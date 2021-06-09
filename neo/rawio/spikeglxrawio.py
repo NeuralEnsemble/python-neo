@@ -200,7 +200,10 @@ def scan_files(dirname):
                 continue
             meta_filename = Path(root) / file
             bin_filename = Path(root) / file.replace('.meta', '.bin')
-            meta = read_meta_file(meta_filename)
+            if meta_filename.exists() and bin_filename.exists():
+                meta = read_meta_file(meta_filename)
+            else:
+                continue
 
             num_chan = int(meta['nSavedChans'])
 
