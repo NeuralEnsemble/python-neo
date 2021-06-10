@@ -22,7 +22,7 @@ from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
                       Group,
-                      Segment, SpikeTrain, Unit)
+                      Segment, SpikeTrain)
 from neo.io.baseio import BaseIO
 
 from neo.io.proxyobjects import (AnalogSignalProxy,
@@ -55,7 +55,7 @@ class BaseFromRaw(BaseIO):
     is_writable = False
 
     supported_objects = [Block, Segment, AnalogSignal,
-                         SpikeTrain, Unit, Group, Event, Epoch]
+                         SpikeTrain, Group, Event, Epoch]
     readable_objects = [Block, Segment]
     writeable_objects = []
 
