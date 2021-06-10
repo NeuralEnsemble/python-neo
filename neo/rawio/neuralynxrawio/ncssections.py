@@ -268,7 +268,7 @@ class NcsSectionsFactory:
         if not all(ncsMemMap['sample_rate'] == recFreq):
             raise IOError('Sampling frequency changed in records within file')
 
-
+        # detect records with incomplete number of samples
         gap_rec_ids = list(np.where(ncsMemMap['nb_valid'] != ncsMemMap['nb_valid'][0])[0])
 
         pred_times = ncsMemMap['timestamp'] + 1e6 / ncsSects.sampFreqUsed * ncsMemMap['nb_valid'][0]
@@ -319,8 +319,9 @@ class NcsSectionsFactory:
         #                          (lastRecTime - startBlockTime)
 
         curBlock.endRec = ncsMemMap.shape[0] - 1
-        endTime = NcsSectionsFactory.calc_sample_time(ncsSects.sampFreqUsed, lastRecTime,
-                                                      lastRecNumSamps)
+        endTime = NcsSectionsFactory.calc_sample_time(ncsSects.sampFreqUsed, ncsMemMap['timestamp'][-1],
+                                                      ncsMemMap['nb_valid'][-1])
+
         curBlock.endTime = endTime
 
         # TODO: This needs to be checked against original implementation
