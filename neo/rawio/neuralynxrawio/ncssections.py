@@ -39,11 +39,12 @@ class NcsSection:
         self.endTime = -1   # end time of last record, that is, the end time of the last
                             # sampling period contained in the last record of the section
 
-    def __init__(self, sb, st, eb, et):
+    def __init__(self, sb, st, eb, et, ns):
         self.startRec = sb
         self.startTime = st
         self.endRec = eb
         self.endTime = et
+        self.n_samples = ns
 
     def before_time(self, rhb):
         """
@@ -144,7 +145,7 @@ class NcsSectionsFactory:
             if timestamp != predTime:
                 curBlock.endRec = recn - 1
                 curBlock.endTime = predTime
-                curBlock = NcsSection(recn, timestamp, -1, -1)
+                curBlock = NcsSection(recn, timestamp, -1, -1, -1)
                 ncsSects.sects.append(curBlock)
                 startBlockPredTime = NcsSectionsFactory.calc_sample_time(
                     ncsSects.sampFreqUsed,
@@ -207,7 +208,7 @@ class NcsSectionsFactory:
                 ncsMemMap['sample_rate'][lastBlkI] == reqFreq and \
                 lts == predLastBlockStartTime:
             lastBlkEndTime = NcsSectionsFactory.calc_sample_time(actualSampFreq, lts, lnb)
-            curBlock = NcsSection(0, ts0, lastBlkI, lastBlkEndTime)
+            curBlock = NcsSection(0, ts0, lastBlkI, lastBlkEndTime, -1)
 
             nb.sects.append(curBlock)
             return nb
@@ -215,7 +216,10 @@ class NcsSectionsFactory:
         # otherwise need to scan looking for breaks
         else:
             blkOnePredTime = NcsSectionsFactory.calc_sample_time(actualSampFreq, ts0, nb0)
-            curBlock = NcsSection(0, ts0, -1, -1)
+            curBlock = NcsSection(0, ts0, -1, -1, -1)
+            blkOnePredTime = NcsSectionsFactory.calc_sample_time(actualSampFreq, rh0.timestamp,
+                                                                 rh0.nb_valid)
+            curBlock = NcsSection(0, rh0.timestamp, -1, -1, -1)
             nb.sects.append(curBlock)
             return NcsSectionsFactory._parseGivenActualFrequency(ncsMemMap, nb, chanNum, reqFreq,
                                                                  blkOnePredTime)
@@ -244,6 +248,8 @@ class NcsSectionsFactory:
 
         print('profiling for memory leak')
 
+        old_ncsSects = copy.deepcopy(ncsSects)
+
         # track frequency of each block and use estimate with longest block
         maxBlkLen = 0
         maxBlkFreqEstimate = 0
@@ -258,8 +264,8 @@ class NcsSectionsFactory:
         lastRecNumSamps = blkLen
         recFreq = ncsMemMap['sample_rate'][0]
 
-        curBlock = NcsSection(0, startBlockTime, -1, -1)
-        ncsSects.sects.append(curBlock)
+        # curBlock = NcsSection(0, rh0.timestamp, -1, -1, -1)
+        # ncsSects.sects.append(curBlock)
 
         # check for consistent channel_ids and sampling rates
         if not all(ncsMemMap['channel_id'] == chanNum):
@@ -277,57 +283,37 @@ class NcsSectionsFactory:
 
         gap_rec_ids.extend(delayed_recs)
 
-        for recn in gap_rec_ids:
-            curBlock = NcsSection(recn, ncsMemMap['timestamp'][recn], -1, -1)
-            ncsSects.sects.append(curBlock)
+        # create recording segments from identified gaps
+        ncsSects.sects.append(NcsSection(0, ncsMemMap['timestamp'][0], -1, -1, -1))
+        for gap_rec_id in gap_rec_ids:
+            curr_sec = ncsSects.sects[-1]
+            curr_sec.endRec = gap_rec_id
+            curr_sec.endTime = ncsMemMap['timestamp'][gap_rec_id]
+            n_samples = np.sum(ncsMemMap['nb_valid'][curr_sec.startRec:gap_rec_id+1])
+            curr_sec.n_samples = n_samples
 
-        # pred_times = round(startTime + 1e6 / ncsSects.sampFreqUsed * posn)
+            next_sec = NcsSection(gap_rec_id+1, ncsMemMap['timestamp'][gap_rec_id+1], -1, -1, -1)
+            ncsSects.sects.append(next_sec)
+
+        curr_sec = ncsSects.sects[-1]
+        curr_sec.endRec = len(ncsMemMap['timestamp']) -1
+        curr_sec.endTime = ncsMemMap['timestamp'][-1]
+        n_samples = np.sum(ncsMemMap['nb_valid'][curr_sec.startRec:])
+        curr_sec.n_samples = n_samples
 
 
-        # for recn in range(1, ncsMemMap.shape[0]):
-            # timestamp = ncsMemMap['timestamp'][recn]
-            # channel_id = ncsMemMap['channel_id'][recn]
-            # sample_rate = ncsMemMap['sample_rate'][recn]
-            # nb_valid = ncsMemMap['nb_valid'][recn]
+        # calculate the estimated frequency of the block with the most samples
+        max_blk_idx = np.argmax([bl.endRec - bl.startRec for bl in ncsSects.sects])
+        max_blk = ncsSects.sects[max_blk_idx]
 
-            # hdr = CscRecordHeader(ncsMemMap, recn)
-            # if channel_id != chanNum or sample_rate != recFreq:
-            #     raise IOError('Channel number or sampling frequency changed in ' +
-        #     #                   'records within file')
-        #     predTime = NcsSectionsFactory.calc_sample_time(ncsSects.sampFreqUsed, lastRecTime,
-        #                                                    lastRecNumSamps)
-        #
-        #
-        #     if abs(timestamp - predTime) > maxGapLen:
-        #         curBlock.endRec = recn - 1
-        #         curBlock.endTime = predTime
-        #         curBlock = NcsSection(recn, timestamp, -1, -1)
-        #         ncsSects.sects.append(curBlock)
-        #         if blkLen > maxBlkLen:
-        #             maxBlkLen = blkLen
-        #             maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
-        #                                  (lastRecTime - startBlockTime)
-        #         startBlockTime = timestamp
-        #         blkLen = nb_valid
-        #     else:
-        #         blkLen += nb_valid
-        #     lastRecTime = timestamp
-        #     lastRecNumSamps = nb_valid
-        #
-        # if blkLen > maxBlkLen:
-        #     maxBlkFreqEstimate = (blkLen - lastRecNumSamps) * 1e6 / \
-        #                          (lastRecTime - startBlockTime)
-
-        curBlock.endRec = ncsMemMap.shape[0] - 1
-        endTime = NcsSectionsFactory.calc_sample_time(ncsSects.sampFreqUsed, ncsMemMap['timestamp'][-1],
-                                                      ncsMemMap['nb_valid'][-1])
-
-        curBlock.endTime = endTime
+        maxBlkFreqEstimate = (max_blk.n_samples - ncsMemMap['nb_valid'][max_blk.endRec]) * 1e6 / \
+                             (max_blk.endTime - max_blk.startTime)
 
         # TODO: This needs to be checked against original implementation
-        sample_freqs = ncsMemMap['nb_valid'][:-1] * 1e6 / np.diff(ncsMemMap['timestamp'])
-        mask = ~np.isin(np.arange(len(ncsMemMap['nb_valid'])), gap_rec_ids)
-        ncsSects.sampFreqUsed = np.mean(sample_freqs[mask[1:]])
+        ncsSects.sampFreqUsed = maxBlkFreqEstimate
+        ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(
+                                                                        maxBlkFreqEstimate)
+
 
         # ncsSects.sampFreqUsed = maxBlkFreqEstimate
         # ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(
@@ -369,9 +355,10 @@ class NcsSectionsFactory:
         numSampsForPred = NcsSection._RECORD_SIZE * lastBlkI
         predLastBlockStartTime = NcsSectionsFactory.calc_sample_time(nomFreq, ts0, numSampsForPred)
         freqInFile = math.floor(nomFreq)
-        if lts - predLastBlockStartTime == 0 and lcid == chanNum and lsr == freqInFile:
-            endTime = NcsSectionsFactory.calc_sample_time(nomFreq, lts, lnb)
-            curBlock = NcsSection(0, ts0, lastBlkI, endTime)
+        if rhl.timestamp - predLastBlockStartTime == 0 and \
+                rhl.channel_id == chanNum and rhl.sample_rate == freqInFile:
+            endTime = NcsSectionsFactory.calc_sample_time(nomFreq, rhl.timestamp, rhl.nb_valid)
+            curBlock = NcsSection(0, rh0.timestamp, lastBlkI, endTime, -1)
             nb.sects.append(curBlock)
             nb.sampFreqUsed = numSampsForPred / (lts - ts0) * 1e6
             nb.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(nb.sampFreqUsed)
