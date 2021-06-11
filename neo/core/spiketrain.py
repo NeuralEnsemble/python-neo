@@ -110,6 +110,57 @@ def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None, copy=True,
     return obj
 
 
+def normalise_times_array(times, units, dtype=None, copy=True):
+    """
+    Return a quantity array with the correct units.
+    There are four scenarios:
+
+    A. times (NumPy array), units given as string or Quantities units
+    B. times (Quantity array), units=None
+    C. times (Quantity), units given as string or Quantities units
+    D. times (NumPy array), units=None
+
+    In scenarios A-C we return a tuple (times as a Quantity array, dimensionality)
+    In scenario C, we rescale the original array to match `units`
+    In scenario D, we raise a ValueError
+    """
+    if dtype is None:
+        if not hasattr(times, 'dtype'):
+            dtype = np.float
+    if units is None:
+        # No keyword units, so get from `times`
+        try:
+            dim = times.units.dimensionality
+        except AttributeError:
+            raise ValueError('you must specify units')
+    else:
+        if hasattr(units, 'dimensionality'):
+            dim = units.dimensionality
+        else:
+            dim = pq.quantity.validate_dimensionality(units)
+
+        if hasattr(times, 'dimensionality'):
+            if times.dimensionality.items() == dim.items():
+                units = None  # units will be taken from times, avoids copying
+            else:
+                if not copy:
+                    raise ValueError("cannot rescale and return view")
+                else:
+                    # this is needed because of a bug in python-quantities
+                    # see issue # 65 in python-quantities github
+                    # remove this if it is fixed
+                    times = times.rescale(dim)
+
+
+    # check to make sure the units are time
+    # this approach is orders of magnitude faster than comparing the
+    # reference dimensionality
+    if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
+                                                                        pq.UnitTime)):
+        ValueError("Units have dimensions %s, not [time]" % dim.simplified)
+    return pq.Quantity(times, units=units, dtype=dtype, copy=copy), dim
+
+
 class SpikeTrain(DataObject):
     '''
     :class:`SpikeTrain` is a :class:`Quantity` array of spike times.
@@ -220,37 +271,7 @@ class SpikeTrain(DataObject):
             # len(times)!=0 has been used to workaround a bug occuring during neo import
             raise ValueError("the number of waveforms should be equal to the number of spikes")
 
-        # Make sure units are consistent
-        # also get the dimensionality now since it is much faster to feed
-        # that to Quantity rather than a unit
-        if units is None:
-            # No keyword units, so get from `times`
-            try:
-                dim = times.units.dimensionality
-            except AttributeError:
-                raise ValueError('you must specify units')
-        else:
-            if hasattr(units, 'dimensionality'):
-                dim = units.dimensionality
-            else:
-                dim = pq.quantity.validate_dimensionality(units)
-
-            if hasattr(times, 'dimensionality'):
-                if times.dimensionality.items() == dim.items():
-                    units = None  # units will be taken from times, avoids copying
-                else:
-                    if not copy:
-                        raise ValueError("cannot rescale and return view")
-                    else:
-                        # this is needed because of a bug in python-quantities
-                        # see issue # 65 in python-quantities github
-                        # remove this if it is fixed
-                        times = times.rescale(dim)
-
-        if dtype is None:
-            if not hasattr(times, 'dtype'):
-                dtype = np.float
-        elif hasattr(times, 'dtype') and times.dtype != dtype:
+        if dtype is not None and hasattr(times, 'dtype') and times.dtype != dtype:
             if not copy:
                 raise ValueError("cannot change dtype and return view")
 
@@ -264,15 +285,13 @@ class SpikeTrain(DataObject):
             if hasattr(t_stop, 'dtype') and t_stop.dtype != times.dtype:
                 t_stop = t_stop.astype(times.dtype)
 
-        # check to make sure the units are time
-        # this approach is orders of magnitude faster than comparing the
-        # reference dimensionality
-        if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
-                                                                          pq.UnitTime)):
-            ValueError("Unit has dimensions %s, not [time]" % dim.simplified)
+        # Make sure units are consistent
+        # also get the dimensionality now since it is much faster to feed
+        # that to Quantity rather than a unit
+        times, dim = normalise_times_array(times, units, dtype, copy)
 
         # Construct Quantity from data
-        obj = pq.Quantity(times, units=units, dtype=dtype, copy=copy).view(cls)
+        obj = times.view(cls)
 
         # spiketrain times always need to be 1-dimensional
         if len(obj.shape) > 1:
