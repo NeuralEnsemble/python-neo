@@ -221,7 +221,7 @@ class SpikeTrainList(object):
     @classmethod
     def from_spike_time_array(cls, spike_time_array, channel_id_array,
                               all_channel_ids=None, units=None,
-                              t_start=None, t_stop=None):
+                              t_start=None, t_stop=None, **annotations):
         """Create a SpikeTrainList object from an array of spike times
         and an array of channel ids."""
         spike_time_array, dim = normalise_times_array(spike_time_array, units)
@@ -233,6 +233,10 @@ class SpikeTrainList(object):
             "t_start": t_start,
             "t_stop": t_stop
         }
+        for name, ann_value in annotations.items():
+            if len(ann_value) != len(obj):
+                raise ValueError(f"incorrect length for annotation '{name}'")
+        obj._annotations = annotations
         return obj
 
     def _spiketrains_from_array(self):
@@ -245,10 +249,14 @@ class SpikeTrainList(object):
             else:
                 all_channel_ids = self._all_channel_ids
             self._items = []
-            for channel_id in all_channel_ids:
+            for i, channel_id in enumerate(all_channel_ids):
                 mask = self._channel_id_array == channel_id
                 times = self._spike_time_array[mask]
                 spiketrain = SpikeTrain(times, **self._spiketrain_metadata)
+                spiketrain.annotations = {
+                    name: value[i]
+                    for name, value in self._annotations.items()
+                }
                 # todo: consider adding channel id as metadata
                 spiketrain.segment = self.segment
                 self._items.append(spiketrain)

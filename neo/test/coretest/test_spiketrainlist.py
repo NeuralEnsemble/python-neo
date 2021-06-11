@@ -4,7 +4,7 @@ Tests of the neo.core.spiketrainlist.SpikeTrainList class
 """
 
 # needed for python 3 compatibility
-from __future__ import absolute_import
+from __future__ import absolute_import, annotations
 
 import sys
 
@@ -71,7 +71,9 @@ class TestSpikeTrainList(unittest.TestCase):
             all_channel_ids=all_channel_ids,
             units='ms',
             t_start=0 * pq.ms,
-            t_stop=100.0 * pq.ms)
+            t_stop=100.0 * pq.ms,
+            identifier=["A", "B", "C", "D"]  # annotation
+        )
 
         self.stl_from_obj_list = SpikeTrainList(items=(
             SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
@@ -98,6 +100,10 @@ class TestSpikeTrainList(unittest.TestCase):
                            np.array([ 1.1, 88.5]))
         assert_array_equal(as_list[3].times.magnitude,
                            np.array([]))
+        self.assertEqual(as_list[0].annotations["identifier"], "A")
+        self.assertEqual(as_list[1].annotations["identifier"], "B")
+        self.assertEqual(as_list[2].annotations["identifier"], "C")
+        self.assertEqual(as_list[3].annotations["identifier"], "D")
 
     def test_create_from_spiketrain_list(self):
         as_list = list(self.stl_from_obj_list)
