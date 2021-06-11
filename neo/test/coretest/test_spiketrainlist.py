@@ -3,9 +3,6 @@
 Tests of the neo.core.spiketrainlist.SpikeTrainList class
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, annotations
-
 import sys
 
 import unittest
