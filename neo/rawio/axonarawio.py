@@ -401,7 +401,7 @@ class AxonaRawIO(BaseRawIO):
     def _get_tetrode_channel_table(self, channel_ids):
         '''Create auxiliary np.array with the following columns:
         Tetrode ID, Channel ID, Channel ID within tetrode
-        This is useful in `_get_mock_analogsignal_chunk()`
+        This is useful in `get_traces()`
 
         Parameters
         ----------
