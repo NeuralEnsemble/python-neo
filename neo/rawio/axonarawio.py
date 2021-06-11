@@ -293,19 +293,26 @@ class AxonaRawIO(BaseRawIO):
         sample 3: 32b (head) + 128*2 (all channels 1st and 2nd entry) + ...
         """
 
+        if self.bin_file is None:
+
+            # NOTE: Passing None or an empty array is not permitted in neo. Here,
+            # we create a fake continuous recording from the tetrode files, filling
+            # data in-between spikes with Gaussian noise. Ultimately we may want to
+            # move the axonaunitextractor.get_traces() code in here instead, going
+            # back and forth is a bit funny.
+            from spikeextractors.extractors.axonaunitrecordingextractor import AxonaUnitRecordingExtractor
+            ue = AxonaUnitRecordingExtractor(filename=self.set_file)
+            return ue.get_traces(return_scaled=False).transpose()
+
         bin_dict = self.file_parameters['bin']
 
         # Set default values
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self.get_signal_size(block_index=block_index, seg_index=seg_index)
+            i_stop = bin_dict['num_total_samples']
         if channel_indexes is None:
-            channel_indexes = [i for i in range(self.header['signal_channels'].shape[0])]
-
-        if self.bin_file is None:
-            return self._get_mock_analogsignal_chunk(channel_ids=channel_indexes,
-                                                     start_frame=i_start, end_frame=i_stop)
+            channel_indexes = [i for i in range(bin_dict['num_channels'])]
 
         num_samples = (i_stop - i_start)
 
@@ -316,7 +323,7 @@ class AxonaRawIO(BaseRawIO):
 
         raw_samples = np.arange(num_packets_oi + 1, dtype=np.uint32)
         sample1 = raw_samples * (bin_dict['bytes_packet'] // 2) + \
-            bin_dict['bytes_head'] // 2 + offset
+                  bin_dict['bytes_head'] // 2 + offset
         sample2 = sample1 + 64
         sample3 = sample2 + 64
 
@@ -337,98 +344,6 @@ class AxonaRawIO(BaseRawIO):
             raw_signals[:, i] = self._raw_signals[sig_ids + chan_offset]
 
         return raw_signals
-
-    def _get_mock_analogsignal_chunk(self, channel_ids, start_frame, end_frame,
-                                     noise_std=0, return_scaled=False):
-        # Create mock continuous recording from tetrode file (.X) data
-        # by filling Gaussian noise into gaps between waveforms.
-
-        timebase_sr = int(self.file_parameters['unit']['timebase'].split(' ')[0])
-        samples_pre = int(self.file_parameters['set']['file_header']['pretrigSamps'])
-        samples_post = int(self.file_parameters['set']['file_header']['spikeLockout'])
-        sampling_rate = int(self.file_parameters['set']['sampling_rate'])
-
-        tcmap = self._get_tetrode_channel_table(channel_ids)
-
-        traces = noise_std * np.random.randn(len(channel_ids), end_frame - start_frame)
-        if return_scaled:
-            traces = traces.astype(np.float32)
-        else:
-            traces = traces.astype(np.int8)
-
-        # Loop through tetrodes and include requested channels in traces
-        itrc = 0
-        for tetrode_id in np.unique(tcmap[:, 0]):
-
-            channels_oi = tcmap[tcmap[:, 0] == tetrode_id, 2]
-
-            waveforms = self._get_spike_raw_waveforms(
-                block_index=0, seg_index=0,
-                unit_index=tetrode_id - 1,  # Tetrodes IDs are 1-indexed
-                t_start=start_frame / sampling_rate,
-                t_stop=end_frame / sampling_rate
-            )
-            waveforms = waveforms[:, channels_oi, :]
-            nch = len(channels_oi)
-
-            spike_train = self._get_spike_timestamps(
-                block_index=0, seg_index=0,
-                unit_index=tetrode_id - 1,
-                t_start=start_frame / sampling_rate,
-                t_stop=end_frame / sampling_rate
-            )
-
-            # Fill waveforms into traces timestamp by timestamp
-            for t, wf in zip(spike_train, waveforms):
-
-                t = int(t // (timebase_sr / sampling_rate))  # timestamps are sampled at higher frequency
-                t = t - start_frame
-                if (t - samples_pre < 0) and (t + samples_post > traces.shape[1]):
-                    traces[itrc:itrc + nch, :] = wf[:, samples_pre - t:traces.shape[1] - (t - samples_pre)]
-                elif t - samples_pre < 0:
-                    traces[itrc:itrc + nch, :t + samples_post] = wf[:, samples_pre - t:]
-                elif t + samples_post > traces.shape[1]:
-                    traces[itrc:itrc + nch, t - samples_pre:] = wf[:, :traces.shape[1] - (t - samples_pre)]
-                else:
-                    traces[itrc:itrc + nch, t - samples_pre:t + samples_post] = wf
-
-            itrc += nch
-
-        return traces.transpose()
-
-    def _get_tetrode_channel_table(self, channel_ids):
-        '''Create auxiliary np.array with the following columns:
-        Tetrode ID, Channel ID, Channel ID within tetrode
-        This is useful in `get_traces()`
-
-        Parameters
-        ----------
-        channel_ids : list
-            List of channel ids to include in table
-
-        Returns
-        -------
-        np.array
-            Rows = channels,
-            columns = TetrodeID, ChannelID, ChannelID within Tetrode
-        '''
-        active_tetrodes = self.get_active_tetrode()
-
-        tcmap = np.zeros((len(active_tetrodes) * 4, 3), dtype=int)
-        row_id = 0
-        for tetrode_id in [int(s[0].split(' ')[1]) for s in self.header['spike_channels']]:
-
-            all_channel_ids = self._get_channel_from_tetrode(tetrode_id)
-
-            for i in range(4):
-                tcmap[row_id, 0] = int(tetrode_id)
-                tcmap[row_id, 1] = int(all_channel_ids[i])
-                tcmap[row_id, 2] = int(i)
-                row_id += 1
-
-        del_idx = [False if i in channel_ids else True for i in tcmap[:, 1]]
-
-        return np.delete(tcmap, del_idx, axis=0)
 
     def _spike_count(self, block_index, seg_index, unit_index):
         tetrode_id = unit_index
