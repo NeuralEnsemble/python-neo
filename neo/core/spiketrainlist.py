@@ -137,10 +137,13 @@ class SpikeTrainList(object):
             if self._spiketrain_metadata['t_stop'] != other._spiketrain_metadata['t_stop']:
                 raise ValueError("Incompatible t_stop")
                 # todo: adjust t_stop of self and other as necessary
-            combined_spike_time_array = np.hstack((self._spike_time_array, other._spike_time_array))
-            combined_channel_id_array = np.hstack((self._channel_id_array, other._channel_id_array))
+            combined_spike_time_array = np.hstack(
+                (self._spike_time_array, other._spike_time_array))
+            combined_channel_id_array = np.hstack(
+                (self._channel_id_array, other._channel_id_array))
             combined_channel_ids = set(list(self._all_channel_ids) + other._all_channel_ids)
-            if len(combined_channel_ids) != len(self._all_channel_ids) + len(other._all_channel_ids):
+            if (len(combined_channel_ids) !=
+                    len(self._all_channel_ids) + len(other._all_channel_ids)):
                 raise ValueError("Duplicate channel ids, please rename channels before adding")
             if in_place:
                 self._spike_time_array = combined_spike_time_array
@@ -265,8 +268,8 @@ class SpikeTrainList(object):
     def multiplexed(self):
         """Return spike trains as a pair of arrays.
 
-        The first (plain NumPy) array contains the ids of the channels/neurons that produced each spike,
-        the second (Quantity) array contains the times of the spikes.
+        The first (plain NumPy) array contains the ids of the channels/neurons that produced
+        each spike, the second (Quantity) array contains the times of the spikes.
         """
         if self._spike_time_array is None:
             # need to convert list of SpikeTrains into multiplexed spike times array

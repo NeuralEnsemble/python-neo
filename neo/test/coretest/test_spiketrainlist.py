@@ -26,7 +26,7 @@ class MockRawIO(object):
         "blocks": [{
             "segments": [{
                 "spikes": [{
-                        "__array_annotations__":  {}
+                    "__array_annotations__": {}
                 }]
             }]
         }]
@@ -65,7 +65,7 @@ class TestSpikeTrainList(unittest.TestCase):
         spike_time_array = np.array([0.5, 0.6, 0.7, 1.1, 11.2, 23.6, 88.5, 99.2])
         channel_id_array = np.array([0, 0, 1, 2, 1, 0, 2, 0])
         all_channel_ids = (0, 1, 2, 3)
-        self.stl_from_array =  SpikeTrainList.from_spike_time_array(
+        self.stl_from_array = SpikeTrainList.from_spike_time_array(
             spike_time_array,
             channel_id_array,
             all_channel_ids=all_channel_ids,
@@ -76,15 +76,17 @@ class TestSpikeTrainList(unittest.TestCase):
         )
 
         self.stl_from_obj_list = SpikeTrainList(items=(
-            SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([ 0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([ 1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms",
+                       t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
         ))
 
         self.stl_from_obj_list_incl_proxy = SpikeTrainList(items=(
-            SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([ 0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms",
+                       t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
             SpikeTrainProxy(rawio=MockRawIO(), spike_channel_index=0),
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
         ))
@@ -95,9 +97,9 @@ class TestSpikeTrainList(unittest.TestCase):
         assert_array_equal(as_list[0].times.magnitude,
                            np.array([0.5, 0.6, 23.6, 99.2]))
         assert_array_equal(as_list[1].times.magnitude,
-                           np.array([ 0.7, 11.2]))
+                           np.array([0.7, 11.2]))
         assert_array_equal(as_list[2].times.magnitude,
-                           np.array([ 1.1, 88.5]))
+                           np.array([1.1, 88.5]))
         assert_array_equal(as_list[3].times.magnitude,
                            np.array([]))
         self.assertEqual(as_list[0].annotations["identifier"], "A")
@@ -110,9 +112,9 @@ class TestSpikeTrainList(unittest.TestCase):
         assert_array_equal(as_list[0].times.rescale(pq.ms).magnitude,
                            np.array([0.5, 0.6, 23.6, 99.2]))
         assert_array_equal(as_list[1].times.rescale(pq.ms).magnitude,
-                           np.array([ 0.7, 11.2]))
+                           np.array([0.7, 11.2]))
         assert_array_equal(as_list[2].times.rescale(pq.ms).magnitude,
-                           np.array([ 1.1, 88.5]))
+                           np.array([1.1, 88.5]))
         assert_array_equal(as_list[3].times.rescale(pq.ms).magnitude,
                            np.array([]))
 
@@ -121,7 +123,7 @@ class TestSpikeTrainList(unittest.TestCase):
         assert_array_equal(as_list[0].times.rescale(pq.ms).magnitude,
                            np.array([0.5, 0.6, 23.6, 99.2]))
         assert_array_equal(as_list[1].times.rescale(pq.ms).magnitude,
-                           np.array([ 0.7, 11.2]))
+                           np.array([0.7, 11.2]))
         assert isinstance(as_list[2], SpikeTrainProxy)
         assert_array_equal(as_list[3].times.rescale(pq.ms).magnitude,
                            np.array([]))
@@ -133,7 +135,7 @@ class TestSpikeTrainList(unittest.TestCase):
                   " <SpikeTrain(array([0.0007, 0.0112]) * s, [0.0 s, 0.1 s])>,"
                   " <SpikeTrain(array([ 1100., 88500.]) * us, [0.0 us, 100000.00000000001 us])>,"
                   " <SpikeTrain(array([], dtype=float64) * ms, [0.0 ms, 100.0 ms])>]"
-        )
+                  )
         self.assertEqual(target, str(self.stl_from_obj_list))
 
     def test_get_single_item(self):
@@ -141,7 +143,7 @@ class TestSpikeTrainList(unittest.TestCase):
         for stl in (self.stl_from_obj_list, self.stl_from_array):
             st = stl[1]
             assert isinstance(st, SpikeTrain)
-            assert_array_equal(st.times.rescale(pq.ms).magnitude, np.array([ 0.7, 11.2]))
+            assert_array_equal(st.times.rescale(pq.ms).magnitude, np.array([0.7, 11.2]))
 
     def test_get_slice(self):
         """Slicing a SpikeTrainList should return a SpikeTrainList"""
@@ -210,15 +212,15 @@ class TestSpikeTrainList(unittest.TestCase):
         """Adding a list of SpikeTrains to a SpikeTrainList should return a new SpikeTrainList"""
         extended_stl = self.stl_from_array + [
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([ 22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),]
+            SpikeTrain([22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms), ]
         self.assertIsInstance(extended_stl, SpikeTrainList)
         self.assertEqual(len(extended_stl), 7)
         self.assertNotEqual(id(extended_stl), id(self.stl_from_array))
 
         extended_stl = self.stl_from_obj_list_incl_proxy + [
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([ 22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms)]
         self.assertIsInstance(extended_stl, SpikeTrainList)
         self.assertEqual(len(extended_stl), 7)
@@ -229,8 +231,8 @@ class TestSpikeTrainList(unittest.TestCase):
         extended_stl = deepcopy(self.stl_from_array)
         extended_stl += [
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([ 22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),]
+            SpikeTrain([22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms), ]
         self.assertIsInstance(extended_stl, SpikeTrainList)
         self.assertEqual(len(extended_stl), 7)
 
@@ -244,7 +246,7 @@ class TestSpikeTrainList(unittest.TestCase):
         """ """
         extended_stl = [
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([ 22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms)
         ] + self.stl_from_array
         self.assertIsInstance(extended_stl, SpikeTrainList)
@@ -252,7 +254,7 @@ class TestSpikeTrainList(unittest.TestCase):
 
         extended_stl = [
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([ 22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+            SpikeTrain([22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
             SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms)
         ] + self.stl_from_obj_list_incl_proxy
         self.assertIsInstance(extended_stl, SpikeTrainList)
@@ -267,7 +269,8 @@ class TestSpikeTrainList(unittest.TestCase):
     def test_append(self):
         """Appending a SpikeTrain to a SpikeTrainList should make the STL longer"""
         for stl in (self.stl_from_obj_list, self.stl_from_array):
-            stl.append(SpikeTrain([ 22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms))
+            stl.append(SpikeTrain([22.2, 33.3], units="ms",
+                                  t_start=0 * pq.ms, t_stop=100.0 * pq.ms))
         self.assertEqual(len(stl), 5)
 
     def test_append_something_else(self):
@@ -277,14 +280,16 @@ class TestSpikeTrainList(unittest.TestCase):
 
     def test_multiplexed(self):
         """The multiplexed property should return a pair of arrays"""
-        channel_id_array, spike_time_array =  self.stl_from_array.multiplexed
+        channel_id_array, spike_time_array = self.stl_from_array.multiplexed
         assert type(spike_time_array) == pq.Quantity
         assert type(channel_id_array) == np.ndarray
         assert_array_equal(channel_id_array, np.array([0, 0, 1, 2, 1, 0, 2, 0]))
-        assert_array_equal(spike_time_array, np.array([0.5, 0.6, 0.7, 1.1, 11.2, 23.6, 88.5, 99.2]) * pq.ms)
+        assert_array_equal(spike_time_array, np.array(
+            [0.5, 0.6, 0.7, 1.1, 11.2, 23.6, 88.5, 99.2]) * pq.ms)
 
-        channel_id_array, spike_time_array =  self.stl_from_obj_list.multiplexed
+        channel_id_array, spike_time_array = self.stl_from_obj_list.multiplexed
         assert type(spike_time_array) == pq.Quantity
         assert type(channel_id_array) == np.ndarray
         assert_array_equal(channel_id_array, np.array([0, 0, 0, 0, 1, 1, 2, 2]))
-        assert_array_equal(spike_time_array, np.array([0.5, 0.6, 23.6, 99.2, 0.7, 11.2, 1.1, 88.5]) * pq.ms)
+        assert_array_equal(spike_time_array, np.array(
+            [0.5, 0.6, 23.6, 99.2, 0.7, 11.2, 1.1, 88.5]) * pq.ms)

@@ -151,12 +151,11 @@ def normalise_times_array(times, units, dtype=None, copy=True):
                     # remove this if it is fixed
                     times = times.rescale(dim)
 
-
     # check to make sure the units are time
     # this approach is orders of magnitude faster than comparing the
     # reference dimensionality
     if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
-                                                                        pq.UnitTime)):
+                                                                      pq.UnitTime)):
         ValueError("Units have dimensions %s, not [time]" % dim.simplified)
     return pq.Quantity(times, units=units, dtype=dtype, copy=copy), dim
 
