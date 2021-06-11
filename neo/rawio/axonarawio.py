@@ -122,6 +122,7 @@ class AxonaRawIO(BaseRawIO):
         params['set']['file_header'] = set_dict
         params['set']['sampling_rate'] = int(set_dict['rawRate'])
 
+        # SCAN BIN FILE
         signal_streams = []
         signal_channels = []
         if self.bin_file:
