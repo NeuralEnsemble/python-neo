@@ -269,8 +269,7 @@ class AxonaRawIO(BaseRawIO):
         if 'num_total_packets' in self.file_parameters['bin']:
             return self.file_parameters['bin']['num_total_samples']
         else:
-            sr = self.file_parameters['set']['sampling_rate']
-            return int(float(self.file_parameters['unit']['duration']) * sr)
+            return 0
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
