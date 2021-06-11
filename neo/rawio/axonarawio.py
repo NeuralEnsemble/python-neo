@@ -381,16 +381,14 @@ class AxonaRawIO(BaseRawIO):
             # Fill waveforms into traces timestamp by timestamp
             for t, wf in zip(spike_train, waveforms):
 
-                t = int(t // (timebase_sr / sampling_rate))  # timestamps are at higher frequency
+                t = int(t // (timebase_sr / sampling_rate))  # timestamps are sampled at higher frequency
                 t = t - start_frame
                 if (t - samples_pre < 0) and (t + samples_post > traces.shape[1]):
-                    traces[itrc:itrc + nch, :] = \
-                        wf[:, samples_pre - t:traces.shape[1] - (t - samples_pre)]
+                    traces[itrc:itrc + nch, :] = wf[:, samples_pre - t:traces.shape[1] - (t - samples_pre)]
                 elif t - samples_pre < 0:
                     traces[itrc:itrc + nch, :t + samples_post] = wf[:, samples_pre - t:]
                 elif t + samples_post > traces.shape[1]:
-                    traces[itrc:itrc + nch, t - samples_pre:] = \
-                        wf[:, :traces.shape[1] - (t - samples_pre)]
+                    traces[itrc:itrc + nch, t - samples_pre:] = wf[:, :traces.shape[1] - (t - samples_pre)]
                 else:
                     traces[itrc:itrc + nch, t - samples_pre:t + samples_post] = wf
 
