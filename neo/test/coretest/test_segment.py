@@ -152,6 +152,12 @@ class TestSegment(unittest.TestCase):
             targ.extend(segment.spiketrains)
             targ.extend(segment.imagesequences)
 
+            # occasionally we randomly get only spike trains,
+            # and then we have to convert to a SpikeTrainList
+            # to match the output of segment.filter
+            if all(isinstance(obj, SpikeTrain) for obj in targ):
+                targ = SpikeTrainList(items=targ, segment=segment)
+
             res0 = segment.filter()
             res1 = segment.filter({})
             res2 = segment.filter([])
@@ -287,8 +293,12 @@ class TestSegment(unittest.TestCase):
     def test__filter_no_annotation_but_object(self):
         for segment in self.segments:
             targ = segment.spiketrains
+            assert isinstance(targ, SpikeTrainList)
             res = segment.filter(objects=SpikeTrain)
-            assert_same_sub_schema(res, targ)
+            if len(res) > 0:
+                # if res has length 0 it will be just a plain list
+                assert isinstance(res, SpikeTrainList)
+                assert_same_sub_schema(res, targ)
 
             targ = segment.analogsignals
             res = segment.filter(objects=AnalogSignal)
@@ -296,7 +306,8 @@ class TestSegment(unittest.TestCase):
 
             targ = segment.analogsignals + segment.spiketrains
             res = segment.filter(objects=[AnalogSignal, SpikeTrain])
-            assert_same_sub_schema(res, targ)
+            if len(res) > 0:
+                assert_same_sub_schema(res, targ)
 
     def test__filter_single_annotation_obj_single(self):
         segment = simple_block().segments[0]
