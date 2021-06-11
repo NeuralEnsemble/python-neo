@@ -293,17 +293,6 @@ class AxonaRawIO(BaseRawIO):
         sample 3: 32b (head) + 128*2 (all channels 1st and 2nd entry) + ...
         """
 
-        if self.bin_file is None:
-
-            # NOTE: Passing None or an empty array is not permitted in neo. Here,
-            # we create a fake continuous recording from the tetrode files, filling
-            # data in-between spikes with Gaussian noise. Ultimately we may want to
-            # move the axonaunitextractor.get_traces() code in here instead, going
-            # back and forth is a bit funny.
-            from spikeextractors.extractors.axonaunitrecordingextractor import AxonaUnitRecordingExtractor
-            ue = AxonaUnitRecordingExtractor(filename=self.set_file)
-            return ue.get_traces(return_scaled=False).transpose()
-
         bin_dict = self.file_parameters['bin']
 
         # Set default values
