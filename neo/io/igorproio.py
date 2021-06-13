@@ -69,7 +69,7 @@ class IgorIO(BaseIO):
         filename = pathlib.Path(filename)
         assert filename.suffix[1:] in self.extensions, \
             "Only the following extensions are supported: %s" % self.extensions
-        self.filename = filename.with_suffix('')
+        self.filename = filename
         self.extension = filename.suffix[1:]
         self.parse_notes = parse_notes
         self._filesystem = None
@@ -77,7 +77,7 @@ class IgorIO(BaseIO):
     def read_block(self, lazy=False):
         assert not lazy, 'This IO does not support lazy mode'
 
-        block = Block(file_origin=self.filename)
+        block = Block(file_origin=str(self.filename))
         block.segments.append(self.read_segment(lazy=lazy))
         block.segments[-1].block = block
         return block
