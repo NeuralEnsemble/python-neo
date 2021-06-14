@@ -6,7 +6,6 @@ from neo.rawio.maxwellrawio import (MaxwellRawIO,
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
-
 class TestMaxwellRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = MaxwellRawIO
     entities_to_download = [
