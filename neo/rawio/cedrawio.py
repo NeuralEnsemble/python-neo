@@ -43,9 +43,11 @@ class CedRawIO(BaseRawIO):
     extensions = ['smr', 'smrx']
     rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename='', take_ideal_sampling_rate=False, ):
         BaseRawIO.__init__(self)
         self.filename = filename
+        
+        self.take_ideal_sampling_rate = take_ideal_sampling_rate
 
     def _source_name(self):
         return self.filename
@@ -62,8 +64,11 @@ class CedRawIO(BaseRawIO):
             chan_type = smrx.ChannelType(chan_ind)
             if chan_type == sonpy.lib.DataType.Adc:
                 physical_chan = smrx.PhysicalChannel(chan_ind)
-                sr = smrx.GetIdealRate(chan_ind)
                 divide = smrx.ChannelDivide(chan_ind)
+                if self.take_ideal_sampling_rate:
+                    sr = smrx.GetIdealRate(chan_ind)
+                else:
+                    sr = 1. / (smrx.GetTimeBase() * divide)
                 max_time = smrx.ChannelMaxTime(chan_ind)
                 first_time = smrx.FirstTime(chan_ind, 0, max_time)
                 # max_times is include so +1
