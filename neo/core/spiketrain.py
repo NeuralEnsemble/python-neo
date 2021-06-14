@@ -77,7 +77,7 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
 def _check_waveform_dimensions(spiketrain):
     '''
     Verify that waveform is compliant with the waveform definition as
-    quantity array 3D (spike, channel_index, time)
+    quantity array 3D (spike, channel, time)
     '''
 
     if not spiketrain.size:
@@ -159,7 +159,7 @@ class SpikeTrain(DataObject):
             :class:`SpikeTrain` began. This will be converted to the
             same units as :attr:`times`.
             Default: 0.0 seconds.
-        :waveforms: (quantity array 3D (spike, channel_index, time))
+        :waveforms: (quantity array 3D (spike, channel, time))
             The waveforms of each spike.
         :sampling_rate: (quantity scalar) Number of samples per unit time
             for the waveforms.
@@ -199,8 +199,8 @@ class SpikeTrain(DataObject):
 
     '''
 
-    _parent_objects = ('Segment', 'Unit')
-    _parent_attrs = ('segment', 'unit')
+    _parent_objects = ('Segment',)
+    _parent_attrs = ('segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('t_start', pq.Quantity, 0),
                         ('t_stop', pq.Quantity, 0))
