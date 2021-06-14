@@ -70,11 +70,6 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
                 np.testing.assert_array_equal(ep1.durations, ep2.durations)
                 np.testing.assert_array_equal(ep1.labels, ep2.labels)
 
-        # Not testing for channel_index as rawio always read from seg
-        for chid1, chid2 in zip(self.blk.channel_indexes, self.blk1.channel_indexes):
-            for asig1, asig2 in zip(chid1.analogsignals, chid2.analogsignals):
-                np.testing.assert_almost_equal(asig1.magnitude, asig2.magnitude)
-
     def test_analog_signal(self):
         seg1 = self.blk.segments[0]
         an_sig1 = seg1.analogsignals[0]

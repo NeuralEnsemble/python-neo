@@ -28,18 +28,10 @@ Classes:
 .. autoclass:: CircularRegionOfInterest
 .. autoclass:: PolygonRegionOfInterest
 
-Deprecated classes:
-
-.. autoclass:: ChannelIndex
-.. autoclass:: Unit
-
 """
 
 from neo.core.block import Block
 from neo.core.segment import Segment
-from neo.core.channelindex import ChannelIndex
-from neo.core.unit import Unit
-
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
@@ -55,9 +47,9 @@ from neo.core.view import ChannelView
 from neo.core.group import Group
 
 # Block should always be first in this list
-objectlist = [Block, Segment, ChannelIndex,
+objectlist = [Block, Segment,
               AnalogSignal, IrregularlySampledSignal,
-              Event, Epoch, Unit, SpikeTrain, ImageSequence,
+              Event, Epoch, SpikeTrain, ImageSequence,
               RectangularRegionOfInterest, CircularRegionOfInterest,
               PolygonRegionOfInterest, ChannelView, Group]
 
