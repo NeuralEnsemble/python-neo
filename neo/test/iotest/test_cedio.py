@@ -10,7 +10,7 @@ class TestCedIO(BaseTestIO, unittest.TestCase, ):
         'spike2/m365_1sec.smrx'
     ]
     entities_to_download = [
-        'spike2/m365_1sec.smrx'
+        'spike2'
     ]
 
 

@@ -6,15 +6,15 @@ This read *.smrx (and *.smr) from spike2 and signal software.
 
 Note Spike2RawIO/Spike2IO is the old implementation in neo.
 It still works without any dependency and should be faster.
-Spike2IO only work for smr (32bit) and not for smrx (64bit).
+Spike2IO only works for smr (32 bit) and not for smrx (64 bit) files.
 
-This implementation depend on SONPY package
+This implementation depends on the SONPY package:
 https://pypi.org/project/sonpy/
 
 Please note that the SONPY package:
-  * IS NOT open source.
-  * use internally list (and not numpy.ndarray) which can make the data read very slow
-  *  is maintain by CED
+  * is NOT open source
+  * internally uses a list instead of numpy.ndarray, potentially causing slow data reading
+  *  is maintained by CED
 
 
 Author : Samuel Garcia
@@ -36,9 +36,9 @@ except ImportError:
 class CedRawIO(BaseRawIO):
     """
     Class for reading data from CED (Cambridge Electronic Design) spike2.
-    This use internally the sonpy package which is close source.
+    This internally uses the sonpy package which is closed source.
 
-    This read smr and smrx.
+    This IO reads smr and smrx files
     """
     extensions = ['smr', 'smrx']
     rawmode = 'one-file'
@@ -71,23 +71,23 @@ class CedRawIO(BaseRawIO):
                     sr = 1. / (smrx.GetTimeBase() * divide)
                 max_time = smrx.ChannelMaxTime(chan_ind)
                 first_time = smrx.FirstTime(chan_ind, 0, max_time)
-                # max_times is include so +1
-                size_size = (max_time - first_time) / divide + 1
-                channel_infos.append((first_time, max_time, divide, size_size, sr))
+                # max_times is included so +1
+                time_size = (max_time - first_time) / divide + 1
+                channel_infos.append((first_time, max_time, divide, time_size, sr))
                 gain = smrx.GetChannelScale(chan_ind)
                 offset = smrx.GetChannelOffset(chan_ind)
                 units = smrx.GetChannelUnits(chan_ind)
                 ch_name = smrx.GetChannelTitle(chan_ind)
                 chan_id = str(chan_ind)
                 dtype = 'int16'
-                # set later after groping
+                # set later after grouping
                 stream_id = '0'
                 signal_channels.append((ch_name, chan_id, sr, dtype,
                                         units, gain, offset, stream_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        # cahnnel are group into stream if same start/stop/size/divide
+        # channels are grouped into stream if they have a common start, stop, size, divide and sampling_rate
         channel_infos = np.array(channel_infos,
                     dtype=[('first_time', 'i8'), ('max_time', 'i8'),
                            ('divide', 'i8'), ('size', 'i8'), ('sampling_rate', 'f8')])
@@ -165,13 +165,13 @@ class CedRawIO(BaseRawIO):
         sigs = np.zeros((size, num_chans), dtype='int16')
 
         info = self.stream_info[stream_index]
-        tFrom = info['first_time'] + info['divide'] * i_start
-        tUpto = info['first_time'] + info['divide'] * i_stop
+        t_from = info['first_time'] + info['divide'] * i_start
+        t_upto = info['first_time'] + info['divide'] * i_stop
 
         for i, chan_id in enumerate(signal_channels['id']):
             chan_ind = int(chan_id)
             sig = self.smrx_file.ReadInts(chan=chan_ind,
-                    nMax=size, tFrom=tFrom, tUpto=tUpto)
+                    nMax=size, tFrom=t_from, tUpto=t_upto)
             sigs[:, i] = sig
 
         return sigs
