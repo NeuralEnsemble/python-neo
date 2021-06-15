@@ -132,7 +132,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         BaseRawIO.__init__(self)
 
-        self.filename = filename
+        self.filename = str(filename)
 
         # remove extension from base _filenames
         for ext in self.extensions:

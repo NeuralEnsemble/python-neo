@@ -45,22 +45,15 @@ def cleanup_test_file(mode, path, directory=None):
             shutil.rmtree(path)
 
 
-def get_test_file_full_path(ioclass, filename=None,
-                            directory=None, clean=False):
+def get_test_file_full_path(ioclass, filename=None, directory=None, clean=False):
     """
     Get the full path for a file of the given filename.
 
     If filename is None, create a filename.
-
     If filename is a list, get the full path for each item in the list.
-
-    If return_path is True, also return the full path to the file.
 
     If directory is not None and path is not an absolute path already,
     use the file from the given directory.
-
-    If return_path is True, return the full path of the file along with
-    the io object.  return reader, path.  Default is False.
 
     If clean is True, try to delete existing versions of the file
     before creating the io object.  Default is False.
