@@ -74,7 +74,7 @@ class CedRawIO(BaseRawIO):
                 # max_times is included so +1
                 time_size = (max_time - first_time) / divide + 1
                 channel_infos.append((first_time, max_time, divide, time_size, sr))
-                gain = smrx.GetChannelScale(chan_ind)
+                gain = smrx.GetChannelScale(chan_ind) / 6553.6
                 offset = smrx.GetChannelOffset(chan_ind)
                 units = smrx.GetChannelUnits(chan_ind)
                 ch_name = smrx.GetChannelTitle(chan_ind)
