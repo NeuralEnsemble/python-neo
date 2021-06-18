@@ -80,8 +80,8 @@ class MaxwellRawIO(BaseRawIO):
                 else:
                     self.rec_name = rec_names[0]
                 signal_streams.append((stream_id, stream_id))
-            else:
-                raise NotImplementedError(f'This version {version} is not supported')
+        else:
+            raise NotImplementedError(f'This version {version} is not supported')
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # create signal channels
