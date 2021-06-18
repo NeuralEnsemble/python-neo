@@ -8,7 +8,7 @@ neuron/channel the spike is from).
 
 import numpy as np
 import quantities as pq
-from .spiketrain import SpikeTrain, normalise_times_array
+from .spiketrain import SpikeTrain, normalize_times_array
 
 
 def is_spiketrain_or_proxy(obj):
@@ -59,8 +59,6 @@ class SpikeTrainList(object):
 
     def __init__(self, items=None, segment=None):
         """Initialize self"""
-        # todo: handle annotations
-        # todo: handle waveforms
         if items is None:
             self._items = items
         else:
@@ -119,7 +117,7 @@ class SpikeTrainList(object):
     def _add_spiketrainlists(self, other, in_place=False):
         if self._spike_time_array is None or other._spike_time_array is None:
             # if either self or other is not storing multiplexed spike trains
-            # we return
+            # we combine them using the list of SpikeTrains representation
             if self._items is None:
                 self._spiketrains_from_array()
             if other._items is None:
@@ -131,6 +129,7 @@ class SpikeTrainList(object):
                 return self.__class__(items=self._items[:] + other._items)
         else:
             # both self and other are storing multiplexed spike trains
+            # so we update the array representation
             if self._spiketrain_metadata['t_start'] != other._spiketrain_metadata['t_start']:
                 raise ValueError("Incompatible t_start")
                 # todo: adjust times and t_start of other to be compatible with self
@@ -223,11 +222,11 @@ class SpikeTrainList(object):
 
     @classmethod
     def from_spike_time_array(cls, spike_time_array, channel_id_array,
-                              all_channel_ids=None, units=None,
+                              all_channel_ids, units=None,
                               t_start=None, t_stop=None, **annotations):
         """Create a SpikeTrainList object from an array of spike times
         and an array of channel ids."""
-        spike_time_array, dim = normalise_times_array(spike_time_array, units)
+        spike_time_array, dim = normalize_times_array(spike_time_array, units)
         obj = cls()
         obj._spike_time_array = spike_time_array
         obj._channel_id_array = channel_id_array
@@ -247,12 +246,8 @@ class SpikeTrainList(object):
         if self._spike_time_array is None:
             self._items = []
         else:
-            if self._all_channel_ids is None:
-                all_channel_ids = np.unique(self._channel_id_array)
-            else:
-                all_channel_ids = self._all_channel_ids
             self._items = []
-            for i, channel_id in enumerate(all_channel_ids):
+            for i, channel_id in enumerate(self._all_channel_ids):
                 mask = self._channel_id_array == channel_id
                 times = self._spike_time_array[mask]
                 spiketrain = SpikeTrain(times, **self._spiketrain_metadata)
@@ -260,7 +255,7 @@ class SpikeTrainList(object):
                     name: value[i]
                     for name, value in self._annotations.items()
                 }
-                # todo: consider adding channel id as metadata
+                spiketrain.annotate(channel_id=channel_id)
                 spiketrain.segment = self.segment
                 self._items.append(spiketrain)
 
@@ -287,8 +282,11 @@ class SpikeTrainList(object):
                         spike_times.append(spiketrain.times)
                     else:
                         spike_times.append(spiketrain.times.rescale(dim))
-                    channel_ids.append(i * np.ones(spiketrain.shape))
-                    # todo: what if the spiketrain has stored its channel id as metadata?
+                    if "channel_id" in spiketrain.annotations and isinstance(spiketrain.annotations["channel_id"], int):
+                        ch_id = spiketrain.annotations["channel_id"]
+                    else:
+                        ch_id = i
+                    channel_ids.append(ch_id * np.ones(spiketrain.shape, dtype=np.int64))
                 self._spike_time_array = np.hstack(spike_times) * self._items[0].units
                 self._channel_id_array = np.hstack(channel_ids)
         return self._channel_id_array, self._spike_time_array

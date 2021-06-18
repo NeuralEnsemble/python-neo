@@ -110,7 +110,7 @@ def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None, copy=True,
     return obj
 
 
-def normalise_times_array(times, units, dtype=None, copy=True):
+def normalize_times_array(times, units=None, dtype=None, copy=True):
     """
     Return a quantity array with the correct units.
     There are four scenarios:
@@ -287,7 +287,7 @@ class SpikeTrain(DataObject):
         # Make sure units are consistent
         # also get the dimensionality now since it is much faster to feed
         # that to Quantity rather than a unit
-        times, dim = normalise_times_array(times, units, dtype, copy)
+        times, dim = normalize_times_array(times, units, dtype, copy)
 
         # Construct Quantity from data
         obj = times.view(cls)

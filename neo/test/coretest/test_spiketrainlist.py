@@ -74,10 +74,13 @@ class TestSpikeTrainList(unittest.TestCase):
 
         self.stl_from_obj_list = SpikeTrainList(items=(
             SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms",
-                       t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-            SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+                       t_start=0 * pq.ms, t_stop=100.0 * pq.ms, channel_id=101),
+            SpikeTrain([0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms,
+                       channel_id=102),
+            SpikeTrain([1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms,
+                       channel_id=103),
+            SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms,
+                       channel_id=104),
         ))
 
         self.stl_from_obj_list_incl_proxy = SpikeTrainList(items=(
@@ -287,6 +290,6 @@ class TestSpikeTrainList(unittest.TestCase):
         channel_id_array, spike_time_array = self.stl_from_obj_list.multiplexed
         assert type(spike_time_array) == pq.Quantity
         assert type(channel_id_array) == np.ndarray
-        assert_array_equal(channel_id_array, np.array([0, 0, 0, 0, 1, 1, 2, 2]))
+        assert_array_equal(channel_id_array, np.array([101, 101, 101, 101, 102, 102, 103, 103]))
         assert_array_equal(spike_time_array, np.array(
             [0.5, 0.6, 23.6, 99.2, 0.7, 11.2, 1.1, 88.5]) * pq.ms)
