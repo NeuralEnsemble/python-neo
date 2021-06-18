@@ -144,7 +144,8 @@ class AxonaRawIO(BaseRawIO):
             signal_channels = self._get_signal_chan_header()
 
         # SCAN TETRODE FILES
-        # In this IO one tetrode corresponds to one unit
+        # In this IO one tetrode corresponds to one unit as spikes are not
+        # sorted yet.
         self._raw_spikes = []
         spike_channels = []
         if self.tetrode_files:
