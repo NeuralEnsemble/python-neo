@@ -380,13 +380,7 @@ class AxonaRawIO(BaseRawIO):
         assert seg_index == 0
 
         tetrode_id = unit_index
-
-        # spike times are repeated for each contact -> use only first contact
-        unit_spikes = self._get_spike_timestamps(block_index, seg_index,
-                                                 unit_index, t_start, t_stop)
         waveforms = self._raw_spikes[tetrode_id]['samples']
-        nb_spikes = len(unit_spikes)
-        nb_samples_per_waveform = waveforms.shape[-1]
 
         # slice timestamps / waveforms only when necessary
         if t_start is None and t_stop is None:
