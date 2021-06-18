@@ -1,10 +1,11 @@
 """
-Class for reading  spikegadgets file.
-Only signals ability at the moment.
+Class for reading spikegadgets files.
+Only continuous signals are supported at the moment.
 
 https://spikegadgets.com/spike-products/
 
-Some doc here: https://bitbucket.org/mkarlsso/trodes/wiki/Configuration
+Documentation of the format:
+https://bitbucket.org/mkarlsso/trodes/wiki/Configuration
 
 Note :
   * this file format have multiple version. news version include the gain for scaling.
@@ -12,8 +13,8 @@ Note :
      files to test this. So now the gain is "hardcoded" to 1. and so units
      is not handled correctly.
 
-The file ".rec" have :
-  * a fist part in text with xml informations
+The ".rec" file format contains:
+  * a first  text part with information in an XML structure
   * a second part for the binary buffer
 
 Author: Samuel Garcia
@@ -36,7 +37,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
             filename ".rec"
         selected_streams: None, list, str
             sublist of streams to load/expose to API
-            uselfull for spikeextractor when one stream isneed.
+            useful for spikeextractor when one stream only is needed.
             For instance streams = ['ECU', 'trodes']
             'trodes' is name for ephy channel (ntrodes)
         """
@@ -58,7 +59,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     break
 
             if header_size is None:
-                ValueError("SpikeGadgets : the xml header do not contain </Configuration>")
+                ValueError("SpikeGadgets: the xml header does not contain '</Configuration>'")
 
             f.seek(0)
             header_txt = f.read(header_size).decode('utf8')
@@ -250,11 +251,11 @@ class SpikeGadgetsRawIO(BaseRawIO):
                 chan_mask = self._mask_channels_bytes[stream_id][chan_ind]
                 stream_mask |= chan_mask
 
-        # this do a copy from memmap to memory
+        # this copies the data from the memmap into memory
         raw_unit8_mask = raw_unit8[:, stream_mask]
         shape = raw_unit8_mask.shape
         shape = (shape[0], shape[1] // 2)
-        # reshape the and re type by view
+        # reshape the and retype by view
         raw_unit16 = raw_unit8_mask.flatten().view('int16').reshape(shape)
 
         if re_order is not None:
