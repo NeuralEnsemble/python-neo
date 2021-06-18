@@ -175,7 +175,7 @@ class NixIO(BaseIO):
         """
         check_nix_version()
         BaseIO.__init__(self, filename)
-        self.filename = filename
+        self.filename = str(filename)
         if mode == "ro":
             filemode = nix.FileMode.ReadOnly
         elif mode == "rw":

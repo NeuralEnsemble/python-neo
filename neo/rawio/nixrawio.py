@@ -42,7 +42,7 @@ class NIXRawIO(BaseRawIO):
     def __init__(self, filename=''):
         check_nix_version()
         BaseRawIO.__init__(self)
-        self.filename = filename
+        self.filename = str(filename)
 
     def _source_name(self):
         return self.filename
