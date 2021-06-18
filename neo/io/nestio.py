@@ -655,6 +655,150 @@ class NestIO(BaseIO):
                                        id_column, time_column,
                                        **args)[0]
 
+    def __read_spiketimes(self, gdf_id_list, time_unit,
+                          t_start, t_stop, id_column,
+                          time_column, **args):
+        """
+        Internal function for reading multiple spiketrains at once.
+        It does not create neo.SpikeTrain objects, useful for large-scale
+        simulations where the overhead of the neo objects can slow everything.
+        This function is called by read_spiketimelist().
+        """
+
+        if 'gdf' not in self.avail_IOs:
+            raise ValueError('Can not load spiketrains. No GDF file provided.')
+
+        # assert that the file contains spike times
+        if time_column is None:
+            raise ValueError('Time column is None. No spike times to '
+                             'be read in.')
+
+        gdf_id_list, id_column = self._check_input_gids(gdf_id_list, id_column)
+
+        t_start, t_stop = self._check_input_times(t_start, t_stop,
+                                                  mandatory=True)
+
+        # assert that no single column is assigned twice
+        if id_column == time_column:
+            raise ValueError('One or more columns have been specified to '
+                             'contain the same data.')
+
+        # defining standard column order for internal usage
+        # [id_column, time_column, value_column1, value_column2, ...]
+        column_ids = [id_column, time_column]
+        for i, cid in enumerate(column_ids):
+            if cid is None:
+                column_ids[i] = -1
+
+        (condition, condition_column, sorting_column) = \
+            self._get_conditions_and_sorting(id_column, time_column,
+                                             gdf_id_list, t_start, t_stop)
+
+        data = self.avail_IOs['gdf'].get_columns(
+            column_ids=column_ids,
+            condition=condition,
+            condition_column=condition_column,
+            sorting_columns=sorting_column)
+
+        # create a list of SpikeTrains for all neuron IDs in gdf_id_list
+        # assign spike times to neuron IDs if id_column is given
+        if id_column is not None:
+            if (gdf_id_list == []) and id_column is not None:
+                gdf_id_list = np.unique(data[:, id_column])
+
+            spiketime_list = []
+            id_list = []
+            for nid in gdf_id_list:
+                selected_ids = self._get_selected_ids(nid, id_column,
+                                                      time_column, t_start,
+                                                      t_stop, time_unit, data)
+                times = data[selected_ids[0]:selected_ids[1], time_column]
+                spiketime_list.append(times.tolist())
+                id_list.append(nid)
+
+        # if id_column is not given, all spike times are collected in one
+        #  spike train with id=None
+        else:
+            raise ValueError('No neuron IDs found')
+        return spiketime_list, id_list
+
+    def read_spiketimelist(self, gid_list=None, time_unit=pq.ms, t_start=None,
+                           t_stop=None, sampling_period=None, id_column_dat=0,
+                           time_column_dat=1, value_columns_dat=2,
+                           id_column_gdf=0, time_column_gdf=1, value_types=None,
+                           value_units=None, lazy=False):
+        """
+        Reads two lists which contains lists of spiketimes and Neuron IDs
+        from the GDF data.
+
+        Arguments
+        ----------
+        gid_list : list, default: None
+            A list of GDF IDs of which to return SpikeTrain(s). gid_list must
+            be specified if the GDF file contains neuron IDs, the default None
+            then raises an error. Specify an empty list [] to retrieve the spike
+            trains of all neurons.
+        time_unit : Quantity (time), optional, default: quantities.ms
+            The time unit of recorded time stamps in DAT as well as GDF files.
+        t_start : Quantity (time), optional, default: 0 * pq.ms
+            Start time of SpikeTrain.
+        t_stop : Quantity (time), default: None
+            Stop time of SpikeTrain. t_stop must be specified, the default None
+            raises an error.
+        sampling_period : Quantity (frequency), optional, default: None
+            Sampling period of the recorded data.
+        id_column_dat : int, optional, default: 0
+            Column index of neuron IDs in the DAT file.
+        time_column_dat : int, optional, default: 1
+            Column index of time stamps in the DAT file.
+        value_columns_dat : int, optional, default: 2
+            Column index of the analog values recorded in the DAT file.
+        id_column_gdf : int, optional, default: 0
+            Column index of neuron IDs in the GDF file.
+        time_column_gdf : int, optional, default: 1
+            Column index of time stamps in the GDF file.
+        value_types : str, optional, default: None
+            Nest data type of the analog values recorded, eg.'V_m', 'I', 'g_e'
+        value_units : Quantity (amplitude), default: None
+            The physical unit of the recorded signal values.
+        lazy : bool, optional, default: False
+
+        Returns
+        -------
+        spiketimelist : list
+            A list of lists containing the spike times for each neuron.
+            The spike times are in the same units as the GDF files
+            (usually ms, but not always).
+        neuron_ids : list
+            List of neuron ids each corresponding to one spike time list in
+            `spiketimelist`.
+        """
+        assert not lazy, 'Do not support lazy'
+
+        if isinstance(gid_list, tuple):
+            if gid_list[0] > gid_list[1]:
+                raise ValueError('The second entry in gid_list must be '
+                                 'greater or equal to the first entry.')
+            gid_list = range(gid_list[0], gid_list[1] + 1)
+
+        # __read_xxx() needs a list of IDs
+        if gid_list is None:
+            gid_list = [None]
+
+        # Load analogsignals and attach to Segment
+        if 'gdf' in self.avail_formats:
+            spiketimelist, neuron_ids = self.__read_spiketimes(
+                gid_list,
+                time_unit,
+                t_start,
+                t_stop,
+                id_column=id_column_gdf,
+                time_column=time_column_gdf)
+        else:
+            raise TypeError('Spiketimelist only works on .gdf files')
+
+        return spiketimelist, neuron_ids
+
 
 class ColumnIO:
     '''
