@@ -22,7 +22,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 import numpy as np
 import os
 import re
-import contextlib
+import pathlib
 import datetime
 
 
@@ -66,10 +66,11 @@ class AxonaRawIO(BaseRawIO):
     def __init__(self, filename):
         BaseRawIO.__init__(self)
 
+        filename = pathlib.Path(filename)
         # We accept base filenames, .bin and .set extensions
-        self.filename = filename.replace('.bin', '').replace('.set', '')
-        self.bin_file = os.path.join(self.filename + '.bin')
-        self.set_file = os.path.join(self.filename + '.set')
+        self.filename = filename.with_suffix('')
+        self.bin_file = self.filename.with_suffix('.bin')
+        self.set_file = self.filename.with_suffix('.set')
         self.set_file_encoding = 'cp1252'
 
     def _source_name(self):

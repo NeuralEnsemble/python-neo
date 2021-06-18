@@ -27,7 +27,8 @@ from collections import OrderedDict
 
 class Spike2RawIO(BaseRawIO):
     """
-
+    This implementation in neo read only old smr files.
+    For smrx files you need to use CedRawIO which is based on sonpy.
     """
     extensions = ['smr']
     rawmode = 'one-file'
@@ -554,10 +555,20 @@ class Spike2RawIO(BaseRawIO):
             timestamps, labels = self._get_internal_timestamp_(seg_index,
                                                                chan_id, t_start, t_stop,
                                                                other_field='marker')
+            # the real encoding is unknown ASCII make it safe
+            if labels.dtype.kind == 'S':
+                labels = np.char.decode(labels, 'ascii', errors='ignore')
+            else:
+                labels = labels.astype('U')
         elif chan_info['kind'] == 8:
             timestamps, labels = self._get_internal_timestamp_(seg_index,
                                                                chan_id, t_start, t_stop,
                                                                other_field='label')
+            # the real encoding is unknown ASCII make it safe
+            if labels.dtype.kind == 'S':
+                labels = np.char.decode(labels, 'ascii', errors='ignore')
+            else:
+                labels = labels.astype('U')
         else:
             timestamps = self._get_internal_timestamp_(seg_index,
                                                        chan_id, t_start, t_stop, other_field=None)

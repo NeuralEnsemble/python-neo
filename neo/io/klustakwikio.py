@@ -294,7 +294,7 @@ class KlustaKwikIO(BaseIO):
 
                 # Convert to samples
                 spike_times_in_samples = np.rint(
-                    np.array(st) * sr).astype(np.int)
+                    np.array(st) * sr).astype(np.int64)
 
                 # Try to get features from spiketrain
                 try:

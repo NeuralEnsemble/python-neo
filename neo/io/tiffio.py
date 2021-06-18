@@ -103,13 +103,13 @@ class TiffIO(BaseIO):
         list_data_image = []
         for file_name in file_name_list:
             list_data_image.append(
-                np.array(Image.open(self.filename + "/" + file_name), dtype=np.float))
+                np.array(Image.open(self.filename + "/" + file_name), dtype=np.float32))
         list_data_image = np.array(list_data_image)
         if len(list_data_image.shape) == 4:
             list_data_image = []
             for file_name in file_name_list:
                 list_data_image.append(
-                    np.array(Image.open(self.filename + "/" + file_name).convert('L'), dtype=np.float))
+                    np.array(Image.open(self.filename + "/" + file_name).convert('L'), dtype=np.float32))
 
         print("read block")
         image_sequence = ImageSequence(np.stack(list_data_image),
