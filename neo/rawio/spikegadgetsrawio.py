@@ -34,7 +34,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
     def __init__(self, filename='', selected_streams=None):
         """
         filename: str
-            filename ".rec"
+            The filename
         selected_streams: None, list, str
             sublist of streams to load/expose to API
             useful for spikeextractor when one stream only is needed.
