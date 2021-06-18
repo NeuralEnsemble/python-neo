@@ -231,11 +231,11 @@ class AxonaRawIO(BaseRawIO):
         bl_ann = self.raw_annotations['blocks'][0]
         seg_ann = bl_ann['segments'][0]
         seg_ann['rec_datetime'] = self.read_datetime()
-        if seg_ann['signals']:
+        if len(seg_ann['signals']):
             seg_ann['signals'][0]['__array_annotations__']['tetrode_id'] = \
                 [tetr for tetr in self.get_active_tetrode() for _ in range(4)]
 
-        if seg_ann['spikes']:
+        if len(seg_ann['spikes']):
             # adding segment annotations
             seg_keys = ['experimenter', 'comments', 'sw_version']
             for seg_key in seg_keys:
