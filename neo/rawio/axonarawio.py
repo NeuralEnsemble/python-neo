@@ -164,7 +164,7 @@ class AxonaRawIO(BaseRawIO):
                     tetrode_file,
                     dtype=self.file_parameters['unit']['data_type'],
                     mode='r', offset=tdict['header_size'],
-                    shape=(tdict['num_spikes'] * 4))
+                    shape=(tdict['num_spikes'], 4))
                 self._raw_spikes.append(spikes)
 
                 unit_name = f'tetrode {i + 1}'
@@ -342,7 +342,7 @@ class AxonaRawIO(BaseRawIO):
         raw_spikes = self._raw_spikes[tetrode_id]
         nb_tetrode_spikes = raw_spikes.shape[0]
         # also take into account last, potentially incomplete set of spikes
-        nb_unit_spikes = int(np.ceil(nb_tetrode_spikes / 4))
+        nb_unit_spikes = int(np.ceil(nb_tetrode_spikes))
         return nb_unit_spikes
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index,
@@ -354,7 +354,7 @@ class AxonaRawIO(BaseRawIO):
         raw_spikes = self._raw_spikes[tetrode_id]
 
         # spike times are repeated for each contact -> use only first contact
-        unit_spikes = raw_spikes['spiketimes'][::4]
+        unit_spikes = raw_spikes['spiketimes'][:, 0]
 
         # slice spike times only if needed
         if t_start is None and t_stop is None:
@@ -390,7 +390,6 @@ class AxonaRawIO(BaseRawIO):
 
         # slice timestamps / waveforms only when necessary
         if t_start is None and t_stop is None:
-            waveforms = waveforms.reshape(nb_spikes, 4, nb_samples_per_waveform)
             return waveforms
 
         if t_start is None:
@@ -399,14 +398,7 @@ class AxonaRawIO(BaseRawIO):
             t_stop = self._segment_t_stop(block_index, seg_index)
 
         mask = self._get_temporal_mask(t_start, t_stop, tetrode_id)
-
-        # unwrap mask to match waveform dimension
-        mask = np.repeat(mask, 4)
-        mask = mask[:len(waveforms)]
         waveforms = waveforms[mask]
-
-        # waveforms must be a 3D numpy array (nb_spike, nb_channel, nb_sample)
-        waveforms = waveforms.reshape(nb_spikes, 4, nb_samples_per_waveform)
 
         return waveforms
 
@@ -446,7 +438,7 @@ class AxonaRawIO(BaseRawIO):
 
         # spike times are repeated for each contact -> use only first contact
         raw_spikes = self._raw_spikes[tetrode_id]
-        unit_spikes = raw_spikes['spiketimes'][::4]
+        unit_spikes = raw_spikes['spiketimes'][:, 0]
 
         # convert t_start and t_stop to sampling frequency
         # Note: this assumes no time offset!
