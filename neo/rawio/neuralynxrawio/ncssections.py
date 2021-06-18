@@ -266,11 +266,6 @@ class NcsSectionsFactory:
         lastRecNumSamps = blkLen
         recFreq = ncsMemMap['sample_rate'][0]
 
-        rh0 = CscRecordHeader(ncsMemMap, 0)
-        chanNum = rh0.channel_id
-        recFreq = rh0.sample_rate
-
-
         # curBlock = NcsSection(0, rh0.timestamp, -1, -1, -1)
         # ncsSects.sects.append(curBlock)
 
