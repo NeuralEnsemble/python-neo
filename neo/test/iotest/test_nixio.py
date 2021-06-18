@@ -738,7 +738,7 @@ class NixIOWriteTest(NixIOTest):
             IrregularlySampledSignal(times=np.sort(np.random.random(10)),
                                      signal=np.random.random((10, 13)),
                                      units="mV", time_units="s",
-                                     dtype=np.float,
+                                     dtype=np.float32,
                                      name="some sort of signal",
                                      description="the signal is described")
         )
