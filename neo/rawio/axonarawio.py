@@ -371,7 +371,8 @@ class AxonaRawIO(BaseRawIO):
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
-        spike_times /= self._to_hz(self.file_parameters['unit']['timebase'])
+        spike_times /= self._to_hz(self.file_parameters['unit']['timebase'],
+                                   dtype=int)
         return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
@@ -437,8 +438,8 @@ class AxonaRawIO(BaseRawIO):
         # convert t_start and t_stop to sampling frequency
         # Note: this assumes no time offset!
         unit_params = self.file_parameters['unit']
-        lim0 = t_start * self._to_hz(unit_params['timebase'])
-        lim1 = t_stop * self._to_hz(unit_params['timebase'])
+        lim0 = t_start * self._to_hz(unit_params['timebase'], dtype=int)
+        lim1 = t_stop * self._to_hz(unit_params['timebase'], dtype=int)
 
         mask = (unit_spikes >= lim0) & (unit_spikes <= lim1)
 
@@ -578,5 +579,5 @@ class AxonaRawIO(BaseRawIO):
 
         return np.array(sig_channels, dtype=_signal_channel_dtype)
 
-    def _to_hz(self, param, dtype=int):
+    def _to_hz(self, param, dtype=float):
         return dtype(param.replace(' hz', ''))
