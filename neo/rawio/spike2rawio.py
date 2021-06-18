@@ -27,7 +27,8 @@ from collections import OrderedDict
 
 class Spike2RawIO(BaseRawIO):
     """
-
+    This implementation in neo read only old smr files.
+    For smrx files you need to use CedRawIO which is based on sonpy.
     """
     extensions = ['smr']
     rawmode = 'one-file'
