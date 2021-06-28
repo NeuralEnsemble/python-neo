@@ -190,7 +190,7 @@ class SpikeTrain(DataObject):
             each spike.
         :units: (quantity units) Required if :attr:`times` is a list or
                 :class:`~numpy.ndarray`, not if it is a
-                :class:`~quantites.Quantity`.
+                :class:`~quantities.Quantity`.
         :t_stop: (quantity scalar, numpy scalar, or float) Time at which
             :class:`SpikeTrain` ended. This will be converted to the
             same units as :attr:`times`. This argument is required because it

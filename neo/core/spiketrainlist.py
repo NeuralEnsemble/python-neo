@@ -141,8 +141,9 @@ class SpikeTrainList(object):
             combined_channel_id_array = np.hstack(
                 (self._channel_id_array, other._channel_id_array))
             combined_channel_ids = set(list(self._all_channel_ids) + other._all_channel_ids)
-            if (len(combined_channel_ids) !=
-                    len(self._all_channel_ids) + len(other._all_channel_ids)):
+            if len(combined_channel_ids) != (
+                len(self._all_channel_ids) + len(other._all_channel_ids)
+            ):
                 raise ValueError("Duplicate channel ids, please rename channels before adding")
             if in_place:
                 self._spike_time_array = combined_spike_time_array
@@ -222,10 +223,36 @@ class SpikeTrainList(object):
 
     @classmethod
     def from_spike_time_array(cls, spike_time_array, channel_id_array,
-                              all_channel_ids, units=None,
-                              t_start=None, t_stop=None, **annotations):
+                              all_channel_ids, t_stop, units=None,
+                              t_start=None, **annotations):
         """Create a SpikeTrainList object from an array of spike times
-        and an array of channel ids."""
+        and an array of channel ids.
+
+        *Required attributes/properties*:
+
+        :spike_time_array: (quantity array 1D, numpy array 1D, or list) The times of
+            all spikes.
+        :channel_id_array: (numpy array 1D, dtype int) The id of the channel (e.g. the
+            neuron) to which each spike belongs. This array should have the same length
+            as :attr:`spike_time_array`
+        :all_channel_ids`: (list, tuple, or numpy array 1D containing integers) All
+            channel ids. This is needed to represent channels in which there are no
+            spikes.
+        :units: (quantity units) Required if :attr:`spike_time_array` is not a
+                :class:`~quantities.Quantity`.
+        :t_stop: (quantity scalar, numpy scalar, or float) Time at which
+            spike recording ended. This will be converted to the
+            same units as :attr:`spike_time_array` or :attr:`units`.
+
+        *Recommended attributes/properties*:
+        :t_start: (quantity scalar, numpy scalar, or float) Time at which
+            spike recording began. This will be converted to the
+            same units as :attr:`spike_time_array` or :attr:`units`.
+            Default: 0.0 seconds.
+
+
+        *Optional attributes/properties*:
+        """
         spike_time_array, dim = normalize_times_array(spike_time_array, units)
         obj = cls()
         obj._spike_time_array = spike_time_array
@@ -282,7 +309,9 @@ class SpikeTrainList(object):
                         spike_times.append(spiketrain.times)
                     else:
                         spike_times.append(spiketrain.times.rescale(dim))
-                    if "channel_id" in spiketrain.annotations and isinstance(spiketrain.annotations["channel_id"], int):
+                    if ("channel_id" in spiketrain.annotations
+                        and isinstance(spiketrain.annotations["channel_id"], int)
+                        ):
                         ch_id = spiketrain.annotations["channel_id"]
                     else:
                         ch_id = i
