@@ -6,6 +6,7 @@ Tests of neo.io.nwbio
 from __future__ import unicode_literals, print_function, division, absolute_import
 import unittest
 import os
+from datetime import datetime
 try:
     from urllib.request import urlretrieve
 except ImportError:
@@ -49,10 +50,13 @@ class TestNWBIO(unittest.TestCase):
 
     def test_roundtrip(self):
 
+        annotations = {
+            "session_start_time": datetime.now()
+        }
         # Define Neo blocks
-        bl0 = Block(name='First block')
-        bl1 = Block(name='Second block')
-        bl2 = Block(name='Third block')
+        bl0 = Block(name='First block', **annotations)
+        bl1 = Block(name='Second block', **annotations)
+        bl2 = Block(name='Third block', **annotations)
         original_blocks = [bl0, bl1, bl2]
 
         num_seg = 4  # number of segments
@@ -185,7 +189,7 @@ class TestNWBIO(unittest.TestCase):
     def test_roundtrip_with_annotations(self):
         # test with NWB-specific annotations
 
-        original_block = Block(name="experiment")
+        original_block = Block(name="experiment", session_start_time=datetime.now())
         segment = Segment(name="session 1")
         original_block.segments.append(segment)
         segment.block = original_block

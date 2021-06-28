@@ -7,7 +7,6 @@ IO class for reading data from a Neurodata Without Borders (NWB) dataset
 Documentation : https://www.nwb.org/
 Depends on: h5py, nwb, dateutil
 Supported: Read, Write
-Specification - https://github.com/NeurodataWithoutBorders/specification
 Python API -  https://pynwb.readthedocs.io
 Sample datasets from CRCNS - https://crcns.org/NWB
 Sample datasets from Allen Institute - http://alleninstitute.github.io/AllenSDK/cell_types.html#neurodata-without-borders
@@ -401,7 +400,6 @@ class NWBIO(BaseIO):
         Write list of blocks to the file
         """
         # todo: allow metadata in NWBFile constructor to be taken from kwargs
-        start_time = datetime.now()
         annotations = defaultdict(set)
         for annotation_name in GLOBAL_ANNOTATIONS:
             if annotation_name in kwargs:
@@ -429,7 +427,7 @@ class NWBIO(BaseIO):
             annotations["session_description"] = blocks[0].description or self.filename
             # todo: concatenate descriptions of multiple blocks if different
         if "session_start_time" not in annotations:
-            annotations["session_start_time"] = datetime.now()
+            raise Exception("Writing to NWB requires an annotation 'session_start_time'")
         # todo: handle subject
         # todo: store additional Neo annotations somewhere in NWB file
         nwbfile = NWBFile(**annotations)
