@@ -184,9 +184,7 @@ class NeuralynxRawIO(BaseRawIO):
                         'Several nse or ntt files have the same unit_id!!!'
                     self.nse_ntt_filenames[chan_uid] = filename
 
-
                     data = self._get_file_map(filename)
-
                     self._spike_memmap[chan_uid] = data
 
                     unit_ids = np.unique(data['unit_id'])
@@ -353,13 +351,13 @@ class NeuralynxRawIO(BaseRawIO):
         see also https://github.com/numpy/numpy/issues/19340
         """
         filename = pathlib.Path(filename)
-        suffix = filename.suffix
+        suffix = filename.suffix.lower()[1:]
 
-        if suffix == '.ncs':
+        if suffix == 'ncs':
             return np.memmap(filename, dtype=self._ncs_dtype, mode='r',
                       offset=NlxHeader.HEADER_SIZE)
 
-        elif suffix in ['.nse', '.ntt']:
+        elif suffix in ['nse', 'ntt']:
             info = NlxHeader(filename)
             dtype = get_nse_or_ntt_dtype(info, suffix)
 
@@ -371,7 +369,7 @@ class NeuralynxRawIO(BaseRawIO):
             return np.memmap(filename, dtype=dtype, mode='r',
                              offset=NlxHeader.HEADER_SIZE)
 
-        elif suffix == '.nev':
+        elif suffix == 'nev':
             return np.memmap(filename, dtype=nev_dtype, mode='r',
                              offset=NlxHeader.HEADER_SIZE)
 
