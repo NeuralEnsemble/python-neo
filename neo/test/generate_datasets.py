@@ -10,8 +10,10 @@ from numpy.random import rand
 import quantities as pq
 
 from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, Group,
-                      Segment, SpikeTrain, ImageSequence, CircularRegionOfInterest, ChannelView,
-                      RectangularRegionOfInterest, PolygonRegionOfInterest, class_by_name)
+                      Segment, SpikeTrain, ImageSequence, ChannelView,
+                      CircularRegionOfInterest, RectangularRegionOfInterest,
+                      PolygonRegionOfInterest, class_by_name)
+from neo.core.spiketrainlist import SpikeTrainList
 
 from neo.core.baseneo import _container_name
 from neo.core.dataobject import DataObject
