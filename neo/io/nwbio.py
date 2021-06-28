@@ -457,6 +457,12 @@ class NWBIO(BaseIO):
         io_nwb.write(nwbfile)
         io_nwb.close()
 
+        io_validate = pynwb.NWBHDF5IO(self.filename, "r")
+        errors = pynwb.validate(io_validate, namespace="core")
+        if errors:
+            raise Exception(f"Errors found when validating {self.filename}")
+        io_validate.close()
+
     def write_block(self, nwbfile, block, **kwargs):
         """
         Write a Block to the file
