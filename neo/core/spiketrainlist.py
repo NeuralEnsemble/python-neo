@@ -32,12 +32,12 @@ class SpikeTrainList(object):
 
         >>> stl = SpikeTrainList(items=(
         ...     SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ...     SpikeTrain([ 0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ...     SpikeTrain([ 1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+        ...     SpikeTrain([0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+        ...     SpikeTrain([1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
         ...     SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
         ... ))
         >>> stl.multiplexed
-        (array([0., 0., 0., 0., 1., 1., 2., 2.]),
+        (array([0, 0, 0, 0, 1, 1, 2, 2]),
          array([ 0.5,  0.6, 23.6, 99.2,  0.7, 11.2,  1.1, 88.5]) * ms)
 
         # Create from a pair of arrays
@@ -224,7 +224,7 @@ class SpikeTrainList(object):
     @classmethod
     def from_spike_time_array(cls, spike_time_array, channel_id_array,
                               all_channel_ids, t_stop, units=None,
-                              t_start=None, **annotations):
+                              t_start=0.0 * pq.s, **annotations):
         """Create a SpikeTrainList object from an array of spike times
         and an array of channel ids.
 
@@ -232,10 +232,10 @@ class SpikeTrainList(object):
 
         :spike_time_array: (quantity array 1D, numpy array 1D, or list) The times of
             all spikes.
-        :channel_id_array: (numpy array 1D, dtype int) The id of the channel (e.g. the
+        :channel_id_array: (numpy array 1D of dtype int) The id of the channel (e.g. the
             neuron) to which each spike belongs. This array should have the same length
             as :attr:`spike_time_array`
-        :all_channel_ids`: (list, tuple, or numpy array 1D containing integers) All
+        :all_channel_ids: (list, tuple, or numpy array 1D containing integers) All
             channel ids. This is needed to represent channels in which there are no
             spikes.
         :units: (quantity units) Required if :attr:`spike_time_array` is not a
