@@ -317,7 +317,7 @@ class NWBIO(BaseIO):
             if epoch_names is not None:
                 unique_epoch_names = np.unique(epoch_names)
                 for epoch_name in unique_epoch_names:
-                    index = (epoch_names == epoch_name)
+                    index, = np.where((epoch_names == epoch_name))
                     epoch = EpochProxy(self._file.epochs, epoch_name, index)
                     if not lazy:
                         epoch = epoch.load()
