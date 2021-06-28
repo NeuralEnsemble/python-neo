@@ -1,16 +1,14 @@
 """
 NWBIO
-========
+=====
 
 IO class for reading data from a Neurodata Without Borders (NWB) dataset
 
-Documentation : https://neurodatawithoutborders.github.io
+Documentation : https://www.nwb.org/
 Depends on: h5py, nwb, dateutil
 Supported: Read, Write
 Specification - https://github.com/NeurodataWithoutBorders/specification
-Python APIs - (1) https://github.com/AllenInstitute/nwb-api/tree/master/ainwb
-	          (2) https://github.com/AllenInstitute/AllenSDK/blob/master/allensdk/core/nwb_data_set.py
-              (3) https://github.com/NeurodataWithoutBorders/api-python
+Python API -  https://pynwb.readthedocs.io
 Sample datasets from CRCNS - https://crcns.org/NWB
 Sample datasets from Allen Institute - http://alleninstitute.github.io/AllenSDK/cell_types.html#neurodata-without-borders
 """
