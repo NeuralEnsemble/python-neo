@@ -276,11 +276,11 @@ class NWBIO(BaseIO):
 
         return list(self._blocks.values())
 
-    def read_block(self, lazy=False, **kargs):
+    def read_block(self, lazy=False, block_index=0, **kargs):
         """
         Load the first block in the file.
         """
-        return self.read_all_blocks(lazy=lazy)[0]
+        return self.read_all_blocks(lazy=lazy)[block_index]
 
     def _get_segment(self, block_name, segment_name):
         # If we've already created a Block with the given name return it,
