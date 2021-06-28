@@ -524,8 +524,8 @@ class NWBIO(BaseIO):
 
     def _write_signal(self, nwbfile, signal, electrodes):
         hierarchy = {'block': signal.segment.block.name, 'segment': signal.segment.name}
-        if "nwb_type" in signal.annotations:
-            timeseries_class = get_class(*signal.annotations["nwb_type"])
+        if "nwb_neurodata_type" in signal.annotations:
+            timeseries_class = get_class(*signal.annotations["nwb_neurodata_type"])
         else:
             timeseries_class = TimeSeries  # default
         additional_metadata = {name[4:]: value
@@ -649,7 +649,7 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
             value = getattr(timeseries, field_name)
             if value is not None:
                 self.annotations[f"nwb:{field_name}"] = value
-        self.annotations["nwb_type"] = (
+        self.annotations["nwb_neurodata_type"] = (
             timeseries.__class__.__module__,
             timeseries.__class__.__name__
         )
