@@ -12,7 +12,7 @@ try:
 except ImportError:
     from urllib import urlretrieve
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.core import AnalogSignal, SpikeTrain, Event, Epoch, IrregularlySampledSignal, Segment, Unit, Block, ChannelIndex, ImageSequence
+from neo.core import AnalogSignal, SpikeTrain, Event, Epoch, IrregularlySampledSignal, Segment, Block, ImageSequence
 try:
     import pynwb
     from neo.io.nwbio import NWBIO

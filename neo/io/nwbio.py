@@ -35,8 +35,8 @@ from neo.io.proxyobjects import (
     EpochProxy as BaseEpochProxy,
     SpikeTrainProxy as BaseSpikeTrainProxy
 )
-from neo.core import (Segment, SpikeTrain, Unit, Epoch, Event, AnalogSignal,
-                      IrregularlySampledSignal, ChannelIndex, Block, ImageSequence)
+from neo.core import (Segment, SpikeTrain, Epoch, Event, AnalogSignal,
+                      IrregularlySampledSignal, Block, ImageSequence)
 
 # PyNWB imports
 try:
