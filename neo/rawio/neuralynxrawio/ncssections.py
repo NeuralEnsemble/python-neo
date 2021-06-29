@@ -255,22 +255,27 @@ class NcsSectionsFactory:
         if not all(ncsMemMap['sample_rate'] == recFreq):
             raise IOError('Sampling frequency changed in records within file')
 
+        # find most frequent number of samples
+        exp_nb_valid = np.argmax(np.bincount(ncsMemMap['nb_valid']))
         # detect records with incomplete number of samples
-        gap_rec_ids = list(np.where(ncsMemMap['nb_valid'] != ncsMemMap['nb_valid'][0])[0])
+        gap_rec_ids = list(np.where(ncsMemMap['nb_valid'] != exp_nb_valid)[0])
 
         pred_times = np.rint(ncsMemMap['timestamp'] + 1e6 / ncsSects.sampFreqUsed * ncsMemMap['nb_valid']).astype(int)
         max_pred_times = pred_times + maxGapLen
-        delayed_recs = list(np.where(max_pred_times[:-1] <= ncsMemMap['timestamp'][1:])[0])
+        # data records that start later than the predicted time (including the
+        # maximal accepted gap length) are considered delayed a gap is
+        # registered
+        delayed_recs = list(np.where(max_pred_times[:-1] < ncsMemMap['timestamp'][1:])[0])
         gap_rec_ids.extend(delayed_recs)
 
         # cleaning extracted gap ids
+        # last record can not be the beginning of a gap
         last_rec_id = len(ncsMemMap['timestamp']) - 1
         if last_rec_id in gap_rec_ids:
             gap_rec_ids.remove(last_rec_id)
-        gap_rec_ids = sorted(set(gap_rec_ids))
 
-        if len(ncsMemMap['timestamp'])-1 in gap_rec_ids:
-            print('here')
+        # gap ids can only be listed once
+        gap_rec_ids = sorted(set(gap_rec_ids))
 
         # create recording segments from identified gaps
         ncsSects.sects.append(NcsSection(0, ncsMemMap['timestamp'][0], -1, -1, -1))
@@ -290,7 +295,6 @@ class NcsSectionsFactory:
         n_samples = np.sum(ncsMemMap['nb_valid'][curr_sec.startRec:])
         curr_sec.n_samples = n_samples
 
-
         # calculate the estimated frequency of the block with the most samples
         max_blk_idx = np.argmax([bl.endRec - bl.startRec for bl in ncsSects.sects])
         max_blk = ncsSects.sects[max_blk_idx]
@@ -301,7 +305,8 @@ class NcsSectionsFactory:
         ncsSects.sampFreqUsed = maxBlkFreqEstimate
         ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(
                                                                         maxBlkFreqEstimate)
-
+        # free memory that is unnecessarily occupied by the memmap
+        # (see https://github.com/numpy/numpy/issues/19340)
         del ncsMemMap
         return ncsSects
 
