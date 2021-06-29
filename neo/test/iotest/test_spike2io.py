@@ -12,22 +12,24 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
     ioclass = Spike2IO
-    files_to_test = [
-        'File_spike2_1.smr',
-        'File_spike2_2.smr',
-        'File_spike2_3.smr',
-        '130322-1LY.smr',  # this is for bug 182
-        'multi_sampling.smr',  # this is for bug 466
-        'Two-mice-bigfile-test000.smr',  # SONv9 file
+    entities_to_download = [
+        'spike2'
     ]
-    files_to_download = files_to_test
+    entities_to_test = [
+        'spike2/File_spike2_1.smr',
+        'spike2/File_spike2_2.smr',
+        'spike2/File_spike2_3.smr',
+        'spike2/130322-1LY.smr',  # this is for bug 182
+        'spike2/multi_sampling.smr',  # this is for bug 466
+        'spike2/Two-mice-bigfile-test000.smr',  # SONv9 file
+    ]
 
     def test_multi_sampling_no_grouping(self):
         """
         Some file can have several sampling_rate.
         This one contain 3 differents signals sampling rate
         """
-        filename = self.get_filename_path('multi_sampling.smr')
+        filename = self.get_local_path('spike2/multi_sampling.smr')
         reader = Spike2IO(filename=filename, try_signal_grouping=False)
         bl = reader.read_block(signal_group_mode='group-by-same-units')
         assert len(bl.segments) == 10
@@ -55,7 +57,7 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         Some files can contain multiple sampling rates.
         This file contains three signals with different sampling rates.
         """
-        filename = self.get_filename_path('multi_sampling.smr')
+        filename = self.get_local_path('spike2/multi_sampling.smr')
         reader = Spike2IO(filename=filename, try_signal_grouping=True)
         bl = reader.read_block(signal_group_mode='group-by-same-units')
         assert len(bl.segments) == 10

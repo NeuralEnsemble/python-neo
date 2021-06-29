@@ -261,7 +261,7 @@ class AlphaOmegaIO(BaseIO):
                         list_data[ind_chan].append(ind_block)
 
         # step 4: compute the length (number of samples) of the channels
-        chan_len = np.zeros(len(list_data), dtype=np.int)
+        chan_len = np.zeros(len(list_data), dtype=np.int64)
         for ind_chan, list_blocks in enumerate(list_data):
             for ind_block in list_blocks:
                 chan_len[ind_chan] += count_samples(
@@ -314,9 +314,6 @@ class AlphaOmegaIO(BaseIO):
                                    [list_chan[ind_chan]]['m_Name'],
                                    file_origin=os.path.basename(self.filename),
                                    units=pq.dimensionless)
-            # todo apibreak: create ChannelIndex for each signals
-            #                ana_sig.channel_index = \
-            #                            file_blocks[list_chan[ind_chan]]['m_numChannel']
             ana_sig.annotate(channel_name=file_blocks[list_chan[ind_chan]]['m_Name'])
             ana_sig.annotate(channel_type=file_blocks[list_chan[ind_chan]]['type_subblock'])
             seg.analogsignals.append(ana_sig)

@@ -1,5 +1,5 @@
 """
-Tests of the neo.utils module
+Tests of the neo.utils.misc module
 """
 
 import unittest

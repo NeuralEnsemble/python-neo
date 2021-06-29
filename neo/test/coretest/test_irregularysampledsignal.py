@@ -30,84 +30,12 @@ else:
     HAVE_SCIPY = True
 
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
-from neo.core import Segment, ChannelIndex
+from neo.core import Segment
 from neo.core.baseneo import MergeError
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant, assert_same_sub_schema,
                             assert_same_attributes, assert_same_annotations,
                             assert_same_array_annotations)
-from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
-                                        TEST_ANNOTATIONS)
-
-
-class Test__generate_datasets(unittest.TestCase):
-    def setUp(self):
-        np.random.seed(0)
-        self.annotations = {
-            str(x): TEST_ANNOTATIONS[x] for x in range(len(TEST_ANNOTATIONS))}
-
-    def test__get_fake_values(self):
-        self.annotations['seed'] = 0
-        times = get_fake_value('times', pq.Quantity, seed=0, dim=1)
-        signal = get_fake_value('signal', pq.Quantity, seed=1, dim=2)
-        name = get_fake_value('name', str, seed=2, obj=IrregularlySampledSignal)
-        description = get_fake_value('description', str, seed=3, obj='IrregularlySampledSignal')
-        file_origin = get_fake_value('file_origin', str)
-        arr_ann = get_fake_value('array_annotations', dict, seed=5,
-                                 obj=IrregularlySampledSignal, n=1)
-        attrs1 = {'name': name, 'description': description, 'file_origin': file_origin}
-        attrs2 = attrs1.copy()
-        attrs2.update(self.annotations)
-        attrs2['array_annotations'] = arr_ann
-
-        res11 = get_fake_values(IrregularlySampledSignal, annotate=False, seed=0)
-        res12 = get_fake_values('IrregularlySampledSignal', annotate=False, seed=0)
-        res21 = get_fake_values(IrregularlySampledSignal, annotate=True, seed=0)
-        res22 = get_fake_values('IrregularlySampledSignal', annotate=True, seed=0)
-
-        assert_array_equal(res11.pop('times'), times)
-        assert_array_equal(res12.pop('times'), times)
-        assert_array_equal(res21.pop('times'), times)
-        assert_array_equal(res22.pop('times'), times)
-
-        assert_array_equal(res11.pop('signal'), signal)
-        assert_array_equal(res12.pop('signal'), signal)
-        assert_array_equal(res21.pop('signal'), signal)
-        assert_array_equal(res22.pop('signal'), signal)
-
-        self.assertEqual(res11, attrs1)
-        self.assertEqual(res12, attrs1)
-        # Array annotations need to be compared separately
-        # because numpy arrays define equality differently
-        arr_ann_res21 = res21.pop('array_annotations')
-        arr_ann_attrs2 = attrs2.pop('array_annotations')
-        self.assertEqual(res21, attrs2)
-        assert_arrays_equal(arr_ann_res21['valid'], arr_ann_attrs2['valid'])
-        assert_arrays_equal(arr_ann_res21['number'], arr_ann_attrs2['number'])
-        arr_ann_res22 = res22.pop('array_annotations')
-        self.assertEqual(res22, attrs2)
-        assert_arrays_equal(arr_ann_res22['valid'], arr_ann_attrs2['valid'])
-        assert_arrays_equal(arr_ann_res22['number'], arr_ann_attrs2['number'])
-
-    def test__fake_neo__cascade(self):
-        self.annotations['seed'] = None
-        obj_type = IrregularlySampledSignal
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, IrregularlySampledSignal))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__fake_neo__nocascade(self):
-        self.annotations['seed'] = None
-        obj_type = 'IrregularlySampledSignal'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, IrregularlySampledSignal))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
 
 
 class TestIrregularlySampledSignalConstruction(unittest.TestCase):
@@ -260,7 +188,6 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
                                                 file_origin='testfile.txt', arg1='test',
                                                 array_annotations=self.arr_ann)
         self.signal1.segment = Segment()
-        self.signal1.channel_index = ChannelIndex([0])
 
     def test__compliant(self):
         assert_neo_object_is_compliant(self.signal1)
@@ -375,9 +302,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         assert_array_equal(result.times, self.time1quant)
         assert_same_sub_schema(result, self.signal1)
 
-        self.assertIsInstance(result.channel_index, ChannelIndex)
         self.assertIsInstance(result.segment, Segment)
-        self.assertIs(result.channel_index, self.signal1.channel_index)
         self.assertIs(result.segment, self.signal1.segment)
 
     def test__rescale_new(self):
@@ -398,9 +323,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         assert_arrays_almost_equal(np.array(result), self.data1.reshape(-1, 1) * 1000., 1e-10)
         assert_array_equal(result.times, self.time1quant)
 
-        self.assertIsInstance(result.channel_index, ChannelIndex)
         self.assertIsInstance(result.segment, Segment)
-        self.assertIs(result.channel_index, self.signal1.channel_index)
         self.assertIs(result.segment, self.signal1.segment)
 
     def test__rescale_new_incompatible_ValueError(self):
@@ -657,13 +580,11 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         # thus the reference to parent objects should be destroyed
         result = self.signal1.time_slice(1 * pq.ms, 3 * pq.ms)
         self.assertEqual(result.segment, None)
-        self.assertEqual(result.channel_index, None)
 
     def test__deepcopy_should_set_parents_objects_to_None(self):
         # Deepcopy should destroy references to parents
         result = deepcopy(self.signal1)
         self.assertEqual(result.segment, None)
-        self.assertEqual(result.channel_index, None)
 
     def test__time_shift_same_attributes(self):
         result = self.signal1.time_shift(1 * pq.ms)
@@ -682,7 +603,6 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         # thus the reference to parent objects should be destroyed
         result = self.signal1.time_shift(1 * pq.ms)
         self.assertEqual(result.segment, None)
-        self.assertEqual(result.channel_index, None)
 
     def test__time_shift_by_zero(self):
         shifted = self.signal1.time_shift(0 * pq.ms)
@@ -709,7 +629,6 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
     def test__copy_should_preserve_parent_objects(self):
         result = self.signal1.copy()
         self.assertIs(result.segment, self.signal1.segment)
-        self.assertIs(result.channel_index, self.signal1.channel_index)
 
     @unittest.skipUnless(HAVE_SCIPY, "requires Scipy")
     def test_resample(self):

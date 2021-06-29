@@ -54,24 +54,17 @@ class Block(Container):
             data file.
         :rec_datetime: (datetime) The date and time of the original recording.
 
-    *Properties available on this object*:
-        :list_units: (deprecated) descends through hierarchy and returns a list of
-            :class:`Unit` objects existing in the block. This shortcut exists
-            because a common analysis case is analyzing all neurons that
-            you recorded in a session.
-
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
 
     *Container of*:
         :class:`Segment`
         :class:`Group`
-        :class:`ChannelIndex` (deprecated)
 
     '''
 
-    _container_child_objects = ('Segment', 'ChannelIndex', 'Group')
-    _child_properties = ('Unit',)
+    _container_child_objects = ('Segment', 'Group')
+    _child_properties = ()
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
                            ('index', int)) +
@@ -104,7 +97,7 @@ class Block(Container):
         obtained recursively.
         '''
         # subclassing this to remove duplicate objects such as SpikeTrain
-        # objects in both Segment and Unit
+        # objects in both Segment and Group
         # Only Block can have duplicate items right now, so implement
         # this here for performance reasons.
         return tuple(unique_objs(super().data_children_recur))
@@ -117,14 +110,7 @@ class Block(Container):
         or the name of the container storing the class.
         '''
         # subclassing this to remove duplicate objects such as SpikeTrain
-        # objects in both Segment and Unit
+        # objects in both Segment and Group
         # Only Block can have duplicate items right now, so implement
         # this here for performance reasons.
         return unique_objs(super().list_children_by_class(cls))
-
-    @property
-    def list_units(self):
-        '''
-        Return a list of all :class:`Unit` objects in the :class:`Block`.
-        '''
-        return self.list_children_by_class('unit')

@@ -28,12 +28,14 @@ Classes:
 * :attr:`BrainwareDamIO`
 * :attr:`BrainwareF32IO`
 * :attr:`BrainwareSrcIO`
+* :attr:`CedIO`
 * :attr:`ElanIO`
 * :attr:`IgorIO`
 * :attr:`IntanIO`
 * :attr:`MEArecIO`
 * :attr:`KlustaKwikIO`
 * :attr:`KwikIO`
+* :attr:`MaxwellIO`
 * :attr:`MicromedIO`
 * :attr:`NeoMatlabIO`
 * :attr:`NestIO`
@@ -114,6 +116,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.CedIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.ElanIO
 
     .. autoattribute:: extensions
@@ -139,6 +145,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.MEArecIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.MaxwellIO
 
     .. autoattribute:: extensions
 
@@ -264,6 +274,7 @@ from neo.io.brainvisionio import BrainVisionIO
 from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
+from neo.io.cedio import CedIO
 from neo.io.elanio import ElanIO
 # from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
@@ -272,6 +283,7 @@ from neo.io.intanio import IntanIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.mearecio import MEArecIO
+from neo.io.maxwellio import MaxwellIO
 from neo.io.micromedio import MicromedIO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
@@ -310,6 +322,7 @@ iolist = [
     BrainwareDamIO,
     BrainwareF32IO,
     BrainwareSrcIO,
+    CedIO,
     ElanIO,
     # ElphyIO,
     ExampleIO,
@@ -318,6 +331,7 @@ iolist = [
     KlustaKwikIO,
     KwikIO,
     MEArecIO,
+    MaxwellIO,
     MicromedIO,
     NixIO,  # place NixIO before other IOs that use HDF5 to make it the default for .h5 files
     NeoMatlabIO,

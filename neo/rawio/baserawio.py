@@ -44,6 +44,15 @@ channel with the same t_start and length. Such multiple Segments for a RawIO wil
 same sampling rate. It is thus possible to retrieve the t_start and length
 of the sections of the channels for a Block and Segment of a stream.
 
+So this handles **only** one simplified but very frequent case of dataset:
+    * Only one channel set  for AnalogSignal stable along Segment
+    * Only one channel set  for SpikeTrain stable along Segment
+    * AnalogSignal have all the same sampling_rate acroos all Segment
+    * t_start/t_stop are the same for many object (SpikeTrain, Event) inside a Segment
+
+Signal channels are handled by group of "stream".
+One stream will result at neo.io level in one AnalogSignal with multiple channels.
+
 A helper class `neo.io.basefromrawio.BaseFromRaw` transforms a RawIO to
 neo legacy IO. In short all "neo.rawio" classes are also "neo.io"
 with lazy reading capability.
@@ -92,6 +101,10 @@ _signal_channel_dtype = [
     ('offset', 'float64'),
     ('stream_id', 'U64'),
 ]
+
+# TODO for later: add t_start and length in _signal_channel_dtype
+# this would simplify all t_start/t_stop stuff for each RawIO class
+
 _common_sig_characteristics = ['sampling_rate', 'dtype', 'stream_id']
 
 _spike_channel_dtype = [

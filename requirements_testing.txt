@@ -1,11 +1,15 @@
+pytest
+pytest-cov
+datalad
 scipy>=1.0.0
 h5py
 igor
 klusta
 tqdm
-nixio>=1.5.0b2
+nixio>=1.5.0
 matplotlib
 ipython
 coverage
 coveralls
 pillow
+sonpy

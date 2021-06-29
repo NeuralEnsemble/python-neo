@@ -42,6 +42,7 @@ class TdtRawIO(BaseRawIO):
         which uses the original online sort.
         """
         BaseRawIO.__init__(self)
+        dirname = str(dirname)
         if dirname.endswith('/'):
             dirname = dirname[:-1]
         self.dirname = dirname

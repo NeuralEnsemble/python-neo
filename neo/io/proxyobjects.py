@@ -89,9 +89,9 @@ class AnalogSignalProxy(BaseProxy):
     >>> some_channel_of_anasig = proxy_anasig.load(channel_indexes=[0,5,10])
 
     '''
-    _parent_objects = ('Segment', 'ChannelIndex')
+    _parent_objects = ('Segment',)
     _necessary_attrs = (('sampling_rate', pq.Quantity, 0),
-                                    ('t_start', pq.Quantity, 0))
+                        ('t_start', pq.Quantity, 0))
     _recommended_attrs = BaseNeo._recommended_attrs
     proxy_for = AnalogSignal
 

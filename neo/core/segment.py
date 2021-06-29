@@ -13,6 +13,7 @@ import numpy as np
 from copy import deepcopy
 
 from neo.core.container import Container
+from neo.core.spiketrainlist import SpikeTrainList
 
 
 class Segment(Container):
@@ -89,8 +90,8 @@ class Segment(Container):
         Initialize a new :class:`Segment` instance.
         '''
         super().__init__(name=name, description=description,
-                                      file_origin=file_origin, **annotations)
-
+                         file_origin=file_origin, **annotations)
+        self.spiketrains = SpikeTrainList(segment=self)
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
@@ -138,129 +139,6 @@ class Segment(Container):
 
         t_stop = max(t_stops)
         return t_stop
-
-    def take_spiketrains_by_unit(self, unit_list=None):
-        '''
-        Return :class:`SpikeTrains` in the :class:`Segment` that are also in a
-        :class:`Unit` in the :attr:`unit_list` provided.
-        '''
-        if unit_list is None:
-            return []
-        spiketrain_list = []
-        for spiketrain in self.spiketrains:
-            if spiketrain.unit in unit_list:
-                spiketrain_list.append(spiketrain)
-        return spiketrain_list
-
-    # def take_analogsignal_by_unit(self, unit_list=None):
-    #     '''
-    #     Return :class:`AnalogSignal` objects in the :class:`Segment` that are
-    #     have the same :attr:`channel_index` as any of the :class:`Unit: objects
-    #     in the :attr:`unit_list` provided.
-    #     '''
-    #     if unit_list is None:
-    #         return []
-    #     channel_indexes = []
-    #     for unit in unit_list:
-    #         if unit.channel_indexes is not None:
-    #             channel_indexes.extend(unit.channel_indexes)
-    #     return self.take_analogsignal_by_channelindex(channel_indexes)
-    #
-    # def take_analogsignal_by_channelindex(self, channel_indexes=None):
-    #     '''
-    #     Return :class:`AnalogSignal` objects in the :class:`Segment` that have
-    #     a :attr:`channel_index` that is in the :attr:`channel_indexes`
-    #     provided.
-    #     '''
-    #     if channel_indexes is None:
-    #         return []
-    #     anasig_list = []
-    #     for anasig in self.analogsignals:
-    #         if anasig.channel_index in channel_indexes:
-    #             anasig_list.append(anasig)
-    #     return anasig_list
-
-    def take_slice_of_analogsignalarray_by_unit(self, unit_list=None):
-        '''
-        Return slices of the :class:`AnalogSignal` objects in the
-        :class:`Segment` that correspond to a :attr:`channel_index`  of any of
-        the :class:`Unit` objects in the :attr:`unit_list` provided.
-        '''
-        if unit_list is None:
-            return []
-        indexes = []
-        for unit in unit_list:
-            if unit.get_channel_indexes() is not None:
-                indexes.extend(unit.get_channel_indexes())
-
-        return self.take_slice_of_analogsignalarray_by_channelindex(indexes)
-
-    def take_slice_of_analogsignalarray_by_channelindex(self,
-                                                        channel_indexes=None):
-        '''
-        Return slices of the :class:`AnalogSignalArrays` in the
-        :class:`Segment` that correspond to the :attr:`channel_indexes`
-        provided.
-        '''
-        if channel_indexes is None:
-            return []
-
-        sliced_sigarrays = []
-        for sigarr in self.analogsignals:
-            if sigarr.get_channel_index() is not None:
-                ind = np.in1d(sigarr.get_channel_index(), channel_indexes)
-                sliced_sigarrays.append(sigarr[:, ind])
-
-        return sliced_sigarrays
-
-    def construct_subsegment_by_unit(self, unit_list=None):
-        '''
-        Return a new :class:`Segment that contains the :class:`AnalogSignal`,
-        :class:`AnalogSignal`, and :class:`SpikeTrain`
-        objects common to both the current :class:`Segment` and any
-        :class:`Unit` in the :attr:`unit_list` provided.
-
-        *Example*::
-
-            >>> from neo.core import (Segment, Block, Unit, SpikeTrain,
-            ...                       ChannelIndex)
-            >>>
-            >>> blk = Block()
-            >>> chx = ChannelIndex(name='group0')
-            >>> blk.channel_indexes = [chx]
-            >>>
-            >>> for ind in range(5):
-            ...         unit = Unit(name='Unit #%s' % ind, channel_index=ind)
-            ...         chx.units.append(unit)
-            ...
-            >>>
-            >>> for ind in range(3):
-            ...     seg = Segment(name='Simulation #%s' % ind)
-            ...     blk.segments.append(seg)
-            ...     for unit in chx.units:
-            ...         train = SpikeTrain([1, 2, 3], units='ms', t_start=0.,
-            ...                            t_stop=10)
-            ...         train.unit = unit
-            ...         unit.spiketrains.append(train)
-            ...         seg.spiketrains.append(train)
-            ...
-            >>>
-            >>> seg0 = blk.segments[-1]
-            >>> seg1 = seg0.construct_subsegment_by_unit(chx.units[:2])
-            >>> len(seg0.spiketrains)
-            5
-            >>> len(seg1.spiketrains)
-            2
-
-        '''
-        # todo: provide equivalent method using Group/ChannelView
-        #       add deprecation message (use decorator)?
-        seg = Segment()
-        seg.spiketrains = self.take_spiketrains_by_unit(unit_list)
-        seg.analogsignals = \
-            self.take_slice_of_analogsignalarray_by_unit(unit_list)
-        # TODO copy others attributes
-        return seg
 
     def time_slice(self, t_start=None, t_stop=None, reset_time=False, **kwargs):
         """

@@ -11,8 +11,12 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 class TestMicromedRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = MicromedRawIO
-    files_to_download = ['File_micromed_1.TRC']
-    entities_to_test = files_to_download
+    entities_to_download = [
+        'micromed'
+    ]
+    entities_to_test = [
+        'micromed/File_micromed_1.TRC'
+    ]
 
 
 if __name__ == "__main__":
