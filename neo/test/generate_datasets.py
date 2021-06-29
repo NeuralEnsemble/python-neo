@@ -3,19 +3,270 @@ Generate datasets for testing
 '''
 
 from datetime import datetime
-
+import random
+import string
 import numpy as np
 from numpy.random import rand
 import quantities as pq
 
-from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, ChannelIndex,
-                      Segment, SpikeTrain, Unit, ImageSequence, CircularRegionOfInterest,
-                      RectangularRegionOfInterest, PolygonRegionOfInterest, class_by_name)
+from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, Group,
+                      Segment, SpikeTrain, ImageSequence, ChannelView,
+                      CircularRegionOfInterest, RectangularRegionOfInterest,
+                      PolygonRegionOfInterest, class_by_name)
+from neo.core.spiketrainlist import SpikeTrainList
 
 from neo.core.baseneo import _container_name
 from neo.core.dataobject import DataObject
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.fromtimestamp(424242424), None]
+
+
+def random_string(length=10):
+    return "".join(random.choice(string.ascii_letters) for i in range(length))
+
+
+def random_datetime(min_year=1990, max_year=datetime.now().year):
+    start = datetime(min_year, 1, 1, 0, 0, 0)
+    end = datetime(max_year, 12, 31, 23, 59, 59)
+    return start + (end - start) * random.random()
+
+
+def random_annotations(n=1):
+    annotation_generators = (
+        random.random,
+        random_datetime,
+        random_string,
+        lambda: None
+    )
+    annotations = {}
+    for i in range(n):
+        var_name = random_string(6)
+        annotation_generator = random.choice(annotation_generators)
+        annotations[var_name] = annotation_generator()
+    return annotations
+
+
+def random_signal(name=None, **annotations):
+    n_channels = random.randint(1, 7)
+    sig_length = random.randint(20, 200)
+    if len(annotations) == 0:
+        annotations = random_annotations(5)
+    obj = AnalogSignal(
+        np.random.uniform(size=(sig_length, n_channels)),
+        units=random.choice(("mV", "nA")),
+        t_start=random.uniform(0, 10) * pq.ms,
+        sampling_rate=random.uniform(0.1, 10) * pq.kHz,
+        name=name or random_string(),
+        file_origin=random_string(),
+        description=random_string(100),
+        array_annotations=None,   # todo
+        **annotations
+    )
+    return obj
+
+
+def random_irreg_signal(name=None, **annotations):
+    n_channels = random.randint(1, 7)
+    sig_length = random.randint(20, 200)
+    if len(annotations) == 0:
+        annotations = random_annotations(5)
+    mean_firing_rate = np.random.uniform(0.1, 10) * pq.kHz
+    times = np.cumsum(np.random.uniform(1.0 / mean_firing_rate, size=(sig_length,))) * pq.ms
+    obj = IrregularlySampledSignal(
+        times,
+        np.random.uniform(size=(sig_length, n_channels)),
+        units=random.choice(("mV", "nA")),
+        name=name or random_string(),
+        file_origin=random_string(),
+        description=random_string(100),
+        array_annotations=None,   # todo
+        **annotations
+    )
+    return obj
+
+
+def random_event(name=None, **annotations):
+    size = random.randint(1, 7)
+    times = np.cumsum(np.random.uniform(5, 10, size=size))
+    labels = [random_string() for i in range(size)]
+    if len(annotations) == 0:
+        annotations = random_annotations(3)
+    obj = Event(
+        times=times,
+        labels=labels,
+        units="ms",
+        name=name or random_string(),
+        array_annotations=None,   # todo
+        **annotations
+    )
+    return obj
+
+
+def random_epoch():
+    size = random.randint(1, 7)
+    times = np.cumsum(np.random.uniform(5, 10, size=size))
+    durations = np.random.uniform(1, 3, size=size)
+    labels = [random_string() for i in range(size)]
+    obj = Epoch(
+        times=times,
+        durations=durations,
+        labels=labels,
+        units="ms",
+        name=random_string(),
+        array_annotations=None,   # todo
+        **random_annotations(3)
+    )
+    return obj
+
+
+def random_spiketrain(name=None, **annotations):
+    size = random.randint(1, 50)
+    times = np.cumsum(np.random.uniform(0.5, 10, size=size))
+    if len(annotations) == 0:
+        annotations = random_annotations(3)
+    # todo: waveforms
+    obj = SpikeTrain(
+        times=times,
+        t_stop=times[-1] + random.uniform(0, 5),
+        units="ms",
+        name=name or random_string(),
+        array_annotations=None,   # todo
+        **annotations
+    )
+    return obj
+
+
+def random_segment():
+    seg = Segment(
+        name=random_string(10),
+        description=random_string(100),
+        file_origin=random_string(20),
+        file_datetime=random_datetime(),
+        rec_datetime=random_datetime(),
+        **random_annotations(4)
+    )
+    n_sigs = random.randint(0, 5)
+    for i in range(n_sigs):
+        seg.analogsignals.append(random_signal())
+    n_irrsigs = random.randint(0, 5)
+    for i in range(n_irrsigs):
+        seg.irregularlysampledsignals.append(random_irreg_signal())
+    n_events = random.randint(0, 3)
+    for i in range(n_events):
+        seg.events.append(random_event())
+    n_epochs = random.randint(0, 3)
+    for i in range(n_epochs):
+        seg.epochs.append(random_epoch())
+    n_spiketrains = random.randint(0, 20)
+    for i in range(n_spiketrains):
+        seg.spiketrains.append(random_spiketrain())
+    # todo: add some ImageSequence and ROI objects
+
+    for child in seg.data_children:
+        child.segment = seg
+    return seg
+
+
+def random_group(candidates):
+    if len(candidates) == 0:
+        return None
+    elif len(candidates) == 1:
+        objects = candidates
+    else:
+        k = random.randint(1, len(candidates))
+        objects = random.sample(candidates, k)
+    obj = Group(objects=objects,
+                name=random_string(),
+                **random_annotations(5))
+    return obj
+
+
+def random_channelview(signal):
+    n_channels = signal.shape[1]
+    if n_channels > 2:
+        view_size = np.random.randint(1, n_channels - 1)
+        index = np.random.choice(np.arange(signal.shape[1]), view_size, replace=False)
+        obj = ChannelView(
+            signal,
+            index,
+            name=random_string(),
+            **random_annotations(3)
+        )
+        return obj
+    else:
+        return None
+
+
+def random_block():
+    block = Block(
+        name=random_string(10),
+        description=random_string(100),
+        file_origin=random_string(20),
+        file_datetime=random_datetime(),
+        rec_datetime=random_datetime(),
+        **random_annotations(6)
+    )
+    n_seg = random.randint(0, 5)
+    for i in range(n_seg):
+        seg = random_segment()
+        block.segments.append(seg)
+        seg.block = block
+    children = list(block.data_children_recur)
+    views = []
+    for child in children:
+        if isinstance(child, (AnalogSignal, IrregularlySampledSignal)):
+            PROB_SIGNAL_HAS_VIEW = 0.5
+            if np.random.random_sample() < PROB_SIGNAL_HAS_VIEW:
+                chv = random_channelview(child)
+                if chv:
+                    views.append(chv)
+    children.extend(views)
+    n_groups = random.randint(0, 5)
+    for i in range(n_groups):
+        group = random_group(children)
+        if group:
+            block.groups.append(group)
+            group.block = block
+            children.append(group)  # this can give us nested groups
+    return block
+
+
+def simple_block():
+    block = Block(
+        name="test block",
+        species="rat",
+        brain_region="cortex"
+    )
+    block.segments = [
+        Segment(name="test segment #1",
+                cell_type="spiny stellate"),
+        Segment(name="test segment #2",
+                cell_type="pyramidal",
+                thing="amajig")
+    ]
+    for segment in block.segments:
+        segment.block = block
+    block.segments[0].analogsignals.extend((
+        random_signal(name="signal #1 in segment #1", thing="wotsit"),
+        random_signal(name="signal #2 in segment #1", thing="frooble"),
+    ))
+    block.segments[1].analogsignals.extend((
+        random_signal(name="signal #1 in segment #2", thing="amajig"),
+    ))
+    block.segments[1].irregularlysampledsignals.extend((
+        random_irreg_signal(name="signal #1 in segment #2", thing="amajig"),
+    ))
+    block.segments[0].events.extend((
+        random_event(name="event array #1 in segment #1", thing="frooble"),
+    ))
+    block.segments[1].events.extend((
+        random_event(name="event array #1 in segment #2", thing="wotsit"),
+    ))
+    block.segments[0].spiketrains.extend((
+        random_spiketrain(name="spiketrain #1 in segment #1", thing="frooble"),
+        random_spiketrain(name="spiketrain #2 in segment #1", thing="wotsit")
+    ))
+    return block
 
 
 def generate_one_simple_block(block_name='block_0', nb_segment=3, supported_objects=[], **kws):
@@ -149,314 +400,3 @@ def generate_from_supported_objects(supported_objects):
 
     higher.create_many_to_one_relationship()
     return higher
-
-
-def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, obj=None, n=None,
-                   shape=None):
-    """
-    Returns default value for a given attribute based on neo.core
-
-    If seed is not None, use the seed to set the random number generator.
-    """
-    if not obj:
-        obj = 'TestObject'
-    elif not hasattr(obj, 'lower'):
-        obj = obj.__name__
-
-    if (name in ['name', 'file_origin', 'description'] and (datatype != str or dim)):
-        raise ValueError('{} must be str, not a {}D {}'.format(name, dim, datatype))
-
-    if name == 'file_origin':
-        return 'test_file.txt'
-    if name == 'name':
-        return '{}{}'.format(obj, get_fake_value('', datatype, seed=seed))
-    if name == 'description':
-        return 'test {} {}'.format(obj, get_fake_value('', datatype, seed=seed))
-
-    if seed is not None:
-        np.random.seed(seed)
-
-    if datatype == str:
-        return str(np.random.randint(100000))
-    if datatype == int:
-        return np.random.randint(100)
-    if datatype == float:
-        return 1000. * np.random.random()
-    if datatype == datetime:
-        return datetime.fromtimestamp(1000000000 * np.random.random())
-
-    if (name in ['t_start', 't_stop', 'sampling_rate'] and (datatype != pq.Quantity or dim)):
-        raise ValueError('{} must be a 0D Quantity, not a {}D {}'.format(name, dim, datatype))
-
-    # only put array types below here
-
-    if units is not None:
-        pass
-    elif name in ['t_start', 't_stop', 'time', 'times', 'duration', 'durations']:
-        units = pq.millisecond
-    elif name == 'sampling_rate':
-        units = pq.Hz
-    elif datatype == pq.Quantity:
-        units = np.random.choice(['nA', 'mA', 'A', 'mV', 'V'])
-        units = getattr(pq, units)
-
-    if name == 'sampling_rate':
-        data = np.array(10000.0)
-    elif name == 't_start':
-        data = np.array(0.0)
-    elif name == 't_stop':
-        data = np.array(1.0)
-    elif n and name in ['channel_indexes', 'channel_ids']:
-        data = np.arange(n)
-    elif n and name == 'coordinates':
-        data = np.arange(0, 2*n).reshape((n, 2))
-    elif n and name == 'channel_names':
-        data = np.array(["ch%d" % i for i in range(n)])
-    elif n and name == 'index':  # ChannelIndex.index
-        data = np.random.randint(0, n, n)
-    elif n and obj == 'AnalogSignal':
-        if name == 'signal':
-            size = []
-            for _ in range(int(dim)):
-                size.append(np.random.randint(5) + 1)
-            size[1] = n
-            data = np.random.random(size) * 1000.
-    else:
-        size = []
-        for _ in range(int(dim)):
-            if shape is None:
-                # To ensure consistency, times, labels and durations need to have the same size
-                if name in ["times", "labels", "durations"]:
-                    size.append(5)
-                else:
-                    size.append(np.random.randint(5) + 1)
-            else:
-                size.append(shape)
-
-        data = np.random.random(size)
-        if name not in ['time', 'times']:
-            data *= 1000.
-    if np.dtype(dtype) != np.float64:
-        data = data.astype(dtype)
-
-    if datatype == np.ndarray:
-        return data
-    if datatype == list:
-        return data.tolist()
-    if datatype == pq.Quantity:
-        return data * units  # set the units
-
-    # Array annotations need to be a dict containing arrays
-    if name == 'array_annotations' and datatype == dict:
-        # Make sure that array annotations have the correct length
-        if obj in ['AnalogSignal', 'IrregularlySampledSignal']:
-            length = n if n is not None else 1
-        elif obj in ['IrregularlySampledSignal', 'SpikeTrain', 'Epoch', 'Event']:
-            length = n
-        else:
-            raise ValueError("This object cannot have array annotations")
-        # Generate array annotations
-        valid = np.array([True, False])
-        number = np.arange(5)
-        arr_ann = {'valid': valid[(rand(length) * len(valid)).astype('i')],
-                   'number': number[(rand(length) * len(number)).astype('i')]}
-
-        return arr_ann
-
-    # we have gone through everything we know, so it must be something invalid
-    raise ValueError('Unknown name/datatype combination {} {}'.format(name, datatype))
-
-
-def get_fake_values(cls, annotate=True, seed=None, n=None):
-    """
-    Returns a dict containing the default values for all attribute for
-    a class from neo.core.
-
-    If seed is not None, use the seed to set the random number generator.
-    The seed is incremented by 1 for each successive object.
-
-    If annotate is True (default), also add annotations to the values.
-    """
-
-    if hasattr(cls, 'lower'):  # is this a test that cls is a string? better to use isinstance(cls,
-        # basestring), no?
-        cls = class_by_name[cls]
-    # iseed is needed below for generation of array annotations
-    iseed = None
-    kwargs = {}  # assign attributes
-    for i, attr in enumerate(cls._necessary_attrs + cls._recommended_attrs):
-        if seed is not None:
-            iseed = seed + i
-        kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=cls, n=n)
-
-    if 'waveforms' in kwargs:  # everything here is to force the kwargs to have len(time) ==
-        # kwargs["waveforms"].shape[0]
-        if len(kwargs["times"]) != kwargs["waveforms"].shape[0]:
-            if len(kwargs["times"]) < kwargs["waveforms"].shape[0]:
-
-                dif = kwargs["waveforms"].shape[0] - len(kwargs["times"])
-
-                new_times = []
-                for i in kwargs["times"].magnitude:
-                    new_times.append(i)
-
-                np.random.seed(0)
-                new_times = np.concatenate([new_times, np.random.random(dif)])
-                kwargs["times"] = pq.Quantity(new_times, units=pq.ms)
-            else:
-                kwargs['times'] = kwargs['times'][:kwargs["waveforms"].shape[0]]
-
-    # IrregularlySampledSignal
-    if 'times' in kwargs and 'signal' in kwargs:
-        kwargs['times'] = kwargs['times'][:len(kwargs['signal'])]
-        kwargs['signal'] = kwargs['signal'][:len(kwargs['times'])]
-
-    if annotate:
-        kwargs.update(get_annotations())
-        # Make sure that array annotations have the right length
-        if cls in [IrregularlySampledSignal, AnalogSignal]:
-            try:
-                n = len(kwargs['signal'][0])
-            # If only 1 signal, len(int) is called, this raises a TypeError
-            except TypeError:
-                n = 1
-        elif cls in [SpikeTrain, Event, Epoch]:
-            n = len(kwargs['times'])
-        # Array annotate any DataObject except ImageSequence
-        if issubclass(cls, DataObject) and cls is not ImageSequence:
-            new_seed = iseed + 1 if iseed is not None else iseed
-            kwargs['array_annotations'] = get_fake_value('array_annotations', dict, seed=new_seed,
-                                                         obj=cls, n=n)
-        kwargs['seed'] = seed
-
-    return kwargs
-
-
-def get_annotations():
-    '''
-    Returns a dict containing the default values for annotations for
-    a class from neo.core.
-    '''
-    return {str(i): ann for i, ann in enumerate(TEST_ANNOTATIONS)}
-
-
-def fake_epoch(seed=None, n=1):
-    """
-    Create a fake Epoch.
-
-    We use this separate function because the attributes of
-    Epoch are not independent (must all have the same size)
-    """
-    kwargs = get_annotations()
-    if seed is not None:
-        np.random.seed(seed)
-    size = np.random.randint(5, 15)
-    for i, attr in enumerate(Epoch._necessary_attrs + Epoch._recommended_attrs):
-        if seed is not None:
-            iseed = seed + i
-        else:
-            iseed = None
-        if attr[0] in ('times', 'durations', 'labels'):
-            kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=Epoch, shape=size)
-        else:
-            kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=Epoch, n=n)
-    kwargs['seed'] = seed
-    obj = Epoch(**kwargs)
-    return obj
-
-
-def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
-    '''
-    Create a fake NEO object of a given type. Follows one-to-many
-    and many-to-many relationships if cascade.
-
-    n (default=1) is the number of child objects of each type will be created.
-    In cases like segment.spiketrains, there will be more than this number
-    because there will be n for each unit, of which there will be n for
-    each channelindex, of which there will be n.
-    '''
-
-    if hasattr(obj_type, 'lower'):
-        cls = class_by_name[obj_type]
-    else:
-        cls = obj_type
-        obj_type = obj_type.__name__
-
-    if cls is Epoch:
-        obj = fake_epoch(seed=seed, n=n)
-    else:
-        kwargs = get_fake_values(obj_type, annotate=True, seed=seed, n=n)
-        obj = cls(**kwargs)
-
-    # if not cascading, we don't need to do any of the stuff after this
-    if not cascade:
-        return obj
-
-    # this is used to signal other containers that they shouldn't duplicate
-    # data
-    if obj_type == 'Block':
-        cascade = 'block'
-    for i, childname in enumerate(getattr(obj, '_child_objects', [])):
-        # we create a few of each class
-        if childname == 'Group':
-            continue  # avoid infinite recursion, since Groups can contain  Groups
-        for j in range(n):
-            if seed is not None:
-                iseed = 10 * seed + 100 * i + 1000 * j
-            else:
-                iseed = None
-            child = fake_neo(obj_type=childname, cascade=cascade, seed=iseed, n=n)
-            child.annotate(i=i, j=j)
-
-            # if we are creating a block and this is the object's primary
-            # parent, don't create the object, we will import it from secondary
-            # containers later
-            if (cascade == 'block' and len(child._parent_objects) > 0
-                    and obj_type != child._parent_objects[-1]):
-                continue
-            getattr(obj, _container_name(childname)).append(child)
-
-    # need to manually create 'implicit' connections
-    if obj_type == 'Block':
-        # connect data objects to segment
-        for i, chx in enumerate(obj.channel_indexes):
-            for k, sigarr in enumerate(chx.analogsignals):
-                obj.segments[k].analogsignals.append(sigarr)
-            for k, sigarr in enumerate(chx.irregularlysampledsignals):
-                obj.segments[k].irregularlysampledsignals.append(sigarr)
-            for j, unit in enumerate(chx.units):
-                for k, train in enumerate(unit.spiketrains):
-                    obj.segments[k].spiketrains.append(train)
-    # elif obj_type == 'ChannelIndex':
-    #    inds = []
-    #    names = []
-    #    chinds = np.array([unit.channel_indexes[0] for unit in obj.units])
-    #    obj.indexes = np.array(inds, dtype='i')
-    #    obj.channel_names = np.array(names).astype('S')
-
-    if hasattr(obj, 'create_many_to_one_relationship'):
-        obj.create_many_to_one_relationship()
-
-    return obj
-
-
-def clone_object(obj, n=None):
-    '''
-    Generate a new object and new objects with the same rules as the original.
-    '''
-    if hasattr(obj, '__iter__') and not hasattr(obj, 'ndim'):
-        return [clone_object(iobj, n=n) for iobj in obj]
-
-    cascade = hasattr(obj, 'children') and len(obj.children)
-    if n is not None:
-        pass
-    elif cascade:
-        n = min(len(getattr(obj, cont)) for cont in obj._child_containers)
-    else:
-        n = 0
-    seed = obj.annotations.get('seed', None)
-
-    newobj = fake_neo(obj.__class__, cascade=cascade, seed=seed, n=n)
-    if 'i' in obj.annotations:
-        newobj.annotate(i=obj.annotations['i'], j=obj.annotations['j'])
-    return newobj

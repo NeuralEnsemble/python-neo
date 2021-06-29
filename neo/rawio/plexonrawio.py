@@ -167,20 +167,33 @@ class PlexonRawIO(BaseRawIO):
             stream_id = '0'
             sig_channels.append((name, str(chan_id), sampling_rate, sig_dtype,
                                  units, gain, offset, stream_id))
-        if len(all_sig_length) > 0:
-            self._signal_length = min(all_sig_length)
+
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
-        if sig_channels.size > 0:
-            signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-        else:
+        if sig_channels.size == 0:
             signal_streams = np.array([], dtype=_signal_stream_dtype)
 
+        else:
+            # detect grousp (aka streams)
+            all_sig_length = all_sig_length = np.array(all_sig_length)
+            groups = set(zip(sig_channels['sampling_rate'], all_sig_length))
+
+            signal_streams = []
+            self._signal_length = {}
+            self._sig_sampling_rate = {}
+            for stream_index, (sr, length) in enumerate(groups):
+                stream_id = str(stream_index)
+                mask = (sig_channels['sampling_rate'] == sr) & (all_sig_length == length)
+                sig_channels['stream_id'][mask] = stream_id
+
+                self._sig_sampling_rate[stream_index] = sr
+                self._signal_length[stream_index] = length
+
+                signal_streams.append(('Signals ' + stream_id, stream_id))
+
+            signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+
         self._global_ssampling_rate = global_header['ADFrequency']
-        if slowChannelHeaders.size > 0:
-            assert np.unique(slowChannelHeaders['ADFreq']
-                             ).size == 1, 'Signal do not have the same sampling rate'
-            self._sig_sampling_rate = float(slowChannelHeaders['ADFreq'][0])
 
         # Determine number of units per channels
         self.internal_unit_ids = []
@@ -246,19 +259,17 @@ class PlexonRawIO(BaseRawIO):
         return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop1 = float(self._last_timestamps) / self._global_ssampling_rate
+        t_stop = float(self._last_timestamps) / self._global_ssampling_rate
         if hasattr(self, '_signal_length'):
-            t_stop2 = self._signal_length / self._sig_sampling_rate
-            return max(t_stop1, t_stop2)
-        else:
-            return t_stop1
+            for stream_id in self._signal_length:
+                t_stop_sig = self._signal_length[stream_id] / self._sig_sampling_rate[stream_id]
+                t_stop = max(t_stop, t_stop_sig)
+        return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
-        return self._signal_length
+        return self._signal_length[stream_index]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
         return 0.
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
@@ -266,17 +277,21 @@ class PlexonRawIO(BaseRawIO):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._signal_length
+            i_stop = self._signal_length[stream_index]
 
-        if channel_indexes is None:
-            channel_indexes = np.arange(self.header['signal_channels'].size)
-        elif isinstance(channel_indexes, slice):
-            channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
+        signal_channels = self.header['signal_channels']
+        signal_streams = self.header['signal_streams']
 
-        raw_signals = np.zeros((i_stop - i_start, len(channel_indexes)), dtype='int16')
-        for c, channel_index in enumerate(channel_indexes):
-            chan_id = self.header['signal_channels'][channel_index]['id']
-            chan_id = np.int32(chan_id)
+        stream_id = signal_streams[stream_index]['id']
+        mask = signal_channels['stream_id'] == stream_id
+        signal_channels = signal_channels[mask]
+        if channel_indexes is not None:
+            signal_channels = signal_channels[channel_indexes]
+        channel_ids = signal_channels['id']
+
+        raw_signals = np.zeros((i_stop - i_start, channel_ids.size), dtype='int16')
+        for c, channel_id in enumerate(channel_ids):
+            chan_id = np.int32(channel_id)
 
             data_blocks = self._data_blocks[5][chan_id]
 

@@ -210,7 +210,7 @@ class BrainwareDamIO(BaseIO):
         # int16 * numpts -- the AnalogSignal itself
         signal = np.fromfile(fobject, dtype=np.int16, count=numpts)
 
-        sig = AnalogSignal(signal.astype(np.float) * pq.mV,
+        sig = AnalogSignal(signal.astype(np.float32) * pq.mV,
                            t_start=t_start * pq.d,
                            file_origin=self._filename,
                            sampling_period=1. * pq.s,

@@ -72,3 +72,22 @@ class TestGroup(unittest.TestCase):
         assert group.spiketrains[0] is self.test_spiketrains[0]
         assert group.spiketrains[1] is self.test_spiketrains[1]
         self.assertRaises(TypeError, group.add, self.test_view)
+
+    def test_walk(self):
+        # set up nested groups
+        parent = Group(name="0")
+        children = (Group(name="00"), Group(name="01"), Group(name="02"))
+        parent.add(*children)
+        grandchildren = (
+            (Group(name="000"), Group(name="001")),
+            [],
+            (Group(name="020"), Group(name="021"), Group(name="022"))
+        )
+        for child, gchildren in zip(children, grandchildren):
+            child.add(*gchildren)
+
+        flattened = list(parent.walk())
+        target = [parent, children[0], *grandchildren[0]]
+        target.extend([children[1], children[2], *grandchildren[2]])
+        self.assertEqual(flattened,
+                         target)

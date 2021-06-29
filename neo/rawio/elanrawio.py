@@ -22,9 +22,8 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 import numpy as np
 
 import datetime
-import os
 import re
-import io
+import pathlib
 
 
 class ElanRawIO(BaseRawIO):
@@ -33,13 +32,15 @@ class ElanRawIO(BaseRawIO):
 
     def __init__(self, filename=None, entfile=None, posfile=None):
         BaseRawIO.__init__(self)
-        self.filename = filename
+        self.filename = pathlib.Path(filename)
 
         # check whether ent and pos files are defined
+        # keep existing suffixes in the process of ent and pos filename
+        # generation
         if entfile is None:
-            entfile = self.filename + '.ent'
+            entfile = self.filename.with_suffix(self.filename.suffix + '.ent')
         if posfile is None:
-            posfile = self.filename + '.pos'
+            posfile = self.filename.with_suffix(self.filename.suffix + '.pos')
         self.entfile = entfile
         self.posfile = posfile
 

@@ -17,8 +17,8 @@ When possible, all IOs should/implement this level following these guidelines:
 
 
 So this handles **only** one simplified but very frequent case of dataset:
-    * Only one channel set  for AnalogSignal (aka ChannelIndex) stable along Segment
-    * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
+    * Only one channel set  for AnalogSignal stable along Segment
+    * Only one channel set  for SpikeTrain stable along Segment
     * AnalogSignal have all the same sampling_rate acroos all Segment
     * t_start/t_stop are the same for many object (SpikeTrain, Event) inside a Segment
 
@@ -76,6 +76,7 @@ _signal_channel_dtype = [
     ('offset', 'float64'),
     ('stream_id', 'U64'),
 ]
+
 # TODO for later: add t_start and length in _signal_channel_dtype
 # this would simplify all t_start/t_stop stuff for each RawIO class
 

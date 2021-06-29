@@ -33,7 +33,7 @@ else:
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
-from neo.core import Block, Segment, Unit, SpikeTrain
+from neo.core import Block, Segment, Group, SpikeTrain
 
 # Pasted version of feature file format spec
 """
@@ -72,7 +72,7 @@ class KlustaKwikIO(BaseIO):
     is_writable = True
 
     # This IO can only manipulate objects relating to spike times
-    supported_objects = [Block, SpikeTrain, Unit]
+    supported_objects = [Block, SpikeTrain]
 
     # Keep things simple by always returning a block
     readable_objects = [Block]
@@ -163,11 +163,11 @@ class KlustaKwikIO(BaseIO):
             if len(spks) != len(uids):
                 raise ValueError("lengths of fet and clu files are different")
 
-            # Create Unit for each cluster
+            # Create Group for each cluster
             unique_unit_ids = np.unique(uids)
             for unit_id in sorted(unique_unit_ids):
                 # Initialize the unit
-                u = Unit(name=('unit %d from group %d' % (unit_id, group)),
+                u = Group(name=('unit %d from group %d' % (unit_id, group)),
                          index=unit_id, group=group)
 
                 # Initialize a new SpikeTrain for the spikes from this unit
@@ -184,7 +184,7 @@ class KlustaKwikIO(BaseIO):
                     st.annotations['waveform_features'] = features
 
                 # Link
-                u.spiketrains.append(st)
+                u.add(st)
                 seg.spiketrains.append(st)
 
         block.create_many_to_one_relationship()
@@ -294,7 +294,7 @@ class KlustaKwikIO(BaseIO):
 
                 # Convert to samples
                 spike_times_in_samples = np.rint(
-                    np.array(st) * sr).astype(np.int)
+                    np.array(st) * sr).astype(np.int64)
 
                 # Try to get features from spiketrain
                 try:

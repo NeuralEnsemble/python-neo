@@ -12,7 +12,7 @@ Also contributing: Rick Gerkin
 """
 
 from warnings import warn
-import numpy as np
+import pathlib
 import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
@@ -66,28 +66,29 @@ class IgorIO(BaseIO):
 
         """
         BaseIO.__init__(self)
-        assert any([filename.endswith('.%s' % x) for x in self.extensions]), \
+        filename = pathlib.Path(filename)
+        assert filename.suffix[1:] in self.extensions, \
             "Only the following extensions are supported: %s" % self.extensions
         self.filename = filename
-        self.extension = filename.split('.')[-1]
+        self.extension = filename.suffix[1:]
         self.parse_notes = parse_notes
         self._filesystem = None
 
     def read_block(self, lazy=False):
         assert not lazy, 'This IO does not support lazy mode'
 
-        block = Block(file_origin=self.filename)
+        block = Block(file_origin=str(self.filename))
         block.segments.append(self.read_segment(lazy=lazy))
         block.segments[-1].block = block
         return block
 
     def read_segment(self, lazy=False):
         assert not lazy, 'This IO does not support lazy mode'
-        segment = Segment(file_origin=self.filename)
+        segment = Segment(file_origin=str(self.filename))
 
         if self.extension == 'pxp':
             if not self._filesystem:
-                _, self.filesystem = pxp.load(self.filename)
+                _, self.filesystem = pxp.load(str(self.filename))
 
             def callback(dirpath, key, value):
                 if isinstance(value, WaveRecord):
@@ -109,7 +110,7 @@ class IgorIO(BaseIO):
             raise Exception("`igor` package not installed. "
                              "Try `pip install igor`")
         if self.extension == 'ibw':
-            data = bw.load(self.filename)
+            data = bw.load(str(self.filename))
             version = data['version']
             if version > 5:
                 raise IOError("Igor binary wave file format version {} "
@@ -118,7 +119,7 @@ class IgorIO(BaseIO):
             assert type(path) is str, \
                 "A colon-separated Igor-style path must be provided."
             if not self._filesystem:
-                _, self.filesystem = pxp.load(self.filename)
+                _, self.filesystem = pxp.load(str(self.filename))
                 path = path.split(':')
                 location = self.filesystem['root']
                 for element in path:
@@ -162,7 +163,7 @@ class IgorIO(BaseIO):
 
         signal = AnalogSignal(signal, units=units, copy=False, t_start=t_start,
                               sampling_period=sampling_period, name=name,
-                              file_origin=self.filename, **annotations)
+                              file_origin=str(self.filename), **annotations)
         return signal
 
 

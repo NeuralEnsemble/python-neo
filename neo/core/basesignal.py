@@ -23,7 +23,6 @@ import quantities as pq
 
 from neo.core.baseneo import MergeError, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
-from neo.core.channelindex import ChannelIndex
 
 logger = logging.getLogger("Neo")
 
@@ -80,7 +79,6 @@ class BaseSignal(DataObject):
 
         # Parent objects
         self.segment = getattr(obj, 'segment', None)
-        self.channel_index = getattr(obj, 'channel_index', None)
 
     @classmethod
     def _rescale(self, signal, units=None):
@@ -99,11 +97,6 @@ class BaseSignal(DataObject):
             if pq.quantity.validate_dimensionality(units) != signal.dimensionality:
                 signal = signal.rescale(units)
         return signal
-
-    def rescale(self, units):
-        obj = super().rescale(units)
-        obj.channel_index = self.channel_index
-        return obj
 
     def __getslice__(self, i, j):
         '''
@@ -278,18 +271,6 @@ class BaseSignal(DataObject):
 
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape
-
-        # merge channel_index (move to ChannelIndex.merge()?)
-        if self.channel_index and other.channel_index:
-            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]),
-                                                channel_ids=np.hstack(
-                                                    [self.channel_index.channel_ids,
-                                                     other.channel_index.channel_ids]),
-                                                channel_names=np.hstack(
-                                                    [self.channel_index.channel_names,
-                                                     other.channel_index.channel_names]))
-        else:
-            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 
         return signal
 

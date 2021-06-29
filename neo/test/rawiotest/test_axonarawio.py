@@ -12,14 +12,15 @@ from neo.rawio.axonarawio import AxonaRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
-class TestAxonaRawIO(BaseTestRawIO, unittest.TestCase, ):
+class TestAxonaRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = AxonaRawIO
-    files_to_download = [
-        'axona_raw.bin',
-        'axona_raw.set',
+    entities_to_download = [
+        'axona'
     ]
     entities_to_test = [
-        'axona_raw.bin'
+        'axona/axona_raw.set',
+        'axona/dataset_unit_spikes/20140815-180secs.set',
+        'axona/dataset_multi_modal/axona_sample.set'
     ]
 
 

@@ -19,20 +19,15 @@ from pathlib import Path
 
 class TestPhyIO(BaseTestIO, unittest.TestCase):
     ioclass = PhyIO
-    files_to_test = ['phy_example_0']
-    files_to_download = [
-        'phy_example_0/spike_times.npy',
-        'phy_example_0/spike_templates.npy',
-        'phy_example_0/spike_clusters.npy',
-        'phy_example_0/params.py',
-        'phy_example_0/cluster_KSLabel.tsv',
-        'phy_example_0/cluster_ContamPct.tsv',
-        'phy_example_0/cluster_Amplitude.tsv',
-        'phy_example_0/cluster_group.tsv'
+    entities_to_download = [
+        'phy'
+    ]
+    entities_to_test = [
+        'phy/phy_example_0'
     ]
 
     def test_read_segment_lazy(self):
-        dirname = self.get_filename_path('phy_example_0')
+        dirname = self.get_local_path('phy/phy_example_0')
         r = PhyIO(dirname=dirname)
         seg = r.read_segment(lazy=True)
         for ana in seg.analogsignals:
@@ -64,12 +59,12 @@ class TestPhyIO(BaseTestIO, unittest.TestCase):
             assert ep.name is not None
 
     def test_read_block(self):
-        dirname = self.get_filename_path('phy_example_0')
+        dirname = self.get_local_path('phy/phy_example_0')
         r = PhyIO(dirname=dirname)
         bl = r.read_block(lazy=True)
 
     def test_read_segment_with_time_slice(self):
-        dirname = self.get_filename_path('phy_example_0')
+        dirname = self.get_local_path('phy/phy_example_0')
         r = PhyIO(dirname=dirname)
         seg = r.read_segment(time_slice=None)
         spikes_full = seg.spiketrains[0]

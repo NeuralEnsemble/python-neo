@@ -25,7 +25,6 @@ class ElanIO(ElanRawIO, BaseFromRaw):
             to it
     """
     _prefered_signal_group_mode = 'group-by-same-units'
-    _default_group_mode_have_change_in_0_9 = True
 
     def __init__(self, filename, entfile=None, posfile=None):
         ElanRawIO.__init__(self, filename=filename, entfile=entfile,

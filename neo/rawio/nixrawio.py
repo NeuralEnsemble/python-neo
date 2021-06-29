@@ -42,7 +42,7 @@ class NIXRawIO(BaseRawIO):
     def __init__(self, filename=''):
         check_nix_version()
         BaseRawIO.__init__(self)
-        self.filename = filename
+        self.filename = str(filename)
 
     def _source_name(self):
         return self.filename
@@ -85,7 +85,9 @@ class NIXRawIO(BaseRawIO):
         unit_name = ""
         unit_id = ""
         for bl in self.file.blocks:
-            for seg in bl.groups:
+            seg_groups = [g for g in bl.groups if g.type == "neo.segment"]
+
+            for seg in seg_groups:
                 for mt in seg.multi_tags:
                     if mt.type == "neo.spiketrain":
                         unit_name = mt.metadata['neo_name']
@@ -115,7 +117,8 @@ class NIXRawIO(BaseRawIO):
         event_count = 0
         epoch_count = 0
         for bl in self.file.blocks:
-            for seg in bl.groups:
+            seg_groups = [g for g in bl.groups if g.type == "neo.segment"]
+            for seg in seg_groups:
                 for mt in seg.multi_tags:
                     if mt.type == "neo.event":
                         ev_name = mt.metadata['neo_name']
@@ -135,9 +138,10 @@ class NIXRawIO(BaseRawIO):
 
         self.da_list = {'blocks': []}
         for block_index, blk in enumerate(self.file.blocks):
+            seg_groups = [g for g in blk.groups if g.type == "neo.segment"]
             d = {'segments': []}
             self.da_list['blocks'].append(d)
-            for seg_index, seg in enumerate(blk.groups):
+            for seg_index, seg in enumerate(seg_groups):
                 d = {'signals': []}
                 self.da_list['blocks'][block_index]['segments'].append(d)
                 size_list = []
@@ -156,9 +160,10 @@ class NIXRawIO(BaseRawIO):
 
         self.unit_list = {'blocks': []}
         for block_index, blk in enumerate(self.file.blocks):
+            seg_groups = [g for g in blk.groups if g.type == "neo.segment"]
             d = {'segments': []}
             self.unit_list['blocks'].append(d)
-            for seg_index, seg in enumerate(blk.groups):
+            for seg_index, seg in enumerate(seg_groups):
                 d = {'spiketrains': [],
                      'spiketrains_id': [],
                      'spiketrains_unit': []}
@@ -185,7 +190,10 @@ class NIXRawIO(BaseRawIO):
 
         self.header = {}
         self.header['nb_block'] = len(self.file.blocks)
-        self.header['nb_segment'] = [len(bl.groups) for bl in self.file.blocks]
+        self.header['nb_segment'] = [
+            len(seg_groups)
+            for bl in self.file.blocks
+        ]
         self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
@@ -193,10 +201,11 @@ class NIXRawIO(BaseRawIO):
 
         self._generate_minimal_annotations()
         for blk_idx, blk in enumerate(self.file.blocks):
+            seg_groups = [g for g in blk.groups if g.type == "neo.segment"]
             bl_ann = self.raw_annotations['blocks'][blk_idx]
             props = blk.metadata.inherited_properties()
             bl_ann.update(self._filter_properties(props, "block"))
-            for grp_idx, group in enumerate(blk.groups):
+            for grp_idx, group in enumerate(seg_groups):
                 seg_ann = bl_ann['segments'][grp_idx]
                 props = group.metadata.inherited_properties()
                 seg_ann.update(self._filter_properties(props, "segment"))
