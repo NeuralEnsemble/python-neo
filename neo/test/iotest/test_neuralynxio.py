@@ -23,6 +23,18 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
     entities_to_download = TestNeuralynxRawIO.entities_to_download
     entities_to_test = TestNeuralynxRawIO.entities_to_test
 
+class TestCheetah_Neuraview(CommonNeuralynxIOTest, unittest.TestCase):
+    files_to_test = []
+
+    def test_read_block(self):
+        dirname = self.get_local_path('neuralynx/Neuraview_v2/original_data')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        bl = nio.read_block()
+
+        # This dataset contains two event sets
+        self.assertEqual(len(bl.segments[0].events), 2)
+
+
 class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
     cheetah_version = '5.5.1'
     files_to_test = []
