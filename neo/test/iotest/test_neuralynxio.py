@@ -23,6 +23,7 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
     entities_to_download = TestNeuralynxRawIO.entities_to_download
     entities_to_test = TestNeuralynxRawIO.entities_to_test
 
+
 class TestCheetah_Neuraview(CommonNeuralynxIOTest, unittest.TestCase):
     files_to_test = []
 
