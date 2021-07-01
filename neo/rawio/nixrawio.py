@@ -231,6 +231,8 @@ class NIXRawIO(BaseRawIO):
                 # adding array annotations to analogsignals
                 annotated_anasigs = []
                 sig_ann = seg_ann['signals']
+                # this implementation relies on analogsignals always being
+                # stored in the same stream order across segments
                 stream_id = 0
                 for da_idx, da in enumerate(group.data_arrays):
                     if da.type != "neo.analogsignal":
