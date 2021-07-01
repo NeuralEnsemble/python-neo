@@ -4,15 +4,17 @@ RawIO Class for NIX files
 The RawIO assumes all segments and all blocks have the same structure.
 It supports all kinds of NEO objects.
 
-Author: Chek Yin Choi
+Author: Chek Yin Choi, Julia Sprenger
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+import os.path
 
-from ..io.nixio import NixIO
-from ..io.nixio import check_nix_version
 import numpy as np
+
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                        _spike_channel_dtype, _event_channel_dtype)
+from ..io.nixio import check_nix_version
+
 try:
     import nixio as nix
 
@@ -240,6 +242,31 @@ class NIXRawIO(BaseRawIO):
                             props = mt.metadata.inherited_properties()
                             event_ann.update(self._filter_properties(props, 'event'))
                             ev_idx += 1
+
+                # adding array annotations to analogsignals
+                annotated_anasigs = []
+                sig_ann = seg_ann['signals']
+                stream_id = 0
+                for da_idx, da in enumerate(group.data_arrays):
+                    if da.type != "neo.analogsignal":
+                        continue
+                    anasig_id = da.name.split('.')[-2]
+                    if anasig_id in annotated_anasigs:
+                        continue
+                    annotated_anasigs.append(anasig_id)
+
+                    array_anno_props = []
+                    for prop in da.metadata.props:
+                        if prop.type == 'ARRAYANNOTATION':
+                            array_anno_props.append(prop)
+
+                    props_dict = self._filter_properties(array_anno_props,
+                                                         "analogsignal")
+
+                    sig_ann[stream_id]['__array_annotations__'].update(
+                        props_dict)
+
+                    stream_id += 1
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
