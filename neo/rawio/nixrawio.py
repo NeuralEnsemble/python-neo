@@ -211,21 +211,6 @@ class NIXRawIO(BaseRawIO):
                 props = group.metadata.inherited_properties()
                 seg_ann.update(self._filter_properties(props, "segment"))
 
-                # TODO handle annotation at stream level
-                '''
-                 sig_idx = 0
-                 groupdas = NixIO._group_signals(grp.data_arrays)
-                 for nix_name, signals in groupdas.items():
-                    da = signals[0]
-                     if da.type == 'neo.analogsignal' and seg_ann['signals']:
-                         # collect and group DataArrays
-                         sig_ann = seg_ann['signals'][sig_idx]
-                         sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
-                         props = da.metadata.inherited_properties()
-                         sig_ann.update(self._filter_properties(props, 'analogsignal'))
-                         sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
-                         sig_idx += 1
-                '''
                 sp_idx = 0
                 ev_idx = 0
                 for mt in group.multi_tags:
@@ -251,18 +236,21 @@ class NIXRawIO(BaseRawIO):
                     if da.type != "neo.analogsignal":
                         continue
                     anasig_id = da.name.split('.')[-2]
+                    # skip already annotated signals
                     if anasig_id in annotated_anasigs:
                         continue
                     annotated_anasigs.append(anasig_id)
 
-                    array_anno_props = []
-                    for prop in da.metadata.props:
-                        if prop.type == 'ARRAYANNOTATION':
-                            array_anno_props.append(prop)
+                    # collect annotation properties
+                    props = [p for p in da.metadata.props
+                             if p.type != 'ARRAYANNOTATION']
+                    props_dict = self._filter_properties(props, "analogsignal")
+                    sig_ann[stream_id].update(props_dict)
 
-                    props_dict = self._filter_properties(array_anno_props,
-                                                         "analogsignal")
-
+                    # collect array annotation properties
+                    props = [p for p in da.metadata.props
+                             if p.type == 'ARRAYANNOTATION']
+                    props_dict = self._filter_properties(props, "analogsignal")
                     sig_ann[stream_id]['__array_annotations__'].update(
                         props_dict)
 
