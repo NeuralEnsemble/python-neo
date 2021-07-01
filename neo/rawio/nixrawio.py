@@ -50,7 +50,7 @@ class NIXRawIO(BaseRawIO):
     def _parse_header(self):
         self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
         signal_channels = []
-        size_list = []
+        anasig_ids = {0: []} # ids of analogsignals by segment
         stream_ids = []
         for bl in self.file.blocks:
             for seg in bl.groups:
@@ -61,19 +61,18 @@ class NIXRawIO(BaseRawIO):
                         units = str(da.unit)
                         dtype = str(da.dtype)
                         sr = 1 / da.dimensions[0].sampling_interval
-                        da_leng = da.size
-                        if da_leng not in size_list:
-                            size_list.append(da_leng)
-                            stream_ids.append(str(len(size_list)))
-                        # very important! group_id use to store
-                        # channel groups!!!
-                        # use only for different signal length
-                        stream_index = size_list.index(da_leng)
-                        stream_id = stream_ids[stream_index]
+                        anasig_id = da.name.split('.')[-2]
+                        if anasig_id not in anasig_ids[0]:
+                            anasig_ids[0].append(anasig_id)
+                        stream_id = anasig_ids[0].index(anasig_id)
+                        if stream_id not in stream_ids:
+                            stream_ids.append(stream_id)
                         gain = 1
                         offset = 0.
                         signal_channels.append((ch_name, chan_id, sr, dtype,
                                             units, gain, offset, stream_id))
+                # only read structure of first segment and assume the same
+                # across segments
                 break
             break
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
