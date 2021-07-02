@@ -903,7 +903,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_complex(self):
         '''test to make sure complex type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.complex)
+        value = np.array([1, 2, 3, 4, 5], complex)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -933,7 +933,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_bool(self):
         '''test to make sure bool type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.bool)
+        value = np.array([1, 2, 3, 4, 5], dtype=bool)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1098,7 +1098,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_complex(self):
         '''test to make sure complex type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.complex)
+        value = np.array(99, dtype=complex)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1127,7 +1127,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_bool(self):
         '''test to make sure bool type numpy scalars are rejected'''
-        value = np.array(99, dtype=np.bool)
+        value = np.array(99, dtype=bool)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)

@@ -126,7 +126,7 @@ def normalize_times_array(times, units=None, dtype=None, copy=True):
     """
     if dtype is None:
         if not hasattr(times, 'dtype'):
-            dtype = np.float
+            dtype = float
     if units is None:
         # No keyword units, so get from `times`
         try:

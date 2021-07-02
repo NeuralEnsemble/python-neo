@@ -108,8 +108,8 @@ class TiffIO(BaseIO):
         if len(list_data_image.shape) == 4:
             list_data_image = []
             for file_name in file_name_list:
-                list_data_image.append(
-                    np.array(Image.open(self.filename + "/" + file_name).convert('L'), dtype=np.float32))
+                data = np.array(Image.open(self.filename + "/" + file_name).convert('L')).astype=np.float32
+                list_data_image.append(data)
 
         print("read block")
         image_sequence = ImageSequence(np.stack(list_data_image),

@@ -277,7 +277,7 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         iow = AsciiSignalIO(filename, metadata_filename=metadata_filename)
         iow.write_block(block1)
-        self.assert_(os.path.exists(metadata_filename))
+        self.assertTrue(os.path.exists(metadata_filename))
 
         ior = AsciiSignalIO(filename)
         block2 = ior.read_block()

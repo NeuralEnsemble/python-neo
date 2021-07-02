@@ -91,22 +91,21 @@ class AsciiSpikeTrainIO(BaseIO):
 
         seg = Segment(file_origin=os.path.basename(self.filename))
 
-        f = open(self.filename, 'Ur')
-        for i, line in enumerate(f):
-            alldata = line[:-1].split(delimiter)
-            if alldata[-1] == '':
-                alldata = alldata[:-1]
-            if alldata[0] == '':
-                alldata = alldata[1:]
+        with open(self.filename, 'r', newline=None) as f:
+            for i, line in enumerate(f):
+                alldata = line[:-1].split(delimiter)
+                if alldata[-1] == '':
+                    alldata = alldata[:-1]
+                if alldata[0] == '':
+                    alldata = alldata[1:]
 
-            spike_times = np.array(alldata).astype('f')
-            t_stop = spike_times.max() * unit
+                spike_times = np.array(alldata).astype('f')
+                t_stop = spike_times.max() * unit
 
-            sptr = SpikeTrain(spike_times * unit, t_start=t_start, t_stop=t_stop)
+                sptr = SpikeTrain(spike_times * unit, t_start=t_start, t_stop=t_stop)
 
-            sptr.annotate(channel_index=i)
-            seg.spiketrains.append(sptr)
-        f.close()
+                sptr.annotate(channel_index=i)
+                seg.spiketrains.append(sptr)
 
         seg.create_many_to_one_relationship()
         return seg

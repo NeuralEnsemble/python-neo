@@ -351,7 +351,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         st = r.read_spiketrain(gdf_id=1, t_start=400. * pq.ms,
                                t_stop=500. * pq.ms,
                                lazy=False, id_column=0, time_column=1)
-        self.assertTrue(st.magnitude.dtype == np.float)
+        self.assertTrue(st.magnitude.dtype == float)
         seg = r.read_segment(gid_list=[1], t_start=400. * pq.ms,
                              t_stop=500. * pq.ms,
                              lazy=False, id_column_gdf=0, time_column_gdf=1)
