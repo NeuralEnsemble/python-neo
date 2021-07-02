@@ -7,9 +7,6 @@ import unittest
 from neo.io import NeuroExplorerIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
-from neo.test.iotest.tools import get_test_file_full_path
-
-
 class TestNeuroExplorerIO(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuroExplorerIO
     entities_to_download = [
