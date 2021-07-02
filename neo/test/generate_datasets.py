@@ -12,11 +12,7 @@ import quantities as pq
 from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, Group,
                       Segment, SpikeTrain, ImageSequence, ChannelView,
                       CircularRegionOfInterest, RectangularRegionOfInterest,
-                      PolygonRegionOfInterest, class_by_name)
-from neo.core.spiketrainlist import SpikeTrainList
-
-from neo.core.baseneo import _container_name
-from neo.core.dataobject import DataObject
+                      PolygonRegionOfInterest)
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.fromtimestamp(424242424), None]
 
@@ -388,10 +384,6 @@ def generate_from_supported_objects(supported_objects):
     objects = supported_objects
     if Block in supported_objects:
         higher = generate_one_simple_block(supported_objects=objects)
-
-        # Chris we do not create RC and RCG if it is not in objects  # there is a test in
-        # generate_one_simple_block so I removed  # finalize_block(higher)
-
     elif Segment in objects:
         higher = generate_one_simple_segment(supported_objects=objects)
     else:
