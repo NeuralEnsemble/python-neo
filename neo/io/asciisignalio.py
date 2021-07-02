@@ -208,7 +208,7 @@ class AsciiSignalIO(BaseIO):
                 sig = sig[:, mask]
         elif self.method == 'homemade':
             with open(self.filename, 'r', newline=None) as fid:
-                for l in range(self.skiprows):
+                for _ in range(self.skiprows):
                     fid.readline()
                 tab = []
                 for line in fid.readlines():
