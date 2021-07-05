@@ -114,6 +114,11 @@ class NeuralynxRawIO(BaseRawIO):
             filenames = sorted(os.listdir(self.dirname))
             dirname = self.dirname
         else:
+            if not os.path.isfile(self.filename):
+                raise ValueError(f'Provided Filename is not a file: '
+                                 f'{self.filename}. If you want to provide a '
+                                 f'directory use the `dirname` keyword')
+
             dirname, fname = os.path.split(self.filename)
             filenames = [fname]
 
@@ -581,8 +586,8 @@ class NeuralynxRawIO(BaseRawIO):
         # If there is only one NcsSections structure in the set of ncs files, there should only
         # be one entry. Otherwise this is presently unsupported.
         if len(revSectMap) > 1:
-            raise IOError('ncs files have {} different sections structures. Unsupported.'.format(
-                len(revSectMap)))
+            raise IOError(f'ncs files have {len(revSectMap)} different sections '
+                          f'structures. Unsupported configuration.')
 
         seg_time_limits = SegmentTimeLimits(nb_segment=len(lastNcsSections.sects),
                                             t_start=[], t_stop=[], length=[],
