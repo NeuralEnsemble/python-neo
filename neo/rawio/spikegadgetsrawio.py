@@ -36,7 +36,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
         Class for reading spikegadgets files.
         Only continuous signals are supported at the moment.
 
-        https://spikegadgets.com/spike-products/
+        Initialize a SpikeGadgetsRawIO for a single ".rec" file.
 
         Args:
             filename: str
