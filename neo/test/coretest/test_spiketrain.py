@@ -21,9 +21,6 @@ except ImportError as err:
 else:
     HAVE_IPYTHON = True
 
-from neo.rawio.examplerawio import ExampleRawIO
-from neo.io.proxyobjects import SpikeTrainProxy
-
 from neo.core.spiketrain import (check_has_dimensions_time, SpikeTrain, _check_time_in_range,
                                  _new_spiketrain)
 from neo.core import Segment
@@ -276,7 +273,7 @@ class TestConstructor(unittest.TestCase):
         train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
         train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s")
 
-        dtype = np.int
+        dtype = int
         units = 1 * pq.s
         t_start_out = t_start
         t_stop_out = t_stop
@@ -322,7 +319,7 @@ class TestConstructor(unittest.TestCase):
         train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
         train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s")
 
-        dtype = np.int
+        dtype = int
         units = 1 * pq.s
         t_start_out = t_start * units
         t_stop_out = t_stop * units
@@ -1365,35 +1362,45 @@ class TestMerge(unittest.TestCase):
         train4.file_origin = 'file3'
 
         # merge two spiketrains with different attributes
-        merge1 = self.train1.merge(self.train2)
+        with warnings.catch_warnings(record=True) as w:
+            merge1 = self.train1.merge(self.train2)
+            self.assertTrue(len(w) > 0)
 
         self.assertEqual(merge1.name, 'merge(name1; name2)')
         self.assertEqual(merge1.description, 'merge(desc1; desc2)')
         self.assertEqual(merge1.file_origin, 'merge(file1; file2)')
 
         # merge a merged spiketrain with a regular one
-        merge2 = merge1.merge(train3)
+        with warnings.catch_warnings(record=True) as w:
+            merge2 = merge1.merge(train3)
+            self.assertTrue(len(w) > 0)
 
         self.assertEqual(merge2.name, 'merge(name1; name2; name3)')
         self.assertEqual(merge2.description, 'merge(desc1; desc2; desc3)')
         self.assertEqual(merge2.file_origin, 'merge(file1; file2; file3)')
 
         # merge two merged spiketrains
-        merge3 = merge1.merge(merge2)
+        with warnings.catch_warnings(record=True) as w:
+            merge3 = merge1.merge(merge2)
+            self.assertTrue(len(w) > 0)
 
         self.assertEqual(merge3.name, 'merge(name1; name2; name3)')
         self.assertEqual(merge3.description, 'merge(desc1; desc2; desc3)')
         self.assertEqual(merge3.file_origin, 'merge(file1; file2; file3)')
 
         # merge two spiketrains with identical attributes
-        merge4 = train3.merge(train4)
+        with warnings.catch_warnings(record=True) as w:
+            merge4 = train3.merge(train4)
+            self.assertTrue(len(w) == 0)
 
         self.assertEqual(merge4.name, 'name3')
         self.assertEqual(merge4.description, 'desc3')
         self.assertEqual(merge4.file_origin, 'file3')
 
         # merge a reqular spiketrain with a merged spiketrain
-        merge5 = train3.merge(merge1)
+        with warnings.catch_warnings(record=True) as w:
+            merge5 = train3.merge(merge1)
+            self.assertTrue(len(w) > 0)
 
         self.assertEqual(merge5.name, 'merge(name3; name1; name2)')
         self.assertEqual(merge5.description, 'merge(desc3; desc1; desc2)')
@@ -1414,7 +1421,8 @@ class TestMerge(unittest.TestCase):
             self.assertEqual(len(w), 1)
             self.assertTrue("array annotations" in str(w[0].message))
         self.assertEqual(self.train1.segment, result.segment)
-        self.assertTrue(result in result.segment.spiketrains)
+        # check if segment is linked bidirectionally
+        self.assertTrue(any([result is r for r in result.segment.spiketrains]))
 
     def test_missing_waveforms_error(self):
         self.train1.waveforms = None
@@ -1643,7 +1651,7 @@ class TestChanging(unittest.TestCase):
         # Array and quantity are tested separately because copy default
         # is different for these two.
         data = np.array([3, 4, 5])
-        train = SpikeTrain(data, units='sec', copy=False, dtype=np.int, t_stop=101)
+        train = SpikeTrain(data, units='sec', copy=False, dtype=int, t_stop=101)
         train[0] = 99 * pq.s
         assert_neo_object_is_compliant(train)
         self.assertEqual(train[0], 99 * pq.s)

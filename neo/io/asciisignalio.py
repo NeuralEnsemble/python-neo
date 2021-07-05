@@ -199,7 +199,7 @@ class AsciiSignalIO(BaseIO):
             if len(sig.shape) == 1:
                 sig = sig[:, np.newaxis]
         elif self.method == 'csv':
-            with open(self.filename, 'rU') as fp:
+            with open(self.filename, newline=None) as fp:
                 tab = [l for l in csv.reader(fp, delimiter=self.delimiter)]
             tab = tab[self.skiprows:]
             sig = np.array(tab, dtype='f')
@@ -207,21 +207,21 @@ class AsciiSignalIO(BaseIO):
                 mask = np.array(self.usecols)
                 sig = sig[:, mask]
         elif self.method == 'homemade':
-            fid = open(self.filename, 'rU')
-            for l in range(self.skiprows):
-                fid.readline()
-            tab = []
-            for line in fid.readlines():
-                line = line.replace('\r', '')
-                line = line.replace('\n', '')
-                parts = line.split(self.delimiter)
-                while '' in parts:
-                    parts.remove('')
-                tab.append(parts)
-            sig = np.array(tab, dtype='f')
-            if self.usecols is not None:
-                mask = np.array(self.usecols)
-                sig = sig[:, mask]
+            with open(self.filename, 'r', newline=None) as fid:
+                for _ in range(self.skiprows):
+                    fid.readline()
+                tab = []
+                for line in fid.readlines():
+                    line = line.replace('\r', '')
+                    line = line.replace('\n', '')
+                    parts = line.split(self.delimiter)
+                    while '' in parts:
+                        parts.remove('')
+                    tab.append(parts)
+                sig = np.array(tab, dtype='f')
+                if self.usecols is not None:
+                    mask = np.array(self.usecols)
+                    sig = sig[:, mask]
         else:
             sig = self.method(self.filename, self.usecols)
             if not isinstance(sig, np.ndarray):

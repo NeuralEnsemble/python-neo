@@ -102,14 +102,15 @@ class TiffIO(BaseIO):
         file_name_list = natural_sort(file_name_list)
         list_data_image = []
         for file_name in file_name_list:
-            list_data_image.append(
-                np.array(Image.open(self.filename + "/" + file_name), dtype=np.float32))
+            data = np.array(Image.open(self.filename + "/" + file_name)).astype(np.float32)
+            list_data_image.append(data)
         list_data_image = np.array(list_data_image)
         if len(list_data_image.shape) == 4:
             list_data_image = []
             for file_name in file_name_list:
-                list_data_image.append(
-                    np.array(Image.open(self.filename + "/" + file_name).convert('L'), dtype=np.float32))
+                image = Image.open(self.filename + "/" + file_name).convert('L')
+                data = np.array(image).astype(np.float32)
+                list_data_image.append(data)
 
         print("read block")
         image_sequence = ImageSequence(np.stack(list_data_image),

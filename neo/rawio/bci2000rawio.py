@@ -175,7 +175,7 @@ class BCI2000RawIO(BaseRawIO):
         # label must a dtype ='U'
         ts, dur, labels = self._event_arrays_list[event_channel_index]
         # seg_t_start = self._segment_t_start(block_index, seg_index)
-        keep = np.ones(ts.shape, dtype=np.bool)
+        keep = np.ones(ts.shape, dtype=bool)
         if t_start is not None:
             keep = np.logical_and(keep, ts >= t_start)
         if t_stop is not None:

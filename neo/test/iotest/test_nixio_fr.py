@@ -9,7 +9,7 @@ import quantities as pq
 from neo.io.nixio import NixIO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
-from neo.test.iotest.tools import get_test_file_full_path
+
 try:
     import nixio as nix
 

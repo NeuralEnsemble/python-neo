@@ -73,7 +73,7 @@ Author: Thierry Brizzi
 
 # python commons:
 from datetime import datetime
-from fractions import gcd
+from math import gcd
 from os import path
 import re
 import struct

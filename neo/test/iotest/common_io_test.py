@@ -80,7 +80,7 @@ class BaseTestIO:
     # allow environment to tell avoid using network
     use_network = can_use_network()
 
-    local_test_dir = None
+    local_test_dir = get_local_testing_data_folder()
 
     def setUp(self):
         '''
