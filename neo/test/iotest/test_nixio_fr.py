@@ -106,7 +106,7 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
             annotations = {'something': 'hello hello000'}
             seg = Segment(**annotations)
             an =AnalogSignal([[1, 2, 3], [4, 5, 6]], units='V',
-                             sampling_rate=1*pq.Hz)
+                             sampling_rate=1 * pq.Hz)
             an.annotate(ansigrandom='hello chars')
             an.array_annotate(custom_id=[1, 2, 3])
             sp = SpikeTrain([3, 4, 5]* s, t_stop=10.0)

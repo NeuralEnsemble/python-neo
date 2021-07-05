@@ -52,7 +52,7 @@ class NIXRawIO(BaseRawIO):
     def _parse_header(self):
         self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
         signal_channels = []
-        anasig_ids = {0: []} # ids of analogsignals by segment
+        anasig_ids = {0: []}  # ids of analogsignals by segment
         stream_ids = []
         for bl in self.file.blocks:
             for seg in bl.groups:
