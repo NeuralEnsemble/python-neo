@@ -1527,7 +1527,7 @@ class NixIOWriteTest(NixIOTest):
             "sometime": time(13, 37, 42),
             "somequantity": self.rquant(10, pq.ms),
             "somestring": self.rsentence(3),
-            "npfloat": float(10),
+            "npfloat": np.float64(10),
             "nparray": np.array([1, 2, 400]),
             "emptystr": "",
         }
