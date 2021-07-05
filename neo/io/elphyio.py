@@ -87,8 +87,7 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import (Block, Segment,
-                      AnalogSignal, Event, SpikeTrain)
+from neo.core import (Block, Segment, AnalogSignal, Event, SpikeTrain)
 
 
 # --------------------------------------------------------
@@ -562,7 +561,7 @@ class ClassicFileInfo(FileInfoBlock):
 
     def get_title(self):
         title_length, title = struct.unpack('<B20s', self.file.read(21))
-        return unicode(title[0:title_length])
+        return str(title[0:title_length])
 
     def get_user_file_info(self):
         header = dict()
@@ -674,7 +673,7 @@ class MultistimFileInfo(FileInfoBlock):
         title_length = read_from_char(self.file, 'B')
         title, = struct.unpack('<%ss' % title_length, self.file.read(title_length))
         self.file.seek(self.file.tell() + 255 - title_length)
-        return unicode(title)
+        return str(title)
 
     def get_user_file_info(self):
         header = dict()
@@ -1858,7 +1857,7 @@ class ElphyLayout:
         for _ch in ch_mask:
             size = self.sample_size(ep, _ch)
             val = 1 if _ch == ch else 0
-            for _ in xrange(0, size):
+            for _ in np.arange(0, size):
                 _mask.append(val)
         return np.array(_mask)
 
@@ -1899,7 +1898,7 @@ class ElphyLayout:
         # create the mask for each shape
         shape_mask = list()
         for shape in reshape:
-            for _ in xrange(1, shape + 1):
+            for _ in np.arange(1, shape + 1):
                 shape_mask.append(shape)
 
         # create a set of masks to extract data
