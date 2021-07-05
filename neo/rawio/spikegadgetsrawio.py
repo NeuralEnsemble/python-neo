@@ -33,13 +33,19 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
     def __init__(self, filename='', selected_streams=None):
         """
-        filename: str
-            The filename
-        selected_streams: None, list, str
-            sublist of streams to load/expose to API
-            useful for spikeextractor when one stream only is needed.
-            For instance streams = ['ECU', 'trodes']
-            'trodes' is name for ephy channel (ntrodes)
+        Class for reading spikegadgets files.
+        Only continuous signals are supported at the moment.
+
+        https://spikegadgets.com/spike-products/
+
+        Args:
+            filename: str
+                The filename
+            selected_streams: None, list, str
+                sublist of streams to load/expose to API
+                useful for spikeextractor when one stream only is needed.
+                For instance streams = ['ECU', 'trodes']
+                'trodes' is name for ephy channel (ntrodes)
         """
         BaseRawIO.__init__(self)
         self.filename = filename
@@ -108,7 +114,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
             for channel in device:
 
                 if 'interleavedDataIDByte' in channel.attrib:
-                    # TODO LATER: deal with "headstageSensor" wich have interleaved
+                    # TODO LATER: deal with "headstageSensor" which have interleaved
                     continue
 
                 if channel.attrib['dataType'] == 'analog':
