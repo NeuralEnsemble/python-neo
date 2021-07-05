@@ -561,6 +561,8 @@ class ClassicFileInfo(FileInfoBlock):
 
     def get_title(self):
         title_length, title = struct.unpack('<B20s', self.file.read(21))
+        if hasattr(title, 'decode'):
+            title = title.decode()
         return str(title[0:title_length])
 
     def get_user_file_info(self):
@@ -672,8 +674,10 @@ class MultistimFileInfo(FileInfoBlock):
     def get_title(self):
         title_length = read_from_char(self.file, 'B')
         title, = struct.unpack('<%ss' % title_length, self.file.read(title_length))
+        if hasattr(title, 'decode'):
+            title = title.decode()
         self.file.seek(self.file.tell() + 255 - title_length)
-        return str(title)
+        return title
 
     def get_user_file_info(self):
         header = dict()
@@ -900,10 +904,14 @@ class Acquis1Header(Header):
         assert not ((n_channels < 1) or (n_channels > 16)), "bad number of channels"
         nbpt = read_from_char(fileobj, 'h')
         l_xu, x_unit = struct.unpack('<B3s', fileobj.read(4))
+        if hasattr(x_unit, 'decode'):
+            x_unit = x_unit.decode()
         # extract units for each channel
         y_units = list()
         for i in range(1, 7):
             l_yu, y_unit = struct.unpack('<B3s', fileobj.read(4))
+            if hasattr(y_unit, 'decode'):
+                y_unit = y_unit.decode()
             y_units.append(y_unit[0:l_yu])
 
         # extract i1, i2, x1, x2 and compute dX and X0
@@ -1223,6 +1231,8 @@ class DAC2GSEpisodeBlock(ElphyBlock):
         Y0_ar = list()
         for _ in range(0, 16):
             l_yu, yu, dY, Y0 = struct.unpack('<B10sdd', layout.file.read(27))
+            if hasattr(yu, 'decode'):
+                yu = yu.decode()
             y_units.append(yu[0:l_yu])
             dY_ar.append(dY)
             Y0_ar.append(Y0)
@@ -1529,6 +1539,8 @@ class DAC2AdcSubBlock(ElphyBlock):
         self.Y0_ar = list()
         for _ in range(0, n_channels):
             l_yu, y_unit, dY, Y0 = struct.unpack('<B10sdd', fileobj.read(27))
+            if hasattr(y_unit, 'decode'):
+                y_unit = y_unit.decode()
             self.y_units.append(y_unit[0:l_yu])
             self.dY_ar.append(dY)
             self.Y0_ar.append(Y0)
@@ -1682,7 +1694,7 @@ def least_common_multiple(a, b):
     """
     Return the value of the least common multiple.
     """
-    return (a * b) / gcd(a, b)
+    return int((a * b) / gcd(a, b))
 
 
 # --------------------------------------------------------
@@ -1954,7 +1966,7 @@ class ElphyLayout:
         # reshape bytes from the sample size
         dt = np.dtype(numpy_map[sample_symbol])
         dt.newbyteorder('<')
-        return np.frombuffer(raw.reshape([len(raw) / sample_size, sample_size]), dt)
+        return np.frombuffer(raw.reshape([int(len(raw) / sample_size), sample_size]), dt)
 
     def apply_op(self, np_array, value, op_type):
         """
@@ -2459,7 +2471,7 @@ class DAC2Layout(ElphyLayout):
         if (blk_1 == blk_2) or (i_2 < i_1):
             return [k for k in data_blocks if self.blocks.index(k) > i_1]
         else:
-            return [k for k in data_blocks if self.blocks.index(k) in xrange(i_1, i_2)]
+            return [k for k in data_blocks if self.blocks.index(k) in range(i_1, i_2)]
 
     def set_cyberk_blocks(self):
         ck_blocks = list()
@@ -2529,10 +2541,9 @@ class DAC2Layout(ElphyLayout):
         return block.ks_block.k_sampling[ch - 1] if block.ks_block else 1
 
     def aggregate_size(self, block, ep):
-        ag_count = self.aggregate_sample_count(block)
         ag_size = 0
-        for ch in range(1, ag_count + 1):
-            if (block.ks_block.k_sampling[ch - 1] != 0):
+        for ch in range(1, len(block.ks_block.k_sampling)):
+            if block.ks_block.k_sampling[ch - 1] != 0:
                 ag_size += self.sample_size(ep, ch)
         return ag_size
 
@@ -2653,7 +2664,7 @@ class DAC2Layout(ElphyLayout):
         count = 0
         for i in range(0, block.ep_block.n_channels):
             if block.ks_block.k_sampling[i] > 0:
-                count += lcm0 / block.ks_block.k_sampling[i]
+                count += int(lcm0 / block.ks_block.k_sampling[i])
 
         return count
 
@@ -3016,6 +3027,8 @@ class LayoutFactory:
         self.file.seek(sub_offset)
         sub_ident_size = read_from_char(self.file, 'B')
         sub_identifier, = struct.unpack('<%ss' % sub_ident_size, self.file.read(sub_ident_size))
+        if hasattr(sub_identifier, 'decode'):
+            sub_identifier = sub_identifier.decode()
         sub_data_size = read_from_char(self.file, 'H')
         sub_data_offset = sub_offset + sub_ident_size + 3
         size_format = "H"
@@ -3100,6 +3113,8 @@ class Acquis1Factory(LayoutFactory):
     def create_block(self, layout, offset):
         self.file.seek(offset)
         ident_size, identifier = struct.unpack('<B15s', self.file.read(16))
+        if hasattr(identifier, 'decode'):
+            identifier = identifier.decode()
         identifier = identifier[0:ident_size]
         size = read_from_char(self.file, 'h')
         block_type = self.select_block_subclass(identifier)
@@ -3138,6 +3153,8 @@ class DAC2GSFactory(LayoutFactory):
     def create_block(self, layout, offset):
         self.file.seek(offset)
         ident_size, identifier = struct.unpack('<B15s', self.file.read(16))
+        if hasattr(identifier, 'decode'):
+            identifier = identifier.decode()
         # block title size is 7 or 15 bytes
         # 7 is for sequence blocs
         if identifier.startswith('DAC2SEQ'):
@@ -3185,6 +3202,8 @@ class DAC2Factory(LayoutFactory):
         size = read_from_char(self.file, 'l')
         ident_size = read_from_char(self.file, 'B')
         identifier, = struct.unpack('<%ss' % ident_size, self.file.read(ident_size))
+        if hasattr(identifier, 'decode'):
+            identifier = identifier.decode()
         block_type = self.select_block_subclass(identifier)
         block = block_type(layout, identifier, offset, size, size_format='l')
         self.file.seek(0)
@@ -3390,10 +3409,10 @@ class ElphyFile:
         """
         self.file.seek(0)
         length, title = struct.unpack('<B15s', self.file.read(16))
-        self.file.seek(0)
-        title = title[0:length]
         if hasattr(title, 'decode'):
             title = title.decode()
+        self.file.seek(0)
+        title = title[0:length]
         if title not in factories:
             title = "format is not implemented ('{}' not in {})".format(
                 title, str(factories.keys()))
@@ -3809,7 +3828,7 @@ class ElphyIO(BaseIO):
 
         # create a segment containing all analog,
         # tag and event channels for the episode
-        if self.elphy_file.n_episodes is None:
+        if self.elphy_file.n_episodes in [None, 0]:
             print("File '%s' appears to have no episodes" % (self.filename))
             return block
         for episode in range(1, self.elphy_file.n_episodes + 1):
@@ -4207,10 +4226,10 @@ class ElphyIO(BaseIO):
             analog_signal = AnalogSignal(
                 signal.data['y'],
                 units=signal.y_unit,
-                t_start=signal.t_start * getattr(pq, signal.x_unit.strip()),
-                t_stop=signal.t_stop * getattr(pq, signal.x_unit.strip()),
+                t_start=signal.t_start * getattr(pq, signal.x_unit.strip().decode()),
+                t_stop=signal.t_stop * getattr(pq, signal.x_unit.strip().decode()),
                 # sampling_rate = signal.sampling_frequency * pq.kHz,
-                sampling_period=signal.sampling_period * getattr(pq, signal.x_unit.strip()),
+                sampling_period=signal.sampling_period * getattr(pq, signal.x_unit.strip().decode()),
                 channel_name="episode {}, channel {}".format(int(episode + 1), int(channel + 1))
             )
             analog_signal.segment = segment
