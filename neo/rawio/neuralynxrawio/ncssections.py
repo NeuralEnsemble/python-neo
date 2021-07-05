@@ -10,7 +10,7 @@ class NcsSections:
     Methods of NcsSectionsFactory perform parsing of this information from an Ncs file and
     produce these where the sections are discontiguous in time and in temporal order.
 
-    TODO: This class will likely need __eq__, __ne__, and __hash__ to be useful in
+    TODO: This class will likely need __ne__ to be useful in
     more sophisticated segment construction algorithms.
 
     """
@@ -18,6 +18,16 @@ class NcsSections:
         self.sects = []
         self.sampFreqUsed = 0  # actual sampling frequency of samples
         self.microsPerSampUsed = 0  # microseconds per sample
+
+    def __eq__(self, other):
+        samp_eq = self.sampFreqUsed == other.sampFreqUsed
+        micros_eq = self.microsPerSampUsed == other.microsPerSampUsed
+        sects_eq = self.sects == other.sects
+        return (samp_eq and micros_eq and sects_eq)
+
+    def __hash__(self):
+        return (f'{self.sampFreqUsed};{self.microsPerSampUsed};'
+               f'{[s.__hash__() for s in self.sects]}').__hash__()
 
 
 class NcsSection:
@@ -46,6 +56,17 @@ class NcsSection:
         self.endRec = eb
         self.endTime = et
         self.n_samples = ns
+
+    def __eq__(self, other):
+        return (self.startRec == other.startRec
+                and self.startTime == other.startTime
+                and self.endRec == other.endRec
+                and self.endTime == other.endTime
+                and self.n_samples == other.n_samples)
+
+    def __hash__(self):
+        s = f'{self.startRec};{self.startTime};{self.endRec};{self.endTime};{self.n_samples}'
+        return s.__hash__()
 
     def before_time(self, rhb):
         """
