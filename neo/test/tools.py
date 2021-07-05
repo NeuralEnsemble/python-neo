@@ -11,7 +11,9 @@ import quantities as pq
 import neo
 from neo.core import objectlist
 from neo.core.baseneo import _reference_name, _container_name
+from neo.core.basesignal import BaseSignal
 from neo.core.container import Container
+from neo.core.spiketrainlist import SpikeTrainList
 from neo.io.basefromrawio import proxyobjectlist, EventProxy, EpochProxy
 
 
@@ -193,7 +195,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
     if exclude is None:
         exclude = []
 
-    if isinstance(ob1, list):
+    if isinstance(ob1, (list, SpikeTrainList)):
         assert len(ob1) == len(ob2), 'lens %s and %s not equal for %s and %s' \
                                      '' % (len(ob1), len(ob2), ob1, ob2)
         for i, (sub1, sub2) in enumerate(zip(ob1, ob2)):
@@ -266,7 +268,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
         attrname, attrtype = ioattr[0], ioattr[1]
         # ~ if attrname =='':
         if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
-            # object is hinerited from Quantity (AnalogSignal, SpikeTrain, ...)
+            # object is inherited from Quantity (AnalogSignal, SpikeTrain, ...)
             try:
                 assert_arrays_almost_equal(ob1.magnitude, ob2.magnitude, threshold=threshold,
                                            dtype=dtype)
@@ -327,6 +329,25 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
             except BaseException as exc:
                 exc.args += ('from {} of {}'.format(attrname, classname),)
                 raise
+
+        elif isinstance(attrtype, tuple):
+            attr1 = getattr(ob1, attrname)
+            attr2 = getattr(ob2, attrname)
+            assert attr1.__class__.__name__ in attrtype
+            assert attr2.__class__.__name__ in attrtype
+            if isinstance(attr1, BaseSignal):
+                assert isinstance(attr2, BaseSignal)
+                # Compare magnitudes
+                assert_arrays_almost_equal(attr1.magnitude, attr2.magnitude,
+                                           threshold=threshold, dtype=dtype)
+                # Compare dimensionalities
+                dim1 = attr1.dimensionality
+                dim2 = attr2.dimensionality
+                errmsg = "Attribute {} of {} are not the same: {} != {}".format(
+                            attrname, classname, dim1.string, dim2.string)
+                assert dim1.simplified == dim2.simplified, errmsg
+                assert attr1.name == attr2.name
+                # todo: check annotations
         else:
             # ~ print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
             assert getattr(ob1, attrname) == getattr(ob2, attrname),\

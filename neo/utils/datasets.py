@@ -1,17 +1,18 @@
 """
 Utility functions to retrieve public datasets.
 """
-from pathlib import Path
 import os
+from pathlib import Path
 
 try:
     import datalad.api
+    from datalad.support.gitrepo import GitRepo
+
     HAVE_DATALAD = True
 except:
     HAVE_DATALAD = False
 
 default_testing_repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-
 
 global local_testing_data_folder
 if os.getenv('EPHY_TESTING_DATA_FOLDER', default=None) is not None:
@@ -26,7 +27,8 @@ def get_local_testing_data_folder():
     return local_testing_data_folder
 
 
-def download_dataset(repo=default_testing_repo, remote_path=None, local_folder=None):
+def download_dataset(repo=default_testing_repo, remote_path=None,
+                     local_folder=None):
     """
     Download a dataset with datalad client.
 
@@ -64,12 +66,15 @@ def download_dataset(repo=default_testing_repo, remote_path=None, local_folder=N
         local_folder = local_testing_data_folder
     local_folder = Path(local_folder)
 
-    if local_folder.exists():
+    if local_folder.exists() and GitRepo.is_valid_repo(local_folder):
         dataset = datalad.api.Dataset(path=local_folder)
-        # TODO : some kind git pull to update distant change ??
+        # make sure git repo is in clean state
+        repo = dataset.repo
+        repo.call_git(['checkout', '--force', 'master'])
+        dataset.update(merge=True)
     else:
         dataset = datalad.api.install(path=local_folder,
-            source=repo)
+                                      source=repo)
 
     if remote_path is None:
         print('Bad boy: you have to provide "remote_path"')

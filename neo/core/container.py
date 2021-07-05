@@ -7,6 +7,8 @@ object inherit from.  It provides shared methods for all container types.
 
 from copy import deepcopy
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
+from neo.core.spiketrain import SpikeTrain
+from neo.core.spiketrainlist import SpikeTrainList
 
 
 def unique_objs(objs):
@@ -83,7 +85,11 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         results = [result for result in results if
                    result.__class__ in objects or
                    result.__class__.__name__ in objects]
-    return results
+
+    if results and all(isinstance(obj, SpikeTrain) for obj in results):
+        return SpikeTrainList(results)
+    else:
+        return results
 
 
 class Container(BaseNeo):
@@ -411,7 +417,11 @@ class Container(BaseNeo):
             data = True
             container = True
 
-        children = []
+        if objects == SpikeTrain:
+            children = SpikeTrainList()
+        else:
+            children = []
+
         # get the objects we want
         if data:
             if recursive:
