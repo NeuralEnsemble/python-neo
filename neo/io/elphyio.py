@@ -4223,13 +4223,14 @@ class ElphyIO(BaseIO):
         # each channel in the episode
         for channel in range(1, self.elphy_file.n_channels(episode) + 1):
             signal = self.elphy_file.get_signal(episode, channel)
+            x_unit = signal.x_unit.strip().decode()
             analog_signal = AnalogSignal(
                 signal.data['y'],
                 units=signal.y_unit,
                 t_start=signal.t_start * getattr(pq, signal.x_unit.strip().decode()),
                 t_stop=signal.t_stop * getattr(pq, signal.x_unit.strip().decode()),
                 # sampling_rate = signal.sampling_frequency * pq.kHz,
-                sampling_period=signal.sampling_period * getattr(pq, signal.x_unit.strip().decode()),
+                sampling_period=signal.sampling_period * getattr(pq, x_unit),
                 channel_name="episode {}, channel {}".format(int(episode + 1), int(channel + 1))
             )
             analog_signal.segment = segment

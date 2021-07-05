@@ -28,5 +28,6 @@ class TestElphyIO(BaseTestIO, unittest.TestCase):
             # ensure that at least one data object is generated for each file
             self.assertTrue(any(list(bl.segments[0].size.values())))
 
+
 if __name__ == "__main__":
     unittest.main()
