@@ -238,7 +238,9 @@ class NIXRawIO(BaseRawIO):
                     if da.type != "neo.analogsignal":
                         continue
                     anasig_id = da.name.split('.')[-2]
-                    # skip already annotated signals
+                    # skip already annotated signals as each channel already
+                    # contains the complete set of annotations and
+                    # array_annotations
                     if anasig_id in annotated_anasigs:
                         continue
                     annotated_anasigs.append(anasig_id)

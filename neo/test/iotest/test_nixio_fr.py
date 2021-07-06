@@ -134,6 +134,9 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
             assert 'venue' in frbl.segments[0].events[0].annotations
             assert 'evven' in frbl.segments[0].events[1].annotations
             assert 'custom_id' in frbl.segments[0].analogsignals[0].array_annotations
+            for anasig in frbl.segments[0].analogsignals:
+                for value in anasig.array_annotations.values():
+                    assert anasig.shape[-1] == len(value)
         os.remove(self.testfilename)
 
 
