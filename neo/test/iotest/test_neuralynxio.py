@@ -239,7 +239,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
             nio = NeuralynxIO(dirname=dirname, use_cache=False)
             block = nio.read_block()
 
-            #check that data agrees in first segment first channel only
+            # check that data agrees in first segment first channel only
             for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
                 chid = int(anasig.array_annotations['channel_ids'][0])
 
