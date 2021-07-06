@@ -255,7 +255,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
             #     np.testing.assert_allclose(plain_data[:numToTest],
             #                                anasig.magnitude[:numToTest, 0] * gain_factor_0,
             #                                rtol=0.01, err_msg=" for file " + filename)
-    @unittest.skip("nse failing for now as per issue #907")
+
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
             dirname = self.get_local_path(session)
@@ -266,7 +266,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 filename = st.file_origin.replace('original_data', 'plain_data')
                 if '.nse' in st.file_origin:
                     filename = filename.replace('.nse', '.txt')
-                    times_column = 1
+                    times_column = 0
                     plain_data = np.loadtxt(filename)[:, times_column]
                 elif '.ntt' in st.file_origin:
                     filename = filename.replace('.ntt', '.txt')
