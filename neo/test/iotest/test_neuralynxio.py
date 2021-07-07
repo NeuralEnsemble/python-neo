@@ -2,7 +2,7 @@
 Tests of neo.io.neuralynxio.py
 """
 
-import time
+import os
 import warnings
 
 import unittest
@@ -233,29 +233,33 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
             return [item for sublist in res for item in sublist]
 
-    # def test_ncs(self):
-        # for session in self.files_to_test:
-        #     dirname = self.get_local_path(session)
-        #     nio = NeuralynxIO(dirname=dirname, use_cache=False)
-        #     block = nio.read_block()
+    def test_ncs(self):
+        for session in self.files_to_test:
+            dirname = self.get_local_path(session)
+            nio = NeuralynxIO(dirname=dirname, use_cache=False)
+            block = nio.read_block()
 
-            # check that data agrees in first segment only
-            # for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
-            #     chid = anasig.channel_index.channel_ids[anasig_id]
-            #
-            #     # need to decode, unless keyerror
-            #     chname = anasig.channel_index.channel_names[anasig_id]
-            #     chuid = (chname, chid)
-            #     filename = nio.ncs_filenames[chuid][:-3] + 'txt'
-            #     filename = filename.replace('original_data', 'plain_data')
-            #     overlap = 512 * 500
-            #     plain_data = self._load_plaindata(filename, overlap)
-            #     gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
-            #     numToTest = min(len(plain_data), len(anasig.magnitude[:, 0]))
-            #     np.testing.assert_allclose(plain_data[:numToTest],
-            #                                anasig.magnitude[:numToTest, 0] * gain_factor_0,
-            #                                rtol=0.01, err_msg=" for file " + filename)
-    @unittest.skip("nse failing for now as per issue #907")
+            # check that data agrees in first segment first channel only
+            for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
+                chid = int(anasig.array_annotations['channel_ids'][0])
+
+                chname = str(anasig.array_annotations['channel_names'][0])
+                chuid = (chname, chid)
+                filename = nio.ncs_filenames[chuid][:-3] + 'txt'
+                filename = filename.replace('original_data', 'plain_data')
+                overlap = 512 * 500
+                if os.path.isfile(filename):
+                    plain_data = self._load_plaindata(filename, overlap)
+                    gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
+                    numToTest = min(len(plain_data), len(anasig.magnitude[:, 0]))
+                    np.testing.assert_allclose(plain_data[:numToTest],
+                                               anasig.magnitude[:numToTest, 0] * gain_factor_0,
+                                               rtol=0.01, err_msg=" for file " + filename)
+                else:
+                    warnings.warn(f'Could not find corresponding test file {filename}')
+                    # TODO: Create missing plain data file using NeuraView
+                    # https://neuralynx.com/software/category/data-analysis
+
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
             dirname = self.get_local_path(session)
@@ -266,7 +270,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 filename = st.file_origin.replace('original_data', 'plain_data')
                 if '.nse' in st.file_origin:
                     filename = filename.replace('.nse', '.txt')
-                    times_column = 1
+                    times_column = 0
                     plain_data = np.loadtxt(filename)[:, times_column]
                 elif '.ntt' in st.file_origin:
                     filename = filename.replace('.ntt', '.txt')
@@ -330,7 +334,7 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
 
 def compare_neo_content(bl1, bl2):
     print('*' * 5, 'Comparison of blocks', '*' * 5)
-    object_types_to_test = [Segment, ChannelIndex, Unit, AnalogSignal,
+    object_types_to_test = [Segment, AnalogSignal,
                             SpikeTrain, Event, Epoch]
     for objtype in object_types_to_test:
         print('Testing {}'.format(objtype))
