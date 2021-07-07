@@ -98,7 +98,7 @@ class CedRawIO(BaseRawIO):
                 max_time = smrx.ChannelMaxTime(chan_ind)
                 divide = smrx.ChannelDivide(chan_ind)
                 # here we don't use filter (sonpy.lib.MarkerFilter()) so we get all marker
-                wave_marks = smrx.ReadWaveMarks(chan_ind, int(max_time/divide), 0, max_time)
+                wave_marks = smrx.ReadWaveMarks(chan_ind, int(max_time / divide), 0, max_time)
 
                 # here we load in memory all spike once because the access is really slow
                 # with the ReadWaveMarks
@@ -113,7 +113,7 @@ class CedRawIO(BaseRawIO):
                     mask = spike_codes == unit_id
                     self._all_spike_ticks[spike_chan_id] = spike_ticks[mask]
 
-        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)       
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         # channels are grouped into stream if they have a common start, stop, size, divide and sampling_rate
         channel_infos = np.array(channel_infos,
@@ -203,7 +203,7 @@ class CedRawIO(BaseRawIO):
             sigs[:, i] = sig
 
         return sigs
-   
+
     def _spike_count(self, block_index, seg_index, unit_index):
         unit_id = self.header['spike_channels'][unit_index]['id']
         spike_ticks = self._all_spike_ticks[unit_id]
