@@ -4,15 +4,17 @@ RawIO Class for NIX files
 The RawIO assumes all segments and all blocks have the same structure.
 It supports all kinds of NEO objects.
 
-Author: Chek Yin Choi
+Author: Chek Yin Choi, Julia Sprenger
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+import os.path
 
-from ..io.nixio import NixIO
-from ..io.nixio import check_nix_version
 import numpy as np
+
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                        _spike_channel_dtype, _event_channel_dtype)
+from ..io.nixio import check_nix_version
+
 try:
     import nixio as nix
 
@@ -50,7 +52,7 @@ class NIXRawIO(BaseRawIO):
     def _parse_header(self):
         self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
         signal_channels = []
-        size_list = []
+        anasig_ids = {0: []}  # ids of analogsignals by segment
         stream_ids = []
         for bl in self.file.blocks:
             for seg in bl.groups:
@@ -61,19 +63,18 @@ class NIXRawIO(BaseRawIO):
                         units = str(da.unit)
                         dtype = str(da.dtype)
                         sr = 1 / da.dimensions[0].sampling_interval
-                        da_leng = da.size
-                        if da_leng not in size_list:
-                            size_list.append(da_leng)
-                            stream_ids.append(str(len(size_list)))
-                        # very important! group_id use to store
-                        # channel groups!!!
-                        # use only for different signal length
-                        stream_index = size_list.index(da_leng)
-                        stream_id = stream_ids[stream_index]
+                        anasig_id = da.name.split('.')[-2]
+                        if anasig_id not in anasig_ids[0]:
+                            anasig_ids[0].append(anasig_id)
+                        stream_id = anasig_ids[0].index(anasig_id)
+                        if stream_id not in stream_ids:
+                            stream_ids.append(stream_id)
                         gain = 1
                         offset = 0.
                         signal_channels.append((ch_name, chan_id, sr, dtype,
                                             units, gain, offset, stream_id))
+                # only read structure of first segment and assume the same
+                # across segments
                 break
             break
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -210,21 +211,6 @@ class NIXRawIO(BaseRawIO):
                 props = group.metadata.inherited_properties()
                 seg_ann.update(self._filter_properties(props, "segment"))
 
-                # TODO handle annotation at stream level
-                '''
-                 sig_idx = 0
-                 groupdas = NixIO._group_signals(grp.data_arrays)
-                 for nix_name, signals in groupdas.items():
-                    da = signals[0]
-                     if da.type == 'neo.analogsignal' and seg_ann['signals']:
-                         # collect and group DataArrays
-                         sig_ann = seg_ann['signals'][sig_idx]
-                         sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
-                         props = da.metadata.inherited_properties()
-                         sig_ann.update(self._filter_properties(props, 'analogsignal'))
-                         sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
-                         sig_idx += 1
-                '''
                 sp_idx = 0
                 ev_idx = 0
                 for mt in group.multi_tags:
@@ -241,6 +227,38 @@ class NIXRawIO(BaseRawIO):
                             props = mt.metadata.inherited_properties()
                             event_ann.update(self._filter_properties(props, 'event'))
                             ev_idx += 1
+
+                # adding array annotations to analogsignals
+                annotated_anasigs = []
+                sig_ann = seg_ann['signals']
+                # this implementation relies on analogsignals always being
+                # stored in the same stream order across segments
+                stream_id = 0
+                for da_idx, da in enumerate(group.data_arrays):
+                    if da.type != "neo.analogsignal":
+                        continue
+                    anasig_id = da.name.split('.')[-2]
+                    # skip already annotated signals as each channel already
+                    # contains the complete set of annotations and
+                    # array_annotations
+                    if anasig_id in annotated_anasigs:
+                        continue
+                    annotated_anasigs.append(anasig_id)
+
+                    # collect annotation properties
+                    props = [p for p in da.metadata.props
+                             if p.type != 'ARRAYANNOTATION']
+                    props_dict = self._filter_properties(props, "analogsignal")
+                    sig_ann[stream_id].update(props_dict)
+
+                    # collect array annotation properties
+                    props = [p for p in da.metadata.props
+                             if p.type == 'ARRAYANNOTATION']
+                    props_dict = self._filter_properties(props, "analogsignal")
+                    sig_ann[stream_id]['__array_annotations__'].update(
+                        props_dict)
+
+                    stream_id += 1
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
