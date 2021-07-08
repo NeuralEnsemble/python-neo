@@ -250,7 +250,7 @@ class NWBIO(BaseIO):
 
         """
         assert self.nwb_file_mode in ('r',)
-        io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode)  # Open a file with NWBHDF5IO
+        io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode, load_namespaces=True)  # Open a file with NWBHDF5IO
         self._file = io.read()
 
         self.global_block_metadata = {}
@@ -372,7 +372,7 @@ class NWBIO(BaseIO):
 
     def _read_units(self, lazy):
         if self._file.units:
-            for id in self._file.units.id[:]:
+            for id in range(len(self._file.units)):
                 try:
                     # NWB files created by Neo store the segment and block names as extra columns
                     segment_name = self._file.units.segment[id]
@@ -457,11 +457,10 @@ class NWBIO(BaseIO):
         io_nwb.write(nwbfile)
         io_nwb.close()
 
-        io_validate = pynwb.NWBHDF5IO(self.filename, "r")
-        errors = pynwb.validate(io_validate, namespace="core")
-        if errors:
-            raise Exception(f"Errors found when validating {self.filename}")
-        io_validate.close()
+        with pynwb.NWBHDF5IO(self.filename, "r") as  io_validate:
+            errors = pynwb.validate(io_validate, namespace="core")
+            if errors:
+                raise Exception(f"Errors found when validating {self.filename}")
 
     def write_block(self, nwbfile, block, **kwargs):
         """
@@ -755,7 +754,7 @@ class EpochProxy(BaseEpochProxy):
             self.shape = (index.sum(),)
         else:
             self._index = slice(None)
-            self.shape = epochs_table.n_rows  # untested, just guessed that n_rows exists
+            self.shape = (len(epochs_table),)
         self.name = epoch_name
 
     def load(self, time_slice=None, strict_slicing=True):
