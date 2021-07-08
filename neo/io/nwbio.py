@@ -20,10 +20,7 @@ import os
 from itertools import chain
 from datetime import datetime
 import json
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:  # Python 2
-    JSONDecodeError = ValueError
+from json.decoder import JSONDecodeError
 from collections import defaultdict
 
 import numpy as np
@@ -54,8 +51,6 @@ try:
     from pynwb.ophys import TwoPhotonSeries, OpticalChannel, ImageSegmentation, Fluorescence
     have_pynwb = True
 except ImportError:
-    have_pynwb = False
-except SyntaxError:  # pynwb doesn't support Python 2.7
     have_pynwb = False
 
 # hdmf imports
@@ -247,7 +242,7 @@ class NWBIO(BaseIO):
 
     def read_all_blocks(self, lazy=False, **kwargs):
         """
-
+        Load all blocks in the file.
         """
         assert self.nwb_file_mode in ('r',)
         io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode, load_namespaces=True)  # Open a file with NWBHDF5IO
@@ -372,7 +367,7 @@ class NWBIO(BaseIO):
 
     def _read_units(self, lazy):
         if self._file.units:
-            for id in range(len(self._file.units)):
+            for id in self._file.units.id[:]:
                 try:
                     # NWB files created by Neo store the segment and block names as extra columns
                     segment_name = self._file.units.segment[id]
@@ -435,7 +430,7 @@ class NWBIO(BaseIO):
         assert self.nwb_file_mode in ('w',)  # possibly expand to 'a'ppend later
         if self.nwb_file_mode == "w" and os.path.exists(self.filename):
             os.remove(self.filename)
-        io_nwb = pynwb.NWBHDF5IO(self.filename, manager=get_manager(), mode=self.nwb_file_mode)
+        io_nwb = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode)
 
         if sum(statistics(block)["SpikeTrain"]["count"] for block in blocks) > 0:
             nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
@@ -457,15 +452,17 @@ class NWBIO(BaseIO):
         io_nwb.write(nwbfile)
         io_nwb.close()
 
-        with pynwb.NWBHDF5IO(self.filename, "r") as  io_validate:
-            errors = pynwb.validate(io_validate, namespace="core")
-            if errors:
-                raise Exception(f"Errors found when validating {self.filename}")
+        io_validate = pynwb.NWBHDF5IO(self.filename, "r")
+        errors = pynwb.validate(io_validate, namespace="core")
+        if errors:
+            raise Exception(f"Errors found when validating {self.filename}")
+        io_validate.close()
 
     def write_block(self, nwbfile, block, **kwargs):
         """
         Write a Block to the file
             :param block: Block to be written
+            :param nwbfile: Representation of an NWB file
         """
         electrodes = self._write_electrodes(nwbfile, block)
         if not block.name:
@@ -673,10 +670,10 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
 
     def load(self, time_slice=None, strict_slicing=True):
         """
-        *Args*:
-            :time_slice: None or tuple of the time slice expressed with quantities.
+        Load AnalogSignalProxy args:
+            :param time_slice: None or tuple of the time slice expressed with quantities.
                             None is the entire signal.
-            :strict_slicing: True by default.
+            :param strict_slicing: True by default.
                 Control if an error is raised or not when one of the time_slice members
                 (t_start or t_stop) is outside the real time range of the segment.
         """
@@ -726,10 +723,10 @@ class EventProxy(BaseEventProxy):
 
     def load(self, time_slice=None, strict_slicing=True):
         """
-        *Args*:
-            :time_slice: None or tuple of the time slice expressed with quantities.
+        Load EventProxy args:
+            :param time_slice: None or tuple of the time slice expressed with quantities.
                             None is the entire signal.
-            :strict_slicing: True by default.
+            :param strict_slicing: True by default.
                 Control if an error is raised or not when one of the time_slice members
                 (t_start or t_stop) is outside the real time range of the segment.
         """
@@ -747,29 +744,36 @@ class EventProxy(BaseEventProxy):
 
 class EpochProxy(BaseEpochProxy):
 
-    def __init__(self, epochs_table, epoch_name=None, index=None):
-        self._epochs_table = epochs_table
+    def __init__(self, time_intervals, epoch_name=None, index=None):
+        """
+            :param time_intervals: An epochs table, 
+                                which is a specific TimeIntervals table that stores info about long periods
+        """
+        self._time_intervals = time_intervals
         if index is not None:
             self._index = index
             self.shape = (index.sum(),)
         else:
             self._index = slice(None)
-            self.shape = (len(epochs_table),)
+            self.shape = time_intervals.n_rows  # untested, just guessed that n_rows exists
         self.name = epoch_name
 
     def load(self, time_slice=None, strict_slicing=True):
         """
-        *Args*:
-            :time_slice: None or tuple of the time slice expressed with quantities.
+        Load EpochProxy args:
+            :param time_slice: None or tuple of the time slice expressed with quantities.
                             None is all of the intervals.
-            :strict_slicing: True by default.
+            :param strict_slicing: True by default.
                 Control if an error is raised or not when one of the time_slice members
                 (t_start or t_stop) is outside the real time range of the segment.
         """
-        start_times = self._epochs_table.start_time[self._index]
-        stop_times = self._epochs_table.stop_time[self._index]
-        durations = stop_times - start_times
-        labels = self._epochs_table.tags[self._index]
+        if time_slice:
+            raise NotImplementedError("todo")
+        else:
+            start_times = self._time_intervals.start_time[self._index]
+            stop_times = self._time_intervals.stop_time[self._index] 
+            durations = stop_times - start_times
+            labels = self._time_intervals.tags[self._index]
 
         return Epoch(times=start_times * pq.s,
                      durations=durations * pq.s,
@@ -779,34 +783,39 @@ class EpochProxy(BaseEpochProxy):
 
 class SpikeTrainProxy(BaseSpikeTrainProxy):
 
-    def __init__(self,  units_table, id):
-        self._units_table = units_table
+    def __init__(self, time_intervals, id):        
+        """
+            :param time_intervals: A trials table, 
+                                which is a specific TimeIntervals table that stores info about short repeated segments. 
+                                There can only be one trials table.
+        """
+        self._time_intervals = time_intervals
         self.id = id
         self.units = pq.s
-        t_start, t_stop = units_table.get_unit_obs_intervals(id)[0]
+        t_start, t_stop = time_intervals.obs_intervals[id] # Only handle the case where there are no observation intervals, as that is the most common case.
         self.t_start = t_start * pq.s
         self.t_stop = t_stop * pq.s
         self.annotations = {"nwb_group": "acquisition"}
         try:
             # NWB files created by Neo store the name as an extra column
-            self.name = units_table._name[id]
+            self.name = time_intervals._name[id]
         except AttributeError:
             self.name = None
         self.shape = None   # no way to get this without reading the data
 
     def load(self, time_slice=None, strict_slicing=True):
         """
-        *Args*:
-            :time_slice: None or tuple of the time slice expressed with quantities.
+        Load SpikeTrainProxy args:
+            :param time_slice: None or tuple of the time slice expressed with quantities.
                             None is the entire spike train.
-            :strict_slicing: True by default.
+            :param strict_slicing: True by default.
                 Control if an error is raised or not when one of the time_slice members
                 (t_start or t_stop) is outside the real time range of the segment.
         """
         interval = None
         if time_slice:
             interval = (float(t) for t in time_slice)  # convert from quantities
-        spike_times = self._units_table.get_unit_spike_times(self.id, in_interval=interval)
+        spike_times = self._time_intervals.get_unit_spike_times(self.id, in_interval=interval)
         return SpikeTrain(
                     spike_times * self.units,
                     self.t_stop,
