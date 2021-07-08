@@ -367,7 +367,7 @@ class NWBIO(BaseIO):
 
     def _read_units(self, lazy):
         if self._file.units:
-            for id in self._file.units.id[:]:
+            for id in range(len(self._file.units)):
                 try:
                     # NWB files created by Neo store the segment and block names as extra columns
                     segment_name = self._file.units.segment[id]
@@ -452,11 +452,10 @@ class NWBIO(BaseIO):
         io_nwb.write(nwbfile)
         io_nwb.close()
 
-        io_validate = pynwb.NWBHDF5IO(self.filename, "r")
-        errors = pynwb.validate(io_validate, namespace="core")
-        if errors:
-            raise Exception(f"Errors found when validating {self.filename}")
-        io_validate.close()
+        with pynwb.NWBHDF5IO(self.filename, "r") as  io_validate:
+            errors = pynwb.validate(io_validate, namespace="core")
+            if errors:
+                raise Exception(f"Errors found when validating {self.filename}")
 
     def write_block(self, nwbfile, block, **kwargs):
         """
@@ -755,7 +754,7 @@ class EpochProxy(BaseEpochProxy):
             self.shape = (index.sum(),)
         else:
             self._index = slice(None)
-            self.shape = time_intervals.n_rows  # untested, just guessed that n_rows exists
+            self.shape = (len(epochs_table),)
         self.name = epoch_name
 
     def load(self, time_slice=None, strict_slicing=True):
@@ -783,22 +782,27 @@ class EpochProxy(BaseEpochProxy):
 
 class SpikeTrainProxy(BaseSpikeTrainProxy):
 
-    def __init__(self, time_intervals, id):        
+    def __init__(self, units_table, id):        
         """
-            :param time_intervals: A trials table, 
-                                which is a specific TimeIntervals table that stores info about short repeated segments. 
-                                There can only be one trials table.
+            :param units_table: A Units table (see https://pynwb.readthedocs.io/en/stable/pynwb.misc.html#pynwb.misc.Units)
+            :param id: the cell/unit ID (integer)
         """
-        self._time_intervals = time_intervals
+        self._units_table = units_table
         self.id = id
         self.units = pq.s
-        t_start, t_stop = time_intervals.obs_intervals[id] # Only handle the case where there are no observation intervals, as that is the most common case.
+        obs_intervals = units_table.get_unit_obs_intervals(id)
+        if len(obs_intervals) == 0:
+            t_start, t_stop = None, None
+        elif len(obs_intervals) == 1:
+            t_start, t_stop = obs_intervals[0]
+        else:
+            raise NotImplementedError("Can't yet handle multiple observation intervals")
         self.t_start = t_start * pq.s
         self.t_stop = t_stop * pq.s
         self.annotations = {"nwb_group": "acquisition"}
         try:
             # NWB files created by Neo store the name as an extra column
-            self.name = time_intervals._name[id]
+            self.name = units_table._name[id]
         except AttributeError:
             self.name = None
         self.shape = None   # no way to get this without reading the data
@@ -815,7 +819,7 @@ class SpikeTrainProxy(BaseSpikeTrainProxy):
         interval = None
         if time_slice:
             interval = (float(t) for t in time_slice)  # convert from quantities
-        spike_times = self._time_intervals.get_unit_spike_times(self.id, in_interval=interval)
+        spike_times = self._units_table.get_unit_spike_times(self.id, in_interval=interval)
         return SpikeTrain(
                     spike_times * self.units,
                     self.t_stop,
