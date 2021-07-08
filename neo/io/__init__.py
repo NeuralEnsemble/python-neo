@@ -281,7 +281,7 @@ from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.cedio import CedIO
 from neo.io.elanio import ElanIO
-# from neo.io.elphyio import ElphyIO
+from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
 from neo.io.intanio import IntanIO
