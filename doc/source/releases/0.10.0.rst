@@ -1,0 +1,48 @@
+========================
+Neo 0.10.0 release notes
+========================
+
+9th July 2021
+
+
+Removal of Unit and ChannelIndex
+--------------------------------
+
+
+
+Supported Python and NumPy versions
+-----------------------------------
+
+We no longer support Python 3.6, nor versions of NumPy older than 1.16.
+
+
+Other new or modified features
+------------------------------
+
+TODO
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+
+New IO modules
+--------------
+
+  * TODO
+  * TODO
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+  * TODO
+  * TODO
+
+
+Acknowledgements
+----------------
+
+Thanks to Samuel Garcia, Julia Sprenger, Peter N. Steinmetz, Andrew Davison, Steffen Bürgers,
+Regimantas Jurkus, Alessio Buccino,  Shashwat Sridhar, Jeffrey Gill, Etienne Combrisson,
+Ben Dichter and Elodie Legouée for their contributions to this release.
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.10.0+is%3Aclosed
+.. _`pull requests`: https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+merged%3A%3E2020-11-10+milestone%3A0.10.0
