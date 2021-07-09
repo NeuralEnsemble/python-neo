@@ -3,6 +3,7 @@ Tests of the neo.utils.misc module
 """
 
 import unittest
+import warnings
 
 import numpy as np
 import quantities as pq
@@ -374,7 +375,10 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         original_block.segments = [seg, seg2]
         original_block.create_many_to_one_relationship()
 
-        block = cut_block_by_epochs(original_block, properties={'pick': 'me'})
+        with warnings.catch_warnings(record=True) as w:
+            # This should raise a warning as one segment does not contain epochs
+            block = cut_block_by_epochs(original_block, properties={'pick': 'me'})
+            self.assertEqual(len(w), 1)
 
         assert_neo_object_is_compliant(block)
         self.assertEqual(len(block.segments), 3)
@@ -430,7 +434,10 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         original_block.segments = [seg, seg2]
         original_block.create_many_to_one_relationship()
 
-        block = cut_block_by_epochs(original_block, properties={'pick': 'me'}, reset_time=True)
+        with warnings.catch_warnings(record=True) as w:
+            # This should raise a warning as one segment does not contain epochs
+            block = cut_block_by_epochs(original_block, properties={'pick': 'me'}, reset_time=True)
+            self.assertEqual(len(w), 1)
 
         assert_neo_object_is_compliant(block)
         self.assertEqual(len(block.segments), 3)
