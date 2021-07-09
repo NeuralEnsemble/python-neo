@@ -28,26 +28,13 @@ from numpy.testing import assert_array_equal, assert_allclose
 
 
 @unittest.skipUnless(HAVE_PYNWB, "requires pynwb")
-class TestNWBIO(unittest.TestCase):
+class TestNWBIO(BaseTestIO, unittest.TestCase):
     ioclass = NWBIO
-    files_to_download = [
-        #        Files from Allen Institute :
-        # "http://download.alleninstitute.org/informatics-archive/prerelease/H19.28.012.11.05-2.nwb",  # 64 MB
-        "http://download.alleninstitute.org/informatics-archive/prerelease/H19.29.141.11.21.01.nwb",  # 7 MB
+    entities_to_download = ["nwb"]
+    entities_to_test = [
+        # Files from Allen Institute:
+        "nwb/H19.29.141.11.21.01.nwb",  # 7 MB
     ]
-
-    def test_read(self):
-        self.local_test_dir = get_local_testing_data_folder() / "nwb"
-        os.makedirs(self.local_test_dir, exist_ok=True)
-        for url in self.files_to_download:
-            local_filename = os.path.join(self.local_test_dir, url.split("/")[-1])
-            if not os.path.exists(local_filename):
-                try:
-                    urlretrieve(url, local_filename)
-                except IOError as exc:
-                    raise unittest.TestCase.failureException(exc)
-            io = NWBIO(local_filename, 'r')
-            blocks = io.read()
 
     def test_roundtrip(self):
 
