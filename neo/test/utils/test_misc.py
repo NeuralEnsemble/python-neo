@@ -386,8 +386,8 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
             self.assertEqual(len(block.segments[epoch_idx].irregularlysampledsignals), 1)
 
             annos = block.segments[epoch_idx].annotations
-            self.assertIn('nix_name', annos)
-            self.assertTrue(annos['nix_name'].startswith('neo.segment.'))
+            # new segment objects have different identity
+            self.assertNotIn('nix_name', annos)
 
             if epoch_idx != 0:
                 self.assertEqual(len(block.segments[epoch_idx].epochs), 1)
@@ -442,8 +442,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
             self.assertEqual(len(block.segments[epoch_idx].irregularlysampledsignals), 1)
 
             annos = block.segments[epoch_idx].annotations
-            self.assertIn('nix_name', annos)
-            self.assertTrue(annos['nix_name'].startswith('neo.segment.'))
+            self.assertNotIn('nix_name', annos)
 
             if epoch_idx != 0:
                 self.assertEqual(len(block.segments[epoch_idx].epochs), 1)
