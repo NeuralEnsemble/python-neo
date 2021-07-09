@@ -558,6 +558,7 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
 
     return segments
 
+
 def clean_annotations(dictionary):
     """
     Remove reserved keys from an annotation dictionary.
