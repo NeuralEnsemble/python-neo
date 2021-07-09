@@ -91,7 +91,16 @@ class MaxwellRawIO(BaseRawIO):
         for stream_id in signal_streams['id']:
             if int(version) == 20160704:
                 sr = 20000.
-                gain_uV = h5['settings']['lsb'][0] * 1e6
+                settings = h5["settings"]
+                if 'lsb' in settings:
+                    gain_uV = settings['lsb'][:][0] * 1e6
+                else:
+                    if "gain" not in settings:
+                        print("'gain' amd 'lsb' not found in settings. Setting gain to 512 (default)")
+                        gain = 512
+                    else:
+                        gain = settings['gain'][:][0]
+                    gain_uV = 3.3 / (1024 * gain) * 1e6
                 sigs = h5['sig']
                 mapping = h5["mapping"]
                 ids = np.array(mapping['channel'])
