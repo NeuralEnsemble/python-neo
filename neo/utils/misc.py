@@ -3,12 +3,15 @@ This module defines multiple utility functions for filtering, creation, slicing,
 etc. of neo.core objects.
 '''
 
-import neo
 import copy
 import warnings
+
 import numpy as np
 import quantities as pq
 
+import neo
+
+ignore_annotations = ['nix_name']
 
 def get_events(container, **properties):
     """
@@ -345,8 +348,12 @@ def add_epoch(
 
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
 
-    ep.annotate(**event1.annotations)
-    ep.array_annotate(**event1.array_annotations)
+    annos = {k: v for k, v in event1.annotations.items()
+             if k not in ignore_annotations}
+    array_annos = {k: v for k, v in event1.array_annotations.items()
+                   if k not in ignore_annotations}
+    ep.annotate(**copy.copy(annos))
+    ep.array_annotate(**copy.copy(array_annos))
 
     if attach_result:
         segment.epochs.append(ep)
@@ -543,10 +550,14 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
                                 epoch.times[ep_id] + epoch.durations[ep_id],
                                 reset_time=reset_time)
 
-        subseg.annotate(**copy.copy(epoch.annotations))
+        annos = {k: v for k, v in epoch.annotations.items()
+                 if k not in ignore_annotations}
+        subseg.annotate(**copy.copy(annos))
 
         # Add array-annotations of Epoch
         for key, val in epoch.array_annotations.items():
+            if key in ignore_annotations:
+                continue
             if len(val):
                 subseg.annotations[key] = copy.copy(val[ep_id])
 
