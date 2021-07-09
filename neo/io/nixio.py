@@ -22,8 +22,6 @@ Neo: https://github.com/G-Node/python-neo/wiki
 
 from datetime import date, time, datetime
 from collections.abc import Iterable
-from collections import OrderedDict
-import itertools
 from uuid import uuid4
 import warnings
 from distutils.version import LooseVersion as Version
@@ -38,6 +36,8 @@ from ..core import (Block, Segment, AnalogSignal,
                     ImageSequence, ChannelView, Group)
 from ..io.proxyobjects import BaseProxy
 from ..version import version as neover
+
+neover = Version(neover)
 
 try:
     import nixio as nix
@@ -202,8 +202,8 @@ class NixIO(BaseIO):
         else:
             # new file
             filemd = self.nix_file.create_section("neo", "neo.metadata")
-            filemd["version"] = neover
-            self._file_version = neover
+            filemd["version"] = str(neover)
+            self._file_version = str(neover)
 
         self._block_read_counter = 0
 
@@ -318,15 +318,25 @@ class NixIO(BaseIO):
             parent.groups.append(newgrp)
 
         # find free floating (Groupless) signals and spiketrains
-        blockdas = self._group_signals(nix_block.data_arrays)
-        for name, das in blockdas.items():
-            if name not in self._neo_map:
-                if das[0].type == "neo.analogsignal":
-                    self._nix_to_neo_analogsignal(das)
-                elif das[0].type == "neo.irregularlysampledsignal":
-                    self._nix_to_neo_irregularlysampledsignal(das)
-                elif das[0].type == "neo.imagesequence":
-                    self._nix_to_neo_imagesequence(das)
+        if neover < Version('0.10.0'):
+            blockdas = self._group_signals(nix_block.data_arrays)
+            for name, das in blockdas.items():
+                if name not in self._neo_map:
+                    if das[0].type == "neo.analogsignal":
+                        self._nix_to_neo_analogsignal(das)
+                    elif das[0].type == "neo.irregularlysampledsignal":
+                        self._nix_to_neo_irregularlysampledsignal(das)
+                    elif das[0].type == "neo.imagesequence":
+                        self._nix_to_neo_imagesequence(das)
+        else:
+            for da in nix_block.data_arrays:
+                if da.name not in self._neo_map:
+                    if da.type == "neo.analogsignal":
+                        self._nix_to_neo_analogsignal(da)
+                    elif da.type == "neo.irregularlysampledsignal":
+                        self._nix_to_neo_irregularlysampledsignal(da)
+                    elif da.type == "neo.imagesequence":
+                        self._nix_to_neo_imagesequence(da)
         for mt in nix_block.multi_tags:
             if mt.type == "neo.spiketrain" and mt.name not in self._neo_map:
                 self._nix_to_neo_spiketrain(mt)
@@ -356,24 +366,44 @@ class NixIO(BaseIO):
                                    "neo.irregularlysampledsignal",
                                    "neo.imagesequence",),
             nix_group.data_arrays))
-        dataarrays = self._group_signals(dataarrays)
-        # descend into DataArrays
-        for name, das in dataarrays.items():
-            if das[0].type == "neo.analogsignal":
-                newasig = self._nix_to_neo_analogsignal(das)
-                neo_segment.analogsignals.append(newasig)
-                # parent reference
-                newasig.segment = neo_segment
-            elif das[0].type == "neo.irregularlysampledsignal":
-                newisig = self._nix_to_neo_irregularlysampledsignal(das)
-                neo_segment.irregularlysampledsignals.append(newisig)
-                # parent reference
-                newisig.segment = neo_segment
-            elif das[0].type == "neo.imagesequence":
-                new_imgseq = self._nix_to_neo_imagesequence(das)
-                neo_segment.imagesequences.append(new_imgseq)
-                # parent reference
-                new_imgseq.segment = neo_segment
+
+        if neover < Version('0.10.0'):
+            dataarrays = self._group_signals(dataarrays)
+            # descend into DataArrays
+            for name, das in dataarrays.items():
+                if das[0].type == "neo.analogsignal":
+                    newasig = self._nix_to_neo_analogsignal(das)
+                    neo_segment.analogsignals.append(newasig)
+                    # parent reference
+                    newasig.segment = neo_segment
+                elif das[0].type == "neo.irregularlysampledsignal":
+                    newisig = self._nix_to_neo_irregularlysampledsignal(das)
+                    neo_segment.irregularlysampledsignals.append(newisig)
+                    # parent reference
+                    newisig.segment = neo_segment
+                elif das[0].type == "neo.imagesequence":
+                    new_imgseq = self._nix_to_neo_imagesequence(das)
+                    neo_segment.imagesequences.append(new_imgseq)
+                    # parent reference
+                    new_imgseq.segment = neo_segment
+            else:
+                # descend into DataArrays
+                for da in dataarrays:
+                    if da.type == "neo.analogsignal":
+                        newasig = self._nix_to_neo_analogsignal(da)
+                        neo_segment.analogsignals.append(newasig)
+                        # parent reference
+                        newasig.segment = neo_segment
+                    elif da.type == "neo.irregularlysampledsignal":
+                        newisig = self._nix_to_neo_irregularlysampledsignal(da)
+                        neo_segment.irregularlysampledsignals.append(newisig)
+                        # parent reference
+                        newisig.segment = neo_segment
+                    elif da.type == "neo.imagesequence":
+                        new_imgseq = self._nix_to_neo_imagesequence(da)
+                        neo_segment.imagesequences.append(new_imgseq)
+                        # parent reference
+                        new_imgseq.segment = neo_segment
 
         # descend into MultiTags
         for mtag in nix_group.multi_tags:
@@ -405,11 +435,18 @@ class NixIO(BaseIO):
                                    "neo.irregularlysampledsignal",
                                    "neo.imagesequence",),
             nix_group.data_arrays))
-        dataarrays = self._group_signals(dataarrays)
-        # descend into DataArrays
-        for name in dataarrays:
-            obj = self._neo_map[name]
-            neo_group.add(obj)
+
+        if neover < Version('0.10.0'):
+            dataarrays = self._group_signals(dataarrays)
+            # descend into DataArrays
+            for name in dataarrays:
+                obj = self._neo_map[name]
+                neo_group.add(obj)
+        else:
+            # descend into DataArrays
+            for da in dataarrays:
+                obj = self._neo_map[da.name]
+                neo_group.add(obj)
         # descend into MultiTags
         for mtag in nix_group.multi_tags:
             if mtag.type == "neo.channelview" and mtag.name not in self._neo_map:
@@ -422,7 +459,11 @@ class NixIO(BaseIO):
     def _nix_to_neo_channelview(self, nix_mtag):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
         index = nix_mtag.positions
-        nix_name, = self._group_signals(nix_mtag.references).keys()
+        if neover < Version('0.10.0'):
+            nix_name, = self._group_signals(nix_mtag.references).keys()
+        else:
+            assert len(nix_mtag.references) == 1
+            nix_name = nix_mtag.references[0].name
         obj = self._neo_map[nix_name]
         neo_chview = ChannelView(obj, index, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_chview
@@ -437,15 +478,25 @@ class NixIO(BaseIO):
         :param nix_da_group: a list of NIX DataArray objects
         :return: a Neo AnalogSignal object
         """
-        neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
-        metadata = nix_da_group[0].metadata
-        neo_attrs["nix_name"] = metadata.name  # use the common base name
 
-        unit = nix_da_group[0].unit
-        signaldata = np.array([d[:] for d in nix_da_group]).transpose()
+        if neover < Version('0.10.0'):
+            da = nix_da_group[0]
+            signaldata = np.array([d[:] for d in nix_da_group]).transpose()
+
+        else:
+            assert isinstance(nix_da_group, nix.data_array.DataArray)
+            da = nix_da_group
+            signaldata = np.array(da).transpose()
+
+        neo_attrs = self._nix_attr_to_neo(da)
+        metadata = da.metadata
+        unit = da.unit
+        timedim = self._get_time_dimension(da)
         signaldata = create_quantity(signaldata, unit)
-        timedim = self._get_time_dimension(nix_da_group[0])
-        sampling_period = create_quantity(timedim.sampling_interval, timedim.unit)
+        sampling_period = create_quantity(timedim.sampling_interval,
+                                          timedim.unit)
+
+        neo_attrs['nix_name'] = metadata.name
         # t_start should have been added to neo_attrs via the NIX
         # object's metadata. This may not be present since in older
         # versions, we didn't store t_start in the metadata when it
@@ -461,7 +512,7 @@ class NixIO(BaseIO):
                                   t_start=t_start, **neo_attrs)
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
         # all DAs reference the same sources
-        srcnames = list(src.name for src in nix_da_group[0].sources)
+        srcnames = list(src.name for src in da.sources)
         for n in srcnames:
             if n not in self._ref_map:
                 self._ref_map[n] = list()
@@ -828,10 +879,8 @@ class NixIO(BaseIO):
 
     def _write_analogsignal(self, anasig, nixblock, nixgroup):
         """
-        Convert the provided ``anasig`` (AnalogSignal) to a list of NIX
-        DataArray objects and write them to the NIX file. All DataArray objects
-        created from the same AnalogSignal have their metadata section point to
-        the same object.
+        Convert the provided ``anasig`` (AnalogSignal) to a NIX
+        DataArray object and write it to the NIX file.
 
         :param anasig: The Neo AnalogSignal to be written
         :param nixblock: NIX Block where the DataArrays will be created
@@ -843,17 +892,10 @@ class NixIO(BaseIO):
             nix_name = f"neo.analogsignal.{self._generate_nix_name()}"
             anasig.annotate(nix_name=nix_name)
 
-        if f"{nix_name}.0" in nixblock.data_arrays and nixgroup:
+        if nix_name in nixblock.data_arrays and nixgroup:
             # AnalogSignal is in multiple Segments.
-            # Append DataArrays to Group and return.
-            dalist = list()
-            for idx in itertools.count():
-                daname = f"{nix_name}.{idx}"
-                if daname in nixblock.data_arrays:
-                    dalist.append(nixblock.data_arrays[daname])
-                else:
-                    break
-            nixgroup.data_arrays.extend(dalist)
+            # Append DataArray to Group.
+            nixgroup.data_arrays.append(nixblock.data_arrays[nix_name])
             return
 
         if isinstance(anasig, BaseProxy):
@@ -863,26 +905,25 @@ class NixIO(BaseIO):
 
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(nix_name, "neo.analogsignal.metadata")
-        nixdas = list()
-        for idx, row in enumerate(data):
-            daname = f"{nix_name}.{idx}"
-            da = nixblock.create_data_array(daname, "neo.analogsignal", data=row)
-            da.metadata = metadata
-            da.definition = anasig.description
-            da.unit = units_to_string(anasig.units)
 
-            sampling_period = anasig.sampling_period.magnitude.item()
-            timedim = da.append_sampled_dimension(sampling_period)
-            timedim.unit = units_to_string(anasig.sampling_period.units)
-            tstart = anasig.t_start
-            metadata["t_start"] = tstart.magnitude.item()
-            metadata.props["t_start"].unit = units_to_string(tstart.units)
-            timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
-            timedim.label = "time"
+        # create nix data array
+        da = nixblock.create_data_array(nix_name, "neo.analogsignal", data=data)
+        da.metadata = metadata
+        da.definition = anasig.description
+        da.unit = units_to_string(anasig.units)
 
-            nixdas.append(da)
-            if nixgroup:
-                nixgroup.data_arrays.append(da)
+        # store metadata
+        sampling_period = anasig.sampling_period.magnitude.item()
+        timedim = da.append_sampled_dimension(sampling_period)
+        timedim.unit = units_to_string(anasig.sampling_period.units)
+        tstart = anasig.t_start
+        metadata["t_start"] = tstart.magnitude.item()
+        metadata.props["t_start"].unit = units_to_string(tstart.units)
+        timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
+        timedim.label = "time"
+
+        if nixgroup:
+            nixgroup.data_arrays.append(da)
 
         neoname = anasig.name if anasig.name is not None else ""
         metadata["neo_name"] = neoname
@@ -894,14 +935,12 @@ class NixIO(BaseIO):
                 p = self._write_property(metadata, k, v)
                 p.type = ARRAYANNOTATION
 
-        self._signal_map[nix_name] = nixdas
+        self._signal_map[nix_name] = [da]
 
     def _write_imagesequence(self, imgseq, nixblock, nixgroup):
         """
-       Convert the provided ``imgseq`` (ImageSequence) to a list of NIX
-       DataArray objects and write them to the NIX file. All DataArray objects
-       created from the same ImageSequence have their metadata section point to
-       the same object.
+       Convert the provided ``imgseq`` (ImageSequence) to a NIX
+       DataArray object and write it to the NIX file.
 
        :param anasig: The Neo ImageSequence to be written
        :param nixblock: NIX Block where the DataArrays will be created
@@ -914,16 +953,10 @@ class NixIO(BaseIO):
             nix_name = f"neo.imagesequence.{self._generate_nix_name()}"
             imgseq.annotate(nix_name=nix_name)
 
-        if f"{nix_name}.0" in nixblock.data_arrays and nixgroup:
-
-            dalist = list()
-            for idx in itertools.count():
-                daname = f"{nix_name}.{idx}"
-                if daname in nixblock.data_arrays:
-                    dalist.append(nixblock.data_arrays[daname])
-                else:
-                    break
-            nixgroup.data_arrays.extend(dalist)
+        if nix_name in nixblock.data_arrays and nixgroup:
+            # ImageSequence is in multiple Segments.
+            # Append DataArray to Group.
+            nixgroup.data_arrays.extend(nixblock.data_arrays[nix_name])
             return
 
         if isinstance(imgseq, BaseProxy):
@@ -934,42 +967,36 @@ class NixIO(BaseIO):
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(nix_name, "neo.imagesequence.metadata")
 
-        nixdas = list()
-        for idx, row in enumerate(data):
-            daname = f"{nix_name}.{idx}"
-            da = nixblock.create_data_array(daname, "neo.imagesequence", data=row)
+        da = nixblock.create_data_array(nix_name, "neo.imagesequence", data=data)
 
-            da.metadata = metadata
-            da.definition = imgseq.description
-            da.unit = units_to_string(imgseq.units)
+        da.metadata = metadata
+        da.definition = imgseq.description
+        da.unit = units_to_string(imgseq.units)
 
-            metadata["sampling_rate"] = imgseq.sampling_rate.magnitude.item()
-            units = imgseq.sampling_rate.units
-            metadata.props["sampling_rate"].unit = units_to_string(units)
-            metadata["spatial_scale"] = imgseq.spatial_scale.magnitude.item()
-            units = imgseq.spatial_scale.units
-            metadata.props["spatial_scale"].unit = units_to_string(units)
-            metadata["t_start"] = imgseq.t_start.magnitude.item()
-            units = imgseq.t_start.units
-            metadata.props["t_start"].unit = units_to_string(units)
+        metadata["sampling_rate"] = imgseq.sampling_rate.magnitude.item()
+        units = imgseq.sampling_rate.units
+        metadata.props["sampling_rate"].unit = units_to_string(units)
+        metadata["spatial_scale"] = imgseq.spatial_scale.magnitude.item()
+        units = imgseq.spatial_scale.units
+        metadata.props["spatial_scale"].unit = units_to_string(units)
+        metadata["t_start"] = imgseq.t_start.magnitude.item()
+        units = imgseq.t_start.units
+        metadata.props["t_start"].unit = units_to_string(units)
 
-            nixdas.append(da)
-            if nixgroup:
-                nixgroup.data_arrays.append(da)
+        if nixgroup:
+            nixgroup.data_arrays.append(da)
 
         neoname = imgseq.name if imgseq.name is not None else ""
         metadata["neo_name"] = neoname
         if imgseq.annotations:
             for k, v in imgseq.annotations.items():
                 self._write_property(metadata, k, v)
-        self._signal_map[nix_name] = nixdas
+        self._signal_map[nix_name] = da
 
     def _write_irregularlysampledsignal(self, irsig, nixblock, nixgroup):
         """
-        Convert the provided ``irsig`` (IrregularlySampledSignal) to a list of
-        NIX DataArray objects and write them to the NIX file at the location.
-        All DataArray objects created from the same IrregularlySampledSignal
-        have their metadata section point to the same object.
+        Convert the provided ``irsig`` (IrregularlySampledSignal) to a
+        NIX DataArray object and write it to the NIX file.
 
         :param irsig: The Neo IrregularlySampledSignal to be written
         :param nixblock: NIX Block where the DataArrays will be created
@@ -981,17 +1008,10 @@ class NixIO(BaseIO):
             nix_name = f"neo.irregularlysampledsignal.{self._generate_nix_name()}"
             irsig.annotate(nix_name=nix_name)
 
-        if f"{nix_name}.0" in nixblock.data_arrays and nixgroup:
+        if nix_name in nixblock.data_arrays and nixgroup:
             # IrregularlySampledSignal is in multiple Segments.
-            # Append DataArrays to Group and return.
-            dalist = list()
-            for idx in itertools.count():
-                daname = f"{nix_name}.{idx}"
-                if daname in nixblock.data_arrays:
-                    dalist.append(nixblock.data_arrays[daname])
-                else:
-                    break
-            nixgroup.data_arrays.extend(dalist)
+            # Append DataArray to Group.
+            nixgroup.data_arrays.append(nixblock.data_arrays[nix_name])
             return
 
         if isinstance(irsig, BaseProxy):
@@ -1001,21 +1021,18 @@ class NixIO(BaseIO):
 
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(nix_name, "neo.irregularlysampledsignal.metadata")
-        nixdas = list()
-        for idx, row in enumerate(data):
-            daname = f"{nix_name}.{idx}"
-            da = nixblock.create_data_array(daname, "neo.irregularlysampledsignal", data=row)
-            da.metadata = metadata
-            da.definition = irsig.description
-            da.unit = units_to_string(irsig.units)
 
-            timedim = da.append_range_dimension(irsig.times.magnitude)
-            timedim.unit = units_to_string(irsig.times.units)
-            timedim.label = "time"
+        da = nixblock.create_data_array(nix_name, "neo.irregularlysampledsignal", data=data)
+        da.metadata = metadata
+        da.definition = irsig.description
+        da.unit = units_to_string(irsig.units)
 
-            nixdas.append(da)
-            if nixgroup:
-                nixgroup.data_arrays.append(da)
+        timedim = da.append_range_dimension(irsig.times.magnitude)
+        timedim.unit = units_to_string(irsig.times.units)
+        timedim.label = "time"
+
+        if nixgroup:
+            nixgroup.data_arrays.append(da)
 
         neoname = irsig.name if irsig.name is not None else ""
         metadata["neo_name"] = neoname
@@ -1027,7 +1044,7 @@ class NixIO(BaseIO):
                 p = self._write_property(metadata, k, v)
                 p.type = ARRAYANNOTATION
 
-        self._signal_map[nix_name] = nixdas
+        self._signal_map[nix_name] = da
 
     def _write_event(self, event, nixblock, nixgroup):
         """
@@ -1332,27 +1349,6 @@ class NixIO(BaseIO):
         neo_attrs["name"] = stringify(neo_attrs.pop("neo_name", None))
 
         return neo_attrs
-
-    @staticmethod
-    def _group_signals(dataarrays):
-        """
-        Groups data arrays that were generated by the same Neo Signal object.
-        The collection can contain both  AnalogSignals and
-        IrregularlySampledSignals.
-
-        :param dataarrays: A collection of DataArray objects to group
-        :return: A dictionary mapping a base name to a list of DataArrays which
-        belong to the same Signal
-        """
-        # now start grouping
-        groups = OrderedDict()
-        for da in dataarrays:
-            basename = ".".join(da.name.split(".")[:-1])
-            if basename not in groups:
-                groups[basename] = list()
-            groups[basename].append(da)
-
-        return groups
 
     @staticmethod
     def _get_time_dimension(obj):

@@ -98,20 +98,20 @@ class NixIOTest(unittest.TestCase):
         self.compare_eests_mtags(neo_eests, nixgroup.multi_tags)
 
     def compare_signals_das(self, neosignals, data_arrays):
-        totalsignals = 0
+        self.assertEqual(len(neosignals), len(data_arrays))
         for sig in neosignals:
-            dalist = list()
+            data_array = None
             nixname = sig.annotations["nix_name"]
-            for da in data_arrays:
-                if da.metadata.name == nixname:
-                    dalist.append(da)
-            nsig = np.shape(sig)[-1]
-            totalsignals += nsig
-            self.assertEqual(nsig, len(dalist))
-            self.compare_signal_dalist(sig, dalist)
-        self.assertEqual(totalsignals, len(data_arrays))
+            # find matching data array for given neo signal
+            for d in data_arrays:
+                if d.metadata.name == nixname:
+                    data_array = d
+                    break
+            nsig = sig.shape[-1]
+            self.assertEqual(nsig, data_array.shape[0]) # TODO: is this the right dimension to compare to?
+            self.compare_signal_da(sig, data_array)
 
-    def compare_signal_dalist(self, neosig, nixdalist):
+    def compare_signal_da(self, neosig, da):
         """
         Check if a Neo Analog or IrregularlySampledSignal matches a list of
         NIX DataArrays.
@@ -119,51 +119,50 @@ class NixIOTest(unittest.TestCase):
         :param neosig: Neo Analog or IrregularlySampledSignal
         :param nixdalist: List of DataArrays
         """
-        nixmd = nixdalist[0].metadata
-        self.assertTrue(all(nixmd == da.metadata for da in nixdalist))
         neounit = neosig.units
         if isinstance(neosig, AnalogSignalProxy):
             neosig = neosig.load()
-        for sig, da in zip(np.transpose(neosig), nixdalist):
-            self.compare_attr(neosig, da)
-            daquant = create_quantity(da[:], da.unit)
-            np.testing.assert_almost_equal(sig.view(pq.Quantity), daquant)
-            nixunit = create_quantity(1, da.unit)
-            self.assertEqual(neounit, nixunit)
 
-            if isinstance(neosig, AnalogSignal):
-                timedim = da.dimensions[0]
-                self.assertEqual(timedim.dimension_type,
-                                 nix.DimensionType.Sample)
-                neosp = neosig.sampling_period
-                nixsp = create_quantity(timedim.sampling_interval,
-                                        timedim.unit)
-                self.assertEqual(neosp, nixsp)
-                tsunit = timedim.unit
-                if "t_start.units" in da.metadata.props:
-                    tsunit = da.metadata["t_start.units"]
-                neots = neosig.t_start
-                nixts = create_quantity(timedim.offset, tsunit)
-                self.assertEqual(neots, nixts)
-            elif isinstance(neosig, IrregularlySampledSignal):
-                timedim = da.dimensions[0]
-                self.assertEqual(timedim.dimension_type,
-                                 nix.DimensionType.Range)
-                np.testing.assert_almost_equal(neosig.times.magnitude,
-                                               timedim.ticks)
-                self.assertEqual(timedim.unit,
-                                 units_to_string(neosig.times.units))
-            elif isinstance(neosig, ImageSequence):
-                rate = da.metadata["sampling_rate"]
-                unit = da.metadata.props["sampling_rate"].unit
-                sampling_rate = create_quantity(rate, unit)
-                neosr = neosig.sampling_rate
-                self.assertEqual(sampling_rate, neosr)
-                scale = da.metadata["spatial_scale"]
-                unit = da.metadata.props["spatial_scale"].unit
-                spatial_scale = create_quantity(scale, unit)
-                neosps = neosig.spatial_scale
-                self.assertEqual(spatial_scale, neosps)
+        sig = np.transpose(neosig)
+        self.compare_attr(neosig, da)
+        daquant = create_quantity(da[:], da.unit)
+        np.testing.assert_almost_equal(sig.view(pq.Quantity), daquant)
+        nixunit = create_quantity(1, da.unit)
+        self.assertEqual(neounit, nixunit)
+
+        if isinstance(neosig, AnalogSignal):
+            timedim = da.dimensions[0]
+            self.assertEqual(timedim.dimension_type,
+                             nix.DimensionType.Sample)
+            neosp = neosig.sampling_period
+            nixsp = create_quantity(timedim.sampling_interval,
+                                    timedim.unit)
+            self.assertEqual(neosp, nixsp)
+            tsunit = timedim.unit
+            if "t_start.units" in da.metadata.props:
+                tsunit = da.metadata["t_start.units"]
+            neots = neosig.t_start
+            nixts = create_quantity(timedim.offset, tsunit)
+            self.assertEqual(neots, nixts)
+        elif isinstance(neosig, IrregularlySampledSignal):
+            timedim = da.dimensions[0]
+            self.assertEqual(timedim.dimension_type,
+                             nix.DimensionType.Range)
+            np.testing.assert_almost_equal(neosig.times.magnitude,
+                                           timedim.ticks)
+            self.assertEqual(timedim.unit,
+                             units_to_string(neosig.times.units))
+        elif isinstance(neosig, ImageSequence):
+            rate = da.metadata["sampling_rate"]
+            unit = da.metadata.props["sampling_rate"].unit
+            sampling_rate = create_quantity(rate, unit)
+            neosr = neosig.sampling_rate
+            self.assertEqual(sampling_rate, neosr)
+            scale = da.metadata["spatial_scale"]
+            unit = da.metadata.props["spatial_scale"].unit
+            spatial_scale = create_quantity(scale, unit)
+            neosps = neosig.spatial_scale
+            self.assertEqual(spatial_scale, neosps)
 
     def compare_eests_mtags(self, eestlist, mtaglist):
         self.assertEqual(len(eestlist), len(mtaglist))
@@ -226,11 +225,7 @@ class NixIOTest(unittest.TestCase):
                              nix.DimensionType.Sample)
 
     def compare_attr(self, neoobj, nixobj):
-        if isinstance(neoobj, (AnalogSignal, IrregularlySampledSignal,
-                               ImageSequence)):
-            nix_name = ".".join(nixobj.name.split(".")[:-1])
-        else:
-            nix_name = nixobj.name
+        nix_name = nixobj.name
 
         self.assertEqual(neoobj.annotations["nix_name"], nix_name)
         self.assertEqual(neoobj.description, nixobj.definition)
@@ -960,7 +955,7 @@ class NixIOWriteTest(NixIOTest):
 
         grpmd = blkmd.sections[grp.name]
         for da in grp.data_arrays:  # signals
-            name = ".".join(da.name.split(".")[:-1])
+            name = da.name
             self.assertIn(name, grpmd.sections)
         for mtag in grp.multi_tags:  # spiketrains, events, and epochs
             self.assertIn(mtag.name, grpmd.sections)
