@@ -193,9 +193,15 @@ def _recompose_unit(base_unit_name, conversion):
     UnitCurrent('nanoampere', 0.001 * uA, 'nA')
 
     """
-    if conversion not in prefix_map:
+    unit_name = None
+    for cf in prefix_map:
+        # conversion may have a different float precision to the keys in
+        # prefix_map, so we can't just use `prefix_map[conversion]`
+        if abs(conversion - cf)/cf < 1e-6:
+            unit_name = prefix_map[cf] + base_unit_name
+    if unit_name is None:
         raise ValueError(f"Can't handle this conversion factor: {conversion}")
-    unit_name = prefix_map[conversion] + base_unit_name
+
     if unit_name[-1] == "s":  # strip trailing 's', e.g. "volts" --> "volt"
         unit_name = unit_name[:-1]
     try:
