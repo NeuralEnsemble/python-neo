@@ -96,7 +96,8 @@ class MaxwellRawIO(BaseRawIO):
                     gain_uV = settings['lsb'][:][0] * 1e6
                 else:
                     if "gain" not in settings:
-                        print("'gain' amd 'lsb' not found in settings. Setting gain to 512 (default)")
+                        print("'gain' amd 'lsb' not found in settings. "
+                              "Setting gain to 512 (default)")
                         gain = 512
                     else:
                         gain = settings['gain'][:][0]
@@ -113,7 +114,8 @@ class MaxwellRawIO(BaseRawIO):
                     gain_uV = settings['lsb'][:][0] * 1e6
                 else:
                     if "gain" not in settings:
-                        print("'gain' amd 'lsb' not found in settings. Setting gain to 512 (default)")
+                        print("'gain' amd 'lsb' not found in settings. "
+                              "Setting gain to 512 (default)")
                         gain = 512
                     else:
                         gain = settings['gain'][:][0]
