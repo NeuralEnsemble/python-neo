@@ -105,8 +105,6 @@ class NIXRawIO(BaseRawIO):
         signal_streams['name'] = ''
 
         spike_channels = []
-        unit_name = ""
-        unit_id = ""
         for bl in self.file.blocks:
             seg_groups = [g for g in bl.groups if g.type == "neo.segment"]
 
@@ -210,7 +208,8 @@ class NIXRawIO(BaseRawIO):
             for seg_index, seg in enumerate(seg_groups):
                 d = {'spiketrains': [],
                      'spiketrains_id': [],
-                     'spiketrains_unit': []}
+                     'spiketrains_unit': [],
+                     'spike_counts': {}}
                 self.unit_list['blocks'][block_index]['segments'].append(d)
                 t_start, t_stop = 0, 0
                 st_idx = 0
@@ -222,6 +221,7 @@ class NIXRawIO(BaseRawIO):
                     if st.type == 'neo.spiketrain':
                         segment['spiketrains'].append(st.positions)
                         segment['spiketrains_id'].append(st.id)
+                        segment['spike_counts'][st.id] = len(st.positions)
                         wftypestr = "neo.waveforms"
                         t_start = min(t_start, st.metadata['t_start'])
                         t_stop = max(t_stop, st.metadata['t_stop'])
@@ -366,14 +366,8 @@ class NIXRawIO(BaseRawIO):
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        count = 0
         head_id = self.header['spike_channels'][unit_index][1]
-        for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
-            for src in mt.sources:
-                if mt.type == 'neo.spiketrain' and [src.type == "neo.unit"]:
-                    if head_id == src.id:
-                        return len(mt.positions)
-        return count
+        return self.unit_list['blocks'][block_index]['segments'][seg_index]['spike_counts'][head_id]
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index,
                               t_start, t_stop):
