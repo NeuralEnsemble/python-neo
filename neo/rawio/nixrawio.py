@@ -7,8 +7,7 @@ It supports all kinds of NEO objects.
 Author: Chek Yin Choi, Julia Sprenger
 """
 
-import os.path
-
+from distutils.version import LooseVersion as Version
 import numpy as np
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
@@ -51,6 +50,10 @@ class NIXRawIO(BaseRawIO):
 
     def _parse_header(self):
         self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
+        if 'version' in self.file.sections['neo']:
+            self._file_version = self.file.sections['neo']['version']
+        else:
+            self._file_version = 'unknown'
         signal_channels = []
         anasig_ids = {0: []}  # ids of analogsignals by segment
         stream_ids = []
@@ -58,21 +61,40 @@ class NIXRawIO(BaseRawIO):
             for seg in bl.groups:
                 for da_idx, da in enumerate(seg.data_arrays):
                     if da.type == "neo.analogsignal":
-                        chan_id = da_idx
-                        ch_name = da.metadata['neo_name']
-                        units = str(da.unit)
-                        dtype = str(da.dtype)
-                        sr = 1 / da.dimensions[0].sampling_interval
-                        anasig_id = da.name.split('.')[-2]
-                        if anasig_id not in anasig_ids[0]:
-                            anasig_ids[0].append(anasig_id)
-                        stream_id = anasig_ids[0].index(anasig_id)
-                        if stream_id not in stream_ids:
-                            stream_ids.append(stream_id)
-                        gain = 1
-                        offset = 0.
-                        signal_channels.append((ch_name, chan_id, sr, dtype,
-                                            units, gain, offset, stream_id))
+                        if self._file_version < Version('0.10.0'):
+                            chan_id = da_idx
+                            ch_name = da.metadata['neo_name']
+                            units = str(da.unit)
+                            dtype = str(da.dtype)
+                            sr = 1 / da.dimensions[0].sampling_interval
+                            anasig_id = da.name.split('.')[-2]
+                            if anasig_id not in anasig_ids[0]:
+                                anasig_ids[0].append(anasig_id)
+                            stream_id = anasig_ids[0].index(anasig_id)
+                            if stream_id not in stream_ids:
+                                stream_ids.append(stream_id)
+                            gain = 1
+                            offset = 0.
+                            signal_channels.append((ch_name, chan_id, sr, dtype,
+                                                units, gain, offset, stream_id))
+                        else:
+                            if len(da.shape) < 2:
+                                n_chans = 1
+                            else:
+                                n_chans = da.shape[-1]
+
+                            for chan_id in range(n_chans):
+                                ch_name = f"{da.metadata['neo_name']}.{chan_id}"
+                                units = str(da.unit)
+                                dtype = str(da.dtype)
+                                sr = 1 / da.dimensions[0].sampling_interval
+                                stream_id = da_idx
+                                if stream_id not in stream_ids:
+                                    stream_ids.append(stream_id)
+                                gain = 1
+                                offset = 0.
+                                signal_channels.append((ch_name, chan_id, sr, dtype,
+                                                    units, gain, offset, stream_id))
                 # only read structure of first segment and assume the same
                 # across segments
                 break
@@ -148,16 +170,28 @@ class NIXRawIO(BaseRawIO):
                 size_list = []
                 data_list = []
                 da_name_list = []
-                for da in seg.data_arrays:
-                    if da.type == 'neo.analogsignal':
-                        size_list.append(da.size)
-                        data_list.append(da)
-                        da_name_list.append(da.metadata['neo_name'])
-                block = self.da_list['blocks'][block_index]
-                segment = block['segments'][seg_index]
-                segment['data_size'] = size_list
-                segment['data'] = data_list
-                segment['ch_name'] = da_name_list
+                if self._file_version < Version('0.10.0'):
+                    for da in seg.data_arrays:
+                        if da.type == 'neo.analogsignal':
+                            size_list.append(da.size)
+                            data_list.append(da)
+                            da_name_list.append(da.metadata['neo_name'])
+                    block = self.da_list['blocks'][block_index]
+                    segment = block['segments'][seg_index]
+                    segment['data_size'] = size_list
+                    segment['data'] = data_list
+                    segment['ch_name'] = da_name_list
+                else:
+                    block = self.da_list['blocks'][block_index]
+                    segment = block['segments'][seg_index]
+                    if 'data' not in segment:
+                        segment['data'] = []
+                        segment['data_size'] = []
+                    for da in seg.data_arrays:
+                        if da.type == 'neo.analogsignal':
+                            for chan_id in range(da.shape[-1]):
+                                segment['data'].append(da)
+                                segment['data_size'].append(da.shape[0])
 
         self.unit_list = {'blocks': []}
         for block_index, blk in enumerate(self.file.blocks):
@@ -237,12 +271,17 @@ class NIXRawIO(BaseRawIO):
                 for da_idx, da in enumerate(group.data_arrays):
                     if da.type != "neo.analogsignal":
                         continue
-                    anasig_id = da.name.split('.')[-2]
-                    # skip already annotated signals as each channel already
-                    # contains the complete set of annotations and
-                    # array_annotations
-                    if anasig_id in annotated_anasigs:
-                        continue
+
+                    if self._file_version < Version('0.10.0'):
+                        anasig_id = da.name.split('.')[-2]
+                        # skip already annotated signals as each channel already
+                        # contains the complete set of annotations and
+                        # array_annotations
+                        if anasig_id in annotated_anasigs:
+                            continue
+                    else:
+                        anasig_id = da.name
+
                     annotated_anasigs.append(anasig_id)
 
                     # collect annotation properties
