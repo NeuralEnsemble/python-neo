@@ -165,17 +165,21 @@ class NIXRawIO(BaseRawIO):
             d = {'segments': []}
             self.da_list['blocks'].append(d)
             for seg_index, seg in enumerate(seg_groups):
-                d = {'signals': []}
+                d = {}
                 self.da_list['blocks'][block_index]['segments'].append(d)
                 size_list = []
                 data_list = []
                 da_name_list = []
+                t_start, t_stop = 0, 0
                 if self._file_version < Version('0.10.0'):
                     for da in seg.data_arrays:
                         if da.type == 'neo.analogsignal':
                             size_list.append(da.size)
                             data_list.append(da)
                             da_name_list.append(da.metadata['neo_name'])
+                            t_start = min(t_start, da.metadata['t_start'])
+                            si = da.dimensions[0].sampling_interval
+                            t_stop = max(t_stop, da.shape[0] * si)
                     block = self.da_list['blocks'][block_index]
                     segment = block['segments'][seg_index]
                     segment['data_size'] = size_list
@@ -192,6 +196,11 @@ class NIXRawIO(BaseRawIO):
                             for chan_id in range(da.shape[-1]):
                                 segment['data'].append(da)
                                 segment['data_size'].append(da.shape[0])
+                            t_start = min(t_start, da.metadata['t_start'])
+                            t_stop = max(t_stop, da.metadata['t_stop'])
+
+                segment['t_start'] = t_start
+                segment['t_stop'] = t_stop
 
         self.unit_list = {'blocks': []}
         for block_index, blk in enumerate(self.file.blocks):
@@ -203,6 +212,7 @@ class NIXRawIO(BaseRawIO):
                      'spiketrains_id': [],
                      'spiketrains_unit': []}
                 self.unit_list['blocks'][block_index]['segments'].append(d)
+                t_start, t_stop = 0, 0
                 st_idx = 0
                 for st in seg.multi_tags:
                     d = {'waveforms': []}
@@ -213,6 +223,8 @@ class NIXRawIO(BaseRawIO):
                         segment['spiketrains'].append(st.positions)
                         segment['spiketrains_id'].append(st.id)
                         wftypestr = "neo.waveforms"
+                        t_start = min(t_start, st.metadata['t_start'])
+                        t_stop = max(t_stop, st.metadata['t_stop'])
                         if (st.features and st.features[0].data.type == wftypestr):
                             waveforms = st.features[0].data
                             stdict = segment['spiketrains_unit'][st_idx]
@@ -222,6 +234,8 @@ class NIXRawIO(BaseRawIO):
                                 stdict['waveforms'] = None
                             # assume one spiketrain one waveform
                             st_idx += 1
+                    segment['t_start'] = t_start
+                    segment['t_stop'] = t_stop
 
         self.header = {}
         self.header['nb_block'] = len(self.file.blocks)
@@ -300,18 +314,12 @@ class NIXRawIO(BaseRawIO):
                     stream_id += 1
 
     def _segment_t_start(self, block_index, seg_index):
-        t_start = 0
-        for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
-            if mt.type == "neo.spiketrain":
-                t_start = mt.metadata['t_start']
-        return t_start
+        return min(self.da_list['blocks'][block_index]['segments'][seg_index]['t_start'],
+                   self.unit_list['blocks'][block_index]['segments'][seg_index]['t_start'])
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = 0
-        for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
-            if mt.type == "neo.spiketrain":
-                t_stop = mt.metadata['t_stop']
-        return t_stop
+        return max(self.da_list['blocks'][block_index]['segments'][seg_index]['t_stop'],
+                   self.unit_list['blocks'][block_index]['segments'][seg_index]['t_stop'])
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
         stream_id = self.header['signal_streams'][stream_index]['id']
