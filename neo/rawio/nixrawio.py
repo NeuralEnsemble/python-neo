@@ -270,10 +270,24 @@ class NIXRawIO(BaseRawIO):
                     # if order is preserving, the annotations
                     # should go to the right place, need test
                     if mt.type == "neo.event" or mt.type == "neo.epoch":
+                        neo_type = mt.type.replace('neo.', '')
+
+                        # only add annotations when events exist
                         if seg_ann['events'] != []:
                             event_ann = seg_ann['events'][ev_idx]
-                            props = mt.metadata.inherited_properties()
-                            event_ann.update(self._filter_properties(props, 'event'))
+
+                            # adding regular annotations
+                            props = [p for p in mt.metadata.props
+                                     if p.type != 'ARRAYANNOTATION']
+                            props_dict = self._filter_properties(props, neo_type)
+                            event_ann.update(props_dict)
+
+                            # adding array_annotations
+                            props = [p for p in mt.metadata.props
+                                     if p.type == 'ARRAYANNOTATION']
+                            props_dict = self._filter_properties(props, neo_type)
+                            event_ann['__array_annotations__'].update(props_dict)
+
                             ev_idx += 1
 
                 # adding array annotations to analogsignals
