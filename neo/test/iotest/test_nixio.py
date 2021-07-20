@@ -153,13 +153,13 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(timedim.unit,
                              units_to_string(neosig.times.units))
         elif isinstance(neosig, ImageSequence):
-            rate = da.metadata["sampling_rate"]
-            unit = da.metadata.props["sampling_rate"].unit
-            sampling_rate = create_quantity(rate, unit)
-            neosr = neosig.sampling_rate
-            self.assertEqual(sampling_rate, neosr)
-            scale = da.metadata["spatial_scale"]
-            unit = da.metadata.props["spatial_scale"].unit
+            rate = da.dimensions[0].sampling_interval
+            unit = da.dimensions[0].unit
+            sampling_period = create_quantity(rate, unit)
+            neofd = neosig.frame_duration
+            self.assertEqual(sampling_period, neofd)
+            scale = da.dimensions[1].sampling_interval
+            unit = da.dimensions[1].unit
             spatial_scale = create_quantity(scale, unit)
             neosps = neosig.spatial_scale
             self.assertEqual(spatial_scale, neosps)
@@ -335,7 +335,8 @@ class NixIOTest(unittest.TestCase):
             timedim.unit = "ms"
             timedim.label = "time"
             timedim.offset = 10
-            da_asig.append_set_dimension()
+            channel_ids = [f'chan {i}' for i in range(da_asig.shape[-1])]
+            da_asig.append_set_dimension(channel_ids)
             group.data_arrays.append(da_asig)
             asig_md["t_start.dim"] = "ms"
 
@@ -363,10 +364,9 @@ class NixIOTest(unittest.TestCase):
             da_imgseq.unit = "mV"
 
             da_imgseq.metadata = imgseq_md
-            imgseq_md["sampling_rate"] = 10
-            imgseq_md.props["sampling_rate"].unit = units_to_string(pq.V)
-            imgseq_md["spatial_scale"] = 10
-            imgseq_md.props["spatial_scale"].unit = units_to_string(pq.micrometer)
+            da_imgseq.append_sampled_dimension(12, 'time', 'ms', 200)
+            da_imgseq.append_sampled_dimension(4, 'row', 'mm', 20)
+            da_imgseq.append_sampled_dimension(4, 'col', 'mm', 10)
 
             group.data_arrays.append(da_imgseq)
 
@@ -398,7 +398,8 @@ class NixIOTest(unittest.TestCase):
             timedim = da_isig.append_range_dimension(isig_times)
             timedim.unit = "s"
             timedim.label = "time"
-            da_isig.append_set_dimension()
+            channel_ids = [f'chan {i}' for i in range(da_isig.shape[1])]
+            da_isig.append_set_dimension(channel_ids)
             group.data_arrays.append(da_isig)
             allsignals.append(da_isig)
 

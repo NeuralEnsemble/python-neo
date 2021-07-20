@@ -318,7 +318,7 @@ class NixIO(BaseIO):
             parent.groups.append(newgrp)
 
         # find free floating (Groupless) signals and spiketrains
-        if neover < Version('0.10.0'):
+        if self._file_version < Version('0.10.0'):
             blockdas = self._group_signals(nix_block.data_arrays)
             for name, das in blockdas.items():
                 if name not in self._neo_map:
@@ -367,7 +367,7 @@ class NixIO(BaseIO):
                                    "neo.imagesequence",),
             nix_group.data_arrays))
 
-        if neover < Version('0.10.0'):
+        if self._file_version < Version('0.10.0'):
             dataarrays = self._group_signals(dataarrays)
             # descend into DataArrays
             for name, das in dataarrays.items():
@@ -436,7 +436,7 @@ class NixIO(BaseIO):
                                    "neo.imagesequence",),
             nix_group.data_arrays))
 
-        if neover < Version('0.10.0'):
+        if self._file_version < Version('0.10.0'):
             dataarrays = self._group_signals(dataarrays)
             # descend into DataArrays
             for name in dataarrays:
@@ -459,7 +459,7 @@ class NixIO(BaseIO):
     def _nix_to_neo_channelview(self, nix_mtag):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
         index = nix_mtag.positions
-        if neover < Version('0.10.0'):
+        if self._file_version < Version('0.10.0'):
             nix_name, = self._group_signals(nix_mtag.references).keys()
         else:
             assert len(nix_mtag.references) == 1
@@ -479,7 +479,7 @@ class NixIO(BaseIO):
         :return: a Neo AnalogSignal object
         """
 
-        if neover < Version('0.10.0'):
+        if self._file_version < Version('0.10.0'):
             da = nix_da_group[0]
             signaldata = np.array([d[:] for d in nix_da_group]).transpose()
 
@@ -529,9 +529,7 @@ class NixIO(BaseIO):
         :return: a Neo ImageSequence object
         """
 
-
-
-        if neover < Version('0.10.0'):
+        if self._file_version < Version('0.10.0'):
             da = nix_da_group[0]
             imgseq = np.array([d[:] for d in nix_da_group]).transpose()
         else:
@@ -543,17 +541,36 @@ class NixIO(BaseIO):
         neo_attrs["nix_name"] = metadata.name  # use the common base name
         unit = da.unit
 
-        sampling_rate = neo_attrs["sampling_rate"]
-        del neo_attrs["sampling_rate"]
-        spatial_scale = neo_attrs["spatial_scale"]
-        del neo_attrs["spatial_scale"]
-        if "t_start" in neo_attrs:
-            t_start = neo_attrs["t_start"]
-            del neo_attrs["t_start"]
-        else:
-            t_start = 0.0 * pq.ms
+        if self._file_version < Version('0.10.0'):
+            neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
+            metadata = nix_da_group[0].metadata
+            neo_attrs["nix_name"] = metadata.name  # use the common base name
+            unit = nix_da_group[0].unit
+            imgseq = np.array([d[:] for d in nix_da_group]).transpose()
 
-        neo_seq = ImageSequence(image_data=imgseq, sampling_rate=sampling_rate,
+            sampling_period = 1 / neo_attrs["sampling_rate"]
+            del neo_attrs["sampling_rate"]
+            spatial_scale = neo_attrs["spatial_scale"]
+            del neo_attrs["spatial_scale"]
+            if "t_start" in neo_attrs:
+                t_start = neo_attrs["t_start"]
+                del neo_attrs["t_start"]
+            else:
+                t_start = 0.0 * pq.ms
+        else:
+            sampling_period = da.dimensions[0].sampling_interval
+            sampling_unit = da.dimensions[0].unit
+            sampling_period = create_quantity(sampling_period, sampling_unit)
+            spatial_scale = da.dimensions[1].sampling_interval
+            assert spatial_scale == da.dimensions[2].sampling_interval
+            spatial_unit = da.dimensions[1].unit
+            assert spatial_unit == da.dimensions[2].unit
+            spatial_scale = create_quantity(spatial_scale, spatial_unit)
+            t_start = da.dimensions[0].offset
+            t_start_unit = da.dimensions[0].unit
+            t_start = create_quantity(t_start, t_start_unit)
+
+        neo_seq = ImageSequence(image_data=imgseq, frame_duration=sampling_period,
                                 spatial_scale=spatial_scale, units=unit,
                                 t_start=t_start, **neo_attrs)
 
@@ -576,9 +593,9 @@ class NixIO(BaseIO):
         :return: a Neo IrregularlySampledSignal object
         """
 
-        if neover < Version('0.10.0'):
+        if self._file_version < Version('0.10.0'):
             da = nix_da_group[0]
-            signaldata = np.array([d[:] for d in nix_da_group]).transpose()
+            signaldata = np.array([d[:] for d in nix_da_group])
         else:
             da = nix_da_group
             signaldata = np.array(da)
@@ -927,14 +944,25 @@ class NixIO(BaseIO):
         da.unit = units_to_string(anasig.units)
 
         # store metadata
+        n_dims = len(anasig.shape)
         sampling_period = anasig.sampling_period.magnitude.item()
         timedim = da.append_sampled_dimension(sampling_period)
         timedim.unit = units_to_string(anasig.sampling_period.units)
         tstart = anasig.t_start
-        metadata["t_start"] = tstart.magnitude.item()
-        metadata.props["t_start"].unit = units_to_string(tstart.units)
         timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
         timedim.label = "time"
+
+        # add additional dimension information
+        # dimensions (time, <arbitrary dim>, channel)
+        for arb_dim in range(1, n_dims - 2):
+            dim_idxs = range(da.shape[arb_dim])
+            da.append_set_dimension(dim_idxs)
+        if n_dims > 1:
+            channel_ids = list(anasig.array_annotations.get('channel_ids',
+                                                       range(anasig.shape[-1])))
+            ch_ids = da.append_set_dimension(channel_ids)
+            # SetDimension currently does not support `label`
+            # ch_ids.label = "channel"
 
         if nixgroup:
             nixgroup.data_arrays.append(da)
@@ -987,15 +1015,20 @@ class NixIO(BaseIO):
         da.definition = imgseq.description
         da.unit = units_to_string(imgseq.units)
 
-        metadata["sampling_rate"] = imgseq.sampling_rate.magnitude.item()
-        units = imgseq.sampling_rate.units
-        metadata.props["sampling_rate"].unit = units_to_string(units)
-        metadata["spatial_scale"] = imgseq.spatial_scale.magnitude.item()
-        units = imgseq.spatial_scale.units
-        metadata.props["spatial_scale"].unit = units_to_string(units)
-        metadata["t_start"] = imgseq.t_start.magnitude.item()
-        units = imgseq.t_start.units
-        metadata.props["t_start"].unit = units_to_string(units)
+        # store dimension metadata
+        n_dims = len(imgseq.shape)
+        assert n_dims == 3
+        sampling_period = imgseq.frame_duration
+        timedim = da.append_sampled_dimension(sampling_period.magnitude.item())
+        timedim.unit = units_to_string(sampling_period.units)
+        tstart = imgseq.t_start
+        timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
+        timedim.label = "time"
+
+        sp_scale_mag = imgseq.spatial_scale.magnitude.item()
+        sp_scale_units = units_to_string(imgseq.spatial_scale)
+        da.append_sampled_dimension(sp_scale_mag, 'row', sp_scale_units, 0)
+        da.append_sampled_dimension(sp_scale_mag, 'col', sp_scale_units, 0)
 
         if nixgroup:
             nixgroup.data_arrays.append(da)
@@ -1044,6 +1077,19 @@ class NixIO(BaseIO):
         timedim = da.append_range_dimension(irsig.times.magnitude)
         timedim.unit = units_to_string(irsig.times.units)
         timedim.label = "time"
+
+        n_dims = len(da.shape)
+        # add additional dimension information
+        # dimensions (time, <arbitrary dim>, channel)
+        for arb_dim in range(1, n_dims - 2):
+            dim_idxs = range(da.shape[arb_dim])
+            da.append_set_dimension(dim_idxs)
+        if n_dims > 1:
+            channel_ids = irsig.array_annotations.get('channel_ids',
+                                                       range(irsig.shape[-1]))
+            ch_ids = da.append_set_dimension(channel_ids)
+            # SetDimension currently does not support `label`
+            # ch_ids.label = "channel"
 
         if nixgroup:
             nixgroup.data_arrays.append(da)
