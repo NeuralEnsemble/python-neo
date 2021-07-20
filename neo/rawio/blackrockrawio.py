@@ -315,7 +315,7 @@ class BlackrockRawIO(BaseRawIO):
                'nsx_to_load do not match available nsx list'
 
         # check that all files come from the same specification
-        all_spec = [self.__nsx_spec[nsx_nb] for nsx in self.nsx_to_load]
+        all_spec = [self.__nsx_spec[nsx_nb] for nsx_nb in self.nsx_to_load]
         if self._avail_files['nev']:
             all_spec.append(self.__nev_spec)
         assert all(all_spec[0] == spec for spec in all_spec), \
