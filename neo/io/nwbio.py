@@ -9,7 +9,8 @@ Depends on: h5py, nwb, dateutil
 Supported: Read, Write
 Python API -  https://pynwb.readthedocs.io
 Sample datasets from CRCNS - https://crcns.org/NWB
-Sample datasets from Allen Institute - http://alleninstitute.github.io/AllenSDK/cell_types.html#neurodata-without-borders
+Sample datasets from Allen Institute
+- http://alleninstitute.github.io/AllenSDK/cell_types.html#neurodata-without-borders
 """
 
 from __future__ import absolute_import, division
@@ -312,7 +313,8 @@ class NWBIO(BaseIO):
     def _read_epochs_group(self, lazy):
         if self._file.epochs is not None:
             try:
-                # NWB files created by Neo store the segment, block and epoch names as extra columns
+                # NWB files created by Neo store the segment, block and epoch names as extra
+                # columns
                 segment_names = self._file.epochs.segment[:]
                 block_names = self._file.epochs.block[:]
                 epoch_names = self._file.epochs._name[:]
@@ -464,7 +466,7 @@ class NWBIO(BaseIO):
         io_nwb.write(nwbfile)
         io_nwb.close()
 
-        with pynwb.NWBHDF5IO(self.filename, "r") as  io_validate:
+        with pynwb.NWBHDF5IO(self.filename, "r") as io_validate:
             errors = pynwb.validate(io_validate, namespace="core")
             if errors:
                 raise Exception(f"Errors found when validating {self.filename}")
@@ -508,7 +510,8 @@ class NWBIO(BaseIO):
 
     def _write_segment(self, nwbfile, segment, electrodes):
         # maybe use NWB trials to store Segment metadata?
-        for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
+        for i, signal in enumerate(
+                chain(segment.analogsignals, segment.irregularlysampledsignals)):
             assert signal.segment is segment
             if not signal.name:
                 signal.name = "%s : analogsignal%d" % (segment.name, i)
@@ -758,8 +761,8 @@ class EpochProxy(BaseEpochProxy):
 
     def __init__(self, time_intervals, epoch_name=None, index=None):
         """
-            :param time_intervals: An epochs table, 
-                                which is a specific TimeIntervals table that stores info about long periods
+            :param time_intervals: An epochs table,
+                which is a specific TimeIntervals table that stores info about long periods
         """
         self._time_intervals = time_intervals
         if index is not None:
