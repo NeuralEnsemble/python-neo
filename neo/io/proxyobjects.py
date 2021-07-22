@@ -166,6 +166,44 @@ class AnalogSignalProxy(BaseProxy):
         '''Time when signal ends'''
         return self.t_start + self.duration
 
+    def _time_slice_indices(self, time_slice, strict_slicing=True):
+        """
+        Calculate the start and end indices for the slice.
+
+        Also returns t_start
+        """
+        if time_slice is None:
+            i_start, i_stop = None, None
+            sig_t_start = self.t_start
+        else:
+            sr = self.sampling_rate
+            t_start, t_stop = time_slice
+            if t_start is None:
+                i_start = None
+                sig_t_start = self.t_start
+            else:
+                t_start = ensure_second(t_start)
+                if strict_slicing:
+                    assert self.t_start <= t_start <= self.t_stop, 't_start is outside'
+                else:
+                    t_start = max(t_start, self.t_start)
+                # the i_start is necessary ceil
+                i_start = int(np.ceil((t_start - self.t_start).magnitude * sr.magnitude))
+                # this needed to get the real t_start of the first sample
+                # because do not necessary match what is demanded
+                sig_t_start = self.t_start + i_start / sr
+
+            if t_stop is None:
+                i_stop = None
+            else:
+                t_stop = ensure_second(t_stop)
+                if strict_slicing:
+                    assert self.t_start <= t_stop <= self.t_stop, 't_stop is outside'
+                else:
+                    t_stop = min(t_stop, self.t_stop)
+                i_stop = int((t_stop - self.t_start).magnitude * sr.magnitude)
+        return i_start, i_stop, sig_t_start
+
     def load(self, time_slice=None, strict_slicing=True,
                     channel_indexes=None, magnitude_mode='rescaled'):
         '''
@@ -210,37 +248,8 @@ class AnalogSignalProxy(BaseProxy):
             else:
                 fixed_chan_indexes = self._inner_stream_channels[channel_indexes]
 
-        sr = self.sampling_rate
-
-        if time_slice is None:
-            i_start, i_stop = None, None
-            sig_t_start = self.t_start
-        else:
-            t_start, t_stop = time_slice
-            if t_start is None:
-                i_start = None
-                sig_t_start = self.t_start
-            else:
-                t_start = ensure_second(t_start)
-                if strict_slicing:
-                    assert self.t_start <= t_start <= self.t_stop, 't_start is outside'
-                else:
-                    t_start = max(t_start, self.t_start)
-                # the i_start is ncessary ceil
-                i_start = int(np.ceil((t_start - self.t_start).magnitude * sr.magnitude))
-                # this needed to get the real t_start of the first sample
-                # because do not necessary match what is demanded
-                sig_t_start = self.t_start + i_start / sr
-
-            if t_stop is None:
-                i_stop = None
-            else:
-                t_stop = ensure_second(t_stop)
-                if strict_slicing:
-                    assert self.t_start <= t_stop <= self.t_stop, 't_stop is outside'
-                else:
-                    t_stop = min(t_stop, self.t_stop)
-                i_stop = int((t_stop - self.t_start).magnitude * sr.magnitude)
+        i_start, i_stop, sig_t_start = self._time_slice_indices(time_slice,
+                                                                strict_slicing=strict_slicing)
 
         raw_signal = self._rawio.get_analogsignal_chunk(block_index=self._block_index,
                     seg_index=self._seg_index, i_start=i_start, i_stop=i_stop,

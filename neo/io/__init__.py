@@ -44,6 +44,7 @@ Classes:
 * :attr:`NeuroScopeIO`
 * :attr:`NeuroshareIO`
 * :attr:`NixIO`
+* :attr:`NWBIO`
 * :attr:`OpenEphysIO`
 * :attr:`OpenEphysBinaryIO`
 * :attr:`PhyIO`
@@ -185,6 +186,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.NWBIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.OpenEphysIO
 
     .. autoattribute:: extensions
@@ -297,6 +302,7 @@ from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
 from neo.io.nixio_fr import NixIO as NixIOFr
+from neo.io.nwbio import NWBIO
 from neo.io.openephysio import OpenEphysIO
 from neo.io.openephysbinaryio import OpenEphysBinaryIO
 from neo.io.phyio import PhyIO
@@ -346,6 +352,7 @@ iolist = [
     NeuroExplorerIO,
     NeuroScopeIO,
     NeuroshareIO,
+    NWBIO,
     OpenEphysIO,
     OpenEphysBinaryIO,
     PhyIO,
