@@ -55,51 +55,77 @@ class NIXRawIO(BaseRawIO):
         else:
             self._file_version = 'unknown'
         signal_channels = []
-        anasig_ids = {0: []}  # ids of analogsignals by segment
-        stream_ids = []
+        anasig_ids = {}  # ids of analogsignals by segment
+        self.da_list = {'blocks': []}
+        bl_idx = 0
         for bl in self.file.blocks:
+            seg_dict = {'segments':[]}
+            self.da_list['blocks'].append(seg_dict)
+            seg_idx = 0
             for seg in bl.groups:
+                if seg.type != 'neo.segment':
+                    continue
+                stream_dict = {'streams': []}
+                self.da_list['blocks'][bl_idx]['segments'].append(stream_dict)
+
+                seg_das = []
+                anasig_ids[seg_idx] = []
+                registered_anasigs = []
+                # assume consistent stream / signal order across segments
+                stream_idx = -1
+                t_start, t_stop = 0, 0
                 for da_idx, da in enumerate(seg.data_arrays):
+                    # todo: This should also cover irreg & imagseq signals
                     if da.type == "neo.analogsignal":
                         if self._file_version < Version('0.10.0'):
-                            chan_id = da_idx
-                            ch_name = da.metadata['neo_name']
-                            units = str(da.unit)
-                            dtype = str(da.dtype)
-                            sr = 1 / da.dimensions[0].sampling_interval
                             anasig_id = da.name.split('.')[-2]
-                            if anasig_id not in anasig_ids[0]:
-                                anasig_ids[0].append(anasig_id)
-                            stream_id = anasig_ids[0].index(anasig_id)
-                            if stream_id not in stream_ids:
-                                stream_ids.append(stream_id)
-                            gain = 1
-                            offset = 0.
-                            signal_channels.append((ch_name, chan_id, sr, dtype,
-                                                units, gain, offset, stream_id))
-                        else:
-                            if len(da.shape) < 2:
-                                n_chans = 1
-                            else:
-                                n_chans = da.shape[-1]
 
-                            for chan_id in range(n_chans):
-                                ch_name = f"{da.metadata['neo_name']}.{chan_id}"
-                                units = str(da.unit)
-                                dtype = str(da.dtype)
-                                sr = 1 / da.dimensions[0].sampling_interval
-                                stream_id = da_idx
-                                if stream_id not in stream_ids:
-                                    stream_ids.append(stream_id)
-                                gain = 1
-                                offset = 0.
-                                signal_channels.append((ch_name, chan_id, sr, dtype,
-                                                    units, gain, offset, stream_id))
-                # only read structure of first segment and assume the same
-                # across segments
-                break
-            break
+                            # start a new stream if analogsignal id is new or changed
+                            if len(stream_dict['streams']) == 0 or \
+                                anasig_id not in stream_dict['streams'][stream_idx]['signal_ids']:
+                                stream_idx += 1
+                                stream_dict['streams'].append({'signal_ids': [anasig_id],
+                                                               'data': [da]})
+                            else:
+                                stream_dict['streams'][stream_idx]['signal_ids'].append(anasig_id)
+                                stream_dict['streams'][stream_idx]['data'].append(da)
+
+                        # find segment t_start and t_stop
+                        timedim = da.dimensions[0]
+                        duration = timedim.sampling_interval * da.shape[0]
+                        t_start = min(t_start, timedim.offset)
+                        t_stop = max(t_stop, timedim.offset + duration)
+
+                seg_dict['segments'][seg_idx]['t_start'] = t_start
+                seg_dict['segments'][seg_idx]['t_stop'] = t_stop
+                seg_idx += 1
+            # only read first block
+            bl_idx += 1
+
+        # TODO: validate stream ordering across segments
+        # TODO: validate consistent channel structure across segments
+
+        # generate signal channels based on da_list of block 0 and seg 0
+        streams = self.da_list['blocks'][0]['segments'][0]['streams']
+        chan_id = 0
+        for stream_idx, stream in enumerate(streams):
+            for da in stream['data']:
+                n_inner_channels = da.shape[-1] if len(da.shape) > 1 else 1
+                for inner_ch_idx in range(n_inner_channels):
+                    ch_name = da.metadata['neo_name']
+                    units = str(da.unit)
+                    dtype = str(da.dtype)
+                    sr = 1 / da.dimensions[0].sampling_interval
+                    gain = 1
+                    offset = 0.
+                    signal_channels.append((ch_name, chan_id, sr, dtype,
+                                            units, gain, offset, stream_idx))
+                    chan_id += 1
+
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        # collecting stream_ids from stream_channels and preserve order
+        stream_ids = []
+        [stream_ids.append(s) for s in signal_channels['stream_id'] if s not in stream_ids]
         signal_streams = np.zeros(len(stream_ids), dtype=_signal_stream_dtype)
         signal_streams['id'] = stream_ids
         signal_streams['name'] = ''
@@ -130,8 +156,8 @@ class NIXRawIO(BaseRawIO):
                             (unit_name, unit_id, wf_units, wf_gain,
                              wf_offset, wf_left_sweep, wf_sampling_rate)
                         )
+                # assume consistent units across segments -> TOCheck
                 break
-            break
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         event_channels = []
@@ -157,48 +183,51 @@ class NIXRawIO(BaseRawIO):
             break
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        self.da_list = {'blocks': []}
-        for block_index, blk in enumerate(self.file.blocks):
-            seg_groups = [g for g in blk.groups if g.type == "neo.segment"]
-            d = {'segments': []}
-            self.da_list['blocks'].append(d)
-            for seg_index, seg in enumerate(seg_groups):
-                d = {}
-                self.da_list['blocks'][block_index]['segments'].append(d)
-                size_list = []
-                data_list = []
-                da_name_list = []
-                t_start, t_stop = 0, 0
-                if self._file_version < Version('0.10.0'):
-                    for da in seg.data_arrays:
-                        if da.type == 'neo.analogsignal':
-                            size_list.append(da.size)
-                            data_list.append(da)
-                            da_name_list.append(da.metadata['neo_name'])
-                            t_start = min(t_start, da.metadata['t_start'])
-                            si = da.dimensions[0].sampling_interval
-                            t_stop = max(t_stop, da.shape[0] * si)
-                    block = self.da_list['blocks'][block_index]
-                    segment = block['segments'][seg_index]
-                    segment['data_size'] = size_list
-                    segment['data'] = data_list
-                    segment['ch_name'] = da_name_list
-                else:
-                    block = self.da_list['blocks'][block_index]
-                    segment = block['segments'][seg_index]
-                    if 'data' not in segment:
-                        segment['data'] = []
-                        segment['data_size'] = []
-                    for da in seg.data_arrays:
-                        if da.type == 'neo.analogsignal':
-                            for chan_id in range(da.shape[-1]):
-                                segment['data'].append(da)
-                                segment['data_size'].append(da.shape[0])
-                            t_start = min(t_start, da.metadata['t_start'])
-                            t_stop = max(t_stop, da.metadata['t_stop'])
-
-                segment['t_start'] = t_start
-                segment['t_stop'] = t_stop
+        # self.da_list = {'blocks': []}
+        # for block_index, blk in enumerate(self.file.blocks):
+        #     seg_groups = [g for g in blk.groups if g.type == "neo.segment"]
+        #     d = {'segments': []}
+        #     self.da_list['blocks'].append(d)
+        #     for seg_index, seg in enumerate(seg_groups):
+        #         d = {}
+        #         self.da_list['blocks'][block_index]['segments'].append(d)
+        #         size_list = []
+        #         data_list = []
+        #         da_name_list = []
+        #         t_start, t_stop = 0, 0
+        #         if self._file_version < Version('0.10.0'):
+        #             for da in seg.data_arrays:
+        #                 # todo: This should also cover irreg and imagseq signals
+        #                 if da.type == 'neo.analogsignal':
+        #                     size_list.append(da.size)
+        #                     data_list.append(da)
+        #                     da_name_list.append(da.metadata['neo_name'])
+        #                     t_start = min(t_start, da.metadata['t_start'])
+        #                     si = da.dimensions[0].sampling_interval
+        #                     t_stop = max(t_stop, da.shape[0] * si)
+        #             block = self.da_list['blocks'][block_index]
+        #             segment = block['segments'][seg_index]
+        #             segment['data_size'] = size_list
+        #             segment['data'] = data_list
+        #             segment['ch_name'] = da_name_list
+        #         else:
+        #             block = self.da_list['blocks'][block_index]
+        #             segment = block['segments'][seg_index]
+        #             if 'data' not in segment:
+        #                 segment['data'] = []
+        #                 segment['data_size'] = []
+        #             for da in seg.data_arrays:
+        #                 if da.type == 'neo.analogsignal':
+        #                     for chan_id in range(da.shape[-1]):
+        #                         segment['data'].append(da)
+        #                         segment['data_size'].append(da.shape[0])
+        #                     timedim = da.dimensions[0]
+        #                     duration = timedim.sampling_interval * da.shape[0]
+        #                     t_start = min(t_start, timedim.offset)
+        #                     t_stop = max(t_stop, timedim.offset + duration)
+        #
+        #         segment['t_start'] = t_start
+        #         segment['t_stop'] = t_stop
 
         self.unit_list = {'blocks': []}
         for block_index, blk in enumerate(self.file.blocks):
@@ -342,41 +371,44 @@ class NIXRawIO(BaseRawIO):
         ch_idx = channel_indexes[0]
         block = self.da_list['blocks'][block_index]
         segment = block['segments'][seg_index]
-        size = segment['data_size'][ch_idx]
+        if self._file_version < Version('0.10.0'):
+            size = segment['streams'][stream_index]['data'][0].size
+        else:
+            size = segment['streams'][stream_index]['data'].shape[0]
         return size  # size is per signal, not the sum of all channel_indexes
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        stream_id = self.header['signal_streams'][stream_index]['id']
-        keep = self.header['signal_channels']['stream_id'] == stream_id
-        channel_indexes, = np.nonzero(keep)
-        ch_idx = channel_indexes[0]
-        block = self.file.blocks[block_index]
-        das = [da for da in block.groups[seg_index].data_arrays]
-        da = das[ch_idx]
-        sig_t_start = float(da.metadata['t_start'])
+        if self._file_version < Version('0.10.0'):
+            das = self.da_list['blocks'][block_index]['segments'][seg_index]['streams'][stream_index]['data']
+            da = das[0]
+        else:
+            da = self.da_list['blocks'][block_index]['segments'][seg_index][
+                'streams'][stream_index]['data']
+        sig_t_start = float(da.dimensions[0].offset)
         return sig_t_start  # assume same group_id always same t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
         keep = self.header['signal_channels']['stream_id'] == stream_id
-        global_channel_indexes, = np.nonzero(keep)
+        selected_channel_indexes, = np.nonzero(keep)
         if channel_indexes is not None:
-            global_channel_indexes = global_channel_indexes[channel_indexes]
+            selected_channel_indexes = selected_channel_indexes[channel_indexes]
 
         if i_start is None:
             i_start = 0
         if i_stop is None:
             i_stop = self.get_signal_size(block_index, seg_index, stream_index)
 
-        raw_signals_list = []
-        da_list = self.da_list['blocks'][block_index]['segments'][seg_index]
-        for idx in global_channel_indexes:
-            da = da_list['data'][idx]
-            raw_signals_list.append(da[i_start:i_stop])
+        segment = self.da_list['blocks'][block_index]['segments'][seg_index]
+        if self._file_version < Version('0.10.0'):
+            das = segment['streams'][stream_index]['data']
+            da = np.asarray(das)
+        else:
+            da = segment['streams'][stream_index]['data']
+        mask = selected_channel_indexes
+        raw_signals = da[..., mask][i_start: i_stop]
 
-        raw_signals = np.array(raw_signals_list)
-        raw_signals = np.transpose(raw_signals)
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
