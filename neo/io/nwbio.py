@@ -38,7 +38,7 @@ from neo.io.proxyobjects import (
 # PyNWB imports
 try:
     import pynwb
-    from pynwb import NWBFile, TimeSeries, get_manager
+    from pynwb import NWBFile, TimeSeries
     from pynwb.base import ProcessingModule
     from pynwb.ecephys import ElectricalSeries, Device, EventDetection
     from pynwb.behavior import SpatialSeries
