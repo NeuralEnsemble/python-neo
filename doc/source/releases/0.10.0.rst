@@ -7,6 +7,8 @@ Neo 0.10.0 release notes
 
 Removal of Unit and ChannelIndex
 --------------------------------
+In version 0.9.0 :class:`Group` and :class:`ChannelView` replace :class:`Unit` and :class:`ChannelIndex`.
+In this version the deprecated :class:`Unit` and :class:`ChannelIndex` are removed and only the new class:`Group` and :class:`ChannelView` objects are available.
 
 
 
@@ -19,22 +21,32 @@ We no longer support Python 3.6, nor versions of NumPy older than 1.16.
 Other new or modified features
 ------------------------------
 
-TODO
-
 See all `pull requests`_ included in this release and the `list of closed issues`_.
+  * SpikeTrain can now also be provided as two arrays: one containing spike times
+    and the other unit identities of the times (:class:`SpikeTrainList`)
+  * Object identity is now preserved when using utility time_slice methods
 
 
 New IO modules
 --------------
 
-  * TODO
-  * TODO
+  * CEDIO - an alternative to spike2io
+  * AxonaIO
+  * OpenEphysIO
+  * PhyIO
+  * SpikeGLXIO
+  * NWBIO
 
 Bug fixes and improvements in IO modules
 ----------------------------------------
 
-  * TODO
-  * TODO
+  * The NeuralynxIO was refactored and now supports new file versions (neuraview) and single file loading.
+  * Legacy versions of old IOs were removed for NeuralynxIO (neuralynxio_v1), BlackrockIO, NeoHdf5IO
+  * NixIOfr now supports array annotations of :class:`AnalogSignal`s.
+  * The IO modules of this release have been tested with version 0.1.0 of the
+    `ephy_testing_data`_
+  * NSDFIO was removed
+  * all IOs now accept `pathlib.Path` objects
 
 
 Acknowledgements
@@ -46,3 +58,4 @@ Ben Dichter and Elodie Legouée for their contributions to this release.
 
 .. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.10.0+is%3Aclosed
 .. _`pull requests`: https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+merged%3A%3E2020-11-10+milestone%3A0.10.0
+.. _`ephy_test_data`: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/v0.1.0
