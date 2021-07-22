@@ -770,7 +770,7 @@ class EpochProxy(BaseEpochProxy):
             self.shape = (index.sum(),)
         else:
             self._index = slice(None)
-            self.shape = (len(epochs_table),)
+            self.shape = (len(time_intervals),)
         self.name = epoch_name
 
     def load(self, time_slice=None, strict_slicing=True):
