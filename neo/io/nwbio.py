@@ -763,6 +763,11 @@ class EpochProxy(BaseEpochProxy):
         """
             :param time_intervals: An epochs table,
                 which is a specific TimeIntervals table that stores info about long periods
+            :param epoch_name: (str)
+                Name of the epoch object
+            :param index: (np.array, slice)
+                Slice object or array of bool values masking time_intervals to be used. In case of
+                an array it has to have the same shape as `time_intervals`.
         """
         self._time_intervals = time_intervals
         if index is not None:
