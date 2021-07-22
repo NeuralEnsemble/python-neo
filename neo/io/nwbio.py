@@ -13,18 +13,19 @@ Sample datasets from Allen Institute - http://alleninstitute.github.io/AllenSDK/
 """
 
 from __future__ import absolute_import, division
-from neo.core import baseneo
 
+import json
 import logging
 import os
-from itertools import chain
-from datetime import datetime
-import json
-from json.decoder import JSONDecodeError
 from collections import defaultdict
+from itertools import chain
+from json.decoder import JSONDecodeError
 
 import numpy as np
 import quantities as pq
+
+from neo.core import (Segment, SpikeTrain, Epoch, Event, AnalogSignal,
+                      IrregularlySampledSignal, Block, ImageSequence)
 from neo.io.baseio import BaseIO
 from neo.io.proxyobjects import (
     AnalogSignalProxy as BaseAnalogSignalProxy,
@@ -32,8 +33,6 @@ from neo.io.proxyobjects import (
     EpochProxy as BaseEpochProxy,
     SpikeTrainProxy as BaseSpikeTrainProxy
 )
-from neo.core import (Segment, SpikeTrain, Epoch, Event, AnalogSignal,
-                      IrregularlySampledSignal, Block, ImageSequence)
 
 # PyNWB imports
 try:
@@ -45,10 +44,12 @@ try:
     from pynwb.misc import AnnotationSeries
     from pynwb import image
     from pynwb.image import ImageSeries
-    from pynwb.spec import NWBAttributeSpec, NWBDatasetSpec, NWBGroupSpec, NWBNamespace, NWBNamespaceBuilder
+    from pynwb.spec import NWBAttributeSpec, NWBDatasetSpec, NWBGroupSpec, NWBNamespace, \
+        NWBNamespaceBuilder
     from pynwb.device import Device
     # For calcium imaging data
     from pynwb.ophys import TwoPhotonSeries, OpticalChannel, ImageSegmentation, Fluorescence
+
     have_pynwb = True
 except ImportError:
     have_pynwb = False
@@ -57,15 +58,14 @@ except ImportError:
 try:
     from hdmf.spec import (LinkSpec, GroupSpec, DatasetSpec, SpecNamespace,
                            NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec)
+
     have_hdmf = True
 except ImportError:
     have_hdmf = False
 except SyntaxError:
     have_hdmf = False
 
-
 logger = logging.getLogger("Neo")
-
 
 GLOBAL_ANNOTATIONS = (
     "session_start_time", "identifier", "timestamps_reference_time", "experimenter",
@@ -146,7 +146,7 @@ def get_units_conversion(signal, timeseries_class):
     else:
         # todo: warn that we don't handle this subclass yet
         expected_units = signal.units
-    return float((signal.units/expected_units).simplified.magnitude), expected_units
+    return float((signal.units / expected_units).simplified.magnitude), expected_units
 
 
 def time_in_seconds(t):
@@ -175,6 +175,7 @@ def _decompose_unit(unit):
             raise NotImplementedError("Compound units not yet supported")  # e.g. volt^2
         uq_def = uq.definition
         return float(uq_def.magnitude), uq_def
+
     conv, unit2 = _decompose(unit)
     while conv != 1:
         conversion *= conv
@@ -197,7 +198,7 @@ def _recompose_unit(base_unit_name, conversion):
     for cf in prefix_map:
         # conversion may have a different float precision to the keys in
         # prefix_map, so we can't just use `prefix_map[conversion]`
-        if abs(conversion - cf)/cf < 1e-6:
+        if abs(conversion - cf) / cf < 1e-6:
             unit_name = prefix_map[cf] + base_unit_name
     if unit_name is None:
         raise ValueError(f"Can't handle this conversion factor: {conversion}")
@@ -251,7 +252,8 @@ class NWBIO(BaseIO):
         Load all blocks in the file.
         """
         assert self.nwb_file_mode in ('r',)
-        io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode, load_namespaces=True)  # Open a file with NWBHDF5IO
+        io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode,
+                             load_namespaces=True)  # Open a file with NWBHDF5IO
         self._file = io.read()
 
         self.global_block_metadata = {}
@@ -262,12 +264,15 @@ class NWBIO(BaseIO):
                     value = try_json_field(value)
                 self.global_block_metadata[annotation_name] = value
         if "session_description" in self.global_block_metadata:
-            self.global_block_metadata["description"] = self.global_block_metadata["session_description"]
+            self.global_block_metadata["description"] = self.global_block_metadata[
+                "session_description"]
         self.global_block_metadata["file_origin"] = self.filename
         if "session_start_time" in self.global_block_metadata:
-            self.global_block_metadata["rec_datetime"] = self.global_block_metadata["session_start_time"]
+            self.global_block_metadata["rec_datetime"] = self.global_block_metadata[
+                "session_start_time"]
         if "file_create_date" in self.global_block_metadata:
-            self.global_block_metadata["file_datetime"] = self.global_block_metadata["file_create_date"]
+            self.global_block_metadata["file_datetime"] = self.global_block_metadata[
+                "file_create_date"]
 
         self._blocks = {}
         self._read_acquisition_group(lazy=lazy)
@@ -440,7 +445,7 @@ class NWBIO(BaseIO):
 
         if sum(statistics(block)["SpikeTrain"]["count"] for block in blocks) > 0:
             nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
-            #nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
+            # nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
             nwbfile.add_unit_column(
                 'segment', 'the name of the Neo Segment to which the SpikeTrain belongs')
             nwbfile.add_unit_column(
@@ -448,10 +453,11 @@ class NWBIO(BaseIO):
 
         if sum(statistics(block)["Epoch"]["count"] for block in blocks) > 0:
             nwbfile.add_epoch_column('_name', 'the name attribute of the Epoch')
-            #nwbfile.add_epoch_column('_description', 'the description attribute of the Epoch')
+            # nwbfile.add_epoch_column('_description', 'the description attribute of the Epoch')
             nwbfile.add_epoch_column(
                 'segment', 'the name of the Neo Segment to which the Epoch belongs')
-            nwbfile.add_epoch_column('block', 'the name of the Neo Block to which the Epoch belongs')
+            nwbfile.add_epoch_column('block',
+                                     'the name of the Neo Block to which the Epoch belongs')
 
         for i, block in enumerate(blocks):
             self.write_block(nwbfile, block)
@@ -552,7 +558,7 @@ class NWBIO(BaseIO):
                 rate=float(sampling_rate),
                 comments=json.dumps(hierarchy),
                 **additional_metadata)
-                # todo: try to add array_annotations via "control" attribute
+            # todo: try to add array_annotations via "control" attribute
         elif isinstance(signal, IrregularlySampledSignal):
             tS = timeseries_class(
                 name=signal.name,
@@ -562,8 +568,9 @@ class NWBIO(BaseIO):
                 comments=json.dumps(hierarchy),
                 **additional_metadata)
         else:
-            raise TypeError("signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(
-                signal.__class__.__name__))
+            raise TypeError(
+                "signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(
+                    signal.__class__.__name__))
         nwb_group = signal.annotations.get("nwb_group", "acquisition")
         add_method_map = {
             "acquisition": nwbfile.add_acquisition,
@@ -592,11 +599,11 @@ class NWBIO(BaseIO):
     def _write_event(self, nwbfile, event):
         hierarchy = {'block': event.segment.block.name, 'segment': event.segment.name}
         tS_evt = AnnotationSeries(
-                        name=event.name,
-                        data=event.labels,
-                        timestamps=event.times.rescale('second').magnitude,
-                        description=event.description or "",
-                        comments=json.dumps(hierarchy))
+            name=event.name,
+            data=event.labels,
+            timestamps=event.times.rescale('second').magnitude,
+            description=event.description or "",
+            comments=json.dumps(hierarchy))
         nwbfile.add_acquisition(tS_evt)
         return tS_evt
 
@@ -692,26 +699,26 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
         signal = self._timeseries.data[i_start: i_stop]
         if self.sampling_rate is None:
             return IrregularlySampledSignal(
-                        self._timeseries.timestamps[i_start:i_stop] * pq.s,
-                        signal,
-                        units=self.units,
-                        t_start=sig_t_start,
-                        sampling_rate=self.sampling_rate,
-                        name=self.name,
-                        description=self.description,
-                        array_annotations=None,
-                        **self.annotations)  # todo: timeseries.control / control_description
+                self._timeseries.timestamps[i_start:i_stop] * pq.s,
+                signal,
+                units=self.units,
+                t_start=sig_t_start,
+                sampling_rate=self.sampling_rate,
+                name=self.name,
+                description=self.description,
+                array_annotations=None,
+                **self.annotations)  # todo: timeseries.control / control_description
 
         else:
             return AnalogSignal(
-                        signal,
-                        units=self.units,
-                        t_start=sig_t_start,
-                        sampling_rate=self.sampling_rate,
-                        name=self.name,
-                        description=self.description,
-                        array_annotations=None,
-                        **self.annotations)  # todo: timeseries.control / control_description
+                signal,
+                units=self.units,
+                t_start=sig_t_start,
+                sampling_rate=self.sampling_rate,
+                name=self.name,
+                description=self.description,
+                array_annotations=None,
+                **self.annotations)  # todo: timeseries.control / control_description
 
 
 class EventProxy(BaseEventProxy):
@@ -776,7 +783,7 @@ class EpochProxy(BaseEpochProxy):
             raise NotImplementedError("todo")
         else:
             start_times = self._time_intervals.start_time[self._index]
-            stop_times = self._time_intervals.stop_time[self._index] 
+            stop_times = self._time_intervals.stop_time[self._index]
             durations = stop_times - start_times
             labels = self._time_intervals.tags[self._index]
 
@@ -788,7 +795,7 @@ class EpochProxy(BaseEpochProxy):
 
 class SpikeTrainProxy(BaseSpikeTrainProxy):
 
-    def __init__(self, units_table, id):        
+    def __init__(self, units_table, id):
         """
             :param units_table: A Units table (see https://pynwb.readthedocs.io/en/stable/pynwb.misc.html#pynwb.misc.Units)
             :param id: the cell/unit ID (integer)
@@ -811,7 +818,7 @@ class SpikeTrainProxy(BaseSpikeTrainProxy):
             self.name = units_table._name[id]
         except AttributeError:
             self.name = None
-        self.shape = None   # no way to get this without reading the data
+        self.shape = None  # no way to get this without reading the data
 
     def load(self, time_slice=None, strict_slicing=True):
         """
@@ -827,15 +834,15 @@ class SpikeTrainProxy(BaseSpikeTrainProxy):
             interval = (float(t) for t in time_slice)  # convert from quantities
         spike_times = self._units_table.get_unit_spike_times(self.id, in_interval=interval)
         return SpikeTrain(
-                    spike_times * self.units,
-                    self.t_stop,
-                    units=self.units,
-                    #sampling_rate=array(1.) * Hz,
-                    t_start=self.t_start,
-                    #waveforms=None,
-                    #left_sweep=None,
-                    name=self.name,
-                    #file_origin=None,
-                    #description=None,
-                    #array_annotations=None,
-                    **self.annotations)
+            spike_times * self.units,
+            self.t_stop,
+            units=self.units,
+            # sampling_rate=array(1.) * Hz,
+            t_start=self.t_start,
+            # waveforms=None,
+            # left_sweep=None,
+            name=self.name,
+            # file_origin=None,
+            # description=None,
+            # array_annotations=None,
+            **self.annotations)

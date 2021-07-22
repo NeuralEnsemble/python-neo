@@ -4,8 +4,9 @@ Tests of neo.io.nwbio
 """
 
 from __future__ import unicode_literals, print_function, division, absolute_import
-import unittest
+
 import os
+import unittest
 from datetime import datetime
 
 try:
@@ -13,11 +14,13 @@ try:
 except ImportError:
     from urllib import urlretrieve
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.core import AnalogSignal, SpikeTrain, Event, Epoch, IrregularlySampledSignal, Segment, Block, ImageSequence
-from neo.utils import get_local_testing_data_folder
+from neo.core import AnalogSignal, SpikeTrain, Event, Epoch, IrregularlySampledSignal, Segment, \
+    Block
+
 try:
     import pynwb
     from neo.io.nwbio import NWBIO
+
     HAVE_PYNWB = True
 except (ImportError, SyntaxError):
     NWBIO = None
@@ -71,8 +74,8 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
                                  t_start=120 * pq.ms)
 
                 # 2 Neo IrregularlySampledSignals
-                d = IrregularlySampledSignal(np.arange(7.0)*pq.ms,
-                                             np.random.randn(7, num_chan)*pq.mV)
+                d = IrregularlySampledSignal(np.arange(7.0) * pq.ms,
+                                             np.random.randn(7, num_chan) * pq.mV)
 
                 # 2 Neo SpikeTrains
                 train = SpikeTrain(times=[1, 2, 3] * pq.s, t_start=1.0, t_stop=10.0)
@@ -226,8 +229,10 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
         nwbfile = pynwb.NWBHDF5IO(test_file_name, mode="r").read()
 
         self.assertIsInstance(nwbfile.acquisition["response"], pynwb.icephys.CurrentClampSeries)
-        self.assertIsInstance(nwbfile.stimulus["stimulus"], pynwb.icephys.CurrentClampStimulusSeries)
-        self.assertEqual(nwbfile.acquisition["response"].bridge_balance, response_annotations["nwb:bridge_balance"])
+        self.assertIsInstance(nwbfile.stimulus["stimulus"],
+                              pynwb.icephys.CurrentClampStimulusSeries)
+        self.assertEqual(nwbfile.acquisition["response"].bridge_balance,
+                         response_annotations["nwb:bridge_balance"])
 
         ior = NWBIO(filename=test_file_name, mode='r')
         retrieved_block = ior.read_all_blocks()[0]
