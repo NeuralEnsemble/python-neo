@@ -447,7 +447,8 @@ class NWBIO(BaseIO):
 
         if sum(statistics(block)["SpikeTrain"]["count"] for block in blocks) > 0:
             nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
-            # nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
+            # nwbfile.add_unit_column('_description',
+            # 'the description attribute of the SpikeTrain')
             nwbfile.add_unit_column(
                 'segment', 'the name of the Neo Segment to which the SpikeTrain belongs')
             nwbfile.add_unit_column(
@@ -805,7 +806,8 @@ class SpikeTrainProxy(BaseSpikeTrainProxy):
 
     def __init__(self, units_table, id):
         """
-            :param units_table: A Units table (see https://pynwb.readthedocs.io/en/stable/pynwb.misc.html#pynwb.misc.Units)
+            :param units_table: A Units table
+            (see https://pynwb.readthedocs.io/en/stable/pynwb.misc.html#pynwb.misc.Units)
             :param id: the cell/unit ID (integer)
         """
         self._units_table = units_table
