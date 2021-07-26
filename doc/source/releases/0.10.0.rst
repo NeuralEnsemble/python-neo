@@ -32,10 +32,19 @@ New IO modules
 
   * CEDIO - an alternative to spike2io
   * AxonaIO
-  * OpenEphysIO
+  * OpenEphysIO - handle the binary format
   * PhyIO
   * SpikeGLXIO
   * NWBIO
+  * MaxwellIO
+
+RawIO modules
+-------------
+
+Internal refactoring of the neo.rawio module about the channel grouping.
+There is a signal_stream filed that handle channel groups for signal.
+This enhanced the way annotation and array_annotaion are rendered at neo.io level.
+
 
 Bug fixes and improvements in IO modules
 ----------------------------------------
