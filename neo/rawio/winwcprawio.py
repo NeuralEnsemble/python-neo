@@ -72,7 +72,7 @@ class WinWcpRawIO(BaseRawIO):
 
                 all_sampling_interval.append(analysisHeader['SamplingInterval'])
 
-        # sampling interval can be slightly due to float precision
+        # sampling interval can be slightly varying due to float precision
         # all_sampling_interval are not always unique
         self._sampling_rate = 1. / np.median(all_sampling_interval)
 
