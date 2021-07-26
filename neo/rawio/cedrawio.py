@@ -58,10 +58,16 @@ class CedRawIO(BaseRawIO):
         self.smrx_file = sonpy.lib.SonFile(sName=str(self.filename), bReadOnly=True)
         smrx = self.smrx_file
 
+        self._time_base = smrx.GetTimeBase()
+
         channel_infos = []
         signal_channels = []
+        spike_channels = []
+        self._all_spike_ticks = {}
+
         for chan_ind in range(smrx.MaxChannels()):
             chan_type = smrx.ChannelType(chan_ind)
+            chan_id = str(chan_ind)
             if chan_type == sonpy.lib.DataType.Adc:
                 physical_chan = smrx.PhysicalChannel(chan_ind)
                 divide = smrx.ChannelDivide(chan_ind)
@@ -78,12 +84,34 @@ class CedRawIO(BaseRawIO):
                 offset = smrx.GetChannelOffset(chan_ind)
                 units = smrx.GetChannelUnits(chan_ind)
                 ch_name = smrx.GetChannelTitle(chan_ind)
-                chan_id = str(chan_ind)
+
                 dtype = 'int16'
                 # set later after grouping
                 stream_id = '0'
                 signal_channels.append((ch_name, chan_id, sr, dtype,
                                         units, gain, offset, stream_id))
+
+            elif chan_type == sonpy.lib.DataType.AdcMark:
+                # spike and waveforms : only spike times is used here
+                ch_name = smrx.GetChannelTitle(chan_ind)
+                first_time = smrx.FirstTime(chan_ind, 0, max_time)
+                max_time = smrx.ChannelMaxTime(chan_ind)
+                divide = smrx.ChannelDivide(chan_ind)
+                # here we don't use filter (sonpy.lib.MarkerFilter()) so we get all marker
+                wave_marks = smrx.ReadWaveMarks(chan_ind, int(max_time / divide), 0, max_time)
+
+                # here we load in memory all spike once because the access is really slow
+                # with the ReadWaveMarks
+                spike_ticks = np.array([t.Tick for t in wave_marks])
+                spike_codes = np.array([t.Code1 for t in wave_marks])
+
+                unit_ids = np.unique(spike_codes)
+                for unit_id in unit_ids:
+                    name = f'{ch_name}#{unit_id}'
+                    spike_chan_id = f'ch{chan_id}#{unit_id}'
+                    spike_channels.append((name, spike_chan_id, '', 1, 0, 0, 0))
+                    mask = spike_codes == unit_id
+                    self._all_spike_ticks[spike_chan_id] = spike_ticks[mask]
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -104,8 +132,7 @@ class CedRawIO(BaseRawIO):
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # spike channels not handled
-        spike_channels = []
-        spike_channels = np.array([], dtype=_spike_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # event channels not handled
         event_channels = []
@@ -115,9 +142,10 @@ class CedRawIO(BaseRawIO):
         self._seg_t_stop = -np.inf
         for info in self.stream_info:
             self._seg_t_start = min(self._seg_t_start,
-                                    info['first_time'] / info['sampling_rate'])
+                                    info['first_time'] * self._time_base)
+
             self._seg_t_stop = max(self._seg_t_stop,
-                                   info['max_time'] / info['sampling_rate'])
+                                   info['max_time'] * self._time_base)
 
         self.header = {}
         self.header['nb_block'] = 1
@@ -141,7 +169,7 @@ class CedRawIO(BaseRawIO):
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         info = self.stream_info[stream_index]
-        t_start = info['first_time'] / info['sampling_rate']
+        t_start = info['first_time'] * self._time_base
         return t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
@@ -175,3 +203,28 @@ class CedRawIO(BaseRawIO):
             sigs[:, i] = sig
 
         return sigs
+
+    def _spike_count(self, block_index, seg_index, unit_index):
+        unit_id = self.header['spike_channels'][unit_index]['id']
+        spike_ticks = self._all_spike_ticks[unit_id]
+        return spike_ticks.size
+
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
+        unit_id = self.header['spike_channels'][unit_index]['id']
+        spike_ticks = self._all_spike_ticks[unit_id]
+        if t_start is not None:
+            tick_start = int(t_start / self._time_base)
+            spike_ticks = spike_ticks[spike_ticks >= tick_start]
+        if t_stop is not None:
+            tick_stop = int(t_stop / self._time_base)
+            spike_ticks = spike_ticks[spike_ticks <= tick_stop]
+        return spike_ticks
+
+    def _rescale_spike_timestamp(self, spike_timestamps, dtype):
+        spike_times = spike_timestamps.astype(dtype)
+        spike_times *= self._time_base
+        return spike_times
+
+    def _get_spike_raw_waveforms(self, block_index, seg_index,
+                                 spike_channel_index, t_start, t_stop):
+        return None
