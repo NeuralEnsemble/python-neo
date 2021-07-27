@@ -960,10 +960,11 @@ class NixIO(BaseIO):
             dim_idxs = range(da.shape[arb_dim])
             da.append_set_dimension(dim_idxs)
         if n_dims > 1:
-            channel_ids = list(anasig.array_annotations.get('channel_ids',
-                                                       range(anasig.shape[-1])))
-            ch_ids = da.append_set_dimension(channel_ids)
-            # SetDimension currently does not support `label`
+            channel_ids = anasig.array_annotations.get('channel_ids',
+                                                       np.arange(anasig.shape[-1]))
+
+            ch_ids = da.append_set_dimension(list(channel_ids.astype('str')))
+            # SetDimension does not yet support `label`
             # ch_ids.label = "channel"
 
         if nixgroup:
@@ -1089,7 +1090,9 @@ class NixIO(BaseIO):
         if n_dims > 1:
             channel_ids = irsig.array_annotations.get('channel_ids',
                                                        range(irsig.shape[-1]))
-            ch_ids = da.append_set_dimension(channel_ids)
+            channel_ids = np.asarray(channel_ids, dtype='str')
+
+            ch_ids = da.append_set_dimension(list(channel_ids))
             # SetDimension currently does not support `label`
             # ch_ids.label = "channel"
 
