@@ -55,8 +55,8 @@ See all `pull requests`_ included in this release and the `list of closed issues
 RawIO modules
 -------------
 
-Internal refactoring of the neo.rawio module about the channel grouping.
-There is a signal_stream field that handles channel groups for signals.
+Internal refactoring of the neo.rawio module regarding channel grouping.
+Now the concept of a signal stream is used to handle channel groups for signals.
 This enhances the way the :attr:`annotation` and :attr:`array_annotation` attributes are rendered at neo.io level.
 
 Acknowledgements
