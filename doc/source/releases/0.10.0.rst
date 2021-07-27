@@ -25,9 +25,9 @@ Bug fixes and improvements in IO modules
 * :class:`NeuralynxIO` was refactored and now supports new file versions (neuraview) and single file loading.
 * Legacy versions of old IOs were removed for NeuralynxIO (neuralynxio_v1), BlackrockIO, NeoHdf5IO.
 * :class:`NixIOfr` now supports array annotations of :class:`AnalogSignal` objects.
-* The IO modules of this release have been tested with version 0.1.0 of the `ephy_testing_data`_.
 * :class:`NSDFIO` was removed because we can no longer maintain it.
 * all IOs now accept :class:`pathlib.Path` objects.
+* The IO modules of this release have been tested with version 0.1.0 of the `ephy_testing_data`_.
 
 
 Removal of Unit and ChannelIndex
