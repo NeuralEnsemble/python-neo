@@ -1763,7 +1763,7 @@ class NixIOVerTests(NixIOTest):
     def test_file_with_ver(self):
         someversion = '0.100.10'
         nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite)
-        filemd = nixfile.section("neo", "neo.metadata")
+        filemd = nixfile.create_section("neo", "neo.metadata")
         filemd["version"] = someversion
         nixfile.close()
 
