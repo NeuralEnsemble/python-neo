@@ -74,7 +74,7 @@ class NIXRawIO(BaseRawIO):
                 for da_idx, da in enumerate(seg.data_arrays):
                     # todo: This should also cover irreg & imagseq signals
                     if da.type == "neo.analogsignal":
-                        if self._file_version < Version('0.10.0dev'):
+                        if self._file_version < Version('0.11.0dev0'):
                             anasig_id = da.name.split('.')[-2]
                         else:
                             anasig_id = da.name
@@ -364,7 +364,7 @@ class NIXRawIO(BaseRawIO):
                     if da.type != "neo.analogsignal":
                         continue
 
-                    if self._file_version < Version('0.10.0dev'):
+                    if self._file_version < Version('0.11.0dev0'):
                         anasig_id = da.name.split('.')[-2]
                         # skip already annotated signals as each channel already
                         # contains the complete set of annotations and
@@ -409,13 +409,8 @@ class NIXRawIO(BaseRawIO):
                          f'{seg_index} and stream {stream_id}.')
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        if self._file_version < Version('0.10.0dev'):
-            das = self.neo_struct['blocks'][block_index]['segments'][seg_index]['streams'][stream_index]['data']
-            da = das[0]
-        else:
-            da = self.neo_struct['blocks'][block_index]['segments'][seg_index][
-                'streams'][stream_index]['data']
-        sig_t_start = float(da.dimensions[0].offset)
+        seg = self.neo_struct['blocks'][block_index]['segments'][seg_index]
+        sig_t_start = seg['signals'][stream_index]['t_start']
         return sig_t_start  # assume same group_id always same t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
@@ -427,11 +422,11 @@ class NIXRawIO(BaseRawIO):
             i_stop = self.get_signal_size(block_index, seg_index, stream_index)
 
         segment = self.neo_struct['blocks'][block_index]['segments'][seg_index]
-        if self._file_version < Version('0.10.0dev'):
+        if self._file_version < Version('0.11.0dev0'):
             das = segment['signals'][stream_index]['data']
             da = np.asarray(das).transpose()
         else:
-            da = segment['signals'][stream_index]['data']
+            da = segment['signals'][stream_index]['data'][0]
 
         if channel_indexes is not None:
             mask = channel_indexes
