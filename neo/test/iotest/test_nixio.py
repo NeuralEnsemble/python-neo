@@ -276,8 +276,8 @@ class NixIOTest(unittest.TestCase):
     def create_full_nix_file(cls, filename):
         nixfile = nix.File.open(filename, nix.FileMode.Overwrite)
 
-        nixfile.create_section('neo')
-        nixfile.sections['neo'].create_property('version', neoversion)
+        nixfile.create_section('neo', 'neo.metadata')
+        nixfile.sections['neo']['version'] = neoversion
 
         nix_block_a = nixfile.create_block(cls.rword(10), "neo.block")
         nix_block_a.definition = cls.rsentence(5, 10)
