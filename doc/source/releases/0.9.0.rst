@@ -54,24 +54,24 @@ To get the "multiple single-channel signals" behaviour, use::
 Other new or modified features
 ------------------------------
 
-  * added methods :func:`rectify()`, :func:`downsample` and :func:`resample` to :class:`AnalogSignal`
-  * :func:`SpikeTrain.merge()` can now merge multiple spiketrains
-  * the utility function :func:`cut_block_by_epochs()` gives a new :class:`Block` now
-    rather than modifying the block in place
-  * some missing properties such as ``t_start`` were added to :class:`ImageSequence`,
-    and ``sampling_period`` was renamed to ``frame_duration``
-  * :func:`AnalogSignal.time_index()` now accepts arrays of times, not just a scalar.
+* added methods :func:`rectify()`, :func:`downsample` and :func:`resample` to :class:`AnalogSignal`
+* :func:`SpikeTrain.merge()` can now merge multiple spiketrains
+* the utility function :func:`cut_block_by_epochs()` gives a new :class:`Block` now
+  rather than modifying the block in place
+* some missing properties such as ``t_start`` were added to :class:`ImageSequence`,
+  and ``sampling_period`` was renamed to ``frame_duration``
+* :func:`AnalogSignal.time_index()` now accepts arrays of times, not just a scalar.
 
 See all `pull requests`_ included in this release and the `list of closed issues`_.
 
 Bug fixes and improvements in IO modules
 ----------------------------------------
 
-  * NeoMatlabIO (support for signal annotations)
-  * NeuralynxIO (fix handling of empty .nev files)
-  * AxonIO (support EDR3 header, fix channel events bug)
-  * Spike2IO (fix rounding problem, fix for v9 SON files)
-  * MicromedIO (fix label encoding)
+* NeoMatlabIO (support for signal annotations)
+* NeuralynxIO (fix handling of empty .nev files)
+* AxonIO (support EDR3 header, fix channel events bug)
+* Spike2IO (fix rounding problem, fix for v9 SON files)
+* MicromedIO (fix label encoding)
 
 
 Acknowledgements
