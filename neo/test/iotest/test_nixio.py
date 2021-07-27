@@ -26,6 +26,7 @@ import string
 import numpy as np
 import quantities as pq
 
+from neo.version import version as neoversion
 from neo.core import (Block, Segment, AnalogSignal,
                       IrregularlySampledSignal, SpikeTrain,
                       Event, Epoch, ImageSequence, Group, ChannelView)
@@ -274,6 +275,9 @@ class NixIOTest(unittest.TestCase):
     @classmethod
     def create_full_nix_file(cls, filename):
         nixfile = nix.File.open(filename, nix.FileMode.Overwrite)
+
+        nixfile.create_section('neo')
+        nixfile.sections['neo'].create_property('version', neoversion)
 
         nix_block_a = nixfile.create_block(cls.rword(10), "neo.block")
         nix_block_a.definition = cls.rsentence(5, 10)
@@ -1759,7 +1763,7 @@ class NixIOVerTests(NixIOTest):
     def test_file_with_ver(self):
         someversion = '0.100.10'
         nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite)
-        filemd = nixfile.create_section("neo", "neo.metadata")
+        filemd = nixfile.section("neo", "neo.metadata")
         filemd["version"] = someversion
         nixfile.close()
 
