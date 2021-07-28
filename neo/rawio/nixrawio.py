@@ -126,8 +126,8 @@ class NIXRawIO(BaseRawIO):
                             sampling_rate = 1 / da.dimensions[0].sampling_interval
                         assert sampling_rate == 1 / da.dimensions[0].sampling_interval
                         # only channel_names and units are not shared by channels
-                        signal['channel_names'].extend([da.metadata['neo_name']]*n_chan)
-                        signal['units'].extend([da.unit]*n_chan)
+                        signal['channel_names'].extend([da.metadata['neo_name']] * n_chan)
+                        signal['units'].extend([da.unit] * n_chan)
                     signal['t_start'] = t_start
                     signal['t_stop'] = t_stop
                     signal['channel_count'] = chan_count
