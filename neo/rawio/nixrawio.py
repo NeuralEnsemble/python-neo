@@ -73,8 +73,7 @@ class NIXRawIO(BaseRawIO):
                 # assume consistent stream / signal order across segments
                 for da_idx, da in enumerate(seg.data_arrays):
                     # todo: This should also cover irreg & imagseq signals
-                    if da.type in ["neo.analogsignal", "neo.irregularysampledsignal",
-                                   "neo.imagesequence"]:
+                    if da.type in ["neo.analogsignal"]:
                         if self._file_version < Version('0.11.0dev0'):
                             anasig_id = da.name.split('.')[-2]
                         else:
