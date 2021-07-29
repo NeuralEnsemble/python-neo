@@ -72,7 +72,7 @@ class NIXRawIO(BaseRawIO):
 
                 # assume consistent stream / signal order across segments
                 for da_idx, da in enumerate(seg.data_arrays):
-                    # todo: This should also cover irreg & imagseq signals
+                    # todo: This should also cover irreg & imagseq signals once supported by rawio
                     if da.type in ["neo.analogsignal"]:
                         if self._file_version < Version('0.11.0dev0'):
                             anasig_id = da.name.split('.')[-2]
@@ -216,12 +216,8 @@ class NIXRawIO(BaseRawIO):
                              }
                         segment['spiketrains'].append(d)
                         wftypestr = "neo.waveforms"
-                        if 't_start' in st.metadata and 't_stop' in st.metadata:
-                            t_start = st.metadata['t_start']
-                            t_stop = st.metadata['t_stop']
-                        else:
-                            t_start = st.positions.dimensions[0].offset
-                            t_stop = st.positions.dimensions[0].stop  # TODO: fix this
+                        t_start = st.metadata['t_start']
+                        t_stop = st.metadata['t_stop']
                         d['t_start'] = t_start
                         d['t_stop'] = t_stop
                         if (st.features and st.features[0].data.type == wftypestr):
