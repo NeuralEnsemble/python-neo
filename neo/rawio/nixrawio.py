@@ -73,7 +73,8 @@ class NIXRawIO(BaseRawIO):
                 # assume consistent stream / signal order across segments
                 for da_idx, da in enumerate(seg.data_arrays):
                     # todo: This should also cover irreg & imagseq signals
-                    if da.type == "neo.analogsignal":
+                    if da.type in ["neo.analogsignal", "neo.irregularysampledsignal",
+                                   "neo.imagesequence"]:
                         if self._file_version < Version('0.11.0dev0'):
                             anasig_id = da.name.split('.')[-2]
                         else:
@@ -85,18 +86,18 @@ class NIXRawIO(BaseRawIO):
                         if len(signal_dict['signals']) == 0:
                             signal_idx = 0
                             signal_dict['signals'].append({'data': [da]})
-                            signal_dict['signal_types'].append('neo.analogsignal')
+                            signal_dict['signal_types'].append(da.type)
                             signal_dict['signal_ids'].append(anasig_id)
                         # object is different -> create new object
                         elif anasig_id != signal_dict['signal_ids'][signal_idx]:
                             signal_idx += 1
                             signal_dict['signals'].append({'data': [da]})
-                            signal_dict['signal_types'].append('neo.analogsignal')
+                            signal_dict['signal_types'].append(da.type)
                             signal_dict['signal_ids'].append(anasig_id)
                         # object already exists (old nix mapping version)
                         else:
                             assert signal_dict['signal_ids'][signal_idx] == anasig_id
-                            assert signal_dict['signal_types'][signal_idx] == 'neo.analogsignal'
+                            assert signal_dict['signal_types'][signal_idx] == da.type
                             signal_dict['signals'][signal_idx]['data'].append(da)
                 seg_idx += 1
             bl_idx += 1
