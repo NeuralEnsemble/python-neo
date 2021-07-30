@@ -178,6 +178,17 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         block = nio.read_block(signal_group_mode='group-by-same-units')
         self.assertEqual(len(block.groups), 1)
 
+    def test_read_single_file(self):
+        filename = self.get_local_path(
+            'neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs'
+        )
+        nio = NeuralynxIO(filename=filename, use_cache=False)
+        block = nio.read_block()
+        self.assertTrue(len(block.segments[0].analogsignals) > 0)
+        self.assertTrue((len(block.segments[0].spiketrains)) == 0)
+        self.assertTrue((len(block.segments[0].events)) == 0)
+        self.assertTrue((len(block.segments[0].epochs)) == 0)
+
 
 class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
     pegasus_version = '2.1.1'

@@ -26,7 +26,7 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
     _prefered_signal_group_mode = 'group-by-same-units'
     mode = 'dir'
 
-    def __init__(self, dirname, use_cache=False, cache_path='same_as_resource',
+    def __init__(self, dirname='', filename='', use_cache=False, cache_path='same_as_resource',
                  keep_original_times=False):
         """
         Initialise IO instance
@@ -46,6 +46,9 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             shifted to begin at t_start = 0*pq.second.
             Default: False
         """
-        NeuralynxRawIO.__init__(self, dirname=dirname, use_cache=use_cache,
+        NeuralynxRawIO.__init__(self, dirname=dirname, filename=filename, use_cache=use_cache,
                                 cache_path=cache_path, keep_original_times=keep_original_times)
-        BaseFromRaw.__init__(self, dirname)
+        if self.rawmode == 'one-file':
+            BaseFromRaw.__init__(self, filename)
+        elif self.rawmode == 'one-dir':
+            BaseFromRaw.__init__(self, dirname)
