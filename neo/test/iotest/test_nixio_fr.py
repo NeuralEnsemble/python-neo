@@ -112,10 +112,10 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
             sp = SpikeTrain([3, 4, 5]* s, t_stop=10.0)
             sp.annotations['railway'] = 'hello train'
             ev = Event(np.arange(0, 30, 10)*pq.Hz,
-                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='S'))
+                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
             ev.annotations['venue'] = 'hello event'
             ev2 = Event(np.arange(0, 30, 10) * pq.Hz,
-                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='S'))
+                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
             ev2.annotations['evven'] = 'hello ev'
             seg.spiketrains.append(sp)
             seg.events.append(ev)
