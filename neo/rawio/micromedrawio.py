@@ -6,8 +6,6 @@ Completed with matlab Guillaume BECQ code.
 
 Author: Samuel Garcia
 """
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
-
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                 _spike_channel_dtype, _event_channel_dtype)

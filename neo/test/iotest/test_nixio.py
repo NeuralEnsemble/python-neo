@@ -561,7 +561,8 @@ class NixIOTest(unittest.TestCase):
                 st.sources.append(nixunit)
 
         # pick a few signal groups to reference this CHX
-        randsiggroups = np.random.choice(allsignalgroups, 5, False)
+        rand_idxs = np.random.choice(range(len(allsignalgroups)), 5, False)
+        randsiggroups = [allsignalgroups[idx] for idx in rand_idxs]
         for siggroup in randsiggroups:
             for sig in siggroup:
                 sig.sources.append(nixchx)
@@ -793,7 +794,7 @@ class NixIOWriteTest(NixIOTest):
         block.segments[0].irregularlysampledsignals.append(
             IrregularlySampledSignal(times=times,
                                      signal=np.random.random((10, 3)),
-                                     units="mV", dtype=np.float,
+                                     units="mV", dtype=float,
                                      name="some sort of signal",
                                      description="the signal is described")
         )
@@ -1526,7 +1527,7 @@ class NixIOWriteTest(NixIOTest):
             "sometime": time(13, 37, 42),
             "somequantity": self.rquant(10, pq.ms),
             "somestring": self.rsentence(3),
-            "npfloat": np.float(10),
+            "npfloat": np.float64(10),
             "nparray": np.array([1, 2, 400]),
             "emptystr": "",
         }

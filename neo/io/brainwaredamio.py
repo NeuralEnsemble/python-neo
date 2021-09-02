@@ -193,7 +193,7 @@ class BrainwareDamIO(BaseIO):
             name = np.fromfile(fobject, dtype=np.uint8, count=numchars)
 
             # exclude invalid characters
-            name = str(name[name >= 32].view('c').tostring())
+            name = str(name[name >= 32].view('c').tobytes())
 
             # add the name to the list of names
             paramnames.append(name)

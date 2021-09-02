@@ -9,7 +9,7 @@ import quantities as pq
 from neo.io.nixio import NixIO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
-from neo.test.iotest.tools import get_test_file_full_path
+
 try:
     import nixio as nix
 
@@ -106,15 +106,16 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
             annotations = {'something': 'hello hello000'}
             seg = Segment(**annotations)
             an =AnalogSignal([[1, 2, 3], [4, 5, 6]], units='V',
-                                        sampling_rate=1*pq.Hz)
-            an.annotations['ansigrandom'] = 'hello chars'
+                             sampling_rate=1 * pq.Hz)
+            an.annotate(ansigrandom='hello chars')
+            an.array_annotate(custom_id=[1, 2, 3])
             sp = SpikeTrain([3, 4, 5]* s, t_stop=10.0)
             sp.annotations['railway'] = 'hello train'
             ev = Event(np.arange(0, 30, 10)*pq.Hz,
-                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='S'))
+                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
             ev.annotations['venue'] = 'hello event'
             ev2 = Event(np.arange(0, 30, 10) * pq.Hz,
-                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='S'))
+                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
             ev2.annotations['evven'] = 'hello ev'
             seg.spiketrains.append(sp)
             seg.events.append(ev)
@@ -123,14 +124,19 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
             bl.segments.append(seg)
             io.write_block(bl)
             io.close()
+
         with NixIOfr(filename=self.testfilename) as frio:
             frbl = frio.read_block()
             assert 'my_custom_annotation' in frbl.annotations
             assert 'something' in frbl.segments[0].annotations
-            # assert 'ansigrandom' in frbl.segments[0].analogsignals[0].annotations
+            assert 'ansigrandom' in frbl.segments[0].analogsignals[0].annotations
             assert 'railway' in frbl.segments[0].spiketrains[0].annotations
             assert 'venue' in frbl.segments[0].events[0].annotations
             assert 'evven' in frbl.segments[0].events[1].annotations
+            assert 'custom_id' in frbl.segments[0].analogsignals[0].array_annotations
+            for anasig in frbl.segments[0].analogsignals:
+                for value in anasig.array_annotations.values():
+                    assert anasig.shape[-1] == len(value)
         os.remove(self.testfilename)
 
 

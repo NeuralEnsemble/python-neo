@@ -24,10 +24,10 @@ and may not be the current affiliation of a contributor.
 * Erik Li [9]
 * Georg Raiser [10]
 * Joffrey Gonin [2]
-* Kyler Brown [?]
+* Kyler Brown
 * Mikkel Elle Lepperød [11]
 * C Daniel Meliza [12]
-* Julia Sprenger [13]
+* Julia Sprenger [13, 6]
 * Maximilian Schmidt [13]
 * Johanna Senk [13]
 * Carlos Canova [13]
@@ -57,6 +57,9 @@ and may not be the current affiliation of a contributor.
 * Alessio Buccino [23]
 * Regimantas Jurkus [13]
 * Steffen Buergers [24]
+* Etienne Combrisson [6]
+* Ben Dichter [24]
+* Elodie Legouée [21]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France

@@ -13,6 +13,7 @@ from neo.core import objectlist
 from neo.core.baseneo import _reference_name, _container_name
 from neo.core.basesignal import BaseSignal
 from neo.core.container import Container
+from neo.core.spiketrainlist import SpikeTrainList
 from neo.io.basefromrawio import proxyobjectlist, EventProxy, EpochProxy
 
 
@@ -194,7 +195,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
     if exclude is None:
         exclude = []
 
-    if isinstance(ob1, list):
+    if isinstance(ob1, (list, SpikeTrainList)):
         assert len(ob1) == len(ob2), 'lens %s and %s not equal for %s and %s' \
                                      '' % (len(ob1), len(ob2), ob1, ob2)
         for i, (sub1, sub2) in enumerate(zip(ob1, ob2)):

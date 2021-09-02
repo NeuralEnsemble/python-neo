@@ -13,6 +13,7 @@ import numpy as np
 from copy import deepcopy
 
 from neo.core.container import Container
+from neo.core.spiketrainlist import SpikeTrainList
 
 
 class Segment(Container):
@@ -89,8 +90,8 @@ class Segment(Container):
         Initialize a new :class:`Segment` instance.
         '''
         super().__init__(name=name, description=description,
-                                      file_origin=file_origin, **annotations)
-
+                         file_origin=file_origin, **annotations)
+        self.spiketrains = SpikeTrainList(segment=self)
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index

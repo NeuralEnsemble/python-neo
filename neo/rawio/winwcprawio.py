@@ -72,9 +72,9 @@ class WinWcpRawIO(BaseRawIO):
 
                 all_sampling_interval.append(analysisHeader['SamplingInterval'])
 
-        assert np.unique(all_sampling_interval).size == 1
-
-        self._sampling_rate = 1. / all_sampling_interval[0]
+        # sampling interval can be slightly varying due to float precision
+        # all_sampling_interval are not always unique
+        self._sampling_rate = 1. / np.median(all_sampling_interval)
 
         signal_channels = []
         for c in range(header['NC']):

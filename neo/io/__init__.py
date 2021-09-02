@@ -44,6 +44,7 @@ Classes:
 * :attr:`NeuroScopeIO`
 * :attr:`NeuroshareIO`
 * :attr:`NixIO`
+* :attr:`NWBIO`
 * :attr:`OpenEphysIO`
 * :attr:`OpenEphysBinaryIO`
 * :attr:`PhyIO`
@@ -52,6 +53,7 @@ Classes:
 * :attr:`RawBinarySignalIO`
 * :attr:`RawMCSIO`
 * :attr:`Spike2IO`
+* :attr:`SpikeGadgetsIO`
 * :attr:`SpikeGLXIO`
 * :attr:`StimfitIO`
 * :attr:`TdtIO`
@@ -184,6 +186,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.NWBIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.OpenEphysIO
 
     .. autoattribute:: extensions
@@ -213,6 +219,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: Spike2IO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: SpikeGadgetsIO
 
     .. autoattribute:: extensions
 
@@ -276,7 +286,7 @@ from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.cedio import CedIO
 from neo.io.elanio import ElanIO
-# from neo.io.elphyio import ElphyIO
+from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
 from neo.io.intanio import IntanIO
@@ -292,6 +302,7 @@ from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
 from neo.io.nixio_fr import NixIO as NixIOFr
+from neo.io.nwbio import NWBIO
 from neo.io.openephysio import OpenEphysIO
 from neo.io.openephysbinaryio import OpenEphysBinaryIO
 from neo.io.phyio import PhyIO
@@ -300,6 +311,7 @@ from neo.io.plexonio import PlexonIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
+from neo.io.spikegadgetsio import SpikeGadgetsIO
 from neo.io.spikeglxio import SpikeGLXIO
 from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
@@ -340,6 +352,7 @@ iolist = [
     NeuroExplorerIO,
     NeuroScopeIO,
     NeuroshareIO,
+    NWBIO,
     OpenEphysIO,
     OpenEphysBinaryIO,
     PhyIO,
@@ -348,6 +361,7 @@ iolist = [
     RawBinarySignalIO,
     RawMCSIO,
     Spike2IO,
+    SpikeGadgetsIO,
     SpikeGLXIO,
     StimfitIO,
     TdtIO,

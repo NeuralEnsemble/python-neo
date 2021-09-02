@@ -91,7 +91,17 @@ class MaxwellRawIO(BaseRawIO):
         for stream_id in signal_streams['id']:
             if int(version) == 20160704:
                 sr = 20000.
-                gain_uV = h5['settings']['lsb'][0] * 1e6
+                settings = h5["settings"]
+                if 'lsb' in settings:
+                    gain_uV = settings['lsb'][0] * 1e6
+                else:
+                    if "gain" not in settings:
+                        print("'gain' amd 'lsb' not found in settings. "
+                              "Setting gain to 512 (default)")
+                        gain = 512
+                    else:
+                        gain = settings['gain'][0]
+                    gain_uV = 3.3 / (1024 * gain) * 1e6
                 sigs = h5['sig']
                 mapping = h5["mapping"]
                 ids = np.array(mapping['channel'])
@@ -99,8 +109,17 @@ class MaxwellRawIO(BaseRawIO):
                 self._channel_slice = ids
             elif int(version) > 20160704:
                 settings = h5['wells'][stream_id][self.rec_name]['settings']
-                sr = settings['sampling'][:][0]
-                gain_uV = settings['lsb'][:][0] * 1e6
+                sr = settings['sampling'][0]
+                if 'lsb' in settings:
+                    gain_uV = settings['lsb'][0] * 1e6
+                else:
+                    if "gain" not in settings:
+                        print("'gain' amd 'lsb' not found in settings. "
+                              "Setting gain to 512 (default)")
+                        gain = 512
+                    else:
+                        gain = settings['gain'][0]
+                    gain_uV = 3.3 / (1024 * gain) * 1e6
                 mapping = settings['mapping']
                 sigs = h5['wells'][stream_id][self.rec_name]['groups']['routed']['raw']
 

@@ -55,7 +55,7 @@ class ChannelView(BaseNeo):
         self.index = np.array(index)
         if len(self.index.shape) != 1:
             raise ValueError("index must be a 1D array")
-        if self.index.dtype == np.bool:  # convert boolean mask to integer index
+        if self.index.dtype == bool:  # convert boolean mask to integer index
             if self.index.size != self.obj.shape[-1]:
                 raise ValueError("index size does not match number of channels in signal")
             self.index, = np.nonzero(self.index)

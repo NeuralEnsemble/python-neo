@@ -13,3 +13,4 @@ coverage
 coveralls
 pillow
 sonpy
+pynwb
