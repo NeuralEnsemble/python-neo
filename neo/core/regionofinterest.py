@@ -2,6 +2,7 @@ from math import floor, ceil
 from neo.core.container import Container
 from neo.core.imagesequence import ImageSequence
 
+
 class RegionOfInterest(Container):
     """Abstract base class"""
 
