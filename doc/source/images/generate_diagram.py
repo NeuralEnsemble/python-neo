@@ -64,17 +64,17 @@ def initialize_dummy_neo(name):
         sig = neo.AnalogSignal([] * pq.V, sampling_rate=1 * pq.Hz)
         return neo.ChannelView(sig, [0])
     elif name in ['ImageSequence']:
-        return neo.ImageSequence(np.array([1]).reshape((1, 1, 1))*pq.V,
-                                 spatial_scale=1*pq.m,
-                                 sampling_rate=1*pq.Hz)
+        return neo.ImageSequence(np.array([1]).reshape((1, 1, 1)) * pq.V,
+                                 spatial_scale=1 * pq.m,
+                                 sampling_rate=1 * pq.Hz)
     elif name in ['AnalogSignal']:
-        return neo.AnalogSignal([] * pq.V, sampling_rate=1*pq.Hz)
+        return neo.AnalogSignal([] * pq.V, sampling_rate=1 * pq.Hz)
     elif name in ['SpikeTrain']:
-        return neo.SpikeTrain([]*pq.s, 0*pq.s)
+        return neo.SpikeTrain([] * pq.s, 0 * pq.s)
     elif name in ['IrregularlySampledSignal']:
-        return neo.IrregularlySampledSignal([]*pq.s, []*pq.V)
+        return neo.IrregularlySampledSignal([] * pq.s, [] * pq.V)
     elif name in ['RegionOfInterest']:
-        return neo.core.regionofinterest.CircularRegionOfInterest(0,0,0)
+        return neo.core.regionofinterest.CircularRegionOfInterest(0, 0, 0)
     else:
         raise ValueError(f'Unknown neo object: {name}')
 
@@ -123,7 +123,7 @@ def generate_diagram(rect_pos, rect_width, figsize):
                 if ch_name == name:
                     rad = 1
                 else:
-                    rad = (y1-y2)/25
+                    rad = (y1 - y2) / 25
 
                 if r == 3:
                     rad = '-0.1'
@@ -132,7 +132,7 @@ def generate_diagram(rect_pos, rect_width, figsize):
                     x2 += rect_width
                 connectionstyle = f"arc3,rad={rad}"
 
-                annotate(ax=ax, coord1=(x1, y1+0.1), coord2=(x2, y2),
+                annotate(ax=ax, coord1=(x1, y1 + 0.1), coord2=(x2, y2),
                          connectionstyle=connectionstyle,
                          color=color[r], alpha=alpha[r])
 
@@ -225,9 +225,9 @@ def generate_diagram(rect_pos, rect_width, figsize):
             t = t1 + ' :  ' + t2
 
             # abbreviating lines to match in rectangles
-            char_limit = int(rect_width*13.4)  # 13.4 = arbitrary calibration
+            char_limit = int(rect_width * 13.4)  # 13.4 = arbitrary calibration
             if len(t) > char_limit:
-                t = t[:char_limit-3] + '...'
+                t = t[:char_limit - 3] + '...'
             ax.text(pos[0] + left_text_shift,
                     pos[1] + htotal - line_heigth * (i + len(allrelationship) + 2),
                     t,
@@ -250,24 +250,24 @@ def generate_diagram_simple():
     rw = rect_width = 3.
     bf = 1.5
     rect_pos = {
-                #  col 0
-                'Block': (.5 + rw * bf * 0, 7),
-                #  col 1
-                'Segment': (.5 + rw * bf * 1, 8.5),
-                'Group': (.5 + rw * bf * 1, 3.5),
-                #  col 2 : not do for now too complicated with our object generator
-                'ChannelView': (.5 + rw * bf * 2, 2.5),
-                'RegionOfInterest': (.5 + rw * bf * 2, 1.0),
+        #  col 0
+        'Block': (.5 + rw * bf * 0, 7),
+        #  col 1
+        'Segment': (.5 + rw * bf * 1, 8.5),
+        'Group': (.5 + rw * bf * 1, 3.5),
+        #  col 2 : not do for now too complicated with our object generator
+        'ChannelView': (.5 + rw * bf * 2, 2.5),
+        'RegionOfInterest': (.5 + rw * bf * 2, 1.0),
 
-                # col 3
-                'AnalogSignal': (.5 + rw * bf * 3, 10),
-                'IrregularlySampledSignal': (.5 + rw * bf * 3, 8.4),
-                'ImageSequence': (.5 + rw * bf * 3, 6.35),
-                'SpikeTrain': (.5 + rw * bf * 3, 3.8),
-                'Event': (.5 + rw * bf * 3, 2.1),
-                'Epoch': (.5 + rw * bf * 3, 0.3),
+        # col 3
+        'AnalogSignal': (.5 + rw * bf * 3, 10),
+        'IrregularlySampledSignal': (.5 + rw * bf * 3, 8.4),
+        'ImageSequence': (.5 + rw * bf * 3, 6.35),
+        'SpikeTrain': (.5 + rw * bf * 3, 3.8),
+        'Event': (.5 + rw * bf * 3, 2.1),
+        'Epoch': (.5 + rw * bf * 3, 0.3),
 
-                }
+    }
 
     fig = generate_diagram(rect_pos, rect_width, figsize)
     fig.savefig('simple_generated_diagram.png', dpi=dpi)
