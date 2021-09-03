@@ -64,7 +64,6 @@ class Block(Container):
     '''
 
     _container_child_objects = ('Segment', 'Group')
-    _child_properties = ()
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
                            ('index', int)) +

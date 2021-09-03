@@ -121,9 +121,6 @@ class Container(BaseNeo):
                                named class.__name__.lower()+'s' will be
                                automatically defined to hold this child and
                                will be initialized to an empty list.
-        :_child_properties: Properties that return sub-children of a particular
-                            type.  These properties must still be defined.
-                            This is mostly used for generate_diagram.
         :_repr_pretty_containers: The names of containers attributes printed
                                   when pretty-printing using iPython.
 
@@ -220,8 +217,6 @@ class Container(BaseNeo):
     _data_child_objects = ()
     # Child objects that can have multiple parents
     _multi_child_objects = ()
-    # Properties returning children of children [of children...]
-    _child_properties = ()
     # Containers that are listed when pretty-printing
     _repr_pretty_containers = ()
 
