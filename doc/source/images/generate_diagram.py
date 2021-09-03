@@ -1,8 +1,8 @@
 """
-This generate diagram in .png and .svg from neo.core
+This generates a diagram in .png and .svg from neo.core objects
 
 
-Author: sgarcia
+Authors: Samuel Garcia, Julia Sprenger
 """
 
 from datetime import datetime
@@ -13,7 +13,7 @@ from matplotlib import pyplot
 from matplotlib.patches import Rectangle, ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
 
-from neo.test.generate_datasets import fake_neo
+import neo
 
 line_heigth = .22
 fontsize = 10.5
@@ -54,7 +54,29 @@ def calc_coordinates(pos, height):
     x = pos[0]
     y = pos[1] + height - line_heigth * .5
 
-    return pos[0], y
+    return x, y
+
+
+def initialize_dummy_neo(name):
+    if name in ['Block', 'Segment', 'Group', 'Event', 'Epoch']:
+        return getattr(neo, name)()
+    elif name in ['ChannelView']:
+        sig = neo.AnalogSignal([] * pq.V, sampling_rate=1 * pq.Hz)
+        return neo.ChannelView(sig, [0])
+    elif name in ['ImageSequence']:
+        return neo.ImageSequence(np.array([1]).reshape((1, 1, 1))*pq.V,
+                                 spatial_scale=1*pq.m,
+                                 sampling_rate=1*pq.Hz)
+    elif name in ['AnalogSignal']:
+        return neo.AnalogSignal([] * pq.V, sampling_rate=1*pq.Hz)
+    elif name in ['SpikeTrain']:
+        return neo.SpikeTrain([]*pq.s, 0*pq.s)
+    elif name in ['IrregularlySampledSignal']:
+        return neo.IrregularlySampledSignal([]*pq.s, []*pq.V)
+    elif name in ['RegionOfInterest']:
+        return neo.core.regionofinterest.CircularRegionOfInterest(0,0,0)
+    else:
+        raise ValueError(f'Unknown neo object: {name}')
 
 
 def generate_diagram(rect_pos, rect_width, figsize):
@@ -66,34 +88,51 @@ def generate_diagram(rect_pos, rect_width, figsize):
     all_h = {}
     objs = {}
     for name in rect_pos:
-        objs[name] = fake_neo(name, cascade=False)
+        objs[name] = initialize_dummy_neo(name)
         all_h[name] = get_rect_height(name, objs[name])
 
     # draw connections
-    color = ['c', 'm', 'y']
-    alpha = [1., 1., 0.3]
+    color = ['c', 'm', 'y', 'r']
+    alpha = [1., 1., 1, 0.5]
     for name, pos in rect_pos.items():
         obj = objs[name]
         relationships = [getattr(obj, '_single_child_objects', []),
                          getattr(obj, '_multi_child_objects', []),
                          getattr(obj, '_child_properties', [])]
 
-        for r in range(3):
+        # additional references
+        custom_relations = []
+        for attr in obj._all_attrs:
+            attr_name, attr_type = attr[0], attr[1]
+            if isinstance(attr_type, str) and hasattr(neo, attr_type):
+                custom_relations.append(attr_type)
+            elif isinstance(attr_type, tuple):
+                for attr_t in attr_type:
+                    if isinstance(attr_t, str) and hasattr(neo, attr_t):
+                        custom_relations.append(attr_t)
+        relationships.append(custom_relations)
+
+        for r in range(4):
             for ch_name in relationships[r]:
                 if ch_name not in rect_pos:
                     continue
                 x1, y1 = calc_coordinates(rect_pos[ch_name], all_h[ch_name])
                 x2, y2 = calc_coordinates(pos, all_h[name])
 
-                if r in [0, 2]:
-                    x2 += rect_width
-                    connectionstyle = "arc3,rad=-0.2"
-                elif y2 >= y1:
-                    connectionstyle = "arc3,rad=0.7"
+                # autolink
+                if ch_name == name:
+                    rad = 1
                 else:
-                    connectionstyle = "arc3,rad=-0.7"
+                    rad = (y1-y2)/25
 
-                annotate(ax=ax, coord1=(x1, y1), coord2=(x2, y2),
+                if r == 3:
+                    rad = '-0.1'
+
+                if r in [0, 2, 3]:
+                    x2 += rect_width
+                connectionstyle = f"arc3,rad={rad}"
+
+                annotate(ax=ax, coord1=(x1, y1+0.1), coord2=(x2, y2),
                          connectionstyle=connectionstyle,
                          color=color[r], alpha=alpha[r])
 
@@ -162,10 +201,9 @@ def generate_diagram(rect_pos, rect_width, figsize):
         # attributes
         for i, attr in enumerate(obj._all_attrs):
             attrname, attrtype = attr[0], attr[1]
-            t1 = attrname
             if (hasattr(obj, '_quantity_attr')
                     and obj._quantity_attr == attrname):
-                t1 = attrname + '(object itself)'
+                t1 = attrname + ' (object itself)'
             else:
                 t1 = attrname
 
@@ -178,10 +216,18 @@ def generate_diagram(rect_pos, rect_width, figsize):
                 t2 = "np.ndarray %dD dt='%s'" % (attr[2], attr[3].kind)
             elif attrtype == datetime:
                 t2 = 'datetime'
+            elif type(attrtype) == tuple:
+                t2 = str(attrtype).replace('(', '').replace(')', '')
+                t2 = t2.replace("'", '').replace(', ', ' or ')
             else:
                 t2 = attrtype.__name__
 
             t = t1 + ' :  ' + t2
+
+            # abbreviating lines to match in rectangles
+            char_limit = int(rect_width*13.4)  # 13.4 = arbitrary calibration
+            if len(t) > char_limit:
+                t = t[:char_limit-3] + '...'
             ax.text(pos[0] + left_text_shift,
                     pos[1] + htotal - line_heigth * (i + len(allrelationship) + 2),
                     t,
@@ -202,28 +248,27 @@ def generate_diagram(rect_pos, rect_width, figsize):
 def generate_diagram_simple():
     figsize = (18, 12)
     rw = rect_width = 3.
-    bf = blank_fact = 1.2
+    bf = 1.5
     rect_pos = {
                 #  col 0
-                'Block': (.5 + rw * bf * 0, 4),
+                'Block': (.5 + rw * bf * 0, 7),
                 #  col 1
-                'Segment': (.5 + rw * bf * 1, .5),
-                'Group': (.5 + rw * bf * 1, 6.5),
+                'Segment': (.5 + rw * bf * 1, 8.5),
+                'Group': (.5 + rw * bf * 1, 3.5),
                 #  col 2 : not do for now too complicated with our object generator
-                # 'ChannelView': (.5 + rw * bf * 2, 5),
+                'ChannelView': (.5 + rw * bf * 2, 2.5),
+                'RegionOfInterest': (.5 + rw * bf * 2, 1.0),
 
-                # col 2.5
-                'ImageSequence': (.5 + rw * bf * 2.5, 3.0),
-                'SpikeTrain': (.5 + rw * bf * 2.5, 0.5),
-                #  col 3
-                'IrregularlySampledSignal': (.5 + rw * bf * 3, 9),
-                'AnalogSignal': (.5 + rw * bf * 3, 7.),
-                #  col 3
-                'Event': (.5 + rw * bf * 4, 3.0),
-                'Epoch': (.5 + rw * bf * 4, 1.0),
+                # col 3
+                'AnalogSignal': (.5 + rw * bf * 3, 10),
+                'IrregularlySampledSignal': (.5 + rw * bf * 3, 8.4),
+                'ImageSequence': (.5 + rw * bf * 3, 6.35),
+                'SpikeTrain': (.5 + rw * bf * 3, 3.8),
+                'Event': (.5 + rw * bf * 3, 2.1),
+                'Epoch': (.5 + rw * bf * 3, 0.3),
 
                 }
-    # todo: add ImageSequence, RegionOfInterest
+
     fig = generate_diagram(rect_pos, rect_width, figsize)
     fig.savefig('simple_generated_diagram.png', dpi=dpi)
     fig.savefig('simple_generated_diagram.svg', dpi=dpi)
