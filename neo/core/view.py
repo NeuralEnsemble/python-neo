@@ -7,11 +7,12 @@ It replaces the indexing function of the former :class:`ChannelIndex`.
 
 import numpy as np
 from .baseneo import BaseNeo
+from .container import Container
 from .basesignal import BaseSignal
 from .dataobject import ArrayDict
 
 
-class ChannelView(BaseNeo):
+class ChannelView(Container):
     """
     A tool for indexing a subset of the channels within an :class:`AnalogSignal`
     or :class:`IrregularlySampledSignal`;
