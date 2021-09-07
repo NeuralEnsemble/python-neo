@@ -112,6 +112,9 @@ class NeuralynxRawIO(BaseRawIO):
         else:
             return self.dirname
 
+    # from memory_profiler import profile
+    #
+    # @profile()
     def _parse_header(self):
 
         stream_channels = []
@@ -375,7 +378,6 @@ class NeuralynxRawIO(BaseRawIO):
                 # ~ ev_ann['nttl'] =
                 # ~ ev_ann['digital_marker'] =
                 # ~ ev_ann['analog_marker'] =
-
 
     def _get_file_map(self, filename):
         """
