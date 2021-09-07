@@ -279,7 +279,8 @@ class NcsSectionsFactory:
         # detect records with incomplete number of samples
         gap_rec_ids = list(np.where(ncsMemMap['nb_valid'] != exp_nb_valid)[0])
 
-        pred_times = np.rint(ncsMemMap['timestamp'] + 1e6 / ncsSects.sampFreqUsed * ncsMemMap['nb_valid']).astype(np.int64)
+        rec_duration = 1e6 / ncsSects.sampFreqUsed * ncsMemMap['nb_valid']
+        pred_times = np.rint(ncsMemMap['timestamp'] + rec_duration).astype(np.int64)
         max_pred_times = pred_times + maxGapLen
         # data records that start later than the predicted time (including the
         # maximal accepted gap length) are considered delayed a gap is
