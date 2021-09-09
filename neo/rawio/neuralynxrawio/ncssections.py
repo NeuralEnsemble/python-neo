@@ -283,8 +283,8 @@ class NcsSectionsFactory:
         pred_times = np.rint(ncsMemMap['timestamp'] + rec_duration).astype(np.int64)
         max_pred_times = pred_times + maxGapLen
         # data records that start later than the predicted time (including the
-        # maximal accepted gap length) are considered delayed a gap is
-        # registered
+        # maximal accepted gap length) are considered delayed and a gap is
+        # registered.
         delayed_recs = list(np.where(max_pred_times[:-1] < ncsMemMap['timestamp'][1:])[0])
         gap_rec_ids.extend(delayed_recs)
 
