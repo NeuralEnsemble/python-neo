@@ -9,6 +9,7 @@ Author: Julia Sprenger
 
 import pygraphviz
 import neo
+
 # from datetime import datetime
 #
 # import numpy as np
@@ -45,12 +46,14 @@ styles['IO']['raw']['color'] = '#008080 '
 styles['ext']['shape'] = 'circle'
 styles['ext']['fillcolor'] = 'red'
 styles['ext']['style'] = 'filled'
+
+
 # styles['ext']['fixedsize'] = 'True'
 
 
 def generate_diagram(filename, plot_extensions=False):
     dia = pygraphviz.AGraph(strict=False, splines='true')
-    G=dia
+    G = dia
     G.node_attr['fontname'] = 'Arial'
     # G.node_attr['shape'] = 'circle'
     # G.node_attr['fixedsize'] = 'true'
@@ -67,7 +70,6 @@ def generate_diagram(filename, plot_extensions=False):
     G.graph_attr['label'] = "NEO {}".format(neo.__version__)
     G.graph_attr['ratio'] = '1.0'
     # G.edge_attr['color'] = '#1100FF'
-
 
     G.edge_attr['style'] = 'setlinewidth(4)'
 
@@ -103,11 +105,10 @@ def generate_diagram(filename, plot_extensions=False):
                 dia.add_node(ext, **styles['ext'])
                 dia.add_edge(io_name, ext, minlen=0)
 
-    dia.layout(prog='fdp') #neato, dot, twopi, circo, fdp, nop, wc, acyclic, gvpr, gvcolor,
+    dia.layout(prog='fdp')  # neato, dot, twopi, circo, fdp, nop, wc, acyclic, gvpr, gvcolor,
     # ccomps, sccmap, tred, sfdp.
     for ext in ['png', 'svg', 'eps']:
         dia.draw('{}.{}'.format(filename, ext))
-
 
 
 if __name__ == '__main__':
