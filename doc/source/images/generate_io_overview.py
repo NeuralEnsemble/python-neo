@@ -83,10 +83,7 @@ def generate_diagram(filename, plot_extensions=False):
             if io_name == 'BaseIO':
                 io_name = io.__name__.rstrip('RawIO')
         if io_name is None:
-            try:
-                io_name = io.__name__.rstrip('IO')
-            except:
-                continue
+            io_name = io.__name__.rstrip('IO')
         if 'example' in io_name:
             continue
 
