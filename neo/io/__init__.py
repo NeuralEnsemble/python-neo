@@ -37,6 +37,7 @@ Classes:
 * :attr:`KwikIO`
 * :attr:`MaxwellIO`
 * :attr:`MicromedIO`
+* :attr:`MonkeyLogicIO`
 * :attr:`NeoMatlabIO`
 * :attr:`NestIO`
 * :attr:`NeuralynxIO`
@@ -155,6 +156,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.MicromedIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.MonkeyLogicIO
 
     .. autoattribute:: extensions
 
@@ -295,6 +300,7 @@ from neo.io.kwikio import KwikIO
 from neo.io.mearecio import MEArecIO
 from neo.io.maxwellio import MaxwellIO
 from neo.io.micromedio import MicromedIO
+from neo.io.monkeylogicio import MonkeyLogicIO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
 from neo.io.neuralynxio import NeuralynxIO
@@ -345,6 +351,7 @@ iolist = [
     MEArecIO,
     MaxwellIO,
     MicromedIO,
+    MonkeyLogicIO,
     NixIO,  # place NixIO before other IOs that use HDF5 to make it the default for .h5 files
     NeoMatlabIO,
     NestIO,
