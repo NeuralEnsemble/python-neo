@@ -141,12 +141,20 @@ class MLBLock(dict):
         else:
             raise ValueError(f'unknown variable type {self.var_type}')
 
-        # Sanity check: Blocks can only have children or contain data
-        if self.data is not None and len(self.keys()):
-            raise ValueError(f'Block {self.var_name} has {len(self)} children and data: {self.data}')
+        self.flatten()
 
+    def flatten(self):
+        '''
+        Reassigning data objects to be children of parent dict
+        block1.block2.data -> block1.data as block2 anyway does not contain keys
+        '''
+        for k, v in self.items():
+            # Sanity check: Blocks can either have children or contain data
+            if v.data is not None and len(v.keys()):
+                raise ValueError(f'Block {k} has {len(k)} children and data: {v.data}')
 
-
+            if v.data is not None:
+                self[k] = v.data
 
 
 class MonkeyLogicRawIO(BaseRawIO):
@@ -161,6 +169,16 @@ class MonkeyLogicRawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
 
+    def _data_sanity_checks(self):
+        for trial_id in self.trial_ids:
+            events = self.ml_blocks[f'Trial{trial_id}']['BehavioralCodes']
+
+            # sanity check: last event == trial end
+            first_event_code = events['CodeNumbers'][0]
+            last_event_code = events['CodeNumbers'][-1]
+            assert first_event_code == 9  # 9 denotes sending of trial start event
+            assert last_event_code == 18  # 18 denotes sending of trial end event
+
     def _parse_header(self):
         self.ml_blocks = {}
 
@@ -170,7 +188,9 @@ class MonkeyLogicRawIO(BaseRawIO):
                 self.ml_blocks[bl.var_name] = bl
 
         trial_rec = self.ml_blocks['TrialRecord']
-        self.trial_ids = np.arange(1, int(trial_rec['CurrentTrialNumber'].data))
+        self.trial_ids = np.arange(1, int(trial_rec['CurrentTrialNumber']))
+
+        self._data_sanity_checks()
 
         exclude_signals = ['SampleInterval']
 
@@ -185,49 +205,48 @@ class MonkeyLogicRawIO(BaseRawIO):
 
             ana_block = self.ml_blocks['Trial1']['AnalogData']
 
-            def _register_signal(sig_block, prefix=''):
+            def _register_signal(sig_block, name):
                 nonlocal stream_id
                 nonlocal chan_id
-                if sig_data.data is not None and any(sig_data.data.shape):
-                    signal_streams.append((prefix + sig_data.var_name, stream_id))
+                if not isinstance(sig_data, dict) and any(sig_data.shape):
+                    signal_streams.append((name, stream_id))
 
-                    ch_name = sig_data.var_name
                     sr = 1  # TODO: Where to get the sampling rate info?
-                    dtype = type(sig_data.data)
+                    dtype = type(sig_data)
                     units = ''  # TODO: Where to find the unit info?
                     gain = 1  # TODO: Where to find the gain info?
                     offset = 0  # TODO: Can signals have an offset in ML?
                     stream_id = 0  # all analog data belong to same stream
 
-                    if sig_block.data.shape[1] == 1:
-                        signal_channels.append((prefix + ch_name, chan_id, sr, dtype, units, gain, offset,
+                    if sig_block.shape[1] == 1:
+                        signal_channels.append((name, chan_id, sr, dtype, units, gain, offset,
                                             stream_id))
                         chan_id += 1
                     else:
-                        for sub_chan_id in range(sig_block.data.shape[1]):
+                        for sub_chan_id in range(sig_block.shape[1]):
                             signal_channels.append(
-                                (prefix + ch_name, chan_id, sr, dtype, units, gain, offset,
+                                (name, chan_id, sr, dtype, units, gain, offset,
                                  stream_id))
                             chan_id += 1
 
 
 
-            # 1st level signals ('Trial1'/'AnalogData'/<signal>')
+
             for sig_name, sig_data in ana_block.items():
                 if sig_name in exclude_signals:
                     continue
 
-                # 1st level signals
-                if sig_data.data is not None and any(sig_data.data.shape):
-                    _register_signal(sig_data)
+                # 1st level signals ('Trial1'/'AnalogData'/<signal>')
+                if not isinstance(sig_data, dict) and any(sig_data.shape):
+                    _register_signal(sig_data, name=sig_name)
 
-                # 2nd level signals
-                elif sig_data.keys():
+                # 2nd level signals ('Trial1'/'AnalogData'/<signal_group>/<signal>')
+                elif isinstance(sig_data, dict):
                     for sig_sub_name, sig_sub_data in sig_data.items():
-                        if sig_sub_data.data is not None:
-                            chan_names.append(f'{sig_name}/{sig_sub_name}')
-                            _register_signal(sig_sub_data, prefix=f'{sig_name}/')
-
+                        if not isinstance(sig_sub_data, dict):
+                            name = f'{sig_name}/{sig_sub_name}'
+                            chan_names.append(name)
+                            _register_signal(sig_sub_data, name=name)
 
         spike_channels = []
 
@@ -244,7 +263,7 @@ class MonkeyLogicRawIO(BaseRawIO):
 
         self.header = {}
         self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
+        self.header['nb_segment'] = [len(self.trial_ids)]
         self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
@@ -258,7 +277,7 @@ class MonkeyLogicRawIO(BaseRawIO):
         array_annotation_keys = []
 
         ml_anno = {k: v for k, v in sorted(self.ml_blocks.items()) if not k.startswith('Trial')}
-        bl_ann = self.raw_annotations['block'][0]
+        bl_ann = self.raw_annotations['blocks'][0]
         bl_ann.update(ml_anno)
 
         # TODO annotate segments according to trial properties
@@ -314,18 +333,17 @@ class MonkeyLogicRawIO(BaseRawIO):
         # return
 
     def _segment_t_start(self, block_index, seg_index):
-        if 'Trial1' in self.ml_blocks:
-            t_start = self.ml_blocks['Trial1']['AbsoluteTrialStartTime'].data[0][0]
-        else:
-            t_start = 0
+        assert block_index == 0
+
+        t_start = self.ml_blocks[f'Trial{seg_index+1}']['AbsoluteTrialStartTime'][0][0]
         return t_start
 
     def _segment_t_stop(self, block_index, seg_index):
-        last_trial = self.ml_blocks[f'Trial{self.trial_ids[-1]}']
+        t_start = self._segment_t_start(block_index, seg_index)
+        # using stream 0 as all analogsignal stream should have the same duration
+        duration = self._get_signal_size(block_index, seg_index, 0)
 
-        t_start = last_trial['AbsoluteTrialStartTime'].data[0][0]
-        t_stop = t_start + 10  # TODO: Find sampling rates to determine trial end
-        return t_stop
+        return t_start + duration
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
         stream_name, stream_id = self.header['signal_streams'][stream_index]
@@ -334,7 +352,7 @@ class MonkeyLogicRawIO(BaseRawIO):
         for sn in stream_name.split('/'):  # dealing with 1st and 2nd level signals
             block = block[sn]
 
-        size = block.data.shape[0]
+        size = block.shape[0]
         return size  # size is per signal, not the sum of all channel_indexes
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
@@ -356,65 +374,28 @@ class MonkeyLogicRawIO(BaseRawIO):
             block = block[sn]
 
         if channel_indexes is None:
-            raw_signals = block.data
+            raw_signals = block
         else:
-            raw_signals = block.data[channel_indexes]
+            raw_signals = block[channel_indexes]
 
         raw_signals = raw_signals[i_start:i_stop]
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        count = 0
-        head_id = self.header['spike_channels'][unit_index][1]
-        for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
-            for src in mt.sources:
-                if mt.type == 'neo.spiketrain' and [src.type == "neo.unit"]:
-                    if head_id == src.id:
-                        return len(mt.positions)
-        return count
+        return None
 
-    def _get_spike_timestamps(self, block_index, seg_index, unit_index,
-                              t_start, t_stop):
-        block = self.unit_list['blocks'][block_index]
-        segment = block['segments'][seg_index]
-        spike_dict = segment['spiketrains']
-        spike_timestamps = spike_dict[unit_index]
-        spike_timestamps = np.transpose(spike_timestamps)
-
-        if t_start is not None or t_stop is not None:
-            lim0 = t_start
-            lim1 = t_stop
-            mask = (spike_timestamps >= lim0) & (spike_timestamps <= lim1)
-            spike_timestamps = spike_timestamps[mask]
-        return spike_timestamps
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
+        return None
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        spike_times = spike_timestamps.astype(dtype)
-        return spike_times
+        return None
 
-    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
-                                 t_start, t_stop):
-        # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
-        seg = self.unit_list['blocks'][block_index]['segments'][seg_index]
-        waveforms = seg['spiketrains_unit'][unit_index]['waveforms']
-        if not waveforms:
-            return None
-        raw_waveforms = np.array(waveforms)
-
-        if t_start is not None:
-            lim0 = t_start
-            mask = (raw_waveforms >= lim0)
-            # use nan to keep the shape
-            raw_waveforms = np.where(mask, raw_waveforms, np.nan)
-        if t_stop is not None:
-            lim1 = t_stop
-            mask = (raw_waveforms <= lim1)
-            raw_waveforms = np.where(mask, raw_waveforms, np.nan)
-        return raw_waveforms
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+        return None
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         assert event_channel_index == 0
-        times = self.ml_blocks[f'Trial{seg_index+1}']['BehavioralCodes']['CodeTimes'].data
+        times = self.ml_blocks[f'Trial{seg_index+1}']['BehavioralCodes']['CodeTimes']
 
         return len(times)
 
@@ -424,9 +405,9 @@ class MonkeyLogicRawIO(BaseRawIO):
         assert block_index == 0
         assert event_channel_index == 0
 
-        timestamp = self.ml_blocks[f'Trial{seg_index+1}']['BehavioralCodes']['CodeTimes'].data
+        timestamp = self.ml_blocks[f'Trial{seg_index+1}']['BehavioralCodes']['CodeTimes']
         timestamp = timestamp.flatten()
-        labels = self.ml_blocks[f'Trial{seg_index+1}']['BehavioralCodes']['CodeNumbers'].data
+        labels = self.ml_blocks[f'Trial{seg_index+1}']['BehavioralCodes']['CodeNumbers']
         labels = labels.flatten()
 
         if t_start is not None:
@@ -440,12 +421,14 @@ class MonkeyLogicRawIO(BaseRawIO):
         return timestamp, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
-        # TODO: Figure out unit and scaling of event timestamps
-        event_timestamps /= 1000  # assume this is in milliseconds
+        # times are stored in millisecond, see
+        # shttps://monkeylogic.nimh.nih.gov/docs_GettingStarted.html#FormatsSupported
+        event_timestamps /= 1000
         return event_timestamps.astype(dtype)  # return in seconds
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
-        # TODO: Figure out unit and scaling of event timestamps
-        raw_duration /= 1000  # assume this is in milliseconds
+        # times are stored in millisecond, see
+        # shttps://monkeylogic.nimh.nih.gov/docs_GettingStarted.html#FormatsSupported
+        raw_duration /= 1000
         return raw_duration.astype(dtype)  # return in seconds
 
