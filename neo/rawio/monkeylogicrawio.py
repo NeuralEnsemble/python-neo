@@ -15,6 +15,7 @@ import struct
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                         _spike_channel_dtype, _event_channel_dtype)
 
+
 class MLBLock(dict):
     n_byte_dtype = {'logical': (1, '?'),
                     'char': (1, 'c'),
@@ -125,7 +126,7 @@ class MLBLock(dict):
             n_fields = f.read(8)
             n_fields = struct.unpack('Q', n_fields)[0]
 
-            for field in range(n_fields*np.prod(self.var_size)):
+            for field in range(n_fields * np.prod(self.var_size)):
                 bl = MLBLock.generate_block(f)
                 if recursive:
                     self[bl.var_name] = bl
@@ -158,7 +159,6 @@ class MLBLock(dict):
 
 
 class MonkeyLogicRawIO(BaseRawIO):
-
     extensions = ['bhv2']
     rawmode = 'one-file'
 
@@ -220,7 +220,7 @@ class MonkeyLogicRawIO(BaseRawIO):
 
                     if sig_block.shape[1] == 1:
                         signal_channels.append((name, chan_id, sr, dtype, units, gain, offset,
-                                            stream_id))
+                                                stream_id))
                         chan_id += 1
                     else:
                         for sub_chan_id in range(sig_block.shape[1]):
@@ -228,9 +228,6 @@ class MonkeyLogicRawIO(BaseRawIO):
                                 (name, chan_id, sr, dtype, units, gain, offset,
                                  stream_id))
                             chan_id += 1
-
-
-
 
             for sig_name, sig_data in ana_block.items():
                 if sig_name in exclude_signals:
@@ -248,6 +245,7 @@ class MonkeyLogicRawIO(BaseRawIO):
                             chan_names.append(name)
                             _register_signal(sig_sub_data, name=name)
 
+        # ML does not record spike information
         spike_channels = []
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -258,8 +256,6 @@ class MonkeyLogicRawIO(BaseRawIO):
         event_channels.append(('ML Trials', 0, 'event'))
         # event_channels.append(('ML Trials', 1, 'epoch')) # no epochs supported yet
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
-
-
 
         self.header = {}
         self.header['nb_block'] = 1
@@ -273,69 +269,49 @@ class MonkeyLogicRawIO(BaseRawIO):
 
         # adding custom annotations and array annotations
 
-        ignore_annotations = ['AnalogData', 'AbsoluteTrialStartTime']
-        array_annotation_keys = []
+        ignore_annotations = [
+            # data blocks
+            'AnalogData', 'AbsoluteTrialStartTime', 'BehavioralCodes', 'CodeNumbers',
+            # ML temporary variables
+            'ConditionsThisBlock',
+            'CurrentBlock', 'CurrentBlockCount', 'CurrentBlockCondition',
+            'CurrentBlockInfo', 'CurrentBlockStimulusInfo', 'CurrentTrialNumber',
+            'CurrentTrialWithinBlock', 'LastTrialAnalogData', 'LastTrialCodes',
+            'NextBlock', 'NextCondition']
 
-        ml_anno = {k: v for k, v in sorted(self.ml_blocks.items()) if not k.startswith('Trial')}
+        def _filter_keys(full_dict, ignore_keys, simplify=True):
+            res = {}
+            for k, v in full_dict.items():
+                if k in ignore_keys:
+                    continue
+
+                if isinstance(v, dict):
+                    res[k] = _filter_keys(v, ignore_keys)
+                else:
+                    if simplify and isinstance(v, np.ndarray) and np.prod(v.shape) == 1:
+                        v = v.flat[0]
+                    res[k] = v
+            return res
+
+        ml_ann = {k: v for k, v in self.ml_blocks.items() if k in ['MLConfig', 'TrialRecord']}
+        ml_ann = _filter_keys(ml_ann, ignore_annotations)
         bl_ann = self.raw_annotations['blocks'][0]
-        bl_ann.update(ml_anno)
+        bl_ann.update(ml_ann)
 
-        # TODO annotate segments according to trial properties
-        seg_ann = self.raw_annotations['blocks'][0]['segments'][0]
-        seg_ann.update(ml_anno)
+        for trial_id in self.trial_ids:
+            ml_trial = self.ml_blocks[f'Trial{trial_id}']
+            assert ml_trial['Trial'] == trial_id
+
+            seg_ann = self.raw_annotations['blocks'][0]['segments'][trial_id-1]
+            seg_ann.update(_filter_keys(ml_trial, ignore_annotations))
 
         event_ann = seg_ann['events'][0]  # 0 is event
         # epoch_ann = seg_ann['events'][1]  # 1 is epoch
 
-        # TODO: add annotations for AnalogSignals
-        # TODO: add array_annotations for AnalogSignals
-
-        # ml_anno = {k: v for k, v in sorted(self.ml_blocks.items()) if k.startswith('Trial')}
-        #
-        # raise NotImplementedError()
-        #
-        # # extract array annotations
-        # event_ann.update(self._filter_properties(props, 'ep'))
-        # ev_idx += 1
-        #
-        # # adding array annotations to analogsignals
-        # annotated_anasigs = []
-        # sig_ann = seg_ann['signals']
-        # # this implementation relies on analogsignals always being
-        # # stored in the same stream order across segments
-        # stream_id = 0
-        # for da_idx, da in enumerate(group.data_arrays):
-        #     if da.type != "neo.analogsignal":
-        #         continue
-        #     anasig_id = da.name.split('.')[-2]
-        #     # skip already annotated signals as each channel already
-        #     # contains the complete set of annotations and
-        #     # array_annotations
-        #     if anasig_id in annotated_anasigs:
-        #         continue
-        #     annotated_anasigs.append(anasig_id)
-        #
-        #     # collect annotation properties
-        #     props = [p for p in da.metadata.props
-        #              if p.type != 'ARRAYANNOTATION']
-        #     props_dict = self._filter_properties(props, "analogsignal")
-        #     sig_ann[stream_id].update(props_dict)
-        #
-        #     # collect array annotation properties
-        #     props = [p for p in da.metadata.props
-        #              if p.type == 'ARRAYANNOTATION']
-        #     props_dict = self._filter_properties(props, "analogsignal")
-        #     sig_ann[stream_id]['__array_annotations__'].update(
-        #         props_dict)
-        #
-        #     stream_id += 1
-        #
-        # return
-
     def _segment_t_start(self, block_index, seg_index):
         assert block_index == 0
 
-        t_start = self.ml_blocks[f'Trial{seg_index+1}']['AbsoluteTrialStartTime'][0][0]
+        t_start = self.ml_blocks[f'Trial{seg_index + 1}']['AbsoluteTrialStartTime'][0][0]
         return t_start
 
     def _segment_t_stop(self, block_index, seg_index):
@@ -369,7 +345,7 @@ class MonkeyLogicRawIO(BaseRawIO):
             i_stop = self.get_signal_size(block_index, seg_index, stream_index)
 
         raw_signals_list = []
-        block = self.ml_blocks[f'Trial{seg_index+1}']['AnalogData']
+        block = self.ml_blocks[f'Trial{seg_index + 1}']['AnalogData']
         for sn in stream_name.split('/'):
             block = block[sn]
 
@@ -395,7 +371,7 @@ class MonkeyLogicRawIO(BaseRawIO):
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         assert event_channel_index == 0
-        times = self.ml_blocks[f'Trial{seg_index+1}']['BehavioralCodes']['CodeTimes']
+        times = self.ml_blocks[f'Trial{seg_index + 1}']['BehavioralCodes']['CodeTimes']
 
         return len(times)
 
@@ -405,9 +381,9 @@ class MonkeyLogicRawIO(BaseRawIO):
         assert block_index == 0
         assert event_channel_index == 0
 
-        timestamp = self.ml_blocks[f'Trial{seg_index+1}']['BehavioralCodes']['CodeTimes']
+        timestamp = self.ml_blocks[f'Trial{seg_index + 1}']['BehavioralCodes']['CodeTimes']
         timestamp = timestamp.flatten()
-        labels = self.ml_blocks[f'Trial{seg_index+1}']['BehavioralCodes']['CodeNumbers']
+        labels = self.ml_blocks[f'Trial{seg_index + 1}']['BehavioralCodes']['CodeNumbers']
         labels = labels.flatten()
 
         if t_start is not None:
@@ -431,4 +407,3 @@ class MonkeyLogicRawIO(BaseRawIO):
         # shttps://monkeylogic.nimh.nih.gov/docs_GettingStarted.html#FormatsSupported
         raw_duration /= 1000
         return raw_duration.astype(dtype)  # return in seconds
-
