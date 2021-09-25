@@ -16,7 +16,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                         _spike_channel_dtype, _event_channel_dtype)
 
 
-class MLBLock(dict):
+class MLBlock(dict):
     n_byte_dtype = {'logical': (1, '?'),
                     'char': (1, 'c'),
                     'integers': (8, 'Q'),
@@ -53,7 +53,7 @@ class MLBLock(dict):
         var_size = struct.unpack(f'{DV}Q', var_size)
         # print(var_size)
 
-        return MLBLock(LN, var_name, LT, var_type, DV, var_size)
+        return MLBlock(LN, var_name, LT, var_type, DV, var_size)
 
     def __bool__(self):
         if any((self.LN, self.LT)):
@@ -107,7 +107,11 @@ class MLBLock(dict):
                 d = struct.unpack(format, d)[0]
                 data[i] = d
 
-            data = data.reshape(self.var_size)
+            # convert to simple / expected data shape
+            if self.var_size == (1, 1):
+                data = data[0]
+            else:
+                data = data.reshape(self.var_size)
 
             # decoding characters
             if self.var_type == 'char':
@@ -127,17 +131,23 @@ class MLBLock(dict):
             n_fields = struct.unpack('Q', n_fields)[0]
 
             for field in range(n_fields * np.prod(self.var_size)):
-                bl = MLBLock.generate_block(f)
+                bl = MLBlock.generate_block(f)
                 if recursive:
                     self[bl.var_name] = bl
                 bl.read_data(f, recursive=recursive)
 
         elif self.var_type == 'cell':
+            # cells are always 2D
+            assert len(self.var_size) == 2, 'Unexpected dimensions of cells'
+            data = np.empty(shape=np.prod(self.var_size), dtype=object)
             for field in range(np.prod(self.var_size)):
-                bl = MLBLock.generate_block(f)
+                bl = MLBlock.generate_block(f)
                 if recursive:
-                    self[bl.var_name] = bl
+                    data[field] = bl
+
                 bl.read_data(f, recursive=recursive)
+            data = data.reshape(self.var_size)
+            self.data = data
 
         else:
             raise ValueError(f'unknown variable type {self.var_type}')
@@ -146,9 +156,12 @@ class MLBLock(dict):
 
     def flatten(self):
         '''
-        Reassigning data objects to be children of parent dict
+        Flatten structure by
+        1) Reassigning data objects to be children of parent dict
         block1.block2.data -> block1.data as block2 anyway does not contain keys
+        2) converting data arrays items from blocks to data objects
         '''
+
         for k, v in self.items():
             # Sanity check: Blocks can either have children or contain data
             if v.data is not None and len(v.keys()):
@@ -156,6 +169,15 @@ class MLBLock(dict):
 
             if v.data is not None:
                 self[k] = v.data
+
+            # converting arrays of MLBlocks (cells) to (nested) list of objects
+            if isinstance(self[k], np.ndarray) and all([isinstance(b, MLBlock) for b in self[k].flat]):
+                assert len(self[k].shape) == 2
+                for i in range(self[k].shape[0]):
+                    for j in range(self[k].shape[1]):
+                        self[k][i, j] = self[k][i, j].data
+                self[k] = self[k].tolist()
+
 
 
 class MonkeyLogicRawIO(BaseRawIO):
@@ -183,7 +205,7 @@ class MonkeyLogicRawIO(BaseRawIO):
         self.ml_blocks = {}
 
         with open(self.filename, 'rb') as f:
-            while bl := MLBLock.generate_block(f):
+            while bl := MLBlock.generate_block(f):
                 bl.read_data(f, recursive=True)
                 self.ml_blocks[bl.var_name] = bl
 
