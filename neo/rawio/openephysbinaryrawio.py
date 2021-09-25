@@ -98,7 +98,6 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             for seg_index in range(nb_segment_per_block[block_index]):
                 for stream_index, d in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(d['channels'])
-                    print(d['raw_filename'])
                     memmap_sigs = np.memmap(d['raw_filename'], d['dtype'],
                                  order='C', mode='r').reshape(-1, num_channels)
                     d['memmap'] = memmap_sigs
