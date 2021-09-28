@@ -248,6 +248,9 @@ def scan_files(dirname):
                 info['bin_file'] = str(bin_filename)
                 info_list.append(info)
 
+            if bin_filename.stat().st_size != meta['fileSizeBytes']:
+                raise Exception('.meta file has faulty value for .bin filesize')
+
     return info_list
 
 
