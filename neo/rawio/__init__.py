@@ -169,7 +169,7 @@ from neo.rawio.biocamrawio import BiocamRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
 from neo.rawio.cedrawio import CedRawIO
-from neo.rawio.edfrawio import EdfRawIO
+from neo.rawio.edfrawio import EDFRawIO
 from neo.rawio.elanrawio import ElanRawIO
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
@@ -201,7 +201,7 @@ rawiolist = [
     BlackrockRawIO,
     BrainVisionRawIO,
     CedRawIO,
-    EdfRawIO,
+    EDFRawIO,
     ElanRawIO,
     IntanRawIO,
     MicromedRawIO,
