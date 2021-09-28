@@ -18,7 +18,7 @@ import numpy as np
 try:
     from pyedflib import highlevel
     HAS_PYEDF = True
-except:
+except ImportError:
     HAS_PYEDF = False
 
 
@@ -82,7 +82,7 @@ class EDFRawIO(BaseRawIO):
             dtype = self.signals.dtype.str
             units = sig_dict['dimension']
             physical_range = sig_dict['physical_max'] - sig_dict['physical_min']
-            digital_range = sig_dict['digital_max']-sig_dict['digital_min']
+            digital_range = sig_dict['digital_max'] - sig_dict['digital_min']
             gain = physical_range / digital_range
             offset = -1 * sig_dict['digital_min'] * gain + sig_dict['physical_min']
             stream_id = 0  # file contains only a single stream
@@ -117,8 +117,10 @@ class EDFRawIO(BaseRawIO):
         # extract keys for array_annotations common to all signals and not already used
         ignore_annotations = ['label', 'dimension', 'sample_rate', 'physical_min', 'physical_max',
                               'digital_min', 'digital_max']
-        array_keys = [k for k in self.signal_headers[0]
-                      if k not in ignore_annotations and all([k in h for h in self.signal_headers])]
+        array_keys = []
+        for k in self.signal_headers[0]:
+            if k not in ignore_annotations and all([k in h for h in self.signal_headers]):
+                array_keys.append(k)
 
         for array_key in array_keys:
             array_anno = {array_key: [h[array_key] for h in self.signal_headers]}
