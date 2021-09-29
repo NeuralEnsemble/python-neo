@@ -51,7 +51,7 @@ class EDFRawIO(BaseRawIO):
 
         self.signals = None
         self.signal_headers = []
-        self.header = {}
+        self.edf_header = {}
 
     def _source_name(self):
         return self.filename
