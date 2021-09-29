@@ -31,21 +31,7 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
         bl = self.io.read_block()
         self.assertTrue(bl.annotations)
 
-    def test_read_segment_lazy(self):
-        """
-        Test lazy loading of object structure and loading of data in a 2nd step
-        """
-        seg = self.io.read_segment(lazy=True)
-        for ana in seg.analogsignals:
-            assert isinstance(ana, AnalogSignalProxy)
-            ana = ana.load()
-            assert isinstance(ana, AnalogSignal)
-
-        seg = self.io.read_segment(lazy=False)
-        for anasig in seg.analogsignals:
-            assert isinstance(ana, AnalogSignal)
-            self.assertTrue(any(anasig.shape))
-
+        seg = bl.segments[0]
         assert seg.name == 'Seg #0 Block #0'
         for anasig in seg.analogsignals:
             assert anasig.name is not None

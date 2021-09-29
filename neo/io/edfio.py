@@ -1,5 +1,5 @@
 """
-IO for reading edf and edfplus files using pyedflib
+IO for reading edf and edf+ files using pyedflib
 
 PyEDFLib
 https://pyedflib.readthedocs.io
@@ -15,6 +15,10 @@ from neo.rawio.edfrawio import EDFRawIO
 
 
 class EDFIO(EDFRawIO, BaseFromRaw):
+    """
+    IO for reading edf and edf+ files.
+    Note that this IO does not yet implement true lazy loading.
+    """
     name = 'EDF IO'
     description = "IO for reading EDF and EDF+ files"
 
