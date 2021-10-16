@@ -1,12 +1,26 @@
 """
+In development 16/10/2021
 
-  2. Step 2: RawIO test:
-    * create a file in neo/rawio/tests with the same name with "test_" prefix ####################### TODO (email people)
-    * copy paste neo/rawio/tests/test_examplerawio.py and do the same
+Class for reading data from WaveSurfer, a software written by
+Boaz Mohar and Adam Taylor https://wavesurfer.janelia.org/
 
-  4.Step 4 : IO test
-    * create a file in neo/test/iotest with the same previous name with "test_" prefix
-    * copy/paste from neo/test/iotest/test_exampleio.py
+Requires the PyWaveSurfer module written by Boaz Mohar and Adam Taylor.
+
+To Discuss:
+- Wavesurfer also has analog output, and digital input / output channels, but here only supported analog input. Is this okay?
+- I believe the signal streams field is configured correctly here, used AxonRawIO as a guide.
+- each segment (sweep) has it's own timestamp, so I beleive no events_signals is correct (similar to winwcprawio not axonrawio)
+
+1) Upload test files (kindly provided by Boaz Mohar and Adam Taylor) to g-node portal
+2) write RawIO and IO tests
+
+2. Step 2: RawIO test:
+* create a file in neo/rawio/tests with the same name with "test_" prefix
+* copy paste neo/rawio/tests/test_examplerawio.py and do the same
+
+4.Step 4 : IO test
+* create a file in neo/test/iotest with the same previous name with "test_" prefix
+* copy/paste from neo/test/iotest/test_exampleio.py
 """
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
@@ -23,11 +37,7 @@ else:
     PYWAVESURFER_ERR = None
 
 class WaveSurferRawIO(BaseRawIO):
-    """
-    Two rules for developers:
-      * Respect the :ref:`neo_rawio_API`
-      * Follow the :ref:`io_guiline`
-    """
+
     extensions = ['fake']
     rawmode = 'one-file'
 
@@ -42,28 +52,6 @@ class WaveSurferRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        """
-        talk about scaling
-
-        WAVESURFER
-
-            1) ask about the files at do not work in the test
-            2) ask if it is okay to upload the test files (e.g. test2) to the website
-            3) ask if single sampling rate only possible
-            4) # TODO: are channel units ever entered by the user or always in standard form?
-            5 TODO: check these timestamps are definately time that starts # ASK
-            6) # TODO: find out why native this is double-nested list for a scalar (e.g. [[time]] (dont ask)
-
-        NEO
-        1) document this well and IO
-        2) ask about and upload to tests, push to repo
-        3) ask if required to handle AI, DI and DO
-        4) sampling streams: # TODO: dont understand this, for now treat all channels as the same. I think different units is fine, just not samplign rate. # TODO: maybe these are split at a later level?? Do not understand this, copied from AxonIO         # Sampling rate is always unique. But units are different across channels. Presume this is okay based on axonrawio.
-        5) double check events channel (No events TODO: I am not sure about this. Timestamps are in each segment (?))
-
-        """
-        import sys
-        sys.path.append(r"C:\fMRIData\git-repo\PyWaveSurfer")
 
         pyws_data = ws.loadDataFile(self.filename, format_string="double")
         header = pyws_data["header"]
@@ -115,7 +103,7 @@ class WaveSurferRawIO(BaseRawIO):
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
-        self._generate_minimal_annotations()  # TODO: return to this, # TODO: ADD ANNOTATIONS
+        self._generate_minimal_annotations()  # TODO: return to this and add annotations
 
     def _segment_t_start(self, block_index, seg_index):
         return self._t_starts[seg_index]
