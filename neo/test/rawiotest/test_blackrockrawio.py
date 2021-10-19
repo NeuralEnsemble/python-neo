@@ -20,20 +20,13 @@ except ImportError:
 
 class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = BlackrockRawIO
-    entities_to_test = ['FileSpec2.3001',
-        'blackrock_2_1/l101210-001']
-
-    files_to_download = [
-        'FileSpec2.3001.nev',
-        'FileSpec2.3001.ns5',
-        'FileSpec2.3001.ccf',
-        'FileSpec2.3001.mat',
-        'blackrock_2_1/l101210-001.mat',
-        'blackrock_2_1/l101210-001_nev-02_ns5.mat',
-        'blackrock_2_1/l101210-001.ns2',
-        'blackrock_2_1/l101210-001.ns5',
-        'blackrock_2_1/l101210-001.nev',
-        'blackrock_2_1/l101210-001-02.nev']
+    entities_to_download = [
+        'blackrock'
+    ]
+    entities_to_test = [
+        'blackrock/FileSpec2.3001',
+        'blackrock/blackrock_2_1/l101210-001'
+    ]
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_compare_blackrockio_with_matlabloader(self):
@@ -50,7 +43,7 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         """
 
         # Load data from Matlab generated files
-        ml = scipy.io.loadmat(self.get_filename_path('FileSpec2.3001.mat'))
+        ml = scipy.io.loadmat(self.get_local_path('blackrock/FileSpec2.3001.mat'))
 
         lfp_ml = ml['lfp']  # (channel x time) LFP matrix
         ts_ml = ml['ts']  # spike time stamps
@@ -62,20 +55,22 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
 
         # Load data in channels 1-3 from original data files using the Neo
         # BlackrockIO
-        reader = BlackrockRawIO(filename=self.get_filename_path('FileSpec2.3001'))
+        reader = BlackrockRawIO(filename=self.get_local_path('blackrock/FileSpec2.3001'))
         reader.parse_header()
 
         # Check if analog data on channels 1-8 are equal
-        self.assertGreater(reader.signal_channels_count(), 0)
+        stream_index = 0
+        self.assertGreater(reader.signal_channels_count(stream_index), 0)
         for c in range(0, 8):
-            raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c])
+            raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c],
+                                                     stream_index=stream_index)
             raw_sigs = raw_sigs.flatten()
             assert_equal(raw_sigs[:-1], lfp_ml[c, :])
 
         # Check if spikes in channels are equal
-        nb_unit = reader.unit_channels_count()
-        for unit_index in range(nb_unit):
-            unit_name = reader.header['unit_channels'][unit_index]['name']
+        nb_unit = reader.spike_channels_count()
+        for spike_channel_index in range(nb_unit):
+            unit_name = reader.header['spike_channels'][spike_channel_index]['name']
             # name is chXX#YY where XX is channel_id and YY is unit_id
             channel_id, unit_id = unit_name.split('#')
             channel_id = int(channel_id.replace('ch', ''))
@@ -83,12 +78,13 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
 
             matlab_spikes = ts_ml[(elec_ml == channel_id) & (unit_ml == unit_id)]
 
-            io_spikes = reader.get_spike_timestamps(unit_index=unit_index)
+            io_spikes = reader.get_spike_timestamps(spike_channel_index=spike_channel_index)
             assert_equal(io_spikes, matlab_spikes)
 
             # Check waveforms of channel 1, unit 0
             if channel_id == 1 and unit_id == 0:
-                io_waveforms = reader.get_spike_raw_waveforms(unit_index=unit_index)
+                io_waveforms = reader.get_spike_raw_waveforms(
+                    spike_channel_index=spike_channel_index)
                 io_waveforms = io_waveforms[:, 0, :]  # remove dim 1
                 assert_equal(io_waveforms, wf_ml)
 
@@ -121,14 +117,14 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         Ported to the rawio API by Samuel Garcia.
         """
 
-        dirname = self.get_filename_path('blackrock_2_1/l101210-001')
+        dirname = self.get_local_path('blackrock/blackrock_2_1/l101210-001')
         # First run with parameters for ns5, then run with correct parameters for ns2
-        parameters = [('blackrock_2_1/l101210-001_nev-02_ns5.mat',
+        parameters = [('blackrock/blackrock_2_1/l101210-001_nev-02_ns5.mat',
                        {'nsx_to_load': 5, 'nev_override': '-'.join([dirname, '02'])}, 96),
-                      ('blackrock_2_1/l101210-001.mat', {'nsx_to_load': 2}, 6)]
+                      ('blackrock/blackrock_2_1/l101210-001.mat', {'nsx_to_load': 2}, 6)]
         for param in parameters:
             # Load data from Matlab generated files
-            ml = scipy.io.loadmat(self.get_filename_path(filename=param[0]))
+            ml = scipy.io.loadmat(self.get_local_path(param[0]))
             lfp_ml = ml['lfp']  # (channel x time) LFP matrix
             ts_ml = ml['ts']  # spike time stamps
             elec_ml = ml['el']  # spike electrodes
@@ -142,7 +138,8 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
             reader.parse_header()
 
             # Check if analog data are equal
-            self.assertGreater(reader.signal_channels_count(), 0)
+            stream_index = 0
+            self.assertGreater(reader.signal_channels_count(stream_index), 0)
 
             for c in range(0, param[2]):
                 raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c])
@@ -150,9 +147,9 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
                 assert_equal(raw_sigs[:], lfp_ml[c, :])
 
             # Check if spikes in channels are equal
-            nb_unit = reader.unit_channels_count()
-            for unit_index in range(nb_unit):
-                unit_name = reader.header['unit_channels'][unit_index]['name']
+            nb_unit = reader.spike_channels_count()
+            for spike_channel_index in range(nb_unit):
+                unit_name = reader.header['spike_channels'][spike_channel_index]['name']
                 # name is chXX#YY where XX is channel_id and YY is unit_id
                 channel_id, unit_id = unit_name.split('#')
                 channel_id = int(channel_id.replace('ch', ''))
@@ -160,11 +157,12 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
 
                 matlab_spikes = ts_ml[(elec_ml == channel_id) & (unit_ml == unit_id)]
 
-                io_spikes = reader.get_spike_timestamps(unit_index=unit_index)
+                io_spikes = reader.get_spike_timestamps(spike_channel_index=spike_channel_index)
                 assert_equal(io_spikes, matlab_spikes)
 
                 # Check all waveforms
-                io_waveforms = reader.get_spike_raw_waveforms(unit_index=unit_index)
+                io_waveforms = reader.get_spike_raw_waveforms(
+                    spike_channel_index=spike_channel_index)
                 io_waveforms = io_waveforms[:, 0, :]  # remove dim 1
                 matlab_wf = wf_ml[np.nonzero(
                     np.logical_and(elec_ml == channel_id, unit_ml == unit_id)), :][0]

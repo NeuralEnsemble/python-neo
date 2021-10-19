@@ -13,21 +13,28 @@ Functions:
 Classes:
 
 * :attr:`AxographRawIO`
+* :attr:`AxonaRawIO`
 * :attr:`AxonRawIO`
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
+* :attr:`CedRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
+* :attr:`MaxwellRawIO`
+* :attr:`MEArecRawIO`
 * :attr:`MicromedRawIO`
 * :attr:`NeuralynxRawIO`
 * :attr:`NeuroExplorerRawIO`
 * :attr:`NeuroScopeRawIO`
 * :attr:`NIXRawIO`
 * :attr:`OpenEphysRawIO`
+* :attr:`OpenEphysBinaryRawIO`
+* :attr:'PhyRawIO'
 * :attr:`PlexonRawIO`
 * :attr:`RawBinarySignalRawIO`
 * :attr:`RawMCSRawIO`
 * :attr:`Spike2RawIO`
+* :attr:`SpikeGadgetsRawIO`
 * :attr:`SpikeGLXRawIO`
 * :attr:`SpykingCircusRawIO`
 * :attr:`TdtRawIO`
@@ -36,6 +43,10 @@ Classes:
 
 
 .. autoclass:: neo.rawio.AxographRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.AxonaRawIO
 
     .. autoattribute:: extensions
 
@@ -51,11 +62,23 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.CedRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.ElanRawIO
 
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.IntanRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.MaxwellRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.MEArecRawIO
 
     .. autoattribute:: extensions
 
@@ -83,6 +106,14 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.OpenEphysBinaryRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.PhyRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.PlexonRawIO
 
     .. autoattribute:: extensions
@@ -96,6 +127,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.Spike2RawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.SpikeGadgetsRawIO
 
     .. autoattribute:: extensions
 
@@ -123,22 +158,29 @@ Classes:
 import os
 
 from neo.rawio.axographrawio import AxographRawIO
+from neo.rawio.axonarawio import AxonaRawIO
 from neo.rawio.axonrawio import AxonRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
+from neo.rawio.cedrawio import CedRawIO
 from neo.rawio.elanrawio import ElanRawIO
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
+from neo.rawio.maxwellrawio import MaxwellRawIO
+from neo.rawio.mearecrawio import MEArecRawIO
 from neo.rawio.micromedrawio import MicromedRawIO
-from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
+from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
 from neo.rawio.neuroscoperawio import NeuroScopeRawIO
 from neo.rawio.nixrawio import NIXRawIO
 from neo.rawio.openephysrawio import OpenEphysRawIO
+from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
+from neo.rawio.phyrawio import PhyRawIO
 from neo.rawio.plexonrawio import PlexonRawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 from neo.rawio.rawmcsrawio import RawMCSRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
+from neo.rawio.spikegadgetsrawio import SpikeGadgetsRawIO
 from neo.rawio.spikeglxrawio import SpikeGLXRawIO
 from neo.rawio.spykingcircusrawio import SpykingCircusRawIO
 from neo.rawio.tdtrawio import TdtRawIO
@@ -148,21 +190,28 @@ from neo.rawio.winwcprawio import WinWcpRawIO
 
 rawiolist = [
     AxographRawIO,
+    AxonaRawIO,
     AxonRawIO,
     BlackrockRawIO,
     BrainVisionRawIO,
+    CedRawIO,
     ElanRawIO,
     IntanRawIO,
     MicromedRawIO,
+    MaxwellRawIO,
+    MEArecRawIO,
     NeuralynxRawIO,
     NeuroExplorerRawIO,
     NeuroScopeRawIO,
     NIXRawIO,
     OpenEphysRawIO,
+    OpenEphysBinaryRawIO,
+    PhyRawIO,
     PlexonRawIO,
     RawBinarySignalRawIO,
     RawMCSRawIO,
     Spike2RawIO,
+    SpikeGadgetsRawIO,
     SpikeGLXRawIO,
     SpykingCircusRawIO,
     TdtRawIO,

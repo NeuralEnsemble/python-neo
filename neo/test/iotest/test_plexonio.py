@@ -10,12 +10,14 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestPlexonIO(BaseTestIO, unittest.TestCase, ):
     ioclass = PlexonIO
-    files_to_test = [
-        'File_plexon_1.plx',
-        'File_plexon_2.plx',
-        'File_plexon_3.plx',
+    entities_to_download = [
+        'plexon'
     ]
-    files_to_download = files_to_test
+    entities_to_test = [
+        'plexon/File_plexon_1.plx',
+        'plexon/File_plexon_2.plx',
+        'plexon/File_plexon_3.plx',
+    ]
 
 
 if __name__ == "__main__":

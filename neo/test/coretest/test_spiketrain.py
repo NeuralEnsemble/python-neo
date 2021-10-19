@@ -21,113 +21,14 @@ except ImportError as err:
 else:
     HAVE_IPYTHON = True
 
-from neo.rawio.examplerawio import ExampleRawIO
-from neo.io.proxyobjects import SpikeTrainProxy
-
 from neo.core.spiketrain import (check_has_dimensions_time, SpikeTrain, _check_time_in_range,
                                  _new_spiketrain)
-from neo.core import Segment, Unit
+from neo.core import Segment
 from neo.core.baseneo import MergeError
 from neo.test.tools import (assert_arrays_equal, assert_arrays_almost_equal,
                             assert_neo_object_is_compliant,
                             assert_same_attributes, assert_same_annotations,
                             assert_same_array_annotations)
-from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
-                                        TEST_ANNOTATIONS)
-
-
-class Test__generate_datasets(unittest.TestCase):
-    def setUp(self):
-        np.random.seed(0)
-        self.annotations = {
-            str(x): TEST_ANNOTATIONS[x] for x in range(len(TEST_ANNOTATIONS))}
-
-    def test__get_fake_values(self):
-        self.annotations['seed'] = 0
-        waveforms = get_fake_value('waveforms', pq.Quantity, seed=3, dim=3)
-        shape = waveforms.shape[0]
-        times = get_fake_value('times', pq.Quantity, seed=0, dim=1, shape=shape)
-        t_start = get_fake_value('t_start', pq.Quantity, seed=1, dim=0)
-        t_stop = get_fake_value('t_stop', pq.Quantity, seed=2, dim=0)
-        left_sweep = get_fake_value('left_sweep', pq.Quantity, seed=4, dim=0)
-        sampling_rate = get_fake_value('sampling_rate', pq.Quantity, seed=5, dim=0)
-        name = get_fake_value('name', str, seed=6, obj=SpikeTrain)
-        description = get_fake_value('description', str, seed=7, obj='SpikeTrain')
-        file_origin = get_fake_value('file_origin', str)
-        arr_ann = get_fake_value('array_annotations', dict, seed=9, obj=SpikeTrain, n=1)
-        attrs1 = {'name': name, 'description': description, 'file_origin': file_origin}
-        attrs2 = attrs1.copy()
-        attrs2.update(self.annotations)
-        attrs2['array_annotations'] = arr_ann
-
-        res11 = get_fake_values(SpikeTrain, annotate=False, seed=0)
-        res12 = get_fake_values('SpikeTrain', annotate=False, seed=0)
-        res21 = get_fake_values(SpikeTrain, annotate=True, seed=0)
-        res22 = get_fake_values('SpikeTrain', annotate=True, seed=0)
-
-        assert_arrays_equal(res11.pop('times'), times)
-        assert_arrays_equal(res12.pop('times'), times)
-        assert_arrays_equal(res21.pop('times'), times)
-        assert_arrays_equal(res22.pop('times'), times)
-
-        assert_arrays_equal(res11.pop('t_start'), t_start)
-        assert_arrays_equal(res12.pop('t_start'), t_start)
-        assert_arrays_equal(res21.pop('t_start'), t_start)
-        assert_arrays_equal(res22.pop('t_start'), t_start)
-
-        assert_arrays_equal(res11.pop('t_stop'), t_stop)
-        assert_arrays_equal(res12.pop('t_stop'), t_stop)
-        assert_arrays_equal(res21.pop('t_stop'), t_stop)
-        assert_arrays_equal(res22.pop('t_stop'), t_stop)
-
-        assert_arrays_equal(res11.pop('waveforms'), waveforms)
-        assert_arrays_equal(res12.pop('waveforms'), waveforms)
-        assert_arrays_equal(res21.pop('waveforms'), waveforms)
-        assert_arrays_equal(res22.pop('waveforms'), waveforms)
-
-        assert_arrays_equal(res11.pop('left_sweep'), left_sweep)
-        assert_arrays_equal(res12.pop('left_sweep'), left_sweep)
-        assert_arrays_equal(res21.pop('left_sweep'), left_sweep)
-        assert_arrays_equal(res22.pop('left_sweep'), left_sweep)
-
-        assert_arrays_equal(res11.pop('sampling_rate'), sampling_rate)
-        assert_arrays_equal(res12.pop('sampling_rate'), sampling_rate)
-        assert_arrays_equal(res21.pop('sampling_rate'), sampling_rate)
-        assert_arrays_equal(res22.pop('sampling_rate'), sampling_rate)
-
-        self.assertEqual(res11, attrs1)
-        self.assertEqual(res12, attrs1)
-        # Array annotations need to be compared separately
-        # because numpy arrays define equality differently
-        arr_ann_res21 = res21.pop('array_annotations')
-        arr_ann_attrs2 = attrs2.pop('array_annotations')
-        self.assertEqual(res21, attrs2)
-        assert_arrays_equal(arr_ann_res21['valid'], arr_ann_attrs2['valid'])
-        assert_arrays_equal(arr_ann_res21['number'], arr_ann_attrs2['number'])
-        arr_ann_res22 = res22.pop('array_annotations')
-        self.assertEqual(res22, attrs2)
-        assert_arrays_equal(arr_ann_res22['valid'], arr_ann_attrs2['valid'])
-        assert_arrays_equal(arr_ann_res22['number'], arr_ann_attrs2['number'])
-
-    def test__fake_neo__cascade(self):
-        self.annotations['seed'] = None
-        obj_type = 'SpikeTrain'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, SpikeTrain))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__fake_neo__nocascade(self):
-        self.annotations['seed'] = None
-        obj_type = SpikeTrain
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, SpikeTrain))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
 
 
 class Testcheck_has_dimensions_time(unittest.TestCase):
@@ -372,7 +273,7 @@ class TestConstructor(unittest.TestCase):
         train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
         train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s")
 
-        dtype = np.int
+        dtype = int
         units = 1 * pq.s
         t_start_out = t_start
         t_stop_out = t_stop
@@ -418,7 +319,7 @@ class TestConstructor(unittest.TestCase):
         train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
         train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s")
 
-        dtype = np.int
+        dtype = int
         units = 1 * pq.s
         t_start_out = t_start * units
         t_stop_out = t_stop * units
@@ -679,8 +580,8 @@ class TestConstructor(unittest.TestCase):
         train2 = _new_spiketrain(SpikeTrain, [3, 4, 5], units='sec', t_stop=10.0)
         assert_neo_object_is_compliant(train1)
         assert_neo_object_is_compliant(train2)
-        self.assertEqual(train1.dtype, np.float)
-        self.assertEqual(train2.dtype, np.float)
+        self.assertEqual(train1.dtype, np.float_)
+        self.assertEqual(train2.dtype, np.float_)
         self.assertEqual(train1.sampling_rate, 1.0 * pq.Hz)
         self.assertEqual(train2.sampling_rate, 1.0 * pq.Hz)
         self.assertEqual(train1.waveforms, None)
@@ -893,9 +794,7 @@ class TestTimeSlice(unittest.TestCase):
         self.train1 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms, waveforms=self.waveforms1,
                                  array_annotations=self.arr_ann)
         self.seg = Segment()
-        self.unit = Unit()
         self.train1.segment = self.seg
-        self.train1.unit = self.unit
 
     def test_compliant(self):
         assert_neo_object_is_compliant(self.train1)
@@ -1219,9 +1118,7 @@ class TestTimeShift(unittest.TestCase):
                                  waveforms=self.waveforms1,
                                  array_annotations=self.arr_ann)
         self.seg = Segment()
-        self.unit = Unit()
         self.train1.segment = self.seg
-        self.train1.unit = self.unit
 
     def test_compliant(self):
         assert_neo_object_is_compliant(self.train1)
@@ -1465,35 +1362,45 @@ class TestMerge(unittest.TestCase):
         train4.file_origin = 'file3'
 
         # merge two spiketrains with different attributes
-        merge1 = self.train1.merge(self.train2)
+        with warnings.catch_warnings(record=True) as w:
+            merge1 = self.train1.merge(self.train2)
+            self.assertTrue(len(w) > 0)
 
         self.assertEqual(merge1.name, 'merge(name1; name2)')
         self.assertEqual(merge1.description, 'merge(desc1; desc2)')
         self.assertEqual(merge1.file_origin, 'merge(file1; file2)')
 
         # merge a merged spiketrain with a regular one
-        merge2 = merge1.merge(train3)
+        with warnings.catch_warnings(record=True) as w:
+            merge2 = merge1.merge(train3)
+            self.assertTrue(len(w) > 0)
 
         self.assertEqual(merge2.name, 'merge(name1; name2; name3)')
         self.assertEqual(merge2.description, 'merge(desc1; desc2; desc3)')
         self.assertEqual(merge2.file_origin, 'merge(file1; file2; file3)')
 
         # merge two merged spiketrains
-        merge3 = merge1.merge(merge2)
+        with warnings.catch_warnings(record=True) as w:
+            merge3 = merge1.merge(merge2)
+            self.assertTrue(len(w) > 0)
 
         self.assertEqual(merge3.name, 'merge(name1; name2; name3)')
         self.assertEqual(merge3.description, 'merge(desc1; desc2; desc3)')
         self.assertEqual(merge3.file_origin, 'merge(file1; file2; file3)')
 
         # merge two spiketrains with identical attributes
-        merge4 = train3.merge(train4)
+        with warnings.catch_warnings(record=True) as w:
+            merge4 = train3.merge(train4)
+            self.assertTrue(len(w) == 0)
 
         self.assertEqual(merge4.name, 'name3')
         self.assertEqual(merge4.description, 'desc3')
         self.assertEqual(merge4.file_origin, 'file3')
 
         # merge a reqular spiketrain with a merged spiketrain
-        merge5 = train3.merge(merge1)
+        with warnings.catch_warnings(record=True) as w:
+            merge5 = train3.merge(merge1)
+            self.assertTrue(len(w) > 0)
 
         self.assertEqual(merge5.name, 'merge(name3; name1; name2)')
         self.assertEqual(merge5.description, 'merge(desc3; desc1; desc2)')
@@ -1514,7 +1421,8 @@ class TestMerge(unittest.TestCase):
             self.assertEqual(len(w), 1)
             self.assertTrue("array annotations" in str(w[0].message))
         self.assertEqual(self.train1.segment, result.segment)
-        self.assertTrue(result in result.segment.spiketrains)
+        # check if segment is linked bidirectionally
+        self.assertTrue(any([result is r for r in result.segment.spiketrains]))
 
     def test_missing_waveforms_error(self):
         self.train1.waveforms = None
@@ -1743,7 +1651,7 @@ class TestChanging(unittest.TestCase):
         # Array and quantity are tested separately because copy default
         # is different for these two.
         data = np.array([3, 4, 5])
-        train = SpikeTrain(data, units='sec', copy=False, dtype=np.int, t_stop=101)
+        train = SpikeTrain(data, units='sec', copy=False, dtype=int, t_stop=101)
         train[0] = 99 * pq.s
         assert_neo_object_is_compliant(train)
         self.assertEqual(train[0], 99 * pq.s)
@@ -1892,7 +1800,6 @@ class TestChanging(unittest.TestCase):
         data = [3, 4, 5] * pq.ms
         train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         train.segment = Segment()
-        train.unit = Unit()
         self.assertEqual(train.t_start.magnitude, 0.5)
         self.assertEqual(train.t_stop.magnitude, 10.0)
         result = train.rescale(pq.s)
@@ -1901,7 +1808,6 @@ class TestChanging(unittest.TestCase):
         assert_arrays_equal(train, result)
         self.assertEqual(result.units, 1 * pq.s)
         self.assertIs(result.segment, train.segment)
-        self.assertIs(result.unit, train.unit)
         self.assertEqual(result.t_start.magnitude, 0.0005)
         self.assertEqual(result.t_stop.magnitude, 0.01)
 
@@ -2050,22 +1956,15 @@ class TestPropertiesMethods(unittest.TestCase):
         segment.spiketrains = [self.train1]
         segment.create_many_to_one_relationship()
 
-        unit = Unit(name='unit1')
-        unit.spiketrains = [self.train1]
-        unit.create_many_to_one_relationship()
+        self.assertEqual(self.train1._parent_objects, ('Segment',))
 
-        self.assertEqual(self.train1._single_parent_objects, ('Segment', 'Unit'))
-        self.assertEqual(self.train1._multi_parent_objects, ())
+        self.assertEqual(self.train1._parent_containers, ('segment',))
 
-        self.assertEqual(self.train1._single_parent_containers, ('segment', 'unit'))
-        self.assertEqual(self.train1._multi_parent_containers, ())
+        self.assertEqual(self.train1._parent_objects, ('Segment',))
+        self.assertEqual(self.train1._parent_containers, ('segment',))
 
-        self.assertEqual(self.train1._parent_objects, ('Segment', 'Unit'))
-        self.assertEqual(self.train1._parent_containers, ('segment', 'unit'))
-
-        self.assertEqual(len(self.train1.parents), 2)
+        self.assertEqual(len(self.train1.parents), 1)
         self.assertEqual(self.train1.parents[0].name, 'seg1')
-        self.assertEqual(self.train1.parents[1].name, 'unit1')
 
         assert_neo_object_is_compliant(self.train1)
 

@@ -7,22 +7,18 @@ import unittest
 from neo.io import NeuroExplorerIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
-from neo.test.iotest.tools import get_test_file_full_path
-
-
 class TestNeuroExplorerIO(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuroExplorerIO
-    _prefered_signal_group_mode = 'split-all'
-    files_to_test = ['File_neuroexplorer_1.nex',
-                     'File_neuroexplorer_2.nex',
-                     ]
-    files_to_download = files_to_test
+    entities_to_download = [
+        'neuroexplorer'
+    ]
+    entities_to_download_test = [
+        'neuroexplorer/File_neuroexplorer_1.nex',
+        'neuroexplorer/File_neuroexplorer_2.nex',
+     ]
 
     def test_signal_group_mode(self):
-        filename = get_test_file_full_path(ioclass=NeuroExplorerIO,
-                                           filename='File_neuroexplorer_1.nex',
-                                           directory=self.local_test_dir,
-                                           clean=False)
+        filename = self.get_local_path('neuroexplorer/File_neuroexplorer_1.nex')
 
         # test that 2 signals are rendered with 2 sampling_rate
         for signal_group_mode in ('group-by-same-units', 'split-all'):

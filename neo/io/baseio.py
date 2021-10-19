@@ -21,8 +21,8 @@ from neo import logging_handler
 from neo.core import (AnalogSignal, Block,
                       Epoch, Event, Group,
                       IrregularlySampledSignal,
-                      ChannelIndex, ChannelView,
-                      Segment, SpikeTrain, Unit, ImageSequence,
+                      ChannelView,
+                      Segment, SpikeTrain, ImageSequence,
                       RectangularRegionOfInterest, CircularRegionOfInterest,
                       PolygonRegionOfInterest)
 
@@ -97,7 +97,7 @@ class BaseIO:
     mode = 'file'  # or 'fake' or 'dir' or 'database'
 
     def __init__(self, filename=None, **kargs):
-        self.filename = filename
+        self.filename = str(filename)
         # create a logger for the IO class
         fullname = self.__class__.__module__ + '.' + self.__class__.__name__
         self.logger = logging.getLogger(fullname)
@@ -155,9 +155,6 @@ class BaseIO:
     def read_segment(self, **kargs):
         assert (Segment in self.readable_objects), read_error
 
-    def read_unit(self, **kargs):
-        assert (Unit in self.readable_objects), read_error
-
     def read_spiketrain(self, **kargs):
         assert (SpikeTrain in self.readable_objects), read_error
 
@@ -179,9 +176,6 @@ class BaseIO:
     def read_irregularlysampledsignal(self, **kargs):
         assert (IrregularlySampledSignal in self.readable_objects), read_error
 
-    def read_channelindex(self, **kargs):
-        assert (ChannelIndex in self.readable_objects), read_error
-
     def read_channelview(self, **kargs):
         assert (ChannelView in self.readable_objects), read_error
 
@@ -200,9 +194,6 @@ class BaseIO:
 
     def write_segment(self, seg, **kargs):
         assert (Segment in self.writeable_objects), write_error
-
-    def write_unit(self, ut, **kargs):
-        assert (Unit in self.writeable_objects), write_error
 
     def write_spiketrain(self, sptr, **kargs):
         assert (SpikeTrain in self.writeable_objects), write_error
@@ -224,9 +215,6 @@ class BaseIO:
 
     def write_irregularlysampledsignal(self, irsig, **kargs):
         assert (IrregularlySampledSignal in self.writeable_objects), write_error
-
-    def write_channelindex(self, chx, **kargs):
-        assert (ChannelIndex in self.writeable_objects), write_error
 
     def write_channelview(self, chv, **kargs):
         assert (ChannelView in self.writeable_objects), write_error

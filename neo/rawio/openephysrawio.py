@@ -1,5 +1,9 @@
 """
-This module implement OpenEphys format.
+This module implement the "old" OpenEphys format.
+In this format channels are split into several files
+
+https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Open-Ephys-format.html
+
 
 Author: Samuel Garcia
 """
@@ -9,8 +13,8 @@ import re
 
 import numpy as np
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 
 RECORD_SIZE = 1024
@@ -78,7 +82,7 @@ class OpenEphysRawIO(BaseRawIO):
         self._sigs_memmap = {}
         self._sig_length = {}
         self._sig_timestamp0 = {}
-        sig_channels = []
+        signal_channels = []
         oe_indices = sorted(list(info['continuous'].keys()))
         for seg_index, oe_index in enumerate(oe_indices):
             self._sigs_memmap[seg_index] = {}
@@ -116,8 +120,8 @@ class OpenEphysRawIO(BaseRawIO):
 
                 if seg_index == 0:
                     # add in channel list
-                    sig_channels.append((ch_name, chan_id, chan_info['sampleRate'],
-                                'int16', 'V', chan_info['bitVolts'], 0., int(processor_id)))
+                    signal_channels.append((ch_name, chan_id, chan_info['sampleRate'],
+                                'int16', 'V', chan_info['bitVolts'], 0., processor_id))
 
             # In some cases, continuous do not have the same lentgh because
             # one record block is missing when the "OE GUI is freezing"
@@ -148,22 +152,33 @@ class OpenEphysRawIO(BaseRawIO):
                     all_first_timestamps.append(data_chan[0]['timestamp'])
                     all_last_timestamps.append(data_chan[-1]['timestamp'])
 
-            # chech that all signals have the same lentgh and timestamp0 for this segment
+            # check that all signals have the same lentgh and timestamp0 for this segment
             assert all(all_sigs_length[0] == e for e in all_sigs_length),\
-                        'All signals do not have the same lentgh'
+                       'Not all signals have the same length'
             assert all(all_first_timestamps[0] == e for e in all_first_timestamps),\
-                        'All signals do not have the same first timestamp'
+                       'Not all signals have the same first timestamp'
             assert all(all_samplerate[0] == e for e in all_samplerate),\
-                        'All signals do not have the same sample rate'
+                       'Not all signals have the same sample rate'
 
             self._sig_length[seg_index] = all_sigs_length[0]
             self._sig_timestamp0[seg_index] = all_first_timestamps[0]
 
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        self._sig_sampling_rate = sig_channels['sampling_rate'][0]  # unique for channel
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        self._sig_sampling_rate = signal_channels['sampling_rate'][0]  # unique for channel
+
+        # split channels in stream depending the name CHxxx ADCxxx
+        chan_stream_ids = [name[:2] if name.startswith('CH') else name[:3]
+                      for name in signal_channels['name']]
+        signal_channels['stream_id'] = chan_stream_ids
+
+        # and create streams channels (keep natural order 'CH' first)
+        stream_ids, order = np.unique(chan_stream_ids, return_index=True)
+        stream_ids = stream_ids[order]
+        signal_streams = [(f'Signals {stream_id}', f'{stream_id}') for stream_id in stream_ids]
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # scan for spikes files
-        unit_channels = []
+        spike_channels = []
 
         if len(info['spikes']) > 0:
 
@@ -216,10 +231,10 @@ class OpenEphysRawIO(BaseRawIO):
                 for sorted_id in all_sorted_ids:
                     unit_name = "{}#{}".format(name, sorted_id)
                     unit_id = "{}#{}".format(name, sorted_id)
-                    unit_channels.append((unit_name, unit_id, wf_units,
+                    spike_channels.append((unit_name, unit_id, wf_units,
                                 wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
 
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # event file are:
         #    * all_channel.events (header + binray)  -->  event 0
@@ -236,7 +251,7 @@ class OpenEphysRawIO(BaseRawIO):
             event_info = read_file_header(fullname)
             self._event_sampling_rate = event_info['sampleRate']
             data_event = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
-                                    dtype=events_dtype)
+                                   dtype=events_dtype)
             self._events_memmap[seg_index] = data_event
 
         event_channels.append(('all_channels', '', 'event'))
@@ -247,8 +262,9 @@ class OpenEphysRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_segment]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['signal_streams'] = signal_streams
+        self.header['signal_channels'] = signal_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotate some objects from coninuous files
@@ -272,13 +288,14 @@ class OpenEphysRawIO(BaseRawIO):
         return (self._sig_timestamp0[seg_index] + self._sig_length[seg_index])\
             / self._sig_sampling_rate
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         return self._sig_length[seg_index]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sig_timestamp0[seg_index] / self._sig_sampling_rate
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -289,20 +306,23 @@ class OpenEphysRawIO(BaseRawIO):
         sl0 = i_start % RECORD_SIZE
         sl1 = sl0 + (i_stop - i_start)
 
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        mask = self.header['signal_channels']['stream_id']
+        global_channel_indexes, = np.nonzero(mask == stream_id)
         if channel_indexes is None:
             channel_indexes = slice(None)
-        channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
+        global_channel_indexes = global_channel_indexes[channel_indexes]
 
-        sigs_chunk = np.zeros((i_stop - i_start, len(channel_indexes)), dtype='int16')
-        for i, chan_index in enumerate(channel_indexes):
-            data = self._sigs_memmap[seg_index][chan_index]
+        sigs_chunk = np.zeros((i_stop - i_start, len(global_channel_indexes)), dtype='int16')
+        for i, global_chan_index in enumerate(global_channel_indexes):
+            data = self._sigs_memmap[seg_index][global_chan_index]
             sub = data[block_start:block_stop]
             sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
 
         return sigs_chunk
 
     def _get_spike_slice(self, seg_index, unit_index, t_start, t_stop):
-        name, sorted_id = self.header['unit_channels'][unit_index]['name'].split('#')
+        name, sorted_id = self.header['spike_channels'][unit_index]['name'].split('#')
         sorted_id = int(sorted_id)
         data_spike = self._spikes_memmap[seg_index][name]
 
@@ -366,11 +386,11 @@ class OpenEphysRawIO(BaseRawIO):
 
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._event_sampling_rate
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         return None
 
 
@@ -473,27 +493,31 @@ def explore_folder(dirname):
                 info['nb_segment'] += 1
 
     # order continuous file by channel number within segment
+    # order "CH before "ADC"
     for seg_index, continuous_filenames in info['continuous'].items():
-        chan_ids = {}
+        chan_ids_by_type = {}
+        filenames_by_type = {}
         for continuous_filename in continuous_filenames:
             s = continuous_filename.replace('.continuous', '').split('_')
             processor_id, ch_name = s[0], s[1]
-            chan_str = re.split(r'(\d+)', s[1])[0]
-            chan_id = int(ch_name.replace(chan_str, ''))
-            if chan_str in chan_ids.keys():
-                chan_ids[chan_str].append(chan_id)
+            chan_type = re.split(r'(\d+)', s[1])[0]
+            chan_id = int(ch_name.replace(chan_type, ''))
+            if chan_type in chan_ids_by_type.keys():
+                chan_ids_by_type[chan_type].append(chan_id)
+                filenames_by_type[chan_type].append(continuous_filename)
             else:
-                chan_ids[chan_str] = [chan_id]
-        order = []
-        for type in chan_ids.keys():
-            order.append(np.argsort(chan_ids[type]))
-        order = [list.tolist() for list in order]
-        for i, sublist in enumerate(order):
-            if i > 0:
-                order[i] = [x + max(order[i - 1]) + 1 for x in order[i]]
-        order = [item for sublist in order for item in sublist]
-        continuous_filenames = [continuous_filenames[i] for i in order]
-        info['continuous'][seg_index] = continuous_filenames
+                chan_ids_by_type[chan_type] = [chan_id]
+                filenames_by_type[chan_type] = [continuous_filename]
+        chan_types = list(chan_ids_by_type.keys())
+        if chan_types[0] == 'ADC':
+            # put ADC at last position
+            chan_types = chan_types[1:] + chan_types[0:1]
+        ordered_continuous_filenames = []
+        for chan_type in chan_types:
+            local_order = np.argsort(chan_ids_by_type[chan_type])
+            local_filenames = np.array(filenames_by_type[chan_type])[local_order]
+            ordered_continuous_filenames.extend(local_filenames)
+        info['continuous'][seg_index] = ordered_continuous_filenames
 
     # order spike files within segment
     for seg_index, spike_filenames in info['spikes'].items():

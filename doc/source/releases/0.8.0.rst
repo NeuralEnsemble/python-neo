@@ -70,25 +70,25 @@ returning an :class:`AnalogSignal` object::
 Other new features
 ------------------
 
-  * new neo.utils module
-  * Numpy 1.16+ compatibility
-  * :meth:`time_shift()` method for :class:`Epoch`/:class:`Event`/:class:`AnalogSignal`
-  * :meth:`time_slice()` method is now more robust
-  * dropped support for Python 3.4
+* new neo.utils module
+* Numpy 1.16+ compatibility
+* :meth:`time_shift()` method for :class:`Epoch`/:class:`Event`/:class:`AnalogSignal`
+* :meth:`time_slice()` method is now more robust
+* dropped support for Python 3.4
 
 See all `pull requests`_ included in this release and the `list of closed issues`_.
 
 Bug fixes and improvements in IO modules
 ----------------------------------------
 
-  * Blackrock
-  * Neuroshare
-  * NixIOFr
-  * NixIO (array annotation + 1d coordinates)
-  * AsciiSignal (fix + json metadata + IrregularlySampledSignals + write proxy)
-  * Spike2 (group same sampling rate)
-  * Brainvision
-  * NeuralynxIO
+* Blackrock
+* Neuroshare
+* NixIOFr
+* NixIO (array annotation + 1d coordinates)
+* AsciiSignal (fix + json metadata + IrregularlySampledSignals + write proxy)
+* Spike2 (group same sampling rate)
+* Brainvision
+* NeuralynxIO
 
 .. Warning:: Some IOs (based on rawio) when loading can choose to split each
     channel into its own 1-channel :class:`AnalogSignal` or to group them

@@ -42,7 +42,7 @@ class Group(Container):
         'Event', 'Epoch', 'ChannelView', 'ImageSequence'
     )
     _container_child_objects = ('Segment', 'Group')
-    _single_parent_objects = ('Block',)
+    _parent_objects = ('Block',)
 
     def __init__(self, objects=None, name=None, description=None, file_origin=None,
                  allowed_types=None, **annotations):
@@ -75,3 +75,11 @@ class Group(Container):
                                 "".format(self.allowed_types, type(obj)))
             container = self._get_container(obj.__class__)
             container.append(obj)
+
+    def walk(self):
+        """
+        Walk the tree of subgroups
+        """
+        yield self
+        for grp in self.groups:
+            yield from grp.walk()

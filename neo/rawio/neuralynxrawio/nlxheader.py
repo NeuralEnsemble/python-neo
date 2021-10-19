@@ -89,6 +89,14 @@ class NlxHeader(OrderedDict):
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
             datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
+        # Cheetah version 5.4.0
+        'v5.4.0': dict(
+            datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)'
+                            r'  At Time: (?P<time>\S+)',
+            datetime2_regex=r'## Time Closed \(m/d/y\): (?P<date>\S+)'
+                            r'  At Time: (?P<time>\S+)',
+            filename_regex=r'## File Name: (?P<filename>\S+)',
+            datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
         # Cheetah version 5 before and including v 5.6.4 as well as version 1
         'bv5.6.4': dict(
             datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)'
@@ -97,6 +105,13 @@ class NlxHeader(OrderedDict):
                             r'  \(h:m:s\.ms\) (?P<time>\S+)',
             filename_regex=r'## File Name (?P<filename>\S+)',
             datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
+        'neuraview2': dict(
+            datetime1_regex=r'## Date Opened: \(mm/dd/yyy\): (?P<date>\S+)'
+                            r' At Time: (?P<time>\S+)',
+            datetime2_regex=r'## Date Closed: \(mm/dd/yyy\): (?P<date>\S+)'
+                            r' At Time: (?P<time>\S+)',
+            filename_regex=r'## File Name: (?P<filename>\S+)',
+            datetimeformat='%m/%d/%Y %H:%M:%S'),
         # Cheetah after v 5.6.4 and default for others such as Pegasus
         'def': dict(
             datetime1_regex=r'-TimeCreated (?P<date>\S+) (?P<time>\S+)',
@@ -140,7 +155,7 @@ class NlxHeader(OrderedDict):
             chid_entries = re.findall(r'\w+', self['channel_ids'])
             self['channel_ids'] = [int(c) for c in chid_entries]
         else:
-            self['channel_ids'] = [name]
+            self['channel_ids'] = ['unknown']
 
         # convert channel names
         if 'channel_names' in self:
@@ -150,7 +165,7 @@ class NlxHeader(OrderedDict):
             assert len(self['channel_names']) == len(self['channel_ids']), \
                 'Number of channel ids does not match channel names.'
         else:
-            self['channel_names'] = [name] * len(self['channel_ids'])
+            self['channel_names'] = ['unknown'] * len(self['channel_ids'])
 
         # version and application name
         # older Cheetah versions with CheetahRev property
@@ -164,10 +179,15 @@ class NlxHeader(OrderedDict):
             match = re.findall(pattern, self['ApplicationName'])
             assert len(match) == 1, 'impossible to find application name and version'
             self['ApplicationName'], app_version = match[0]
-        # BML Ncs file writing contained neither property, assume BML version 2
-        else:
+        # BML Ncs file contain neither property, but 'NLX_Base_Class_Type'
+        elif 'NLX_Base_Class_Type' in txt_header:
             self['ApplicationName'] = 'BML'
             app_version = "2.0"
+        # Neuraview Ncs file contained neither property nor
+        # NLX_Base_Class_Type information
+        else:
+            self['ApplicationName'] = 'Neuraview'
+            app_version = '2'
 
         self['ApplicationVersion'] = distutils.version.LooseVersion(app_version)
 
@@ -199,25 +219,43 @@ class NlxHeader(OrderedDict):
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
             elif av < '5':
                 hpd = NlxHeader.header_pattern_dicts['bv5']
+            elif av <= '5.4.0':
+                hpd = NlxHeader.header_pattern_dicts['v5.4.0']
             elif av <= '5.6.4':
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
             else:
                 hpd = NlxHeader.header_pattern_dicts['def']
         elif an == 'BML':
             hpd = NlxHeader.header_pattern_dicts['bml']
+            av = "2"
+        elif an == 'Neuraview':
+            hpd = NlxHeader.header_pattern_dicts['neuraview2']
+            av = "2"
         else:
+            an = "Unknown"
+            av = "NA"
             hpd = NlxHeader.header_pattern_dicts['def']
 
         # opening time
-        dt1 = re.search(hpd['datetime1_regex'], txt_header).groupdict()
-        self['recording_opened'] = datetime.datetime.strptime(
-            dt1['date'] + ' ' + dt1['time'], hpd['datetimeformat'])
+        sr = re.search(hpd['datetime1_regex'], txt_header)
+        if not sr:
+            raise IOError("No matching header open date/time for application {} " +
+                          "version {}. Please contact developers.".format(an, av))
+        else:
+            dt1 = sr.groupdict()
+            self['recording_opened'] = datetime.datetime.strptime(
+                dt1['date'] + ' ' + dt1['time'], hpd['datetimeformat'])
 
         # close time, if available
         if 'datetime2_regex' in hpd:
-            dt2 = re.search(hpd['datetime2_regex'], txt_header).groupdict()
-            self['recording_closed'] = datetime.datetime.strptime(
-                dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
+            sr = re.search(hpd['datetime2_regex'], txt_header)
+            if not sr:
+                raise IOError("No matching header close date/time for application {} " +
+                              "version {}. Please contact developers.".format(an, av))
+            else:
+                dt2 = sr.groupdict()
+                self['recording_closed'] = datetime.datetime.strptime(
+                    dt2['date'] + ' ' + dt2['time'], hpd['datetimeformat'])
 
     def type_of_recording(self):
         """

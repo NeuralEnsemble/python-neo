@@ -1,0 +1,16 @@
+pytest
+pytest-cov
+datalad==0.14.8  # 0.15. is incompatible with default apt git-annex version
+scipy>=1.0.0
+h5py
+igor
+klusta
+tqdm
+nixio>=1.5.0
+matplotlib
+ipython
+coverage
+coveralls
+pillow
+sonpy
+pynwb

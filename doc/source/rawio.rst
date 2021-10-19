@@ -77,11 +77,11 @@ Then browse the internal header and display information::
     nb_block: 1
     nb_segment:  [1]
     signal_channels: [V1]
-    unit_channels: [Wspk1u, Wspk2u, Wspk4u, Wspk5u ... Wspk29u Wspk30u Wspk31u Wspk32u]
+    spike_channels: [Wspk1u, Wspk2u, Wspk4u, Wspk5u ... Wspk29u Wspk30u Wspk31u Wspk32u]
     event_channels: []
 
 You get the number of blocks and segments per block. You have information
-about channels: **signal_channels**, **unit_channels**, **event_channels**.
+about channels: **signal_channels**, **spike_channels**, **event_channels**.
 
 All this information is internally available in the *header* dict::
 
@@ -91,7 +91,7 @@ All this information is internally available in the *header* dict::
     event_channels []
     nb_segment [1]
     nb_block 1
-    unit_channels [('Wspk1u', 'ch1#0', '',  0.00146484,  0., 0,  30000.)
+    spike_channels [('Wspk1u', 'ch1#0', '',  0.00146484,  0., 0,  30000.)
     ('Wspk2u', 'ch2#0', '',  0.00146484,  0., 0,  30000.)
     ...
 
@@ -114,8 +114,17 @@ Read signal chunks of data and scale them::
 
 
 There are 3 ways to select a subset of channels: by index (0 based), by id or by name.
-By index is not ambiguous 0 to n-1 (included), for some IOs channel_names (and sometimes channel_ids) have no guarantees to
-be unique, in such cases it would raise an error.
+By index is unambiguous 0 to n-1 (included), whereas for some IOs channel_names
+(and sometimes channel_ids) have no guarantees to
+be unique. In such cases, using names or ids may raise an error.
+
+A selected subset of channels which is passed to get_analog_signal_chunk, get_analog_signal_size,
+or get_analog_signal_t_start has the additional restriction that all such channels must have
+the same t_start and signal_size.
+
+Such subsets of channels may be available in specific RawIOs by using the
+get_group_signal_channel_indexes method, if the RawIO has defined separate
+group_ids for each group with those common characteristics.
 
 Example with BlackrockRawIO for the file FileSpec2.3001::
 
@@ -132,7 +141,7 @@ Inspect units channel. Each channel gives a SpikeTrain for each Segment.
 Note that for many formats a physical channel can have several units after spike
 sorting. So the nb_unit could be more than physical channel or signal channels.
 
-    >>> nb_unit = reader.unit_channels_count()
+    >>> nb_unit = reader.spike_channels_count()
     >>> print('nb_unit', nb_unit)
     nb_unit 30
     >>> for unit_index in range(nb_unit):

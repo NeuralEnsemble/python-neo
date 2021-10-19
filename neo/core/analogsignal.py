@@ -58,7 +58,7 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True, t_start=0 * pq.s,
                            sampling_rate=None, sampling_period=None, name=None, file_origin=None,
                            description=None, array_annotations=None, annotations=None,
-                           channel_index=None, segment=None):
+                           segment=None):
     '''
     A function to map AnalogSignal.__new__ to function that
         does not do the unit checking. This is needed for pickle to work.
@@ -68,7 +68,6 @@ def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True, t_sta
               sampling_period=sampling_period, name=name,
               file_origin=file_origin, description=description,
               array_annotations=array_annotations, **annotations)
-    obj.channel_index = channel_index
     obj.segment = segment
     return obj
 
@@ -140,9 +139,6 @@ class AnalogSignal(BaseSignal):
         :times: (quantity 1D) The time points of each sample of the signal,
             read-only.
             (:attr:`t_start` + arange(:attr:`shape`[0])/:attr:`sampling_rate`)
-        :channel_index:
-            (deprecated) access to the channel_index attribute of the principal ChannelIndex
-            associated with this signal.
 
     *Slicing*:
         :class:`AnalogSignal` objects can be sliced. When taking a single
@@ -160,8 +156,8 @@ class AnalogSignal(BaseSignal):
 
     '''
 
-    _single_parent_objects = ('Segment', 'ChannelIndex')
-    _single_parent_attrs = ('segment', 'channel_index')
+    _parent_objects = ('Segment',)
+    _parent_attrs = ('segment',)
     _quantity_attr = 'signal'
     _necessary_attrs = (('signal', pq.Quantity, 2),
                         ('sampling_rate', pq.Quantity, 0),
@@ -192,7 +188,6 @@ class AnalogSignal(BaseSignal):
         obj._sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
         obj.segment = None
-        obj.channel_index = None
         return obj
 
     def __init__(self, signal, units=None, dtype=None, copy=True, t_start=0 * pq.s,
@@ -220,7 +215,7 @@ class AnalogSignal(BaseSignal):
                                         True, self.t_start, self.sampling_rate,
                                         self.sampling_period, self.name, self.file_origin,
                                         self.description, self.array_annotations,
-                                        self.annotations, self.channel_index, self.segment)
+                                        self.annotations, self.segment)
 
     def _array_finalize_spec(self, obj):
         '''
@@ -243,14 +238,6 @@ class AnalogSignal(BaseSignal):
                                                            super().__repr__(),
                                                            self.t_start, self.t_stop,
                                                            self.sampling_rate))
-
-    def get_channel_index(self):
-        """
-        """
-        if self.channel_index:
-            return self.channel_index.index
-        else:
-            return None
 
     def __getitem__(self, i):
         '''
@@ -278,8 +265,6 @@ class AnalogSignal(BaseSignal):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
-                if self.channel_index:
-                    obj.channel_index = self.channel_index.__getitem__(k)
                 obj.array_annotate(**deepcopy(self.array_annotations_at_index(k)))
         elif isinstance(i, slice):
             obj = super().__getitem__(i)
@@ -448,7 +433,7 @@ class AnalogSignal(BaseSignal):
     def time_index(self, t):
         """Return the array index (or indices) corresponding to the time (or times) `t`"""
         i = (t - self.t_start) * self.sampling_rate
-        i = np.rint(i.simplified.magnitude).astype(np.int)
+        i = np.rint(i.simplified.magnitude).astype(np.int64)
         return i
 
     def time_slice(self, t_start, t_stop):
@@ -534,7 +519,6 @@ class AnalogSignal(BaseSignal):
         if copy:
             new_signal = deepcopy(self)
             new_signal.segment = None
-            new_signal.channel_index = None
             new_signal[i:j, :] = signal
             return new_signal
         else:

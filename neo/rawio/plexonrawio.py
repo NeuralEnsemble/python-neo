@@ -21,10 +21,9 @@ If one day, somebody use it, consider to offer me a beer.
 Author: Samuel Garcia
 
 """
-# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 from collections import OrderedDict
@@ -165,18 +164,36 @@ class PlexonRawIO(BaseRawIO):
                     .5 * (2 ** global_header['BitsPerSpikeSample']) *
                     h['Gain'] * h['PreampGain'])
             offset = 0.
-            group_id = 0
-            sig_channels.append((name, chan_id, sampling_rate, sig_dtype,
-                                 units, gain, offset, group_id))
-        if len(all_sig_length) > 0:
-            self._signal_length = min(all_sig_length)
+            stream_id = '0'
+            sig_channels.append((name, str(chan_id), sampling_rate, sig_dtype,
+                                 units, gain, offset, stream_id))
+
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
+        if sig_channels.size == 0:
+            signal_streams = np.array([], dtype=_signal_stream_dtype)
+
+        else:
+            # detect grousp (aka streams)
+            all_sig_length = all_sig_length = np.array(all_sig_length)
+            groups = set(zip(sig_channels['sampling_rate'], all_sig_length))
+
+            signal_streams = []
+            self._signal_length = {}
+            self._sig_sampling_rate = {}
+            for stream_index, (sr, length) in enumerate(groups):
+                stream_id = str(stream_index)
+                mask = (sig_channels['sampling_rate'] == sr) & (all_sig_length == length)
+                sig_channels['stream_id'][mask] = stream_id
+
+                self._sig_sampling_rate[stream_index] = sr
+                self._signal_length[stream_index] = length
+
+                signal_streams.append(('Signals ' + stream_id, stream_id))
+
+            signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+
         self._global_ssampling_rate = global_header['ADFrequency']
-        if slowChannelHeaders.size > 0:
-            assert np.unique(slowChannelHeaders['ADFreq']
-                             ).size == 1, 'Signal do not have the same sampling rate'
-            self._sig_sampling_rate = float(slowChannelHeaders['ADFreq'][0])
 
         # Determine number of units per channels
         self.internal_unit_ids = []
@@ -186,7 +203,7 @@ class PlexonRawIO(BaseRawIO):
                 self.internal_unit_ids.append((chan_id, unit_id))
 
         # Spikes channels
-        unit_channels = []
+        spike_channels = []
         for unit_index, (chan_id, unit_id) in enumerate(self.internal_unit_ids):
             c = np.nonzero(dspChannelHeaders['Channel'] == chan_id)[0][0]
             h = dspChannelHeaders[c]
@@ -207,9 +224,9 @@ class PlexonRawIO(BaseRawIO):
             wf_offset = 0.
             wf_left_sweep = -1  # DONT KNOWN
             wf_sampling_rate = global_header['WaveformFreq']
-            unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
+            spike_channels.append((name, _id, wf_units, wf_gain, wf_offset,
                                   wf_left_sweep, wf_sampling_rate))
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # Event channels
         event_channels = []
@@ -225,8 +242,9 @@ class PlexonRawIO(BaseRawIO):
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
+        self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         # Annotations
@@ -241,32 +259,39 @@ class PlexonRawIO(BaseRawIO):
         return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop1 = float(self._last_timestamps) / self._global_ssampling_rate
+        t_stop = float(self._last_timestamps) / self._global_ssampling_rate
         if hasattr(self, '_signal_length'):
-            t_stop2 = self._signal_length / self._sig_sampling_rate
-            return max(t_stop1, t_stop2)
-        else:
-            return t_stop1
+            for stream_id in self._signal_length:
+                t_stop_sig = self._signal_length[stream_id] / self._sig_sampling_rate[stream_id]
+                t_stop = max(t_stop, t_stop_sig)
+        return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        return self._signal_length
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        return self._signal_length[stream_index]
 
-    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
+                                stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._signal_length
+            i_stop = self._signal_length[stream_index]
 
-        if channel_indexes is None:
-            channel_indexes = np.arange(self.header['signal_channels'].size)
+        signal_channels = self.header['signal_channels']
+        signal_streams = self.header['signal_streams']
 
-        raw_signals = np.zeros((i_stop - i_start, len(channel_indexes)), dtype='int16')
-        for c, channel_index in enumerate(channel_indexes):
-            chan_header = self.header['signal_channels'][channel_index]
-            chan_id = chan_header['id']
+        stream_id = signal_streams[stream_index]['id']
+        mask = signal_channels['stream_id'] == stream_id
+        signal_channels = signal_channels[mask]
+        if channel_indexes is not None:
+            signal_channels = signal_channels[channel_indexes]
+        channel_ids = signal_channels['id']
+
+        raw_signals = np.zeros((i_stop - i_start, channel_ids.size), dtype='int16')
+        for c, channel_id in enumerate(channel_ids):
+            chan_id = np.int32(channel_id)
 
             data_blocks = self._data_blocks[5][chan_id]
 
@@ -369,7 +394,7 @@ class PlexonRawIO(BaseRawIO):
 
         return timestamps, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype)
         event_times /= self._global_ssampling_rate
         return event_times

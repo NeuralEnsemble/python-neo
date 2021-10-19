@@ -30,8 +30,8 @@ class ChannelView(BaseNeo):
     Note: Any other additional arguments are assumed to be user-specific
             metadata and stored in :attr:`annotations`.
     """
-    _single_parent_objects = ('Segment',)
-    _single_parent_attrs = ('segment',)
+    _parent_objects = ('Segment',)
+    _parent_attrs = ('segment',)
     _necessary_attrs = (
         ('index', np.ndarray, 1, np.dtype('i')),
         ('obj', ('AnalogSignal', 'IrregularlySampledSignal'), 1)
@@ -55,7 +55,7 @@ class ChannelView(BaseNeo):
         self.index = np.array(index)
         if len(self.index.shape) != 1:
             raise ValueError("index must be a 1D array")
-        if self.index.dtype == np.bool:  # convert boolean mask to integer index
+        if self.index.dtype == bool:  # convert boolean mask to integer index
             if self.index.size != self.obj.shape[-1]:
                 raise ValueError("index size does not match number of channels in signal")
             self.index, = np.nonzero(self.index)

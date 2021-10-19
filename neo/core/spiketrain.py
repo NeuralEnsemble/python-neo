@@ -77,7 +77,7 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
 def _check_waveform_dimensions(spiketrain):
     '''
     Verify that waveform is compliant with the waveform definition as
-    quantity array 3D (spike, channel_index, time)
+    quantity array 3D (spike, channel, time)
     '''
 
     if not spiketrain.size:
@@ -110,6 +110,56 @@ def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None, copy=True,
     return obj
 
 
+def normalize_times_array(times, units=None, dtype=None, copy=True):
+    """
+    Return a quantity array with the correct units.
+    There are four scenarios:
+
+    A. times (NumPy array), units given as string or Quantities units
+    B. times (Quantity array), units=None
+    C. times (Quantity), units given as string or Quantities units
+    D. times (NumPy array), units=None
+
+    In scenarios A-C we return a tuple (times as a Quantity array, dimensionality)
+    In scenario C, we rescale the original array to match `units`
+    In scenario D, we raise a ValueError
+    """
+    if dtype is None:
+        if not hasattr(times, 'dtype'):
+            dtype = float
+    if units is None:
+        # No keyword units, so get from `times`
+        try:
+            dim = times.units.dimensionality
+        except AttributeError:
+            raise ValueError('you must specify units')
+    else:
+        if hasattr(units, 'dimensionality'):
+            dim = units.dimensionality
+        else:
+            dim = pq.quantity.validate_dimensionality(units)
+
+        if hasattr(times, 'dimensionality'):
+            if times.dimensionality.items() == dim.items():
+                units = None  # units will be taken from times, avoids copying
+            else:
+                if not copy:
+                    raise ValueError("cannot rescale and return view")
+                else:
+                    # this is needed because of a bug in python-quantities
+                    # see issue # 65 in python-quantities github
+                    # remove this if it is fixed
+                    times = times.rescale(dim)
+
+    # check to make sure the units are time
+    # this approach is orders of magnitude faster than comparing the
+    # reference dimensionality
+    if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
+                                                                      pq.UnitTime)):
+        ValueError("Units have dimensions %s, not [time]" % dim.simplified)
+    return pq.Quantity(times, units=units, dtype=dtype, copy=copy), dim
+
+
 class SpikeTrain(DataObject):
     '''
     :class:`SpikeTrain` is a :class:`Quantity` array of spike times.
@@ -140,7 +190,7 @@ class SpikeTrain(DataObject):
             each spike.
         :units: (quantity units) Required if :attr:`times` is a list or
                 :class:`~numpy.ndarray`, not if it is a
-                :class:`~quantites.Quantity`.
+                :class:`~quantities.Quantity`.
         :t_stop: (quantity scalar, numpy scalar, or float) Time at which
             :class:`SpikeTrain` ended. This will be converted to the
             same units as :attr:`times`. This argument is required because it
@@ -159,7 +209,7 @@ class SpikeTrain(DataObject):
             :class:`SpikeTrain` began. This will be converted to the
             same units as :attr:`times`.
             Default: 0.0 seconds.
-        :waveforms: (quantity array 3D (spike, channel_index, time))
+        :waveforms: (quantity array 3D (spike, channel, time))
             The waveforms of each spike.
         :sampling_rate: (quantity scalar) Number of samples per unit time
             for the waveforms.
@@ -199,8 +249,8 @@ class SpikeTrain(DataObject):
 
     '''
 
-    _single_parent_objects = ('Segment', 'Unit')
-    _single_parent_attrs = ('segment', 'unit')
+    _parent_objects = ('Segment',)
+    _parent_attrs = ('segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('t_start', pq.Quantity, 0),
                         ('t_stop', pq.Quantity, 0))
@@ -220,37 +270,7 @@ class SpikeTrain(DataObject):
             # len(times)!=0 has been used to workaround a bug occuring during neo import
             raise ValueError("the number of waveforms should be equal to the number of spikes")
 
-        # Make sure units are consistent
-        # also get the dimensionality now since it is much faster to feed
-        # that to Quantity rather than a unit
-        if units is None:
-            # No keyword units, so get from `times`
-            try:
-                dim = times.units.dimensionality
-            except AttributeError:
-                raise ValueError('you must specify units')
-        else:
-            if hasattr(units, 'dimensionality'):
-                dim = units.dimensionality
-            else:
-                dim = pq.quantity.validate_dimensionality(units)
-
-            if hasattr(times, 'dimensionality'):
-                if times.dimensionality.items() == dim.items():
-                    units = None  # units will be taken from times, avoids copying
-                else:
-                    if not copy:
-                        raise ValueError("cannot rescale and return view")
-                    else:
-                        # this is needed because of a bug in python-quantities
-                        # see issue # 65 in python-quantities github
-                        # remove this if it is fixed
-                        times = times.rescale(dim)
-
-        if dtype is None:
-            if not hasattr(times, 'dtype'):
-                dtype = np.float
-        elif hasattr(times, 'dtype') and times.dtype != dtype:
+        if dtype is not None and hasattr(times, 'dtype') and times.dtype != dtype:
             if not copy:
                 raise ValueError("cannot change dtype and return view")
 
@@ -264,15 +284,13 @@ class SpikeTrain(DataObject):
             if hasattr(t_stop, 'dtype') and t_stop.dtype != times.dtype:
                 t_stop = t_stop.astype(times.dtype)
 
-        # check to make sure the units are time
-        # this approach is orders of magnitude faster than comparing the
-        # reference dimensionality
-        if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
-                                                                          pq.UnitTime)):
-            ValueError("Unit has dimensions %s, not [time]" % dim.simplified)
+        # Make sure units are consistent
+        # also get the dimensionality now since it is much faster to feed
+        # that to Quantity rather than a unit
+        times, dim = normalize_times_array(times, units, dtype, copy)
 
         # Construct Quantity from data
-        obj = pq.Quantity(times, units=units, dtype=dtype, copy=copy).view(cls)
+        obj = times.view(cls)
 
         # spiketrain times always need to be 1-dimensional
         if len(obj.shape) > 1:
@@ -310,7 +328,7 @@ class SpikeTrain(DataObject):
 
         return obj
 
-    def __init__(self, times, t_stop, units=None, dtype=np.float, copy=True,
+    def __init__(self, times, t_stop, units=None, dtype=None, copy=True,
                  sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None, left_sweep=None,
                  name=None, file_origin=None, description=None, array_annotations=None,
                  **annotations):

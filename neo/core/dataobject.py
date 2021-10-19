@@ -357,7 +357,7 @@ class DataObject(BaseNeo, pq.Quantity):
             # thus creating a lot of overhead
             # But keeping the reference to the same parent is not desired either, because this would be unidirectional
             # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
-            if k in self._single_parent_attrs:
+            if k in self._parent_attrs:
                 setattr(new_obj, k, None)
                 continue
             try:

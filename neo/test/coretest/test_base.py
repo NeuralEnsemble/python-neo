@@ -116,11 +116,9 @@ class TestBaseNeo(unittest.TestCase):
     def test__children(self):
         base = BaseNeo()
 
-        self.assertEqual(base._single_parent_objects, ())
-        self.assertEqual(base._multi_parent_objects, ())
+        self.assertEqual(base._parent_objects, ())
 
-        self.assertEqual(base._single_parent_containers, ())
-        self.assertEqual(base._multi_parent_containers, ())
+        self.assertEqual(base._parent_containers, ())
 
         self.assertEqual(base._parent_objects, ())
         self.assertEqual(base._parent_containers, ())
@@ -771,7 +769,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_int(self):
         '''test to make sure int type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.int)
+        value = np.array([1, 2, 3, 4, 5], dtype=int)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -855,14 +853,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_float(self):
         '''test to make sure float type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.float)
-        self.base.annotate(data=value)
-        result = {'data': value}
-        self.assertDictEqual(result, self.base.annotations)
-
-    def test_numpy_array_floating(self):
-        '''test to make sure floating type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.floating)
+        value = np.array([1, 2, 3, 4, 5], dtype=np.float_)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -905,7 +896,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_complex(self):
         '''test to make sure complex type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.complex)
+        value = np.array([1, 2, 3, 4, 5], complex)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -935,14 +926,14 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_bool(self):
         '''test to make sure bool type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.bool)
+        value = np.array([1, 2, 3, 4, 5], dtype=bool)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
     def test_numpy_array_str(self):
         '''test to make sure str type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.str)
+        value = np.array([1, 2, 3, 4, 5], dtype=str)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -966,7 +957,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_int(self):
         '''test to make sure int type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.int)
+        value = np.array(99, dtype=int)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1050,14 +1041,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_float(self):
         '''test to make sure float type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.float)
-        self.base.annotate(data=value)
-        result = {'data': value}
-        self.assertDictEqual(result, self.base.annotations)
-
-    def test_numpy_scalar_floating(self):
-        '''test to make sure floating type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.floating)
+        value = np.array(99, dtype=np.float_)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1100,7 +1084,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_complex(self):
         '''test to make sure complex type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.complex)
+        value = np.array(99, dtype=complex)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1129,14 +1113,14 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_bool(self):
         '''test to make sure bool type numpy scalars are rejected'''
-        value = np.array(99, dtype=np.bool)
+        value = np.array(99, dtype=bool)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
     def test_numpy_array_str(self):
         '''test to make sure str type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.str)
+        value = np.array(99, dtype=str)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1161,7 +1145,7 @@ class TestBaseNeoQuantitiesArrayTypes(unittest.TestCase):
 
     def test_quantities_array_int(self):
         '''test to make sure int type quantites arrays are accepted'''
-        value = pq.Quantity([1, 2, 3, 4, 5], dtype=np.int, units=pq.s)
+        value = pq.Quantity([1, 2, 3, 4, 5], dtype=int, units=pq.s)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1182,7 +1166,7 @@ class TestBaseNeoQuantitiesArrayTypes(unittest.TestCase):
 
     def test_quantities_array_str(self):
         '''test to make sure str type quantites arrays are accepted'''
-        value = pq.Quantity([1, 2, 3, 4, 5], dtype=np.str, units=pq.meter)
+        value = pq.Quantity([1, 2, 3, 4, 5], dtype=str, units=pq.meter)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1200,7 +1184,7 @@ class TestBaseNeoQuantitiesScalarTypes(unittest.TestCase):
 
     def test_quantities_scalar_int(self):
         '''test to make sure int type quantites scalars are accepted'''
-        value = pq.Quantity(99, dtype=np.int, units=pq.s)
+        value = pq.Quantity(99, dtype=int, units=pq.s)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1221,7 +1205,7 @@ class TestBaseNeoQuantitiesScalarTypes(unittest.TestCase):
 
     def test_quantities_scalar_str(self):
         '''test to make sure str type quantites scalars are accepted'''
-        value = pq.Quantity(99, dtype=np.str, units=pq.meter)
+        value = pq.Quantity(99, dtype=str, units=pq.meter)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
