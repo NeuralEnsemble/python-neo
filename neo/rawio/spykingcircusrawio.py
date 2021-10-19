@@ -38,7 +38,7 @@ class SpykingCircusRawIO(BaseRawIO):
     the results have been stored.
     """
     extensions = []
-    rawmode = 'one-folder'
+    rawmode = 'one-dir'
 
     def __init__(self, dirname=''):
         BaseRawIO.__init__(self)
