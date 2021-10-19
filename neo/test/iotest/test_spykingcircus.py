@@ -10,11 +10,11 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestSpykingCircusIO(BaseTestIO, unittest.TestCase):
     files_to_download = [
-        'spykingcircus_example0/recording.params',
-        'spykingcircus_example0/recording/recording.result.hdf5',
-        'spykingcircus_example0/recording/recording.result-merged.hdf5',
+        'spykingcircus/spykingcircus_example0/recording.params',
+        'spykingcircus/spykingcircus_example0/recording/recording.result.hdf5',
+        'spykingcircus/spykingcircus_example0/recording/recording.result-merged.hdf5',
     ]
-    entities_to_test = ['spykingcircus_example0']
+    entities_to_test = ['spykingcircus']
     ioclass = SpykingCircusIO
 
 
