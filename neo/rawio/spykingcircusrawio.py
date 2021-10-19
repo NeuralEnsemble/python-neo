@@ -3,7 +3,7 @@
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _spike_channel_dtype,
                         _event_channel_dtype)
 
 import numpy as np
@@ -113,7 +113,7 @@ class SpykingCircusRawIO(BaseRawIO):
             wf_sampling_rate = 0
             unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                   wf_offset, wf_left_sweep, wf_sampling_rate))
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        unit_channels = np.array(unit_channels, dtype=_spike_channel_dtype)
 
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
