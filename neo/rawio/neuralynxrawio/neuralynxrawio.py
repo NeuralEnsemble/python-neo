@@ -166,6 +166,9 @@ class NeuralynxRawIO(BaseRawIO):
                 if excl_file in filenames:
                     filenames.remove(excl_file)
 
+        ncs_sampling_rates = []
+        stream_id = -1  # will be increased to 0 for first signal
+
         for filename in filenames:
             filename = os.path.join(dirname, filename)
 
@@ -191,13 +194,17 @@ class NeuralynxRawIO(BaseRawIO):
 
                 chan_uid = (chan_name, chan_id)
                 if ext == 'ncs':
+                    if info['sampling_rate'] not in ncs_sampling_rates:
+                        ncs_sampling_rates.append(info['sampling_rate'])
+                        stream_id += 1
+
                     # a sampled signal channel
                     units = 'uV'
                     gain = info['bit_to_microVolt'][idx]
                     if info.get('input_inverted', False):
                         gain *= -1
                     offset = 0.
-                    stream_id = 0
+                    stream_id = stream_id
                     signal_channels.append((chan_name, str(chan_id), info['sampling_rate'],
                                          'int16', units, gain, offset, stream_id))
                     self.ncs_filenames[chan_uid] = filename
@@ -283,10 +290,8 @@ class NeuralynxRawIO(BaseRawIO):
 
         # require all sampled signals, ncs files, to have the same sampling rate
         if signal_channels.size > 0:
-            sampling_rate = np.unique(signal_channels['sampling_rate'])
-            assert sampling_rate.size == 1
-            self._sigs_sampling_rate = sampling_rate[0]
-            signal_streams = [('signals', '0')]
+            names = [f'signals ({sr}Hz)' for sr in ncs_sampling_rates]
+            signal_streams = list(zip(names, range(len(names))))
         else:
             signal_streams = []
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
@@ -301,7 +306,6 @@ class NeuralynxRawIO(BaseRawIO):
         if ncsSegTimestampLimits:
             self._ncs_seg_timestamp_limits = ncsSegTimestampLimits  # save copy
             self._nb_segment = ncsSegTimestampLimits.nb_segment
-            self._sigs_length = ncsSegTimestampLimits.length.copy()
             self._timestamp_limits = ncsSegTimestampLimits.timestamp_limits.copy()
             self._sigs_t_start = ncsSegTimestampLimits.t_start.copy()
             self._sigs_t_stop = ncsSegTimestampLimits.t_stop.copy()
@@ -362,19 +366,20 @@ class NeuralynxRawIO(BaseRawIO):
         for seg_index in range(self._nb_segment):
             seg_annotations = bl_annotations['segments'][seg_index]
 
-            for c in range(signal_streams.size):
+            for stream_id in range(signal_streams.size):
                 # one or no signal stream
-                sig_ann = seg_annotations['signals'][c]
+                stream_ann = seg_annotations['signals'][stream_id]
                 # handle array annotations
                 for key in signal_annotations[0].keys():
                     values = []
-                    for c in range(signal_channels.size):
-                        value = signal_annotations[0][key]
+                    # only collect values from channels belonging to current stream
+                    for d in np.where(signal_channels['stream_id'] == f'{stream_id}')[0]:
+                        value = signal_annotations[d][key]
                         values.append(value)
                     values = np.array(values)
                     if values.ndim == 1:
                         # 'InputRange': is 2D and make bugs
-                        sig_ann['__array_annotations__'][key] = values
+                        stream_ann['__array_annotations__'][key] = values
 
             for c in range(spike_channels.size):
                 unit_ann = seg_annotations['spikes'][c]
@@ -432,7 +437,15 @@ class NeuralynxRawIO(BaseRawIO):
         return self._seg_t_stops[seg_index] - self.global_t_start
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        return self._sigs_length[seg_index]
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        channel_indexes = np.where(self.header['signal_channels']['stream_id'] == stream_id)[0]
+
+        if len(channel_indexes):
+            channel_index = channel_indexes[0]
+            chan = self.header['signal_channels'][channel_index]
+            return self._sigs_memmaps[seg_index][(chan['name'], int(chan['id']))]
+        else:
+            return None
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sigs_t_start[seg_index] - self.global_t_start
@@ -472,8 +485,12 @@ class NeuralynxRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(None)
 
-        channel_ids = self.header['signal_channels'][channel_indexes]['id'].astype(int)
-        channel_names = self.header['signal_channels'][channel_indexes]['name']
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        stream_mask = self.header['signal_channels']['stream_id'] == stream_id
+
+        # channel_streams = self.
+        channel_ids = self.header['signal_channels'][stream_mask][channel_indexes]['id'].astype(int)
+        channel_names = self.header['signal_channels'][stream_mask][channel_indexes]['name']
 
         # create buffer for samples
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
@@ -622,9 +639,18 @@ class NeuralynxRawIO(BaseRawIO):
             del data
 
         # Construct an inverse dictionary from NcsSections to list of associated chan_uids
-        revSectMap = dict()
-        for k, v in chanSectMap.items():
-            revSectMap.setdefault(v[0], []).append(k)
+        # consider channels
+        revSectMap = {}
+        for i, (k, v) in enumerate(chanSectMap.items()):
+            if i == 0:  # start initially with first Ncssections
+                latest_sections = v[0]
+            # time tolerance of +- one data package (in microsec)
+            tolerance = 512 / min(v[0].sampFreqUsed, latest_sections.sampFreqUsed) *1e6
+            if v[0].is_equivalent(latest_sections, abs_tol=tolerance):
+                revSectMap.setdefault(latest_sections, []).append(k)
+            else:
+                revSectMap[v[0]] = [k]
+                latest_sections = v[0]
 
         # If there is only one NcsSections structure in the set of ncs files, there should only
         # be one entry. Otherwise this is presently unsupported.
