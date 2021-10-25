@@ -76,7 +76,8 @@ class NeuralynxRawIO(BaseRawIO):
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
                   ('nb_valid', 'uint32'), ('samples', 'int16', (NcsSection._RECORD_SIZE))]
 
-    def __init__(self, dirname='', filename='', exclude_filename=None, keep_original_times=False, **kargs):
+    def __init__(self, dirname='', filename='', exclude_filename=None, keep_original_times=False,
+                 **kargs):
         """
         Initialize io for either a directory of Ncs files or a single Ncs file.
 

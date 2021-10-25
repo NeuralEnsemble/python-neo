@@ -202,7 +202,7 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertTrue((len(block.segments[0].events)) >= 0)
         self.assertTrue((len(block.segments[0].epochs)) == 0)
 
-        # exclude a multiple files
+        # exclude all ncs files from session
         exclude_files = [f'CSC{i}.ncs' for i in range(6)]
         nio = NeuralynxIO(dirname=dname, exclude_filename=exclude_files,
                           use_cache=False)
