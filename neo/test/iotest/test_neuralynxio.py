@@ -189,6 +189,29 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertTrue((len(block.segments[0].events)) == 0)
         self.assertTrue((len(block.segments[0].epochs)) == 0)
 
+    def test_exclude_filename(self):
+        dname = self.get_local_path(
+            'neuralynx/Cheetah_v5.7.4/original_data/'
+        )
+
+        # exclude a single file
+        nio = NeuralynxIO(dirname=dname, exclude_filename='CSC1.ncs', use_cache=False)
+        block = nio.read_block()
+        self.assertTrue(len(block.segments[0].analogsignals) > 0)
+        self.assertTrue((len(block.segments[0].spiketrains)) >= 0)
+        self.assertTrue((len(block.segments[0].events)) >= 0)
+        self.assertTrue((len(block.segments[0].epochs)) == 0)
+
+        # exclude a multiple files
+        exclude_files = [f'CSC{i}.ncs' for i in range(6)]
+        nio = NeuralynxIO(dirname=dname, exclude_filename=exclude_files,
+                          use_cache=False)
+        block = nio.read_block()
+        self.assertTrue(len(block.segments[0].analogsignals) == 0)
+        self.assertTrue((len(block.segments[0].spiketrains)) >= 0)
+        self.assertTrue((len(block.segments[0].events)) >= 0)
+        self.assertTrue((len(block.segments[0].epochs)) == 0)
+
 
 class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
     pegasus_version = '2.1.1'
