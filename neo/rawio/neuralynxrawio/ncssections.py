@@ -27,6 +27,17 @@ class NcsSections:
         return (f'{self.sampFreqUsed};{self.microsPerSampUsed};'
                f'{[s.__hash__() for s in self.sects]}').__hash__()
 
+    def is_equivalent(self, other, rel_tol=0, abs_tol=0):
+        if len(self.sects) != len(other.sects):
+            return False
+        else:
+            # do not check for gaps if only a single section is present
+            for sec_id in range(len(self.sects)-1):
+                if not self.sects[sec_id].is_equivalent(
+                        other.sects[sec_id], rel_tol=rel_tol, abs_tol=abs_tol):
+                    return False
+            return True
+
 
 class NcsSection:
     """
@@ -65,6 +76,12 @@ class NcsSection:
     def __hash__(self):
         s = f'{self.startRec};{self.startTime};{self.endRec};{self.endTime};{self.n_samples}'
         return s.__hash__()
+
+    def is_equivalent(self, other, rel_tol=0, abs_tol=0):
+        eq_start = math.isclose(self.startTime, other.startTime, rel_tol=rel_tol, abs_tol=abs_tol)
+        eq_end = math.isclose(self.endTime, other.endTime, rel_tol=rel_tol, abs_tol=abs_tol)
+        return eq_start & eq_end
+
 
     def before_time(self, rhb):
         """
