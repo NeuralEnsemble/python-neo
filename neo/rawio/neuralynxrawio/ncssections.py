@@ -228,9 +228,9 @@ class NcsSectionsFactory:
             raise IOError("Sampling frequency in first record doesn't agree with header.")
         chanNum = ncsMemMap['channel_id'][0]
 
-        nb = NcsSections()
-        nb.sampFreqUsed = actualSampFreq
-        nb.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(actualSampFreq)
+        secs = NcsSections()
+        secs.sampFreqUsed = actualSampFreq
+        secs.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(actualSampFreq)
 
         # check if file is one block of records, which is often the case, and avoid full parse
         lastBlkI = ncsMemMap.shape[0] - 1
@@ -248,15 +248,15 @@ class NcsSectionsFactory:
             n_samples = NcsSection._RECORD_SIZE * lastBlkI
             curBlock = NcsSection(0, ts0, lastBlkI, lastBlkEndTime, n_samples)
 
-            nb.sects.append(curBlock)
-            return nb
+            secs.sects.append(curBlock)
+            return secs
 
         # otherwise need to scan looking for breaks
         else:
             blkOnePredTime = NcsSectionsFactory.calc_sample_time(actualSampFreq, ts0, nb0)
             curBlock = NcsSection(0, ts0, -1, -1, -1)
-            nb.sects.append(curBlock)
-            return NcsSectionsFactory._parseGivenActualFrequency(ncsMemMap, nb, chanNum, reqFreq,
+            secs.sects.append(curBlock)
+            return NcsSectionsFactory._parseGivenActualFrequency(ncsMemMap, secs, chanNum, reqFreq,
                                                                  blkOnePredTime)
 
     @staticmethod

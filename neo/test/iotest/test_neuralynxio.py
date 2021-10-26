@@ -275,7 +275,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
             # check that data agrees in first segment first channel only
             for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
-                chid = int(anasig.array_annotations['channel_ids'][0])
+                chid = anasig.array_annotations['channel_ids'][0]
 
                 chname = str(anasig.array_annotations['channel_names'][0])
                 chuid = (chname, chid)

@@ -117,9 +117,6 @@ class NeuralynxRawIO(BaseRawIO):
         else:
             return self.dirname
 
-    # from memory_profiler import profile
-    #
-    # @profile()
     def _parse_header(self):
 
         stream_channels = []
@@ -192,7 +189,7 @@ class NeuralynxRawIO(BaseRawIO):
             for idx, chan_id in enumerate(chan_ids):
                 chan_name = chan_names[idx]
 
-                chan_uid = (chan_name, chan_id)
+                chan_uid = (chan_name, str(chan_id))
                 if ext == 'ncs':
                     if info['sampling_rate'] not in ncs_sampling_rates:
                         ncs_sampling_rates.append(info['sampling_rate'])
@@ -309,6 +306,14 @@ class NeuralynxRawIO(BaseRawIO):
             self._timestamp_limits = ncsSegTimestampLimits.timestamp_limits.copy()
             self._sigs_t_start = ncsSegTimestampLimits.t_start.copy()
             self._sigs_t_stop = ncsSegTimestampLimits.t_stop.copy()
+
+        # precompute signal lengths within segments
+        self._sigs_length = []
+        if self._sigs_memmaps:
+            for seg_idx, sig_container in enumerate(self._sigs_memmaps):
+                self._sigs_length.append({})
+                for chan_uid, sig_infos in sig_container.items():
+                    self._sigs_length[seg_idx][chan_uid] = int(sig_infos['nb_valid'].sum())
 
         # Determine timestamp limits in nev, nse file by scanning them.
         ts0, ts1 = None, None
@@ -438,12 +443,12 @@ class NeuralynxRawIO(BaseRawIO):
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
         stream_id = self.header['signal_streams'][stream_index]['id']
-        channel_indexes = np.where(self.header['signal_channels']['stream_id'] == stream_id)[0]
+        stream_mask = self.header['signal_channels']['stream_id'] == stream_id
+        signals = self.header['signal_channels'][stream_mask]
 
-        if len(channel_indexes):
-            channel_index = channel_indexes[0]
-            chan = self.header['signal_channels'][channel_index]
-            return self._sigs_memmaps[seg_index][(chan['name'], int(chan['id']))]
+        if len(signals):
+            sig = signals[0]
+            return self._sigs_length[seg_index][(sig['name'], sig['id'])]
         else:
             return None
 
@@ -475,7 +480,8 @@ class NeuralynxRawIO(BaseRawIO):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._sigs_length[seg_index]
+            i_stop = self.get_signal_size(block_index=block_index, seg_index=seg_index,
+                                          stream_index=stream_index)
 
         block_start = i_start // NcsSection._RECORD_SIZE
         block_stop = i_stop // NcsSection._RECORD_SIZE + 1
@@ -489,7 +495,7 @@ class NeuralynxRawIO(BaseRawIO):
         stream_mask = self.header['signal_channels']['stream_id'] == stream_id
 
         # channel_streams = self.
-        channel_ids = self.header['signal_channels'][stream_mask][channel_indexes]['id'].astype(int)
+        channel_ids = self.header['signal_channels'][stream_mask][channel_indexes]['id']
         channel_names = self.header['signal_channels'][stream_mask][channel_indexes]['name']
 
         # create buffer for samples
@@ -632,10 +638,9 @@ class NeuralynxRawIO(BaseRawIO):
             nlxHeader = NlxHeader(ncs_filename)
 
             if not chanSectMap or (chanSectMap and
-                    not NcsSectionsFactory._verifySectionsStructure(data,
-                    lastNcsSections)):
-                lastNcsSections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
-            chanSectMap[chan_uid] = [lastNcsSections, nlxHeader, ncs_filename]
+                    not NcsSectionsFactory._verifySectionsStructure(data, chan_ncs_sections)):
+                chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
+            chanSectMap[chan_uid] = [chan_ncs_sections, nlxHeader, ncs_filename]
             del data
 
         # Construct an inverse dictionary from NcsSections to list of associated chan_uids
@@ -646,7 +651,7 @@ class NeuralynxRawIO(BaseRawIO):
                 latest_sections = v[0]
             # time tolerance of +- one data package (in microsec)
             tolerance = 512 / min(v[0].sampFreqUsed, latest_sections.sampFreqUsed) *1e6
-            if v[0].is_equivalent(latest_sections, abs_tol=tolerance):
+            if not v[0].is_equivalent(latest_sections, abs_tol=tolerance):
                 revSectMap.setdefault(latest_sections, []).append(k)
             else:
                 revSectMap[v[0]] = [k]
@@ -658,7 +663,7 @@ class NeuralynxRawIO(BaseRawIO):
             raise IOError(f'ncs files have {len(revSectMap)} different sections '
                           f'structures. Unsupported configuration.')
 
-        seg_time_limits = SegmentTimeLimits(nb_segment=len(lastNcsSections.sects),
+        seg_time_limits = SegmentTimeLimits(nb_segment=len(chan_ncs_sections.sects),
                                             t_start=[], t_stop=[], length=[],
                                             timestamp_limits=[])
         memmaps = [{} for seg_index in range(seg_time_limits.nb_segment)]
