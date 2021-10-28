@@ -32,7 +32,7 @@ class NcsSections:
             return False
         else:
             # do not check for gaps if only a single section is present
-            for sec_id in range(len(self.sects)-1):
+            for sec_id in range(len(self.sects) - 1):
                 if not self.sects[sec_id].is_equivalent(
                         other.sects[sec_id], rel_tol=rel_tol, abs_tol=abs_tol):
                     return False
