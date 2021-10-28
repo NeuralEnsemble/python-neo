@@ -4,7 +4,8 @@ import numpy as np
 
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuralynxrawio.nlxheader import NlxHeader
-from neo.rawio.neuralynxrawio.ncssections import (NcsSections, NcsSectionsFactory)
+from neo.rawio.neuralynxrawio.ncssections import (NcsSection, NcsSections,
+                                                  NcsSectionsFactory)
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 import logging
@@ -276,6 +277,43 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
 
         # check that two blocks verify against self
         self.assertTrue(NcsSectionsFactory._verifySectionsStructure(data1, nb1))
+
+
+class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
+    """
+    Test building NcsBlocks for files of different revisions.
+    """
+    entities_to_test = []
+
+    def test_equality(self):
+        ns0 = NcsSections()
+        ns1 = NcsSections()
+
+        ns0.microsPerSampUsed = 1
+        ns1.microsPerSampUsed = 1
+        ns0.sampFreqUsed = 300
+        ns1.sampFreqUsed = 300
+
+        self.assertEqual(ns0, ns1)
+
+        # add sections
+        ns0.sects = [NcsSection(0, 0, 100, 100, 10)]
+        ns1.sects = [NcsSection(0, 0, 100, 100, 10)]
+
+        self.assertEqual(ns0, ns1)
+
+        # check inequality for different attributes
+        # different number of sections
+        ns0.sects.append(NcsSection(0, 0, 100, 100, 10))
+        self.assertNotEqual(ns0, ns1)
+
+        # different section attributes
+        ns0.sects = [NcsSection(0, 0, 200, 200, 10)]
+        self.assertNotEqual(ns0, ns1)
+
+        # different attributes
+        ns0.sampFreqUsed = 400
+        self.assertNotEqual(ns0, ns1)
 
 
 if __name__ == "__main__":

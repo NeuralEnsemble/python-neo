@@ -47,6 +47,8 @@ from ..baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 import numpy as np
 import os
+import pathlib
+import copy
 from collections import (namedtuple, OrderedDict)
 
 from neo.rawio.neuralynxrawio.ncssections import (NcsSection, NcsSectionsFactory)
@@ -110,6 +112,9 @@ class NeuralynxRawIO(BaseRawIO):
         else:
             return self.dirname
 
+    # from memory_profiler import profile
+    #
+    # @profile()
     def _parse_header(self):
 
         stream_channels = []
@@ -139,6 +144,11 @@ class NeuralynxRawIO(BaseRawIO):
             filenames = sorted(os.listdir(self.dirname))
             dirname = self.dirname
         else:
+            if not os.path.isfile(self.filename):
+                raise ValueError(f'Provided Filename is not a file: '
+                                 f'{self.filename}. If you want to provide a '
+                                 f'directory use the `dirname` keyword')
+
             dirname, fname = os.path.split(self.filename)
             filenames = [fname]
 
@@ -209,15 +219,7 @@ class NeuralynxRawIO(BaseRawIO):
                         'Several nse or ntt files have the same unit_id!!!'
                     self.nse_ntt_filenames[chan_uid] = filename
 
-                    dtype = get_nse_or_ntt_dtype(info, ext)
-
-                    if os.path.getsize(filename) <= NlxHeader.HEADER_SIZE:
-                        self._empty_nse_ntt.append(filename)
-                        data = np.zeros((0,), dtype=dtype)
-                    else:
-                        data = np.memmap(filename, dtype=dtype, mode='r',
-                                         offset=NlxHeader.HEADER_SIZE)
-
+                    data = self._get_file_map(filename)
                     self._spike_memmap[chan_uid] = data
 
                     unit_ids = np.unique(data['unit_id'])
@@ -249,8 +251,7 @@ class NeuralynxRawIO(BaseRawIO):
                         data = np.zeros((0,), dtype=nev_dtype)
                         internal_ids = []
                     else:
-                        data = np.memmap(filename, dtype=nev_dtype, mode='r',
-                                         offset=NlxHeader.HEADER_SIZE)
+                        data = self._get_file_map(filename)
                         internal_ids = np.unique(data[['event_id', 'ttl_input']]).tolist()
                     for internal_event_id in internal_ids:
                         if internal_event_id not in self.internal_event_ids:
@@ -377,6 +378,37 @@ class NeuralynxRawIO(BaseRawIO):
                 # ~ ev_ann['nttl'] =
                 # ~ ev_ann['digital_marker'] =
                 # ~ ev_ann['analog_marker'] =
+
+    def _get_file_map(self, filename):
+        """
+        Create memory maps when needed
+        see also https://github.com/numpy/numpy/issues/19340
+        """
+        filename = pathlib.Path(filename)
+        suffix = filename.suffix.lower()[1:]
+
+        if suffix == 'ncs':
+            return np.memmap(filename, dtype=self._ncs_dtype, mode='r',
+                      offset=NlxHeader.HEADER_SIZE)
+
+        elif suffix in ['nse', 'ntt']:
+            info = NlxHeader(filename)
+            dtype = get_nse_or_ntt_dtype(info, suffix)
+
+            # return empty map if file does not contain data
+            if os.path.getsize(filename) <= NlxHeader.HEADER_SIZE:
+                self._empty_nse_ntt.append(filename)
+                return np.zeros((0,), dtype=dtype)
+
+            return np.memmap(filename, dtype=dtype, mode='r',
+                             offset=NlxHeader.HEADER_SIZE)
+
+        elif suffix == 'nev':
+            return np.memmap(filename, dtype=nev_dtype, mode='r',
+                             offset=NlxHeader.HEADER_SIZE)
+
+        else:
+            raise ValueError(f'Unknown file suffix {suffix}')
 
     # Accessors for segment times which are offset by appropriate global start time
     def _segment_t_start(self, block_index, seg_index):
@@ -565,16 +597,15 @@ class NeuralynxRawIO(BaseRawIO):
         chanSectMap = dict()
         for chan_uid, ncs_filename in self.ncs_filenames.items():
 
-            data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
-                             offset=NlxHeader.HEADER_SIZE)
+            data = self._get_file_map(ncs_filename)
             nlxHeader = NlxHeader(ncs_filename)
 
             if not chanSectMap or (chanSectMap and
                     not NcsSectionsFactory._verifySectionsStructure(data,
                     lastNcsSections)):
                 lastNcsSections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
-
-            chanSectMap[chan_uid] = [lastNcsSections, nlxHeader, data]
+            chanSectMap[chan_uid] = [lastNcsSections, nlxHeader, ncs_filename]
+            del data
 
         # Construct an inverse dictionary from NcsSections to list of associated chan_uids
         revSectMap = dict()
@@ -584,8 +615,8 @@ class NeuralynxRawIO(BaseRawIO):
         # If there is only one NcsSections structure in the set of ncs files, there should only
         # be one entry. Otherwise this is presently unsupported.
         if len(revSectMap) > 1:
-            raise IOError('ncs files have {} different sections structures. Unsupported.'.format(
-                len(revSectMap)))
+            raise IOError(f'ncs files have {len(revSectMap)} different sections '
+                          f'structures. Unsupported configuration.')
 
         seg_time_limits = SegmentTimeLimits(nb_segment=len(lastNcsSections.sects),
                                             t_start=[], t_stop=[], length=[],
@@ -595,7 +626,7 @@ class NeuralynxRawIO(BaseRawIO):
         # create segment with subdata block/t_start/t_stop/length for each channel
         for i, fileEntry in enumerate(self.ncs_filenames.items()):
             chan_uid = fileEntry[0]
-            data = chanSectMap[chan_uid][2]
+            data = self._get_file_map(chanSectMap[chan_uid][2])
 
             # create a memmap for each record section of the current file
             curSects = chanSectMap[chan_uid][0]
