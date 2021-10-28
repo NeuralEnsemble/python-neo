@@ -366,6 +366,26 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
         # self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), n_gaps + 1)
 
 
+class TestMultiSamplingRates(CommonNeuralynxIOTest, unittest.TestCase):
+    def test_multi_sampling_rates(self):
+        # Test Cheetah 6.4.1, with different sampling rates across ncs files.
+        nio = NeuralynxIO(self.get_local_path('neuralynx/Cheetah_v6.4.1dev/original_data'))
+        block = nio.read_block()
+
+        self.assertEqual(len(block.segments), 1)
+        seg = block.segments[0]
+        self.assertEqual(len(seg.analogsignals), 3)
+        self.assertEqual(len(np.unique([sig.sampling_rate for sig in seg.analogsignals])), 3)
+
+        # check if the sampling rate of analogsignals are correct
+        expected_rates = [2, 2.66667, 32] * pq.kHz
+        for sig in block.segments[0].analogsignals:
+            observed_rate = sig.sampling_rate.rescale(expected_rates.units)
+            # using isclose for flexible float comparison
+            self.assertTrue(any([np.isclose(observed_rate, exp_rate)]) for
+                            exp_rate in expected_rates)
+
+
 def compare_neo_content(bl1, bl2):
     print('*' * 5, 'Comparison of blocks', '*' * 5)
     object_types_to_test = [Segment, AnalogSignal,
