@@ -91,7 +91,24 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertDictEqual(rawio._sigs_length[2], {('CSC1', '48'): 897536})
         self.assertListEqual(rawio._sigs_t_stop, [8427.831990, 8487.768498, 8515.816549])
         self.assertListEqual(rawio._sigs_t_start, [8408.806811, 8427.832053, 8487.768561])
-        self.assertEqual(len(rawio._sigs_memmaps), 3)  # check only that there are 3 memmaps
+        self.assertEqual(len(rawio._sigs_memmaps), 3)  # check that there are only 3 memmaps
+
+        # Test Cheetah 6.4.1, with different sampling rates across ncs files.
+        rawio = NeuralynxRawIO(self.get_local_path('neuralynx/Cheetah_v6.4.1dev/original_data'))
+        rawio.parse_header()
+
+        self.assertEqual(rawio._nb_segment, 1)
+        seg_idx = 0
+
+        self.assertEqual(rawio.signal_streams_count(), 3)
+        self.assertListEqual(rawio._timestamp_limits, [(1614363777985169, 1614363778481169)])
+        self.assertDictEqual(rawio._sigs_length[seg_idx], {('CSC1', '26'): 15872,
+                                                           ('LFP4', '41'): 1024,
+                                                           ('WE1', '33'): 512})
+        self.assertListEqual(rawio._sigs_t_stop, [1614363778.481169])
+        self.assertListEqual(rawio._sigs_t_start, [1614363777.985169])
+        # check that there are only 3 memmaps
+        self.assertEqual(len(rawio._sigs_memmaps[seg_idx]), 3)
 
     def test_single_file_mode(self):
         """
