@@ -386,7 +386,7 @@ class NcsSectionsFactory:
             endTime = NcsSectionsFactory.calc_sample_time(nomFreq, lts, lnb)
             curBlock = NcsSection(0, ts0, lastBlkI, endTime, numSampsForPred)
             nb.sects.append(curBlock)
-            nb.sampFreqUsed = numSampsForPred / (lts - ts0) * 1e6
+            nb.sampFreqUsed = (numSampsForPred + lnb) / (endTime - ts0) * 1e6
             nb.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(nb.sampFreqUsed)
 
         # otherwise parse records to determine blocks using default maximum gap length
