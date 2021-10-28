@@ -120,6 +120,35 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(len(rawio.header['signal_channels']), 0)
         self.assertEqual(len(rawio.header['event_channels']), 0)
 
+    def test_exclude_filenames(self):
+        # exclude single ncs file from session
+        dname = self.get_local_path('neuralynx/Cheetah_v5.6.3/original_data/')
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filename='CSC2.ncs')
+        rawio.parse_header()
+
+        self.assertEqual(rawio._nb_segment, 2)
+        self.assertEqual(len(rawio.ncs_filenames), 1)
+        self.assertEqual(len(rawio.nev_filenames), 1)
+        sigHdrs = rawio.header['signal_channels']
+        self.assertEqual(sigHdrs.size, 1)
+        self.assertEqual(sigHdrs[0][0], 'CSC1')
+        self.assertEqual(sigHdrs[0][1], '58')
+        self.assertEqual(len(rawio.header['spike_channels']), 8)
+        self.assertEqual(len(rawio.header['event_channels']), 2)
+
+        # exclude multiple files from session
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filename=['Events.nev', 'CSC2.ncs'])
+        rawio.parse_header()
+
+        self.assertEqual(rawio._nb_segment, 2)
+        self.assertEqual(len(rawio.ncs_filenames), 1)
+        self.assertEqual(len(rawio.nev_filenames), 0)
+        sigHdrs = rawio.header['signal_channels']
+        self.assertEqual(sigHdrs.size, 1)
+        self.assertEqual(sigHdrs[0][0], 'CSC1')
+        self.assertEqual(sigHdrs[0][1], '58')
+        self.assertEqual(len(rawio.header['spike_channels']), 8)
+        self.assertEqual(len(rawio.header['event_channels']), 0)
 
 class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
     """

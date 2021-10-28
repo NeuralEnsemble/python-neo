@@ -78,7 +78,8 @@ class NeuralynxRawIO(BaseRawIO):
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
                   ('nb_valid', 'uint32'), ('samples', 'int16', (NcsSection._RECORD_SIZE))]
 
-    def __init__(self, dirname='', filename='', keep_original_times=False, **kargs):
+    def __init__(self, dirname='', filename='', exclude_filename=None, keep_original_times=False,
+                 **kargs):
         """
         Initialize io for either a directory of Ncs files or a single Ncs file.
 
@@ -90,6 +91,9 @@ class NeuralynxRawIO(BaseRawIO):
         filename: str
             name of a single ncs, nse, nev, or ntt file to include in dataset. If used,
             dirname must not be provided.
+        exclude_filename: str or list
+            name of a single ncs, nse, nev or ntt file or list of such files. Expects plain
+            filenames (without directory path).
         keep_original_times:
             if True, keep original start time as in files,
             otherwise set 0 of time to first time in dataset
@@ -104,6 +108,7 @@ class NeuralynxRawIO(BaseRawIO):
             raise ValueError("One of dirname or filename must be provided.")
 
         self.keep_original_times = keep_original_times
+        self.exclude_filename = exclude_filename
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
@@ -151,6 +156,15 @@ class NeuralynxRawIO(BaseRawIO):
 
             dirname, fname = os.path.split(self.filename)
             filenames = [fname]
+
+        if not isinstance(self.exclude_filename, (list, set, np.ndarray)):
+            self.exclude_filename = [self.exclude_filename]
+
+        # remove files that were explicitly excluded
+        if self.exclude_filename is not None:
+            for excl_file in self.exclude_filename:
+                if excl_file in filenames:
+                    filenames.remove(excl_file)
 
         for filename in filenames:
             filename = os.path.join(dirname, filename)
