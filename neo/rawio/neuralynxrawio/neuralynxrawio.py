@@ -147,7 +147,7 @@ class NeuralynxRawIO(BaseRawIO):
             dirname, fname = os.path.split(self.filename)
             filenames = [fname]
 
-        if isinstance(self.exclude_filename, str):
+        if not isinstance(self.exclude_filename, (list, set, np.ndarray)):
             self.exclude_filename = [self.exclude_filename]
 
         # remove files that were explicitly excluded
