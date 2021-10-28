@@ -651,7 +651,7 @@ class NeuralynxRawIO(BaseRawIO):
                 latest_sections = v[0]
             # time tolerance of +- one data package (in microsec)
             tolerance = 512 / min(v[0].sampFreqUsed, latest_sections.sampFreqUsed) *1e6
-            if not v[0].is_equivalent(latest_sections, abs_tol=tolerance):
+            if v[0].is_equivalent(latest_sections, abs_tol=tolerance):
                 revSectMap.setdefault(latest_sections, []).append(k)
             else:
                 revSectMap[v[0]] = [k]
