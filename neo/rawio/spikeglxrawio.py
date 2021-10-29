@@ -150,15 +150,6 @@ class SpikeGLXRawIO(BaseRawIO):
                 stream_name = signal_stream['name']
                 sig_ann = self.raw_annotations['blocks'][0]['segments'][seg_index]['signals'][c]
 
-                # channel location
-                info = self.signals_info_dict[seg_index, stream_name]
-                if 'channel_location' in info:
-                    loc = info['channel_location']
-                    # one fake channel  for "sys0"
-                    loc = np.concatenate((loc, [[0., 0.]]), axis=0)
-                    for ndim in range(loc.shape[1]):
-                        sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = loc[:, ndim]
-
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
@@ -287,15 +278,6 @@ def scan_files(dirname):
             info['channel_names'] = [txt.split(';')[0] for txt in meta['snsChanMap']]
             info['channel_gains'] = channel_gains
             info['channel_offsets'] = np.zeros(info['num_chan'])
-
-            if signal_kind == 'ap':
-                channel_location = []
-                for e in meta['snsShankMap']:
-                    x_pos = int(e.split(':')[1])
-                    y_pos = int(e.split(':')[2])
-                    channel_location.append([x_pos, y_pos])
-
-                info['channel_location'] = np.array(channel_location)
 
             info_list.append(info)
 
