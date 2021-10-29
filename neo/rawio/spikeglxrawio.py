@@ -35,6 +35,11 @@ https://billkarsh.github.io/SpikeGLX/#offline-analysis-tools
 https://billkarsh.github.io/SpikeGLX/#metadata-guides
 https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/spikeglxrecordingextractor/spikeglxrecordingextractor.py
 
+This reader handle:
+
+imDatPrb_type=1 (NP 1.0)
+imDatPrb_type=21 (NP 2.0, single multiplexed shank)
+imDatPrb_type=24 (NP 2.0, 4-shank)
 
 Author : Samuel Garcia
 """
@@ -229,13 +234,20 @@ def scan_files(dirname):
                 # metad['imroTbl'] contain two gain per channel  AP and LF
                 # except for the last fake channel
                 per_channel_gain = np.ones(num_chan, dtype='float64')
-                if signal_kind == 'ap':
-                    index_imroTbl = 3
-                elif signal_kind == 'lf':
-                    index_imroTbl = 4
-                # the last channel doesn't have a gain value
-                for c in range(num_chan - 1):
-                    per_channel_gain[c] = 1. / float(meta['imroTbl'][c].split(' ')[index_imroTbl])
+                if meta['imDatPrb_type'] == '0':
+                    if signal_kind == 'ap':
+                        index_imroTbl = 3
+                    elif signal_kind == 'lf':
+                        index_imroTbl = 4
+                        for c in range(num_chan - 1):
+                            per_channel_gain[c] = 1. / float(meta['imroTbl'][c].split(' ')[index_imroTbl])
+                elif meta['imDatPrb_type'] == '21' and signal_kind == 'ap':
+                    per_channel_gain[:-1] = 80.
+                elif meta['imDatPrb_type'] == '24' and signal_kind == 'ap':
+                    per_channel_gain[:-1] = 80.
+                else:
+                    raise NotImplementedError('This meta file version of spikeglx is not implemenetd')
+
                 gain_factor = float(meta['imAiRangeMax']) / 512
                 channel_gains = per_channel_gain * gain_factor * 1e6
 
