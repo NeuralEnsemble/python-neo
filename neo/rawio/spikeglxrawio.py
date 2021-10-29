@@ -57,13 +57,19 @@ import numpy as np
 class SpikeGLXRawIO(BaseRawIO):
     """
     Class for reading data from a SpikeGLX system
+    
+    dirname: 
+        The spikeglx folder containing meta/bin files
+    load_sync_channel=False/True
+        The last channel (SY0) of each stream is a fake channel used for synchronisation.
     """
     extensions = []
     rawmode = 'one-dir'
 
-    def __init__(self, dirname=''):
+    def __init__(self, dirname='', load_sync_channel=False):
         BaseRawIO.__init__(self)
         self.dirname = dirname
+        self.load_sync_channel = load_sync_channel
 
     def _source_name(self):
         return self.dirname
@@ -107,6 +113,8 @@ class SpikeGLXRawIO(BaseRawIO):
                 signal_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16',
                                     info['units'], info['channel_gains'][local_chan],
                                     info['channel_offsets'][local_chan], stream_id))
+            if not self.load_sync_channel:
+                signal_channels = signal_channels[:-1]
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -170,15 +178,33 @@ class SpikeGLXRawIO(BaseRawIO):
         memmap = self._memmaps[seg_index, stream_id]
 
         if channel_indexes is None:
-            channel_indexes = slice(channel_indexes)
-
-        if not isinstance(channel_indexes, slice):
+            if self.load_sync_channel:
+                channel_selection = slice(None)
+            else:
+                channel_selection = slice(-1)
+        elif isinstance(channel_indexes, slice):
+            if self.load_sync_channel:
+                # simple
+                channel_selection = channel_indexes
+            else:
+                # more tricky because negative
+                sl_start = channel_indexes.start
+                sl_stop = channel_indexes.stop
+                sl_step = channel_indexes.step
+                if sl_start is not None and sl_start < 0:
+                    sl_start = sl_start - 1
+                if sl_stop is not None and sl_stop < 0:
+                    sl_stop = sl_stop - 1
+                channel_selection = slice(sl_start, sl_stop, sl_step)
+        elif not isinstance(channel_indexes, slice):
             if np.all(np.diff(channel_indexes) == 1):
                 # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
                 # and so keep the underlying memmap
-                local_chans = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
+                channel_selection = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
+        else:
+            raise ValueError('get_analogsignal_chunk : channel_indexes must be slice or list or array of int')
 
-        raw_signals = memmap[slice(i_start, i_stop), channel_indexes]
+        raw_signals = memmap[slice(i_start, i_stop), channel_selection]
 
         return raw_signals
 
