@@ -91,8 +91,10 @@ class SpikeGLXRawIO(BaseRawIO):
             self.signals_info_dict[key] = info
 
             # create memmap
-            data = np.memmap(info['bin_file'], dtype='int16', mode='r',
-                        shape=(info['sample_length'], info['num_chan']), offset=0, order='C')
+            data = np.memmap(info['bin_file'], dtype='int16', mode='r', offset=0, order='C')
+            # this should be (info['sample_length'], info['num_chan'])
+            # be some file are shorten
+            data = data.reshape(-1, info['num_chan'])
             self._memmaps[key] = data
 
         # create channel header
@@ -201,6 +203,8 @@ class SpikeGLXRawIO(BaseRawIO):
                 # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
                 # and so keep the underlying memmap
                 channel_selection = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
+            else:
+                channel_selection = channel_indexes
         else:
             raise ValueError('get_analogsignal_chunk : channel_indexes must be slice or list or array of int')
 
