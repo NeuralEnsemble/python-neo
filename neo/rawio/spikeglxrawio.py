@@ -178,7 +178,6 @@ class SpikeGLXRawIO(BaseRawIO):
                                 stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
         memmap = self._memmaps[seg_index, stream_id]
-
         if channel_indexes is None:
             if self.load_sync_channel:
                 channel_selection = slice(None)
@@ -193,10 +192,10 @@ class SpikeGLXRawIO(BaseRawIO):
                 sl_start = channel_indexes.start
                 sl_stop = channel_indexes.stop
                 sl_step = channel_indexes.step
-                if sl_start is not None and sl_start < 0:
-                    sl_start = sl_start - 1
                 if sl_stop is not None and sl_stop < 0:
                     sl_stop = sl_stop - 1
+                elif sl_stop is None:
+                    sl_stop = -1
                 channel_selection = slice(sl_start, sl_stop, sl_step)
         elif not isinstance(channel_indexes, slice):
             if np.all(np.diff(channel_indexes) == 1):
@@ -297,6 +296,7 @@ def scan_files(dirname):
             info = {}
             info['name'] = name
             info['meta'] = meta
+            info['meta_file'] = str(meta_filename)
             info['bin_file'] = str(bin_filename)
             for k in ('niSampRate', 'imSampRate'):
                 if k in meta:
