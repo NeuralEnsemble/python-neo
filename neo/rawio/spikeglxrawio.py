@@ -57,8 +57,8 @@ import numpy as np
 class SpikeGLXRawIO(BaseRawIO):
     """
     Class for reading data from a SpikeGLX system
-    
-    dirname: 
+
+    dirname:
         The spikeglx folder containing meta/bin files
     load_sync_channel=False/True
         The last channel (SY0) of each stream is a fake channel used for synchronisation.
@@ -202,11 +202,13 @@ class SpikeGLXRawIO(BaseRawIO):
             if np.all(np.diff(channel_indexes) == 1):
                 # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
                 # and so keep the underlying memmap
-                channel_selection = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
+                channel_selection = slice(channel_indexes[0],
+                                          channel_indexes[0] + len(channel_indexes))
             else:
                 channel_selection = channel_indexes
         else:
-            raise ValueError('get_analogsignal_chunk : channel_indexes must be slice or list or array of int')
+            raise ValueError('get_analogsignal_chunk : channel_indexes'
+                             'must be slice or list or array of int')
 
         raw_signals = memmap[slice(i_start, i_stop), channel_selection]
 
@@ -236,11 +238,11 @@ def scan_files(dirname):
             # Example file name structure:
             # Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
             # The filenames consist of 3 or 4 parts separated by `.`
-            #   * "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user
-            #      at recording time.
-            #   * "_gt0_" will give the `seg_index` (here 0)
-            #   * "nidq" or "imec0" will give the `device` variable
-            #   * "lf" or "ap" will be the `signal_kind` variable
+            # 1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user
+            #    at recording time.
+            # 2. "_gt0_" will give the `seg_index` (here 0)
+            # 3. "nidq" or "imec0" will give the `device` variable
+            # 4. "lf" or "ap" will be the `signal_kind` variable
             # `stream_name` variable is the concatenation of `device.signal_kind`
             name = file.split('.')[0]
             r = re.findall(r'_g(\d*)_t', name)
@@ -261,13 +263,15 @@ def scan_files(dirname):
                     elif signal_kind == 'lf':
                         index_imroTbl = 4
                         for c in range(num_chan - 1):
-                            per_channel_gain[c] = 1. / float(meta['imroTbl'][c].split(' ')[index_imroTbl])
+                            v = meta['imroTbl'][c].split(' ')[index_imroTbl]
+                            per_channel_gain[c] = 1. / float(v)
                 elif meta['imDatPrb_type'] == '21' and signal_kind == 'ap':
                     per_channel_gain[:-1] = 80.
                 elif meta['imDatPrb_type'] == '24' and signal_kind == 'ap':
                     per_channel_gain[:-1] = 80.
                 else:
-                    raise NotImplementedError('This meta file version of spikeglx is not implemenetd')
+                    raise NotImplementedError('This meta file version of spikeglx'
+                                             'is not implemented')
 
                 gain_factor = float(meta['imAiRangeMax']) / 512
                 channel_gains = per_channel_gain * gain_factor * 1e6
