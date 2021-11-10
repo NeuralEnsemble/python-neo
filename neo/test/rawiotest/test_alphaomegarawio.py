@@ -22,11 +22,15 @@ Author: Samuel Garcia
 
 """
 
+import logging
 import unittest
 
 from neo.rawio.alphaomegarawio import AlphaOmegaRawIO
 
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
+
+
+logging.getLogger().setLevel(logging.INFO)
 
 
 class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
