@@ -91,6 +91,30 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
     else:
         return results
 
+class FilterCondition():
+    def __init__(self, z):
+        pass
+
+    def test(self, x):
+        return True
+
+class less_than(FilterCondition):
+
+    def __init__(self, z):
+        self.control = z
+
+    def test(self, x):
+        return x < self.control
+
+class equal(FilterCondition):
+
+    def __init__(self, z):
+        self.control = z
+
+    def test(self, x):
+        return x == self.control
+
+    
 
 class Container(BaseNeo):
     """
