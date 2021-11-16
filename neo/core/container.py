@@ -76,7 +76,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
                 if (hasattr(obj, key) and getattr(obj, key) == value and
                         all([obj is not res for res in results])):
                     results.append(obj)
-                elif (key in obj.annotations and obj.annotations[key] == value and
+                elif (key in obj.annotations and obj.annotations[key].test(key) and #elif (key in obj.annotations and obj.annotations[key].test(key) and AttributeError: 'int' object has no attribute 'test'
                           all([obj is not res for res in results])):
                     results.append(obj)
 
@@ -98,14 +98,6 @@ class FilterCondition():
     def test(self, x):
         return True
 
-class less_than(FilterCondition):
-
-    def __init__(self, z):
-        self.control = z
-
-    def test(self, x):
-        return x < self.control
-
 class equal(FilterCondition):
 
     def __init__(self, z):
@@ -114,7 +106,49 @@ class equal(FilterCondition):
     def test(self, x):
         return x == self.control
 
-    
+class less_than(FilterCondition):
+
+    def __init__(self, z):
+        self.control = z
+
+    def test(self, x):
+        return x < self.control
+
+class more_than(FilterCondition):
+
+    def __init__(self, z):
+        self.control=z
+
+    def test(self, x):
+        return x > self.control
+
+class is_in(FilterCondition):
+
+    def __init__(self, z):
+        self.control = z
+
+    def test(self, x):
+        if(type(x) == list):
+            return x.contains(self.control)
+        elif(type(x) == int):
+            return x == self.control
+        else:
+            raise SyntaxError('parameter not of type list or int')
+
+class in_range(FilterCondition):
+
+    def __init__(self, a: int, b: int):
+        if(type(a) != int or type(b) != int):
+            raise SyntaxError("parameters not of type int")
+        else:
+            self.control=[]
+            for num in range(a, b+1):
+                self.control.append(num)
+
+    def test(self, x):
+        is_in(self.control)
+
+
 
 class Container(BaseNeo):
     """
