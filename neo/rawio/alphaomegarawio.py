@@ -9,7 +9,7 @@ Listing files
 
 The specifications are mostly extracted from the "AlphaRS User Manual V1.0.1.pdf"
 manual provided with the AlphaRS hardware. The specifications are described in
-the chapter 6: ALPHARS FILE FORMAT. See at the end of the file for file format
+the chapter 6: ALPHARS FILE FORMAT. See at the end of this file for file format
 blocks description.
 Some informations missing from the file specifications were kindly provided by
 AlphaOmega engineers:
@@ -33,7 +33,7 @@ AlphaOmega engineers:
           value is the timestamp of the first sample in the same block which is
           the index of the sample from the HW boot
     - final block: the stop condition for reading MPX blocks is based on the
-      length of the block: if the block has length 65535 (or -1 in signed interger
+      length of the block: if the block has length 65535 (or -1 in signed integer
       value) we know we have reached the end of the file
 
 Still questions/need info:
@@ -56,7 +56,10 @@ Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
 :attribute __FOLLOW_SPEC: the AlphaOmega specifiction describe some field that
                           seems to be different in the recorded data. If True it
                           will follow the look-alike buggy spec implementation.
-                          Default to False.
+                          Default to False. Be aware that this affects only when
+                          the module is loaded so changing this attribute will
+                          have no effect once it's loaded. You should change it
+                          in the source code.
 :type __FOLLOW_SPEC: bool
 """
 
@@ -92,6 +95,7 @@ class AlphaOmegaRawIO(BaseRawIO):
     A block is a recording define in a *.lsx file. AlphaOmega record system
     creates a new file each time the software is closed then re-opened.
     A segment is a continuous record (when record starts/stops).
+    If file are not referenced in a *.lsx file, they are put in the same block.
 
     Because channels must be gathered into coherent streams, channels names MUST
     be the default channel names in AlphaRS software (or Alpha LAB SNR).
@@ -126,6 +130,8 @@ class AlphaOmegaRawIO(BaseRawIO):
         else:
             self.logger.error(f"{self.dirname} is not a folder")
         self._prune_channels = prune_channels
+        self._opened_files = {}
+        self._filenames = {}
 
     def _explore_folder(self):
         """
@@ -134,7 +140,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         it will load them without splitting them into blocks.
         It does not explores the folder recursively.
         """
-        self.filenames = defaultdict(list)
+        self._filenames = defaultdict(list)
 
         # first check if there is any *.mpx files
         filenames = list(filter(lambda x: x.is_file(), self.dirname.glob("*.mpx")))
@@ -142,10 +148,12 @@ class AlphaOmegaRawIO(BaseRawIO):
             self.logger.error(f"Found no AlphaOmega *.mpx files in {self.dirname}")
         else:
             index_files = list(filter(lambda x: x.is_file(), self.dirname.glob("*.lsx")))
-            index_files.sort()  # not very usefull but we should expect the original names to be in increasing lexical order
+            # the following is not very usefull but we should expect the original
+            # names to be in increasing lexical order
+            index_files.sort()
             if not index_files:
                 self.logger.warning("No *.lsx files found. Will try to load all *.mpx files")
-                self.filenames[""].extend(filenames)
+                self._filenames[""].extend(filenames)
             else:
                 for index_file in index_files:
                     with open(index_file, "r") as f:
@@ -158,11 +166,11 @@ class AlphaOmegaRawIO(BaseRawIO):
                             if not filename.is_file():
                                 self.logger.warning(f"File {filename} does not exist")
                             else:
-                                self.filenames[index_file.name].append(filename)
+                                self._filenames[index_file.name].append(filename)
                                 filenames.remove(filename)
                 if filenames:
                     self.logger.info("Some *.mpx files not referenced. Will try to load them.")
-                    self.filenames[""].extend(filenames)
+                    self._filenames[""].extend(filenames)
 
     def _source_name(self):
         return str(self.dirname)
@@ -183,7 +191,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         segmented_analog_channels = {}
         digital_channels = {}
         channel_type = {}
-        stream_data = {}
+        stream_data_channels = {}
         ports = {}
         events = []
         unknown_blocks = []
@@ -327,7 +335,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                     channel_type[channel_number] = "stream_data"
                     name_length = length - 18
                     name = get_name(f, name_length)
-                    stream_data[channel_number] = {
+                    stream_data_channels[channel_number] = {
                         "sample_rate": sample_rate * 1000,
                         "name": name,
                     }
@@ -449,6 +457,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             segmented_analog_channels,
             digital_channels,
             channel_type,
+            stream_data_channels,
             ports,
             events,
             unknown_blocks
@@ -513,15 +522,19 @@ class AlphaOmegaRawIO(BaseRawIO):
                     for f in segment_to_merge["spikes"][channel_id]["positions"]:
                         segment["spikes"][channel_id]["positions"][f].extend(segment_to_merge["spikes"][channel_id]["positions"][f])
                 segment["ao_events"].extend(segment_to_merge["ao_events"])
+                for channel_id in segment_to_merge["stream_data"]:
+                    # To be honest, I have no idea what is a
+                    # stream_data_channels so let's just overwrite it here
+                    segment["stream_data"][channel_id] = segment_to_merge["stream_data"][channel_id]
                 block.remove(segment_to_merge)
 
     def _parse_header(self):
         blocks = []
-        for index_file, filenames in self.filenames.items():
+        for index_file, filenames in self._filenames.items():
             segments = []
             continuous_analog_channels = {}
             for i, filename in enumerate(filenames):
-                metadata, cac, sac, dc, ct, p, e, ub = self._read_file_blocks(filename, self._prune_channels)
+                metadata, cac, sac, dc, ct, sd, p, e, ub = self._read_file_blocks(filename, self._prune_channels)
                 metadata["filenames"] = [filename]
                 streams = {}
                 for stream_name, channel_name_start, stream_id in self.STREAM_CHANNELS:
@@ -537,6 +550,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                     "events": events,
                     "spikes": sac,
                     "ao_events": e,
+                    "stream_data": sd,
                 }
 
                 segments.append(segment)
@@ -607,7 +621,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         self.header = {}
-        self.header["nb_block"] = len(self.filenames)
+        self.header["nb_block"] = len(self._filenames)
         self.header["nb_segment"] = [len(segment) for segment in self._blocks]
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
@@ -726,9 +740,17 @@ class AlphaOmegaRawIO(BaseRawIO):
     def _rescale_event_timestamp(self, event_timestamps, dtype,
                                  event_channel_index):
         event_id = int(self.header["event_channels"]["id"][event_channel_index])
-        # TODO: we should not assume that the first block/segment has this
-        # event channel, we should find one segment that has it for sure
-        event = self._blocks[0][0]["events"][event_id]
+        for block in self._blocks:
+            for segment in block:
+                if event_id in segment["events"]:
+                    event = segment["events"][event_id]
+                    break
+            else:
+                # if no event of this type were found we continue to the next
+                # block. Trick found here: https://stackoverflow.com/a/3150107
+                continue
+            # Inner loop broken (event found), breaking outer loop
+            break
         event_times = event_timestamps.astype(dtype) / event["sample_rate"]
         return event_times
 
@@ -747,6 +769,7 @@ def get_name(f, name_length):
 
 
 
+HeaderType = struct.Struct("<Hc")
 """All blocks start with the same common structure:
     - length (ushort): the size (in bytes) of the block
     - block_type (char): the type of block (described after)
@@ -754,36 +777,41 @@ def get_name(f, name_length):
 There are two main block types:
     1. definition blocks (types H, 2, S, B): these block describe metadata of
        channels and ports
-    2. data blocks (types 5, E): these blocks records data of the previously
-       defined channels and ports
+    2. data blocks (types 5, E): these blocks contains records data of the
+       previously defined channels and ports
 
 Other blocks exist in the data but are ignored in this implementation as per the
 specification: "Any block type other than the ones described below should be
 ignored."
 """
-HeaderType = struct.Struct("<Hc")
 
+SDataHeader = struct.Struct("<xlhBBBBBBHBxddlB10s4sxl")
 """Type H block is unique and the first block. It specifies file metadatas:
+    - alignment byte: ignore
     - next_block (long): offset of the next block from beginning of file
     - version (short): program version number
     - hour (unsigned char): start hour of data saving
     - minute (unsigned char): start minute of the data saving
     - second (unsigned char): start second of the data saving
     - hsecond (unsigned char): start 100th of seconds of the data saving
-    - day
-    - mont
-    - year
-    - dayofweek
-    - minimum_time
-    - maximum_time
-    - erase_count
-    - map_version
-    - application_name
-    - resource_version
-    - reserved
+    - day (unsigned char): start day of the data saving
+    - month (unsigned char): start month of the data saving
+    - year (unsigned short): start year of the data saving
+    - dayofweek (unsigned char): start day of week of the data saving
+    - minimum_time (double): minimal acquisition time in seconds
+    - maximum_time (double): maximal acquisition time in seconds
+    - erase_count (long): number of erase messages in the file
+    - map_version (unsigned char): MPX file format version (only 4 if supported
+      by this implementation)
+    - application_name (10-char string): name of the recording application.
+      Should be "ARS" for AlphaRS hardware or "ALab SNR" for AlphaLab SnR hardware
+    - resource_version (4-char string): C++ version used to compile recording
+      software
+    - alignment byte: ignore
+    - reserved (long): not used
 """
-SDataHeader = struct.Struct("<xlhBBBBBBHBxddlB10s4sxl")
 
+Type2Block = struct.Struct("<xlhhhxBBB")
 """There are two (or three, depending on your interpretation) types of Type 2
 blocks:
     1. Analog channels definition
@@ -802,7 +830,7 @@ all type 2 blocks starts with the same structure:
     - spike_color_green (unsigned char)
     - spike_color_red (unsigned char)
 """
-Type2Block = struct.Struct("<xlhhhxBBB")
+SDefAnalog = struct.Struct("<hffhh")
 """
 Then if is_analog and is_input:
     - mode (short): 0=Continuous, 1=(Level or Segmented)
@@ -811,14 +839,14 @@ Then if is_analog and is_input:
     - spike_count (short): total number of segments captured in this channel
     - mode_spike: see top docstring of this module
 """
-SDefAnalog = struct.Struct("<hffhh")
+SDefContinAnalog = struct.Struct("<fh")
 """
     Then if mode is Continuous:
         - duration (float): unknown
         - total_gain_100 (short): 100 x total_gain applied to this channel
         - name (n-char string): channel name; n=length-38
 """
-SDefContinAnalog = struct.Struct("<fh")
+SDefLevelAnalog =  struct.Struct("<ffhhhh")
 """
     Then if mode is Level of Segmented:
         - pre_trigm_sec (float): number of seconds before segment trigger
@@ -829,7 +857,7 @@ SDefContinAnalog = struct.Struct("<fh")
         - total_gain_100 (short): see above
         - name (n-char string): channel name; n=length-48
 """
-SDefLevelAnalog =  struct.Struct("<ffhhhh")
+SDefDigitalInput = struct.Struct("<fhfh")
 """
 Then if not is_analog and is_input
     - sample_rate (float): see above
@@ -839,10 +867,10 @@ Then if not is_analog and is_input
       could be useful for segments merged from several files)
     - name (n-char string): channel name; n=length-30
 """
-SDefDigitalInput = struct.Struct("<fhfh")
 """All other combinations of is_analog and is_input are unknown (not described
 in the specification and therefore not supported by this implementation)"""
 
+SDefStream = struct.Struct("<xlhf")
 """Type S block: Stream data definition:
     - alignment byte: ignore
     - next_block (long): see above
@@ -851,8 +879,8 @@ in the specification and therefore not supported by this implementation)"""
     - name (n-char string): channel name; n=length-18
 
 """
-SDefStream = struct.Struct("<xlhf")
 
+SDefPortX = struct.Struct("<xiifH")
 """Type b block: Digital Input/Output port definition:
     - board_number (int): not sure… maybe in case of multiple connected
       AlphaOmega setups?
@@ -861,46 +889,46 @@ SDefStream = struct.Struct("<xlhf")
     - prev_value (ushort): not used (see above)
     - name (n-char string): port name; n=length-18
 """
-SDefPortX = struct.Struct("<xiifH")
 
+SDataChannel = struct.Struct("<ch")
 """Type 5 block: channel data:
     - unit_number (char): for analog segmented channels: unit number; 0=Level,
       1=Unit1, 2=Unit2, 3=Unit3, 4=Unit4
     - channel_number: the previously defined channel_number (in one of the
       definition blocks)
 """
-SDataChannel = struct.Struct("<ch")
+SDataChannel_sample_id = struct.Struct("<L")
 """
 Then for analog channels:
     - sample_value (n-short): array of data values
     - first_sample_number (ulong): for continuous channels: first sample number
       in the channel records
 """
-SDataChannel_sample_id = struct.Struct("<L")
+SDataChannelDigital = struct.Struct("<Lh")
 """
-Then for digital channels and ports:
-
-    .. warning::
-        this is what the specification says…
+Then for digital channels:
 
     - sample_number (ulong): the sample number of the event
     - value (short): value of the event
-
-    .. warning::
-        …but this is what data looks like
-
-    - value (ushort)
-    - sample_number (ulong)
 """
 if __FOLLOW_SPEC:
-    SDataChannelDigital = struct.Struct("<Lh")
+    SDataChannelPort = struct.Struct("<Lh")
 else:
-    SDataChannelDigital = struct.Struct("<HL")
+    SDataChannelPort = struct.Struct("<HL")
+    """
+    Then for digital ports:
+        - value (ushort)
+        - sample_number (ulong)
 
+    .. warning::
+        The specification says that for port channels it should be the same as for
+        digital channels but the data says otherwise
+    """
+
+SAOEvent = struct.Struct("<cL")
 """Type E: stream data block:
     - type_event (char): event type only b"S" for now
     - timestamp (ulong): see above
     - stream_data (n-char): Stream Data - spec says: "Refer to SreamFormat.h or
                             use dll to decipher this stream of data"; n=length-8
 """
-SAOEvent = struct.Struct("<cL")
