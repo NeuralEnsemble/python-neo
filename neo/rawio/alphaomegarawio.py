@@ -635,6 +635,28 @@ class AlphaOmegaRawIO(BaseRawIO):
 
         self._generate_minimal_annotations()
 
+        # We open files and create mmap objects
+        for block in self._filenames:
+            for filename in self._filenames[block]:
+                if not filename in self._opened_files:
+                    self._opened_files[filename] = {}
+                    self._opened_files[filename]["file"] = filename.open(mode="rb")
+                    self._opened_files[filename]["mmap"] = mmap.mmap(
+                        self._opened_files[filename]["file"].fileno(),
+                        0,
+                        access=mmap.ACCESS_READ,
+                    )
+
+    def __del__(self):
+        # To be sure we close the file when object is deleted. Be aware that the
+        # __del__ method is not necessarily called when interpreter exits so we
+        # could still leave file opened. This is probably bad…
+        for filename in self._opened_files:
+            self._opened_files[filename]["mmap"].close()
+            self._opened_files[filename]["file"].close()
+        if hasattr(super(), "__del__"):
+            super().__del__()
+
     def _segment_t_start(self, block_index, seg_index):
         return self._blocks[block_index][seg_index]["metadata"]["start_time"]
 
@@ -706,12 +728,14 @@ class AlphaOmegaRawIO(BaseRawIO):
             # true for hard drives but shouldn't hurt flash memory
             file_chunks[filename].sort(key=lambda x: x[0])
         for filename in file_chunks:
-            # TODO: we should open and create mmap in _parse_header to avoid
-            # re-opening files at each method call
-            with filename.open("rb") as f:
-                with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as m:
-                    for channel_index, chunk_index, file_position, chunk_size in file_chunks[filename]:
-                        sigs[chunk_index-first_pos[channel_index]-min_size:chunk_index-first_pos[channel_index]+chunk_size-min_size, channel_index] = np.frombuffer(m, dtype=np.short, count=chunk_size, offset=file_position)
+            for channel_index, chunk_index, file_position, chunk_size in file_chunks[filename]:
+                sig_offset = chunk_index - first_pos[channel_index] - min_size
+                sigs[sig_offset:sig_offset + chunk_size, channel_index] = np.frombuffer(
+                    self._opened_files[filename]["mmap"],
+                    dtype=np.short,
+                    count=chunk_size,
+                    offset=file_position
+                )
         return sigs[i_start - min_size:i_stop - min_size, :]
 
 
