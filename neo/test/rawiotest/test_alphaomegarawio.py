@@ -57,7 +57,9 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
             with self.subTest(lsx_file=lsx_file.name):
                 self.assertIn(lxc_file, reader._filenames)
 
-        all_filenames = sorted(f for lsx_file in reader._filenames for f in reader._filenames[lsx_file])
+        all_filenames = sorted(
+            f for lsx_file in reader._filenames for f in reader._filenames[lsx_file]
+        )
         all_mpx = sorted(list(path.glob("*.mpx")))
         self.assertSequenceEqual(all_filenames, all_mpx)
 
@@ -194,7 +196,9 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         nb_segments = [2, 1]
         for block_index in range(nb_blocks):
             with self.subTest(block_index=block_index):
-                self.assertEqual(reader.segment_count(block_index), nb_segments[block_index])
+                self.assertEqual(
+                    reader.segment_count(block_index), nb_segments[block_index]
+                )
 
         nb_streams = 5
         self.assertEqual(reader.signal_streams_count(), nb_streams)
@@ -220,11 +224,16 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         for block_index in range(nb_block):
             for seg_index in range(nb_segments[block_index]):
                 for event_index in range(nb_event_channels):
-                    with self.subTest(block_index=block_index, segment_index=seg_index, event_index=event_index):
+                    with self.subTest(
+                        block_index=block_index,
+                        segment_index=seg_index,
+                        event_index=event_index,
+                    ):
                         self.assertEqual(
                             reader.event_count(block_index, seg_index, event_index),
                             nb_events[block_index][seg_index][event_index],
                         )
+
 
 if __name__ == "__main__":
     unittest.main()
