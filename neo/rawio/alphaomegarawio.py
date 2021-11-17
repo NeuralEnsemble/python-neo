@@ -400,7 +400,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                         assert channel_number in ports
                         # specifications says that for ports it should be "<Lh"
                         # but the data shows clearly "<HL"
-                        value, sample_number = SDataChannelDigital.unpack(f.read(SDataChannelDigital.size))
+                        value, sample_number = SDataChannelPort.unpack(f.read(SDataChannelPort.size))
                         ports[channel_number]["samples"].append((
                             sample_number,
                             value,
