@@ -45,6 +45,8 @@ Still questions/need info:
         - what is the m_Duration value?
     - for segmented channel:
         - how do we extract the waveforms?
+    - for block type E:
+        - how do we decode the stream data (we need S(t)?reamFormat.h header)
 
 
 Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
