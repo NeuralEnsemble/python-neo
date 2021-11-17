@@ -141,13 +141,13 @@ class AlphaOmegaRawIO(BaseRawIO):
         #  super().__init__(self)
         BaseRawIO.__init__(self)
         self.dirname = Path(dirname)
+        self._filenames = {}
         if self.dirname.is_dir():
             self._explore_folder()
         else:
             self.logger.error(f"{self.dirname} is not a folder")
         self._prune_channels = prune_channels
         self._opened_files = {}
-        self._filenames = {}
 
     def _explore_folder(self):
         """
