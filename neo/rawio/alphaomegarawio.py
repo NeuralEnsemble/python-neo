@@ -66,6 +66,15 @@ Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
 :attribute __IGNORE_UNKNOWN_BLOCK__: if True (the default) will not read the
     unknown block types. This should be faster if there are a lot of them.
 :type __IGNORE_UNKNOWN_BLOCK__: bool
+
+.. todo::
+    1. First search TODO in this file.
+    2. add IO class with :py:class:`neo.io.basefromrawio.BaseFromRaw`
+    3. Make TTL events -> epochs? We could describe TTL 0/1 events as epochs:
+       when the TTL goes to 1=beginning of epoch
+                            0=end of epoch
+    4. Once we know how to decode Stream AlphaOmega events add them to an event
+       channel
 """
 
 import io
