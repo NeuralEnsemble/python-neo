@@ -61,6 +61,9 @@ Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
                           have no effect once it's loaded. You should change it
                           in the source code.
 :type __FOLLOW_SPEC: bool
+:attribute __IGNORE_UNKNOWN_BLOCK__: if True (the default) will not read the
+    unknown block types. This should be faster if there are a lot of them.
+:type __IGNORE_UNKNOWN_BLOCK__: bool
 """
 
 import io
@@ -86,6 +89,7 @@ from .baserawio import (
 
 
 __FOLLOW_SPEC = False
+__IGNORE_UNKNOWN_BLOCK__ = True
 
 
 class AlphaOmegaRawIO(BaseRawIO):
@@ -415,16 +419,17 @@ class AlphaOmegaRawIO(BaseRawIO):
                         "stream_data": struct.unpack(f"<{stream_data_length}s", f.read(stream_data_length))[0],
                     })
                 else:
-                    try:
-                        bt = block_type.decode()
-                        self.logger.debug(f"Unknown block type: block length: {length}, block_type: {bt}")
-                    except UnicodeDecodeError:
-                        self.logger.debug(f"Unknown block type: block length: {length}, block_type: {int.from_bytes(block_type, 'little')} (int format)")
-                    unknown_blocks.append({
-                        "length": length,
-                        "block_type": block_type,
-                        "data": f.read(length),
-                    })
+                    if not __IGNORE_UNKNOWN_BLOCK__:
+                        try:
+                            bt = block_type.decode()
+                            self.logger.debug(f"Unknown block type: block length: {length}, block_type: {bt}")
+                        except UnicodeDecodeError:
+                            self.logger.debug(f"Unknown block type: block length: {length}, block_type: {int.from_bytes(block_type, 'little')} (int format)")
+                        unknown_blocks.append({
+                            "length": length,
+                            "block_type": block_type,
+                            "data": f.read(length),
+                        })
         if prune_channels:
             to_remove = []
             for channel_id, channel in continuous_analog_channels.items():
