@@ -635,6 +635,26 @@ class AlphaOmegaRawIO(BaseRawIO):
 
         self._generate_minimal_annotations()
 
+        for block_index, filename in enumerate(self._filenames):
+            bl_ann = self.raw_annotations["blocks"][block_index]
+            bl_ann["name"] = "Block #{}{}".format(block_index, " from lsx file" if filename else "")
+            bl_ann["file_origin"] = str(self.dirname / filename) if filename else bl_ann["file_origin"]
+            bl_ann["rec_datetime"] = self._blocks[block_index][0]["metadata"]["record_date"]
+            for seg_index, segment in enumerate(self._blocks[block_index]):
+                seg_ann = bl_ann["segments"][seg_index]
+                seg_ann["name"] = "Seg #{} Block #{}".format(seg_index, block_index)
+                seg_ann["file_origin"] = "\n".join(str(f) for f in self._blocks[block_index][seg_index]["metadata"]["filenames"])
+                seg_ann["rec_datetime"] = self._blocks[block_index][seg_index]["metadata"]["record_date"]
+                seg_ann["index"] = seg_index
+                for c_index, c in enumerate(seg_ann["signals"]):
+                    c = c.copy()
+                    c["file_origin"] = "\n".join(set(str(f) for channels in self._blocks[block_index][seg_index]["streams"][c["stream_id"]].values() for f in channels["positions"]))
+                    seg_ann["signals"][c_index] = c
+                for e_index, e in enumerate(seg_ann["events"]):
+                    e = e.copy()
+                    e["file_origin"] = seg_ann["file_origin"]
+                    seg_ann["events"][e_index] = e
+
         # We open files and create mmap objects
         for block in self._filenames:
             for filename in self._filenames[block]:
