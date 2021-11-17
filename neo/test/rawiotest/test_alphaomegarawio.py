@@ -41,7 +41,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
     ]
 
     entities_to_test = [
-        "alphaomega/",
+        "alphaomega/mpx_map_version4",
     ]
 
 
