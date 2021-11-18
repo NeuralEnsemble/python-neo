@@ -21,6 +21,7 @@ import os
 import inspect
 from copy import copy
 import unittest
+import pathlib
 
 from neo.core import Block, Segment
 from neo.io.basefromrawio import BaseFromRaw
@@ -39,6 +40,7 @@ from neo.test.iotest.tools import (cleanup_test_file,
                                    close_object_safe, create_generic_io_object,
                                    create_generic_reader,
                                    create_generic_writer,
+                                   get_test_file_full_path,
                                    iter_generic_io_objects,
                                    iter_generic_readers, iter_read_objects,
                                    read_generic,
@@ -78,7 +80,7 @@ class BaseTestIO:
     # allow environment to tell avoid using network
     use_network = can_use_network()
 
-    local_test_dir = None
+    local_test_dir = get_local_testing_data_folder()
 
     def setUp(self):
         '''
@@ -204,65 +206,6 @@ class BaseTestIO:
                                         directory=self.local_test_dir,
                                         return_path=return_path,
                                         clean=clean)
-
-    def create_file_reader(self, filename=None, return_path=False,
-                           clean=False, target=None, readall=False):
-        '''
-        Create a function that can read from the specified filename.
-
-        If filename is None, create a filename (default).
-
-        If return_path is True, return the full path of the file along with
-        the reader function.  return reader, path.  Default is False.
-
-        If clean is True, try to delete existing versions of the file
-        before creating the io object.  Default is False.
-
-        If target is None, use the first supported_objects from ioobj
-        If target is False, use the 'read' method.
-        If target is the Block or Segment class, use read_block or
-        read_segment, respectively.
-        If target is a string, use 'read_'+target.
-
-        If readall is True, use the read_all_ method instead of the read_
-        method. Default is False.
-        '''
-        ioobj, path = self.generic_io_object(filename=filename,
-                                             return_path=True, clean=clean)
-
-        res = create_generic_reader(ioobj, target=target, readall=readall)
-
-        if return_path:
-            return res, path
-        return res
-
-    def create_file_writer(self, filename=None, return_path=False,
-                           clean=False, target=None):
-        '''
-        Create a function that can write from the specified filename.
-
-        If filename is None, create a filename (default).
-
-        If return_path is True, return the full path of the file along with
-        the writer function.  return writer, path.  Default is False.
-
-        If clean is True, try to delete existing versions of the file
-        before creating the io object.  Default is False.
-
-        If target is None, use the first supported_objects from ioobj
-        If target is False, use the 'write' method.
-        If target is the Block or Segment class, use write_block or
-        write_segment, respectively.
-        If target is a string, use 'write_'+target.
-        '''
-        ioobj, path = self.generic_io_object(filename=filename,
-                                             return_path=True, clean=clean)
-
-        res = create_generic_writer(ioobj, target=target)
-
-        if return_path:
-            return res, path
-        return res
 
     def read_file(self, filename=None, return_path=False, clean=False,
                   target=None, readall=False, lazy=False):
@@ -569,3 +512,14 @@ class BaseTestIO:
                                 reader(lazy=self.ioclass.support_lazy, create_group_across_segment=case)
                         else:
                             reader(lazy=self.ioclass.support_lazy, create_group_across_segment=case)
+
+    def test__handle_pathlib_filename(self):
+        if self.files_to_test:
+            filename = get_test_file_full_path(self.ioclass, filename=self.files_to_test[0],
+                                               directory=self.local_test_dir)
+            pathlib_filename = pathlib.Path(filename)
+
+            if self.ioclass.mode == 'file':
+                self.ioclass(filename=pathlib_filename)
+            elif self.ioclass.mode == 'dir':
+                self.ioclass(dirname=pathlib_filename)

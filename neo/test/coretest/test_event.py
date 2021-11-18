@@ -27,79 +27,8 @@ from neo.test.tools import (assert_neo_object_is_compliant, assert_arrays_equal,
                             assert_arrays_almost_equal, assert_same_sub_schema,
                             assert_same_attributes, assert_same_annotations,
                             assert_same_array_annotations)
-from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
-                                        TEST_ANNOTATIONS)
 
 warnings.simplefilter("always")
-
-
-class Test__generate_datasets(unittest.TestCase):
-    def setUp(self):
-        np.random.seed(0)
-        self.annotations = {
-            str(x): TEST_ANNOTATIONS[x] for x in range(len(TEST_ANNOTATIONS))}
-
-    def test__get_fake_values(self):
-        self.annotations['seed'] = 0
-        times = get_fake_value('times', pq.Quantity, seed=0, dim=1)
-        labels = get_fake_value('labels', np.ndarray, seed=1, dim=1, dtype='U')
-        name = get_fake_value('name', str, seed=2, obj=Event)
-        description = get_fake_value('description', str, seed=3, obj='Event')
-        file_origin = get_fake_value('file_origin', str)
-        arr_ann = get_fake_value('array_annotations', dict, seed=5, obj=Event, n=5)
-        attrs1 = {'name': name, 'description': description, 'file_origin': file_origin}
-        attrs2 = attrs1.copy()
-        attrs2.update(self.annotations)
-        attrs2['array_annotations'] = arr_ann
-
-        res11 = get_fake_values(Event, annotate=False, seed=0)
-        res12 = get_fake_values('Event', annotate=False, seed=0)
-        res21 = get_fake_values(Event, annotate=True, seed=0)
-        res22 = get_fake_values('Event', annotate=True, seed=0)
-
-        assert_arrays_equal(res11.pop('times'), times)
-        assert_arrays_equal(res12.pop('times'), times)
-        assert_arrays_equal(res21.pop('times'), times)
-        assert_arrays_equal(res22.pop('times'), times)
-
-        assert_arrays_equal(res11.pop('labels'), labels)
-        assert_arrays_equal(res12.pop('labels'), labels)
-        assert_arrays_equal(res21.pop('labels'), labels)
-        assert_arrays_equal(res22.pop('labels'), labels)
-
-        self.assertEqual(res11, attrs1)
-        self.assertEqual(res12, attrs1)
-        # Array annotations need to be compared separately
-        # because numpy arrays define equality differently
-        arr_ann_res21 = res21.pop('array_annotations')
-        arr_ann_attrs2 = attrs2.pop('array_annotations')
-        self.assertEqual(res21, attrs2)
-        assert_arrays_equal(arr_ann_res21['valid'], arr_ann_attrs2['valid'])
-        assert_arrays_equal(arr_ann_res21['number'], arr_ann_attrs2['number'])
-        arr_ann_res22 = res22.pop('array_annotations')
-        self.assertEqual(res22, attrs2)
-        assert_arrays_equal(arr_ann_res22['valid'], arr_ann_attrs2['valid'])
-        assert_arrays_equal(arr_ann_res22['number'], arr_ann_attrs2['number'])
-
-    def test__fake_neo__cascade(self):
-        self.annotations['seed'] = None
-        obj_type = Event
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Event))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__fake_neo__nocascade(self):
-        self.annotations['seed'] = None
-        obj_type = 'Event'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Event))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
 
 
 class TestEvent(unittest.TestCase):

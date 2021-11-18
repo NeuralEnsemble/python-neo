@@ -4,7 +4,8 @@ import numpy as np
 
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuralynxrawio.nlxheader import NlxHeader
-from neo.rawio.neuralynxrawio.ncssections import (NcsSections, NcsSectionsFactory)
+from neo.rawio.neuralynxrawio.ncssections import (NcsSection, NcsSections,
+                                                  NcsSectionsFactory)
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 import logging
@@ -119,6 +120,35 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(len(rawio.header['signal_channels']), 0)
         self.assertEqual(len(rawio.header['event_channels']), 0)
 
+    def test_exclude_filenames(self):
+        # exclude single ncs file from session
+        dname = self.get_local_path('neuralynx/Cheetah_v5.6.3/original_data/')
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filename='CSC2.ncs')
+        rawio.parse_header()
+
+        self.assertEqual(rawio._nb_segment, 2)
+        self.assertEqual(len(rawio.ncs_filenames), 1)
+        self.assertEqual(len(rawio.nev_filenames), 1)
+        sigHdrs = rawio.header['signal_channels']
+        self.assertEqual(sigHdrs.size, 1)
+        self.assertEqual(sigHdrs[0][0], 'CSC1')
+        self.assertEqual(sigHdrs[0][1], '58')
+        self.assertEqual(len(rawio.header['spike_channels']), 8)
+        self.assertEqual(len(rawio.header['event_channels']), 2)
+
+        # exclude multiple files from session
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filename=['Events.nev', 'CSC2.ncs'])
+        rawio.parse_header()
+
+        self.assertEqual(rawio._nb_segment, 2)
+        self.assertEqual(len(rawio.ncs_filenames), 1)
+        self.assertEqual(len(rawio.nev_filenames), 0)
+        sigHdrs = rawio.header['signal_channels']
+        self.assertEqual(sigHdrs.size, 1)
+        self.assertEqual(sigHdrs[0][0], 'CSC1')
+        self.assertEqual(sigHdrs[0][1], '58')
+        self.assertEqual(len(rawio.header['spike_channels']), 8)
+        self.assertEqual(len(rawio.header['event_channels']), 0)
 
 class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
     """
@@ -276,6 +306,43 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
 
         # check that two blocks verify against self
         self.assertTrue(NcsSectionsFactory._verifySectionsStructure(data1, nb1))
+
+
+class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
+    """
+    Test building NcsBlocks for files of different revisions.
+    """
+    entities_to_test = []
+
+    def test_equality(self):
+        ns0 = NcsSections()
+        ns1 = NcsSections()
+
+        ns0.microsPerSampUsed = 1
+        ns1.microsPerSampUsed = 1
+        ns0.sampFreqUsed = 300
+        ns1.sampFreqUsed = 300
+
+        self.assertEqual(ns0, ns1)
+
+        # add sections
+        ns0.sects = [NcsSection(0, 0, 100, 100, 10)]
+        ns1.sects = [NcsSection(0, 0, 100, 100, 10)]
+
+        self.assertEqual(ns0, ns1)
+
+        # check inequality for different attributes
+        # different number of sections
+        ns0.sects.append(NcsSection(0, 0, 100, 100, 10))
+        self.assertNotEqual(ns0, ns1)
+
+        # different section attributes
+        ns0.sects = [NcsSection(0, 0, 200, 200, 10)]
+        self.assertNotEqual(ns0, ns1)
+
+        # different attributes
+        ns0.sampFreqUsed = 400
+        self.assertNotEqual(ns0, ns1)
 
 
 if __name__ == "__main__":

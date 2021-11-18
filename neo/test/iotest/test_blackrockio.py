@@ -238,35 +238,6 @@ class CommonTests(BaseTestIO, unittest.TestCase):
             block = session.read_block(load_waveforms=True, signal_group_mode='split-all')
             # Check if analog data are equal
             self.assertGreater(len(block.groups), 0)
-            for i, chidx_grp in enumerate(block.channel_indexes):
-                # Break for ChannelIndexes for Units that don't contain any Analogsignals
-                if len(chidx_grp.analogsignals) == 0 and len(chidx_grp.spiketrains) >= 1:
-                    break
-                # Should only have one AnalogSignal per ChannelIndex-representing Group
-                self.assertEqual(len(chidx_grp.analogsignals), 1)
-
-                # Find out channel_id in order to compare correctly
-                idx = chidx_grp.analogsignals[0].annotations['channel_id']
-                # Get data of AnalogSignal without pq.units
-                anasig = np.squeeze(chidx_grp.analogsignals[0].base[:].magnitude)
-                # Test for equality of first nonzero values of AnalogSignal
-                #                                   and matlab file contents
-                # If not equal test if hardcoded gain is responsible for this
-                # See BlackrockRawIO ll. 1420 commit 77a645655605ae39eca2de3ee511f3b522f11bd7
-                j = 0
-                while anasig[j] == 0:
-                    j += 1
-                if lfp_ml[i, j] != np.squeeze(chidx_grp.analogsignals[0].base[j].magnitude):
-                    anasig = anasig / 152.592547
-                    anasig = np.round(anasig).astype(int)
-
-                # Special case because id 142 is not included in ns2 file
-                if idx == 143:
-                    idx -= 1
-                if idx > 128:
-                    idx = idx - 136
-
-                assert_equal(anasig, lfp_ml[idx - 1, :])
 
             # Check if spikes are equal
             self.assertEqual(len(block.segments), 1)

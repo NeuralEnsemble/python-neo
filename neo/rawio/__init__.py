@@ -18,8 +18,10 @@ Classes:
 * :attr:`BiocamRawIO`
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
+* :attr:`CedRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
+* :attr:`MaxwellRawIO`
 * :attr:`MEArecRawIO`
 * :attr:`MicromedRawIO`
 * :attr:`NeuralynxRawIO`
@@ -33,6 +35,7 @@ Classes:
 * :attr:`RawBinarySignalRawIO`
 * :attr:`RawMCSRawIO`
 * :attr:`Spike2RawIO`
+* :attr:`SpikeGadgetsRawIO`
 * :attr:`SpikeGLXRawIO`
 * :attr:`TdtRawIO`
 * :attr:`WinEdrRawIO`
@@ -63,11 +66,19 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.CedRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.ElanRawIO
 
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.IntanRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.MaxwellRawIO
 
     .. autoattribute:: extensions
 
@@ -123,6 +134,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.SpikeGadgetsRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.SpikeGLXRawIO
 
     .. autoattribute:: extensions
@@ -148,9 +163,11 @@ from neo.rawio.axonrawio import AxonRawIO
 from neo.rawio.biocamrawio import BiocamRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
+from neo.rawio.cedrawio import CedRawIO
 from neo.rawio.elanrawio import ElanRawIO
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
+from neo.rawio.maxwellrawio import MaxwellRawIO
 from neo.rawio.mearecrawio import MEArecRawIO
 from neo.rawio.micromedrawio import MicromedRawIO
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
@@ -164,6 +181,7 @@ from neo.rawio.plexonrawio import PlexonRawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 from neo.rawio.rawmcsrawio import RawMCSRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
+from neo.rawio.spikegadgetsrawio import SpikeGadgetsRawIO
 from neo.rawio.spikeglxrawio import SpikeGLXRawIO
 from neo.rawio.tdtrawio import TdtRawIO
 from neo.rawio.winedrrawio import WinEdrRawIO
@@ -176,9 +194,11 @@ rawiolist = [
     BiocamRawIO,
     BlackrockRawIO,
     BrainVisionRawIO,
+    CedRawIO,
     ElanRawIO,
     IntanRawIO,
     MicromedRawIO,
+    MaxwellRawIO,
     MEArecRawIO,
     NeuralynxRawIO,
     NeuroExplorerRawIO,
@@ -191,6 +211,7 @@ rawiolist = [
     RawBinarySignalRawIO,
     RawMCSRawIO,
     Spike2RawIO,
+    SpikeGadgetsRawIO,
     SpikeGLXRawIO,
     TdtRawIO,
     WinEdrRawIO,

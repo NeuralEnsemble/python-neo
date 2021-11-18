@@ -3,12 +3,15 @@ This module defines multiple utility functions for filtering, creation, slicing,
 etc. of neo.core objects.
 '''
 
-import neo
 import copy
 import warnings
+
 import numpy as np
 import quantities as pq
 
+import neo
+
+reserved_annotations = ['nix_name']
 
 def get_events(container, **properties):
     """
@@ -345,8 +348,8 @@ def add_epoch(
 
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
 
-    ep.annotate(**event1.annotations)
-    ep.array_annotate(**event1.array_annotations)
+    ep.annotate(**clean_annotations(event1.annotations))
+    ep.array_annotate(**clean_annotations(event1.array_annotations))
 
     if attach_result:
         segment.epochs.append(ep)
@@ -543,16 +546,34 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
                                 epoch.times[ep_id] + epoch.durations[ep_id],
                                 reset_time=reset_time)
 
-        subseg.annotate(**copy.copy(epoch.annotations))
+        subseg.annotations = clean_annotations(subseg.annotations)
+        subseg.annotate(**clean_annotations(epoch.annotations))
 
         # Add array-annotations of Epoch
-        for key, val in epoch.array_annotations.items():
+        for key, val in clean_annotations(epoch.array_annotations).items():
             if len(val):
                 subseg.annotations[key] = copy.copy(val[ep_id])
 
         segments.append(subseg)
 
     return segments
+
+
+def clean_annotations(dictionary):
+    """
+    Remove reserved keys from an annotation dictionary.
+
+    Parameters
+    ----------
+    dictionary: dict
+        annotation dictionary to be cleaned
+
+    Returns:
+    --------
+    dict
+        A cleaned version of the annotations
+    """
+    return {k: v for k, v in dictionary.items() if k not in reserved_annotations}
 
 
 def is_block_rawio_compatible(block, return_problems=False):

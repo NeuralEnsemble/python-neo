@@ -22,7 +22,7 @@ from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
                       Group,
-                      Segment, SpikeTrain, Unit)
+                      Segment, SpikeTrain)
 from neo.io.baseio import BaseIO
 
 from neo.io.proxyobjects import (AnalogSignalProxy,
@@ -55,7 +55,7 @@ class BaseFromRaw(BaseIO):
     is_writable = False
 
     supported_objects = [Block, Segment, AnalogSignal,
-                         SpikeTrain, Unit, Group, Event, Epoch]
+                         SpikeTrain, Group, Event, Epoch]
     readable_objects = [Block, Segment]
     writeable_objects = []
 
@@ -68,7 +68,6 @@ class BaseFromRaw(BaseIO):
     mode = 'file'
 
     _prefered_signal_group_mode = 'group-by-same-units'  # 'split-all'
-    _default_group_mode_have_change_in_0_9 = False
 
     def __init__(self, *args, **kargs):
         BaseIO.__init__(self, *args, **kargs)
@@ -103,9 +102,6 @@ class BaseFromRaw(BaseIO):
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
-            if self._default_group_mode_have_change_in_0_9:
-                warnings.warn('default "signal_group_mode" have change in version 0.9:'
-                        'now all channels are group together in AnalogSignal')
 
         l = ['AnalogSignal', 'SpikeTrain', 'Event', 'Epoch']
         if create_group_across_segment is None:

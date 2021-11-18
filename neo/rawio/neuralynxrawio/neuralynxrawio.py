@@ -8,9 +8,35 @@ NEV contains events
 NSE contains spikes and waveforms for mono electrodes
 NTT contains spikes and waveforms for tetrodes
 
-NCS files can contains gaps that can be detected in irregularity
-in timestamps of data records. Each gap leads to one new segment being defined.
-Some NCS files may need to be read entirely to detect those gaps, which can be slow.
+All Neuralynx files contain a 16 kilobyte text header followed by 0 or more fixed length records.
+The format of the header has never been formally specified, however, the Neuralynx programs which
+write them have followed a set of conventions which have varied over the years. Additionally,
+other programs like Pegasus write files with somewhat varying headers. This variation requires
+parsing to determine the exact version and type which is handled within this RawIO by the
+NlxHeader class.
+
+Ncs files contain a series of 1044 byte records, each of which contains 512 16 byte samples and
+header information which includes a 64 bit timestamp in microseconds, a 16 bit channel number,
+the sampling frequency in integral Hz, and the number of the 512 samples which are considered
+valid samples (the remaining samples within the record are invalid). The Ncs file header usually
+contains a specification of the sampling frequency, which may be rounded to an integral number
+of Hz or may be fractional. The actual sampling frequency in terms of the underlying clock is
+physically determined by the spacing of the timestamps between records.
+
+These variations of header format and possible differences between the stated sampling frequency
+and actual sampling frequency can create apparent time discrepancies in .Ncs files. Additionally,
+the Neuralynx recording software can start and stop recording while continuing to write samples
+to a single .Ncs file, which creates larger gaps in the time sequences of the samples.
+
+This RawIO attempts to correct for these deviations where possible and present a single section of
+contiguous samples with one sampling frequency, t_start, and length for each .Ncs file. These
+sections are determined by the NcsSectionsFactory class. In the
+event the gaps are larger, this RawIO only provides the samples from the first section as belonging
+to one Segment.
+
+This RawIO presents only a single Block and Segment.
+:TODO: This should likely be changed to provide multiple segments and allow for
+multiple .Ncs files in a directory with differing section structures.
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
 """
@@ -21,6 +47,8 @@ from ..baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 import numpy as np
 import os
+import pathlib
+import copy
 from collections import (namedtuple, OrderedDict)
 
 from neo.rawio.neuralynxrawio.ncssections import (NcsSection, NcsSectionsFactory)
@@ -31,7 +59,8 @@ class NeuralynxRawIO(BaseRawIO):
     """"
     Class for reading datasets recorded by Neuralynx.
 
-    This version only works with rawmode of one-dir for a single directory.
+    This version works with rawmode of one-dir for a single directory of files or one-file for
+    a single file.
 
     Examples:
         >>> reader = NeuralynxRawIO(dirname='Cheetah_v5.5.1/original_data')
@@ -49,7 +78,8 @@ class NeuralynxRawIO(BaseRawIO):
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
                   ('nb_valid', 'uint32'), ('samples', 'int16', (NcsSection._RECORD_SIZE))]
 
-    def __init__(self, dirname='', filename='', keep_original_times=False, **kargs):
+    def __init__(self, dirname='', filename='', exclude_filename=None, keep_original_times=False,
+                 **kargs):
         """
         Initialize io for either a directory of Ncs files or a single Ncs file.
 
@@ -61,6 +91,9 @@ class NeuralynxRawIO(BaseRawIO):
         filename: str
             name of a single ncs, nse, nev, or ntt file to include in dataset. If used,
             dirname must not be provided.
+        exclude_filename: str or list
+            name of a single ncs, nse, nev or ntt file or list of such files. Expects plain
+            filenames (without directory path).
         keep_original_times:
             if True, keep original start time as in files,
             otherwise set 0 of time to first time in dataset
@@ -75,6 +108,7 @@ class NeuralynxRawIO(BaseRawIO):
             raise ValueError("One of dirname or filename must be provided.")
 
         self.keep_original_times = keep_original_times
+        self.exclude_filename = exclude_filename
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
@@ -83,6 +117,9 @@ class NeuralynxRawIO(BaseRawIO):
         else:
             return self.dirname
 
+    # from memory_profiler import profile
+    #
+    # @profile()
     def _parse_header(self):
 
         stream_channels = []
@@ -112,8 +149,22 @@ class NeuralynxRawIO(BaseRawIO):
             filenames = sorted(os.listdir(self.dirname))
             dirname = self.dirname
         else:
+            if not os.path.isfile(self.filename):
+                raise ValueError(f'Provided Filename is not a file: '
+                                 f'{self.filename}. If you want to provide a '
+                                 f'directory use the `dirname` keyword')
+
             dirname, fname = os.path.split(self.filename)
             filenames = [fname]
+
+        if not isinstance(self.exclude_filename, (list, set, np.ndarray)):
+            self.exclude_filename = [self.exclude_filename]
+
+        # remove files that were explicitly excluded
+        if self.exclude_filename is not None:
+            for excl_file in self.exclude_filename:
+                if excl_file in filenames:
+                    filenames.remove(excl_file)
 
         for filename in filenames:
             filename = os.path.join(dirname, filename)
@@ -182,15 +233,7 @@ class NeuralynxRawIO(BaseRawIO):
                         'Several nse or ntt files have the same unit_id!!!'
                     self.nse_ntt_filenames[chan_uid] = filename
 
-                    dtype = get_nse_or_ntt_dtype(info, ext)
-
-                    if os.path.getsize(filename) <= NlxHeader.HEADER_SIZE:
-                        self._empty_nse_ntt.append(filename)
-                        data = np.zeros((0,), dtype=dtype)
-                    else:
-                        data = np.memmap(filename, dtype=dtype, mode='r',
-                                         offset=NlxHeader.HEADER_SIZE)
-
+                    data = self._get_file_map(filename)
                     self._spike_memmap[chan_uid] = data
 
                     unit_ids = np.unique(data['unit_id'])
@@ -222,8 +265,7 @@ class NeuralynxRawIO(BaseRawIO):
                         data = np.zeros((0,), dtype=nev_dtype)
                         internal_ids = []
                     else:
-                        data = np.memmap(filename, dtype=nev_dtype, mode='r',
-                                         offset=NlxHeader.HEADER_SIZE)
+                        data = self._get_file_map(filename)
                         internal_ids = np.unique(data[['event_id', 'ttl_input']]).tolist()
                     for internal_event_id in internal_ids:
                         if internal_event_id not in self.internal_event_ids:
@@ -239,7 +281,7 @@ class NeuralynxRawIO(BaseRawIO):
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        # require all sampled signals, ncs files, to have same sampling rate
+        # require all sampled signals, ncs files, to have the same sampling rate
         if signal_channels.size > 0:
             sampling_rate = np.unique(signal_channels['sampling_rate'])
             assert sampling_rate.size == 1
@@ -350,6 +392,37 @@ class NeuralynxRawIO(BaseRawIO):
                 # ~ ev_ann['nttl'] =
                 # ~ ev_ann['digital_marker'] =
                 # ~ ev_ann['analog_marker'] =
+
+    def _get_file_map(self, filename):
+        """
+        Create memory maps when needed
+        see also https://github.com/numpy/numpy/issues/19340
+        """
+        filename = pathlib.Path(filename)
+        suffix = filename.suffix.lower()[1:]
+
+        if suffix == 'ncs':
+            return np.memmap(filename, dtype=self._ncs_dtype, mode='r',
+                      offset=NlxHeader.HEADER_SIZE)
+
+        elif suffix in ['nse', 'ntt']:
+            info = NlxHeader(filename)
+            dtype = get_nse_or_ntt_dtype(info, suffix)
+
+            # return empty map if file does not contain data
+            if os.path.getsize(filename) <= NlxHeader.HEADER_SIZE:
+                self._empty_nse_ntt.append(filename)
+                return np.zeros((0,), dtype=dtype)
+
+            return np.memmap(filename, dtype=dtype, mode='r',
+                             offset=NlxHeader.HEADER_SIZE)
+
+        elif suffix == 'nev':
+            return np.memmap(filename, dtype=nev_dtype, mode='r',
+                             offset=NlxHeader.HEADER_SIZE)
+
+        else:
+            raise ValueError(f'Unknown file suffix {suffix}')
 
     # Accessors for segment times which are offset by appropriate global start time
     def _segment_t_start(self, block_index, seg_index):
@@ -538,16 +611,15 @@ class NeuralynxRawIO(BaseRawIO):
         chanSectMap = dict()
         for chan_uid, ncs_filename in self.ncs_filenames.items():
 
-            data = np.memmap(ncs_filename, dtype=self._ncs_dtype, mode='r',
-                             offset=NlxHeader.HEADER_SIZE)
+            data = self._get_file_map(ncs_filename)
             nlxHeader = NlxHeader(ncs_filename)
 
             if not chanSectMap or (chanSectMap and
                     not NcsSectionsFactory._verifySectionsStructure(data,
                     lastNcsSections)):
                 lastNcsSections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
-
-            chanSectMap[chan_uid] = [lastNcsSections, nlxHeader, data]
+            chanSectMap[chan_uid] = [lastNcsSections, nlxHeader, ncs_filename]
+            del data
 
         # Construct an inverse dictionary from NcsSections to list of associated chan_uids
         revSectMap = dict()
@@ -557,8 +629,8 @@ class NeuralynxRawIO(BaseRawIO):
         # If there is only one NcsSections structure in the set of ncs files, there should only
         # be one entry. Otherwise this is presently unsupported.
         if len(revSectMap) > 1:
-            raise IOError('ncs files have {} different sections structures. Unsupported.'.format(
-                len(revSectMap)))
+            raise IOError(f'ncs files have {len(revSectMap)} different sections '
+                          f'structures. Unsupported configuration.')
 
         seg_time_limits = SegmentTimeLimits(nb_segment=len(lastNcsSections.sects),
                                             t_start=[], t_stop=[], length=[],
@@ -568,7 +640,7 @@ class NeuralynxRawIO(BaseRawIO):
         # create segment with subdata block/t_start/t_stop/length for each channel
         for i, fileEntry in enumerate(self.ncs_filenames.items()):
             chan_uid = fileEntry[0]
-            data = chanSectMap[chan_uid][2]
+            data = self._get_file_map(chanSectMap[chan_uid][2])
 
             # create a memmap for each record section of the current file
             curSects = chanSectMap[chan_uid][0]

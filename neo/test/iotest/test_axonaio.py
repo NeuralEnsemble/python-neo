@@ -6,12 +6,7 @@ import unittest
 
 from neo.io.axonaio import AxonaIO
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io.proxyobjects import (AnalogSignalProxy,
-                SpikeTrainProxy, EventProxy, EpochProxy)
-from neo import (AnalogSignal, SpikeTrain)
-
-import quantities as pq
-import numpy as np
+from neo.test.rawiotest.test_axonarawio import TestAxonaRawIO
 
 
 class TestAxonaIO(BaseTestIO, unittest.TestCase, ):
@@ -19,9 +14,8 @@ class TestAxonaIO(BaseTestIO, unittest.TestCase, ):
     entities_to_download = [
         'axona'
     ]
-    entities_to_test = [
-        'axona/axona_raw.set'
-    ]
+
+    entities_to_test = TestAxonaRawIO.entities_to_test
 
 
 if __name__ == "__main__":

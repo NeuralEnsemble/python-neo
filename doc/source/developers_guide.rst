@@ -235,8 +235,7 @@ Tag the release in the Git repository and push it::
     $ git push --tags upstream
 
 
-To upload the package to `PyPI`_ (currently Samuel Garcia,  Andrew Davison,
-Michael Denker and Julia Sprenger have the necessary permissions to do this)::
+To upload the package to `PyPI`_ (the members of the `maintainers team`_ have the necessary permissions to do this)::
 
     $ twine upload dist/neo-0.X.Y.tar.gz
 
@@ -252,6 +251,11 @@ If you want to develop your own IO module
 
 See :ref:`io_dev_guide` for implementation of a new IO.
 
+
+Project governance
+------------------
+
+The :doc:`governance` document describes how decisions about the project are taken.
 
 
 
@@ -276,3 +280,4 @@ See :ref:`io_dev_guide` for implementation of a new IO.
 .. _pep8: https://pypi.org/project/pep8/
 .. _flake8: https://pypi.org/project/flake8/
 .. _pyflakes: https://pypi.org/project/pyflakes/
+.. _`maintainers team`: https://github.com/orgs/NeuralEnsemble/teams/neo-maintainers

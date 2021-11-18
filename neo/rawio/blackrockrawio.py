@@ -132,7 +132,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         BaseRawIO.__init__(self)
 
-        self.filename = filename
+        self.filename = str(filename)
 
         # remove extension from base _filenames
         for ext in self.extensions:
@@ -315,7 +315,7 @@ class BlackrockRawIO(BaseRawIO):
                'nsx_to_load do not match available nsx list'
 
         # check that all files come from the same specification
-        all_spec = [self.__nsx_spec[nsx_nb] for nsx in self.nsx_to_load]
+        all_spec = [self.__nsx_spec[nsx_nb] for nsx_nb in self.nsx_to_load]
         if self._avail_files['nev']:
             all_spec.append(self.__nev_spec)
         assert all(all_spec[0] == spec for spec in all_spec), \
@@ -486,45 +486,6 @@ class BlackrockRawIO(BaseRawIO):
         # block_ann['avail_sif'] = self._avail_files['sif']
         # block_ann['avail_ccf'] = self._avail_files['ccf']
         block_ann['rec_pauses'] = False
-
-        # this is not used anymore because not more ChannelIndex
-        """
-        flt_type = {0: 'None', 1: 'Butterworth'}
-        for c in range(signal_channels.size):
-            chidx_ann = self.raw_annotations['signal_channels'][c]
-            if self._avail_files['nev']:
-                neuevwav = self.__nev_ext_header[b'NEUEVWAV']
-                if signal_channels[c]['id'] in neuevwav['electrode_id']:
-                    get_idx = list(neuevwav['electrode_id']).index(signal_channels[c]['id'])
-                    chidx_ann['connector_ID'] = neuevwav['physical_connector'][get_idx]
-                    chidx_ann['connector_pinID'] = neuevwav['connector_pin'][get_idx]
-                    chidx_ann['nev_dig_factor'] = neuevwav['digitization_factor'][get_idx]
-                    chidx_ann['nev_energy_threshold'] = neuevwav['energy_threshold'][
-                        get_idx] * chidx_ann['nev_dig_factor'] / 1000 * pq.uV
-                    chidx_ann['nev_hi_threshold'] = neuevwav['hi_threshold'][get_idx] * chidx_ann[
-                        'nev_dig_factor'] / 1000 * pq.uV
-                    chidx_ann['nev_lo_threshold'] = neuevwav['lo_threshold'][get_idx] * chidx_ann[
-                        'nev_dig_factor'] / 1000 * pq.uV
-                    chidx_ann['nb_sorted_units'] = neuevwav['nb_sorted_units'][get_idx]
-                    chidx_ann['waveform_size'] = self.__waveform_size[self.__nev_spec](
-                    )[signal_channels[c]['id']] * self.__nev_params('waveform_time_unit')
-                    if self.__nev_spec in ['2.2', '2.3']:
-                        neuevflt = self.__nev_ext_header[b'NEUEVFLT']
-                        get_idx = list(
-                            neuevflt['electrode_id']).index(
-                            signal_channels[c]['id'])
-                        # filter type codes (extracted from blackrock manual)
-                        chidx_ann['nev_hi_freq_corner'] = neuevflt['hi_freq_corner'][
-                            get_idx] / 1000. * pq.Hz
-                        chidx_ann['nev_hi_freq_order'] = neuevflt['hi_freq_order'][get_idx]
-                        chidx_ann['nev_hi_freq_type'] = flt_type[neuevflt['hi_freq_type'][
-                            get_idx]]
-                        chidx_ann['nev_lo_freq_corner'] = neuevflt['lo_freq_corner'][
-                            get_idx] / 1000. * pq.Hz
-                        chidx_ann['nev_lo_freq_order'] = neuevflt['lo_freq_order'][get_idx]
-                        chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
-                            get_idx]]
-        """
 
         for seg_index in range(self._nb_segment):
             seg_ann = block_ann['segments'][seg_index]

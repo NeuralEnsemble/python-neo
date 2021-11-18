@@ -75,3 +75,11 @@ class Group(Container):
                                 "".format(self.allowed_types, type(obj)))
             container = self._get_container(obj.__class__)
             container.append(obj)
+
+    def walk(self):
+        """
+        Walk the tree of subgroups
+        """
+        yield self
+        for grp in self.groups:
+            yield from grp.walk()

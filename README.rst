@@ -33,16 +33,13 @@ Code status
 
 .. image:: https://travis-ci.org/NeuralEnsemble/python-neo.png?branch=master
    :target: https://travis-ci.org/NeuralEnsemble/python-neo
-   :alt: Unit Test Status (TravisCI)
-.. image:: https://circleci.com/gh/NeuralEnsemble/python-neo.svg?style=svg
-    :target: https://circleci.com/gh/NeuralEnsemble/python-neo
-    :alt: Unit Test Status (CircleCI)
+   :alt: Core Unit Test Status (TravisCI)
+.. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/full-test.yml/badge.svg?event=push&branch=master
+   :target: https://github.com/NeuralEnsemble/python-neo/actions?query=event%3Apush+branch%3Amaster
+   :alt: IO Unit Test Status (Github Actions)
 .. image:: https://coveralls.io/repos/NeuralEnsemble/python-neo/badge.png
    :target: https://coveralls.io/r/NeuralEnsemble/python-neo
    :alt: Unit Test Coverage
-.. image:: https://requires.io/github/NeuralEnsemble/python-neo/requirements.png?branch=master
-   :target: https://requires.io/github/NeuralEnsemble/python-neo/requirements/?branch=master
-   :alt: Requirements Status
 
 More information
 ----------------
@@ -56,7 +53,7 @@ For installation instructions, see doc/source/install.rst
 
 To cite Neo in publications, see CITATION.txt
 
-:copyright: Copyright 2010-2020 by the Neo team, see doc/source/authors.rst.
+:copyright: Copyright 2010-2021 by the Neo team, see doc/source/authors.rst.
 :license: 3-Clause Revised BSD License, see LICENSE.txt for details.
 
 Funding
