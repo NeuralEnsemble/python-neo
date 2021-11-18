@@ -14,7 +14,7 @@ class TestBiocamIO(BaseTestIO, unittest.TestCase, ):
         'biocam'
     ]
     entities_to_test = [
-        'biocam/test_biocam.brw'
+        'biocam/biocam_hw3.0_fw1.6.brw'
     ]
 
 
