@@ -91,7 +91,7 @@ class BiocamRawIO(BaseRawIO):
 
         self._generate_minimal_annotations()
         stram_ann = self.raw_annotations['blocks'][0]['segments'][0]['signals'][0]
-        stram_ann['__array_annotations__']['location'] = np.array(channel_locations)
+        stram_ann['__array_annotations__']['locations'] = np.array(channel_locations)
 
     def _segment_t_start(self, block_index, seg_index):
         all_starts = [[0.]]
