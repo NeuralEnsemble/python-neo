@@ -24,9 +24,10 @@ class BiocamRawIO(BaseRawIO):
         >>> r.parse_header()
         >>> print(r)
         >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            i_start=0, i_stop=1024,  channel_names=channel_names)
-        >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
-                            channel_indexes=[0, 3, 6])
+                                                 i_start=0, i_stop=1024,  
+                                                 channel_names=channel_names)
+        >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
+                                                        channel_indexes=[0, 3, 6])
     """
     extensions = ['h5']
     rawmode = 'one-file'
@@ -53,7 +54,9 @@ class BiocamRawIO(BaseRawIO):
         self._sampling_rate = self._header_dict["sampling_rate"]
         self._filehandle = self._header_dict["file_handle"]
         self._read_function = self._header_dict["read_function"]
-        self._channel_locations - self._header_dict["locations"]
+        channel_locations = self._header_dict["locations"]
+        gain = self._header_dict["gain"]
+        offset = self._header_dict["offset"]
 
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
 
@@ -64,8 +67,8 @@ class BiocamRawIO(BaseRawIO):
             sr = self._sampling_rate  # Hz
             dtype = "uint16"
             units = 'uV'
-            gain = 1.  # TODO find gain
-            offset = 0.  # TODO find offset
+            gain = gain
+            offset = offset
             stream_id = '0'
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -75,18 +78,20 @@ class BiocamRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_spike_channel_dtype)
+        spike_channels = []
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
         self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
+        self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
+        stram_ann = self.raw_annotations['blocks'][0]['segments'][0]['signals'][0]
+        stram_ann['__array_annotations__']['location'] = np.array(channel_locations)
 
     def _segment_t_start(self, block_index, seg_index):
         all_starts = [[0.]]
@@ -113,7 +118,7 @@ class BiocamRawIO(BaseRawIO):
             i_stop = self._num_frames
 
         data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
-        return data[:, channel_indexes]
+        return np.squeeze(data[:, channel_indexes])
 
 
 def open_biocam_file_header(filename, mea_pitch, verbose=False):
@@ -128,79 +133,68 @@ def open_biocam_file_header(filename, mea_pitch, verbose=False):
 
     rf = h5py.File(filename, 'r')
     # Read recording variables
-    recVars = rf.require_group('3BRecInfo/3BRecVars/')
-    # bitDepth = recVars['BitDepth'].value[0]
-    # maxV = recVars['MaxVolt'].value[0]
-    # minV = recVars['MinVolt'].value[0]
-    nFrames = recVars['NRecFrames'][0]
-    samplingRate = recVars['SamplingRate'][0]
-    signalInv = recVars['SignalInversion'][0]
+    rec_vars = rf.require_group('3BRecInfo/3BRecVars/')
+    bit_depth = rec_vars['BitDepth'][0]
+    max_uv = rec_vars['MaxVolt'][0]
+    min_uv = rec_vars['MinVolt'][0]
+    n_frames = rec_vars['NRecFrames'][0]
+    sampling_rate = rec_vars['SamplingRate'][0]
+    signal_inv = rec_vars['SignalInversion'][0]
     # Read chip variables
-    chipVars = rf.require_group('3BRecInfo/3BMeaChip/')
-    nCols = chipVars['NCols'][0]
+    chip_vars = rf.require_group('3BRecInfo/3BMeaChip/')
+    n_cols = chip_vars['NCols'][0]
     # Get the actual number of channels used in the recording
-    file_format = rf['3BData'].attrs.get('Version')
+    file_format = rf['3BData'].attrs.get('Version', None)
+    format_100 = False
     if file_format == 100:
-        nRecCh = len(rf['3BData/Raw'][0])
-    elif (file_format == 101) or (file_format == 102):
-        nRecCh = int(1. * rf['3BData/Raw'].shape[0] / nFrames)
+        n_channels = len(rf['3BData/Raw'][0])
+        format_100 = True
+    elif file_format in (101, 102) or file_format is None:
+        n_channels = int(1. * rf['3BData/Raw'].shape[0] / n_frames)
     else:
         raise Exception('Unknown data file format.')
 
-    if verbose:
-        print('# 3Brain data format:', file_format, 'signal inversion', signalInv)
-        print('#       signal range: ', recVars['MinVolt'][0], '- ', recVars['MaxVolt'][0])
-        print('# channels: ', nRecCh)
-        print('# frames: ', nFrames)
-        print('# sampling rate: ', samplingRate)
     # get channel locations
-    r = (rf['3BRecInfo/3BMeaStreams/Raw/Chs'][()]['Row'] - 1) * mea_pitch
-    c = (rf['3BRecInfo/3BMeaStreams/Raw/Chs'][()]['Col'] - 1) * mea_pitch
-    rawIndices = np.vstack((r, c)).T
+    rows = (rf['3BRecInfo/3BMeaStreams/Raw/Chs'][()]['Row'] - 1) * mea_pitch
+    cols = (rf['3BRecInfo/3BMeaStreams/Raw/Chs'][()]['Col'] - 1) * mea_pitch
+    locations = np.vstack((rows, cols)).T
     # assign channel numbers
-    chIndices = np.array([(x - 1) + (y - 1) * nCols for (y, x) in rawIndices])
+    ch_indices = np.array([(x - 1) + (y - 1) * n_cols for (y, x) in locations])
     # determine correct function to read data
-    if verbose:
-        print("# Signal inversion is " + str(signalInv) + ".")
-        print("# If your spike sorting results look wrong, invert the signal.")
-    if (file_format == 100) & (signalInv == 1):
-        read_function = readHDF5t_100
-    elif (file_format == 100) & (signalInv == -1):
-        read_function = readHDF5t_100_i
-    if ((file_format == 101) | (file_format == 102)) & (signalInv == 1):
-        read_function = readHDF5t_101
-    elif ((file_format == 101) | (file_format == 102)) & (signalInv == -1):
-        read_function = readHDF5t_101_i
+    if format_100:
+        if signal_inv == 1:
+            read_function = readHDF5t_100
+        elif signal_inv == 1:
+            read_function = readHDF5t_100_i
+        else:
+            raise Exception("Unknown signal inversion")
     else:
-        raise RuntimeError("File format unknown.")
-    return dict(file_handle=rf, num_frames=nFrames, sampling_rate=samplingRate, num_channels=nRecCh,
-                channel_inds=chIndices, file_format=file_format, signal_inv=signalInv,
-                locations=rawIndices, read_function=read_function)
+        if signal_inv == 1:
+            read_function = readHDF5t_101
+        elif signal_inv == 1:
+            read_function = readHDF5t_101_i
+        else:
+            raise Exception("Unknown signal inversion")
+
+    gain = (max_uv - min_uv) / (2 ** bit_depth)
+    offset = min_uv
+
+    return dict(file_handle=rf, num_frames=n_frames, sampling_rate=sampling_rate, num_channels=n_channels,
+                channel_inds=ch_indices, file_format=file_format, signal_inv=signal_inv,
+                locations=locations, read_function=read_function, gain=gain, offset=offset)
 
 
 def readHDF5t_100(rf, t0, t1, nch):
-    if t0 <= t1:
-        return rf['3BData/Raw'][t0:t1]
-    else:  # Reversed read
-        raise Exception('Reading backwards? Not sure about this.')
+    return rf['3BData/Raw'][t0:t1]
 
 
 def readHDF5t_100_i(rf, t0, t1, nch):
-    if t0 <= t1:
-        return 4096 - rf['3BData/Raw'][t0:t1]
-    else:  # Reversed read
-        raise Exception('Reading backwards? Not sure about this.')
+    return 4096 - rf['3BData/Raw'][t0:t1]
 
 
 def readHDF5t_101(rf, t0, t1, nch):
-    if t0 <= t1:
-        return rf['3BData/Raw'][nch * t0:nch * t1].reshape((t1 - t0, nch), order='C')
-    else:  # Reversed read
-        raise Exception('Reading backwards? Not sure about this.')
+    return rf['3BData/Raw'][nch * t0:nch * t1].reshape((t1 - t0, nch), order='C')
 
 
 def readHDF5t_101_i(rf, t0, t1, nch):
-    if t0 <= t1:
-        return 4096 - rf['3BData/Raw'][nch * t0:nch * t1].reshape((t1 - t0, nch), order='C')
-    else:  # Reversed read
-        raise Exception('Reading backwards? Not sure about this.')
+    return 4096 - rf['3BData/Raw'][nch * t0:nch * t1].reshape((t1 - t0, nch), order='C')
