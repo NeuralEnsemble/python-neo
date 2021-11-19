@@ -1010,16 +1010,34 @@ class AlphaOmegaRawIO(BaseRawIO):
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         event_id = int(self.header["event_channels"]["id"][event_channel_index])
-        return len(self._blocks[block_index][seg_index]["events"][event_id]["samples"])
+        try:
+            nb_events = len(self._blocks[block_index][seg_index]["events"][event_id]["samples"])
+        except KeyError:
+            # No event in this segment
+            nb_events = 0
+        return nb_events
 
     def _get_event_timestamps(
         self, block_index, seg_index, event_channel_index, t_start, t_stop
     ):
-        event_id = int(self.header["event_channels"]["id"][event_channel_index])
-        event = self._blocks[block_index][seg_index]["events"][event_id]
+        if self._event_count(block_index, seg_index, event_channel_index):
+            event_id = int(self.header["event_channels"]["id"][event_channel_index])
+            event = self._blocks[block_index][seg_index]["events"][event_id]
 
-        timestamps = np.array([s[0] for s in event["samples"]], dtype=np.uint32)
-        labels = np.array([s[1] for s in event["samples"]], dtype=np.ushort)
+            timestamps = np.array([s[0] for s in event["samples"]], dtype=np.uint32)
+            if t_start is None:
+                t_start = self._segment_t_start(block_index, seg_index)
+            if t_stop is None:
+                t_stop = self._segment_t_stop(block_index, seg_index)
+            effective_start = t_start * event["sample_rate"]
+            effective_stop = t_stop * event["sample_rate"]
+            mask = (effective_start <= timestamps) & (timestamps <= effective_stop)
+            timestamps = timestamps[mask]
+            labels = np.array([s[1] for s in event["samples"]], dtype=np.ushort)
+            labels = labels[mask]
+        else:
+            timestamps = np.array([], dtype=np.uint32)
+            labels = np.array([], dtype="U")
         return timestamps, None, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
