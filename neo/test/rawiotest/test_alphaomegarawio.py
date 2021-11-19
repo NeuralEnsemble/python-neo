@@ -202,7 +202,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
 
         nb_streams = 5
         self.assertEqual(reader.signal_streams_count(), nb_streams)
-        nb_channels = [3, 8, 16, 4, 16]
+        nb_channels = [3, 8, 4, 4, 4]
         for stream_index in range(nb_streams):
             with self.subTest(stream_index=stream_index):
                 self.assertEqual(
@@ -214,11 +214,11 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         self.assertEqual(reader.event_channels_count(), nb_event_channels)
         nb_events = [
             [
-                [160, 2, 2, 2, 2],
-                [160, 2, 2, 4, 2],
+                [160, 0, 0, 0, 0],
+                [0, 2, 2, 2, 2],
             ],
             [
-                [764, 10, 20, 28, 38],
+                [0, 0, 0, 0, 0],
             ],
         ]
         for block_index in range(nb_blocks):
