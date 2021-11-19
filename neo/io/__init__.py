@@ -33,6 +33,7 @@ Classes:
 * :attr:`CedIO`
 * :attr:`EDFIO`
 * :attr:`ElanIO`
+* :attr:`HEKAIO`
 * :attr:`IgorIO`
 * :attr:`IntanIO`
 * :attr:`MEArecIO`
@@ -140,6 +141,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. .. autoclass:: neo.io.ElphyIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.HekaIO
 
     .. autoattribute:: extensions
 
@@ -314,6 +319,7 @@ from neo.io.edfio import EDFIO
 from neo.io.elanio import ElanIO
 from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
+from neo.io.hekaio import HekaIO
 from neo.io.igorproio import IgorIO
 from neo.io.intanio import IntanIO
 from neo.io.klustakwikio import KlustaKwikIO
@@ -368,6 +374,7 @@ iolist = [
     ElanIO,
     ElphyIO,
     ExampleIO,
+    HekaIO,  # TO CHECK: uses .dat file do any others?
     IgorIO,
     IntanIO,
     KlustaKwikIO,
