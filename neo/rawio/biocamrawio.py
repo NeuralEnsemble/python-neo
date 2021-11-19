@@ -54,6 +54,7 @@ class BiocamRawIO(BaseRawIO):
         self._sampling_rate = self._header_dict["sampling_rate"]
         self._filehandle = self._header_dict["file_handle"]
         self._read_function = self._header_dict["read_function"]
+        self._channels = self._header_dict["channels"]
         channel_locations = self._header_dict["locations"]
         gain = self._header_dict["gain"]
         offset = self._header_dict["offset"]
@@ -61,8 +62,8 @@ class BiocamRawIO(BaseRawIO):
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
 
         sig_channels = []
-        for c in range(self._num_channels):
-            ch_name = 'ch{}'.format(c)
+        for c, chan in enumerate(self._channels):
+            ch_name = f'ch{chan[0]}-{chan[1]}'
             chan_id = str(c + 1)
             sr = self._sampling_rate  # Hz
             dtype = "uint16"
@@ -140,9 +141,7 @@ def open_biocam_file_header(filename, mea_pitch, verbose=False):
     n_frames = rec_vars['NRecFrames'][0]
     sampling_rate = rec_vars['SamplingRate'][0]
     signal_inv = rec_vars['SignalInversion'][0]
-    # Read chip variables
-    chip_vars = rf.require_group('3BRecInfo/3BMeaChip/')
-    n_cols = chip_vars['NCols'][0]
+
     # Get the actual number of channels used in the recording
     file_format = rf['3BData'].attrs.get('Version', None)
     format_100 = False
@@ -150,16 +149,16 @@ def open_biocam_file_header(filename, mea_pitch, verbose=False):
         n_channels = len(rf['3BData/Raw'][0])
         format_100 = True
     elif file_format in (101, 102) or file_format is None:
-        n_channels = int(1. * rf['3BData/Raw'].shape[0] / n_frames)
+        n_channels = int(rf['3BData/Raw'].shape[0] / n_frames)
     else:
         raise Exception('Unknown data file format.')
 
     # get channel locations
-    rows = (rf['3BRecInfo/3BMeaStreams/Raw/Chs'][()]['Row'] - 1) * mea_pitch
-    cols = (rf['3BRecInfo/3BMeaStreams/Raw/Chs'][()]['Col'] - 1) * mea_pitch
-    locations = np.vstack((rows, cols)).T
-    # assign channel numbers
-    ch_indices = np.array([(x - 1) + (y - 1) * n_cols for (y, x) in locations])
+    channels = rf['3BRecInfo/3BMeaStreams/Raw/Chs'][:]
+    rows = channels['Row'] - 1
+    cols = channels['Col'] - 1
+    locations = np.vstack((rows, cols)).T * mea_pitch
+
     # determine correct function to read data
     if format_100:
         if signal_inv == 1:
@@ -180,8 +179,8 @@ def open_biocam_file_header(filename, mea_pitch, verbose=False):
     offset = min_uv
 
     return dict(file_handle=rf, num_frames=n_frames, sampling_rate=sampling_rate, num_channels=n_channels,
-                channel_inds=ch_indices, file_format=file_format, signal_inv=signal_inv,
-                locations=locations, read_function=read_function, gain=gain, offset=offset)
+                channels=channels, file_format=file_format, signal_inv=signal_inv, locations=locations,
+                read_function=read_function, gain=gain, offset=offset)
 
 
 def readHDF5t_100(rf, t0, t1, nch):
