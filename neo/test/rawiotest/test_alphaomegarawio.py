@@ -185,6 +185,34 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
             with self.subTest(port_id=port_id):
                 self.assertTrue(port["samples"])
 
+    def test_read_file_blocks_no_prune(self):
+        """Check that we keep empty channels when pruning is False"""
+        path = Path(self.get_local_path("alphaomega/mpx_map_version4"))
+        reader = AlphaOmegaRawIO(dirname=path)
+        mpx_file = Path(
+            self.get_local_path("alphaomega/mpx_map_version4/mapfile0054.mpx")
+        )
+        (
+            metadata,
+            continuous_analog_channels,
+            segmented_analog_channels,
+            digital_channels,
+            channel_type,
+            stream_data_channels,
+            ports,
+            events,
+            _,  # ignore unknown_blocks
+        ) = reader._read_file_blocks(mpx_file, prune_channels=False)
+
+        self.assertFalse(
+            all(c["positions"] for c in continuous_analog_channels.values())
+        )
+        self.assertFalse(
+            all(c["positions"] for c in segmented_analog_channels.values())
+        )
+        self.assertFalse(all(c["samples"] for c in digital_channels.values()))
+        self.assertFalse(all(c["samples"] for c in ports.values()))
+
     def test_correct_number_of_blocks_and_segments(self):
         """We just check that when we read test data we get what we expect"""
         reader = AlphaOmegaRawIO(
