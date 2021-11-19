@@ -645,6 +645,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                     and 0
                     <= (s["metadata"]["start_time"] - segment["metadata"]["stop_time"])
                     <= factor_period / segment["metadata"]["max_sample_rate"]
+                    and s is not segment
                 ]
                 assert len(possible_same_segments) in (0, 1)
                 if possible_same_segments:
