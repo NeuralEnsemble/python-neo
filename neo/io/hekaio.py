@@ -43,16 +43,13 @@ class HekaIO(BaseIO):
 
     mode = 'file'
 
-    def __init__(self, filename, group_idx, series_idx, use_recreated_stim_protocol):
+    def __init__(self, filename, group_idx, series_idx, load_recreated_stim_protocol=True):
         """
         Arguments:
             filename : a filename
         """
         if not HAS_LOADHEKA:
             raise LOADHEKA_ERR
-
-        # TODO: add generate stimulus
-        assert not use_recreated_stim_protocol, "use_recreated_stim_protocol not supported yet"
 
         BaseIO.__init__(self)
 
@@ -62,7 +59,7 @@ class HekaIO(BaseIO):
         self.group_idx = group_idx
         self.series_idx = series_idx
         self.num_sweeps = None
-        self.use_recreated_stim_protocol = use_recreated_stim_protocol
+        self.load_recreated_stim_protocol = load_recreated_stim_protocol
         self.read_block()
 
     def read_block(self, lazy=False):
@@ -74,8 +71,8 @@ class HekaIO(BaseIO):
         self.fill_header(channels)
 
         # TODO: this is very lazy to try and load both channels without knowing if they exist. Read off header to decide what to load
-        series_data = {"V": self.heka.get_series_data("Vm", self.group_idx, self.series_idx, include_stim_protocol=self.use_recreated_stim_protocol),
-                       "A": self.heka.get_series_data("Im", self.group_idx, self.series_idx, include_stim_protocol=self.use_recreated_stim_protocol)}
+        series_data = {"V": self.heka.get_series_data("Vm", self.group_idx, self.series_idx, include_stim_protocol=self.load_recreated_stim_protocol),
+                       "A": self.heka.get_series_data("Im", self.group_idx, self.series_idx, include_stim_protocol=self.load_recreated_stim_protocol)}
         bl = Block()
 
         # iterate over sections first:
@@ -88,15 +85,12 @@ class HekaIO(BaseIO):
 
                 unit = self.header["signal_channels"]["units"][chan_idx]
                 name = self.header["signal_channels"]["name"][chan_idx]
-                sampling_rate = self.header["signal_channels"]["sampling_rate"][chan_idx]
+                sampling_rate = self.header["signal_channels"]["sampling_rate"][chan_idx] * 1 / pq.s
                 t_start = series_data[unit]["time"][seg_index, 0] * pq.s
 
-                # TODO: support stimuatlion
-#                if series_data[unit]["stim"] and series_data[unit]["stim"]["unit"] == series_data["data"]["unit"]:  # TODO: this will probably break when no chanel here!! dummy!!
- #                   recdata = series_data[unit]["stim"][seg_index, :]
-  #              else:
+                recdata, name = self.get_chan_data_or_stim_data_if_does_not_exist(name, seg_index,
+                                                                                  series_data, unit)
 
-                recdata = series_data[unit]["data"][seg_index, :]
                 signal = pq.Quantity(recdata, unit).T
 
                 anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
@@ -145,6 +139,21 @@ class HekaIO(BaseIO):
         self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
+
+    @staticmethod
+    def get_chan_data_or_stim_data_if_does_not_exist(name, seg_index, series_data, unit):
+        """
+        Get stim data if second channel does not exist f4 is a good test of this! 
+        """
+        if series_data[unit]["data"] is None and \
+                series_data[unit]["stim"]["data"] \
+                and series_data[unit]["stim"]["units"] == unit:
+            recdata = series_data[unit]["stim"]["data"][seg_index, :]
+            name = "stim_" + name
+        else:
+            recdata = series_data[unit]["data"][seg_index, :]
+
+        return recdata, name
 
     @staticmethod
     def check_channel_sampling_rate(channels):
