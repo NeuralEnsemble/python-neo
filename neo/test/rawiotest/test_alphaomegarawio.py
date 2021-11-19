@@ -55,7 +55,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         reader._explore_folder()
         for lsx_file in path.glob("*.lsx"):
             with self.subTest(lsx_file=lsx_file.name):
-                self.assertIn(lxc_file, reader._filenames)
+                self.assertIn(lsx_file.name, reader._filenames)
 
         all_filenames = sorted(
             f for lsx_file in reader._filenames for f in reader._filenames[lsx_file]
@@ -221,7 +221,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
                 [764, 10, 20, 28, 38],
             ],
         ]
-        for block_index in range(nb_block):
+        for block_index in range(nb_blocks):
             for seg_index in range(nb_segments[block_index]):
                 for event_index in range(nb_event_channels):
                     with self.subTest(
