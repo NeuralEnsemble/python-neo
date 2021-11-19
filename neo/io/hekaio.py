@@ -10,8 +10,8 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
-from baserawio import _signal_channel_dtype, _signal_stream_dtype, _spike_channel_dtype, _event_channel_dtype  # TODO: not sure about this  # from ..rawio.
-# ..rawio.
+from ..rawio.baserawio import _signal_channel_dtype, _signal_stream_dtype, _spike_channel_dtype, _event_channel_dtype  # TODO: not sure about this  # from ..rawio.
+
 try:
     from load_heka.load_heka import LoadHeka  # TOOD: what is package called?
 except ImportError as err:
@@ -143,7 +143,7 @@ class HekaIO(BaseIO):
     @staticmethod
     def get_chan_data_or_stim_data_if_does_not_exist(name, seg_index, series_data, unit):
         """
-        Get stim data if second channel does not exist f4 is a good test of this! 
+        Get stim data if second channel does not exist f4 is a good test of this!
         """
         if series_data[unit]["data"] is None and \
                 series_data[unit]["stim"]["data"] \
