@@ -5,6 +5,7 @@ TODO: implement at rawio level for inclusion in Neo
 """
 import numpy as np
 import quantities as pq
+import copy
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
@@ -41,7 +42,7 @@ class HekaIO(BaseIO):
 
     mode = 'file'
 
-    def __init__(self, filename, group_idx, series_idx, load_recreated_stim_protocol=True):
+    def __init__(self, filename, group_idx, series_idx):
         """
         Assumes HEKA file units is A and V for data and stimulus. This is enforced in LoadHeka level.
         """
@@ -56,21 +57,25 @@ class HekaIO(BaseIO):
         self.group_idx = group_idx
         self.series_idx = series_idx
         self.num_sweeps = None
-        self.load_recreated_stim_protocol = load_recreated_stim_protocol
+        self.series_data = None
 
-        self.heka = LoadHeka(self.filename, only_load_header=True)
-        self.num_sweeps = self.heka.get_num_sweeps_in_series(self.group_idx, self.series_idx)
-        self.channels = self.heka.get_series_channels(self.group_idx, self.series_idx)
-        self.fill_header()
-
-    def read_block(self, lazy=False):
+    def read_block(self, lazy=False, force_order_to_recording_mode=False):
         assert not lazy, 'Do not support lazy'
 
-        series_data = {"V": self.heka.get_series_data("Vm", self.group_idx, self.series_idx, include_stim_protocol=self.load_recreated_stim_protocol),  # try and load both, even if doesn't exist
-                       "A": self.heka.get_series_data("Im", self.group_idx, self.series_idx, include_stim_protocol=self.load_recreated_stim_protocol)}
+        self.heka = LoadHeka(self.filename, only_load_header=True)
+
+        self.series_data = {"V": self.heka.get_series_data("Vm", self.group_idx, self.series_idx, include_stim_protocol=True),  # try and load both, even if doesn't exist
+                            "A": self.heka.get_series_data("Im", self.group_idx, self.series_idx, include_stim_protocol=True)}
         bl = Block()
 
-        self.append_stimulus_as_header_channel_if_analogisignal_does_not_exist()
+        self.channels = self.heka.get_series_channels(self.group_idx, self.series_idx)
+        self.recording_mode = self.channels[0]["recording_mode"]
+
+        self.num_sweeps = self.heka.get_num_sweeps_in_series(self.group_idx, self.series_idx)
+        self.fill_header()
+
+        if force_order_to_recording_mode:
+            self.make_header_order_match_recording_mode()
 
         # iterate over sections first:
         for seg_index in range(self.num_sweeps):
@@ -78,15 +83,14 @@ class HekaIO(BaseIO):
             seg = Segment(index=seg_index)
 
             # iterate over channels:
-            for chan_idx, recsig in enumerate(self.channels):
+            for chan_idx, recsig in enumerate(self.header["signal_channels"]):  # TODO fix channels!
 
                 unit = self.header["signal_channels"]["units"][chan_idx]
                 name = self.header["signal_channels"]["name"][chan_idx]
                 sampling_rate = self.header["signal_channels"]["sampling_rate"][chan_idx] * 1 / pq.s
-                t_start = series_data[unit]["time"][seg_index, 0] * pq.s
+                t_start = self.series_data[unit]["time"][seg_index, 0] * pq.s
 
-                recdata, name = self.get_chan_data_or_stim_data_if_does_not_exist(name, seg_index,
-                                                                                  series_data, unit)
+                recdata = self.get_chan_data_or_stim_data_if_does_not_exist(seg_index, unit)
                 signal = pq.Quantity(recdata, unit).T
 
                 anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
@@ -102,9 +106,9 @@ class HekaIO(BaseIO):
     def fill_header(self):
 
         signal_channels = []
-        self.check_channel_sampling_rate()
 
         for ch_idx, chan in enumerate(self.channels):
+
             ch_id = ch_idx + 1
             ch_name = chan["name"]
             ch_units = chan["unit"]
@@ -113,9 +117,9 @@ class HekaIO(BaseIO):
             gain = 1
             offset = 0
             stream_id = "0"
-            signal_channels.append((ch_name, ch_id, sampling_rate, dtype, ch_units, gain, offset, stream_id))
+            signal_channels.append((ch_name, ch_id, sampling_rate, dtype, ch_units, gain, offset, stream_id))  # turned into numpy array after stim channel added
 
-        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        self.append_stimulus_if_analogisignal_does_not_exist(signal_channels, self.series_data)
 
         # Spike Channels (no spikes)
         spike_channels = []
@@ -132,38 +136,51 @@ class HekaIO(BaseIO):
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [self.num_sweeps]
         self.header['signal_streams'] = signal_streams
-        self.header['signal_channels'] = signal_channels
+        self.header['signal_channels'] =  np.array(signal_channels, dtype=_signal_channel_dtype)
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
+
+        self.check_channel_sampling_rate()
+
+    def append_stimulus_if_analogisignal_does_not_exist(self, signal_channels, series_data):
+        for unit in ["A", "V"]:
+            if not np.any(series_data[unit]["data"]) and np.any(series_data[unit]["stim"]):
+                signal_channels.append(("stimulation",
+                                        2,
+                                        1 / series_data[unit]["stim"]["ts"] * 1 / pq.s,
+                                        "float64",
+                                        series_data["A"]["stim"]["units"], 1, 0, "0"))
 
     def check_channel_sampling_rate(self):
         """
         this is already checked in load-heka-python but sanity checked here
         """
         sampling_rate = []
-        for chan in self.channels:
-            sampling_rate.append(chan["sampling_step"])
+        for chan in self.header["signal_channels"]:
+            sampling_rate.append(chan["sampling_rate"])
 
         assert len(np.unique(sampling_rate)), "HEAK record sampling are not the same "
 
-    def append_stimulus_as_header_channel_if_analogisignal_does_not_exist(self):
-        for a_or_v in ["A", "V"]:
-            if series_data[a_or_v]["data"] is False and np.any(series_data[a_or_v]["stim"]):
-                self.header["signal_channels"].append(("stimulation",
-                                                       2,
-                                                       self.header["signal_channels"]["sampling_rate"][chan_idx] * 1 / pq.s,
-                                                       "float64",
-                                                       series_data["A"]["stim"]["units"], 1, 0, "0"))
+    def make_header_order_match_recording_mode(self):
 
-    @staticmethod
-    def get_chan_data_or_stim_data_if_does_not_exist(name, seg_index, series_data, unit):
+        first_channel_units = self.header["signal_channels"][0]["units"]
+
+        if self.recording_mode == "CClamp" and first_channel_units != "V" or \
+                      self.recording_mode == "VClamp" and first_channel_units != "A":
+
+            channels = self.header["signal_channels"]
+
+            first_chan = copy.deepcopy(channels[0])
+            channels[0] = channels[1]
+            channels[1] = first_chan
+
+    def get_chan_data_or_stim_data_if_does_not_exist(self, seg_index, unit):
         """
         Get stim data if second channel does not exist f4 is a good test of this!
         """
-        if series_data[a_or_v]["data"] is False and np.any(series_data[a_or_v]["stim"]):
-            recdata = series_data[unit]["stim"]["data"][seg_index, :]
-            name = "stim_" + name
+        if not np.any(self.series_data[unit]["data"]) and np.any(self.series_data[unit]["stim"]):
+            recdata = self.series_data[unit]["stim"]["data"][seg_index, :]
         else:
-            recdata = series_data[unit]["data"][seg_index, :]
+            recdata = self.series_data[unit]["data"][seg_index, :]
 
-        return recdata, name
+        return recdata
