@@ -119,7 +119,7 @@ class HekaIO(BaseIO):
             stream_id = "0"
             signal_channels.append((ch_name, ch_id, sampling_rate, dtype, ch_units, gain, offset, stream_id))  # turned into numpy array after stim channel added
 
-        self.append_stimulus_if_analogisignal_does_not_exist(signal_channels, self.series_data)
+        self.append_stimulus_if_analogisignal_does_not_exist(signal_channels)
 
         # Spike Channels (no spikes)
         spike_channels = []
@@ -142,14 +142,14 @@ class HekaIO(BaseIO):
 
         self.check_channel_sampling_rate()
 
-    def append_stimulus_if_analogisignal_does_not_exist(self, signal_channels, series_data):
+    def append_stimulus_if_analogisignal_does_not_exist(self, signal_channels):
         for unit in ["A", "V"]:
-            if not np.any(series_data[unit]["data"]) and np.any(series_data[unit]["stim"]):
+            if not np.any(self.series_data[unit]["data"]) and np.any(self.series_data[unit]["stim"]):
                 signal_channels.append(("stimulation",
                                         2,
-                                        1 / series_data[unit]["stim"]["ts"] * 1 / pq.s,
+                                        1 / self.series_data[unit]["stim"]["ts"] * 1 / pq.s,
                                         "float64",
-                                        series_data["A"]["stim"]["units"], 1, 0, "0"))
+                                        self.series_data["A"]["stim"]["units"], 1, 0, "0"))
 
     def check_channel_sampling_rate(self):
         """
