@@ -85,12 +85,18 @@ class HekaIO(BaseIO):
             # iterate over channels:
             for chan_idx, recsig in enumerate(self.header["signal_channels"]):  # TODO fix channels!
 
-                unit = self.header["signal_channels"]["units"][chan_idx]
+                unit = self.header["signal_channels"]["units"][chan_idx]  # revisit if we can loose the indexing
                 name = self.header["signal_channels"]["name"][chan_idx]
                 sampling_rate = self.header["signal_channels"]["sampling_rate"][chan_idx] * 1 / pq.s
-                t_start = self.series_data[unit]["time"][seg_index, 0] * pq.s
 
-                recdata = self.get_chan_data_or_stim_data_if_does_not_exist(seg_index, unit)
+                if name == "stimulation":
+                    primary_channel_unit = self.header["signal_channels"]["units"][0]
+                    t_start =  self.series_data[primary_channel_unit]["time"][seg_index, 0] * pq.s
+                    recdata =  self.series_data[primary_channel_unit]["stim"]["data"][seg_index, :]
+                else:
+                    t_start = self.series_data[unit]["time"][seg_index, 0] * pq.s
+                    recdata = self.series_data[unit]["data"][seg_index, :]
+
                 signal = pq.Quantity(recdata, unit).T
 
                 anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
@@ -119,7 +125,9 @@ class HekaIO(BaseIO):
             stream_id = "0"
             signal_channels.append((ch_name, ch_id, sampling_rate, dtype, ch_units, gain, offset, stream_id))  # turned into numpy array after stim channel added
 
-        self.append_stimulus_if_analogisignal_does_not_exist(signal_channels)
+        if len(signal_channels) == 1:
+            unit = self.channels[0]["unit"]
+            self.append_stimulus_if_analogisignal_does_not_exist(signal_channels, unit)
 
         # Spike Channels (no spikes)
         spike_channels = []
@@ -142,14 +150,14 @@ class HekaIO(BaseIO):
 
         self.check_channel_sampling_rate()
 
-    def append_stimulus_if_analogisignal_does_not_exist(self, signal_channels):
-        for unit in ["A", "V"]:
-            if not np.any(self.series_data[unit]["data"]) and np.any(self.series_data[unit]["stim"]):
-                signal_channels.append(("stimulation",
-                                        2,
-                                        1 / self.series_data[unit]["stim"]["ts"] * 1 / pq.s,
-                                        "float64",
-                                        self.series_data["A"]["stim"]["units"], 1, 0, "0"))
+    def append_stimulus_if_analogisignal_does_not_exist(self, signal_channels, unit):
+
+        if np.any(self.series_data[unit]["stim"]):
+            signal_channels.append(("stimulation",
+                                    2,
+                                    1 / self.series_data[unit]["stim"]["ts"] * 1 / pq.s,
+                                    "float64",
+                                    self.series_data[unit]["stim"]["units"], 1, 0, "0"))
 
     def check_channel_sampling_rate(self):
         """
@@ -166,21 +174,10 @@ class HekaIO(BaseIO):
         first_channel_units = self.header["signal_channels"][0]["units"]
 
         if self.recording_mode == "CClamp" and first_channel_units != "V" or \
-                      self.recording_mode == "VClamp" and first_channel_units != "A":
+                self.recording_mode == "VClamp" and first_channel_units != "A":
 
             channels = self.header["signal_channels"]
 
             first_chan = copy.deepcopy(channels[0])
             channels[0] = channels[1]
             channels[1] = first_chan
-
-    def get_chan_data_or_stim_data_if_does_not_exist(self, seg_index, unit):
-        """
-        Get stim data if second channel does not exist f4 is a good test of this!
-        """
-        if not np.any(self.series_data[unit]["data"]) and np.any(self.series_data[unit]["stim"]):
-            recdata = self.series_data[unit]["stim"]["data"][seg_index, :]
-        else:
-            recdata = self.series_data[unit]["data"][seg_index, :]
-
-        return recdata
