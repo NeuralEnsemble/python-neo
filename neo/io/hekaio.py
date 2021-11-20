@@ -1,19 +1,17 @@
 """
-Class for reading data from WaveSurfer, a software written by
-Boaz Mohar and Adam Taylor https://wavesurfer.janelia.org/
+Quick way to load Hekafiles into Neo format using load-heka-python module.
 
-This is a wrapper around the PyWaveSurfer module written by Boaz Mohar and Adam Taylor,
-using the "double" argument to load the data as 64-bit double.
+TODO: implement at rawio level for inclusion in Neo
 """
 import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
-from ..rawio.baserawio import _signal_channel_dtype, _signal_stream_dtype, _spike_channel_dtype, _event_channel_dtype  # TODO: not sure about this  # from ..rawio.
+from ..rawio.baserawio import _signal_channel_dtype, _signal_stream_dtype, _spike_channel_dtype, _event_channel_dtype
 
 try:
-    from load_heka.load_heka import LoadHeka  # TOOD: what is package called?
+    from load_heka.load_heka import LoadHeka
 except ImportError as err:
     HAS_LOADHEKA = False
     LOADHEKA_ERR = err
@@ -45,8 +43,7 @@ class HekaIO(BaseIO):
 
     def __init__(self, filename, group_idx, series_idx, load_recreated_stim_protocol=True):
         """
-        Arguments:
-            filename : a filename
+        Assumes HEKA file units is A and V for data and stimulus. This is enforced in LoadHeka level.
         """
         if not HAS_LOADHEKA:
             raise LOADHEKA_ERR
@@ -60,20 +57,20 @@ class HekaIO(BaseIO):
         self.series_idx = series_idx
         self.num_sweeps = None
         self.load_recreated_stim_protocol = load_recreated_stim_protocol
-        self.read_block()
+
+        self.heka = LoadHeka(self.filename, only_load_header=True)
+        self.num_sweeps = self.heka.get_num_sweeps_in_series(self.group_idx, self.series_idx)
+        self.channels = self.heka.get_series_channels(self.group_idx, self.series_idx)
+        self.fill_header()
 
     def read_block(self, lazy=False):
         assert not lazy, 'Do not support lazy'
 
-        self.heka = LoadHeka(self.filename, only_load_header=True)
-        self.num_sweeps = self.heka.get_num_sweeps_in_series(self.group_idx, self.series_idx)
-        channels = self.heka.get_series_channels(self.group_idx, self.series_idx)
-        self.fill_header(channels)
-
-        # TODO: this is very lazy to try and load both channels without knowing if they exist. Read off header to decide what to load
-        series_data = {"V": self.heka.get_series_data("Vm", self.group_idx, self.series_idx, include_stim_protocol=self.load_recreated_stim_protocol),
+        series_data = {"V": self.heka.get_series_data("Vm", self.group_idx, self.series_idx, include_stim_protocol=self.load_recreated_stim_protocol),  # try and load both, even if doesn't exist
                        "A": self.heka.get_series_data("Im", self.group_idx, self.series_idx, include_stim_protocol=self.load_recreated_stim_protocol)}
         bl = Block()
+
+        self.append_stimulus_as_header_channel_if_analogisignal_does_not_exist()
 
         # iterate over sections first:
         for seg_index in range(self.num_sweeps):
@@ -81,7 +78,7 @@ class HekaIO(BaseIO):
             seg = Segment(index=seg_index)
 
             # iterate over channels:
-            for chan_idx, recsig in enumerate(channels):
+            for chan_idx, recsig in enumerate(self.channels):
 
                 unit = self.header["signal_channels"]["units"][chan_idx]
                 name = self.header["signal_channels"]["name"][chan_idx]
@@ -90,7 +87,6 @@ class HekaIO(BaseIO):
 
                 recdata, name = self.get_chan_data_or_stim_data_if_does_not_exist(name, seg_index,
                                                                                   series_data, unit)
-
                 signal = pq.Quantity(recdata, unit).T
 
                 anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
@@ -103,12 +99,12 @@ class HekaIO(BaseIO):
 
         return bl
 
-    def fill_header(self, channels):
+    def fill_header(self):
 
         signal_channels = []
-        self.check_channel_sampling_rate(channels)
+        self.check_channel_sampling_rate()
 
-        for ch_idx, chan in enumerate(channels):
+        for ch_idx, chan in enumerate(self.channels):
             ch_id = ch_idx + 1
             ch_name = chan["name"]
             ch_units = chan["unit"]
@@ -140,26 +136,34 @@ class HekaIO(BaseIO):
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
+    def check_channel_sampling_rate(self):
+        """
+        this is already checked in load-heka-python but sanity checked here
+        """
+        sampling_rate = []
+        for chan in self.channels:
+            sampling_rate.append(chan["sampling_step"])
+
+        assert len(np.unique(sampling_rate)), "HEAK record sampling are not the same "
+
+    def append_stimulus_as_header_channel_if_analogisignal_does_not_exist(self):
+        for a_or_v in ["A", "V"]:
+            if series_data[a_or_v]["data"] is False and np.any(series_data[a_or_v]["stim"]):
+                self.header["signal_channels"].append(("stimulation",
+                                                       2,
+                                                       self.header["signal_channels"]["sampling_rate"][chan_idx] * 1 / pq.s,
+                                                       "float64",
+                                                       series_data["A"]["stim"]["units"], 1, 0, "0"))
+
     @staticmethod
     def get_chan_data_or_stim_data_if_does_not_exist(name, seg_index, series_data, unit):
         """
         Get stim data if second channel does not exist f4 is a good test of this!
         """
-        if series_data[unit]["data"] is None and \
-                series_data[unit]["stim"]["data"] \
-                and series_data[unit]["stim"]["units"] == unit:
+        if series_data[a_or_v]["data"] is False and np.any(series_data[a_or_v]["stim"]):
             recdata = series_data[unit]["stim"]["data"][seg_index, :]
             name = "stim_" + name
         else:
             recdata = series_data[unit]["data"][seg_index, :]
 
         return recdata, name
-
-    @staticmethod
-    def check_channel_sampling_rate(channels):
-        # this is already checked in load-heka-python but sanity checked here
-        sampling_rate = []
-        for chan in channels:
-            sampling_rate.append(chan["sampling_step"])
-
-        assert len(np.unique(sampling_rate)), "HEAK record sampling are not the same "
