@@ -76,8 +76,8 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
                 if (hasattr(obj, key) and getattr(obj, key) == value and
                         all([obj is not res for res in results])):
                     results.append(obj)
-                elif (key in obj.annotations and obj.annotations[key].test(key) and #elif (key in obj.annotations and obj.annotations[key].test(key) and AttributeError: 'int' object has no attribute 'test'
-                          all([obj is not res for res in results])):
+                elif (key in obj.annotations and value.test(obj.annotations[key]) and
+                          all([obj is not res for res in results])):    #Benchmark -> hauefigkeit, time
                     results.append(obj)
 
     # keep only objects of the correct classes
@@ -106,6 +106,27 @@ class equal(FilterCondition):
     def test(self, x):
         return x == self.control
 
+class is_not(FilterCondition):
+    def __init__(self, z):
+        self.control = z
+
+    def test(self, x):
+        return x != self.control
+
+class less_than_equal(FilterCondition):
+    def __init__(self, z):
+        self.control = z
+
+    def test(self, x):
+        return x <= self.control
+
+class greater_than_equal(FilterCondition):
+    def __init__(self, z):
+        self.control = z
+
+    def test(self, x):
+        return x >= self.control
+
 class less_than(FilterCondition):
 
     def __init__(self, z):
@@ -114,7 +135,7 @@ class less_than(FilterCondition):
     def test(self, x):
         return x < self.control
 
-class more_than(FilterCondition):
+class greater_than(FilterCondition):
 
     def __init__(self, z):
         self.control=z
@@ -128,25 +149,34 @@ class is_in(FilterCondition):
         self.control = z
 
     def test(self, x):
-        if(type(x) == list):
-            return x.contains(self.control)
-        elif(type(x) == int):
+        if(type(self.control) == list):
+            return x in self.control
+        elif(type(self.control) == int):
             return x == self.control
         else:
             raise SyntaxError('parameter not of type list or int')
 
 class in_range(FilterCondition):
 
-    def __init__(self, a: int, b: int):
+    def __init__(self, a, b, left_closed=False, right_closed=False):
         if(type(a) != int or type(b) != int):
             raise SyntaxError("parameters not of type int")
         else:
-            self.control=[]
-            for num in range(a, b+1):
-                self.control.append(num)
+            self.a = a
+            self.b = b
+            self.left_closed = left_closed
+            self.right_closed = right_closed
 
     def test(self, x):
-        is_in(self.control)
+        if (not self.left_closed and not self.right_closed):
+            return (x >= self.a and x <= self.b)
+        elif (not self.left_closed and self.right_closed):
+            return (x >= self.a and x < self.b)
+        elif (self.left_closed and not self.right_closed):
+            return (x > self.a and x <= self.b)
+        else:
+            return (x > self.a and x < self.b)
+
 
 
 
