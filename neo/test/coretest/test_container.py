@@ -4,7 +4,11 @@ Tests of the neo.core.container.Container class
 
 import unittest
 
+import quantities as q
+
 import numpy as np
+
+import neo.core
 
 try:
     from IPython.lib.pretty import pretty
@@ -101,6 +105,20 @@ class TestContainerNeo(unittest.TestCase):
     def test_filter(self):
         container = Container()
         self.assertRaises(TypeError, container.filter, "foo")
+
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2]*q.ms, t_stop=10)
+        st1.annotate(test=5)
+        seg.spiketrains.append(st1)
+        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.equal(5))[0].annotations)
+        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.less_than(6))[0].annotations)
+        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.greater_than(4))[0].annotations)
+        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.is_not(1))[0].annotations)
+        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.is_in([1, 2, 5]))[0].annotations)
+        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.in_range(1, 5))[0].annotations)
+        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.greater_than_equal(5))[0].annotations)
+        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.less_than_equal(5))[0].annotations)
+
 
 
 class Test_Container_merge(unittest.TestCase):
