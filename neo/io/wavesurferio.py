@@ -98,7 +98,7 @@ class WaveSurferIO(BaseIO):
                                       t_start=t_start, name=name,
                                       channel_index=chan_idx)
                 seg.analogsignals.append(anaSig)
-                bl.segments.append(seg)
+            bl.segments.append(seg)
 
         bl.create_many_to_one_relationship()
 
