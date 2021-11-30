@@ -77,7 +77,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
                         all([obj is not res for res in results])):
                     results.append(obj)
                 elif (key in obj.annotations and value.test(obj.annotations[key]) and
-                          all([obj is not res for res in results])):    #Benchmark -> hauefigkeit, time
+                          all([obj is not res for res in results])):
                     results.append(obj)
 
     # keep only objects of the correct classes
