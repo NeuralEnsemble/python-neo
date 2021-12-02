@@ -265,7 +265,8 @@ class AnalogSignal(BaseSignal):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
-                obj.array_annotate(**deepcopy(self.array_annotations_at_index(k)))
+                if k is not None:  # matplotlib _check_1d() calls__getitem__ with (:, None)
+                    obj.array_annotate(**deepcopy(self.array_annotations_at_index(k)))
         elif isinstance(i, slice):
             obj = super().__getitem__(i)
             if i.start:

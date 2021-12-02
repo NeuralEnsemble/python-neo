@@ -639,6 +639,10 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertTrue(hasattr(self.signal1[9, 3], 'units'))
         self.assertRaises(IndexError, self.signal1.__getitem__, (99, 73))
 
+    def test__getitem__with_tuple_slice_none(self):
+        item = self.signal1[:, None]
+        # we're just testing no error is raised
+
     def test__time_index(self):
         # scalar arguments
         self.assertEqual(self.signal2.time_index(2.0 * pq.s), 2)
