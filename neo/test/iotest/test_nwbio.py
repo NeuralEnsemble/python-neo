@@ -63,15 +63,15 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
             for seg in blk.segments:  # AnalogSignal objects
 
                 # 3 Neo AnalogSignals
-                a = AnalogSignal(name = 'Signal_a %s' % (seg.name),
+                a = AnalogSignal(name='Signal_a %s' % (seg.name),
                                  signal=np.random.randn(44, num_chan) * pq.nA,
                                  sampling_rate=10 * pq.kHz,
                                  t_start=50 * pq.ms)
-                b = AnalogSignal(name = 'Signal_b %s' % (seg.name),
+                b = AnalogSignal(name='Signal_b %s' % (seg.name),
                                  signal=np.random.randn(64, num_chan) * pq.mV,
                                  sampling_rate=8 * pq.kHz,
                                  t_start=40 * pq.ms)
-                c = AnalogSignal(name = 'Signal_c %s' % (seg.name),
+                c = AnalogSignal(name='Signal_c %s' % (seg.name),
                                  signal=np.random.randn(33, num_chan) * pq.uA,
                                  sampling_rate=10 * pq.kHz,
                                  t_start=120 * pq.ms)
@@ -232,8 +232,10 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
         nwbfile = pynwb.NWBHDF5IO(test_file_name, mode="r").read()
 
         self.assertIsInstance(nwbfile.acquisition[response.name], pynwb.icephys.CurrentClampSeries)
-        self.assertIsInstance(nwbfile.stimulus[stimulus.name], pynwb.icephys.CurrentClampStimulusSeries)
-        self.assertEqual(nwbfile.acquisition[response.name].bridge_balance, response_annotations["nwb:bridge_balance"])
+        self.assertIsInstance(nwbfile.stimulus[stimulus.name], 
+                              pynwb.icephys.CurrentClampStimulusSeries)
+        self.assertEqual(nwbfile.acquisition[response.name].bridge_balance, 
+                         response_annotations["nwb:bridge_balance"])
 
         ior = NWBIO(filename=test_file_name, mode='r')
         retrieved_block = ior.read_all_blocks()[0]

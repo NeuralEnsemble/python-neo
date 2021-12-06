@@ -435,17 +435,14 @@ class NWBIO(BaseIO):
         if "session_description" not in annotations:
             annotations["session_description"] = blocks[0].description or self.filename
             # todo: concatenate descriptions of multiple blocks if different
-        
         if "session_start_time" not in annotations:
             annotations["session_start_time"] = blocks[0].rec_datetime
             if annotations["session_start_time"] is None:
-                raise Exception("Give a session start time")
+                raise Exception("Writing to NWB requires an annotation 'session_start_time'")
         self.annotations = {"rec_datetime": "rec_datetime"}        
         self.annotations["rec_datetime"] = blocks[0].rec_datetime
-        
         # todo: handle subject
         nwbfile = NWBFile(**annotations)
-
         assert self.nwb_file_mode in ('w',)  # possibly expand to 'a'ppend later
         if self.nwb_file_mode == "w" and os.path.exists(self.filename):
             os.remove(self.filename)
