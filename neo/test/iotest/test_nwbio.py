@@ -232,9 +232,9 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
         nwbfile = pynwb.NWBHDF5IO(test_file_name, mode="r").read()
 
         self.assertIsInstance(nwbfile.acquisition[response.name], pynwb.icephys.CurrentClampSeries)
-        self.assertIsInstance(nwbfile.stimulus[stimulus.name], 
+        self.assertIsInstance(nwbfile.stimulus[stimulus.name],
                               pynwb.icephys.CurrentClampStimulusSeries)
-        self.assertEqual(nwbfile.acquisition[response.name].bridge_balance, 
+        self.assertEqual(nwbfile.acquisition[response.name].bridge_balance,
                          response_annotations["nwb:bridge_balance"])
 
         ior = NWBIO(filename=test_file_name, mode='r')
