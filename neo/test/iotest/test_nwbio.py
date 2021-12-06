@@ -36,8 +36,7 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
     entities_to_download = ["nwb"]
     entities_to_test = [
         # Files from Allen Institute:
-#        "nwb/H19.29.141.11.21.01.nwb",  # 7 MB
-        "/Users/legouee/Desktop/Brainhack/Neo_NWB/H19.29.141.11.21.01.nwb"
+        "nwb/H19.29.141.11.21.01.nwb",  # 7 MB
     ]
 
     def test_roundtrip(self):
@@ -76,7 +75,6 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
                                  signal=np.random.randn(33, num_chan) * pq.uA,
                                  sampling_rate=10 * pq.kHz,
                                  t_start=120 * pq.ms)
-                print("a = ", a)
                 # 2 Neo IrregularlySampledSignals
                 d = IrregularlySampledSignal(np.arange(7.0) * pq.ms,
                                              np.random.randn(7, num_chan) * pq.mV)

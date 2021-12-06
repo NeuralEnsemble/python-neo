@@ -438,8 +438,8 @@ class NWBIO(BaseIO):
         
         if "session_start_time" not in annotations:
             annotations["session_start_time"] = blocks[0].rec_datetime
-            if annotations["session_start_time"]==None:
-                annotations["session_start_time"] = datetime.now()
+            if annotations["session_start_time"] is None:
+                raise Exception("Give a session start time")
         self.annotations = {"rec_datetime": "rec_datetime"}        
         self.annotations["rec_datetime"] = blocks[0].rec_datetime
         
