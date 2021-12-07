@@ -514,6 +514,9 @@ class NWBIO(BaseIO):
         for i, signal in enumerate(
                 chain(segment.analogsignals, segment.irregularlysampledsignals)):
             assert signal.segment is segment
+            if hasattr(signal, 'name'):
+                signal.name = "%s %s %i" % (signal.name, segment.name, i)
+                logging.warning("Warning signal name exists. New name: %s" % (signal.name))
             if not signal.name:
                 signal.name = "%s : analogsignal%d" % (segment.name, i)
             self._write_signal(nwbfile, signal, electrodes)
@@ -526,6 +529,9 @@ class NWBIO(BaseIO):
 
         for i, event in enumerate(segment.events):
             assert event.segment is segment
+            if hasattr(event, 'name'):
+                event.name = "%s  %s %i" % (event.name, segment.name, i)
+                logging.warning("Warning event name exists. New name: %s" % (event.name))
             if not event.name:
                 event.name = "%s : event%d" % (segment.name, i)
             self._write_event(nwbfile, event)
