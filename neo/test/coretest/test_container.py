@@ -102,12 +102,12 @@ class TestContainerNeo(unittest.TestCase):
         container.create_many_to_many_relationship()
         container.create_relationship()
 
-    def test_filter_input(self):  #verschiedene tests
+    def test_filter_input(self):
         container = Container()
         self.assertRaises(TypeError, container.filter, "foo")
 
 
-    def test_filter_results(self):  #(test fuer filterCondition)
+    def test_filter_results(self):
 
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2]*q.ms, t_stop=10)
@@ -128,33 +128,111 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.less_than_equal(5))[0].annotations)
 
 
-        #Neue Tests, aufteilen?
+    def test_filter_equal(self):
+
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1.annotate(test=5)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2.annotate(test=6)
+        seg.spiketrains.append(st1)
+        seg.spiketrains.append(st2)
         self.assertEqual(1, len(seg.filter(test=neo.core.container.equal(5))))
         self.assertEqual(0, len(seg.filter(test=neo.core.container.equal(1))))
+
+    def test_filter_is_not(self):
+
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2]*q.ms, t_stop=10)
+        st1.annotate(test=5)
+        st2 = neo.core.SpikeTrain([3, 4]*q.ms, t_stop=10)
+        st2.annotate(test=6)
+        seg.spiketrains.append(st1)
+        seg.spiketrains.append(st2)
 
         self.assertEqual(2, len(seg.filter(test=neo.core.container.is_not(1))))
         self.assertEqual(1, len(seg.filter(test=neo.core.container.is_not(5))))
         self.assertEqual(0, len(seg.filter([{"test":neo.core.container.is_not(5)}, {"test":neo.core.container.is_not(6)}])))
 
+    def test_filter_less_than(self):
+
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1.annotate(test=5)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2.annotate(test=6)
+        seg.spiketrains.append(st1)
+        seg.spiketrains.append(st2)
+
         self.assertEqual(0, len(seg.filter(test=neo.core.container.less_than(5))))
         self.assertEqual(1, len(seg.filter(test=neo.core.container.less_than(6))))
         self.assertEqual(2, len(seg.filter(test=neo.core.container.less_than(7))))
+
+    def test_filter_less_than_equal(self):
+
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1.annotate(test=5)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2.annotate(test=6)
+        seg.spiketrains.append(st1)
+        seg.spiketrains.append(st2)
 
         self.assertEqual(0, len(seg.filter(test=neo.core.container.less_than_equal(4))))
         self.assertEqual(1, len(seg.filter(test=neo.core.container.less_than_equal(5))))
         self.assertEqual(2, len(seg.filter(test=neo.core.container.less_than_equal(6))))
 
+    def test_filter_greater_than(self):
+
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1.annotate(test=5)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2.annotate(test=6)
+        seg.spiketrains.append(st1)
+        seg.spiketrains.append(st2)
+
         self.assertEqual(0, len(seg.filter(test=neo.core.container.greater_than(6))))
         self.assertEqual(1, len(seg.filter(test=neo.core.container.greater_than(5))))
         self.assertEqual(2, len(seg.filter(test=neo.core.container.greater_than(4))))
+
+    def test_filter_greater_than_equal(self):
+
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1.annotate(test=5)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2.annotate(test=6)
+        seg.spiketrains.append(st1)
+        seg.spiketrains.append(st2)
 
         self.assertEqual(0, len(seg.filter(test=neo.core.container.greater_than_equal(7))))
         self.assertEqual(1, len(seg.filter(test=neo.core.container.greater_than_equal(6))))
         self.assertEqual(2, len(seg.filter(test=neo.core.container.greater_than_equal(5))))
 
+    def test_filter_is_in(self):
+
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1.annotate(test=5)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2.annotate(test=6)
+        seg.spiketrains.append(st1)
+        seg.spiketrains.append(st2)
+
         self.assertEqual(0, len(seg.filter(test=neo.core.container.is_in([4, 7, 10]))))
         self.assertEqual(1, len(seg.filter(test=neo.core.container.is_in([5, 7, 10]))))
         self.assertEqual(2, len(seg.filter(test=neo.core.container.is_in([5, 6, 10]))))
+
+    def test_filter_in_range(self):
+
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1.annotate(test=5)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2.annotate(test=6)
+        seg.spiketrains.append(st1)
+        seg.spiketrains.append(st2)
 
         self.assertEqual(2, len(seg.filter(test=neo.core.container.in_range(5, 6, False, False))))
         self.assertEqual(1, len(seg.filter(test=neo.core.container.in_range(5, 6, True, False))))
@@ -168,32 +246,13 @@ class TestContainerNeo(unittest.TestCase):
         st1.annotate(test=5)
         st2 = neo.core.SpikeTrain([3, 4]*q.ms, t_stop=10)
         st2.annotate(filt=6)
-        st2.name('st_num_1')
+        st2.annotate(name='st_num_1')
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
 
         self.assertEqual(2, len(seg.filter({'test': neo.core.container.equal(5), 'filt': neo.core.container.equal(6)})))
         self.assertEqual(0, len(seg.filter([{'test': neo.core.container.equal(5)}, {'filt': neo.core.container.equal(6)}])))
-        #self.assertEqual(1, len(seg.filter(name='st_num_1')))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        self.assertEqual(1, len(seg.filter(name='st_num_1')))
 
 
 class Test_Container_merge(unittest.TestCase):

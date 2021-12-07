@@ -76,9 +76,12 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
                 if (hasattr(obj, key) and getattr(obj, key) == value and
                         all([obj is not res for res in results])):
                     results.append(obj)
-                elif (key in obj.annotations and value.test(obj.annotations[key]) and
+                elif(isinstance(value, FilterCondition)):
+                    if (key in obj.annotations and value.test(obj.annotations[key]) and
                           all([obj is not res for res in results])):
-                    results.append(obj)
+                        results.append(obj)
+                elif (key in obj.annotations and obj.annotations[key] == value and all([obj is not res for res in results])):
+                        results.append(obj)
 
     # keep only objects of the correct classes
     if objects:
