@@ -73,7 +73,8 @@ GLOBAL_ANNOTATIONS = (
     "experiment_description", "session_id", "institution", "keywords", "notes",
     "pharmacology", "protocol", "related_publications", "slices", "source_script",
     "source_script_file_name", "data_collection", "surgery", "virus", "stimulus_notes",
-    "lab", "session_description"
+    "lab", "session_description",
+    "rec_datetime",
 )
 
 POSSIBLE_JSON_FIELDS = (
@@ -273,7 +274,7 @@ class NWBIO(BaseIO):
                 "session_start_time"]
         if "file_create_date" in self.global_block_metadata:
             self.global_block_metadata["file_datetime"] = self.global_block_metadata[
-                "file_create_date"]
+                "rec_datetime"]
 
         self._blocks = {}
         self._read_acquisition_group(lazy=lazy)
@@ -435,11 +436,13 @@ class NWBIO(BaseIO):
             annotations["session_description"] = blocks[0].description or self.filename
             # todo: concatenate descriptions of multiple blocks if different
         if "session_start_time" not in annotations:
-            raise Exception("Writing to NWB requires an annotation 'session_start_time'")
+            annotations["session_start_time"] = blocks[0].rec_datetime
+            if annotations["session_start_time"] is None:
+                raise Exception("Writing to NWB requires an annotation 'session_start_time'")
+        self.annotations = {"rec_datetime": "rec_datetime"}
+        self.annotations["rec_datetime"] = blocks[0].rec_datetime
         # todo: handle subject
-        # todo: store additional Neo annotations somewhere in NWB file
         nwbfile = NWBFile(**annotations)
-
         assert self.nwb_file_mode in ('w',)  # possibly expand to 'a'ppend later
         if self.nwb_file_mode == "w" and os.path.exists(self.filename):
             os.remove(self.filename)
@@ -518,7 +521,7 @@ class NWBIO(BaseIO):
                 signal.name = "%s %s %i" % (signal.name, segment.name, i)
                 logging.warning("Warning signal name exists. New name: %s" % (signal.name))
             if not signal.name:
-                signal.name = "%s : analogsignal%d" % (segment.name, i)
+                signal.name = "%s : analogsignal%d %i" % (segment.name, i, i)
             self._write_signal(nwbfile, signal, electrodes)
 
         for i, train in enumerate(segment.spiketrains):
@@ -632,7 +635,8 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
     common_metadata_fields = (
         # fields that are the same for all TimeSeries subclasses
         "comments", "description", "unit", "starting_time", "timestamps", "rate",
-        "data", "starting_time_unit", "timestamps_unit", "electrode"
+        "data", "starting_time_unit", "timestamps_unit", "electrode",
+        "stream_id",
     )
 
     def __init__(self, timeseries, nwb_group):
