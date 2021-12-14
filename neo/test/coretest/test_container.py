@@ -129,6 +129,9 @@ class TestContainerNeo(unittest.TestCase):
 
 
     def test_filter_equal(self):
+        '''
+            Tests FilterCondition object "equal".
+        '''
 
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
@@ -141,6 +144,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(0, len(seg.filter(test=neo.core.container.equal(1))))
 
     def test_filter_is_not(self):
+        '''
+            Tests FilterCondition object "is_not".
+        '''
 
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2]*q.ms, t_stop=10)
@@ -155,6 +161,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(0, len(seg.filter([{"test":neo.core.container.is_not(5)}, {"test":neo.core.container.is_not(6)}])))
 
     def test_filter_less_than(self):
+        '''
+            Tests FilterCondition object "less_than".
+        '''
 
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
@@ -169,6 +178,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(2, len(seg.filter(test=neo.core.container.less_than(7))))
 
     def test_filter_less_than_equal(self):
+        '''
+            Tests FilterCondition object "less_than_equal".
+        '''
 
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
@@ -183,6 +195,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(2, len(seg.filter(test=neo.core.container.less_than_equal(6))))
 
     def test_filter_greater_than(self):
+        '''
+            Tests FilterCondition object "greater_than".
+        '''
 
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
@@ -197,6 +212,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(2, len(seg.filter(test=neo.core.container.greater_than(4))))
 
     def test_filter_greater_than_equal(self):
+        '''
+            Tests FilterCondition object "greater_than_equal".
+        '''
 
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
@@ -211,6 +229,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(2, len(seg.filter(test=neo.core.container.greater_than_equal(5))))
 
     def test_filter_is_in(self):
+        '''
+        Tests FilterCondition object "is_in".
+        '''
 
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
@@ -225,7 +246,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(2, len(seg.filter(test=neo.core.container.is_in([5, 6, 10]))))
 
     def test_filter_in_range(self):
-
+        '''
+        Tests FilterCondition object "in_range".
+        '''
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
         st1.annotate(test=5)
@@ -240,7 +263,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(0, len(seg.filter(test=neo.core.container.in_range(5, 6, True, True))))
 
     def test_filter_connectivity(self):
-
+        '''
+        Tests old functionality with new filter method.
+        '''
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
         st1.annotate(test=5)

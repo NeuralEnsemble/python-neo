@@ -23,21 +23,23 @@ def unique_objs(objs):
 
 def filterdata(data, targdict=None, objects=None, **kwargs):
     """
-    Return a list of the objects in data matching *any* of the search terms
-    in either their attributes or annotations.  Search terms can be
-    provided as keyword arguments or a dictionary, either as a positional
-    argument after data or to the argument targdict.  targdict can also
-    be a list of dictionaries, in which case the filters are applied
-    sequentially.  If targdict and kwargs are both supplied, the
-    targdict filters are applied first, followed by the kwarg filters.
-    A targdict of None or {} and objects = None corresponds to no filters
-    applied, therefore returning all child objects.
-    Default targdict and objects is None.
+        Return a list of child objects matching *any* of the search terms
+        in either their attributes or annotations.  Search terms can be
+        provided as keyword arguments or a dictionary, either as a positional
+        argument after data or to the argument targdict.
+        A key of a provided dictionary is the name of the requested annotation and the value is a FilterCondition object.
+        E.g.: equal(x), less_than(x), in_range(x, y).
 
+        targdict can also
+        be a list of dictionaries, in which case the filters are applied
+        sequentially.
 
-    objects (optional) should be the name of a Neo object type,
-    a neo object class, or a list of one or both of these.  If specified,
-    only these objects will be returned.
+        A list of disctionaries is handled as follows: [ { or } and { or } ]
+        If targdict and kwargs are both supplied, the
+        targdict filters are applied first, followed by the kwarg filters.
+        A targdict of None or {} corresponds to no filters applied, therefore
+        returning all child objects. Default targdict is None.
+
     """
 
     # if objects are specified, get the classes
@@ -95,6 +97,13 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         return results
 
 class FilterCondition():
+    """
+        FilterCondition object is given as parameter to container.filter():
+
+        example.filter(annotation=<FilterCondition>) or
+        example=filter({'annotation': <FilterCondition>})
+    """
+
     def __init__(self, z):
         pass
 
@@ -110,6 +119,7 @@ class equal(FilterCondition):
         return x == self.control
 
 class is_not(FilterCondition):
+
     def __init__(self, z):
         self.control = z
 
@@ -117,6 +127,7 @@ class is_not(FilterCondition):
         return x != self.control
 
 class less_than_equal(FilterCondition):
+
     def __init__(self, z):
         self.control = z
 
@@ -472,9 +483,16 @@ class Container(BaseNeo):
         Return a list of child objects matching *any* of the search terms
         in either their attributes or annotations.  Search terms can be
         provided as keyword arguments or a dictionary, either as a positional
-        argument after data or to the argument targdict.  targdict can also
+        argument after data or to the argument targdict.
+        A key of a provided dictionary is the name of the requested annotation and the value is a FilterCondition object.
+        E.g.: equal(x), less_than(x), in_range(x, y).
+
+        targdict can also
         be a list of dictionaries, in which case the filters are applied
-        sequentially.  If targdict and kwargs are both supplied, the
+        sequentially.
+
+        A list of disctionaries is handled as follows: [ { or } and { or } ]
+        If targdict and kwargs are both supplied, the
         targdict filters are applied first, followed by the kwarg filters.
         A targdict of None or {} corresponds to no filters applied, therefore
         returning all child objects. Default targdict is None.
