@@ -136,12 +136,12 @@ class TestAsciiSignalIO(unittest.TestCase):
     def test_skiprows(self):
         filename = 'test_skiprows.txt'
         sample_data = [
-                (-65, -65, -65, 0.5),
-                (-64.8, -64.5, -64.0, 0.6),
-                (-64.6, -64.2, -77.0, 0.7),
-                (-64.3, -64.0, -99.9, 0.8),
-                (-66, -64.3, -61.0, 1.4),
-            ]
+            (-65, -65, -65, 0.5),
+            (-64.8, -64.5, -64.0, 0.6),
+            (-64.6, -64.2, -77.0, 0.7),
+            (-64.3, -64.0, -99.9, 0.8),
+            (-66, -64.3, -61.0, 1.4),
+        ]
         with open(filename, 'w') as datafile:
             for row in sample_data:
                 datafile.write("\t ".join(map(str, row)) + "\t\n")
@@ -158,12 +158,12 @@ class TestAsciiSignalIO(unittest.TestCase):
     def test_usecols(self):
         filename = 'test_usecols.txt'
         sample_data = [
-                (-65, -65, -65, 0.5),
-                (-64.8, -64.5, -64.0, 0.6),
-                (-64.6, -64.2, -77.0, 0.7),
-                (-64.3, -64.0, -99.9, 0.8),
-                (-66, -64.3, -61.0, 1.4),
-            ]
+            (-65, -65, -65, 0.5),
+            (-64.8, -64.5, -64.0, 0.6),
+            (-64.6, -64.2, -77.0, 0.7),
+            (-64.3, -64.0, -99.9, 0.8),
+            (-66, -64.3, -61.0, 1.4),
+        ]
         with open(filename, 'w') as datafile:
             for row in sample_data:
                 datafile.write("\t ".join(map(str, row)) + "\t\n")
@@ -174,7 +174,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         self.assertEqual(len(block.segments[0].analogsignals[0]), 5)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(signal.units, pq.V)
-        
+
         os.remove(filename)
 
 
