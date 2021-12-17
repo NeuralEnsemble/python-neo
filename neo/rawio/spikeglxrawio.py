@@ -261,9 +261,9 @@ def scan_files(dirname):
                         index_imroTbl = 3
                     elif signal_kind == 'lf':
                         index_imroTbl = 4
-                        for c in range(num_chan - 1):
-                            v = meta['imroTbl'][c].split(' ')[index_imroTbl]
-                            per_channel_gain[c] = 1. / float(v)
+                    for c in range(num_chan - 1):
+                        v = meta['imroTbl'][c].split(' ')[index_imroTbl]
+                        per_channel_gain[c] = 1. / float(v)
                 elif meta['imDatPrb_type'] == '21' and signal_kind == 'ap':
                     per_channel_gain[:-1] = 80.
                 elif meta['imDatPrb_type'] == '24' and signal_kind == 'ap':
