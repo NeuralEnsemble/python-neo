@@ -1,6 +1,6 @@
 """
 Quick way to load Hekafiles into Neo format using load-heka-python module.
-
+Joseph John Ziminski 2021
 TODO: implement at rawio level for inclusion in Neo
 """
 import numpy as np
@@ -64,8 +64,8 @@ class HekaIO(BaseIO):
 
         self.heka = LoadHeka(self.filename, only_load_header=True)
 
-        self.series_data = {"V": self.heka.get_series_data("Vm", self.group_idx, self.series_idx, include_stim_protocol=True),  # try and load both, even if doesn't exist
-                            "A": self.heka.get_series_data("Im", self.group_idx, self.series_idx, include_stim_protocol=True)}
+        self.series_data = {"V": self.heka.get_series_data("Vm", self.group_idx, self.series_idx, include_stim_protocol=True, fill_with_mean=True),  # try and load both, even if doesn't exist
+                            "A": self.heka.get_series_data("Im", self.group_idx, self.series_idx, include_stim_protocol=True, fill_with_mean=True)}
         bl = Block()
 
         self.channels = self.heka.get_series_channels(self.group_idx, self.series_idx)
