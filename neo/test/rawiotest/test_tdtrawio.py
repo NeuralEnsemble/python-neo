@@ -10,7 +10,8 @@ class TestTdtRawIO(BaseTestRawIO, unittest.TestCase, ):
         'tdt'
     ]
     entities_to_test = [
-        'tdt/aep_05'
+        'tdt/aep_05',
+        'tdt/aep_05/Block-1/aep_05_Block-1.Tdx'
     ]
 
 
