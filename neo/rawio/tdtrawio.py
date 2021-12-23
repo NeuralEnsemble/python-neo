@@ -60,6 +60,8 @@ class TdtRawIO(BaseRawIO):
             # in single tdt block mode the dirname also contains the block prefix
             self.dirname = dirname.with_suffix('')
             self.tdt_block_mode = 'single'
+        else:
+            raise ValueError(f'No data folder or file found for {dirname}')
 
         self.sortname = sortname
 
