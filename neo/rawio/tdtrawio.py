@@ -212,7 +212,8 @@ class TdtRawIO(BaseRawIO):
                     if len(data_index['timestamp']):
                         t_start = data_index['timestamp'][0]
                     else:
-                        t_start = None
+                        # if no signal present use segment t_start as dummy value
+                        t_start = self._seg_t_starts[seg_index]
                     if stream_index not in self._sigs_t_start[seg_index]:
                         self._sigs_t_start[seg_index][stream_index] = t_start
                     else:
@@ -223,8 +224,9 @@ class TdtRawIO(BaseRawIO):
                         _sampling_rate = float(data_index['frequency'][0])
                         _dtype = data_formats[data_index['dataformat'][0]]
                     else:
-                        _sampling_rate = np.nan
-                        _dtype = type(None)
+                        # if no signal present use dummy values
+                        _sampling_rate = 1.
+                        _dtype = int
                     if sampling_rate is None:
                         sampling_rate = _sampling_rate
                         dtype = _dtype
