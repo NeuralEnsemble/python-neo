@@ -243,7 +243,7 @@ class TdtRawIO(BaseRawIO):
                     if self.tdt_block_mode == 'multi':
                         # for multi block datasets the names of sev files are fixed
                         store = info['StoreName'].decode('ascii')
-                        sev_stem = tankname + '_' + segment_name + '_' + store + '_ch' + str(chan_id)
+                        sev_stem = f'{tankname}_{segment_name}_{store}_ch{chan_id}'
                         sev_filename = (path / sev_stem).with_suffix('.sev')
                     else:
                         # for single block datasets the exact name of sev files in not known
