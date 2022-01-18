@@ -256,7 +256,11 @@ def scan_files(dirname):
                 # metad['imroTbl'] contain two gain per channel  AP and LF
                 # except for the last fake channel
                 per_channel_gain = np.ones(num_chan, dtype='float64')
-                if meta['imDatPrb_type'] == '0':
+                if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0':
+                    # This wirk with NP 1.0 case with different metadata versions
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec   
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B2.md#imec
                     if signal_kind == 'ap':
                         index_imroTbl = 3
                     elif signal_kind == 'lf':
@@ -264,17 +268,19 @@ def scan_files(dirname):
                     for c in range(num_chan - 1):
                         v = meta['imroTbl'][c].split(' ')[index_imroTbl]
                         per_channel_gain[c] = 1. / float(v)
-                elif meta['imDatPrb_type'] == '21' and signal_kind == 'ap':
+                    gain_factor = float(meta['imAiRangeMax']) / 512
+                    channel_gains = per_channel_gain * gain_factor * 1e6
+                elif meta['imDatPrb_type'] in ('21', '24') and signal_kind == 'ap':
+                    # This wirk with NP 2.0 case with different metadata versions
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_30.md#imec
                     per_channel_gain[:-1] = 80.
-                elif meta['imDatPrb_type'] == '24' and signal_kind == 'ap':
-                    per_channel_gain[:-1] = 80.
+                    gain_factor = float(meta['imAiRangeMax']) / 8192
+                    channel_gains = per_channel_gain * gain_factor * 1e6
                 else:
                     raise NotImplementedError('This meta file version of spikeglx'
                                              'is not implemented')
-
-                gain_factor = float(meta['imAiRangeMax']) / 512
-                channel_gains = per_channel_gain * gain_factor * 1e6
-
             else:
                 signal_kind = ''
                 stream_name = device
