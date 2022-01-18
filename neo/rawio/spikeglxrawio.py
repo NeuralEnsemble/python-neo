@@ -258,8 +258,8 @@ def scan_files(dirname):
                 per_channel_gain = np.ones(num_chan, dtype='float64')
                 if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0':
                     # This wirk with NP 1.0 case with different metadata versions
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec   
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec
                     # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B2.md#imec
                     if signal_kind == 'ap':
                         index_imroTbl = 3
@@ -272,8 +272,8 @@ def scan_files(dirname):
                     channel_gains = per_channel_gain * gain_factor * 1e6
                 elif meta['imDatPrb_type'] in ('21', '24') and signal_kind == 'ap':
                     # This wirk with NP 2.0 case with different metadata versions
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
                     # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_30.md#imec
                     per_channel_gain[:-1] = 80.
                     gain_factor = float(meta['imAiRangeMax']) / 8192
