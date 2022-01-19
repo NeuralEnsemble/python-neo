@@ -14,3 +14,4 @@ coveralls
 pillow
 sonpy
 pynwb
+probeinterface

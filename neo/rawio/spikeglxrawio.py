@@ -66,10 +66,11 @@ class SpikeGLXRawIO(BaseRawIO):
     extensions = []
     rawmode = 'one-dir'
 
-    def __init__(self, dirname='', load_sync_channel=False):
+    def __init__(self, dirname='', load_sync_channel=False, load_channel_location=False):
         BaseRawIO.__init__(self)
         self.dirname = dirname
         self.load_sync_channel = load_sync_channel
+        self.load_channel_location = load_channel_location
 
     def _source_name(self):
         return self.dirname
@@ -159,6 +160,20 @@ class SpikeGLXRawIO(BaseRawIO):
             for c, signal_stream in enumerate(signal_streams):
                 stream_name = signal_stream['name']
                 sig_ann = self.raw_annotations['blocks'][0]['segments'][seg_index]['signals'][c]
+
+                if self.load_channel_location:
+                    # need probeinterface to be installed
+                    import probeinterface
+                    info = self.signals_info_dict[seg_index, stream_name]
+                    if 'imroTbl' in info['meta'] and info['signal_kind'] == 'ap':
+                        # only
+                        probe = probeinterface.read_spikeglx(info['meta_file'])
+                        loc = probe.contact_positions
+                        if self.load_sync_channel:
+                            # one fake channel  for "sys0"
+                            loc = np.concatenate((loc, [[0., 0.]]), axis=0)
+                        for ndim in range(loc.shape[1]):
+                            sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = loc[:, ndim]
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
