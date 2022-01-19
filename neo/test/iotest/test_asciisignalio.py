@@ -78,7 +78,6 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         os.remove(filename)
     # test_csv_expect_failure
-    # test_homemade_expect_success
 
     def test_homemade_expect_success(self):
         filename = 'test_homemade_expect_success.txt'
@@ -152,6 +151,13 @@ class TestAsciiSignalIO(unittest.TestCase):
         self.assertEqual(len(block.segments[0].analogsignals), 5)
         self.assertEqual(len(block.segments[0].analogsignals[0]), 4)
         self.assertEqual(signal.units, pq.V)
+        assert_array_equal(signal.times, [0., 1., 2., 3.] * pq.s)
+        assert_array_equal(signal.times.magnitude, [0., 1., 2., 3.])
+        assert_array_equal(signal[0].magnitude, -64.8)
+        assert_array_equal(signal[1].magnitude, -64.6)
+        assert_array_equal(signal[2].magnitude, -64.3)
+        assert_array_equal(signal[3].magnitude, -66)
+        assert_array_almost_equal(np.asarray(signal).flatten(), np.array([-64.8, -64.6, -64.3, -66]), decimal=5)
 
         os.remove(filename)
 
@@ -174,9 +180,67 @@ class TestAsciiSignalIO(unittest.TestCase):
         self.assertEqual(len(block.segments[0].analogsignals[0]), 5)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(signal.units, pq.V)
+        assert_array_equal(signal.times, [0., 1., 2., 3., 4.] * pq.s)
+        assert_array_equal(signal.times.magnitude, [0., 1., 2., 3., 4.])
+        assert_array_equal(signal[0].magnitude, 0.5)
+        assert_array_equal(signal[1].magnitude, 0.6)
+        assert_array_equal(signal[2].magnitude, 0.7)
+        assert_array_equal(signal[3].magnitude, 0.8)
+        assert_array_equal(signal[4].magnitude, 1.4)
+        assert_array_almost_equal(np.asarray(signal).flatten(), np.array([0.5, 0.6, 0.7, 0.8, 1.4]), decimal=5)
 
         os.remove(filename)
 
+    # test skip comments
+    def test_skip_comments(self):
+
+        sample_data = [
+            ("INFORMATION"),
+            ("20170119_cell1_CA"),
+            (""),
+            (""),
+            (""),
+            (""),
+            (""),
+            (),
+            ("Waveform"),
+            ("Unit"),
+            (),
+            (-0.02121), 
+            (-0.01740),
+            (-0.00671),
+            (-0.00885),
+            (-0.00092),
+            (-0.01373),
+            (-0.01175),
+            (-0.00504),
+            (-0.01358),
+            (-0.01526),
+            (-0.00244),
+            (2.26852),
+            ("CHANNEL"	"5"),
+            ("Evt+-"),
+            (""),
+            (""),
+        ]
+        sampling_rate = 1 * pq.kHz
+        filename='test_skip_comments.txt'
+        with open(filename, 'w') as datafile:
+            for row in sample_data:
+                datafile.write(str(float))
+
+        io = AsciiSignalIO(filename, sampling_rate=sampling_rate, delimiter=' ',
+                           units='mV', method='genfromtxt')
+        block = io.read_block()
+        signal1 = block.segments[0].analogsignals[0]
+
+        self.assertEqual(len(block.segments[0].analogsignals), 1)
+        self.assertEqual(signal1.units, pq.mV)
+        self.assertEqual(signal1.shape, (0, 1))
+        self.assertEqual(len(block.segments[0].analogsignals), 1)
+        self.assertEqual(len(block.segments[0].analogsignals[0]), 0)
+
+        os.remove(filename)
 
     def test_timecolumn(self):
         sample_data = np.random.uniform(size=(200, 3))
@@ -266,8 +330,140 @@ class TestAsciiSignalIO(unittest.TestCase):
         os.remove(filename)
 
     # test write without timecolumn
+    def test_write_without_timecolumn(self):
+        sample_data = np.random.uniform(size=(2, 3))
+        sampling_period = 1
+        time_data = sampling_period * np.arange(sample_data.shape[0])
+        combined_data = np.hstack((time_data[:, np.newaxis], sample_data))
+        filename = "test_write_without_timecolumn.txt"
+        np.savetxt(filename, combined_data, delimiter=' ')
+
+        signal1 = AnalogSignal(sample_data, units="V", sampling_rate=1 * pq.Hz)
+        seg1 = Segment()
+        block1 = Block()
+        seg1.analogsignals.append(signal1)
+        seg1.block = block1
+        block1.segments.append(seg1)
+
+        iow = AsciiSignalIO(filename,
+                           method='genfromtxt',
+                           time_units='ms',
+                           signal_group_mode='all-in-one'
+                           )
+        iow.write_block(block1)
+
+        ior = AsciiSignalIO(filename)
+        block2 = ior.read_block()
+        
+        assert len(block2.segments[0].analogsignals) == 3
+        signal2 = block2.segments[0].analogsignals[1]
+ 
+        assert_array_almost_equal(signal1.magnitude[:, 1], signal2.magnitude.reshape(-1),
+                                  decimal=7)
+        self.assertEqual(signal1.units, signal2.units)
+        self.assertEqual(signal1.sampling_rate, signal2.sampling_rate)
+        assert_array_equal(signal1.times, signal2.times)
+
+        assert_array_almost_equal(signal2.magnitude.reshape(-1), sample_data[:, 1],
+                                  decimal=6)
+        
+        self.assertEqual(signal2.sampling_period, sampling_period * pq.s)
+        self.assertEqual(len(block2.segments[0].analogsignals), 3)
+        self.assertEqual(signal2.t_stop, sample_data.shape[0] * sampling_period * pq.s)
+        self.assertEqual(signal2.units, pq.V)
+
+        os.remove(filename)
+
     # test write with timecolumn
+    def test_write_with_timecolumn(self):
+        sample_data = np.random.uniform(size=(200, 3))
+        sampling_period = 1
+        time_data = sampling_period * np.arange(sample_data.shape[0])
+        combined_data = np.hstack((time_data[:, np.newaxis], sample_data))
+        filename = "test_write_with_timecolumn.txt"
+        np.savetxt(filename, combined_data, delimiter=' ')
+
+        signal1 = AnalogSignal(sample_data, units="V", sampling_rate=1 * pq.Hz)
+        seg1 = Segment()
+        block1 = Block()
+        seg1.analogsignals.append(signal1)
+        seg1.block = block1
+        block1.segments.append(seg1)
+
+        iow = AsciiSignalIO(filename,
+                           method='genfromtxt',
+                           timecolumn=0,
+                           time_units='ms',
+                           signal_group_mode='all-in-one'
+                           )
+        iow.write_block(block1)
+
+        ior = AsciiSignalIO(filename)
+        block2 = ior.read_block()
+        
+        assert len(block2.segments[0].analogsignals) == 4
+        signal2 = block2.segments[0].analogsignals[1]
+
+        assert_array_almost_equal(signal1.magnitude[:, 0], signal2.magnitude.reshape(-1),
+                                  decimal=7)
+        self.assertEqual(signal1.units, signal2.units)
+        self.assertEqual(signal1.sampling_rate, signal2.sampling_rate)
+        assert_array_equal(signal1.times, signal2.times)
+        assert_array_almost_equal(signal2.magnitude[:, 0], sample_data[:, 0],
+                                  decimal=6)
+        self.assertEqual(signal2.sampling_period, sampling_period * pq.s)
+        self.assertEqual(len(block2.segments[0].analogsignals), 4)
+        self.assertEqual(signal2.t_stop, sample_data.shape[0] * sampling_period * pq.s)
+        self.assertEqual(signal2.units, pq.V)
+
+        os.remove(filename)
+
     # test write with units/timeunits different from those of signal
+    def test_write_with_timeunits_different_from_those_of_signal(self):
+        sample_data = np.random.uniform(size=(3, 3))
+        sampling_period = 1
+        time_data = sampling_period * np.arange(sample_data.shape[0])
+        combined_data = np.hstack((time_data[:, np.newaxis], sample_data))
+        filename = "test_write_with_timeunits_different_from_those_of_signal.txt"
+        np.savetxt(filename, combined_data, delimiter=' ')
+
+        signal1 = AnalogSignal(sample_data, units="A", sampling_rate=2 * pq.Hz, sampling_period=0.5)
+        seg1 = Segment()
+        block1 = Block()
+        seg1.analogsignals.append(signal1)
+        seg1.block = block1
+        block1.segments.append(seg1)
+
+        iow = AsciiSignalIO(filename,
+                           method='genfromtxt',
+                           timecolumn=0,
+                           units='mV',
+                           time_units='ms',
+                           signal_group_mode='all-in-one'
+                           )
+        def_units = iow.units
+        def_time_units = iow.time_units
+        iow.write_block(block1)
+
+        ior = AsciiSignalIO(filename)
+        block2 = ior.read_block()
+
+        assert len(block2.segments[0].analogsignals) == 4
+        signal2 = block2.segments[0].analogsignals[1]
+ 
+        self.assertTrue(signal1.units, def_units)
+        self.assertEqual(signal1.units, pq.A)
+        self.assertEqual(iow.units, pq.A)
+        self.assertEqual(signal1.units, iow.units)
+        self.assertTrue(def_units, iow.units)
+
+        self.assertTrue(signal1.units, ior.time_units)        
+        self.assertEqual(iow.time_units, ior.time_units)
+        self.assertTrue(def_time_units, iow.time_units)
+        self.assertEqual(iow.time_units, pq.s)
+        self.assertEqual(ior.time_units, pq.s)        
+
+        os.remove(filename)
 
     def test_read_with_json_metadata(self):
         sample_data = np.random.uniform(size=(200, 3))
