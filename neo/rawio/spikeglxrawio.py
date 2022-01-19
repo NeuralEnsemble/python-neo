@@ -166,7 +166,7 @@ class SpikeGLXRawIO(BaseRawIO):
                     import probeinterface
                     info = self.signals_info_dict[seg_index, stream_name]
                     if 'imroTbl' in info['meta'] and info['signal_kind'] == 'ap':
-                        # only
+                        # only for ap channel
                         probe = probeinterface.read_spikeglx(info['meta_file'])
                         loc = probe.contact_positions
                         if self.load_sync_channel:
