@@ -16,7 +16,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 import numpy as np
 
 try:
-    from pyedflib import highlevel
+    from pyedflib import EdfReader
     HAS_PYEDF = True
 except ImportError:
     HAS_PYEDF = False
@@ -49,7 +49,6 @@ class EDFRawIO(BaseRawIO):
         # note that this filename is used in self._source_name
         self.filename = filename
 
-        self.signals = None
         self.signal_headers = []
         self.edf_header = {}
 
@@ -67,28 +66,47 @@ class EDFRawIO(BaseRawIO):
             if ('EDF+' in file_version_header) and ('EDF+C' not in file_version_header):
                 raise ValueError('Only continuous EDF+ files are currently supported.')
 
-        # read a edf file content using pyedflib
-        self.signals, self.signal_headers, self.edf_header = highlevel.read_edf(self.filename)
+        self.edf_reader = EdfReader(self.filename)
+        # load headers, signal information and
+        self.edf_header = self.edf_reader.getHeader()
+        self.signal_headers = self.edf_reader.getSignalHeaders()
 
-        # 1 edf file = 1 stream
-        signal_streams = [('edf stream', 0)]
-        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # add annotations to header
+        annotations = self.edf_reader.readAnnotations()
+        self.signal_annotations = [[s, d, a] for s, d, a in zip(*annotations)]
+
+        # 1 stream = 1 sampling rate
+        stream_characteristics = []
+        self.stream_idx_to_chidx = {}
 
         signal_channels = []
         for ch_idx, sig_dict in enumerate(self.signal_headers):
             ch_name = sig_dict['label']
             chan_id = ch_idx
             sr = sig_dict['sample_rate']  # Hz
-            dtype = self.signals.dtype.str
+            dtype = np.int16  # assume general int16 based on edf documentation
             units = sig_dict['dimension']
             physical_range = sig_dict['physical_max'] - sig_dict['physical_min']
             digital_range = sig_dict['digital_max'] - sig_dict['digital_min']
             gain = physical_range / digital_range
             offset = -1 * sig_dict['digital_min'] * gain + sig_dict['physical_min']
-            stream_id = 0  # file contains only a single stream
+
+            # identify corresponding stream based on sampling rate
+            if (sr,) not in stream_characteristics:
+                stream_characteristics += [(sr,)]
+
+            stream_id = stream_characteristics.index((sr,))
+            self.stream_idx_to_chidx.setdefault(stream_id, []).append(ch_idx)
+
             signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
 
+        # convert channel index lists to arrays for indexing
+        self.stream_idx_to_chidx = {k: np.array(v) for k, v in self.stream_idx_to_chidx.items()}
+
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+
+        signal_streams = [(f'stream ({sr} Hz)', i) for i, sr in enumerate(stream_characteristics)]
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # no unit/epoch information contained in edf
         spike_channels = []
@@ -126,37 +144,59 @@ class EDFRawIO(BaseRawIO):
             array_anno = {array_key: [h[array_key] for h in self.signal_headers]}
         seg_ann['signals'].append({'__array_annotations__': array_anno})
 
+    def _get_stream_channels(self, stream_index):
+        return self.header['signal_channels'][self.stream_idx_to_chidx[stream_index]]
+
     def _segment_t_start(self, block_index, seg_index):
         # no time offset provided by EDF format
         return 0  # in seconds
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self.signals.shape[1] / self.signal_headers[0]['sample_rate']
+        t_stop = self.edf_reader.datarecord_duration * self.edf_reader.datarecords_in_file
         # this must return an float scale in second
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        return self.signals.shape[1]
+        chidx = self.stream_idx_to_chidx[stream_index][0]
+        # use sample count of first signal in stream
+        return self.edf_reader.getNSamples()[chidx]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0  # EDF does not provide temporal offset information
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
-        # only dealing with single segment, single stream edf files
-        assert (block_index, seg_index, stream_index) == (0, 0, 0)
+        # only dealing with single block and segment edf files
+        assert (block_index, seg_index) == (0, 0)
+
+        stream_channel_idxs = self.stream_idx_to_chidx[stream_index]
+
+        # keep all channels of the stream if none are selected
+        if channel_indexes is None:
+            channel_indexes = slice(None)
 
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self.signals.shape[1]
+            i_stop = self.get_signal_size(block_index=block_index, seg_index=seg_index,
+                                          stream_index=stream_index)
+        n = i_stop - i_start
 
-        # keep all channels if none are selected
-        if channel_indexes is None:
-            channel_indexes = slice(None)
+        # raw_signals = self.edf_reader. am[channel_indexes, i_start:i_stop]
+        selected_channel_idxs = stream_channel_idxs[channel_indexes]
 
-        raw_signals = self.signals[channel_indexes, i_start:i_stop]
-        return raw_signals.T
+        # load data into numpy array buffer
+        data = []
+        for i, channel_idx in enumerate(selected_channel_idxs):
+            # use int32 for compatibility with pyedflib
+            buffer = np.empty(n, dtype=np.int32)
+            self.edf_reader.read_digital_signal(channel_idx, i_start, n, buffer)
+            data.append(buffer)
+
+        # downgrade to int16 as this is what is used in the edf file format
+        data = np.asarray(data, dtype=np.int16)
+
+        return data.T  # use dimensions (time, channel)
 
     def _spike_count(self, block_index, seg_index, spike_channel_index):
         return None
