@@ -222,3 +222,6 @@ class EDFRawIO(BaseRawIO):
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         return None
+
+    def close(self):
+        self.edf_reader.close()
