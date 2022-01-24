@@ -63,16 +63,18 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
             for seg in blk.segments:  # AnalogSignal objects
 
                 # 3 Neo AnalogSignals
-                a = AnalogSignal(np.random.randn(44, num_chan) * pq.nA,
+                a = AnalogSignal(name='Signal_a %s' % (seg.name),
+                                 signal=np.random.randn(44, num_chan) * pq.nA,
                                  sampling_rate=10 * pq.kHz,
                                  t_start=50 * pq.ms)
-                b = AnalogSignal(np.random.randn(64, num_chan) * pq.mV,
+                b = AnalogSignal(name='Signal_b %s' % (seg.name),
+                                 signal=np.random.randn(64, num_chan) * pq.mV,
                                  sampling_rate=8 * pq.kHz,
                                  t_start=40 * pq.ms)
-                c = AnalogSignal(np.random.randn(33, num_chan) * pq.uA,
+                c = AnalogSignal(name='Signal_c %s' % (seg.name),
+                                 signal=np.random.randn(33, num_chan) * pq.uA,
                                  sampling_rate=10 * pq.kHz,
                                  t_start=120 * pq.ms)
-
                 # 2 Neo IrregularlySampledSignals
                 d = IrregularlySampledSignal(np.arange(7.0) * pq.ms,
                                              np.random.randn(7, num_chan) * pq.mV)
@@ -83,7 +85,8 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
                 # todo: add waveforms
 
                 # 1 Neo Event
-                evt = Event(times=np.arange(0, 30, 10) * pq.ms,
+                evt = Event(name='Event',
+                            times=np.arange(0, 30, 10) * pq.ms,
                             labels=np.array(['ev0', 'ev1', 'ev2']))
 
                 # 2 Neo Epochs
@@ -228,17 +231,17 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
 
         nwbfile = pynwb.NWBHDF5IO(test_file_name, mode="r").read()
 
-        self.assertIsInstance(nwbfile.acquisition["response"], pynwb.icephys.CurrentClampSeries)
-        self.assertIsInstance(nwbfile.stimulus["stimulus"],
+        self.assertIsInstance(nwbfile.acquisition[response.name], pynwb.icephys.CurrentClampSeries)
+        self.assertIsInstance(nwbfile.stimulus[stimulus.name],
                               pynwb.icephys.CurrentClampStimulusSeries)
-        self.assertEqual(nwbfile.acquisition["response"].bridge_balance,
+        self.assertEqual(nwbfile.acquisition[response.name].bridge_balance,
                          response_annotations["nwb:bridge_balance"])
 
         ior = NWBIO(filename=test_file_name, mode='r')
         retrieved_block = ior.read_all_blocks()[0]
 
-        original_response = original_block.segments[0].filter(name="response")[0]
-        retrieved_response = retrieved_block.segments[0].filter(name="response")[0]
+        original_response = original_block.segments[0].filter(name=response.name)[0]
+        retrieved_response = retrieved_block.segments[0].filter(name=response.name)[0]
         for attr_name in ("name", "units", "sampling_rate", "t_start"):
             retrieved_attribute = getattr(retrieved_response, attr_name)
             original_attribute = getattr(original_response, attr_name)

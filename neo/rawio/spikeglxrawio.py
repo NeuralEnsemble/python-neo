@@ -35,6 +35,11 @@ https://billkarsh.github.io/SpikeGLX/#offline-analysis-tools
 https://billkarsh.github.io/SpikeGLX/#metadata-guides
 https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/spikeglxrecordingextractor/spikeglxrecordingextractor.py
 
+This reader handle:
+
+imDatPrb_type=1 (NP 1.0)
+imDatPrb_type=21 (NP 2.0, single multiplexed shank)
+imDatPrb_type=24 (NP 2.0, 4-shank)
 
 Author : Samuel Garcia
 """
@@ -52,13 +57,20 @@ import numpy as np
 class SpikeGLXRawIO(BaseRawIO):
     """
     Class for reading data from a SpikeGLX system
+
+    dirname:
+        The spikeglx folder containing meta/bin files
+    load_sync_channel=False/True
+        The last channel (SY0) of each stream is a fake channel used for synchronisation.
     """
     extensions = []
     rawmode = 'one-dir'
 
-    def __init__(self, dirname=''):
+    def __init__(self, dirname='', load_sync_channel=False, load_channel_location=False):
         BaseRawIO.__init__(self)
         self.dirname = dirname
+        self.load_sync_channel = load_sync_channel
+        self.load_channel_location = load_channel_location
 
     def _source_name(self):
         return self.dirname
@@ -80,8 +92,10 @@ class SpikeGLXRawIO(BaseRawIO):
             self.signals_info_dict[key] = info
 
             # create memmap
-            data = np.memmap(info['bin_file'], dtype='int16', mode='r',
-                        shape=(info['sample_length'], info['num_chan']), offset=0, order='C')
+            data = np.memmap(info['bin_file'], dtype='int16', mode='r', offset=0, order='C')
+            # this should be (info['sample_length'], info['num_chan'])
+            # be some file are shorten
+            data = data.reshape(-1, info['num_chan'])
             self._memmaps[key] = data
 
         # create channel header
@@ -102,6 +116,8 @@ class SpikeGLXRawIO(BaseRawIO):
                 signal_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16',
                                     info['units'], info['channel_gains'][local_chan],
                                     info['channel_offsets'][local_chan], stream_id))
+            if not self.load_sync_channel:
+                signal_channels = signal_channels[:-1]
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -145,14 +161,19 @@ class SpikeGLXRawIO(BaseRawIO):
                 stream_name = signal_stream['name']
                 sig_ann = self.raw_annotations['blocks'][0]['segments'][seg_index]['signals'][c]
 
-                # channel location
-                info = self.signals_info_dict[seg_index, stream_name]
-                if 'channel_location' in info:
-                    loc = info['channel_location']
-                    # one fake channel  for "sys0"
-                    loc = np.concatenate((loc, [[0., 0.]]), axis=0)
-                    for ndim in range(loc.shape[1]):
-                        sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = loc[:, ndim]
+                if self.load_channel_location:
+                    # need probeinterface to be installed
+                    import probeinterface
+                    info = self.signals_info_dict[seg_index, stream_name]
+                    if 'imroTbl' in info['meta'] and info['signal_kind'] == 'ap':
+                        # only for ap channel
+                        probe = probeinterface.read_spikeglx(info['meta_file'])
+                        loc = probe.contact_positions
+                        if self.load_sync_channel:
+                            # one fake channel  for "sys0"
+                            loc = np.concatenate((loc, [[0., 0.]]), axis=0)
+                        for ndim in range(loc.shape[1]):
+                            sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = loc[:, ndim]
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
@@ -172,17 +193,38 @@ class SpikeGLXRawIO(BaseRawIO):
                                 stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
         memmap = self._memmaps[seg_index, stream_id]
-
         if channel_indexes is None:
-            channel_indexes = slice(channel_indexes)
-
-        if not isinstance(channel_indexes, slice):
+            if self.load_sync_channel:
+                channel_selection = slice(None)
+            else:
+                channel_selection = slice(-1)
+        elif isinstance(channel_indexes, slice):
+            if self.load_sync_channel:
+                # simple
+                channel_selection = channel_indexes
+            else:
+                # more tricky because negative
+                sl_start = channel_indexes.start
+                sl_stop = channel_indexes.stop
+                sl_step = channel_indexes.step
+                if sl_stop is not None and sl_stop < 0:
+                    sl_stop = sl_stop - 1
+                elif sl_stop is None:
+                    sl_stop = -1
+                channel_selection = slice(sl_start, sl_stop, sl_step)
+        elif not isinstance(channel_indexes, slice):
             if np.all(np.diff(channel_indexes) == 1):
                 # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
                 # and so keep the underlying memmap
-                local_chans = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
+                channel_selection = slice(channel_indexes[0],
+                                          channel_indexes[0] + len(channel_indexes))
+            else:
+                channel_selection = channel_indexes
+        else:
+            raise ValueError('get_analogsignal_chunk : channel_indexes'
+                             'must be slice or list or array of int')
 
-        raw_signals = memmap[slice(i_start, i_stop), channel_indexes]
+        raw_signals = memmap[slice(i_start, i_stop), channel_selection]
 
         return raw_signals
 
@@ -210,11 +252,11 @@ def scan_files(dirname):
             # Example file name structure:
             # Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
             # The filenames consist of 3 or 4 parts separated by `.`
-            #   * "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user
-            #      at recording time.
-            #   * "_gt0_" will give the `seg_index` (here 0)
-            #   * "nidq" or "imec0" will give the `device` variable
-            #   * "lf" or "ap" will be the `signal_kind` variable
+            # 1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user
+            #    at recording time.
+            # 2. "_gt0_" will give the `seg_index` (here 0)
+            # 3. "nidq" or "imec0" will give the `device` variable
+            # 4. "lf" or "ap" will be the `signal_kind` variable
             # `stream_name` variable is the concatenation of `device.signal_kind`
             name = file.split('.')[0]
             r = re.findall(r'_g(\d*)_t', name)
@@ -229,16 +271,31 @@ def scan_files(dirname):
                 # metad['imroTbl'] contain two gain per channel  AP and LF
                 # except for the last fake channel
                 per_channel_gain = np.ones(num_chan, dtype='float64')
-                if signal_kind == 'ap':
-                    index_imroTbl = 3
-                elif signal_kind == 'lf':
-                    index_imroTbl = 4
-                # the last channel doesn't have a gain value
-                for c in range(num_chan - 1):
-                    per_channel_gain[c] = 1. / float(meta['imroTbl'][c].split(' ')[index_imroTbl])
-                gain_factor = float(meta['imAiRangeMax']) / 512
-                channel_gains = per_channel_gain * gain_factor * 1e6
-
+                if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0':
+                    # This wirk with NP 1.0 case with different metadata versions
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B2.md#imec
+                    if signal_kind == 'ap':
+                        index_imroTbl = 3
+                    elif signal_kind == 'lf':
+                        index_imroTbl = 4
+                    for c in range(num_chan - 1):
+                        v = meta['imroTbl'][c].split(' ')[index_imroTbl]
+                        per_channel_gain[c] = 1. / float(v)
+                    gain_factor = float(meta['imAiRangeMax']) / 512
+                    channel_gains = per_channel_gain * gain_factor * 1e6
+                elif meta['imDatPrb_type'] in ('21', '24') and signal_kind == 'ap':
+                    # This wirk with NP 2.0 case with different metadata versions
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
+                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_30.md#imec
+                    per_channel_gain[:-1] = 80.
+                    gain_factor = float(meta['imAiRangeMax']) / 8192
+                    channel_gains = per_channel_gain * gain_factor * 1e6
+                else:
+                    raise NotImplementedError('This meta file version of spikeglx'
+                                             'is not implemented')
             else:
                 signal_kind = ''
                 stream_name = device
@@ -260,6 +317,7 @@ def scan_files(dirname):
             info = {}
             info['name'] = name
             info['meta'] = meta
+            info['meta_file'] = str(meta_filename)
             info['bin_file'] = str(bin_filename)
             for k in ('niSampRate', 'imSampRate'):
                 if k in meta:
@@ -275,15 +333,6 @@ def scan_files(dirname):
             info['channel_names'] = [txt.split(';')[0] for txt in meta['snsChanMap']]
             info['channel_gains'] = channel_gains
             info['channel_offsets'] = np.zeros(info['num_chan'])
-
-            if signal_kind == 'ap':
-                channel_location = []
-                for e in meta['snsShankMap']:
-                    x_pos = int(e.split(':')[1])
-                    y_pos = int(e.split(':')[2])
-                    channel_location.append([x_pos, y_pos])
-
-                info['channel_location'] = np.array(channel_location)
 
             info_list.append(info)
 

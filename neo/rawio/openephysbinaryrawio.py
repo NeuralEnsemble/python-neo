@@ -337,7 +337,7 @@ def explore_folder(dirname):
                 # so no node_name
                 node_name = ''
 
-            block_index = int(root.parents[0].stem.replace('experiment', '')) - 1
+            block_index = int(root.parents[0].stem.lower().replace('experiment', '')) - 1
             if block_index not in all_streams:
                 all_streams[block_index] = {}
                 if block_index >= nb_block:
