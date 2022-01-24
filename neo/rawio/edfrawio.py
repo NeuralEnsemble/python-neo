@@ -223,5 +223,21 @@ class EDFRawIO(BaseRawIO):
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         return None
 
+    def __enter__(self):
+        return self
+
+    def __del__(self):
+        self._close_reader()
+
+    def __exit__(self, exc_type, exc_val, ex_tb):
+        self._close_reader()
+
     def close(self):
-        self.edf_reader.close()
+        """
+        Closes the file handler
+        """
+        self._close_reader()
+
+    def _close_reader(self):
+        if hasattr(self, 'edf_reader'):
+            self.edf_reader.close()
