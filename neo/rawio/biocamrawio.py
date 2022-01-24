@@ -11,7 +11,12 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                         _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
-from copy import deepcopy
+
+try:
+    import h5py
+    HAVE_H5PY = True
+except ImportError:
+    HAVE_H5PY = False
 
 
 class BiocamRawIO(BaseRawIO):
@@ -42,11 +47,6 @@ class BiocamRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        try:
-            import h5py
-            HAVE_H5PY = True
-        except ImportError:
-            HAVE_H5PY = False
         assert HAVE_H5PY, 'h5py is not installed'
         self._header_dict = open_biocam_file_header(self.filename, self._mea_pitch, self._verbose)
         self._num_channels = self._header_dict["num_channels"]
@@ -125,11 +125,6 @@ class BiocamRawIO(BaseRawIO):
 def open_biocam_file_header(filename, mea_pitch, verbose=False):
     """Open a Biocam hdf5 file, read and return the recording info, pick te correct method to access raw data,
     and return this to the caller."""
-    try:
-        import h5py
-        HAVE_H5PY = True
-    except ImportError:
-        HAVE_H5PY = False
     assert HAVE_H5PY, 'h5py is not installed'
 
     rf = h5py.File(filename, 'r')
