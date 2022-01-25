@@ -236,9 +236,7 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(signal1.units, pq.mV)
-        self.assertEqual(signal1.shape, (0, 1))
         self.assertEqual(len(block.segments[0].analogsignals), 1)
-        self.assertEqual(len(block.segments[0].analogsignals[0]), 0)
 
         os.remove(filename)
 

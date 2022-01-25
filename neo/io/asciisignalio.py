@@ -203,9 +203,6 @@ class AsciiSignalIO(BaseIO):
                                 invalid_raise=False)
 
             nan = np.isnan(sig[:])
-            for i in nan:
-                if i.all()==True:
-                    sig = np.delete(sig, np.isnan(sig[:]))           
             if len(sig.shape) == 1:
                 sig = sig[:, np.newaxis]
         elif self.method == 'csv':
