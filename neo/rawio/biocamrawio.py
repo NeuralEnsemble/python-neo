@@ -37,25 +37,22 @@ class BiocamRawIO(BaseRawIO):
     extensions = ['h5']
     rawmode = 'one-file'
 
-    def __init__(self, filename='', mea_pitch=42, verbose=False):
+    def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         self.filename = filename
-        self._mea_pitch = mea_pitch
-        self._verbose = verbose
 
     def _source_name(self):
         return self.filename
 
     def _parse_header(self):
         assert HAVE_H5PY, 'h5py is not installed'
-        self._header_dict = open_biocam_file_header(self.filename, self._mea_pitch, self._verbose)
+        self._header_dict = open_biocam_file_header(self.filename)
         self._num_channels = self._header_dict["num_channels"]
         self._num_frames = self._header_dict["num_frames"]
         self._sampling_rate = self._header_dict["sampling_rate"]
         self._filehandle = self._header_dict["file_handle"]
         self._read_function = self._header_dict["read_function"]
         self._channels = self._header_dict["channels"]
-        channel_locations = self._header_dict["locations"]
         gain = self._header_dict["gain"]
         offset = self._header_dict["offset"]
 
@@ -91,8 +88,6 @@ class BiocamRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
-        stram_ann = self.raw_annotations['blocks'][0]['segments'][0]['signals'][0]
-        stram_ann['__array_annotations__']['locations'] = np.array(channel_locations)
 
     def _segment_t_start(self, block_index, seg_index):
         all_starts = [[0.]]
@@ -122,7 +117,7 @@ class BiocamRawIO(BaseRawIO):
         return np.squeeze(data[:, channel_indexes])
 
 
-def open_biocam_file_header(filename, mea_pitch, verbose=False):
+def open_biocam_file_header(filename):
     """Open a Biocam hdf5 file, read and return the recording info, pick te correct method to access raw data,
     and return this to the caller."""
     assert HAVE_H5PY, 'h5py is not installed'
@@ -148,11 +143,8 @@ def open_biocam_file_header(filename, mea_pitch, verbose=False):
     else:
         raise Exception('Unknown data file format.')
 
-    # get channel locations
+    # # get channels
     channels = rf['3BRecInfo/3BMeaStreams/Raw/Chs'][:]
-    rows = channels['Row'] - 1
-    cols = channels['Col'] - 1
-    locations = np.vstack((rows, cols)).T * mea_pitch
 
     # determine correct function to read data
     if format_100:
@@ -174,7 +166,7 @@ def open_biocam_file_header(filename, mea_pitch, verbose=False):
     offset = min_uv
 
     return dict(file_handle=rf, num_frames=n_frames, sampling_rate=sampling_rate, num_channels=n_channels,
-                channels=channels, file_format=file_format, signal_inv=signal_inv, locations=locations,
+                channels=channels, file_format=file_format, signal_inv=signal_inv,
                 read_function=read_function, gain=gain, offset=offset)
 
 
