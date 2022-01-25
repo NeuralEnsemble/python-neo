@@ -136,7 +136,7 @@ class TestAsciiSignalIO(unittest.TestCase):
 
     # test_skiprows
     # test_usecols
-    
+
     def test_timecolumn(self):
         sample_data = np.random.uniform(size=(200, 3))
         sampling_period = 0.5
