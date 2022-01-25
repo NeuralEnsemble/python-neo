@@ -13,7 +13,6 @@ from neo.io import AsciiSignalIO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import AnalogSignal, Segment, Block
 
-import string
 
 class TestAsciiSignalIOWithTestFiles(BaseTestIO, unittest.TestCase):
     ioclass = AsciiSignalIO
