@@ -15,6 +15,7 @@ Classes:
 * :attr:`AxographRawIO`
 * :attr:`AxonaRawIO`
 * :attr:`AxonRawIO`
+* :attr:`BiocamRawIO`
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
 * :attr:`CedRawIO`
@@ -50,6 +51,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.AxonRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.BiocamRawIO
 
     .. autoattribute:: extensions
 
@@ -155,6 +160,7 @@ import os
 from neo.rawio.axographrawio import AxographRawIO
 from neo.rawio.axonarawio import AxonaRawIO
 from neo.rawio.axonrawio import AxonRawIO
+from neo.rawio.biocamrawio import BiocamRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
 from neo.rawio.cedrawio import CedRawIO
@@ -185,6 +191,7 @@ rawiolist = [
     AxographRawIO,
     AxonaRawIO,
     AxonRawIO,
+    BiocamRawIO,
     BlackrockRawIO,
     BrainVisionRawIO,
     CedRawIO,
