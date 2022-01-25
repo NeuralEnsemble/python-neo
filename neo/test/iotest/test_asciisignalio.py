@@ -133,8 +133,8 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         os.remove(filename)
 
-    # test_skiprows
-    # test_usecols
+    # test usecols
+    # test skiprows
 
     def test_timecolumn(self):
         sample_data = np.random.uniform(size=(200, 3))
