@@ -201,8 +201,6 @@ class AsciiSignalIO(BaseIO):
                                 names=None,
                                 loose=True,
                                 invalid_raise=False)
-
-            nan = np.isnan(sig[:])
             if len(sig.shape) == 1:
                 sig = sig[:, np.newaxis]
         elif self.method == 'csv':
