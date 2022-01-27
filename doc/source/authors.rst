@@ -60,6 +60,7 @@ and may not be the current affiliation of a contributor.
 * Etienne Combrisson [6]
 * Ben Dichter [24]
 * Elodie Legouée [21]
+* Thomas Perret [25]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -85,6 +86,7 @@ and may not be the current affiliation of a contributor.
 22. Neurtex Brain Research Institute, Dallas, TX, USAs
 23. Bio Engineering Laboratory, DBSSE, ETH, Basel, Switzerland
 24. CatalystNeuro
+25. Institut des Sciences Cognitives Marc Jeannerod, CNRS UMR5229, Lyon, France
 
 If we've somehow missed you off the list we're very sorry - please let us know.
 
