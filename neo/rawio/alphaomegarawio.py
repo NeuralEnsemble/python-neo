@@ -361,8 +361,8 @@ class AlphaOmegaRawIO(BaseRawIO):
                             assert channel_number not in channel_type
                             channel_type[channel_number] = "segmented_analog"
                             (
-                                pre_trigm_sec,
-                                post_trigm_sec,
+                                pre_trig_ms,
+                                post_trig_ms,
                                 level_value,
                                 trg_mode,
                                 yes_rms,
@@ -377,8 +377,8 @@ class AlphaOmegaRawIO(BaseRawIO):
                                 "sample_rate": sample_rate * 1000,
                                 "spike_count": spike_count,
                                 "mode_spike": mode_spike,
-                                "pre_trigm_sec": pre_trigm_sec,
-                                "post_trigm_sec": post_trigm_sec,
+                                "pre_trig_duration": pre_trig_ms / 1000,
+                                "post_trig_duration": post_trig_ms / 1000,
                                 "level_value": level_value,
                                 "trg_mode": trg_mode,
                                 "automatic_level_base_rms": yes_rms,
@@ -772,24 +772,23 @@ class AlphaOmegaRawIO(BaseRawIO):
         signal_channels.sort(key=lambda x: (x[7], x[0]))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        # TODO: read the waveforms then uncomment the following
-        #  spike_channels = set(
-        #  (
-        #  c["name"],
-        #  i,
-        #  "uV",
-        #  c["gain"] / c["bit_resolution"],
-        #  0,
-        #  round(c["pre_trigm_sec"] * c["sample_rate"]),
-        #  c["sample_rate"],
-        #  ) for block in self._blocks
-        #  for segment in block
-        #  for i, c in segment["spikes"].items()
-        #  )
-        #  spike_channels = list(spike_channels)
-        #  spike_channels.sort(key=lambda x: x[0])
-        #  spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
-        spike_channels = np.array([], dtype=_spike_channel_dtype)
+        spike_channels = set(
+            (
+                c["name"],
+                i,
+                "uV",
+                c["gain"] / c["bit_resolution"],
+                0,
+                round(c["pre_trig_duration"] * c["sample_rate"]),
+                c["sample_rate"],
+            )
+            for block in self._blocks
+            for segment in block
+            for i, c in segment["spikes"].items()
+        )
+        spike_channels = list(spike_channels)
+        spike_channels.sort(key=lambda x: x[0])
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         event_channels = set(
             (event["name"], i, "event")
@@ -994,20 +993,65 @@ class AlphaOmegaRawIO(BaseRawIO):
         return sigs[i_start - min_size : i_stop - min_size, :]
 
     def _spike_count(self, block_index, seg_index, spike_channel_index):
-        pass
+        spike_id = int(self.header["spike_channels"]["id"][spike_channel_index])
+        nb_spikes = sum(
+            len(f) for f in self._blocks[block_index][seg_index]["spikes"][spike_id]["positions"].values()
+        )
+        return nb_spikes
 
     def _get_spike_timestamps(
         self, block_index, seg_index, spike_channel_index, t_start, t_stop
     ):
-        pass
+        if self._spike_count(block_index, seg_index, spike_channel_index):
+            spike_id = int(self.header["spike_channels"]["id"][spike_channel_index])
+            spikes = self._blocks[block_index][seg_index]["spikes"][spike_id]
+            if t_start is None:
+                t_start = self._segment_t_start(block_index, seg_index)
+            if t_stop is None:
+                t_stop = self._segment_t_stop(block_index, seg_index)
+            effective_start = t_start * spikes["sample_rate"]
+            effective_stop = t_stop * spikes["sample_rate"]
+            timestamps = np.array([p[0] for f in spikes["positions"].values() for p in f if effective_start <= p[0] <= effective_stop])
+        else:
+            timestamps = np.array([], dtype=np.uint32)
+        return timestamps
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        pass
+        # let's hope every spike channels have the same sampling rate
+        sample_rate = int(self.header["spike_channels"]["wf_sampling_rate"][0])
+        spike_timestamps = spike_timestamps.astype(dtype) / sample_rate
+        return spike_timestamps
 
     def _get_spike_raw_waveforms(
         self, block_index, seg_index, spike_channel_index, t_start, t_stop
     ):
-        pass
+        spike_id = int(self.header["spike_channels"]["id"][spike_channel_index])
+        #  nb_spikes = self._spike_count(block_index, seg_index, spike_channel_index)
+        nb_spikes = self._get_spike_timestamps(block_index, seg_index, spike_channel_index, t_start, t_stop).size
+        spikes = self._blocks[block_index][seg_index]["spikes"][spike_id]
+        spike_length = {p[2] for f in spikes["positions"].values() for p in f}
+        assert len(spike_length) == 1
+        spike_length = spike_length.pop()
+        waveforms = np.ndarray((nb_spikes, spike_length), dtype=np.short)
+        if t_start is None:
+            t_start = self._segment_t_start(block_index, seg_index)
+        if t_stop is None:
+            t_stop = self._segment_t_stop(block_index, seg_index)
+        effective_start = t_start * spikes["sample_rate"]
+        effective_stop = t_stop * spikes["sample_rate"]
+        i = 0
+        for filename in spikes["positions"]:
+            for timestamp, file_position, length in spikes["positions"][filename]:
+                if effective_start <= timestamp <= effective_stop:
+                    waveforms[i, :length] = np.frombuffer(
+                        self._opened_files[filename]["mmap"],
+                        dtype=np.short,
+                        count=length,
+                        offset=file_position,
+                    )
+                    i += 1
+        waveforms.shape = nb_spikes, 1, spike_length
+        return waveforms
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         event_id = int(self.header["event_channels"]["id"][event_channel_index])
@@ -1151,10 +1195,11 @@ SDefContinAnalog = struct.Struct("<fh")
 SDefLevelAnalog = struct.Struct("<ffhhhh")
 """
     Then if mode is Level of Segmented:
-        - pre_trigm_sec (float): number of seconds before segment trigger
-        - post_trigm_sec (float): number of seconds after segment trigger
-        - level_value (short): not sure…
-        - trg_mode (short): not sure…
+        - pre_trig_msec (float): number of milliseconds before segment trigger
+        - post_trig_msec (float): number of milliseconds after segment trigger
+        - level_value (short): unknown (should be the level that trigger a
+          spike detection)
+        - trg_mode (short): unknown (level or template mode?)
         - yes_rms (short): 1 if automatic level calculation base on RMS
         - total_gain_100 (short): see above
         - name (n-char string): channel name; n=length-48
