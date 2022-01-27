@@ -4,7 +4,7 @@ This module implements file reader for AlphaOmega MPX file format version 4.
 This module expect default channel names from the AlphaOmega record system (RAW
 ###, SPK ###, LFP ###, AI ###,…).
 
-This module reads all *.lsx and *.mpx files in a directory (not recursively).
+This module reads all \*.lsx and \*.mpx files in a directory (not recursively).
 Listing files
 
 The specifications are mostly extracted from the "AlphaRS User Manual V1.0.1.pdf"
@@ -12,44 +12,7 @@ manual provided with the AlphaRS hardware. The specifications are described in
 the chapter 6: ALPHARS FILE FORMAT. See at the end of this file for file format
 blocks description.
 Some informations missing from the file specifications were kindly provided by
-AlphaOmega engineers:
-    - strings are NULL terminated and encoded in ASCII
-    - m_ResourceVersion (4 bytes) is the C++ version used to compile the logging
-      (data recording) library: each byte is read separately as a char and then
-      concatenated to create the original value (e.g.: b"\x00\x01\x00\x00' -> 100)
-    - m_ModeSpike (2 bytes) is read as hex data: 0xMCCC:
-        - M: 1=Master, 2=Slave
-        - CCC: linked channel
-        Be carefull here, the first byte cover MC and the second byte the last
-        part of the linked channel CC
-    - m_nSpikeCount: the total number of segments captured on this channel
-    - m_SpikeColor: follows the COLORREF convention from Windef.h:
-        hex value: 0x00bbggrr
-    - for Type E Stream Data Block:
-        - m_uTimeStamp is an unsigned int32 (unsigned long) counter that is set
-          to 0 at hardware boot and advances at the sampling rate of the system
-    - for analog/digital data channels:
-        - m_FirstSampleNumber: this is the same as m_uTimeStamp. Meaning the
-          value is the timestamp of the first sample in the same block which is
-          the index of the sample from the HW boot
-    - final block: the stop condition for reading MPX blocks is based on the
-      length of the block: if the block has length 65535 (or -1 in signed integer
-      value) we know we have reached the end of the file
-
-Still questions/need info:
-    - for digital data channels:
-        - m_SampleNumber and m_Value seems inverted in data compared to
-          specification
-        - m_Value seems to have wrong type: it looks like ushort in data
-    - for analog channels:
-        - what is the m_Duration value?
-    - for segmented channel:
-        - how do we extract the waveforms?
-    - for block type E:
-        - how do we decode the stream data (we need S(t)?reamFormat.h header)
-
-
-Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
+AlphaOmega engineers.
 
 .. note::
     Not a lot of memory optimization effort was put into this module. You should
@@ -59,10 +22,13 @@ Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
     1. First search TODO in this file.
     2. add IO class with :py:class:`neo.io.basefromrawio.BaseFromRaw`
     3. Make TTL events -> epochs? We could describe TTL 0/1 events as epochs:
-       when the TTL goes to 1=beginning of epoch
-                            0=end of epoch
-    4. Once we know how to decode Stream AlphaOmega events add them to an event
-       channel
+       when the TTL goes to 1=beginning of epoch 0=end of epoch
+    4. decode stram data (block type E) using StreamFormat.h file (not provided
+       with this code)
+    5. (4.bis) Once we know how to decode Stream AlphaOmega events add them to
+       an event channel
+
+Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
 """
 
 import io
@@ -89,15 +55,22 @@ from .baserawio import (
 
 class AlphaOmegaRawIO(BaseRawIO):
     """
-    Handles several blocks and segments.
+    AlphaOmega MPX file format 4 reader. Handles several blocks and segments.
 
-    A block is a recording define in a *.lsx file. AlphaOmega record system
-    creates a new file each time the software is closed then re-opened.
+    A block is a recording defined in a \*.lsx file. AlphaOmega record system
+    creates such files every time the software is opened.
+
     A segment is a continuous record (when record starts/stops).
-    If file are not referenced in a *.lsx file, they are put in the same block.
+    If file are not referenced in a \*.lsx file, they are put in the same block.
 
-    Because channels must be gathered into coherent streams, channels names MUST
-    be the default channel names in AlphaRS software (or Alpha LAB SNR).
+    :param dirname: folder from where to load the data
+    :type dirname: str or Path-like
+    :param prune_channels: if True removes the empty channels, defaults to True
+    :type prune_channels: bool
+
+    .. warning::
+        Because channels must be gathered into coherent streams, channels names
+        MUST be the default channel names in AlphaRS software (or Alpha LAB SNR).
     """
 
     extensions = ["lsx", "mpx"]
@@ -274,6 +247,12 @@ class AlphaOmegaRawIO(BaseRawIO):
 
                 length, block_type = HeaderType.unpack(header_bytes)
                 if length == 65535:
+                    # The stop condition for reading MPX blocks is base on the
+                    # length of the block: if the block has length 65535 (or -1
+                    # in signed integer value) we know we have reached the end
+                    # of the file
+                    # We could also check that we are at the end of the file
+                    # after this block
                     break
 
                 if block_type == b"h":
@@ -313,11 +292,10 @@ class AlphaOmegaRawIO(BaseRawIO):
                         metadata["max_sample_rate"] = max(
                             metadata["max_sample_rate"], sample_rate * 1000
                         )
-                        if (
-                            amplitude <= 5
-                            and metadata["application_name"] == "ALab SNR"
-                        ):
-                            self.logger.warning("This should be checked!")
+                        if amplitude <= 5:
+                            # This is true for any logging software for map
+                            # version >4 (specs say only for ALab SNR but AO
+                            # engineer says it's true for any software)
                             amplitude = 1250000 / 2 ** 15
                         if mode == 0:
                             # continuous analog channel definition block
@@ -609,11 +587,12 @@ class AlphaOmegaRawIO(BaseRawIO):
             - The two segment must also have the same record date
             (YEAR-MONTH-DAY). This could potentially lead to errors if
             recordings are longer than a day or run over the night
-            - The next segment must have a datetime greater or equal thant the
-            previous segment (datetime : YEAR-MONTH-DAT-HOUR-MINUTE-SECOND)
+            - The next segment must have a datetime greater or equal than the
+            previous segment (datetime : YEAR-MONTH-DAY-HOUR-MINUTE-SECOND)
 
         :param factor_period: how many sample period to consider the next segment
-            is part of the previous one. This should be 1 <= `factor_period` < 2
+            is part of the previous one. This should be 1 <= `factor_period` < 2,
+            defaults to 1.5
         :type factor_period: float
         """
         for block in self._blocks:
@@ -1090,7 +1069,8 @@ class AlphaOmegaRawIO(BaseRawIO):
 
 
 def decode_string(encoded_string):
-    """All AlphaOmega strings are NULL terminated and ASCII encoded"""
+    """According to AlphaOmega engineers, all strings are NULL terminated and
+    ASCII encoded"""
     return encoded_string[: encoded_string.find(b"\x00")].decode("ascii")
 
 
@@ -1113,6 +1093,8 @@ There are two main block types:
 Other blocks exist in the data but are ignored in this implementation as per the
 specification: "Any block type other than the ones described below should be
 ignored."
+
+All data is little-endian (hence the '<' in Struct calls).
 """
 
 SDataHeader = struct.Struct("<xlhBBBBBBHBxddlB10s4sxl")
@@ -1136,7 +1118,8 @@ SDataHeader = struct.Struct("<xlhBBBBBBHBxddlB10s4sxl")
     - application_name (10-char string): name of the recording application.
       Should be "ARS" for AlphaRS hardware or "ALab SNR" for AlphaLab SnR hardware
     - resource_version (4-char string): C++ version used to compile recording
-      software
+      software: each byte is read separately as a char and concatenated and cast
+      into an int to create the original value (e.g.: b"\x00\x01\x00\x00" -> 100)
     - alignment byte: ignore
     - reserved (long): not used
 """
@@ -1155,7 +1138,8 @@ all type 2 blocks starts with the same structure:
     - is_analog (short): 0=Digital, 1=Analog
     - is_input (short): 0=Output, 1=Input
     - channel_number: the (unique) channel number identifier from the recording software
-    - alignment byte: ignore
+    - alignment byte: ignore, this and the following bytes are COLORREF
+      convention from Windef.h: hex value: 0x00bbggrr
     - spike_color_blue (unsigned char)
     - spike_color_green (unsigned char)
     - spike_color_red (unsigned char)
@@ -1164,10 +1148,15 @@ SDefAnalog = struct.Struct("<hffhh")
 """
 Then if is_analog and is_input:
     - mode (short): 0=Continuous, 1=(Level or Segmented)
-    - amplitude (float): bit resolution
+    - amplitude (float): bit resolution. For MAP file version 4 if amplitude < 5
+                         amplitude = 1_250_000/2**15
     - sample_rate (float): in kHz (or more precisely in kilosample per seconds)
-    - spike_count (short): total number of segments captured in this channel
-    - mode_spike: see top docstring of this module
+    - spike_count (short): size of each data block (short) + timestamp (unsigned long)
+    - mode_spike (2 bytes): read as hex data 0xMCCC:
+        - M: 1=Master, 2=Slave
+        - CCC: linked channel
+        Be carefull here, the first byte cover MC and the second byte the last
+        part of the linked channel CC
 """
 SDefContinAnalog = struct.Struct("<fh")
 """
@@ -1233,7 +1222,8 @@ SDataChannel_sample_id = struct.Struct("<L")
 Then for analog channels:
     - sample_value (n-short): array of data values
     - first_sample_number (ulong): for continuous channels: first sample number
-      in the channel records
+      in the channel records. This is the timestamp (see :attr:`SAOEvent`) of
+      the first sample in the data blocks
 """
 SDataChannelDigital = struct.Struct("<Lh")
 """
@@ -1258,7 +1248,8 @@ Then for digital ports:
 SAOEvent = struct.Struct("<cL")
 """Type E: stream data block:
     - type_event (char): event type only b"S" for now
-    - timestamp (ulong): see above
+    - timestamp (ulong): a counter initialized at 0 at hardware boot and that
+      advances at the sampling rate of the system
     - stream_data (n-char): Stream Data - spec says: "Refer to SreamFormat.h or
                             use dll to decipher this stream of data"; n=length-8
 """
