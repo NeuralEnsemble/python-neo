@@ -157,7 +157,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         assert_array_equal(signal[1].magnitude, -64.6)
         assert_array_equal(signal[2].magnitude, -64.3)
         assert_array_equal(signal[3].magnitude, -66)
-        assert_array_almost_equal(np.asarray(signal).flatten(), 
+        assert_array_almost_equal(np.asarray(signal).flatten(),
                                   np.array([-64.8, -64.6, -64.3, -66]), decimal=5)
 
         os.remove(filename)
@@ -188,7 +188,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         assert_array_equal(signal[2].magnitude, 0.7)
         assert_array_equal(signal[3].magnitude, 0.8)
         assert_array_equal(signal[4].magnitude, 1.4)
-        assert_array_almost_equal(np.asarray(signal).flatten(), 
+        assert_array_almost_equal(np.asarray(signal).flatten(),
                                   np.array([0.5, 0.6, 0.7, 0.8, 1.4]), decimal=5)
 
         os.remove(filename)
@@ -425,7 +425,8 @@ class TestAsciiSignalIO(unittest.TestCase):
         filename = "test_write_with_timeunits_different_from_those_of_signal.txt"
         np.savetxt(filename, combined_data, delimiter=' ')
 
-        signal1 = AnalogSignal(sample_data, units="A", sampling_rate=2*pq.Hz, sampling_period=0.5)
+        signal1 = AnalogSignal(sample_data, units="A",
+                               sampling_rate=2 * pq.Hz, sampling_period=0.5)
         seg1 = Segment()
         block1 = Block()
         seg1.analogsignals.append(signal1)
