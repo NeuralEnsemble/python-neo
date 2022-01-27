@@ -12,6 +12,7 @@ Functions:
 
 Classes:
 
+* :attr:`AlphaOmegaRawIO`
 * :attr:`AxographRawIO`
 * :attr:`AxonaRawIO`
 * :attr:`AxonRawIO`
@@ -30,7 +31,7 @@ Classes:
 * :attr:`NIXRawIO`
 * :attr:`OpenEphysRawIO`
 * :attr:`OpenEphysBinaryRawIO`
-* :attr:'PhyRawIO'
+* :attr:`PhyRawIO`
 * :attr:`PlexonRawIO`
 * :attr:`RawBinarySignalRawIO`
 * :attr:`RawMCSRawIO`
@@ -41,6 +42,10 @@ Classes:
 * :attr:`WinEdrRawIO`
 * :attr:`WinWcpRawIO`
 
+
+.. autoclass:: neo.rawio.AlphaOmegaRawIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.AxographRawIO
 
@@ -157,6 +162,7 @@ Classes:
 """
 import os
 
+from neo.rawio.alphaomegarawio import AlphaOmegaRawIO
 from neo.rawio.axographrawio import AxographRawIO
 from neo.rawio.axonarawio import AxonaRawIO
 from neo.rawio.axonrawio import AxonRawIO
@@ -188,6 +194,7 @@ from neo.rawio.winedrrawio import WinEdrRawIO
 from neo.rawio.winwcprawio import WinWcpRawIO
 
 rawiolist = [
+    AlphaOmegaRawIO,
     AxographRawIO,
     AxonaRawIO,
     AxonRawIO,
