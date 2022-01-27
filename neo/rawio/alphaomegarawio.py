@@ -722,7 +722,8 @@ class AlphaOmegaRawIO(BaseRawIO):
                         if c["name"].startswith(channel_name_start)
                     }
                     streams[stream_id] = channels
-                events = dc | p
+                events = dc.copy()
+                events.update(p)
                 segment = {
                     "metadata": metadata,
                     "streams": streams,
