@@ -55,18 +55,6 @@ Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
     Not a lot of memory optimization effort was put into this module. You should
     expect a big memory usage when loading data with this module
 
-:attribute __FOLLOW_SPEC: the AlphaOmega specifiction describe some field that
-                          seems to be different in the recorded data. If True it
-                          will follow the look-alike buggy spec implementation.
-                          Default to False. Be aware that this affects only when
-                          the module is loaded so changing this attribute will
-                          have no effect once it's loaded. You should change it
-                          in the source code.
-:type __FOLLOW_SPEC: bool
-:attribute __IGNORE_UNKNOWN_BLOCK__: if True (the default) will not read the
-    unknown block types. This should be faster if there are a lot of them.
-:type __IGNORE_UNKNOWN_BLOCK__: bool
-
 .. todo::
     1. First search TODO in this file.
     2. add IO class with :py:class:`neo.io.basefromrawio.BaseFromRaw`
@@ -97,10 +85,6 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-
-__FOLLOW_SPEC = False
-__IGNORE_UNKNOWN_BLOCK__ = True
 
 
 class AlphaOmegaRawIO(BaseRawIO):
@@ -148,6 +132,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             self.logger.error(f"{self.dirname} is not a folder")
         self._prune_channels = prune_channels
         self._opened_files = {}
+        self._ignore_unknown_blocks = True  # internal debug property
 
     def _explore_folder(self):
         """
@@ -553,7 +538,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                         }
                     )
                 else:
-                    if not __IGNORE_UNKNOWN_BLOCK__:
+                    if not self._ignore_unknown_blocks:
                         try:
                             bt = block_type.decode()
                             self.logger.debug(
@@ -1258,19 +1243,18 @@ Then for digital channels:
     - sample_number (ulong): the sample number of the event
     - value (short): value of the event
 """
-if __FOLLOW_SPEC:
-    SDataChannelPort = struct.Struct("<Lh")
-else:
-    SDataChannelPort = struct.Struct("<HL")
-    """
-    Then for digital ports:
-        - value (ushort)
-        - sample_number (ulong)
+SDataChannelPort = struct.Struct("<HL")
+"""
+Then for digital ports:
+    - value (ushort)
+    - sample_number (ulong)
 
-    .. warning::
-        The specification says that for port channels it should be the same as for
-        digital channels but the data says otherwise
-    """
+.. warning::
+    The specification says that for port channels it should be the same as for
+    digital channels but the data (and AO engineers) says otherwise. According
+    to AlphaOmega engineer, this could change in a future logging software
+    release and could break this reader.
+"""
 
 SAOEvent = struct.Struct("<cL")
 """Type E: stream data block:

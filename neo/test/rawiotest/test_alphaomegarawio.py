@@ -27,7 +27,7 @@ import unittest
 
 from pathlib import Path
 
-from neo.rawio.alphaomegarawio import AlphaOmegaRawIO, __IGNORE_UNKNOWN_BLOCK__
+from neo.rawio.alphaomegarawio import AlphaOmegaRawIO
 
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
@@ -145,12 +145,15 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
 
         self.assertIsInstance(events, list)
 
-        # unknown_blocks is empty by default unless you set modules's attribute
-        # __IGNORE_UNKNOWN_BLOCK__ to False (which is True by default)
-        if __IGNORE_UNKNOWN_BLOCK__:
-            self.assertFalse(unknown_blocks)
-        else:
-            self.assertTrue(unknown_blocks)  # should not be empty
+        self.assertFalse(unknown_blocks)  # unknown blocks are ignored by default
+
+    def test_read_unknown_blocks(self):
+        path = Path(self.get_local_path("alphaomega/mpx_map_version4"))
+        reader = AlphaOmegaRawIO(dirname=path)
+        reader._ignore_unknown_blocks = False
+        first_mpx = list(path.glob("*.mpx"))[0]
+        *_, unknown_blocks = reader._read_file_blocks(first_mpx, prune_channels=False)
+        self.assertTrue(unknown_blocks)
 
     def test_read_file_blocks_prune(self):
         """Check that pruning keep only channels with recorded data"""
