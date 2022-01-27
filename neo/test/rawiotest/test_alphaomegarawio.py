@@ -23,6 +23,7 @@ Author: Samuel Garcia
 """
 
 import logging
+import tempfile
 import unittest
 
 from pathlib import Path
@@ -46,6 +47,10 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         "alphaomega/mpx_map_version4",
     ]
 
+    def setUp(self):
+        super().setUp()
+        self.logger = logging.getLogger("neo.rawio.alphaomegarawio.AlphaOmegaRawIO")
+
     def test_explore_folder(self):
         """We just check that we index all *.lsx files and that all *.mpx files
         are referenced somewhere. We should maybe check that *.lsx files are
@@ -62,6 +67,20 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         )
         all_mpx = sorted(list(path.glob("*.mpx")))
         self.assertSequenceEqual(all_filenames, all_mpx)
+
+    def test_explore_no_folder(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # just create a temporary folder that is removed
+            pass
+        with self.assertLogs(logger=self.logger, level="ERROR") as cm:
+            reader = AlphaOmegaRawIO(dirname=tmpdir)
+        self.assertIn("is not a folder", cm.output[0])
+
+    def test_empty_folder(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertLogs(logger=self.logger, level="ERROR") as cm:
+                reader = AlphaOmegaRawIO(dirname=tmpdir)
+        self.assertIn("Found no AlphaOmega *.mpx files in", cm.output[0])
 
     def test_read_file_blocks(self):
         """Superficial test that check it returns all types of channels"""
