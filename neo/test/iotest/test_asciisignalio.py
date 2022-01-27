@@ -157,7 +157,8 @@ class TestAsciiSignalIO(unittest.TestCase):
         assert_array_equal(signal[1].magnitude, -64.6)
         assert_array_equal(signal[2].magnitude, -64.3)
         assert_array_equal(signal[3].magnitude, -66)
-        assert_array_almost_equal(np.asarray(signal).flatten(), np.array([-64.8, -64.6, -64.3, -66]), decimal=5)
+        assert_array_almost_equal(np.asarray(signal).flatten(), 
+                                  np.array([-64.8, -64.6, -64.3, -66]), decimal=5)
 
         os.remove(filename)
 
@@ -187,7 +188,8 @@ class TestAsciiSignalIO(unittest.TestCase):
         assert_array_equal(signal[2].magnitude, 0.7)
         assert_array_equal(signal[3].magnitude, 0.8)
         assert_array_equal(signal[4].magnitude, 1.4)
-        assert_array_almost_equal(np.asarray(signal).flatten(), np.array([0.5, 0.6, 0.7, 0.8, 1.4]), decimal=5)
+        assert_array_almost_equal(np.asarray(signal).flatten(), 
+                                  np.array([0.5, 0.6, 0.7, 0.8, 1.4]), decimal=5)
 
         os.remove(filename)
 
@@ -206,7 +208,7 @@ class TestAsciiSignalIO(unittest.TestCase):
             ("Waveform"),
             ("Unit"),
             (),
-            (-0.02121), 
+            (-0.02121),
             (-0.01740),
             (-0.00671),
             (-0.00885),
@@ -224,7 +226,7 @@ class TestAsciiSignalIO(unittest.TestCase):
             (""),
         ]
         sampling_rate = 1 * pq.kHz
-        filename='test_skip_comments.txt'
+        filename = 'test_skip_comments.txt'
         with open(filename, 'w') as datafile:
             for row in sample_data:
                 datafile.write(str(float))
@@ -346,16 +348,15 @@ class TestAsciiSignalIO(unittest.TestCase):
         iow = AsciiSignalIO(filename,
                            method='genfromtxt',
                            time_units='ms',
-                           signal_group_mode='all-in-one'
-                           )
+                           signal_group_mode='all-in-one')
         iow.write_block(block1)
 
         ior = AsciiSignalIO(filename)
         block2 = ior.read_block()
-        
+
         assert len(block2.segments[0].analogsignals) == 3
         signal2 = block2.segments[0].analogsignals[1]
- 
+
         assert_array_almost_equal(signal1.magnitude[:, 1], signal2.magnitude.reshape(-1),
                                   decimal=7)
         self.assertEqual(signal1.units, signal2.units)
@@ -364,7 +365,7 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         assert_array_almost_equal(signal2.magnitude.reshape(-1), sample_data[:, 1],
                                   decimal=6)
-        
+
         self.assertEqual(signal2.sampling_period, sampling_period * pq.s)
         self.assertEqual(len(block2.segments[0].analogsignals), 3)
         self.assertEqual(signal2.t_stop, sample_data.shape[0] * sampling_period * pq.s)
@@ -392,13 +393,12 @@ class TestAsciiSignalIO(unittest.TestCase):
                            method='genfromtxt',
                            timecolumn=0,
                            time_units='ms',
-                           signal_group_mode='all-in-one'
-                           )
+                           signal_group_mode='all-in-one')
         iow.write_block(block1)
 
         ior = AsciiSignalIO(filename)
         block2 = ior.read_block()
-        
+
         assert len(block2.segments[0].analogsignals) == 4
         signal2 = block2.segments[0].analogsignals[1]
 
@@ -425,7 +425,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         filename = "test_write_with_timeunits_different_from_those_of_signal.txt"
         np.savetxt(filename, combined_data, delimiter=' ')
 
-        signal1 = AnalogSignal(sample_data, units="A", sampling_rate=2 * pq.Hz, sampling_period=0.5)
+        signal1 = AnalogSignal(sample_data, units="A", sampling_rate=2*pq.Hz, sampling_period=0.5)
         seg1 = Segment()
         block1 = Block()
         seg1.analogsignals.append(signal1)
@@ -437,8 +437,7 @@ class TestAsciiSignalIO(unittest.TestCase):
                            timecolumn=0,
                            units='mV',
                            time_units='ms',
-                           signal_group_mode='all-in-one'
-                           )
+                           signal_group_mode='all-in-one')
         def_units = iow.units
         def_time_units = iow.time_units
         iow.write_block(block1)
@@ -448,18 +447,18 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         assert len(block2.segments[0].analogsignals) == 4
         signal2 = block2.segments[0].analogsignals[1]
- 
+
         self.assertTrue(signal1.units, def_units)
         self.assertEqual(signal1.units, pq.A)
         self.assertEqual(iow.units, pq.A)
         self.assertEqual(signal1.units, iow.units)
         self.assertTrue(def_units, iow.units)
 
-        self.assertTrue(signal1.units, ior.time_units)        
+        self.assertTrue(signal1.units, ior.time_units)
         self.assertEqual(iow.time_units, ior.time_units)
         self.assertTrue(def_time_units, iow.time_units)
         self.assertEqual(iow.time_units, pq.s)
-        self.assertEqual(ior.time_units, pq.s)        
+        self.assertEqual(ior.time_units, pq.s)
 
         os.remove(filename)
 
