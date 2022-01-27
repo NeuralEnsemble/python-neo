@@ -121,9 +121,8 @@ class AlphaOmegaRawIO(BaseRawIO):
         ("Internal Detection", "Internal Detection", "Internal Detection"),
     )
 
-    def __init__(self, dirname, prune_channels=True):
-        #  super().__init__(self)
-        BaseRawIO.__init__(self)
+    def __init__(self, dirname="", prune_channels=True):
+        super().__init__(dirname=dirname)
         self.dirname = Path(dirname)
         self._filenames = {}
         if self.dirname.is_dir():
