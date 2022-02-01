@@ -10,7 +10,9 @@ or more class from this module.
 Classes:
 
 .. autoclass:: Block
+.. automethod:: Block.filter
 .. autoclass:: Segment
+.. automethod:: Segment.filter
 .. autoclass:: Group
 
 .. autoclass:: AnalogSignal

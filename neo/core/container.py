@@ -515,6 +515,8 @@ class Container(BaseNeo):
             >>> obj.filter(name="Vm")
             >>> obj.filter(objects=neo.SpikeTrain)
             >>> obj.filter(targdict={'myannotation':3})
+            >>> obj.filter(name=neo.core.container.equal(5))
+            >>> obj.filter({'name': neo.core.container.less_than(5)})
         """
 
         if isinstance(targdict, str):
