@@ -27,7 +27,8 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         in either their attributes or annotations.  Search terms can be
         provided as keyword arguments or a dictionary, either as a positional
         argument after data or to the argument targdict.
-        A key of a provided dictionary is the name of the requested annotation and the value is a FilterCondition object.
+        A key of a provided dictionary is the name of the requested annotation
+        and the value is a FilterCondition object.
         E.g.: FilterEqual(x), FilterLessThan(x), FilterInRange(x, y).
 
         targdict can also
@@ -82,7 +83,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
                     if (key in obj.annotations and value.test(obj.annotations[key]) and
                           all([obj is not res for res in results])):
                         results.append(obj)
-                elif (key in obj.annotations and obj.annotations[key] == value and all([obj is not res for res in results])):
+                elif key in obj.annotations and obj.annotations[key] == value and all([obj is not res for res in results]):
                         results.append(obj)
 
     # keep only objects of the correct classes
@@ -95,6 +96,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         return SpikeTrainList(results)
     else:
         return results
+
 
 class FilterCondition():
     """
@@ -110,6 +112,7 @@ class FilterCondition():
     def test(self, x):
         return True
 
+
 class FilterEqual(FilterCondition):
 
     def __init__(self, z):
@@ -117,6 +120,7 @@ class FilterEqual(FilterCondition):
 
     def test(self, x):
         return x == self.control
+
 
 class FilterIsNot(FilterCondition):
 
@@ -126,6 +130,7 @@ class FilterIsNot(FilterCondition):
     def test(self, x):
         return x != self.control
 
+
 class FilterLessThanEqual(FilterCondition):
 
     def __init__(self, z):
@@ -134,12 +139,14 @@ class FilterLessThanEqual(FilterCondition):
     def test(self, x):
         return x <= self.control
 
+
 class FilterGreaterThanEqual(FilterCondition):
     def __init__(self, z):
         self.control = z
 
     def test(self, x):
         return x >= self.control
+
 
 class FilterLessThan(FilterCondition):
 
@@ -149,13 +156,15 @@ class FilterLessThan(FilterCondition):
     def test(self, x):
         return x < self.control
 
+
 class FilterGreaterThan(FilterCondition):
 
     def __init__(self, z):
-        self.control=z
+        self.control = z
 
     def test(self, x):
         return x > self.control
+
 
 class FilterIsIn(FilterCondition):
 
@@ -169,6 +178,7 @@ class FilterIsIn(FilterCondition):
             return x == self.control
         else:
             raise SyntaxError('parameter not of type list or int')
+
 
 class FilterInRange(FilterCondition):
 
@@ -484,7 +494,8 @@ class Container(BaseNeo):
         in either their attributes or annotations.  Search terms can be
         provided as keyword arguments or a dictionary, either as a positional
         argument after data or to the argument targdict.
-        A key of a provided dictionary is the name of the requested annotation and the value is a FilterCondition object.
+        A key of a provided dictionary is the name of the requested annotation
+        and the value is a FilterCondition object.
         E.g.: equal(x), less_than(x), FilterInRange(x, y).
 
         targdict can also

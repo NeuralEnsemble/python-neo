@@ -106,33 +106,37 @@ class TestContainerNeo(unittest.TestCase):
         container = Container()
         self.assertRaises(TypeError, container.filter, "foo")
 
-
     def test_filter_results(self):
 
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2]*q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4]*q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
 
-        #Tests behalten?
-        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.FilterEqual(5))[0].annotations)
-        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.FilterLessThan(6))[0].annotations)
-        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.FilterGreaterThan(4))[0].annotations)
-        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.FilterIsNot(1))[0].annotations)
-        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.FilterIsIn([1, 2, 5]))[0].annotations)
-        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.FilterInRange(1, 5))[0].annotations)
-        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.FilterGreaterThanEqual(5))[0].annotations)
-        self.assertEqual(st1.annotations, seg.filter(test=neo.core.container.FilterLessThanEqual(5))[0].annotations)
-
+        self.assertEqual(st1.annotations,
+                         seg.filter(test=neo.FilterEqual(5))[0].annotations)
+        self.assertEqual(st1.annotations,
+                         seg.filter(test=neo.FilterLessThan(6))[0].annotations)
+        self.assertEqual(st1.annotations,
+                         seg.filter(test=neo.FilterGreaterThan(4))[0].annotations)
+        self.assertEqual(st1.annotations,
+                         seg.filter(test=neo.FilterIsNot(1))[0].annotations)
+        self.assertEqual(st1.annotations,
+                         seg.filter(test=neo.FilterIsIn([1, 2, 5]))[0].annotations)
+        self.assertEqual(st1.annotations,
+                         seg.filter(test=neo.FilterInRange(1, 5))[0].annotations)
+        self.assertEqual(st1.annotations,
+                         seg.filter(test=neo.FilterGreaterThanEqual(5))[0].annotations)
+        self.assertEqual(st1.annotations,
+                         seg.filter(test=neo.FilterLessThanEqual(5))[0].annotations)
 
     def test_filter_equal(self):
         '''
             Tests FilterCondition object "FilterEqual".
         '''
-
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
         st1.annotate(test=5)
@@ -149,16 +153,17 @@ class TestContainerNeo(unittest.TestCase):
         '''
 
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2]*q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4]*q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
 
         self.assertEqual(2, len(seg.filter(test=neo.FilterIsNot(1))))
         self.assertEqual(1, len(seg.filter(test=neo.FilterIsNot(5))))
-        self.assertEqual(0, len(seg.filter([{"test":neo.FilterIsNot(5)}, {"test":neo.FilterIsNot(6)}])))
+        self.assertEqual(0, len(seg.filter([{"test": neo.FilterIsNot(5)},
+                                            {"test": neo.FilterIsNot(6)}])))
 
     def test_filter_less_than(self):
         '''
@@ -269,14 +274,16 @@ class TestContainerNeo(unittest.TestCase):
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4]*q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
         st2.annotate(filt=6)
         st2.annotate(name='st_num_1')
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
 
-        self.assertEqual(2, len(seg.filter({'test': neo.FilterEqual(5), 'filt': neo.FilterEqual(6)})))
-        self.assertEqual(0, len(seg.filter([{'test': neo.FilterEqual(5)}, {'filt': neo.FilterEqual(6)}])))
+        self.assertEqual(2, len(seg.filter({'test': neo.FilterEqual(5),
+                                            'filt': neo.FilterEqual(6)})))
+        self.assertEqual(0, len(seg.filter([{'test': neo.FilterEqual(5)},
+                                            {'filt': neo.FilterEqual(6)}])))
         self.assertEqual(1, len(seg.filter(name='st_num_1')))
 
 
