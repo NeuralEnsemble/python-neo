@@ -28,7 +28,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         provided as keyword arguments or a dictionary, either as a positional
         argument after data or to the argument targdict.
         A key of a provided dictionary is the name of the requested annotation and the value is a FilterCondition object.
-        E.g.: equal(x), less_than(x), in_range(x, y).
+        E.g.: FilterEqual(x), FilterLessThan(x), FilterInRange(x, y).
 
         targdict can also
         be a list of dictionaries, in which case the filters are applied
@@ -110,7 +110,7 @@ class FilterCondition():
     def test(self, x):
         return True
 
-class equal(FilterCondition):
+class FilterEqual(FilterCondition):
 
     def __init__(self, z):
         self.control = z
@@ -118,7 +118,7 @@ class equal(FilterCondition):
     def test(self, x):
         return x == self.control
 
-class is_not(FilterCondition):
+class FilterIsNot(FilterCondition):
 
     def __init__(self, z):
         self.control = z
@@ -126,7 +126,7 @@ class is_not(FilterCondition):
     def test(self, x):
         return x != self.control
 
-class less_than_equal(FilterCondition):
+class FilterLessThanEqual(FilterCondition):
 
     def __init__(self, z):
         self.control = z
@@ -134,14 +134,14 @@ class less_than_equal(FilterCondition):
     def test(self, x):
         return x <= self.control
 
-class greater_than_equal(FilterCondition):
+class FilterGreaterThanEqual(FilterCondition):
     def __init__(self, z):
         self.control = z
 
     def test(self, x):
         return x >= self.control
 
-class less_than(FilterCondition):
+class FilterLessThan(FilterCondition):
 
     def __init__(self, z):
         self.control = z
@@ -149,7 +149,7 @@ class less_than(FilterCondition):
     def test(self, x):
         return x < self.control
 
-class greater_than(FilterCondition):
+class FilterGreaterThan(FilterCondition):
 
     def __init__(self, z):
         self.control=z
@@ -157,7 +157,7 @@ class greater_than(FilterCondition):
     def test(self, x):
         return x > self.control
 
-class is_in(FilterCondition):
+class FilterIsIn(FilterCondition):
 
     def __init__(self, z):
         self.control = z
@@ -170,7 +170,7 @@ class is_in(FilterCondition):
         else:
             raise SyntaxError('parameter not of type list or int')
 
-class in_range(FilterCondition):
+class FilterInRange(FilterCondition):
 
     def __init__(self, a, b, left_closed=False, right_closed=False):
         if(type(a) != int or type(b) != int):
@@ -485,7 +485,7 @@ class Container(BaseNeo):
         provided as keyword arguments or a dictionary, either as a positional
         argument after data or to the argument targdict.
         A key of a provided dictionary is the name of the requested annotation and the value is a FilterCondition object.
-        E.g.: equal(x), less_than(x), in_range(x, y).
+        E.g.: equal(x), less_than(x), FilterInRange(x, y).
 
         targdict can also
         be a list of dictionaries, in which case the filters are applied
@@ -515,8 +515,8 @@ class Container(BaseNeo):
             >>> obj.filter(name="Vm")
             >>> obj.filter(objects=neo.SpikeTrain)
             >>> obj.filter(targdict={'myannotation':3})
-            >>> obj.filter(name=neo.core.container.equal(5))
-            >>> obj.filter({'name': neo.core.container.less_than(5)})
+            >>> obj.filter(name=neo.core.container.FilterEqual(5))
+            >>> obj.filter({'name': neo.core.container.FilterLessThan(5)})
         """
 
         if isinstance(targdict, str):
