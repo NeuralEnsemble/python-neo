@@ -284,18 +284,18 @@ def scan_files(dirname):
                         v = meta['imroTbl'][c].split(' ')[index_imroTbl]
                         per_channel_gain[c] = 1. / float(v)
                     gain_factor = float(meta['imAiRangeMax']) / 512
-                    channel_gains = gain_factor / per_channel_gain * 1e6
+                    channel_gains = gain_factor * per_channel_gain * 1e6
                 elif meta['imDatPrb_type'] in ('21', '24') and signal_kind == 'ap':
                     # This wirk with NP 2.0 case with different metadata versions
                     # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
                     # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
                     # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_30.md#imec
-                    per_channel_gain[:-1] = 80.
+                    per_channel_gain[:-1] = 1 / 80.
                     gain_factor = float(meta['imAiRangeMax']) / 8192
-                    channel_gains = gain_factor / per_channel_gain * 1e6
+                    channel_gains = gain_factor * per_channel_gain * 1e6
                 else:
                     raise NotImplementedError('This meta file version of spikeglx'
-                                             'is not implemented')
+                                              'is not implemented')
             else:
                 signal_kind = ''
                 stream_name = device
