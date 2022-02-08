@@ -75,7 +75,8 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         results = []
         for key, value in sorted(targdict.items()):
             for obj in data:
-                if (hasattr(obj, key) and getattr(obj, key) == value and all([obj is not res for res in results])):
+                if (hasattr(obj, key) and getattr(obj, key) == value and all(
+                        [obj is not res for res in results])):
                     results.append(obj)
                 elif (isinstance(value, FilterCondition)):
                     if (key in obj.annotations and value.test(obj.annotations[key]) and all(
@@ -87,7 +88,8 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
 
     # keep only objects of the correct classes
     if objects:
-        results = [result for result in results if result.__class__ in objects or result.__class__.__name__ in objects]
+        results = [result for result in results if
+                   result.__class__ in objects or result.__class__.__name__ in objects]
 
     if results and all(isinstance(obj, SpikeTrain) for obj in results):
         return SpikeTrainList(results)
@@ -336,7 +338,8 @@ class Container(BaseNeo):
         """
         Initalize a new :class:`Container` instance.
         """
-        super().__init__(name=name, description=description, file_origin=file_origin, **annotations)
+        super().__init__(name=name, description=description, file_origin=file_origin,
+                         **annotations)
 
         # initialize containers
         for container in self._child_containers:
@@ -423,7 +426,8 @@ class Container(BaseNeo):
         All container child objects stored in the current object.
         Not recursive.
         """
-        childs = [list(getattr(self, attr)) for attr in self._container_child_containers + self._multi_child_containers]
+        childs = [list(getattr(self, attr)) for attr in
+                  self._container_child_containers + self._multi_child_containers]
         return tuple(sum(childs, []))
 
     @property
@@ -468,7 +472,8 @@ class Container(BaseNeo):
         """
         return {name: len(getattr(self, name)) for name in self._child_containers}
 
-    def filter(self, targdict=None, data=True, container=False, recursive=True, objects=None, **kwargs):
+    def filter(self, targdict=None, data=True, container=False, recursive=True, objects=None,
+               **kwargs):
         """
         Return a list of child objects matching *any* of the search terms
         in either their attributes or annotations.  Search terms can be
