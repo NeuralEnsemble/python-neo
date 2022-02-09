@@ -389,7 +389,9 @@ class TdtRawIO(BaseRawIO):
                     # right border
                     # be careful that bl could be both bl0 and bl1!!
                     border = data.size - (i_stop % sample_per_chunk)
-                    data = data[:-border]
+                    # cut data if not all samples are requested
+                    if border != len(data):
+                        data = data[:-border]
                 if bl == bl0:
                     # left border
                     border = i_start % sample_per_chunk
