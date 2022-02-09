@@ -522,7 +522,8 @@ def read_tbk(tbk_filename):
 
         # parse into a dict
         info = OrderedDict()
-        pattern = br'NAME=(\S+);TYPE=(\S+);VALUE=(\S+);'
+        # name and type have to be words, but value can contain floating numbers
+        pattern = br'NAME=(\w+);TYPE=(\w+);VALUE=(\S+);'
         r = re.findall(pattern, chan_grp_header)
         for name, _type, value in r:
             info[name.decode('ascii')] = value
