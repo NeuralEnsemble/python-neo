@@ -101,8 +101,8 @@ class FilterCondition():
     """
         FilterCondition object is given as parameter to container.filter():
 
-        example.filter(annotation=<FilterCondition>) or
-        example=filter({'annotation': <FilterCondition>})
+        segment.filter(my_annotation=<FilterCondition>) or
+        segment=filter({'my_annotation': <FilterCondition>})
     """
 
     def __init__(self, z):
