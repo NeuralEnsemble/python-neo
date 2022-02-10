@@ -487,7 +487,7 @@ class Container(BaseNeo):
         be a list of dictionaries, in which case the filters are applied
         sequentially.
 
-        A list of disctionaries is handled as follows: [ { or } and { or } ]
+        A list of dictionaries is handled as follows: [ { or } and { or } ]
         If targdict and kwargs are both supplied, the
         targdict filters are applied first, followed by the kwarg filters.
         A targdict of None or {} corresponds to no filters applied, therefore
