@@ -109,7 +109,7 @@ class FilterCondition():
         pass
 
     def test(self, x):
-        return True
+        raise NotImplementedError()
 
 
 class FilterEqual(FilterCondition):
