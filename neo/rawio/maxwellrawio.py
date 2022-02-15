@@ -75,8 +75,9 @@ class MaxwellRawIO(BaseRawIO):
                 rec_names = list(h5['wells'][stream_id].keys())
                 if len(rec_names) > 1:
                     if self.rec_name is None:
-                        raise ValueError("Detected multiple recordings. Please select a single recording using"
-                                         f' the `rec_name` paramter.\nPossible rec_name {rec_names}')
+                        raise ValueError("Detected multiple recordings. Please select a "
+                                         "single recording using the `rec_name` paramter. "
+                                         f"Possible rec_name {rec_names}")
                 else:
                     self.rec_name = rec_names[0]
                 signal_streams.append((stream_id, stream_id))
