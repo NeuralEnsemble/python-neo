@@ -194,17 +194,23 @@ class MaxwellRawIO(BaseRawIO):
             if np.array(channel_indexes).size > 1 and np.any(np.diff(channel_indexes) < 0):
                 # get around h5py constraint that it does not allow datasets
                 # to be indexed out of order
-                channel_indexes = np.sort(channel_indexes)
+                sorted_channel_indexes = np.sort(channel_indexes)
                 resorted_indexes = np.array(
-                    [list(channel_indexes).index(ch) for ch in channel_indexes])
+                    [list(channel_indexes).index(ch) for ch in sorted_channel_indexes])
 
         try:
-            if self._old_format:
-                sigs = sigs[self._channel_slice, i_start:i_stop]
-                sigs = sigs[channel_indexes]
+            if resorted_indexes is None:
+                if self._old_format:
+                    sigs = sigs[self._channel_slice, i_start:i_stop]
+                    sigs = sigs[channel_indexes]
+                else:
+                    sigs = sigs[channel_indexes, i_start:i_stop]
             else:
-                sigs = sigs[channel_indexes, i_start:i_stop]
-            if resorted_indexes is not None:
+                if self._old_format:
+                    sigs = sigs[self._channel_slice, i_start:i_stop]
+                    sigs = sigs[sorted_channel_indexes]
+                else:
+                    sigs = sigs[sorted_channel_indexes, i_start:i_stop]
                 sigs = sigs[resorted_indexes]
         except OSError as e:
             print('*' * 10)
