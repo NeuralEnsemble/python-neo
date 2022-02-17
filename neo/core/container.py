@@ -74,7 +74,8 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         results = []
         for key, value in sorted(targdict.items()):
             for obj in data:
-                if (hasattr(obj, key) and getattr(obj, key) == value and all([obj is not res for res in results])):
+                if (hasattr(obj, key) and getattr(obj, key) == value and
+                        all([obj is not res for res in results])):
                     results.append(obj)
                 elif (isinstance(value, FilterCondition)):
                     if (key in obj.annotations and value.evaluate(obj.annotations[key]) and all(
