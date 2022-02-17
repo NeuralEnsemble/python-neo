@@ -4,7 +4,7 @@ Tests of the neo.core.container.Container class
 
 import unittest
 
-import quantities as q
+import quantities as pq
 
 import numpy as np
 
@@ -109,9 +109,9 @@ class TestContainerNeo(unittest.TestCase):
     def test_filter_results(self):
 
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
@@ -138,14 +138,20 @@ class TestContainerNeo(unittest.TestCase):
             Tests FilterCondition object "FilterEqual".
         '''
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
+        st3 = neo.core.SpikeTrain([5, 6] * pq.ms, t_stop=10)
+        st3.annotate(list=[1, 2])
+        st3.annotate(dict={'key': 5})
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
+        seg.spiketrains.append(st3)
         self.assertEqual(1, len(seg.filter(test=neo.FilterEqual(5))))
         self.assertEqual(0, len(seg.filter(test=neo.FilterEqual(1))))
+        self.assertEqual(1, len(seg.filter({'list': neo.FilterEqual([1, 2])})))
+        self.assertEqual(1, len(seg.filter(dict=neo.FilterEqual({'key': 5}))))
 
     def test_filter_is_not(self):
         '''
@@ -153,9 +159,9 @@ class TestContainerNeo(unittest.TestCase):
         '''
 
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
@@ -171,9 +177,9 @@ class TestContainerNeo(unittest.TestCase):
         '''
 
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
@@ -188,9 +194,9 @@ class TestContainerNeo(unittest.TestCase):
         '''
 
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
@@ -205,9 +211,9 @@ class TestContainerNeo(unittest.TestCase):
         '''
 
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
@@ -222,9 +228,9 @@ class TestContainerNeo(unittest.TestCase):
         '''
 
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
@@ -239,9 +245,9 @@ class TestContainerNeo(unittest.TestCase):
         '''
 
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
@@ -255,9 +261,9 @@ class TestContainerNeo(unittest.TestCase):
         Tests FilterCondition object "FilterInRange".
         '''
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
@@ -272,9 +278,9 @@ class TestContainerNeo(unittest.TestCase):
         Tests old functionality with new filter method.
         '''
         seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * q.ms, t_stop=10)
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
         st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * q.ms, t_stop=10)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(filt=6)
         st2.annotate(name='st_num_1')
         seg.spiketrains.append(st1)
@@ -356,8 +362,7 @@ class Test_pprint(unittest.TestCase):
         description = 'this is a test'
         obj = Container(name=name, description=description)
         res = pretty(obj)
-        targ = "Container with  name: '{}' description: '{}'".format(name,
-                                                                 description)
+        targ = "Container with  name: '{}' description: '{}'".format(name, description)
         self.assertEqual(res, targ)
 
 

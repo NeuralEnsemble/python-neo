@@ -22,24 +22,23 @@ def unique_objs(objs):
 
 def filterdata(data, targdict=None, objects=None, **kwargs):
     """
-        Return a list of child objects matching *any* of the search terms
-        in either their attributes or annotations.  Search terms can be
-        provided as keyword arguments or a dictionary, either as a positional
-        argument after data or to the argument targdict.
-        A key of a provided dictionary is the name of the requested annotation
-        and the value is a FilterCondition object.
-        E.g.: FilterEqual(x), FilterLessThan(x), FilterInRange(x, y).
+    Return a list of child objects matching *any* of the search terms
+    in either their attributes or annotations.  Search terms can be
+    provided as keyword arguments or a dictionary, either as a positional
+    argument after data or to the argument targdict.
+    A key of a provided dictionary is the name of the requested annotation
+    and the value is a FilterCondition object.
+    E.g.: FilterEqual(x), FilterLessThan(x), FilterInRange(x, y).
 
-        targdict can also
-        be a list of dictionaries, in which case the filters are applied
-        sequentially.
+    targdict can also
+    be a list of dictionaries, in which case the filters are applied
+    sequentially.
 
-        A list of disctionaries is handled as follows: [ { or } and { or } ]
-        If targdict and kwargs are both supplied, the
-        targdict filters are applied first, followed by the kwarg filters.
-        A targdict of None or {} corresponds to no filters applied, therefore
-        returning all child objects. Default targdict is None.
-
+    A list of disctionaries is handled as follows: [ { or } and { or } ]
+    If targdict and kwargs are both supplied, the
+    targdict filters are applied first, followed by the kwarg filters.
+    A targdict of None or {} corresponds to no filters applied, therefore
+    returning all child objects. Default targdict is None.
     """
 
     # if objects are specified, get the classes
@@ -75,11 +74,10 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         results = []
         for key, value in sorted(targdict.items()):
             for obj in data:
-                if (hasattr(obj, key) and getattr(obj, key) == value and all(
-                        [obj is not res for res in results])):
+                if (hasattr(obj, key) and getattr(obj, key) == value and all([obj is not res for res in results])):
                     results.append(obj)
                 elif (isinstance(value, FilterCondition)):
-                    if (key in obj.annotations and value.test(obj.annotations[key]) and all(
+                    if (key in obj.annotations and value.evaluate(obj.annotations[key]) and all(
                             [obj is not res for res in results])):
                         results.append(obj)
                 elif key in obj.annotations and obj.annotations[key] == value and all(
@@ -108,7 +106,7 @@ class FilterCondition():
     def __init__(self, z):
         pass
 
-    def test(self, x):
+    def evaluate(self, x):
         raise NotImplementedError()
 
 
@@ -117,7 +115,7 @@ class FilterEqual(FilterCondition):
     def __init__(self, z):
         self.control = z
 
-    def test(self, x):
+    def evaluate(self, x):
         return x == self.control
 
 
@@ -126,7 +124,7 @@ class FilterIsNot(FilterCondition):
     def __init__(self, z):
         self.control = z
 
-    def test(self, x):
+    def evaluate(self, x):
         return x != self.control
 
 
@@ -135,7 +133,7 @@ class FilterLessThanEqual(FilterCondition):
     def __init__(self, z):
         self.control = z
 
-    def test(self, x):
+    def evaluate(self, x):
         return x <= self.control
 
 
@@ -143,7 +141,7 @@ class FilterGreaterThanEqual(FilterCondition):
     def __init__(self, z):
         self.control = z
 
-    def test(self, x):
+    def evaluate(self, x):
         return x >= self.control
 
 
@@ -152,7 +150,7 @@ class FilterLessThan(FilterCondition):
     def __init__(self, z):
         self.control = z
 
-    def test(self, x):
+    def evaluate(self, x):
         return x < self.control
 
 
@@ -161,7 +159,7 @@ class FilterGreaterThan(FilterCondition):
     def __init__(self, z):
         self.control = z
 
-    def test(self, x):
+    def evaluate(self, x):
         return x > self.control
 
 
@@ -170,7 +168,7 @@ class FilterIsIn(FilterCondition):
     def __init__(self, z):
         self.control = z
 
-    def test(self, x):
+    def evaluate(self, x):
         if (type(self.control) == list):
             return x in self.control
         elif (type(self.control) == int):
@@ -190,7 +188,7 @@ class FilterInRange(FilterCondition):
             self.left_closed = left_closed
             self.right_closed = right_closed
 
-    def test(self, x):
+    def evaluate(self, x):
         if (not self.left_closed and not self.right_closed):
             return (x >= self.a and x <= self.b)
         elif (not self.left_closed and self.right_closed):
