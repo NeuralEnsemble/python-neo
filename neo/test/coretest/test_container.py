@@ -267,7 +267,7 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(1, len(seg.filter(test=neo.FilterInRange(5, 6, False, True))))
         self.assertEqual(0, len(seg.filter(test=neo.FilterInRange(5, 6, True, True))))
 
-    def test_filter_connectivity(self):
+    def test_filter_filter_consistency(self):
         '''
         Tests old functionality with new filter method.
         '''
