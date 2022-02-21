@@ -32,15 +32,6 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
 
-try:
-    import stfio
-except ImportError as err:
-    HAS_STFIO = False
-    STFIO_ERR = err
-else:
-    HAS_STFIO = True
-    STFIO_ERR = None
-
 
 class StimfitIO(BaseIO):
     """
@@ -99,8 +90,9 @@ class StimfitIO(BaseIO):
         Arguments:
             filename : Either a filename or a stfio Recording object
         """
-        if not HAS_STFIO:
-            raise STFIO_ERR
+        # We need this module, so try importing now so that it fails on
+        # instantiation rather than read_block
+        import stfio  # noqa
 
         BaseIO.__init__(self)
 
@@ -112,6 +104,7 @@ class StimfitIO(BaseIO):
             self.filename = None
 
     def read_block(self, lazy=False):
+        import stfio
         assert not lazy, 'Do not support lazy'
 
         if self.filename is not None:
