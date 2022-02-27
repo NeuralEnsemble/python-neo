@@ -69,12 +69,11 @@ class NeuroScopeRawIO(BaseRawIO):
 
         # one unique stream
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-        
+
         # signals
         sig_channels = []
         for c in range(nb_channel):
             name = 'ch{}grp{}'.format(c, channel_group.get(c, 'none'))
- 
             chan_id = str(c)
             units = 'mV'
             offset = 0.
