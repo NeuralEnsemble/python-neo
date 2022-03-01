@@ -21,14 +21,14 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
 
     def setUp(self):
         super().setUp()
-        filename = self.get_local_path('edf/edf+C.edf')
-        self.io = EDFIO(filename)
+        self.filename = self.get_local_path('edf/edf+C.edf')
 
     def test_read_block(self):
         """
         Test reading the complete block and general annotations
         """
-        bl = self.io.read_block()
+        io = EDFIO(self.filename)
+        bl = io.read_block()
         self.assertTrue(bl.annotations)
 
         seg = bl.segments[0]
@@ -40,7 +40,8 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
         """
         Test loading of a time slice and check resulting times
         """
-        seg = self.io.read_segment(time_slice=None)
+        io = EDFIO(self.filename)
+        seg = io.read_segment(time_slice=None)
 
         self.assertEqual(len(seg.spiketrains), 0)
         self.assertEqual(len(seg.events), 0)
@@ -50,7 +51,7 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
         self.assertEqual(n_channels, 5)
 
         t_start, t_stop = 500 * pq.ms, 800 * pq.ms
-        seg = self.io.read_segment(time_slice=(t_start, t_stop))
+        seg = io.read_segment(time_slice=(t_start, t_stop))
 
         self.assertAlmostEqual(seg.t_start.rescale(t_start.units), t_start, delta=5.)
         self.assertAlmostEqual(seg.t_stop.rescale(t_stop.units), t_stop, delta=5.)
@@ -59,9 +60,9 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
         """
         Compare data from AnalogSignal with plain data stored in text file
         """
-
-        plain_data = np.loadtxt(self.io.filename.replace('.edf', '.txt'))
-        seg = self.io.read_segment(signal_group_mode='split-all')
+        io = EDFIO(self.filename)
+        plain_data = np.loadtxt(io.filename.replace('.edf', '.txt'))
+        seg = io.read_segment(signal_group_mode='split-all')
 
         anasigs = seg.analogsignals
 
@@ -69,7 +70,7 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
             ana_data = anasig.magnitude.flatten()
 
             # reverting gain and offset conversion
-            sig_dict = self.io.signal_headers[aidx]
+            sig_dict = io.signal_headers[aidx]
             physical_range = sig_dict['physical_max'] - sig_dict['physical_min']
             digital_range = sig_dict['digital_max'] - sig_dict['digital_min']
             gain = physical_range / digital_range
