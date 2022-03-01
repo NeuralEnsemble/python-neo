@@ -114,7 +114,7 @@ class BiocamRawIO(BaseRawIO):
             i_stop = self._num_frames
 
         data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
-        return np.squeeze(data[:, channel_indexes])
+        return data[:, channel_indexes]
 
 
 def open_biocam_file_header(filename):

@@ -302,7 +302,7 @@ class AxonaRawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = bin_dict['num_total_samples']
-        if channel_indexes is None:
+        if channel_indexes is None or isinstance(channel_indexes, slice):
             channel_indexes = [i for i in range(bin_dict['num_channels'])]
 
         num_samples = (i_stop - i_start)
