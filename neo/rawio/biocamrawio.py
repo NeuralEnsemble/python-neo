@@ -112,11 +112,10 @@ class BiocamRawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = self._num_frames
-        data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
         if channel_indexes is None:
-            return data
-        else:
-            return data[:, channel_indexes]
+            channel_indexes = slice(None)
+        data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
+        return data[:, channel_indexes]
 
 
 def open_biocam_file_header(filename):
