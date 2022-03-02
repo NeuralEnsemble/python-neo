@@ -6,8 +6,8 @@ build:
     python: "3.8"
 
 sphinx:
-   configuration: docs/conf.py
+   configuration: python-neo/docs/source/conf.py
 
 python:
    install:
-   - requirements: docs/requirements_docs.txt 
+   - requirements: python-neo/docs/requirements_docs.txt 
