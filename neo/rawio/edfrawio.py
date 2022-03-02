@@ -11,7 +11,7 @@ Author: Julia Sprenger
 """
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+                        _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 
@@ -114,6 +114,8 @@ class EDFRawIO(BaseRawIO):
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         event_channels = []
+        event_channels.append(('Event', 'event_channel', 'event'))
+        event_channels.append(('Epoch', 'epoch_channel', 'epoch'))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         self.header = {}
@@ -213,16 +215,38 @@ class EDFRawIO(BaseRawIO):
         return None
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        return None
+        return len(self.edf_reader.readAnnotations()[0])
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        return None
+        # these time should be already in seconds
+        timestamps, durations, labels = self.edf_reader.readAnnotations()
+        if t_start is None:
+            t_start = self.segment_t_start(block_index, seg_index)
+        if t_stop is None:
+            t_stop = self.segment_t_stop(block_index, seg_index)
+
+        # only consider events and epochs that overlap with t_start t_stop range
+        time_mask = ((t_start < timestamps) & (timestamps < t_stop)) | \
+                    ((t_start < (timestamps+durations)) & ((timestamps+durations) < t_stop))
+
+        # separate event from epoch times
+        event_mask = durations[time_mask] == 0
+        if self.header['event_channels']['type'][event_channel_index] == b'epoch':
+            event_mask = ~event_mask
+            durations = durations[time_mask][event_mask]
+        elif self.header['event_channels']['type'][event_channel_index] == b'event':
+            durations = None
+
+        times = timestamps[time_mask][event_mask]
+        labels = labels[time_mask][event_mask]
+
+        return times, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
-        return None
+        return np.asarray(event_timestamps, dtype=dtype)
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
-        return None
+        return np.asarray(raw_duration, dtype=dtype)
 
     def __enter__(self):
         return self
