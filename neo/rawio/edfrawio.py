@@ -17,6 +17,7 @@ import numpy as np
 
 try:
     from pyedflib import EdfReader
+
     HAS_PYEDF = True
 except ImportError:
     HAS_PYEDF = False
@@ -227,7 +228,7 @@ class EDFRawIO(BaseRawIO):
 
         # only consider events and epochs that overlap with t_start t_stop range
         time_mask = ((t_start < timestamps) & (timestamps < t_stop)) | \
-                    ((t_start < (timestamps+durations)) & ((timestamps+durations) < t_stop))
+                    ((t_start < (timestamps + durations)) & ((timestamps + durations) < t_stop))
 
         # separate event from epoch times
         event_mask = durations[time_mask] == 0

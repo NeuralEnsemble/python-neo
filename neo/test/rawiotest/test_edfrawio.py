@@ -24,7 +24,6 @@ class TestExampleRawIO(BaseTestRawIO, unittest.TestCase, ):
         with open(filename) as f:
             pass
 
-
     def test_close(self):
         filename = self.get_local_path('edf/edf+C.edf')
 

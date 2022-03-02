@@ -69,7 +69,7 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
         for aidx, anasig in enumerate(anasigs):
             # comparing raw data to original values
             ana_data = anasigs[0].load(magnitude_mode='raw')
-            np.testing.assert_array_equal(ana_data.magnitude, plain_data[:, aidx:aidx+1])
+            np.testing.assert_array_equal(ana_data.magnitude, plain_data[:, aidx:aidx + 1])
 
             # comparing floating data to original values * gain factor
             ch_head = io.edf_reader.getSignalHeader(aidx)
@@ -79,7 +79,7 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
 
             gain = physical_range / digital_range
             ana_data = anasigs[0].load(magnitude_mode='rescaled')
-            rescaled_data = plain_data[:, aidx:aidx+1] * gain
+            rescaled_data = plain_data[:, aidx:aidx + 1] * gain
             np.testing.assert_array_equal(ana_data.magnitude, rescaled_data)
 
 
