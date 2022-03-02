@@ -84,10 +84,11 @@ class EDFRawIO(BaseRawIO):
             ch_name = sig_dict['label']
             chan_id = ch_idx
             sr = sig_dict['sample_rate']  # Hz
-            dtype = np.int16  # assume general int16 based on edf documentation
+            dtype = 'int16'  # assume general int16 based on edf documentation
             units = sig_dict['dimension']
             physical_range = sig_dict['physical_max'] - sig_dict['physical_min']
-            digital_range = sig_dict['digital_max'] - sig_dict['digital_min']
+            # number of digital steps resolved (+1 to account for '0')
+            digital_range = sig_dict['digital_max'] - sig_dict['digital_min'] + 1
             gain = physical_range / digital_range
             offset = -1 * sig_dict['digital_min'] * gain + sig_dict['physical_min']
 
