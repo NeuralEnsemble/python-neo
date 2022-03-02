@@ -61,24 +61,26 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
         Compare data from AnalogSignal with plain data stored in text file
         """
         io = EDFIO(self.filename)
-        plain_data = np.loadtxt(io.filename.replace('.edf', '.txt'))
-        seg = io.read_segment(signal_group_mode='split-all')
+        plain_data = np.loadtxt(io.filename.replace('.edf', '.txt'), dtype=np.int16)
+        seg = io.read_segment(lazy=True)
 
         anasigs = seg.analogsignals
-
+        self.assertEqual(len(anasigs), 5)  # all channels have different units, so expecting 5
         for aidx, anasig in enumerate(anasigs):
-            ana_data = anasig.magnitude.flatten()
+            # comparing raw data to original values
+            ana_data = anasigs[0].load(magnitude_mode='raw')
+            np.testing.assert_array_equal(ana_data.magnitude, plain_data[:, aidx:aidx+1])
 
-            # reverting gain and offset conversion
-            sig_dict = io.signal_headers[aidx]
-            physical_range = sig_dict['physical_max'] - sig_dict['physical_min']
-            digital_range = sig_dict['digital_max'] - sig_dict['digital_min']
+            # comparing floating data to original values * gain factor
+            ch_head = io.edf_reader.getSignalHeader(aidx)
+            physical_range = ch_head['physical_max'] - ch_head['physical_min']
+            # number of digital values used (+1 to account for '0' value)
+            digital_range = ch_head['digital_max'] - ch_head['digital_min'] + 1
+
             gain = physical_range / digital_range
-            offset = -1 * sig_dict['digital_min'] * gain + sig_dict['physical_min']
-
-            ana_data = (ana_data - offset) / gain
-            # allow for some floating imprecision between calculations
-            np.testing.assert_array_almost_equal(ana_data, plain_data[:, aidx], decimal=2)
+            ana_data = anasigs[0].load(magnitude_mode='rescaled')
+            rescaled_data = plain_data[:, aidx:aidx+1] * gain
+            np.testing.assert_array_equal(ana_data.magnitude, rescaled_data)
 
 
 if __name__ == "__main__":
