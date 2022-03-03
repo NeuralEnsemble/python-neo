@@ -239,7 +239,7 @@ class EDFRawIO(BaseRawIO):
             durations = None
 
         times = timestamps[time_mask][event_mask]
-        labels = labels[time_mask][event_mask]
+        labels = np.asarray(labels[time_mask][event_mask], dtype='U')
 
         return times, durations, labels
 

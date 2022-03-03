@@ -43,8 +43,12 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
         io = EDFIO(self.filename)
         seg = io.read_segment(time_slice=None)
 
+        # data file does not contain spike, event or epoch timestamps
         self.assertEqual(len(seg.spiketrains), 0)
-        self.assertEqual(len(seg.events), 0)
+        self.assertEqual(len(seg.events), 1)
+        self.assertEqual(len(seg.events[0]), 0)
+        self.assertEqual(len(seg.epochs), 1)
+        self.assertEqual(len(seg.epochs[0]), 0)
         for asig in seg.analogsignals:
             self.assertEqual(asig.shape[0], 256)
         n_channels = sum(a.shape[-1] for a in seg.analogsignals)
@@ -68,7 +72,7 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
         self.assertEqual(len(anasigs), 5)  # all channels have different units, so expecting 5
         for aidx, anasig in enumerate(anasigs):
             # comparing raw data to original values
-            ana_data = anasigs[0].load(magnitude_mode='raw')
+            ana_data = anasig.load(magnitude_mode='raw')
             np.testing.assert_array_equal(ana_data.magnitude, plain_data[:, aidx:aidx + 1])
 
             # comparing floating data to original values * gain factor
@@ -78,7 +82,7 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
             digital_range = ch_head['digital_max'] - ch_head['digital_min'] + 1
 
             gain = physical_range / digital_range
-            ana_data = anasigs[0].load(magnitude_mode='rescaled')
+            ana_data = anasig.load(magnitude_mode='rescaled')
             rescaled_data = plain_data[:, aidx:aidx + 1] * gain
             np.testing.assert_array_equal(ana_data.magnitude, rescaled_data)
 
