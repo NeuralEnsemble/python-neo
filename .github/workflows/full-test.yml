@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           python-version: 3.8
+          ref: ${{ github.event.workflow_run.head_branch }}
       - name: Get current year-month
         id: date
         run: echo "::set-output name=date::$(date+'%Y-%m')"
