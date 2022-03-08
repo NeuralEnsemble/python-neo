@@ -796,7 +796,6 @@ class AlphaOmegaRawIO(BaseRawIO):
                 seg_ann["rec_datetime"] = self._blocks[block_index][seg_index][
                     "metadata"
                 ]["record_date"]
-                seg_ann["index"] = seg_index
                 for c_index, c in enumerate(seg_ann["signals"]):
                     c = c.copy()
                     c["file_origin"] = "\n".join(
