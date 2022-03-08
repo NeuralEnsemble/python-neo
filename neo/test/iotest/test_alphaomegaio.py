@@ -13,8 +13,7 @@ class TestAlphaOmegaIO(BaseTestIO, unittest.TestCase):
         'alphaomega'
     ]
     entities_to_test = [
-        'alphaomega/File_AlphaOmega_1.map',
-        'alphaomega/File_AlphaOmega_2.map'
+        'alphaomega/mpx_map_version4',
     ]
     ioclass = AlphaOmegaIO
 

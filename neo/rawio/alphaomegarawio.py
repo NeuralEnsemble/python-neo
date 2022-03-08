@@ -19,13 +19,11 @@ AlphaOmega engineers.
     expect a big memory usage when loading data with this module
 
 .. todo::
-    1. First search TODO in this file.
-    2. add IO class with :py:class:`neo.io.basefromrawio.BaseFromRaw`
-    3. Make TTL events -> epochs? We could describe TTL 0/1 events as epochs:
+    1. Make TTL events -> epochs? We could describe TTL 0/1 events as epochs:
        when the TTL goes to 1=beginning of epoch 0=end of epoch
-    4. decode stram data (block type E) using StreamFormat.h file (not provided
+    2. decode stram data (block type E) using StreamFormat.h file (not provided
        with this code)
-    5. (4.bis) Once we know how to decode Stream AlphaOmega events add them to
+    3. (2.bis) Once we know how to decode Stream AlphaOmega events add them to
        an event channel
 
 Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
