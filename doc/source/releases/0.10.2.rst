@@ -4,7 +4,7 @@ Neo 0.10.2 release notes
 
 8th March 2022
 
-This release replace 0.10.1 because:
+This release fixes the following bugs introduced in 0.10.1:
 
-1. Something was push accidentaly on pypi in `spike2rawio.py <https://github.com/NeuralEnsemble/python-neo/issues/1089>`_
-2. the doc waas not building on `readthedoc <https://github.com/NeuralEnsemble/python-neo/issues/1084>`_
+1. Remove broken imports in `spike2rawio.py <https://github.com/NeuralEnsemble/python-neo/issues/1089>`_
+2. Fix the compilation of the documentation on `readthedoc <https://github.com/NeuralEnsemble/python-neo/issues/1084>`_
