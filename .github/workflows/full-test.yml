@@ -1,4 +1,4 @@
-name: neo.io and neo.rawio tests
+name: NeoIoTest
 
 # on:
 #  pull_request:
@@ -11,7 +11,8 @@ name: neo.io and neo.rawio tests
 
 on:
   workflow_run:
-    workflows: [neo.core]
+    workflows:
+      - NeoCoreTest
     types:
       - completed
 
