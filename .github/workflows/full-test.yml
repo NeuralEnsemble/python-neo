@@ -1,18 +1,25 @@
 name: neo.io and neo.rawio tests
 
-on:
-  pull_request:
-    branches: [master]
-    types: [synchronize, opened, reopened, ready_for_review]
+# on:
+#  pull_request:
+#    branches: [master]
+#    types: [synchronize, opened, reopened, ready_for_review]
+#
+#  # run checks on any change of master, including merge of PRs
+#  push:
+#    branches: [master]
 
-  # run checks on any change of master, including merge of PRs
-  push:
-    branches: [master]
+on:
+  workflow_run:
+    workflows: [neo.core]
+    types:
+      - completed
 
 jobs:
   build-and-test:
     name: Test on (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     strategy:
       fail-fast: true
       matrix:

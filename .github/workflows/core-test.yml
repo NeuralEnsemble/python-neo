@@ -5,6 +5,12 @@ on:
     branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
 
+  # run checks on any change of master, including merge of PRs
+  push:
+    branches: [master]
+
+
+
 jobs:
   multi-os-python-numpy:
     runs-on: ${{ matrix.os }}
