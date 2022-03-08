@@ -42,5 +42,4 @@ jobs:
 
         - name: Run tests
           run: |
-            pytest -v --cov
-            pytest --cov=neo neo/test/croe
+            pytest --cov=neo neo/test/core
