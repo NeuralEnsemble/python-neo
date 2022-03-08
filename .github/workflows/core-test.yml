@@ -1,4 +1,4 @@
-name: neo.core multi os/python/numpy
+name: neo.core
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     types: [synchronize, opened, reopened, ready_for_review]
 
 jobs:
-  neo-core-test:
+  multi-os-python-numpy:
     runs-on: ${{ matrix.os }}
 
     strategy:
