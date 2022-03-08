@@ -12,4 +12,4 @@ python:
   install:
     - method: pip
       path: .
-     - requirements: doc/requirements_docs.txt
+    - requirements: doc/requirements_docs.txt
