@@ -1041,7 +1041,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             effective_stop = t_stop * event["sample_rate"]
             mask = (effective_start <= timestamps) & (timestamps <= effective_stop)
             timestamps = timestamps[mask]
-            labels = np.array([s[1] for s in event["samples"]], dtype=np.ushort)
+            labels = np.array([s[1] for s in event["samples"]], dtype="U")
             labels = labels[mask]
         else:
             timestamps = np.array([], dtype=np.uint32)
