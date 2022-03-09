@@ -60,18 +60,23 @@ class NestIO(BaseIO):
     extensions = ['gdf', 'dat']
     mode = 'file'
 
-    def __init__(self, filenames=None, additional_parameters={}):
+    def __init__(self, filenames=None, target_object='SpikeTrain',
+                 additional_parameters={}):
         """
         Parameters
         ----------
             filenames: string or list of strings, default=None
                 The filename or list of filenames to load.
+            target_object : string, default='SpikeTrain'
+                The type of neo object that should be read out from the input.
+                Options are: 'SpikeTrain', 'AnalogSignal'
         """
 
         if isinstance(filenames, str):
             filenames = [filenames]
 
         self.filenames = filenames
+        self.target_object = target_object
         self.avail_formats = {}
         self.avail_IOs = {}
 
@@ -541,7 +546,7 @@ class NestIO(BaseIO):
         #       in practice, there won't be much difference
 
         # Load analogsignals and attach to Segment
-        if 'dat' in self.avail_formats:
+        if 'AnalogSignal' is self.target_object:
             seg.analogsignals = self.__read_analogsignals(
                 gid_list,
                 time_unit,
@@ -553,7 +558,7 @@ class NestIO(BaseIO):
                 value_columns=value_columns_dat,
                 value_types=value_types,
                 value_units=value_units)
-        # if 'gdf' in self.avail_formats:
+        if 'SpikeTrain' is self.target_object:
             seg.spiketrains = self.__read_spiketrains(
                 gid_list,
                 time_unit,
