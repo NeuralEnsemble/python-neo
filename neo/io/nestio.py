@@ -695,7 +695,6 @@ class ColumnIO:
         if header_size > 0:
             warnings.warn(f'Ignoring {str(header_size)} header lines.')
 
-        additional_parameters = {}
         if '.' not in line:
             additional_parameters['dtype'] = np.int32
 
