@@ -7,11 +7,10 @@ Depends on: numpy, quantities
 
 Supported: Read
 
-Authors: Julia Sprenger, Maximilian Schmidt, Johanna Senk
+Authors: Julia Sprenger, Maximilian Schmidt, Johanna Senk,
+Simon Essink, Robin Gutzen, Jasper Albers, Aitor Morales-Gregorio
 
 """
-
-# needed for Python3 compatibility
 
 import os.path
 import warnings
