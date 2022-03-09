@@ -60,7 +60,7 @@ class NestIO(BaseIO):
     supported_target_objects = ['SpikeTrain', 'AnalogSignal']
     mode = 'file'
 
-    def __init__(self, filenames=None, target_object='SpikeTrain',
+    def __init__(self, filename=None, target_object='SpikeTrain',
                  additional_parameters={}):
         """
         Parameters
@@ -75,24 +75,9 @@ class NestIO(BaseIO):
             raise ValueError(f'{obj} is not a valid object type. '
                              f'Valid values are {self.objects}.')
 
-        if isinstance(filenames, str):
-            filenames = [filenames]
-
-        self.filenames = filenames
+        self.filename = filename
         self.target_object = target_object
-        self.avail_formats = {}
-        self.avail_IOs = {}
-
-        for filename in filenames:
-            path, ext = os.path.splitext(filename)
-            ext = ext.strip('.')
-            if ext in self.extensions:
-                if ext in self.avail_IOs:
-                    raise ValueError('Received multiple files with "%s" '
-                                     'extention. Can only load single file of '
-                                     'this type.' % ext)
-                self.avail_IOs[ext] = ColumnIO(filename, additional_parameters)
-            self.avail_formats[ext] = path
+        self.IO = ColumnIO(filename, additional_parameters)
 
     def __read_analogsignals(self, gid_list, time_unit, t_start=None,
                              t_stop=None, sampling_period=None,
@@ -198,10 +183,6 @@ class NestIO(BaseIO):
         Internal function for reading multiple spiketrains at once.
         This function is called by read_spiketrain() and read_segment().
         """
-        ext = list(self.avail_IOs.keys())[0]
-        # if 'gdf' not in self.avail_IOs:
-        #     raise ValueError('Can not load spiketrains. No GDF file provided.')
-
         # assert that the file contains spike times
         if time_column is None:
             raise ValueError('Time column is None. No spike times to '
