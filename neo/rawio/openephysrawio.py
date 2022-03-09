@@ -173,7 +173,7 @@ class OpenEphysRawIO(BaseRawIO):
 
         # and create streams channels (keep natural order 'CH' first)
         stream_ids, order = np.unique(chan_stream_ids, return_index=True)
-        stream_ids = stream_ids[order]
+        stream_ids = stream_ids[np.argsort(order)]
         signal_streams = [(f'Signals {stream_id}', f'{stream_id}') for stream_id in stream_ids]
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
