@@ -197,6 +197,10 @@ class NestIO(BaseIO):
         Internal function for reading multiple spiketrains at once.
         This function is called by read_spiketrain() and read_segment().
         """
+        ext = list(self.avail_IOs.keys())[0]
+        # if 'gdf' not in self.avail_IOs:
+        #     raise ValueError('Can not load spiketrains. No GDF file provided.')
+
         # assert that the file contains spike times
         if time_column is None:
             raise ValueError('Time column is None. No spike times to '
