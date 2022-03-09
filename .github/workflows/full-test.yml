@@ -1,4 +1,4 @@
-name: neo.io and neo.rawio tests
+name: NeoIoTest
 
 on:
   pull_request:
@@ -9,12 +9,13 @@ on:
   push:
     branches: [master]
 
+
 jobs:
   build-and-test:
     name: Test on (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", ]
