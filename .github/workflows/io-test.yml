@@ -25,7 +25,7 @@ jobs:
           python-version: 3.8
       - name: Get current year-month
         id: date
-        run: echo "::set-output name=date::$(date+'%Y-%m')"
+        run: echo "::set-output name=date::$(date +'%Y-%m')"
       - uses: actions/cache@v2
         # the cache for python package is reset:
         #   * every month
