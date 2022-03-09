@@ -60,7 +60,7 @@ class NestIO(BaseIO):
     supported_target_objects = ['SpikeTrain', 'AnalogSignal']
     mode = 'file'
 
-    def __init__(self, filename=None, target_object='SpikeTrain',
+    def __init__(self, filenames=None, target_object='SpikeTrain',
                  additional_parameters={}):
         """
         Parameters
@@ -79,6 +79,7 @@ class NestIO(BaseIO):
             filenames = [filenames]
 
         self.filenames = filenames
+        self.target_object = target_object
         self.avail_formats = {}
         self.avail_IOs = {}
 
