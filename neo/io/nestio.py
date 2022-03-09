@@ -672,7 +672,7 @@ class ColumnIO:
     Class for reading an ASCII file containing multiple columns of data.
     '''
 
-    def __init__(self, filename, additional_parameters):
+    def __init__(self, filename, additional_parameters={}):
         """
         filename: string, path to ASCII file to read.
         """
@@ -696,7 +696,6 @@ class ColumnIO:
         if header_size > 0:
             warnings.warn(f'Ignoring {str(header_size)} header lines.')
 
-        additional_parameters = {}
         if '.' not in line:
             additional_parameters['dtype'] = np.int32
 
