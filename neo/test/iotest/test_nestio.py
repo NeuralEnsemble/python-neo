@@ -73,7 +73,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         filename = self.get_local_path('nest/0time-1255-0.gdf')
         r = NestIO(filename=filename)
         with self.assertRaises(ValueError):
-            r.read_analogsignal(t_stop=1000. * pq.ms, lazy=False,
+            r.read_spiketrain(t_stop=1000. * pq.ms, lazy=False,
                                 sampling_period=pq.ms,
                                 id_column=None, time_column=0,
                                 value_column=1)
@@ -160,7 +160,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
             r.read_segment()
         with self.assertRaises(ValueError):
             r.read_segment(gid_list=[1], t_stop=1000. * pq.ms,
-                           sampling_period=1. * pq.ms, lazy=False,
+                           sampling_period=1., lazy=False,
                            id_column_dat=0, time_column_dat=1,
                            value_columns_dat=2, value_types='V_m')
 
@@ -351,7 +351,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         st = r.read_spiketrain(gdf_id=1, t_start=400. * pq.ms,
                                t_stop=500. * pq.ms,
                                lazy=False, id_column=0, time_column=1)
-        self.assertTrue(st.magnitude.dtype == float)
+        self.assertTrue(st.magnitude.dtype == np.float_)
         seg = r.read_segment(gid_list=[1], t_start=400. * pq.ms,
                              t_stop=500. * pq.ms,
                              lazy=False, id_column_gdf=0, time_column_gdf=1)
@@ -600,7 +600,7 @@ class TestColumnIO(BaseTestIO, unittest.TestCase):
     def setUp(self):
         BaseTestIO.setUp(self)
         filename = self.get_local_path('nest/0gid-1time-2Vm-3gex-4gin-1260-0.dat')
-        self.testIO = ColumnIO(filename=filename, target_object='AnalogSignal')
+        self.testIO = ColumnIO(filename=filename)
 
     def test_no_arguments(self):
         """
