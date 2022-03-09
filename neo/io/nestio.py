@@ -684,10 +684,6 @@ class ColumnIO:
 
         self.filename = filename
 
-        # Were the next few lines thought as a speed improvement?
-        # Only works if the first line of the file consists of 
-        # values and not a header as is with the new NEST versions.
-
         # read the first line to check the data type (int or float) of the data
         f = open(self.filename)
         line = f.readline()
