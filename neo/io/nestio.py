@@ -37,7 +37,7 @@ class NestIO(BaseIO):
 
         >>> files = ['membrane_voltages-1261-0.dat',
                  'spikes-1258-0.gdf']
-        >>> r = NestIO(filenames=files)
+        >>> r = NestIO(filename=files)
         >>> seg = r.read_segment(gid_list=[], t_start=400 * pq.ms,
                              t_stop=600 * pq.ms,
                              id_column_gdf=0, time_column_gdf=1,
@@ -57,39 +57,27 @@ class NestIO(BaseIO):
     write_params = None  # writing is not supported
 
     name = 'nest'
-    extensions = ['gdf', 'dat']
+    supported_target_objects = ['SpikeTrain', 'AnalogSignal']
     mode = 'file'
 
-    def __init__(self, filenames=None, target_object='SpikeTrain',
+    def __init__(self, filename=None, target_object='SpikeTrain',
                  additional_parameters={}):
         """
         Parameters
         ----------
-            filenames: string or list of strings, default=None
-                The filename or list of filenames to load.
-            target_object : string, default='SpikeTrain'
+            filename: string or list of strings, default=None
+                The filename or list of filename to load.
+            target_object : string or list of strings, default='SpikeTrain'
                 The type of neo object that should be read out from the input.
                 Options are: 'SpikeTrain', 'AnalogSignal'
         """
+        if target_object not in self.supported_target_objects:
+            raise ValueError(f'{obj} is not a valid object type. '
+                             f'Valid values are {self.objects}.')
 
-        if isinstance(filenames, str):
-            filenames = [filenames]
-
-        self.filenames = filenames
+        self.filename = filename
         self.target_object = target_object
-        self.avail_formats = {}
-        self.avail_IOs = {}
-
-        for filename in filenames:
-            path, ext = os.path.splitext(filename)
-            ext = ext.strip('.')
-            if ext in self.extensions:
-                if ext in self.avail_IOs:
-                    raise ValueError('Received multiple files with "%s" '
-                                     'extension. Can only load single file of '
-                                     'this type.' % ext)
-                self.avail_IOs[ext] = ColumnIO(filename, additional_parameters)
-            self.avail_formats[ext] = path
+        self.IO = ColumnIO(filename, additional_parameters)
 
     def __read_analogsignals(self, gid_list, time_unit, t_start=None,
                              t_stop=None, sampling_period=None,
@@ -99,10 +87,6 @@ class NestIO(BaseIO):
         """
         Internal function called by read_analogsignal() and read_segment().
         """
-
-        if 'dat' not in self.avail_formats:
-            raise ValueError('Can not load analogsignals. No DAT file '
-                             'provided.')
 
         # checking gid input parameters
         gid_list, id_column = self._check_input_gids(gid_list, id_column)
@@ -143,7 +127,7 @@ class NestIO(BaseIO):
                                                             t_start,
                                                             t_stop)
         # loading raw data columns
-        data = self.avail_IOs['dat'].get_columns(
+        data = self.IO.get_columns(
             column_ids=column_ids,
             condition=condition,
             condition_column=condition_column,
@@ -199,10 +183,6 @@ class NestIO(BaseIO):
         Internal function for reading multiple spiketrains at once.
         This function is called by read_spiketrain() and read_segment().
         """
-        ext = list(self.avail_IOs.keys())[0]
-        # if 'gdf' not in self.avail_IOs:
-        #     raise ValueError('Can not load spiketrains. No GDF file provided.')
-
         # assert that the file contains spike times
         if time_column is None:
             raise ValueError('Time column is None. No spike times to '
@@ -229,7 +209,7 @@ class NestIO(BaseIO):
             self._get_conditions_and_sorting(id_column, time_column,
                                              gdf_id_list, t_start, t_stop)
 
-        data = self.avail_IOs[ext].get_columns(
+        data = self.IO.get_columns(
             column_ids=column_ids,
             condition=condition,
             condition_column=condition_column,
@@ -540,13 +520,13 @@ class NestIO(BaseIO):
             gid_list = [None]
 
         # create an empty Segment
-        seg = Segment(file_origin=",".join(self.filenames))
-        seg.file_datetime = datetime.fromtimestamp(os.stat(self.filenames[0]).st_mtime)
+        seg = Segment(file_origin=",".join(self.filename))
+        seg.file_datetime = datetime.fromtimestamp(os.stat(self.filename).st_mtime)
         # todo: rather than take the first file for the timestamp, we should take the oldest
         #       in practice, there won't be much difference
 
         # Load analogsignals and attach to Segment
-        if 'AnalogSignal' is self.target_object:
+        if 'AnalogSignal' == self.target_object:
             seg.analogsignals = self.__read_analogsignals(
                 gid_list,
                 time_unit,
@@ -558,7 +538,7 @@ class NestIO(BaseIO):
                 value_columns=value_columns_dat,
                 value_types=value_types,
                 value_units=value_units)
-        if 'SpikeTrain' is self.target_object:
+        if 'SpikeTrain' == self.target_object:
             seg.spiketrains = self.__read_spiketrains(
                 gid_list,
                 time_unit,
