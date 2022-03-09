@@ -61,7 +61,7 @@ class NestIO(BaseIO):
     extensions = ['gdf', 'dat']
     mode = 'file'
 
-    def __init__(self, filenames=None):
+    def __init__(self, filenames=None, additional_parameters={}):
         """
         Parameters
         ----------
@@ -84,7 +84,7 @@ class NestIO(BaseIO):
                     raise ValueError('Received multiple files with "%s" '
                                      'extension. Can only load single file of '
                                      'this type.' % ext)
-                self.avail_IOs[ext] = ColumnIO(filename)
+                self.avail_IOs[ext] = ColumnIO(filename, additional_parameters)
             self.avail_formats[ext] = path
 
     def __read_analogsignals(self, gid_list, time_unit, t_start=None,
@@ -113,13 +113,17 @@ class NestIO(BaseIO):
 
         # defining standard column order for internal usage
         # [id_column, time_column, value_column1, value_column2, ...]
-        column_ids = [id_column, time_column] + value_columns
+        column_ids = [id_column, time_column]
+        if value_columns is not None:
+            column_ids += value_columns
         for i, cid in enumerate(column_ids):
             if cid is None:
                 column_ids[i] = -1
 
         # assert that no single column is assigned twice
-        column_list = [id_column, time_column] + value_columns
+        column_list = [id_column, time_column]
+        if value_columns is not None:
+            column_list += value_columns
         column_list_no_None = [c for c in column_list if c is not None]
         if len(np.unique(column_list_no_None)) < len(column_list_no_None):
             raise ValueError(
@@ -165,22 +169,23 @@ class NestIO(BaseIO):
                 #  recording only after 1 sampling_period
                 anasig_start_time = 1. * sampling_period
 
-            # create one analogsignal per value column requested
-            for v_id, value_column in enumerate(value_columns):
-                signal = data[
-                    selected_ids[0]:selected_ids[1], value_column]
+            if value_columns is not None:
+                # create one analogsignal per value column requested
+                for v_id, value_column in enumerate(value_columns):
+                    signal = data[
+                        selected_ids[0]:selected_ids[1], value_column]
 
-                # create AnalogSignal objects and annotate them with
-                #  the neuron ID
-                analogsignal_list.append(AnalogSignal(
-                    signal * value_units[v_id],
-                    sampling_period=sampling_period,
-                    t_start=anasig_start_time,
-                    id=i,
-                    type=value_types[v_id]))
-                # check for correct length of analogsignal
-                assert (analogsignal_list[-1].t_stop
-                        == anasig_start_time + len(signal) * sampling_period)
+                    # create AnalogSignal objects and annotate them with
+                    #  the neuron ID
+                    analogsignal_list.append(AnalogSignal(
+                        signal * value_units[v_id],
+                        sampling_period=sampling_period,
+                        t_start=anasig_start_time,
+                        id=i,
+                        type=value_types[v_id]))
+                    # check for correct length of analogsignal
+                    assert (analogsignal_list[-1].t_stop
+                            == anasig_start_time + len(signal) * sampling_period)
         return analogsignal_list
 
     def __read_spiketrains(self, gdf_id_list, time_unit,
@@ -190,9 +195,9 @@ class NestIO(BaseIO):
         Internal function for reading multiple spiketrains at once.
         This function is called by read_spiketrain() and read_segment().
         """
-
-        if 'gdf' not in self.avail_IOs:
-            raise ValueError('Can not load spiketrains. No GDF file provided.')
+        ext = list(self.avail_IOs.keys())[0]
+        # if 'gdf' not in self.avail_IOs:
+        #     raise ValueError('Can not load spiketrains. No GDF file provided.')
 
         # assert that the file contains spike times
         if time_column is None:
@@ -220,7 +225,7 @@ class NestIO(BaseIO):
             self._get_conditions_and_sorting(id_column, time_column,
                                              gdf_id_list, t_start, t_stop)
 
-        data = self.avail_IOs['gdf'].get_columns(
+        data = self.avail_IOs[ext].get_columns(
             column_ids=column_ids,
             condition=condition,
             condition_column=condition_column,
@@ -293,7 +298,10 @@ class NestIO(BaseIO):
         adjusted list of [value_columns, value_types, value_units]
         """
         if value_columns is None:
-            raise ValueError('No value column provided.')
+            warnings.warn('No value column was provided.')
+            value_types = None
+            value_units = None
+            return value_columns, value_types, value_units
         if isinstance(value_columns, int):
             value_columns = [value_columns]
         if value_types is None:
@@ -361,7 +369,7 @@ class NestIO(BaseIO):
         if sampling_period is None:
             if time_column is not None:
                 data_sampling = np.unique(
-                    np.diff(sorted(np.unique(data[:, 1]))))
+                    np.diff(sorted(np.unique(data[:, time_column]))))
                 if len(data_sampling) > 1:
                     raise ValueError('Different sampling distances found in '
                                      'data set (%s)' % data_sampling)
@@ -372,7 +380,7 @@ class NestIO(BaseIO):
                                  'column id provided.')
             sampling_period = pq.CompoundUnit(str(dt) + '*'
                                               + time_unit.units.u_symbol)
-        elif not isinstance(sampling_period, pq.UnitQuantity):
+        elif not isinstance(sampling_period, pq.Quantity):
             raise ValueError("sampling_period is not specified as a unit.")
         return sampling_period
 
@@ -546,7 +554,7 @@ class NestIO(BaseIO):
                 value_columns=value_columns_dat,
                 value_types=value_types,
                 value_units=value_units)
-        if 'gdf' in self.avail_formats:
+        # if 'gdf' in self.avail_formats:
             seg.spiketrains = self.__read_spiketrains(
                 gid_list,
                 time_unit,
@@ -660,20 +668,23 @@ class ColumnIO:
     Class for reading an ASCII file containing multiple columns of data.
     '''
 
-    def __init__(self, filename):
+    def __init__(self, filename, additional_parameters):
         """
         filename: string, path to ASCII file to read.
         """
 
         self.filename = filename
 
-        # read the first line to check the data type (int or float) of the data
-        f = open(self.filename)
-        line = f.readline()
+        # Were the next few lines thought as a speed improvement?
+        # Only works if the first line of the file consists of 
+        # values and not a header as is with the new NEST versions.
 
-        additional_parameters = {}
-        if '.' not in line:
-            additional_parameters['dtype'] = np.int32
+        # read the first line to check the data type (int or float) of the data
+        # f = open(self.filename)
+        # line = f.readline()
+
+        # if '.' not in line:
+        #     additional_parameters['dtype'] = np.int32
 
         self.data = np.loadtxt(self.filename, **additional_parameters)
 
@@ -707,7 +718,7 @@ class ColumnIO:
         column_ids = np.array(column_ids)
 
         if column_ids is not None:
-            if max(column_ids) >= len(self.data) - 1:
+            if max(column_ids) > len(self.data) - 1:
                 raise ValueError('Can not load column ID %i. File contains '
                                  'only %i columns' % (max(column_ids),
                                                       len(self.data)))
