@@ -677,10 +677,6 @@ class ColumnIO:
 
         self.filename = filename
 
-        # Were the next few lines thought as a speed improvement?
-        # Only works if the first line of the file consists of 
-        # values and not a header as is with the new NEST versions.
-
         # read the first line to check the data type (int or float) of the data
         f = open(self.filename)
         line = f.readline()
@@ -698,10 +694,9 @@ class ColumnIO:
         if header_size > 0:
             warnings.warn(f'Ignoring {str(header_size)} header lines.')
 
+        additional_parameters = {}
         if '.' not in line:
             additional_parameters['dtype'] = np.int32
-        else:
-            additional_parameters['dtype'] = np.float
 
         self.data = np.loadtxt(self.filename, skiprows=header_size,
                                **additional_parameters)
