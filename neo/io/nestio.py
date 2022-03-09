@@ -678,6 +678,8 @@ class ColumnIO:
 
         if '.' not in line:
             additional_parameters['dtype'] = np.int32
+        else:
+            additional_parameters['dtype'] = np.float
 
         self.data = np.loadtxt(self.filename, skiprows=header_size,
                                **additional_parameters)
