@@ -75,9 +75,23 @@ class NestIO(BaseIO):
             raise ValueError(f'{obj} is not a valid object type. '
                              f'Valid values are {self.objects}.')
 
-        self.filename = filename
-        self.target_object = target_object
-        self.IO = ColumnIO(filename, additional_parameters)
+        if isinstance(filenames, str):
+            filenames = [filenames]
+
+        self.filenames = filenames
+        self.avail_formats = {}
+        self.avail_IOs = {}
+
+        for filename in filenames:
+            path, ext = os.path.splitext(filename)
+            ext = ext.strip('.')
+            if ext in self.extensions:
+                if ext in self.avail_IOs:
+                    raise ValueError('Received multiple files with "%s" '
+                                     'extention. Can only load single file of '
+                                     'this type.' % ext)
+                self.avail_IOs[ext] = ColumnIO(filename, additional_parameters)
+            self.avail_formats[ext] = path
 
     def __read_analogsignals(self, gid_list, time_unit, t_start=None,
                              t_stop=None, sampling_period=None,
@@ -658,6 +672,10 @@ class ColumnIO:
         """
 
         self.filename = filename
+
+        # Were the next few lines thought as a speed improvement?
+        # Only works if the first line of the file consists of 
+        # values and not a header as is with the new NEST versions.
 
         # read the first line to check the data type (int or float) of the data
         f = open(self.filename)
