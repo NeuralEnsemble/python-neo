@@ -120,8 +120,12 @@ class OpenEphysRawIO(BaseRawIO):
 
                 if seg_index == 0:
                     # add in channel list
+                    if ch_name[:2].upper() == 'CH':
+                        units = 'uV'
+                    else:
+                        units = 'V'
                     signal_channels.append((ch_name, chan_id, chan_info['sampleRate'],
-                                'int16', 'V', chan_info['bitVolts'], 0., processor_id))
+                                'int16', units, chan_info['bitVolts'], 0., processor_id))
 
             # In some cases, continuous do not have the same lentgh because
             # one record block is missing when the "OE GUI is freezing"
@@ -173,7 +177,7 @@ class OpenEphysRawIO(BaseRawIO):
 
         # and create streams channels (keep natural order 'CH' first)
         stream_ids, order = np.unique(chan_stream_ids, return_index=True)
-        stream_ids = stream_ids[order]
+        stream_ids = stream_ids[np.argsort(order)]
         signal_streams = [(f'Signals {stream_id}', f'{stream_id}') for stream_id in stream_ids]
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
