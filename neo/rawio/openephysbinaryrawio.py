@@ -81,8 +81,13 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             new_channels = []
             for chan_info in d['channels']:
                 chan_id = chan_info['channel_name']
+                if chan_info["units"] == "":
+                    # in some cases for some OE version the unit is "", but the gain is to "uV"
+                    units = "uV"
+                else:
+                    units = chan_info["units"]
                 new_channels.append((chan_info['channel_name'],
-                    chan_id, float(d['sample_rate']), d['dtype'], chan_info['units'],
+                    chan_id, float(d['sample_rate']), d['dtype'], units,
                     chan_info['bit_volts'], 0., stream_id))
             signal_channels.extend(new_channels)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -136,6 +141,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             elif 'channels' in d:
                 # ttl case use channels
                 d['labels'] = d['channels'].astype('U')
+            elif 'states' in d:
+                # ttl case use states
+                d['labels'] = d['states'].astype('U')
             else:
                 raise ValueError(f'There is no possible labels for this event: {stream_name}')
 
@@ -295,8 +303,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         pass
 
 
-_possible_event_stream_names = ('timestamps', 'channels', 'text',
-        'full_word', 'channel_states', 'data_array', 'metadata')
+_possible_event_stream_names = ('timestamps', 'channels', 'text', 'states',
+                                'full_word', 'channel_states', 'data_array', 'metadata')
 
 
 def explore_folder(dirname):
