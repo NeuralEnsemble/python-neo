@@ -1430,8 +1430,16 @@ class NixIOWriteTest(NixIOTest):
     def test_empty_array_annotations(self):
         wblock = Block("block with spiketrain")
         wseg = Segment()
+        empty_array_annotations = {'emptylist': [],
+                                   'emptyarray': np.array([]),
+                                   'quantitylist': [] * pq.s,
+                                   'quantityarray': np.array([]) * pq.s}
+        expected_array_annotations = {'emptylist': np.array([]),
+                                   'emptyarray': np.array([]),
+                                   'quantitylist': np.array([]) * pq.s,
+                                   'quantityarray': np.array([]) * pq.s}
         wseg.spiketrains = [SpikeTrain(times=[] * pq.s, t_stop=1 * pq.s,
-                                       array_annotations={'empty': []})]
+                                       array_annotations=empty_array_annotations)]
         wblock.segments = [wseg]
         self.writer.write_block(wblock)
         try:
@@ -1441,9 +1449,13 @@ class NixIOWriteTest(NixIOTest):
                       + ' reading the block with an empty array annotation:\n'
                       + str(exc))
         rst = rblock.segments[0].spiketrains[0]
-        self.assertEqual(len(rst.array_annotations), 1)
-        self.assertIn('empty', rst.array_annotations.keys())
-        self.assertEqual(len(rst.array_annotations['empty']), 0)
+        for k, v in expected_array_annotations.items():
+            self.assertIn(k, rst.array_annotations)
+            np.testing.assert_array_equal(rst.array_annotations[k], v)
+            if hasattr(v, 'units'):
+                self.assertEqual(rst.array_annotations[k].units, v.units)
+            else:
+                self.assertFalse(hasattr(rst.array_annotations[k], 'units'))
 
     def test_write_proxyobjects(self):
 
