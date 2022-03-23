@@ -1235,13 +1235,7 @@ class NixIO(BaseIO):
         :return: The newly created property
         """
 
-        if isinstance(v, pq.Quantity):
-            if len(v.shape):
-                section.create_property(name, tuple(v.magnitude))
-            else:
-                section.create_property(name, v.magnitude.item())
-            section.props[name].unit = str(v.dimensionality)
-        elif isinstance(v, datetime_types):
+        if isinstance(v, datetime_types):
             value, annotype = dt_to_nix(v)
             prop = section.create_property(name, value)
             prop.definition = annotype
@@ -1256,22 +1250,27 @@ class NixIO(BaseIO):
             values = []
             unit = None
             definition = None
-            if len(v) == 0:
+            # handling (quantity) arrays with only a single element
+            if hasattr(v, "ndim") and v.ndim == 0:
+                values = v.item()
+            # handling empty arrays or lists
+            elif (hasattr(v, 'size') and (v.size == 0)) or (len(v) == 0):
                 # NIX supports empty properties but dtype must be specified
                 # Defaulting to String and using definition to signify empty
                 # iterable as opposed to empty string
                 values = nix.DataType.String
                 definition = EMPTYANNOTATION
-            elif hasattr(v, "ndim") and v.ndim == 0:
-                values = v.item()
-                if isinstance(v, pq.Quantity):
-                    unit = str(v.dimensionality)
             else:
                 for item in v:
                     if isinstance(item, str):
                         item = item
                     elif isinstance(item, pq.Quantity):
-                        unit = str(item.dimensionality)
+                        current_unit = str(item.dimensionality)
+                        if unit is None:
+                            unit = current_unit
+                        elif unit != current_unit:
+                            raise ValueError(f'Inconsistent units detected for '
+                                             f'property {name}: {v}')
                         item = item.magnitude.item()
                     elif isinstance(item, Iterable):
                         self.logger.warn("Multidimensional arrays and nested "
@@ -1281,6 +1280,8 @@ class NixIO(BaseIO):
                     else:
                         item = item
                     values.append(item)
+            if hasattr(v, 'dimensionality'):
+                unit = str(v.dimensionality)
             section.create_property(name, values)
             section.props[name].unit = unit
             section.props[name].definition = definition
@@ -1308,9 +1309,6 @@ class NixIO(BaseIO):
         if nix_obj.metadata:
             for prop in nix_obj.metadata.inherited_properties():
                 values = list(prop.values)
-                if prop.unit:
-                    units = prop.unit
-                    values = create_quantity(values, units)
                 if not len(values):
                     if prop.definition == EMPTYANNOTATION:
                         values = list()
@@ -1318,6 +1316,9 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
+                if prop.unit:
+                    units = prop.unit
+                    values = create_quantity(values, units)
                 if prop.definition in (DATEANNOTATION, TIMEANNOTATION, DATETIMEANNOTATION):
                     values = dt_from_nix(values, prop.definition)
                 if prop.type == ARRAYANNOTATION:
