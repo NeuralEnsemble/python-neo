@@ -936,7 +936,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             # we sort by chunk position in the file because we want to optimize
             # IO access and possibly read in sequential access. This is mainly
             # true for hard drives but shouldn't hurt flash memory
-            file_chunks[filename].sort(key=lambda x: x[0])
+            file_chunks[filename].sort(key=lambda x: x[2])
         for filename in file_chunks:
             for channel_index, chunk_index, file_position, chunk_size in file_chunks[
                 filename
