@@ -288,6 +288,13 @@ class NlxHeader(OrderedDict):
             elif self['HardwareSubSystemType'] == 'DigitalLynxSX':
                 return 'DIGITALLYNXSX'
 
+            # Cheetah64
+            elif self['HardwareSubSystemType'] == 'Cheetah64':
+                return 'CHEETAH64'
+
+            else:
+                return 'UNKNOWN'
+
         elif 'FileType' in self:
 
             if self['FileVersion'] in ['3.3', '3.4']:
