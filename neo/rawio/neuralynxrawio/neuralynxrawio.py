@@ -524,7 +524,8 @@ class NeuralynxRawIO(BaseRawIO):
             sig = signals[0]
             return self._sigs_length[seg_index][(sig['name'], sig['id'])]
         else:
-            return None
+            raise ValueError(f'No signals present for block {block_index}, segment {seg_index},'
+                             f' stream {stream_index}')
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sigs_t_start[seg_index] - self.global_t_start
