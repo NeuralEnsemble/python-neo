@@ -528,7 +528,17 @@ class NeuralynxRawIO(BaseRawIO):
                              f' stream {stream_index}')
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        return self._sigs_t_start[seg_index] - self.global_t_start
+
+        stream_id = self.header['signal_streams'][stream_index]['id']
+        stream_mask = self.header['signal_channels']['stream_id'] == stream_id
+
+        # use first channel of stream as all channels in stream have a common t_start
+        channel = self.header['signal_channels'][stream_mask][0]
+
+        data = self._sigs_memmaps[seg_index][(channel['name'], channel['id'])]
+        absolute_t_start = data['timestamp'][0]
+
+        return absolute_t_start / 1e6 - self.global_t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
@@ -569,7 +579,6 @@ class NeuralynxRawIO(BaseRawIO):
         stream_id = self.header['signal_streams'][stream_index]['id']
         stream_mask = self.header['signal_channels']['stream_id'] == stream_id
 
-        # channel_streams = self.
         channel_ids = self.header['signal_channels'][stream_mask][channel_indexes]['id']
         channel_names = self.header['signal_channels'][stream_mask][channel_indexes]['name']
 
