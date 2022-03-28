@@ -34,16 +34,13 @@ sections are determined by the NcsSectionsFactory class. In the
 event the gaps are larger, this RawIO only provides the samples from the first section as belonging
 to one Segment.
 
-This RawIO presents only a single Block and Segment.
-:TODO: This should likely be changed to provide multiple segments and allow for
-multiple .Ncs files in a directory with differing section structures.
+This RawIO presents only a single Block.
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
 """
 
-
 from ..baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+                         _spike_channel_dtype, _event_channel_dtype)
 from operator import itemgetter
 import numpy as np
 import os
@@ -89,8 +86,8 @@ class NeuralynxRawIO(BaseRawIO):
             name of directory containing all files for dataset. If provided, filename is
             ignored.
         filename: str
-            name of a single ncs, nse, nev, or ntt file to include in dataset. If used,
-            dirname must not be provided.
+            name of a single ncs, nse, nev, or ntt file to include in dataset. Will be ignored,
+            if dirname is provided.
         exclude_filename: str or list
             name of a single ncs, nse, nev or ntt file or list of such files. Expects plain
             filenames (without directory path).
@@ -163,8 +160,7 @@ class NeuralynxRawIO(BaseRawIO):
                 if excl_file in filenames:
                     filenames.remove(excl_file)
 
-        stream_props = {}  # {(sampling_rate, n_samples, t_start):
-                           # {stream_id: [filenames]}
+        stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
         for filename in filenames:
             filename = os.path.join(dirname, filename)
@@ -213,7 +209,7 @@ class NeuralynxRawIO(BaseRawIO):
                     offset = 0.
                     stream_id = stream_id
                     signal_channels.append((chan_name, str(chan_id), info['sampling_rate'],
-                                         'int16', units, gain, offset, stream_id))
+                                            'int16', units, gain, offset, stream_id))
                     self.ncs_filenames[chan_uid] = filename
                     keys = [
                         'DspFilterDelay_µs',
@@ -296,8 +292,7 @@ class NeuralynxRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         if signal_channels.size > 0:
-            names = [f'Stream with (sampling_rate, n_packets, t_start): ' \
-                     f'({stream_prop})' for stream_prop in stream_props]
+            names = [f'Stream (rate,#packet,t0): {sp}' for sp in stream_props]
             ids = [stream_prop['stream_id'] for stream_prop in stream_props.values()]
             signal_streams = list(zip(names, ids))
         else:
@@ -315,17 +310,20 @@ class NeuralynxRawIO(BaseRawIO):
         for stream_id in np.unique(signal_channels['stream_id']):
             stream_channels = signal_channels[signal_channels['stream_id'] == stream_id]
             stream_chan_uids = zip(stream_channels['name'], stream_channels['id'])
-            stream_filenames = itemgetter(*stream_chan_uids)(self.ncs_filenames)
-            _sigs_memmaps, ncsSegTimestampLimits, section_structure = self.scan_stream_ncs_files(stream_filenames)
+            stream_filenames = [self.ncs_filenames[chuid] for chuid in stream_chan_uids]
+            _sigs_memmaps, ncsSegTimestampLimits, section_structure = self.scan_stream_ncs_files(
+                stream_filenames)
 
             stream_infos[stream_id] = {'segment_sig_memmaps': _sigs_memmaps,
                                        'ncs_segment_infos': ncsSegTimestampLimits,
                                        'section_structure': section_structure}
 
         # check if section structure across streams is compatible and merge infos
-        ref_stream_id = list(stream_infos.keys())[0]
-        ref_sec_structure = stream_infos[ref_stream_id]['section_structure']
+        ref_sec_structure = None
         for stream_id, stream_info in stream_infos.items():
+            ref_stream_id = list(stream_infos.keys())[0]
+            ref_sec_structure = stream_infos[ref_stream_id]['section_structure']
+
             sec_structure = stream_info['section_structure']
 
             # check if section structure of streams are compatible
@@ -333,18 +331,31 @@ class NeuralynxRawIO(BaseRawIO):
             tolerance = 512 / min(ref_sec_structure.sampFreqUsed,
                                   sec_structure.sampFreqUsed) * 1e6
             if not ref_sec_structure.is_equivalent(sec_structure, abs_tol=tolerance):
-                ref_chan_ids = signal_channels[signal_channels['stream_id'] == ref_stream_id]['name']
+                ref_chan_ids = signal_channels[signal_channels['stream_id'] == ref_stream_id][
+                    'name']
                 chan_ids = signal_channels[signal_channels['stream_id'] == stream_id]['name']
 
                 raise ValueError('Incompatible section structures across streams: '
                                  f'Stream id {ref_stream_id}:{ref_chan_ids} and '
                                  f'{stream_id}:{chan_ids}.')
 
-        self._nb_segment = len(ref_sec_structure.sects)
+        if ref_sec_structure is not None:
+            self._nb_segment = len(ref_sec_structure.sects)
+        else:
+            # Use only a single segment if no ncs data is present
+            self._nb_segment = 1
+
+        def min_max_tuple(tuple1, tuple2):
+            """Merge tuple by selecting min for first and max for 2nd entry"""
+            mins, maxs = zip(tuple1, tuple2)
+            result = (min(m for m in mins if m is not None), max(m for m in maxs if m is not None))
+            return result
 
         # merge stream mmemmaps since streams are compatible
         self._sigs_memmaps = [{} for seg_idx in range(self._nb_segment)]
+        # time limits of integer timestamps in ncs files
         self._timestamp_limits = [(None, None) for seg_idx in range(self._nb_segment)]
+        # time limits physical times in ncs files
         self._signal_limits = [(None, None) for seg_idx in range(self._nb_segment)]
         for stream_id, stream_info in stream_infos.items():
             stream_mmaps = stream_info['segment_sig_memmaps']
@@ -353,37 +364,14 @@ class NeuralynxRawIO(BaseRawIO):
 
             ncs_segment_info = stream_info['ncs_segment_infos']
             for seg_idx, (t_start, t_stop) in enumerate(ncs_segment_info.timestamp_limits):
-                old_times = self._timestamp_limits[seg_idx]
-                if (old_times[0] is None) or (t_start < old_times[0]):
-                    self._timestamp_limits[seg_idx] = (t_start, self._signal_limits[seg_idx][1])
-                if (self._timestamp_limits[seg_idx][1] is None) or (
-                        t_stop > self._timestamp_limits[seg_idx][1]):
-                    self._timestamp_limits[seg_idx] = (self._signal_limits[seg_idx][0],
-                                                       t_stop)
+                self._timestamp_limits[seg_idx] = min_max_tuple(self._timestamp_limits[seg_idx],
+                                                                (t_start, t_stop))
 
             for seg_idx in range(ncs_segment_info.nb_segment):
                 t_start = ncs_segment_info.t_start[seg_idx]
                 t_stop = ncs_segment_info.t_stop[seg_idx]
-                old_times = self._signal_limits[seg_idx]
-                if (self._signal_limits[seg_idx][0] is None) or (
-                        t_start < self._signal_limits[seg_idx][0]):
-                    self._signal_limits[seg_idx] = (t_start, self._signal_limits[seg_idx][1])
-                if (self._signal_limits[seg_idx][1] is None) or (
-                        t_stop > self._signal_limits[seg_idx][1]):
-                    self._signal_limits[seg_idx] = (self._signal_limits[seg_idx][0],
-                                                    t_stop)
-
-        # self._sigs_length = [{} for seg_idx in range(self._nb_segment)]
-        # for stream_id, stream_info in stream_infos.items():
-        #     ncs_segment_info = stream_info['ncs_segment_infos']
-        #     chan_ids = signal_channels[signal_channels['stream_id'] == stream_id]['name']
-        #
-        #     for chan_uid in chan_ids:
-        #
-        #
-        # for seg_idx in range(self._nb_segment):
-
-
+                self._signal_limits[seg_idx] = min_max_tuple(self._signal_limits[seg_idx],
+                                                             (t_start, t_stop))
 
         # precompute signal lengths within segments
         self._sigs_length = []
@@ -393,7 +381,7 @@ class NeuralynxRawIO(BaseRawIO):
                 for chan_uid, sig_infos in sig_container.items():
                     self._sigs_length[seg_idx][chan_uid] = int(sig_infos['nb_valid'].sum())
 
-        # Determine timestamp limits in nev, nse file by scanning them.
+        # Determine timestamp limits in nev, nse, ntt files by scanning them.
         ts0, ts1 = None, None
         for _data_memmap in (self._spike_memmap, self._nev_memmap):
             for _, data in _data_memmap.items():
@@ -406,28 +394,36 @@ class NeuralynxRawIO(BaseRawIO):
                 ts0 = min(ts0, ts[0])
                 ts1 = max(ts1, ts[-1])
 
+        # rescaling for comparison with signal times
+        if ts0 is not None:
+            timestamps_start, timestamps_stop = ts0 / 1e6, ts1 / 1e6
+
         # decide on segment and global start and stop times based on files available
         if self._timestamp_limits is None:
-            # case  NO ncs but HAVE nev or nse
+            # case  NO ncs but HAVE nev or nse -> single segment covering all spikes & events
             self._timestamp_limits = [(ts0, ts1)]
-            self._seg_t_starts = [ts0 / 1e6]
-            self._seg_t_stops = [ts1 / 1e6]
-            self.global_t_start = ts0 / 1e6
-            self.global_t_stop = ts1 / 1e6
+            self._seg_t_starts = [timestamps_start]
+            self._seg_t_stops = [timestamps_stop]
+            self.global_t_start = timestamps_start
+            self.global_t_stop = timestamps_stop
         elif ts0 is not None:
-            # case  HAVE ncs AND HAVE nev or nse
-            self.global_t_start = min(ts0, self._timestamp_limits[0][0]) /1e6
-            self.global_t_stop = max(ts1 / 1e6, self._timestamp_limits[-1][-1])
-            self._seg_t_starts = [limits[0] /1e6 for limits in self._timestamp_limits]
+            # case  HAVE ncs AND HAVE nev or nse -> multi segments based on ncs segmentation
+            # ignoring nev/nse/ntt time limits, loading only data within ncs segments
+            global_events_limits = (timestamps_start, timestamps_stop)
+            global_signal_limits = (self._signal_limits[0][0], self._signal_limits[-1][-1])
+            self.global_t_start, self.global_t_stop = min_max_tuple(global_events_limits,
+                                                                    global_signal_limits)
+            self._seg_t_starts = [limits[0] for limits in self._signal_limits]
+            self._seg_t_stops = [limits[1] for limits in self._signal_limits]
             self._seg_t_starts[0] = self.global_t_start
-            self._seg_t_stops = [limits[1] / 1e6 for limits in self._timestamp_limits]
             self._seg_t_stops[-1] = self.global_t_stop
+
         else:
-            # case HAVE ncs but  NO nev or nse
-            self._seg_t_starts = [limits[0] / 1e6 for limits in self._timestamp_limits]
-            self._seg_t_stops = [limits[1] / 1e6 for limits in self._timestamp_limits]
-            self.global_t_start = self._signal_limits[0][0] / 1e6
-            self.global_t_stop = self._signal_limits[-1][-1] / 1e6
+            # case HAVE ncs but  NO nev or nse ->
+            self._seg_t_starts = [limits[0] for limits in self._signal_limits]
+            self._seg_t_stops = [limits[1] for limits in self._signal_limits]
+            self.global_t_start = self._signal_limits[0][0]
+            self.global_t_stop = self._signal_limits[-1][-1]
 
         if self.keep_original_times:
             self.global_t_stop = self.global_t_stop - self.global_t_start
@@ -491,7 +487,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         if suffix == 'ncs':
             return np.memmap(filename, dtype=self._ncs_dtype, mode='r',
-                      offset=NlxHeader.HEADER_SIZE)
+                             offset=NlxHeader.HEADER_SIZE)
 
         elif suffix in ['nse', 'ntt']:
             info = NlxHeader(filename)
@@ -599,6 +595,9 @@ class NeuralynxRawIO(BaseRawIO):
         return nb_spike
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
+        """
+        Extract timestamps within a Segment defined by ncs timestamps
+        """
         chan_uid, unit_id = self.internal_unit_ids[unit_index]
         data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
@@ -718,7 +717,8 @@ class NeuralynxRawIO(BaseRawIO):
             nlxHeader = NlxHeader(ncs_filename)
 
             if not chanSectMap or (chanSectMap and
-                    not NcsSectionsFactory._verifySectionsStructure(data, chan_ncs_sections)):
+                                   not NcsSectionsFactory._verifySectionsStructure(data,
+                                                                                   chan_ncs_sections)):
                 chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
 
             # register file section structure for all contained channels
@@ -783,7 +783,6 @@ class NeuralynxRawIO(BaseRawIO):
 # time limits for set of segments
 SegmentTimeLimits = namedtuple("SegmentTimeLimits", ['nb_segment', 't_start', 't_stop', 'length',
                                                      'timestamp_limits'])
-
 
 nev_dtype = [
     ('reserved', '<i2'),
