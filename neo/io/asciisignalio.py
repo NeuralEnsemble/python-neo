@@ -196,6 +196,10 @@ class AsciiSignalIO(BaseIO):
                                 usecols=self.usecols,
                                 skip_header=self.skiprows,
                                 dtype='f',
+                                filling_values=None,
+                                comments='""',
+                                names=None,
+                                loose=True,
                                 invalid_raise=False)
             if len(sig.shape) == 1:
                 sig = sig[:, np.newaxis]
