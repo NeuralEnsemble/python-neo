@@ -331,12 +331,15 @@ class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
 
-        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_start, [8408.806811, 8427.832053,
-                                                                 8487.768561]):
-            self.assertEqual(np.round(t, 4), np.round(gt, 4))
-        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_stop, [8427.831990, 8487.768498,
-                                                                8515.816549]):
-            self.assertEqual(np.round(t, 4), np.round(gt, 4))
+        expected_segment_starts = [8124.582909, 8427.832053, 8487.768561]
+        expected_segment_stops = [8427.831990, 8487.768498, 10794.133994]
+        for seg_idx in range(n_gaps+1):
+
+            t_start = nio.segment_t_start(0, seg_idx) + nio.global_t_start
+            t_stop = nio.segment_t_stop(0, seg_idx) + nio.global_t_start
+
+            self.assertEqual(np.round(t_start, 4), np.round(expected_segment_starts[seg_idx], 4))
+            self.assertEqual(np.round(t_stop, 4), np.round(expected_segment_stops[seg_idx], 4))
 
 
 class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):

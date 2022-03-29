@@ -597,7 +597,13 @@ class NeuralynxRawIO(BaseRawIO):
         data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
 
-        ts0, ts1 = self._timestamp_limits[seg_index]
+        ts0 = self.segment_t_start(block_index, seg_index)
+        ts1 = self.segment_t_stop(block_index, seg_index)
+
+        # rescale to integer sampling of time
+        ts0 = int((ts0 + self.global_t_start) * 1e6)
+        ts1 = int((ts1 + self.global_t_start) * 1e6)
+
 
         # only count spikes inside the timestamp limits, inclusive, and for the specified unit
         keep = (ts >= ts0) & (ts <= ts1) & (unit_id == data['unit_id'])
@@ -612,11 +618,15 @@ class NeuralynxRawIO(BaseRawIO):
         data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
 
-        ts0, ts1 = self._timestamp_limits[seg_index]
-        if t_start is not None:
-            ts0 = int((t_start + self.global_t_start) * 1e6)
-        if t_start is not None:
-            ts1 = int((t_stop + self.global_t_start) * 1e6)
+        ts0, ts1 = t_start, t_stop
+        if ts0 is None:
+            ts0 = self.segment_t_start(block_index, seg_index)
+        if ts1 is None:
+            ts1 = self.segment_t_stop(block_index, seg_index)
+
+        # rescale to integer sampling of time
+        ts0 = int((ts0 + self.global_t_start) * 1e6)
+        ts1 = int((ts1 + self.global_t_start) * 1e6)
 
         keep = (ts >= ts0) & (ts <= ts1) & (unit_id == data['unit_id'])
         timestamps = ts[keep]
@@ -628,17 +638,20 @@ class NeuralynxRawIO(BaseRawIO):
         spike_times -= self.global_t_start
         return spike_times
 
-    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
-                                 t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         chan_uid, unit_id = self.internal_unit_ids[unit_index]
         data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
 
-        ts0, ts1 = self._timestamp_limits[seg_index]
-        if t_start is not None:
-            ts0 = int((t_start + self.global_t_start) * 1e6)
-        if t_start is not None:
-            ts1 = int((t_stop + self.global_t_start) * 1e6)
+        ts0, ts1 = t_start, t_stop
+        if ts0 is None:
+            ts0 = self.segment_t_start(block_index, seg_index)
+        if ts1 is None:
+            ts1 = self.segment_t_stop(block_index, seg_index)
+
+        # rescale to integer sampling of time
+        ts0 = int((ts0 + self.global_t_start) * 1e6)
+        ts1 = int((ts1 + self.global_t_start) * 1e6)
 
         keep = (ts >= ts0) & (ts <= ts1) & (unit_id == data['unit_id'])
 
@@ -656,7 +669,14 @@ class NeuralynxRawIO(BaseRawIO):
         event_id, ttl_input = self.internal_event_ids[event_channel_index]
         chan_id = self.header['event_channels'][event_channel_index]['id']
         data = self._nev_memmap[chan_id]
-        ts0, ts1 = self._timestamp_limits[seg_index]
+
+        ts0 = self.segment_t_start(block_index, seg_index)
+        ts1 = self.segment_t_stop(block_index, seg_index)
+
+        # rescale to integer sampling of time
+        ts0 = int((ts0 + self.global_t_start) * 1e6)
+        ts1 = int((ts1 + self.global_t_start) * 1e6)
+
         ts = data['timestamp']
         keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) & \
                (data['ttl_input'] == ttl_input)
@@ -667,12 +687,16 @@ class NeuralynxRawIO(BaseRawIO):
         event_id, ttl_input = self.internal_event_ids[event_channel_index]
         chan_id = self.header['event_channels'][event_channel_index]['id']
         data = self._nev_memmap[chan_id]
-        ts0, ts1 = self._timestamp_limits[seg_index]
 
-        if t_start is not None:
-            ts0 = int((t_start + self.global_t_start) * 1e6)
-        if t_start is not None:
-            ts1 = int((t_stop + self.global_t_start) * 1e6)
+        ts0, ts1 = t_start, t_stop
+        if ts0 is None:
+            ts0 = self.segment_t_start(block_index, seg_index)
+        if ts1 is None:
+            ts1 = self.segment_t_stop(block_index, seg_index)
+
+        # rescale to integer sampling of time
+        ts0 = int((ts0 + self.global_t_start) * 1e6)
+        ts1 = int((ts1 + self.global_t_start) * 1e6)
 
         ts = data['timestamp']
         keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) & \
