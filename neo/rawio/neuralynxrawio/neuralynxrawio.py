@@ -207,7 +207,6 @@ class NeuralynxRawIO(BaseRawIO):
                     if info.get('input_inverted', False):
                         gain *= -1
                     offset = 0.
-                    stream_id = stream_id
                     signal_channels.append((chan_name, str(chan_id), info['sampling_rate'],
                                             'int16', units, gain, offset, stream_id))
                     self.ncs_filenames[chan_uid] = filename
