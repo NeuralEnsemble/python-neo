@@ -6,7 +6,7 @@ h5py
 igor
 klusta
 tqdm
-nixio==1.5.1
+nixio
 matplotlib
 ipython
 coverage
