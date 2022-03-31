@@ -34,6 +34,12 @@ sections are determined by the NcsSectionsFactory class. In the
 event the gaps are larger, this RawIO only provides the samples from the first section as belonging
 to one Segment.
 
+If .Ncs files are loaded these determine the Segments of data to be loaded. Events and spiking data
+outside of Segments defined by .Ncs files will be ignored. To access all time point data in a
+single Segment load a session excluding .Ncs files.
+
+Continuous data streams are ordered by descending sampling rate.
+
 This RawIO presents only a single Block.
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
