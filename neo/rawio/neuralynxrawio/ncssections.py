@@ -411,12 +411,12 @@ class NcsSectionsFactory:
 
         # digital lynx style with fractional frequency and micros per samp determined from
         # block times
-        elif acqType == "DIGITALLYNX" or acqType == "DIGITALLYNXSX":
+        elif acqType == "DIGITALLYNX" or acqType == "DIGITALLYNXSX" or acqType == 'CHEETAH64':
             nomFreq = nlxHdr['sampling_rate']
             nb = NcsSectionsFactory._buildForMaxGap(ncsMemMap, nomFreq)
 
-        # BML style with fractional frequency and micros per samp
-        elif acqType == "BML":
+        # BML & ATLAS style with fractional frequency and micros per samp
+        elif acqType == "BML" or acqType == "ATLAS":
             sampFreqUsed = nlxHdr['sampling_rate']
             nb = NcsSectionsFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed,
                                                                math.floor(sampFreqUsed))
