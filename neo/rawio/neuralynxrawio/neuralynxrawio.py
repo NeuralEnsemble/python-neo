@@ -291,6 +291,8 @@ class NeuralynxRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         if signal_channels.size > 0:
+            # ordering streams according from high to low sampling rates
+            stream_props = {k: stream_props[k] for k in sorted(stream_props, reverse=True)}
             names = [f'Stream (rate,#packet,t0): {sp}' for sp in stream_props]
             ids = [stream_prop['stream_id'] for stream_prop in stream_props.values()]
             signal_streams = list(zip(names, ids))
