@@ -750,9 +750,8 @@ class NeuralynxRawIO(BaseRawIO):
             data = self._get_file_map(ncs_filename)
             nlxHeader = NlxHeader(ncs_filename)
 
-            if not chanSectMap or (chanSectMap and
-                                   not NcsSectionsFactory._verifySectionsStructure(data,
-                                                                                   chan_ncs_sections)):
+            verify_sec_struct = NcsSectionsFactory._verifySectionsStructure
+            if not chanSectMap or (not verify_sec_struct(data, chan_ncs_sections)):
                 chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
 
             # register file section structure for all contained channels

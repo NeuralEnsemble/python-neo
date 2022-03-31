@@ -333,7 +333,7 @@ class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
 
         expected_segment_starts = [8124.582909, 8427.832053, 8487.768561]
         expected_segment_stops = [8427.831990, 8487.768498, 10794.133994]
-        for seg_idx in range(n_gaps+1):
+        for seg_idx in range(n_gaps + 1):
 
             t_start = nio.segment_t_start(0, seg_idx) + nio.global_t_start
             t_stop = nio.segment_t_stop(0, seg_idx) + nio.global_t_start

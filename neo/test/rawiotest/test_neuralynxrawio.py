@@ -53,7 +53,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(rawio.signal_streams_count(), 1)
         self.assertListEqual(rawio._timestamp_limits, [(266982936, 267162136)])
         self.assertEqual(rawio._sigs_length[0][('unknown', '13')], 5120)
-        self.assertListEqual(rawio._signal_limits, [(266.982936,267.162136)])
+        self.assertListEqual(rawio._signal_limits, [(266.982936, 267.162136)])
         self.assertEqual(len(rawio._sigs_memmaps), 1)
 
         # Test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
