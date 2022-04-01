@@ -153,7 +153,7 @@ class EDFRawIO(BaseRawIO):
 
     def _segment_t_start(self, block_index, seg_index):
         # no time offset provided by EDF format
-        return 0  # in seconds
+        return 0.  # in seconds
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = self.edf_reader.datarecord_duration * self.edf_reader.datarecords_in_file
@@ -166,7 +166,7 @@ class EDFRawIO(BaseRawIO):
         return self.edf_reader.getNSamples()[chidx]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        return 0  # EDF does not provide temporal offset information
+        return 0.  # EDF does not provide temporal offset information
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
@@ -197,10 +197,13 @@ class EDFRawIO(BaseRawIO):
             self.edf_reader.read_digital_signal(channel_idx, i_start, n, buffer)
             data.append(buffer)
 
+        # use dimensions (time, channel)
+        data = data.T
+
         # downgrade to int16 as this is what is used in the edf file format
         data = np.asarray(data, dtype=np.int16)
 
-        return data.T  # use dimensions (time, channel)
+        return data
 
     def _spike_count(self, block_index, seg_index, spike_channel_index):
         return None
