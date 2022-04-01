@@ -197,11 +197,12 @@ class EDFRawIO(BaseRawIO):
             self.edf_reader.read_digital_signal(channel_idx, i_start, n, buffer)
             data.append(buffer)
 
+        # downgrade to int16 as this is what is used in the edf file format
+        # use fortran (column major) order to be more efficient after transposal
+        data = np.asarray(data, dtype=np.int16, order='F')
+
         # use dimensions (time, channel)
         data = data.T
-
-        # downgrade to int16 as this is what is used in the edf file format
-        data = np.asarray(data, dtype=np.int16)
 
         return data
 
