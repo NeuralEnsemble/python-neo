@@ -44,6 +44,7 @@ imDatPrb_type=24 (NP 2.0, 4-shank)
 Author : Samuel Garcia
 """
 
+import warnings
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                 _spike_channel_dtype, _event_channel_dtype)
 
@@ -249,7 +250,7 @@ def scan_files(dirname):
                 info_list.append(info)
 
             if bin_filename.stat().st_size != meta['fileSizeBytes']:
-                raise Exception('.meta file has faulty value for .bin file size on disc')
+                raise warnings.warn('.meta file has faulty value for .bin file size on disc')
 
     return info_list
 
