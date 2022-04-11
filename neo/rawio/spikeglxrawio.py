@@ -363,8 +363,6 @@ def extract_stream_info(meta_file, meta):
     info['units'] = units
     info['channel_names'] = [txt.split(';')[0] for txt in meta['snsChanMap']]
     info['channel_gains'] = channel_gains
-    info['channel_offsets'] = np.zeros(info['num_chan'])    
+    info['channel_offsets'] = np.zeros(info['num_chan'])
 
     return info
-    
-    
