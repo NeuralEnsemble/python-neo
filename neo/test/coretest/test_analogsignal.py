@@ -640,8 +640,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertRaises(IndexError, self.signal1.__getitem__, (99, 73))
 
     def test__getitem__with_tuple_slice_none(self):
-        item = self.signal1[:, None]
-        # we're just testing no error is raised
+        self.assertRaises(IndexError, self.signal1.__getitem__, (slice(None), None))
 
     def test__time_index(self):
         # scalar arguments
