@@ -24,7 +24,7 @@ def unique(quantities):
     if len(quantities) > 0:
         common_units = quantities[0].units
         scaled_quantities = pq.Quantity(
-            [q.rescale(common_units) for q in quantities], 
+            [q.rescale(common_units) for q in quantities],
             common_units)
         return np.unique(scaled_quantities)
     else:
@@ -280,10 +280,10 @@ class SpikeTrainList(object):
             "t_stop": t_stop
         }
         for name, ann_value in annotations.items():
-            if (not isinstance(ann_value, str) 
-                and hasattr(ann_value, "__len__") 
+            if (not isinstance(ann_value, str)
+                and hasattr(ann_value, "__len__")
                 and len(ann_value) != len(all_channel_ids)
-            ):
+               ):
                 raise ValueError(f"incorrect length for annotation '{name}'")
         obj._annotations = annotations
         return obj
@@ -299,10 +299,10 @@ class SpikeTrainList(object):
                 times = self._spike_time_array[mask]
                 spiketrain = SpikeTrain(times, **self._spiketrain_metadata)
                 for name, value in self._annotations.items():
-                    if (not isinstance(value, str) 
+                    if (not isinstance(value, str)
                         and hasattr(value, "__len__")
                         and len(value) == len(self._all_channel_ids)
-                    ):
+                       ):
                         spiketrain.annotate(**{name: value[i]})
                     else:
                         spiketrain.annotate(**{name: value})
@@ -366,7 +366,7 @@ class SpikeTrainList(object):
         if "t_stop" in self._spiketrain_metadata:
             return self._spiketrain_metadata["t_stop"]
         else:
-            t_stop_values = unique([item.t_stop for item in self._items 
+            t_stop_values = unique([item.t_stop for item in self._items
                                     if isinstance(item, SpikeTrain)])  # ignore proxy objects
             if len(t_stop_values) == 0:
                 raise ValueError("t_stop not defined for an empty spike train list")
@@ -385,7 +385,7 @@ class SpikeTrainList(object):
             for i, spiketrain in enumerate(self._items):
                 if ("channel_id" in spiketrain.annotations
                     and isinstance(spiketrain.annotations["channel_id"], int)
-                ):
+                   ):
                     ch_id = spiketrain.annotations["channel_id"]
                 else:
                     ch_id = i
