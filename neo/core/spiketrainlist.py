@@ -263,7 +263,10 @@ class SpikeTrainList(object):
             "t_stop": t_stop
         }
         for name, ann_value in annotations.items():
-            if len(ann_value) != len(obj):
+            if (not isinstance(ann_value, str) 
+                and hasattr(ann_value, "__len__") 
+                and len(ann_value) != len(all_channel_ids)
+            ):
                 raise ValueError(f"incorrect length for annotation '{name}'")
         obj._annotations = annotations
         return obj
@@ -278,10 +281,14 @@ class SpikeTrainList(object):
                 mask = self._channel_id_array == channel_id
                 times = self._spike_time_array[mask]
                 spiketrain = SpikeTrain(times, **self._spiketrain_metadata)
-                spiketrain.annotations = {
-                    name: value[i]
-                    for name, value in self._annotations.items()
-                }
+                for name, value in self._annotations.items():
+                    if (not isinstance(value, str) 
+                        and hasattr(value, "__len__")
+                        and len(value) == len(self._all_channel_ids)
+                    ):
+                        spiketrain.annotate(**{name: value[i]})
+                    else:
+                        spiketrain.annotate(**{name: value})
                 spiketrain.annotate(channel_id=channel_id)
                 spiketrain.segment = self.segment
                 self._items.append(spiketrain)

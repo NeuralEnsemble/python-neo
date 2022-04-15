@@ -69,7 +69,9 @@ class TestSpikeTrainList(unittest.TestCase):
             units='ms',
             t_start=0 * pq.ms,
             t_stop=100.0 * pq.ms,
-            identifier=["A", "B", "C", "D"]  # annotation
+            identifier=["A", "B", "C", "D"],     # separate annotation for each SpikeTrain
+            global_str="some string annotation",  # global annotations, same for each SpikeTrain
+            global_int=42
         )
 
         self.stl_from_obj_list = SpikeTrainList(items=(
@@ -106,6 +108,10 @@ class TestSpikeTrainList(unittest.TestCase):
         self.assertEqual(as_list[1].annotations["identifier"], "B")
         self.assertEqual(as_list[2].annotations["identifier"], "C")
         self.assertEqual(as_list[3].annotations["identifier"], "D")
+        self.assertEqual(as_list[0].annotations["global_str"], "some string annotation")
+        self.assertEqual(as_list[3].annotations["global_str"], "some string annotation")
+        self.assertEqual(as_list[2].annotations["global_int"], 42)
+        self.assertEqual(as_list[1].annotations["global_int"], 42)
 
     def test_create_from_spiketrain_list(self):
         as_list = list(self.stl_from_obj_list)
