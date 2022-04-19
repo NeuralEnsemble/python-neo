@@ -236,105 +236,17 @@ def scan_files(dirname):
     info_list = []
 
     for root, dirs, files in os.walk(dirname):
-
         for file in files:
             if not file.endswith('.meta'):
                 continue
             meta_filename = Path(root) / file
-            bin_filename = Path(root) / file.replace('.meta', '.bin')
+            bin_filename = meta_filename.with_suffix('.bin')
             if meta_filename.exists() and bin_filename.exists():
                 meta = read_meta_file(meta_filename)
-            else:
-                continue
-
-            num_chan = int(meta['nSavedChans'])
-
-            # Example file name structure:
-            # Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
-            # The filenames consist of 3 or 4 parts separated by `.`
-            # 1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user
-            #    at recording time.
-            # 2. "_gt0_" will give the `seg_index` (here 0)
-            # 3. "nidq" or "imec0" will give the `device` variable
-            # 4. "lf" or "ap" will be the `signal_kind` variable
-            # `stream_name` variable is the concatenation of `device.signal_kind`
-            name = file.split('.')[0]
-            r = re.findall(r'_g(\d*)_t', name)
-            seg_index = int(r[0][0])
-            device = file.split('.')[1]
-            if 'imec' in device:
-                signal_kind = file.split('.')[2]
-                stream_name = device + '.' + signal_kind
-                units = 'uV'
-                # please note the 1e6 in gain for this uV
-
-                # metad['imroTbl'] contain two gain per channel  AP and LF
-                # except for the last fake channel
-                per_channel_gain = np.ones(num_chan, dtype='float64')
-                if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0':
-                    # This work with NP 1.0 case with different metadata versions
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B2.md#imec
-                    if signal_kind == 'ap':
-                        index_imroTbl = 3
-                    elif signal_kind == 'lf':
-                        index_imroTbl = 4
-                    for c in range(num_chan - 1):
-                        v = meta['imroTbl'][c].split(' ')[index_imroTbl]
-                        per_channel_gain[c] = 1. / float(v)
-                    gain_factor = float(meta['imAiRangeMax']) / 512
-                    channel_gains = gain_factor * per_channel_gain * 1e6
-                elif meta['imDatPrb_type'] in ('21', '24') and signal_kind == 'ap':
-                    # This work with NP 2.0 case with different metadata versions
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
-                    # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_30.md#imec
-                    per_channel_gain[:-1] = 1 / 80.
-                    gain_factor = float(meta['imAiRangeMax']) / 8192
-                    channel_gains = gain_factor * per_channel_gain * 1e6
-                else:
-                    raise NotImplementedError('This meta file version of spikeglx'
-                                              'is not implemented')
-            else:
-                signal_kind = ''
-                stream_name = device
-                units = 'V'
-                channel_gains = np.ones(num_chan)
-
-                # there are differents kinds of channels with different gain values
-                mn, ma, xa, dw = [int(e) for e in meta['snsMnMaXaDw'].split(sep=',')]
-                per_channel_gain = np.ones(num_chan, dtype='float64')
-                per_channel_gain[0:mn] = 1. / float(meta['niMNGain'])
-                per_channel_gain[mn:mn + ma] = 1. / float(meta['niMAGain'])
-                # this scaling come from the code in this zip
-                # https://billkarsh.github.io/SpikeGLX/Support/SpikeGLX_Datafile_Tools.zip
-                # in file readSGLX.py line76
-                # this is equivalent of 2**15
-                gain_factor = float(meta['niAiRangeMax']) / 32768
-                channel_gains = per_channel_gain * gain_factor
-
-            info = {}
-            info['name'] = name
-            info['meta'] = meta
-            info['meta_file'] = str(meta_filename)
-            info['bin_file'] = str(bin_filename)
-            for k in ('niSampRate', 'imSampRate'):
-                if k in meta:
-                    info['sampling_rate'] = float(meta[k])
-            info['num_chan'] = num_chan
-
-            info['sample_length'] = int(meta['fileSizeBytes']) // 2 // num_chan
-            info['seg_index'] = seg_index
-            info['device'] = device
-            info['signal_kind'] = signal_kind
-            info['stream_name'] = stream_name
-            info['units'] = units
-            info['channel_names'] = [txt.split(';')[0] for txt in meta['snsChanMap']]
-            info['channel_gains'] = channel_gains
-            info['channel_offsets'] = np.zeros(info['num_chan'])
-
-            info_list.append(info)
+                info = extract_stream_info(meta_filename, meta)
+                info['meta_file'] = str(meta_filename)
+                info['bin_file'] = str(bin_filename)
+                info_list.append(info)
 
     return info_list
 
@@ -344,7 +256,7 @@ def read_meta_file(meta_file):
     with open(meta_file, mode='r') as f:
         lines = f.read().splitlines()
 
-    info = {}
+    meta = {}
     # Fix taken from: https://github.com/SpikeInterface/probeinterface/blob/
     # 19d6518fbc67daca71aba5e99d8aa0d445b75eb7/probeinterface/io.py#L649-L662
     for line in lines:
@@ -356,6 +268,101 @@ def read_meta_file(meta_file):
             # replace by the list
             k = k[1:]
             v = v[1:-1].split(')(')[1:]
-        info[k] = v
+        meta[k] = v
+
+    return meta
+
+
+def extract_stream_info(meta_file, meta):
+    """Extract info from the meta dict"""
+
+    num_chan = int(meta['nSavedChans'])
+
+    # Example file name structure:
+    # Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
+    # The filenames consist of 3 or 4 parts separated by `.`
+    # 1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user
+    #    at recording time.
+    # 2. "_gt0_" will give the `seg_index` (here 0)
+    # 3. "nidq" or "imec0" will give the `device` variable
+    # 4. "lf" or "ap" will be the `signal_kind` variable
+    # `stream_name` variable is the concatenation of `device.signal_kind`
+    name = Path(meta_file).stem
+    r = re.findall(r'_g(\d*)_t', name)
+    if len(r) == 0:
+        # when manual renaming _g0_ can be removed
+        seg_index = 0
+    else:
+        seg_index = int(r[0][0])
+    device = name.split('.')[1]
+    if 'imec' in device:
+        signal_kind = name.split('.')[2]
+        stream_name = device + '.' + signal_kind
+        units = 'uV'
+        # please note the 1e6 in gain for this uV
+
+        # metad['imroTbl'] contain two gain per channel  AP and LF
+        # except for the last fake channel
+        per_channel_gain = np.ones(num_chan, dtype='float64')
+        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0':
+            # This work with NP 1.0 case with different metadata versions
+            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
+            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec
+            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B2.md#imec
+            if signal_kind == 'ap':
+                index_imroTbl = 3
+            elif signal_kind == 'lf':
+                index_imroTbl = 4
+            for c in range(num_chan - 1):
+                v = meta['imroTbl'][c].split(' ')[index_imroTbl]
+                per_channel_gain[c] = 1. / float(v)
+            gain_factor = float(meta['imAiRangeMax']) / 512
+            channel_gains = gain_factor * per_channel_gain * 1e6
+        elif meta['imDatPrb_type'] in ('21', '24') and signal_kind == 'ap':
+            # This work with NP 2.0 case with different metadata versions
+            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
+            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
+            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_30.md#imec
+            per_channel_gain[:-1] = 1 / 80.
+            gain_factor = float(meta['imAiRangeMax']) / 8192
+            channel_gains = gain_factor * per_channel_gain * 1e6
+        else:
+            raise NotImplementedError('This meta file version of spikeglx'
+                                      'is not implemented')
+    else:
+        signal_kind = ''
+        stream_name = device
+        units = 'V'
+        channel_gains = np.ones(num_chan)
+
+        # there are differents kinds of channels with different gain values
+        mn, ma, xa, dw = [int(e) for e in meta['snsMnMaXaDw'].split(sep=',')]
+        per_channel_gain = np.ones(num_chan, dtype='float64')
+        per_channel_gain[0:mn] = 1. / float(meta['niMNGain'])
+        per_channel_gain[mn:mn + ma] = 1. / float(meta['niMAGain'])
+        # this scaling come from the code in this zip
+        # https://billkarsh.github.io/SpikeGLX/Support/SpikeGLX_Datafile_Tools.zip
+        # in file readSGLX.py line76
+        # this is equivalent of 2**15
+        gain_factor = float(meta['niAiRangeMax']) / 32768
+        channel_gains = per_channel_gain * gain_factor
+
+    info = {}
+    info['name'] = name
+    info['meta'] = meta
+    for k in ('niSampRate', 'imSampRate'):
+        if k in meta:
+            info['sampling_rate'] = float(meta[k])
+    info['num_chan'] = num_chan
+
+    info['sample_length'] = int(meta['fileSizeBytes']) // 2 // num_chan
+    info['seg_index'] = seg_index
+    info['device'] = device
+    info['signal_kind'] = signal_kind
+    info['stream_name'] = stream_name
+    info['units'] = units
+    info['channel_names'] = [txt.split(';')[0] for txt in meta['snsChanMap']]
+    info['channel_gains'] = channel_gains
+    info['channel_offsets'] = np.zeros(info['num_chan'])
 
     return info
