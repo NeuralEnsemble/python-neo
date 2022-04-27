@@ -37,7 +37,7 @@ class NeuroScopeRawIO(BaseRawIO):
 
     def _parse_header(self):
         file_path = Path(self.filename)
-        
+
         supported_data_extensions = ['.dat', '.lfp', '.eeg']
         suffix = file_path.suffix
         if suffix == '.xml':
@@ -48,8 +48,12 @@ class NeuroScopeRawIO(BaseRawIO):
             self.data_extension = ".dat"
         elif suffix in supported_data_extensions:
             self.data_extension = suffix
-        else:            
-            raise KeyError(f"Format {suffix} not supported, filename format should be {supported_data_extensions} or xml")
+        else:
+            error_string = (
+                f"Format {suffix} not supported"
+                f"filename format should be {supported_data_extensions} or xml"
+            )
+            raise KeyError(error_string)
         
         xml_file_path = file_path.with_suffix(".xml")
         tree = ElementTree.parse(xml_file_path)
