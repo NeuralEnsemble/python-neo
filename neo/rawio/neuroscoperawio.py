@@ -15,6 +15,7 @@ This should be done (but maybe never will):
 Author: Samuel Garcia
 
 """
+from pathlib import Path
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                 _spike_channel_dtype, _event_channel_dtype)
@@ -32,12 +33,26 @@ class NeuroScopeRawIO(BaseRawIO):
         self.filename = filename
 
     def _source_name(self):
-        return self.filename.replace('.xml', '').replace('.dat', '')
+        return Path(self.filename).stem
 
     def _parse_header(self):
-        filename = self.filename.replace('.xml', '').replace('.dat', '')
-
-        tree = ElementTree.parse(filename + '.xml')
+        file_path = Path(self.filename)
+        
+        supported_data_extensions = ['.dat', '.lfp', '.eeg']
+        suffix = file_path.suffix
+        if suffix == '.xml':
+            # Keeps the old behavior for an xml input
+            self.data_extension = ".dat"
+        elif suffix == '':
+            # Empty suffix to keep testing behavior with non-existing file passing
+            self.data_extension = ".dat"
+        elif suffix in supported_data_extensions:
+            self.data_extension = suffix
+        else:            
+            raise KeyError(f"Format {suffix} not supported, filename format should be {supported_data_extensions} or xml")
+        
+        xml_file_path = file_path.with_suffix(".xml")
+        tree = ElementTree.parse(xml_file_path)
         root = tree.getroot()
         acq = root.find('acquisitionSystem')
         nbits = int(acq.find('nBits').text)
@@ -64,7 +79,8 @@ class NeuroScopeRawIO(BaseRawIO):
         else:
             raise (NotImplementedError)
 
-        self._raw_signals = np.memmap(filename + '.dat', dtype=sig_dtype,
+        data_file_path = file_path.with_suffix(self.data_extension)
+        self._raw_signals = np.memmap(data_file_path, dtype=sig_dtype,
                                       mode='r', offset=0).reshape(-1, nb_channel)
 
         # one unique stream
