@@ -54,7 +54,7 @@ class NeuroScopeRawIO(BaseRawIO):
                 f"filename format should be {supported_data_extensions} or xml"
             )
             raise KeyError(error_string)
-        
+
         xml_file_path = file_path.with_suffix(".xml")
         tree = ElementTree.parse(xml_file_path)
         root = tree.getroot()
