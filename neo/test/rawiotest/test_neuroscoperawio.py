@@ -10,7 +10,9 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase, ):
         'neuroscope'
     ]
     entities_to_test = [
-        'neuroscope/test1/test1'
+        'neuroscope/test1/test1',
+        'neuroscope/test1/test1.dat',
+        'neuroscope/dataset_1/YutaMouse42-151117.eeg'
     ]
 
 
