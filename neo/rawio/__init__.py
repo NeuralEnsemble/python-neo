@@ -19,6 +19,7 @@ Classes:
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
 * :attr:`CedRawIO`
+* :attr: `EdfRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
 * :attr:`MaxwellRawIO`
@@ -67,6 +68,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.CedRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.EdfRawIO
 
     .. autoattribute:: extensions
 
@@ -164,6 +169,7 @@ from neo.rawio.biocamrawio import BiocamRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
 from neo.rawio.cedrawio import CedRawIO
+from neo.rawio.edfrawio import EDFRawIO
 from neo.rawio.elanrawio import ElanRawIO
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
@@ -195,6 +201,7 @@ rawiolist = [
     BlackrockRawIO,
     BrainVisionRawIO,
     CedRawIO,
+    EDFRawIO,
     ElanRawIO,
     IntanRawIO,
     MicromedRawIO,
