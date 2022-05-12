@@ -20,11 +20,11 @@ jobs:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", ]
         python-version: ['3.8', ]
+    defaults:
+      # by default run in bash mode (required for conda usage)
+      run:
+        shell: bash -l {0}
     steps:
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
 
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -33,49 +33,51 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m')"
 
-      - uses: actions/cache@v2
-        # the cache for python package is reset:
-        #   * every month
-        #   * when requirements/requirements_testing change
-        id: cache-venv
-        with:
-          path: ~/test_env
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/requirements_testing.txt') }}-${{ steps.date.outputs.date }}
-          restore-keys: |
-            ${{ runner.os }}-venv-
-
-      - name: Install dependencies
-        run: |
-          # this is for datalad and download testing datasets
-          sudo apt install git git-annex
-          # needed for correct operation of git/git-annex/DataLad
-          git config --global user.email "neo_ci@fake_mail.com"
-          git config --global user.name "neo CI"
-          # create an environment and install everything
-          python -m venv ~/test_env
-          source ~/test_env/bin/activate
-          python -m pip install --upgrade pip
-          # pip install -r requirements.txt
-          pip install -r requirements_testing.txt
-          pip install -e .
-
       - name: Get ephy_testing_data current head hash
-        # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+        # the key depend on the last commit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: vars
         run: |
           echo "::set-output name=HASH_EPHY_DATASET::$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
+        # Loading cache of ephys_testing_dataset
         id: cache-datasets
         with:
           path: ~/ephy_testing_data
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
-          restore-keys: |
-            ${{ runner.os }}-datasets
+
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: neo-test-env
+          python-version: ${{ matrix.python-version }}
+          clean-patched-environment-file: false
+
+      - uses: actions/cache@v3
+        # the cache for python package is reset:
+        #   * every month
+        #   * when requirements/requirements_testing change
+        id: cache-conda-env
+        with:
+          path: /usr/share/miniconda/envs/neo-test-env
+          key: ${{ runner.os }}-conda-env-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/requirements_testing.txt') }}-${{ hashFiles('**/environment_testing.txt') }}-${{ steps.date.outputs.date }}
+
+      - name: Install testing dependencies
+        # testing environment is only installed if no cache was found
+        if: steps.cache-conda-env.outputs.cache-hit != 'true'
+        run: |
+          conda env update neo-test-env --file environment_testing.yml
+
+      - name: Configure git
+        run: |
+          git config --global user.email "neo_ci@fake_mail.com"
+          git config --global user.name "neo CI"
+
+      - name: Install neo
+        run: |
+          pip install --upgrade -e .
 
       - name: Test with pytest
         run: |
-          source ~/test_env/bin/activate
           # only neo.rawio and neo.io
           pytest --cov=neo neo/test/rawiotest
           pytest --cov=neo neo/test/iotest
