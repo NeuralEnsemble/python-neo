@@ -452,11 +452,11 @@ class NWBIO(BaseIO):
         if "subject" not in annotations:
             nwbfile.subject = Subject(
                                 subject_id="subject_id",
-                                age="P0D", #Period x days old
+                                age="P0D",#Period x days old
                                 description="no description",
-                                species="Mus musculus", # by default
-                                sex="U", # unknown
-                            )
+                                species="Mus musculus",# by default
+                                sex="U",# unknown
+                                )
         assert self.nwb_file_mode in ('w',)  # possibly expand to 'a'ppend later
         if self.nwb_file_mode == "w" and os.path.exists(self.filename):
             os.remove(self.filename)
@@ -472,14 +472,14 @@ class NWBIO(BaseIO):
                 'block', 'the name of the Neo Block to which the SpikeTrain belongs')
 
         if sum(statistics(block)["Epoch"]["count"] for block in blocks) > 0:
-            nwbfile.add_trial_column('segment', 'the name of the Neo Segment to which the Epoch belongs') 
-            nwbfile.add_trial_column('block', 'the name of the Neo Block to which the Epoch belongs')
+            nwbfile.add_trial_column('segment', 'name of the Segment to which the Epoch belongs')
+            nwbfile.add_trial_column('block', 'name of the Block to which the Epoch belongs')
 
-        arr = [[], []] # epoch array for ascending t_start and t_stop
+        arr = [[], []]# epoch array for ascending t_start and t_stop
         for i, block in enumerate(blocks):
-            block_name=block.name
+            block_name = block.name
             self.write_block(nwbfile, block, arr)
-        arr2 = np.sort(arr)       
+        arr2 = np.sort(arr)
         self._write_epoch(nwbfile, arr2, block)
 
         io_nwb.write(nwbfile)
@@ -493,7 +493,7 @@ class NWBIO(BaseIO):
         # NWBInspector : Inspect NWB files for compliance with NWB Best Practices.
         results_generator = inspect_nwb(nwbfile_path=self.filename)
         for message in results_generator:
-            if message.importance._name_=="CRITICAL":
+            if message.importance._name_ == "CRITICAL":
                 print("message.importance = ", message.importance)
                 print("Potentially incorrect data")
                 print(message.message)
@@ -501,7 +501,7 @@ class NWBIO(BaseIO):
                 print("message.object_type = ", message.object_type)
                 print("message.object_name = ", message.object_name)
                 print("----------------------")
-            if message.importance._name_=="BEST_PRACTICE_VIOLATION":
+            if message.importance._name_ == "BEST_PRACTICE_VIOLATION":
                 print("message.importance = ", message.importance)
                 print("Very suboptimal data representation")
                 print(message.message)
@@ -509,7 +509,7 @@ class NWBIO(BaseIO):
                 print("message.object_type = ", message.object_type)
                 print("message.object_name = ", message.object_name)
                 print("----------------------")
-            if message.importance._name_=="BEST_PRACTICE_SUGGESTION":
+            if message.importance._name_ == "BEST_PRACTICE_SUGGESTION":
                 print("message.importance = ", message.importance)
                 print("Improvable data representation")
                 print(message.message)
@@ -608,23 +608,21 @@ class NWBIO(BaseIO):
             units = signal.units
         if isinstance(signal, AnalogSignal):
             sampling_rate = signal.sampling_rate.rescale("Hz")
-            tS = timeseries_class(
-                    name=signal.name,
-                    starting_time=time_in_seconds(signal.t_start),
-                    data=signal,
-                    unit=units.dimensionality.string,
-                    rate=float(sampling_rate),
-                    comments=json.dumps(hierarchy),
-                    **additional_metadata)
+            tS = timeseries_class(name=signal.name,
+                                  starting_time=time_in_seconds(signal.t_start),
+                                  data=signal,
+                                  unit=units.dimensionality.string,
+                                  rate=float(sampling_rate),
+                                  comments=json.dumps(hierarchy),
+                                  **additional_metadata)
             # todo: try to add array_annotations via "control" attribute
         elif isinstance(signal, IrregularlySampledSignal):
-                tS = timeseries_class(
-                        name=signal.name,
-                        data=signal,
-                        unit=units.dimensionality.string,
-                        timestamps=signal.times.rescale('second').magnitude,
-                        comments=json.dumps(hierarchy),
-                        **additional_metadata)
+                tS = timeseries_class(name=signal.name,
+                                      data=signal,
+                                      unit=units.dimensionality.string,
+                                      timestamps=signal.times.rescale('second').magnitude,
+                                      comments=json.dumps(hierarchy),
+                                      **additional_metadata)
         else:
             raise TypeError(
                 "signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(
@@ -655,25 +653,23 @@ class NWBIO(BaseIO):
         return nwbfile.units
 
     def _write_event(self, nwbfile, event):
-        hierarchy = {'block': event.segment.block.name, 'segment': event.segment.name}        
-
-        if any(event.times.rescale('second').magnitude)==any(event.times.rescale('second').magnitude): # if constant timestamps
-            tS_evt = TimeSeries(
-                                    name=event.name,
-                                    data=event.labels,
-                                    starting_time=0.0,
-                                    rate=0.01,
-                                    unit=str(event.units),
-                                    description=event.description or "",
-                                    comments=json.dumps(hierarchy))
+        hierarchy = {'block': event.segment.block.name, 'segment': event.segment.name}
+        # if constant timestamps
+        if any(event.times.rescale('second').magnitude) == any(event.times.rescale('second').magnitude):
+            tS_evt = TimeSeries(name=event.name,
+                                data=event.labels,
+                                starting_time=0.0,
+                                rate=0.01,
+                                unit=str(event.units),
+                                description=event.description or "",
+                                comments=json.dumps(hierarchy))
         else:
-            tS_evt = TimeSeries(    
-                                    name=event.name,
-                                    data=event.labels,
-                                    timestamps=event.times.rescale('second').magnitude,
-                                    unit=str(event.units),
-                                    description=event.description or "",
-                                    comments=json.dumps(hierarchy))
+            tS_evt = TimeSeries(name=event.name,
+                                data=event.labels,
+                                timestamps=event.times.rescale('second').magnitude,
+                                unit=str(event.units),
+                                description=event.description or "",
+                                comments=json.dumps(hierarchy))
 
         nwbfile.add_acquisition(tS_evt)
         return tS_evt
@@ -698,8 +694,7 @@ class NWBIO(BaseIO):
             t_stop = arr2[1][i]
             for k in block.segments:
                 segment_name = k.name
-            nwbfile.add_trial(
-                              start_time=t_start,
+            nwbfile.add_trial(start_time=t_start,
                               stop_time=t_stop,
                               tags=[" "],
                               timeseries=[],
@@ -724,7 +719,7 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
             self.units = _recompose_unit(timeseries.unit, timeseries.conversion)
         check_timestamps = check_regular_timestamps(timeseries)
         if check_timestamps is not None:
-            timeseries.starting_time=0.0
+            timeseries.starting_time = 0.0
         if timeseries.starting_time is not None:
             self.t_start = timeseries.starting_time * pq.s
         else:
@@ -793,28 +788,25 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
                     time_slice, strict_slicing=strict_slicing)
         signal = self._timeseries.data[i_start: i_stop]
         if self.sampling_rate is None:
-            return IrregularlySampledSignal(
-                self._timeseries.timestamps[i_start:i_stop] * pq.s,
-            #    time_units=pq.s,
-                signal=signal,
-                units=self.units,
-                t_start=sig_t_start,
-                sampling_rate=self.sampling_rate,
-                name=self.name,
-                description=self.description,
-                array_annotations=None,
-                **self.annotations)  # todo: timeseries.control / control_description
+            return IrregularlySampledSignal(self._timeseries.timestamps[i_start:i_stop] * pq.s,
+                                            signal=signal,
+                                            units=self.units,
+                                            t_start=sig_t_start,
+                                            sampling_rate=self.sampling_rate,
+                                            name=self.name,
+                                            description=self.description,
+                                            array_annotations=None,
+                                            **self.annotations)  # todo: timeseries.control / control_description
 
         else:
-            return AnalogSignal(
-                signal,
-                units=self.units,
-                t_start=sig_t_start,
-                sampling_rate=self.sampling_rate,
-                name=self.name,
-                description=self.description,
-                array_annotations=None,
-                **self.annotations)  # todo: timeseries.control / control_description
+            return AnalogSignal(signal,
+                                units=self.units,
+                                t_start=sig_t_start,
+                                sampling_rate=self.sampling_rate,
+                                name=self.name,
+                                description=self.description,
+                                array_annotations=None,
+                                **self.annotations)  # todo: timeseries.control / control_description
 
 
 class EventProxy(BaseEventProxy):

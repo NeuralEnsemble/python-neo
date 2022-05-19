@@ -34,8 +34,8 @@ from pynwb.file import Subject
 
 
 @unittest.skipUnless(HAVE_PYNWB, "requires pynwb")
-#class TestNWBIO(BaseTestIO, unittest.TestCase):
-class TestNWBIO(unittest.TestCase):
+class TestNWBIO(BaseTestIO, unittest.TestCase):
+#class TestNWBIO(unittest.TestCase):
     ioclass = NWBIO
     entities_to_download = ["nwb"]
     entities_to_test = [
@@ -45,13 +45,12 @@ class TestNWBIO(unittest.TestCase):
 
     def test_roundtrip(self):
 
-        subject_annotations = {
-                        "nwb:subject_id": "012",
-                        "nwb:age": "P90D",
-                        "nwb:description": "mouse 5",
-                        "nwb:species": "Mus musculus",
-                        "nwb:sex": "M",
-        }
+        subject_annotations = {"nwb:subject_id": "012",
+                                "nwb:age": "P90D",
+                                "nwb:description": "mouse 5",
+                                "nwb:species": "Mus musculus",
+                                "nwb:sex": "M",
+                              }
         annotations = {
             "session_start_time": datetime.now(),
             "subject": subject_annotations,
@@ -84,7 +83,7 @@ class TestNWBIO(unittest.TestCase):
                 seg.block = blk
                 blk.segments.append(seg)
 
-            for i, seg in enumerate(blk.segments): # AnalogSignal objects
+            for i, seg in enumerate(blk.segments):# AnalogSignal objects
 
                 # 3 Neo AnalogSignals
                 a = AnalogSignal(name='Signal_a %s' % (seg.name),
@@ -100,7 +99,8 @@ class TestNWBIO(unittest.TestCase):
                                  sampling_rate=10 * pq.kHz,
                                  t_start=120 * pq.ms)
                 # 1 Neo IrregularlySampledSignals
-                d = IrregularlySampledSignal([0.01, 0.03, 0.12]*pq.s, [[4, 5], [5, 4], [6, 3]]*pq.nA)                
+                d = IrregularlySampledSignal([0.01, 0.03, 0.12]*pq.s, 
+                                            [[4, 5], [5, 4], [6, 3]]*pq.nA)
                 # 2 Neo SpikeTrains
                 train = SpikeTrain(times=[1, 2, 3] * pq.s, t_start=1.0, t_stop=10.0)
                 train2 = SpikeTrain(times=[4, 5, 6] * pq.s, t_stop=10.0)
@@ -157,28 +157,26 @@ class TestNWBIO(unittest.TestCase):
         assert_array_equal(retrieved_spiketrain_131.times.rescale('ms').magnitude,
                            original_spiketrain_131.times.rescale('ms').magnitude)
 
-        # NWBInspector : Inspect NWB files for compliance with NWB Best Practices.
+        #NWBInspector : Inspect NWB files for compliance with NWB Best Practices.
         results_roundtrip = list(inspect_nwb(nwbfile_path=test_file_name))
         #print("results test_roundtrip NWBInspector = ", results_roundtrip)
 
         os.remove(test_file_name)
 
     def test_roundtrip_with_annotations(self):
-        # test with NWB-specific annotations
+        #Test with NWB-specific annotations
 
-        subject_annotations = {
-                        "nwb:subject_id": "011",
-                        "nwb:age": "P90D",
-                        "nwb:description": "mouse 4",
-                        "nwb:species": "Mus musculus",
-                        "nwb:sex": "F",
-        }
+        subject_annotations = {"nwb:subject_id": "011",
+                                "nwb:age": "P90D",
+                                "nwb:description": "mouse 4",
+                                "nwb:species": "Mus musculus",
+                                "nwb:sex": "F",
+                              }
         original_block = Block(name="experiment", session_start_time=datetime.now(),
-                               experimenter="Experimenter's name", 
+                               experimenter="Experimenter's name",
                                experiment_description="Experiment description",
                                institution="Institution",
-                               subject=subject_annotations,
-                              )
+                               subject=subject_annotations)
         segment = Segment(name="session 1")
         original_block.segments.append(segment)
         segment.block = original_block
@@ -243,7 +241,8 @@ class TestNWBIO(unittest.TestCase):
             self.assertEqual(retrieved_attribute, original_attribute)
         assert_array_equal(retrieved_response.magnitude, original_response.magnitude)
 
-        # NWBInspector : Inspect NWB files for compliance with NWB Best Practices.
+        #NWBInspector : Inspect NWB files 
+        #for compliance with NWB Best Practices.
         results_roundtrip_with_annotations = list(inspect_nwb(nwbfile_path=test_file_name))
         #print("results test_roundtrip_with_annotations NWBInspector = ", results_roundtrip_with_annotations)
         
@@ -272,31 +271,29 @@ class TestNWBIO(unittest.TestCase):
 
         for j, blk in enumerate(original_blocks):
 
-            for ind in range(num_seg):  # number of Segments
+            for ind in range(num_seg): # number of Segments
                 seg = Segment(index=ind)
                 seg.block = blk
                 blk.segments.append(seg)
 
-            for i, seg in enumerate(blk.segments): # AnalogSignal objects
+            for i, seg in enumerate(blk.segments):# AnalogSignal objects
             
                 a = AnalogSignal(name='Signal_a %s' % (seg.name),
                                  signal=np.random.randn(44, num_chan) * pq.nA,
                                  sampling_rate=10 * pq.kHz,
                                  t_start=50 * pq.ms)
 
-                epc = Epoch(times=[0 + i*ind, 10 + i*ind, 33 + i*ind]*pq.s,
-                    durations=[10, 5, 7]*pq.s,
-                    labels=np.array(['btn0', 'btn1', 'btn2'], dtype='U')
-                   )
+                epc = Epoch(times [0 + i * ind, 10 + i * ind, 33 + i * ind]*pq.s,
+                    durations=[10, 5, 7] * pq.s,
+                    labels=np.array(['btn0', 'btn1', 'btn2'], dtype='U'))
 
-                epc2 = Epoch(times=[0.1 + i*ind, 30 + i*ind, 61 + i*ind]*pq.s,
-                     durations=[10, 5, 7]*pq.s,
+                epc2 = Epoch(times=[0.1 + i * ind, 30 + i * ind, 61 + i * ind]*pq.s,
+                     durations=[10, 5, 7] * pq.s,
                      labels=np.array(['btn4', 'btn5', 'btn6']))
 
                 evt = Event(name='Event',
-                            times=[0.01 + i*ind, 11 + i*ind, 33 + i*ind]*pq.s,
-                            labels=np.array(['ev0', 'ev1', 'ev2'])
-                            )
+                            times=[0.01 + i * ind, 11 + i * ind, 33 + i * ind]*pq.s,
+                            labels=np.array(['ev0', 'ev1', 'ev2']))
 
                 seg.epochs.append(epc)
                 seg.epochs.append(epc2)
@@ -308,7 +305,7 @@ class TestNWBIO(unittest.TestCase):
                 epc2.segment = seg
                 evt.segment = seg
 
-        # write to file
+        #write to file
         test_file_name = "test_round_trip_with_not_constant_sampling_rate.nwb"
         iow = NWBIO(filename=test_file_name, mode='w')
         iow.write_all_blocks(original_blocks)
@@ -318,7 +315,8 @@ class TestNWBIO(unittest.TestCase):
 
         self.assertEqual(len(retrieved_blocks), 1)
 
-        # NWBInspector : Inspect NWB files for compliance with NWB Best Practices.
+        #NWBInspector : Inspect NWB files 
+        #for compliance with NWB Best Practices.
         results_roundtrip_specific_for_epochs = list(inspect_nwb(nwbfile_path=test_file_name))
         #print("results test_roundtrip_specific_for_epochs NWBInspector = ", results_roundtrip_specific_for_epochs)
 
