@@ -168,8 +168,10 @@ class NixIOTest(unittest.TestCase):
     def compare_eests_mtags(self, eestlist, mtaglist):
         self.assertEqual(len(eestlist), len(mtaglist))
         for eest in eestlist:
-            if isinstance(eest, (EventProxy, EpochProxy, SpikeTrainProxy)):
+            if isinstance(eest, (EventProxy, EpochProxy)):
                 eest = eest.load()
+            elif isinstance(eest, SpikeTrainProxy):
+                eest = eest.load(load_waveforms=True)
             mtag = mtaglist[eest.annotations["nix_name"]]
             if isinstance(eest, Epoch):
                 self.compare_epoch_mtag(eest, mtag)
