@@ -83,6 +83,7 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
                 blk.segments.append(seg)
 
             for i, seg in enumerate(blk.segments):# AnalogSignal objects
+
                 # 3 Neo AnalogSignals
                 a = AnalogSignal(name='Signal_a %s' % (seg.name),
                                  signal=np.random.randn(44, num_chan) * pq.nA,
@@ -155,14 +156,13 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
         assert_array_equal(retrieved_spiketrain_131.times.rescale('ms').magnitude,
                            original_spiketrain_131.times.rescale('ms').magnitude)
 
-        #NWBInspector : Inspect NWB files for compliance with NWB Best Practices.
         results_roundtrip = list(inspect_nwb(nwbfile_path=test_file_name))
 
         os.remove(test_file_name)
 
     def test_roundtrip_with_annotations(self):
-        #Test with NWB-specific annotations
 
+        #Test with NWB-specific annotations
         subject_annotations = {"nwb:subject_id": "011",
                                 "nwb:age": "P90D",
                                 "nwb:description": "mouse 4",
@@ -237,8 +237,6 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
             self.assertEqual(retrieved_attribute, original_attribute)
         assert_array_equal(retrieved_response.magnitude, original_response.magnitude)
 
-        #NWBInspector : Inspect NWB files 
-        #for compliance with NWB Best Practices.
         results_roundtrip_with_annotations = list(inspect_nwb(nwbfile_path=test_file_name))
 
         os.remove(test_file_name)
@@ -267,12 +265,13 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
         for j, blk in enumerate(original_blocks):
 
             for ind in range(num_seg): # number of Segments
+
                 seg = Segment(index=ind)
                 seg.block = blk
                 blk.segments.append(seg)
 
             for i, seg in enumerate(blk.segments):# AnalogSignal objects
-            
+
                 a = AnalogSignal(name='Signal_a %s' % (seg.name),
                                  signal=np.random.randn(44, num_chan) * pq.nA,
                                  sampling_rate=10 * pq.kHz,
@@ -300,7 +299,6 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
                 epc2.segment = seg
                 evt.segment = seg
 
-        #write to file
         test_file_name = "test_round_trip_with_not_constant_sampling_rate.nwb"
         iow = NWBIO(filename=test_file_name, mode='w')
         iow.write_all_blocks(original_blocks)
@@ -310,8 +308,6 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
 
         self.assertEqual(len(retrieved_blocks), 1)
 
-        #NWBInspector : Inspect NWB files 
-        #for compliance with NWB Best Practices.
         results_roundtrip_specific_for_epochs = list(inspect_nwb(nwbfile_path=test_file_name))
 
         os.remove(test_file_name)
