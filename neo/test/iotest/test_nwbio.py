@@ -34,7 +34,6 @@ from pynwb.file import Subject
 
 
 @unittest.skipUnless(HAVE_PYNWB, "requires pynwb")
-#class TestNWBIO(unittest.TestCase):
 class TestNWBIO(BaseTestIO, unittest.TestCase):
     ioclass = NWBIO
     entities_to_download = ["nwb"]
@@ -82,7 +81,7 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
                 seg.block = blk
                 blk.segments.append(seg)
 
-            for i, seg in enumerate(blk.segments):# AnalogSignal objects
+            for i, seg in enumerate(blk.segments):  # AnalogSignal objects
 
                 # 3 Neo AnalogSignals
                 a = AnalogSignal(name='Signal_a %s' % (seg.name),
@@ -162,7 +161,7 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
 
     def test_roundtrip_with_annotations(self):
 
-        #Test with NWB-specific annotations
+        # Test with NWB-specific annotations
         subject_annotations = {"nwb:subject_id": "011",
                                 "nwb:age": "P90D",
                                 "nwb:description": "mouse 4",
@@ -264,13 +263,13 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
 
         for j, blk in enumerate(original_blocks):
 
-            for ind in range(num_seg): # number of Segments
+            for ind in range(num_seg):  # number of Segments
 
                 seg = Segment(index=ind)
                 seg.block = blk
                 blk.segments.append(seg)
 
-            for i, seg in enumerate(blk.segments):# AnalogSignal objects
+            for i, seg in enumerate(blk.segments):  # AnalogSignal objects
 
                 a = AnalogSignal(name='Signal_a %s' % (seg.name),
                                  signal=np.random.randn(44, num_chan) * pq.nA,

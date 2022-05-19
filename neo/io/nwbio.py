@@ -451,11 +451,11 @@ class NWBIO(BaseIO):
         nwbfile = NWBFile(**annotations)
         if "subject" not in annotations:
             nwbfile.subject = Subject(subject_id="subject_id",
-                                      age="P0D",#Period x days old
+                                      age="P0D",  # Period x days old
                                       description="no description",
-                                      species="Mus musculus",#by default
+                                      species="Mus musculus",  # by default
                                       sex="U")
-        assert self.nwb_file_mode in ('w',)#possibly expand to 'a'ppend later
+        assert self.nwb_file_mode in ('w',)  # possibly expand to 'a'ppend later
         if self.nwb_file_mode == "w" and os.path.exists(self.filename):
             os.remove(self.filename)
         io_nwb = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode)
@@ -473,7 +473,7 @@ class NWBIO(BaseIO):
             nwbfile.add_trial_column('segment', 'name of the Segment to which the Epoch belongs')
             nwbfile.add_trial_column('block', 'name of the Block to which the Epoch belongs')
 
-        arr = [[], []]#epoch array for ascending t_start and t_stop
+        arr = [[], []]  # epoch array for ascending t_start and t_stop
         for i, block in enumerate(blocks):
             block_name = block.name
             self.write_block(nwbfile, block, arr)
