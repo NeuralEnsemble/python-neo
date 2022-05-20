@@ -18,14 +18,6 @@ AlphaOmega engineers.
     Not a lot of memory optimization effort was put into this module. You should
     expect a big memory usage when loading data with this module
 
-.. todo::
-    1. Make TTL events -> epochs? We could describe TTL 0/1 events as epochs:
-       when the TTL goes to 1=beginning of epoch 0=end of epoch
-    2. decode stram data (block type E) using StreamFormat.h file (not provided
-       with this code)
-    3. (2.bis) Once we know how to decode Stream AlphaOmega events add them to
-       an event channel
-
 Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
 """
 
