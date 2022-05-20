@@ -9,7 +9,7 @@ Rules for creating a new class:
     * Create the class that inherits from BaseRawIO
     * copy/paste all methods that need to be implemented.
     * code hard! The main difficulty is `_parse_header()`.
-      In short you have a create a mandatory dict than
+      In short you have to create a mandatory dict that
       contains channel informations::
 
             self.header = {}
