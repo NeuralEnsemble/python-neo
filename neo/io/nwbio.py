@@ -253,6 +253,8 @@ class NWBIO(BaseIO):
             raise Exception("Please install the pynwb package to use NWBIO")
         if not have_hdmf:
             raise Exception("Please install the hdmf package to use NWBIO")
+        if not have_nwbinspector:
+            raise Exception("Please install the nwbinspector package to use NWBIO")
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
         self.blocks_written = 0
