@@ -216,7 +216,12 @@ class NeurosharectypesIO(BaseIO):
                                                     ctypes.POINTER(ctypes.c_double)))
                     total_read += pdwContCount.value
 
-                signal = pq.Quantity(pData, units=pAnalogInfo.szUnits.decode(), copy=False)
+                try:
+                    signal = pq.Quantity(pData, units=pAnalogInfo.szUnits.decode(), copy=False)
+                    unit_annotation = None
+                except LookupError:
+                    signal = pq.Quantity(pData, units='dimensionless', copy=False)
+                    unit_annotation = pAnalogInfo.szUnits.decode()
 
                 # t_start
                 dwIndex = 0
@@ -229,6 +234,8 @@ class NeurosharectypesIO(BaseIO):
                                       name=str(entityInfo.szEntityLabel),
                                       )
                 anaSig.annotate(probe_info=str(pAnalogInfo.szProbeInfo))
+                if unit_annotation is not None:
+                    anaSig.annotate(units=unit_annotation)
                 seg.analogsignals.append(anaSig)
 
             # segment
