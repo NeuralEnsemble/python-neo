@@ -7,6 +7,7 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 from neo.test.rawiotest import rawio_compliance as compliance
 from neo.utils.datasets import get_local_testing_data_folder
 
+
 class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = NeuroScopeRawIO
     entities_to_download = [
@@ -17,21 +18,23 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         'neuroscope/test1/test1.dat',
         'neuroscope/dataset_1/YutaMouse42-151117.eeg'
     ]
-    
+
     def test_binary_argument_with_non_canonical_xml_file(self):
-        
+
         local_test_dir = get_local_testing_data_folder()
         filename = local_test_dir / "neuroscope/test2/recording.xml"
         binary_file = local_test_dir / "neuroscope/test2/signal1.dat"
         reader = NeuroScopeRawIO(filename=filename, binary_file=binary_file)
 
         txt = reader.__repr__()
-        assert 'nb_block' not in txt, 'Before parser_header() nb_block should be NOT known'
+        msg = 'Before parser_header() nb_block should be NOT known'
+        assert 'nb_block' not in txt, msg
 
         reader.parse_header()
 
         txt = reader.__repr__()
-        assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
+        msg = 'After parser_header() nb_block should be known'
+        assert 'nb_block' in txt, msg
         # print(txt)
 
         #

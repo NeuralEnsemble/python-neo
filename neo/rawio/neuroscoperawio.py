@@ -18,7 +18,7 @@ Author: Samuel Garcia
 from pathlib import Path
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+                        _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 from xml.etree import ElementTree
@@ -51,31 +51,32 @@ class NeuroScopeRawIO(BaseRawIO):
 
         supported_data_extensions = ['.dat', '.lfp', '.eeg']
         suffix = file_path.suffix
-        if suffix == '.xml': 
-            xml_file_path = file_path 
+        if suffix == '.xml':
+            xml_file_path = file_path
             data_file_path = self.binary_file
             # If no binary file provided iterate over the formats
-            if data_file_path is None:   
-        
+            if data_file_path is None:
                 for extension in supported_data_extensions:
-                    found_binaries = list(file_path.parent.glob(f"*.{extension}"))
-                    if found_binaries:
+                    found_bin = list(file_path.parent.glob(f"*.{extension}"))
+                    if found_bin:
                         break
-                assert_msg =  (
-                    f"more than one binary file in {file_path.parent} where filename resides,"
+                assert_msg = (
+                    f"more than one binary file in {file_path.parent} "
+                    " where filename resides,"
                     " specify one using the binary_file argument"
                 )
-                assert len(found_binaries) == 0, assert_msg
-                data_file_path = found_binaries[0]
+                assert len(found_bin) == 0, assert_msg
+                data_file_path = found_bin[0]
         elif suffix == '':
             xml_file_path = file_path.with_suffix(".xml")
             data_file_path = self.binary_file
-            # Empty suffix to keep testing behavior with non-existing file passing for backwards compatibility
+            # Empty suffix to keep testing behavior with non-existing
+            # file passing for backwards compatibility
             if data_file_path is None:
                 data_file_path = file_path.with_suffix(".dat")
         elif suffix in supported_data_extensions:
             xml_file_path = file_path.with_suffix(".xml")
-            data_file_path = file_path 
+            data_file_path = file_path
         else:
             error_string = (
                 f"Format {suffix} not supported "
@@ -111,7 +112,8 @@ class NeuroScopeRawIO(BaseRawIO):
             raise (NotImplementedError)
 
         self._raw_signals = np.memmap(data_file_path, dtype=sig_dtype,
-                                      mode='r', offset=0).reshape(-1, nb_channel)
+                                      mode='r',
+                                      offset=0).reshape(-1, nb_channel)
 
         # one unique stream
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
