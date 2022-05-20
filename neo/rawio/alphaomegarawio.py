@@ -94,7 +94,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             self.logger.error(f"{self.dirname} is not a folder")
         self._prune_channels = prune_channels
         self._opened_files = {}
-        self._ignore_unknown_blocks = True  # internal debug property
+        self._ignore_unknown_datablocks = True  # internal debug property
 
     def _explore_folder(self):
         """
@@ -144,8 +144,8 @@ class AlphaOmegaRawIO(BaseRawIO):
     def _source_name(self):
         return str(self.dirname)
 
-    def _read_file_blocks(self, filename, prune_channels=True):
-        """Read blocks from AlphaOmega MPX file version 4.
+    def _read_file_datablocks(self, filename, prune_channels=True):
+        """Read datablocks from AlphaOmega MPX file version 4.
 
         :param filename: the MPX filename to read blocks from
         :type filename: Path-like object or str
@@ -163,7 +163,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         stream_data_channels = {}
         ports = {}
         events = []
-        unknown_blocks = []
+        unknown_datablocks = []
         with open(filename, "rb") as f:
             length, block_type = HeaderType.unpack(f.read(HeaderType.size))
             # First block is always type h and size 60
@@ -237,7 +237,7 @@ class AlphaOmegaRawIO(BaseRawIO):
 
                 length, block_type = HeaderType.unpack(header_bytes)
                 if length == 65535:
-                    # The stop condition for reading MPX blocks is base on the
+                    # The stop condition for reading MPX datablocks is base on the
                     # length of the block: if the block has length 65535 (or -1
                     # in signed integer value) we know we have reached the end
                     # of the file
@@ -260,7 +260,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                         is_input,
                         channel_number,
                         *spike_color,
-                    ) = Type2Block.unpack(f.read(Type2Block.size))
+                    ) = Type2DataBlock.unpack(f.read(Type2DataBlock.size))
                     if is_analog and is_input:
                         (
                             mode,
@@ -505,7 +505,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                         }
                     )
                 else:
-                    if not self._ignore_unknown_blocks:
+                    if not self._ignore_unknown_datablocks:
                         try:
                             bt = block_type.decode()
                             self.logger.debug(
@@ -519,7 +519,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                                     "(int format)"
                                 )
                             )
-                        unknown_blocks.append(
+                        unknown_datablocks.append(
                             {
                                 "length": length,
                                 "block_type": block_type,
@@ -561,7 +561,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             stream_data_channels,
             ports,
             events,
-            unknown_blocks,
+            unknown_datablocks,
         )
 
     def _merge_segments(self, factor_period=1.5):
@@ -663,7 +663,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             segments = []
             continuous_analog_channels = {}
             for i, filename in enumerate(filenames):
-                metadata, cac, sac, dc, ct, sd, p, e, ub = self._read_file_blocks(
+                metadata, cac, sac, dc, ct, sd, p, e, ub = self._read_file_datablocks(
                     filename, self._prune_channels
                 )
                 metadata["filenames"] = [filename]
@@ -1069,17 +1069,17 @@ def get_name(f, name_length):
 
 
 HeaderType = struct.Struct("<Hc")
-"""All blocks start with the same common structure:
-    - length (ushort): the size (in bytes) of the block
-    - block_type (char): the type of block (described after)
+"""All datablocks start with the same common structure:
+    - length (ushort): the size (in bytes) of the datablock
+    - datablock_type (char): the type of datablock (described after)
 
-There are two main block types:
-    1. definition blocks (types H, 2, S, B): these block describe metadata of
+There are two main datablock types:
+    1. definition datablocks (types H, 2, S, B): these datablock describe metadata of
        channels and ports
-    2. data blocks (types 5, E): these blocks contains records data of the
+    2. data datablocks (types 5, E): these datablocks contains records data of the
        previously defined channels and ports
 
-Other blocks exist in the data but are ignored in this implementation as per the
+Other datablocks exist in the data but are ignored in this implementation as per the
 specification: "Any block type other than the ones described below should be
 ignored."
 
@@ -1087,9 +1087,9 @@ All data is little-endian (hence the '<' in Struct calls).
 """
 
 SDataHeader = struct.Struct("<xlhBBBBBBHBxddlB10s4sxl")
-"""Type H block is unique and the first block. It specifies file metadatas:
+"""Type H datablock is unique and the first datablock. It specifies file metadatas:
     - alignment byte: ignore
-    - next_block (long): offset of the next block from beginning of file
+    - next_datablock (long): offset of the next datablock from beginning of file
     - version (short): program version number
     - hour (unsigned char): start hour of data saving
     - minute (unsigned char): start minute of the data saving
@@ -1113,17 +1113,17 @@ SDataHeader = struct.Struct("<xlhBBBBBBHBxddlB10s4sxl")
     - reserved (long): not used
 """
 
-Type2Block = struct.Struct("<xlhhhxBBB")
+Type2DataBlock = struct.Struct("<xlhhhxBBB")
 """There are two (or three, depending on your interpretation) types of Type 2
-blocks:
+datablocks:
     1. Analog channels definition
       1.a. Continuous (RAW, LFP, SPK)
       1.b. Segmented (SEG)
     2. Digital channels definition (mainly TTL)
 
-all type 2 blocks starts with the same structure:
+all type 2 datablocks starts with the same structure:
     - alignment byte: ignore
-    - next_block (long)
+    - next_datablock (long)
     - is_analog (short): 0=Digital, 1=Analog
     - is_input (short): 0=Output, 1=Input
     - channel_number: the (unique) channel number identifier from the recording software
@@ -1140,7 +1140,7 @@ Then if is_analog and is_input:
     - amplitude (float): bit resolution. For MAP file version 4 if amplitude < 5
                          amplitude = 1_250_000/2**15
     - sample_rate (float): in kHz (or more precisely in kilosample per seconds)
-    - spike_count (short): size of each data block (short) + timestamp (unsigned long)
+    - spike_count (short): size of each data datablock (short) + timestamp (unsigned long)
     - mode_spike (2 bytes): read as hex data 0xMCCC:
         - M: 1=Master, 2=Slave
         - CCC: linked channel
@@ -1180,9 +1180,9 @@ Then if not is_analog and is_input
 in the specification and therefore not supported by this implementation)"""
 
 SDefStream = struct.Struct("<xlhf")
-"""Type S block: Stream data definition:
+"""Type S datablock: Stream data definition:
     - alignment byte: ignore
-    - next_block (long): see above
+    - next_datablock (long): see above
     - channel_number (short): see above
     - sample_rate (float): see above
     - name (n-char string): channel name; n=length-18
@@ -1190,7 +1190,7 @@ SDefStream = struct.Struct("<xlhf")
 """
 
 SDefPortX = struct.Struct("<xiifH")
-"""Type b block: Digital Input/Output port definition:
+"""Type b datablock: Digital Input/Output port definition:
     - board_number (int): not sure… maybe in case of multiple connected
       AlphaOmega setups?
     - port (int): unique port number identifier
@@ -1200,11 +1200,11 @@ SDefPortX = struct.Struct("<xiifH")
 """
 
 SDataChannel = struct.Struct("<ch")
-"""Type 5 block: channel data:
+"""Type 5 datablock: channel data:
     - unit_number (char): for analog segmented channels: unit number; 0=Level,
       1=Unit1, 2=Unit2, 3=Unit3, 4=Unit4
     - channel_number: the previously defined channel_number (in one of the
-      definition blocks)
+      definition datablocks)
 """
 SDataChannel_sample_id = struct.Struct("<L")
 """
@@ -1212,7 +1212,7 @@ Then for analog channels:
     - sample_value (n-short): array of data values
     - first_sample_number (ulong): for continuous channels: first sample number
       in the channel records. This is the timestamp (see :attr:`SAOEvent`) of
-      the first sample in the data blocks
+      the first sample in the data datablocks
 """
 SDataChannelDigital = struct.Struct("<Lh")
 """
@@ -1235,7 +1235,7 @@ Then for digital ports:
 """
 
 SAOEvent = struct.Struct("<cL")
-"""Type E: stream data block:
+"""Type E: stream data datablock:
     - type_event (char): event type only b"S" for now
     - timestamp (ulong): a counter initialized at 0 at hardware boot and that
       advances at the sampling rate of the system
