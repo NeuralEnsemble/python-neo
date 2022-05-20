@@ -63,7 +63,7 @@ try:
     have_nwbinspector = True
 except ImportError:
     have_nwbinspector = False
-    
+
 # hdmf imports
 try:
     from hdmf.spec import (LinkSpec, GroupSpec, DatasetSpec, SpecNamespace,
