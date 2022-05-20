@@ -69,7 +69,9 @@ class TestSpikeTrainList(unittest.TestCase):
             units='ms',
             t_start=0 * pq.ms,
             t_stop=100.0 * pq.ms,
-            identifier=["A", "B", "C", "D"]  # annotation
+            identifier=["A", "B", "C", "D"],     # separate annotation for each SpikeTrain
+            global_str="some string annotation",  # global annotations, same for each SpikeTrain
+            global_int=42
         )
 
         self.stl_from_obj_list = SpikeTrainList(items=(
@@ -106,6 +108,13 @@ class TestSpikeTrainList(unittest.TestCase):
         self.assertEqual(as_list[1].annotations["identifier"], "B")
         self.assertEqual(as_list[2].annotations["identifier"], "C")
         self.assertEqual(as_list[3].annotations["identifier"], "D")
+        self.assertEqual(as_list[0].annotations["global_str"], "some string annotation")
+        self.assertEqual(as_list[3].annotations["global_str"], "some string annotation")
+        self.assertEqual(as_list[2].annotations["global_int"], 42)
+        self.assertEqual(as_list[1].annotations["global_int"], 42)
+        self.assertEqual(self.stl_from_array.t_stop, 100.0 * pq.ms)
+        self.assertEqual(self.stl_from_array.all_channel_ids, (0, 1, 2, 3))
+
 
     def test_create_from_spiketrain_list(self):
         as_list = list(self.stl_from_obj_list)
@@ -117,6 +126,9 @@ class TestSpikeTrainList(unittest.TestCase):
                            np.array([1.1, 88.5]))
         assert_array_equal(as_list[3].times.rescale(pq.ms).magnitude,
                            np.array([]))
+        self.assertAlmostEqual(self.stl_from_obj_list.t_stop, 100.0 * pq.ms)
+        self.assertEqual(self.stl_from_obj_list.all_channel_ids, [101, 102, 103, 104])
+
 
     def test_create_from_spiketrain_list_incl_proxy(self):
         as_list = list(self.stl_from_obj_list_incl_proxy)
@@ -127,6 +139,8 @@ class TestSpikeTrainList(unittest.TestCase):
         assert isinstance(as_list[2], SpikeTrainProxy)
         assert_array_equal(as_list[3].times.rescale(pq.ms).magnitude,
                            np.array([]))
+        self.assertAlmostEqual(self.stl_from_obj_list_incl_proxy.t_stop, 100.0 * pq.ms)
+        self.assertEqual(self.stl_from_obj_list_incl_proxy.all_channel_ids, [0, 1, 2, 3])
 
     def test_str(self):
         target = "SpikeTrainList containing 8 spikes from 4 neurons"

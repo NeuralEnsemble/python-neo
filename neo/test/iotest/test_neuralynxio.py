@@ -275,7 +275,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
             # check that data agrees in first segment first channel only
             for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
-                chid = int(anasig.array_annotations['channel_ids'][0])
+                chid = anasig.array_annotations['channel_ids'][0]
 
                 chname = str(anasig.array_annotations['channel_names'][0])
                 chuid = (chname, chid)
@@ -331,12 +331,15 @@ class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
 
-        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_start, [8408.806811, 8427.832053,
-                                                                 8487.768561]):
-            self.assertEqual(np.round(t, 4), np.round(gt, 4))
-        for t, gt in zip(nio._ncs_seg_timestamp_limits.t_stop, [8427.831990, 8487.768498,
-                                                                8515.816549]):
-            self.assertEqual(np.round(t, 4), np.round(gt, 4))
+        expected_segment_starts = [8124.582909, 8427.832053, 8487.768561]
+        expected_segment_stops = [8427.831990, 8487.768498, 10794.133994]
+        for seg_idx in range(n_gaps + 1):
+
+            t_start = nio.segment_t_start(0, seg_idx) + nio.global_t_start
+            t_stop = nio.segment_t_stop(0, seg_idx) + nio.global_t_start
+
+            self.assertEqual(np.round(t_start, 4), np.round(expected_segment_starts[seg_idx], 4))
+            self.assertEqual(np.round(t_stop, 4), np.round(expected_segment_stops[seg_idx], 4))
 
 
 class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
@@ -364,6 +367,26 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
         # self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), n_gaps + 1)
+
+
+class TestMultiSamplingRates(CommonNeuralynxIOTest, unittest.TestCase):
+    def test_multi_sampling_rates(self):
+        # Test Cheetah 6.4.1, with different sampling rates across ncs files.
+        nio = NeuralynxIO(self.get_local_path('neuralynx/Cheetah_v6.4.1dev/original_data'))
+        block = nio.read_block()
+
+        self.assertEqual(len(block.segments), 1)
+        seg = block.segments[0]
+        self.assertEqual(len(seg.analogsignals), 3)
+        self.assertEqual(len(np.unique([sig.sampling_rate for sig in seg.analogsignals])), 3)
+
+        # check if the sampling rate of analogsignals are correct
+        expected_rates = [2, 2.66667, 32] * pq.kHz
+        for sig in block.segments[0].analogsignals:
+            observed_rate = sig.sampling_rate.rescale(expected_rates.units)
+            # using isclose for flexible float comparison
+            self.assertTrue(any([np.isclose(observed_rate, exp_rate)]) for
+                            exp_rate in expected_rates)
 
 
 def compare_neo_content(bl1, bl2):
