@@ -57,16 +57,10 @@ class NeuroScopeRawIO(BaseRawIO):
             # If no binary file provided iterate over the formats
             if data_file_path is None:
                 for extension in supported_data_extensions:
-                    found_bin = list(file_path.parent.glob(f"*.{extension}"))
-                    if found_bin:
+                    data_file_path = file_path.with_suffix(extension)
+                    if data_file_path.is_file():
                         break
-                assert_msg = (
-                    f"more than one binary file in {file_path.parent} "
-                    " where filename resides,"
-                    " specify one using the binary_file argument"
-                )
-                assert len(found_bin) == 0, assert_msg
-                data_file_path = found_bin[0]
+                assert data_file_path.is_file(), "data binary not found"
         elif suffix == '':
             xml_file_path = file_path.with_suffix(".xml")
             data_file_path = self.binary_file
