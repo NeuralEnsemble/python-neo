@@ -8,25 +8,19 @@ import tarfile
 import zipfile
 import tempfile
 import platform
-
 import unittest
-
-try:
-    from urllib import urlretrieve  # Py2
-except ImportError:
-    from urllib.request import urlretrieve  # Py3
+from urllib.request import urlretrieve
 
 from neo.io import NeuroshareIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-@unittest.skipUnless(sys.platform.startswith("win"), "Only works on Windows")
 class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
     ioclass = NeuroshareIO
     entities_to_download = [
         'neuroshare/Multichannel_fil_1.mcd'
     ]
-    entities_to_test = []
+    entities_to_test = ['neuroshare/Multichannel_fil_1.mcd']
 
     def setUp(self):
         BaseTestIO.setUp(self)
@@ -71,7 +65,7 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
             raise unittest.SkipTest("Not currently supported on OS X")
 
     def test_with_multichannel(self):
-        filename0 = self.get_local_path(self.files_to_download[0])
+        filename0 = self.get_local_path(self.files_to_test[0])
         reader = NeuroshareIO(filename0, self.dllname)
         blocks = reader.read()
         n = len(blocks[0].segments[0].analogsignals)
