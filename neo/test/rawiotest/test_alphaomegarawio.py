@@ -26,7 +26,7 @@ import logging
 import tempfile
 import unittest
 
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from neo.rawio.alphaomegarawio import AlphaOmegaRawIO
 
@@ -51,22 +51,32 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         super().setUp()
         self.logger = logging.getLogger("neo.rawio.alphaomegarawio.AlphaOmegaRawIO")
 
-    def test_explore_folder(self):
+    def test_explore_folder_all_mpx(self):
         """We just check that we index all *.lsx files and that all *.mpx files
         are referenced somewhere. We should maybe check that *.lsx files are
         correctly read but it seems like just duplicating source code."""
         path = Path(self.get_local_path("alphaomega/mpx_map_version4"))
         reader = AlphaOmegaRawIO(dirname=path)
         reader._explore_folder()
-        for lsx_file in path.glob("*.lsx"):
-            with self.subTest(lsx_file=lsx_file.name):
-                self.assertIn(lsx_file.name, reader._filenames)
-
-        all_filenames = sorted(
-            f for lsx_file in reader._filenames for f in reader._filenames[lsx_file]
-        )
         all_mpx = sorted(list(path.glob("*.mpx")))
-        self.assertSequenceEqual(all_filenames, all_mpx)
+        self.assertSequenceEqual(all_mpx, reader._mpx_files)
+
+    def test_explore_lsx(self):
+        """We only load files referenced in lsx file"""
+        lsx_file = "i211119-0002.lsx"
+        path = Path(self.get_local_path("alphaomega/mpx_map_version4"))
+        reader = AlphaOmegaRawIO(dirname=path, lsx_files=[lsx_file])
+        reader._explore_folder()
+        other_mpx = set(path.glob("*.mpx"))
+        with open(path / lsx_file) as f:
+            for line in f:
+                mpx_file = path / PureWindowsPath(line.strip()).name
+                other_mpx.discard(mpx_file)
+                with self.subTest(mpx_file=mpx_file):
+                    self.assertIn(mpx_file, reader._mpx_files)
+        for f in other_mpx:
+            with self.subTest(other_mpx=f):
+                self.assertNotIn(f, reader._mpx_files)
 
     def test_explore_no_folder(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -82,7 +92,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
                 reader = AlphaOmegaRawIO(dirname=tmpdir)
         self.assertIn("Found no AlphaOmega *.mpx files in", cm.output[0])
 
-    def test_read_file_blocks(self):
+    def test_read_file_datablocks(self):
         """Superficial test that check it returns all types of channels"""
         path = Path(self.get_local_path("alphaomega/mpx_map_version4"))
         reader = AlphaOmegaRawIO(dirname=path)
@@ -97,7 +107,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
             ports,
             events,
             unknown_blocks,  # empty by default
-        ) = reader._read_file_blocks(first_mpx, prune_channels=False)
+        ) = reader._read_file_datablocks(first_mpx, prune_channels=False)
         self.assertIn("application_version", metadata)
         self.assertIn("application_name", metadata)
         self.assertIn("record_date", metadata)
@@ -166,15 +176,15 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
 
         self.assertFalse(unknown_blocks)  # unknown blocks are ignored by default
 
-    def test_read_unknown_blocks(self):
+    def test_read_unknown_datablocks(self):
         path = Path(self.get_local_path("alphaomega/mpx_map_version4"))
         reader = AlphaOmegaRawIO(dirname=path)
-        reader._ignore_unknown_blocks = False
+        reader._ignore_unknown_datablocks = False
         first_mpx = list(path.glob("*.mpx"))[0]
-        *_, unknown_blocks = reader._read_file_blocks(first_mpx, prune_channels=False)
+        *_, unknown_blocks = reader._read_file_datablocks(first_mpx, prune_channels=False)
         self.assertTrue(unknown_blocks)
 
-    def test_read_file_blocks_prune(self):
+    def test_read_file_datablocks_prune(self):
         """Check that pruning keep only channels with recorded data"""
         path = Path(self.get_local_path("alphaomega/mpx_map_version4"))
         reader = AlphaOmegaRawIO(dirname=path)
@@ -189,7 +199,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
             ports,
             events,
             _,  # ignore unknown_blocks
-        ) = reader._read_file_blocks(first_mpx, prune_channels=True)
+        ) = reader._read_file_datablocks(first_mpx, prune_channels=True)
 
         for channel_id, channel in continuous_analog_channels.items():
             with self.subTest(channel_id=channel_id):
@@ -207,7 +217,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
             with self.subTest(port_id=port_id):
                 self.assertTrue(port["samples"])
 
-    def test_read_file_blocks_no_prune(self):
+    def test_read_file_datablocks_no_prune(self):
         """Check that we keep empty channels when pruning is False"""
         path = Path(self.get_local_path("alphaomega/mpx_map_version4"))
         reader = AlphaOmegaRawIO(dirname=path)
@@ -224,7 +234,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
             ports,
             events,
             _,  # ignore unknown_blocks
-        ) = reader._read_file_blocks(mpx_file, prune_channels=False)
+        ) = reader._read_file_datablocks(mpx_file, prune_channels=False)
 
         self.assertFalse(
             all(c["positions"] for c in continuous_analog_channels.values())
@@ -241,9 +251,9 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
             dirname=self.get_local_path("alphaomega/mpx_map_version4")
         )
         reader.parse_header()
-        nb_blocks = 2
+        nb_blocks = 1
         self.assertEqual(reader.block_count(), nb_blocks)
-        nb_segments = [2, 1]
+        nb_segments = [3]
         for block_index in range(nb_blocks):
             with self.subTest(block_index=block_index):
                 self.assertEqual(
@@ -266,8 +276,6 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
             [
                 [160, 0, 0, 0, 0],
                 [0, 2, 2, 2, 2],
-            ],
-            [
                 [0, 0, 0, 0, 0],
             ],
         ]

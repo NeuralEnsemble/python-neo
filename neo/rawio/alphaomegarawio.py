@@ -4,8 +4,9 @@ This module implements file reader for AlphaOmega MPX file format version 4.
 This module expect default channel names from the AlphaOmega record system (RAW
 ###, SPK ###, LFP ###, AI ###,…).
 
-This module reads all \*.lsx and \*.mpx files in a directory (not recursively).
-Listing files
+This module reads all \*.mpx files in a directory (not recursively) by default.
+If you provide a list of \*.lsx files only the \*.mpx files referenced by those
+\*.lsx files will be loaded.
 
 The specifications are mostly extracted from the "AlphaRS User Manual V1.0.1.pdf"
 manual provided with the AlphaRS hardware. The specifications are described in
@@ -45,22 +46,24 @@ from .baserawio import (
 
 class AlphaOmegaRawIO(BaseRawIO):
     """
-    AlphaOmega MPX file format 4 reader. Handles several blocks and segments.
-
-    A block is a recording defined in a \*.lsx file. AlphaOmega record system
-    creates such files every time the software is opened.
+    AlphaOmega MPX file format 4 reader. Handles several segments.
 
     A segment is a continuous record (when record starts/stops).
-    If file are not referenced in a \*.lsx file, they are put in the same block.
+
+    Only files in current `dirname` are loaded, subfolders are not explored.
 
     :param dirname: folder from where to load the data
     :type dirname: str or Path-like
+    :param lsx_files: list of lsx files in `dirname` referencing mpx files to
+        load (optional). If None (default), read all mpx files in `dirname`
+    :type lsx_files: list of strings or None
     :param prune_channels: if True removes the empty channels, defaults to True
     :type prune_channels: bool
 
     .. warning::
         Because channels must be gathered into coherent streams, channels names
-        MUST be the default channel names in AlphaRS software (or Alpha LAB SNR).
+        **must** be the default channel names in AlphaRS or Alpha LAB SNR
+        software.
     """
 
     extensions = ["lsx", "mpx"]
@@ -84,10 +87,11 @@ class AlphaOmegaRawIO(BaseRawIO):
         ("Internal Detection", "Internal Detection", "Internal Detection"),
     )
 
-    def __init__(self, dirname="", prune_channels=True):
+    def __init__(self, dirname="", lsx_files=None, prune_channels=True):
         super().__init__(dirname=dirname)
         self.dirname = Path(dirname)
-        self._filenames = {}
+        self._lsx_files = lsx_files
+        self._mpx_files = None
         if self.dirname.is_dir():
             self._explore_folder()
         else:
@@ -98,48 +102,37 @@ class AlphaOmegaRawIO(BaseRawIO):
 
     def _explore_folder(self):
         """
-        Explores an AlphaOmega folder and tries to load the index files (*.lsx)
-        to get the data files (*.mpx). If the folder contains only *.mpx files,
-        it will load them without splitting them into blocks.
-        It does not explores the folder recursively.
+        If class was instanciated with lsx_files (list of .lsx files), load only
+        the files referenced in these lsx files otherwise, load all *.mpx files
+        in `dirname`.
+        It does not explores the subfolders.
         """
-        self._filenames = defaultdict(list)
-
-        # first check if there is any *.mpx files
-        filenames = list(filter(lambda x: x.is_file(), self.dirname.glob("*.mpx")))
+        filenames = []
+        if self._lsx_files is not None:
+            for index_file in self._lsx_files:
+                index_file = self.dirname / index_file
+                with open(index_file, "r") as f:
+                    for line in f:
+                        # a line is a Microsoft Windows path. As we cannot
+                        # instanciate a WindowsPath on other OS than MS
+                        # Windows, we use the PureWindowsPath class
+                        filename = PureWindowsPath(line.strip())
+                        filename = self.dirname / filename.name
+                        if not filename.is_file():
+                            self.logger.warning(f"File {filename} does not exist")
+                        else:
+                            filenames.append(filename)
+        else:
+            # Load all mpx. Filter in only files in case there's a folder with
+            # .mpx extension
+            filenames = list(filter(lambda x: x.is_file(), self.dirname.glob("*.mpx")))
         if not filenames:
             self.logger.error(f"Found no AlphaOmega *.mpx files in {self.dirname}")
         else:
-            index_files = list(
-                filter(lambda x: x.is_file(), self.dirname.glob("*.lsx"))
-            )
-            # the following is not very usefull but we should expect the original
-            # names to be in increasing lexical order
-            index_files.sort()
-            if not index_files:
-                self.logger.warning(
-                    "No *.lsx files found. Will try to load all *.mpx files"
-                )
-                self._filenames[""].extend(filenames)
-            else:
-                for index_file in index_files:
-                    with open(index_file, "r") as f:
-                        for line in f:
-                            # a line is a Microsoft Windows path. As we cannot
-                            # instanciate a WindowsPath on other OS than MS
-                            # Windows, we use the PureWindowsPath class
-                            filename = PureWindowsPath(line.strip())
-                            filename = self.dirname / filename.name
-                            if not filename.is_file():
-                                self.logger.warning(f"File {filename} does not exist")
-                            else:
-                                self._filenames[index_file.name].append(filename)
-                                filenames.remove(filename)
-                if filenames:
-                    self.logger.info(
-                        "Some *.mpx files not referenced. Will try to load them."
-                    )
-                    self._filenames[""].extend(filenames)
+            # Sorting lexicographically should be enough to load the files in
+            # correct order. This could improve slightly loading performances
+            filenames.sort()
+            self._mpx_files = filenames
 
     def _source_name(self):
         return str(self.dirname)
@@ -147,7 +140,7 @@ class AlphaOmegaRawIO(BaseRawIO):
     def _read_file_datablocks(self, filename, prune_channels=True):
         """Read datablocks from AlphaOmega MPX file version 4.
 
-        :param filename: the MPX filename to read blocks from
+        :param filename: the MPX filename to read datablocks from
         :type filename: Path-like object or str
         :param prune_channels: Remove references to channels and ports which
             doesn't contain any data recorded. Be careful when using this option
@@ -237,10 +230,10 @@ class AlphaOmegaRawIO(BaseRawIO):
 
                 length, block_type = HeaderType.unpack(header_bytes)
                 if length == 65535:
-                    # The stop condition for reading MPX datablocks is base on the
-                    # length of the block: if the block has length 65535 (or -1
-                    # in signed integer value) we know we have reached the end
-                    # of the file
+                    # The stop condition for reading MPX datablocks is base on
+                    # the # length of the block: if the block has length 65535
+                    # (or -1 in signed integer value) we know we have reached
+                    # the end of the file
                     # We could also check that we are at the end of the file
                     # after this block
                     break
@@ -585,118 +578,119 @@ class AlphaOmegaRawIO(BaseRawIO):
             defaults to 1.5
         :type factor_period: float
         """
-        for block in self._blocks:
-            segments_to_merge = []
-            for segment in block:
-                possible_same_segments = [
-                    s
-                    for s in block
-                    if s["metadata"]["record_date"].date()
-                    == segment["metadata"]["record_date"].date()
-                    and s["metadata"]["record_date"]
-                    >= segment["metadata"]["record_date"]
-                    and 0
-                    <= (s["metadata"]["start_time"] - segment["metadata"]["stop_time"])
-                    <= factor_period / segment["metadata"]["max_sample_rate"]
-                    and s is not segment
-                ]
-                assert len(possible_same_segments) in (0, 1)
-                if possible_same_segments:
-                    existing_merges = [s for segs in segments_to_merge for s in segs]
-                    if existing_merges:
-                        existing_merges.sort(key=lambda x: x["metadata"]["start_time"])
-                        segment = existing_merges[0]
-                    segments_to_merge.append((segment, possible_same_segments[0]))
-            for segment, segment_to_merge in segments_to_merge:
-                assert (
-                    segment["metadata"]["max_sample_rate"]
-                    == segment_to_merge["metadata"]["max_sample_rate"]
-                )
-                segment["metadata"]["stop_time"] = segment_to_merge["metadata"][
-                    "stop_time"
-                ]
-                segment["metadata"]["filenames"].extend(
-                    segment_to_merge["metadata"]["filenames"]
-                )
-                for stream in segment_to_merge["streams"]:
-                    for channel_id in segment_to_merge["streams"][stream]:
-                        assert channel_id in segment["streams"][stream]
-                        for f in segment_to_merge["streams"][stream][channel_id][
-                            "positions"
-                        ]:
-                            segment["streams"][stream][channel_id]["positions"][
-                                f
-                            ].extend(
-                                segment_to_merge["streams"][stream][channel_id][
-                                    "positions"
-                                ][f]
+        segments_to_merge = []
+        for segment in self._segments:
+            possible_same_segments = [
+                s
+                for s in self._segments
+                if s["metadata"]["record_date"].date()
+                == segment["metadata"]["record_date"].date()
+                and s["metadata"]["record_date"]
+                >= segment["metadata"]["record_date"]
+                and 0
+                <= (s["metadata"]["start_time"] - segment["metadata"]["stop_time"])
+                <= factor_period / segment["metadata"]["max_sample_rate"]
+                and s is not segment
+            ]
+            if len(possible_same_segments) not in (0, 1):
+                self.logger.error(f"Cannot merge segments. Found {len(possible_same_segments)} segments following segment: {segment['metadata']}")
+                continue
+            if possible_same_segments:
+                existing_merges = [s for segs in segments_to_merge for s in segs]
+                if existing_merges:
+                    existing_merges.sort(key=lambda x: x["metadata"]["start_time"])
+                    segment = existing_merges[0]
+                segments_to_merge.append((segment, possible_same_segments[0]))
+        for segment, segment_to_merge in segments_to_merge:
+            sample_rate = segment["metadata"]["max_sample_rate"]
+            sample_rate_merge = segment_to_merge["metadata"]["max_sample_rate"]
+            if sample_rate != sample_rate_merge:
+                self.logger.error(f"Segment to merge has sample_rate={sample_rate_merge}, expected {sample_rate}. Continuing anyway.")
+            segment["metadata"]["stop_time"] = segment_to_merge["metadata"][
+                "stop_time"
+            ]
+            segment["metadata"]["filenames"].extend(
+                segment_to_merge["metadata"]["filenames"]
+            )
+            for stream in segment_to_merge["streams"]:
+                for channel_id in segment_to_merge["streams"][stream]:
+                    try:
+                        channel = segment["streams"][stream][channel_id]
+                    except KeyError:
+                        # there can potentially have segment without stream for this
+                        # channel but the segment to merge has stream for this channel
+                        segment["streams"][stream][channel_id] = segment_to_merge["streams"][stream][channel_id]
+                    else:
+                        for f in segment_to_merge["streams"][stream][channel_id]["positions"]:
+                            channel["positions"][f].extend(
+                                segment_to_merge["streams"][stream][channel_id]["positions"][f]
                             )
-                for channel_id in segment_to_merge["events"]:
+            for channel_id in segment_to_merge["events"]:
+                try:
+                    channel = segment["events"][channel_id]
+                except KeyError:
                     # it's possible  that the first segment doesn't record any
                     # port channel data and the port could have been pruned
-                    if channel_id in segment["events"]:
-                        segment["events"][channel_id]["samples"].extend(
-                            segment_to_merge["events"][channel_id]["samples"]
-                        )
-                    else:
-                        segment["events"][channel_id] = segment_to_merge["events"][
-                            channel_id
-                        ]
-                for channel_id in segment_to_merge["spikes"]:
-                    assert channel_id in segment["spikes"]
+                    segment["events"][channel_id] = segment_to_merge["events"][channel_id]
+                else:
+                    channel["samples"].extend(
+                        segment_to_merge["events"][channel_id]["samples"]
+                    )
+            for channel_id in segment_to_merge["spikes"]:
+                try:
+                    channel = segment["spikes"][channel_id]
+                except KeyError:
+                    # there can potentially have segment without spike for this
+                    # channel but the segment to merge has spikes for this channel
+                    segment["spikes"][channel_id] = segment_to_merge["spikes"][channel_id]
+                else:
                     for f in segment_to_merge["spikes"][channel_id]["positions"]:
-                        segment["spikes"][channel_id]["positions"][f].extend(
+                        channel["positions"][f].extend(
                             segment_to_merge["spikes"][channel_id]["positions"][f]
                         )
-                segment["ao_events"].extend(segment_to_merge["ao_events"])
-                for channel_id in segment_to_merge["stream_data"]:
-                    # To be honest, I have no idea what is a
-                    # stream_data_channels so let's just overwrite it here
-                    segment["stream_data"][channel_id] = segment_to_merge[
-                        "stream_data"
-                    ][channel_id]
-                block.remove(segment_to_merge)
+            segment["ao_events"].extend(segment_to_merge["ao_events"])
+            for channel_id in segment_to_merge["stream_data"]:
+                # To be honest, I have no idea what is a
+                # stream_data_channels so let's just overwrite it here
+                segment["stream_data"][channel_id] = segment_to_merge[
+                    "stream_data"
+                ][channel_id]
+            self._segments.remove(segment_to_merge)
 
     def _parse_header(self):
-        blocks = []
-        for index_file, filenames in self._filenames.items():
-            segments = []
-            continuous_analog_channels = {}
-            for i, filename in enumerate(filenames):
-                metadata, cac, sac, dc, ct, sd, p, e, ub = self._read_file_datablocks(
-                    filename, self._prune_channels
-                )
-                metadata["filenames"] = [filename]
-                streams = {}
-                for stream_name, channel_name_start, stream_id in self.STREAM_CHANNELS:
-                    channels = {
-                        i: c
-                        for i, c in cac.items()
-                        if c["name"].startswith(channel_name_start)
-                    }
-                    streams[stream_id] = channels
-                events = dc.copy()
-                events.update(p)
-                segment = {
-                    "metadata": metadata,
-                    "streams": streams,
-                    "events": events,
-                    "spikes": sac,
-                    "ao_events": e,
-                    "stream_data": sd,
+        segments = []
+        for i, filename in enumerate(self._mpx_files):
+            metadata, cac, sac, dc, ct, sd, p, e, ub = self._read_file_datablocks(
+                filename, self._prune_channels
+            )
+            metadata["filenames"] = [filename]
+            streams = {}
+            for stream_name, channel_name_start, stream_id in self.STREAM_CHANNELS:
+                channels = {
+                    i: c
+                    for i, c in cac.items()
+                    if c["name"].startswith(channel_name_start)
                 }
-
-                segments.append(segment)
-            blocks.append(segments)
-        self._blocks = blocks
+                streams[stream_id] = channels
+            events = dc.copy()
+            events.update(p)
+            segment = {
+                "metadata": metadata,
+                "streams": streams,
+                "events": events,
+                "spikes": sac,
+                "ao_events": e,
+                "stream_data": sd,
+            }
+            segments.append(segment)
+        self._segments = segments
         # We merge segments after having loading all the files because they
         # could be loaded in any order
         self._merge_segments()
 
         signal_streams = set(
             (stream_name, stream_id)
-            for block in self._blocks
-            for segment in block
+            for segment in self._segments
             for stream in segment["streams"]
             for stream_name, _, stream_id in self.STREAM_CHANNELS
             if stream_id == stream and segment["streams"][stream]
@@ -716,8 +710,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                 0,
                 stream,
             )
-            for block in self._blocks
-            for segment in block
+            for segment in self._segments
             for stream in segment["streams"]
             for channel_id, channel in segment["streams"][stream].items()
         )
@@ -735,8 +728,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                 round(c["pre_trig_duration"] * c["sample_rate"]),
                 c["sample_rate"],
             )
-            for block in self._blocks
-            for segment in block
+            for segment in self._segments
             for i, c in segment["spikes"].items()
         )
         spike_channels = list(spike_channels)
@@ -745,8 +737,7 @@ class AlphaOmegaRawIO(BaseRawIO):
 
         event_channels = set(
             (event["name"], i, "event")
-            for block in self._blocks
-            for segment in block
+            for segment in self._segments
             for i, event in segment["events"].items()
         )
         event_channels = list(event_channels)
@@ -754,8 +745,8 @@ class AlphaOmegaRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         self.header = {}
-        self.header["nb_block"] = len(self._filenames)
-        self.header["nb_segment"] = [len(segment) for segment in self._blocks]
+        self.header["nb_block"] = 1
+        self.header["nb_segment"] = [len(self._segments)]
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -763,57 +754,56 @@ class AlphaOmegaRawIO(BaseRawIO):
 
         self._generate_minimal_annotations()
 
-        for block_index, filename in enumerate(self._filenames):
-            bl_ann = self.raw_annotations["blocks"][block_index]
-            bl_ann["name"] = "Block #{}{}".format(
-                block_index, " from lsx file" if filename else ""
+        bl_ann = self.raw_annotations["blocks"][0]
+        bl_ann["name"] = "Block #{}{}".format(
+            0, " from lsx file(s) {self._lsx_files}" if self._lsx_files else ""
+        )
+        bl_ann["file_origin"] = (
+            "\n".join(str(self.dirname / f) for f in self._lsx_files)
+            if self._lsx_files else bl_ann["file_origin"]
+        )
+        bl_ann["rec_datetime"] = self._segments[0]["metadata"][
+            "record_date"
+        ]
+        for seg_index, segment in enumerate(self._segments):
+            seg_ann = bl_ann["segments"][seg_index]
+            seg_ann["name"] = "Seg #{} Block #0".format(seg_index)
+            seg_ann["file_origin"] = "\n".join(
+                str(f)
+                for f in self._segments[seg_index]["metadata"][
+                    "filenames"
+                ]
             )
-            bl_ann["file_origin"] = (
-                str(self.dirname / filename) if filename else bl_ann["file_origin"]
-            )
-            bl_ann["rec_datetime"] = self._blocks[block_index][0]["metadata"][
-                "record_date"
-            ]
-            for seg_index, segment in enumerate(self._blocks[block_index]):
-                seg_ann = bl_ann["segments"][seg_index]
-                seg_ann["name"] = "Seg #{} Block #{}".format(seg_index, block_index)
-                seg_ann["file_origin"] = "\n".join(
-                    str(f)
-                    for f in self._blocks[block_index][seg_index]["metadata"][
-                        "filenames"
-                    ]
-                )
-                seg_ann["rec_datetime"] = self._blocks[block_index][seg_index][
-                    "metadata"
-                ]["record_date"]
-                for c_index, c in enumerate(seg_ann["signals"]):
-                    c = c.copy()
-                    c["file_origin"] = "\n".join(
-                        set(
-                            str(f)
-                            for channels in self._blocks[block_index][seg_index][
-                                "streams"
-                            ][c["stream_id"]].values()
-                            for f in channels["positions"]
-                        )
+            seg_ann["rec_datetime"] = self._segments[seg_index][
+                "metadata"
+            ]["record_date"]
+            for c_index, c in enumerate(seg_ann["signals"]):
+                c = c.copy()
+                c["file_origin"] = "\n".join(
+                    set(
+                        str(f)
+                        for channels in self._segments[seg_index][
+                            "streams"
+                        ][c["stream_id"]].values()
+                        for f in channels["positions"]
                     )
-                    seg_ann["signals"][c_index] = c
-                for e_index, e in enumerate(seg_ann["events"]):
-                    e = e.copy()
-                    e["file_origin"] = seg_ann["file_origin"]
-                    seg_ann["events"][e_index] = e
+                )
+                seg_ann["signals"][c_index] = c
+            for e_index, e in enumerate(seg_ann["events"]):
+                e = e.copy()
+                e["file_origin"] = seg_ann["file_origin"]
+                seg_ann["events"][e_index] = e
 
         # We open files and create mmap objects
-        for block in self._filenames:
-            for filename in self._filenames[block]:
-                if filename not in self._opened_files:
-                    self._opened_files[filename] = {}
-                    self._opened_files[filename]["file"] = filename.open(mode="rb")
-                    self._opened_files[filename]["mmap"] = mmap.mmap(
-                        self._opened_files[filename]["file"].fileno(),
-                        0,
-                        access=mmap.ACCESS_READ,
-                    )
+        for filename in self._mpx_files:
+            if filename not in self._opened_files:
+                self._opened_files[filename] = {}
+                self._opened_files[filename]["file"] = filename.open(mode="rb")
+                self._opened_files[filename]["mmap"] = mmap.mmap(
+                    self._opened_files[filename]["file"].fileno(),
+                    0,
+                    access=mmap.ACCESS_READ,
+                )
 
     def __del__(self):
         # To be sure we close the file when object is deleted. Be aware that the
@@ -826,10 +816,10 @@ class AlphaOmegaRawIO(BaseRawIO):
             super().__del__()
 
     def _segment_t_start(self, block_index, seg_index):
-        return self._blocks[block_index][seg_index]["metadata"]["start_time"]
+        return self._segments[seg_index]["metadata"]["start_time"]
 
     def _segment_t_stop(self, block_index, seg_index):
-        return self._blocks[block_index][seg_index]["metadata"]["stop_time"]
+        return self._segments[seg_index]["metadata"]["stop_time"]
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
         stream_id = self.header["signal_streams"][stream_index]["id"]
@@ -839,7 +829,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                 for sample_by_file in channel["positions"].values()
                 for sample in sample_by_file
             )
-            for channel in self._blocks[block_index][seg_index]["streams"][
+            for channel in self._segments[seg_index]["streams"][
                 stream_id
             ].values()
         ]
@@ -871,7 +861,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             first_pos.append(
                 min(
                     p[0]
-                    for f in self._blocks[block_index][seg_index]["streams"][stream_id][
+                    for f in self._segments[seg_index]["streams"][stream_id][
                         channel_id
                     ]["positions"].values()
                     for p in f
@@ -885,7 +875,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             channel_id = int(channel_id)
             effective_start = i_start + first_pos[i]
             effective_stop = i_stop + first_pos[i]
-            for filename, positions in self._blocks[block_index][seg_index]["streams"][
+            for filename, positions in self._segments[seg_index]["streams"][
                 stream_id
             ][channel_id]["positions"].items():
                 file_chunks[filename].extend(
@@ -947,7 +937,7 @@ class AlphaOmegaRawIO(BaseRawIO):
     def _spike_count(self, block_index, seg_index, spike_channel_index):
         spike_id = int(self.header["spike_channels"]["id"][spike_channel_index])
         nb_spikes = sum(
-            len(f) for f in self._blocks[block_index][seg_index]["spikes"][spike_id]["positions"].values()
+            len(f) for f in self._segments[seg_index]["spikes"][spike_id]["positions"].values()
         )
         return nb_spikes
 
@@ -956,7 +946,7 @@ class AlphaOmegaRawIO(BaseRawIO):
     ):
         if self._spike_count(block_index, seg_index, spike_channel_index):
             spike_id = int(self.header["spike_channels"]["id"][spike_channel_index])
-            spikes = self._blocks[block_index][seg_index]["spikes"][spike_id]
+            spikes = self._segments[seg_index]["spikes"][spike_id]
             if t_start is None:
                 t_start = self._segment_t_start(block_index, seg_index)
             if t_stop is None:
@@ -980,7 +970,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         spike_id = int(self.header["spike_channels"]["id"][spike_channel_index])
         #  nb_spikes = self._spike_count(block_index, seg_index, spike_channel_index)
         nb_spikes = self._get_spike_timestamps(block_index, seg_index, spike_channel_index, t_start, t_stop).size
-        spikes = self._blocks[block_index][seg_index]["spikes"][spike_id]
+        spikes = self._segments[seg_index]["spikes"][spike_id]
         spike_length = {p[2] for f in spikes["positions"].values() for p in f}
         assert len(spike_length) == 1
         spike_length = spike_length.pop()
@@ -1008,7 +998,7 @@ class AlphaOmegaRawIO(BaseRawIO):
     def _event_count(self, block_index, seg_index, event_channel_index):
         event_id = int(self.header["event_channels"]["id"][event_channel_index])
         try:
-            nb_events = len(self._blocks[block_index][seg_index]["events"][event_id]["samples"])
+            nb_events = len(self._segments[seg_index]["events"][event_id]["samples"])
         except KeyError:
             # No event in this segment
             nb_events = 0
@@ -1019,7 +1009,7 @@ class AlphaOmegaRawIO(BaseRawIO):
     ):
         if self._event_count(block_index, seg_index, event_channel_index):
             event_id = int(self.header["event_channels"]["id"][event_channel_index])
-            event = self._blocks[block_index][seg_index]["events"][event_id]
+            event = self._segments[seg_index]["events"][event_id]
 
             timestamps = np.array([s[0] for s in event["samples"]], dtype=np.uint32)
             if t_start is None:
@@ -1039,17 +1029,10 @@ class AlphaOmegaRawIO(BaseRawIO):
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_id = int(self.header["event_channels"]["id"][event_channel_index])
-        for block in self._blocks:
-            for segment in block:
-                if event_id in segment["events"]:
-                    event = segment["events"][event_id]
-                    break
-            else:
-                # if no event of this type were found we continue to the next
-                # block. Trick found here: https://stackoverflow.com/a/3150107
-                continue
-            # Inner loop broken (event found), breaking outer loop
-            break
+        for segment in self._segments:
+            if event_id in segment["events"]:
+                event = segment["events"][event_id]
+                break
         event_times = event_timestamps.astype(dtype) / event["sample_rate"]
         return event_times
 
