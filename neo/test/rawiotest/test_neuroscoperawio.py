@@ -39,9 +39,8 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
 
         #
         txt = reader._repr_annotations()
-        # reader.print_annotations()
 
-        # lanch a series of test compliance
+        # launch a series of test compliance
         compliance.header_is_total(reader)
         compliance.count_element(reader)
         compliance.read_analogsignals(reader)
