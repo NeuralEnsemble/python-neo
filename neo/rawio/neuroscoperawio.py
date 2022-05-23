@@ -60,7 +60,8 @@ class NeuroScopeRawIO(BaseRawIO):
                     data_file_path = file_path.with_suffix(extension)
                     if data_file_path.is_file():
                         break
-                assert data_file_path.is_file(), "data binary not found"
+                assert data_file_path.is_file(), "data binary not found for file " \
+                f"{data_file_path} with supported extensions: {supported_data_extensions}"
         elif suffix == '':
             xml_file_path = file_path.with_suffix(".xml")
             data_file_path = self.binary_file
