@@ -107,8 +107,7 @@ class NeuroScopeRawIO(BaseRawIO):
             raise (NotImplementedError)
 
         self._raw_signals = np.memmap(data_file_path, dtype=sig_dtype,
-                                      mode='r',
-                                      offset=0).reshape(-1, nb_channel)
+                                      mode='r', offset=0).reshape(-1, nb_channel)
 
         # one unique stream
         signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
