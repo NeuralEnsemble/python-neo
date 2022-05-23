@@ -35,9 +35,6 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         txt = reader.__repr__()
         msg = 'After parser_header() nb_block should be known'
         assert 'nb_block' in txt, msg
-        # print(txt)
-
-        #
         txt = reader._repr_annotations()
 
         # launch a series of test compliance
