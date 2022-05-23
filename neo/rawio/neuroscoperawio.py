@@ -74,7 +74,7 @@ class NeuroScopeRawIO(BaseRawIO):
         else:
             error_string = (
                 f"Format {suffix} not supported "
-                f"filename format should be {supported_data_extensions} or xml"
+                f"filename format should be {supported_data_extensions} or .xml"
             )
             raise KeyError(error_string)
 
