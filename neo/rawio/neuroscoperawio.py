@@ -137,7 +137,7 @@ class NeuroScopeRawIO(BaseRawIO):
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals
-    
+
     def _resolve_xml_and_data_paths(self):
         file_path = Path(self.filename)
         supported_data_extensions = ['.dat', '.lfp', '.eeg']
@@ -169,6 +169,6 @@ class NeuroScopeRawIO(BaseRawIO):
                 f"filename format should be {supported_data_extensions} or .xml"
             )
             raise KeyError(error_string)
-        
+
         self.xml_file_path = xml_file_path
         self.data_file_path = data_file_path
