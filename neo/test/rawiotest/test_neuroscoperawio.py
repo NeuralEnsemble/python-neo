@@ -31,6 +31,10 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         assert 'nb_block' not in txt, msg
 
         reader.parse_header()
+        
+        # After the file resolution test that the right file is being loaded
+        assert reader.data_file_path == binary_file 
+        assert reader.xml_file_path == filename
 
         txt = reader.__repr__()
         msg = 'After parser_header() nb_block should be known'
