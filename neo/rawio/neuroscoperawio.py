@@ -169,6 +169,11 @@ class NeuroScopeRawIO(BaseRawIO):
                 f"filename format should be {supported_data_extensions} or .xml"
             )
             raise KeyError(error_string)
-assert xml_file_path.is_file(), f"xml file not found at  expected location {xml_file_path}"
+        
+        msg = f"xml file not found at the expected location {xml_file_path}"
+        assert xml_file_path.is_file(), msg
+        msg = f"binary file not found at the expected location {data_file_path}"
+        assert data_file_path.is_file(), msg
+        
         self.xml_file_path = xml_file_path
         self.data_file_path = data_file_path
