@@ -49,11 +49,6 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         compliance.read_events(reader)
         compliance.has_annotations(reader)
 
-        # basic benchmark
-        level = logging.getLogger().getEffectiveLevel()
-        logging.getLogger().setLevel(logging.INFO)
-        compliance.benchmark_speed_read_signals(reader)
-        logging.getLogger().setLevel(level)
 
 
 if __name__ == "__main__":
