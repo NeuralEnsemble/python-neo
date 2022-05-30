@@ -26,9 +26,8 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         binary_file = local_test_dir / "neuroscope/test2/signal1.dat"
         reader = NeuroScopeRawIO(filename=filename, binary_file=binary_file)
 
-        txt = reader.__repr__()
-        msg = 'Before parser_header() nb_block should be NOT known'
-        assert 'nb_block' not in txt, msg
+        msg = 'Before parser_header() no header information should be present'
+        assert reader.header is None, msg
 
         reader.parse_header()
 
