@@ -1167,7 +1167,7 @@ class NixIO(BaseIO):
             return
 
         if isinstance(spiketrain, BaseProxy):
-            spiketrain = spiketrain.load()
+            spiketrain = spiketrain.load(load_waveforms=True)
 
         times = spiketrain.times.magnitude
         tunits = units_to_string(spiketrain.times.units)
