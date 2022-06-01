@@ -90,6 +90,7 @@ class SpikeGLXRawIO(BaseRawIO):
         for info in self.signals_info_list:
             # key is (seg_index, stream_name)
             key = (info['seg_index'], info['stream_name'])
+            assert key not in self.signals_info_dict
             self.signals_info_dict[key] = info
 
             # create memmap
@@ -233,12 +234,11 @@ class SpikeGLXRawIO(BaseRawIO):
 def scan_files(dirname):
     """
     Scan for pairs of `.bin` and `.meta` files and return information about it.
-    
+
     After exploring the folder, the segment index (`seg_index`) is construct as follow:
       * if only one `gate_num=0` then `trigger_num` = `seg_index`
       * if only one `trigger_num=0` then `gate_num` = `seg_index`
       * if both are increasing then seg_index increased by gate_num, trigger_num order.
-    
     """
     info_list = []
 
@@ -251,11 +251,12 @@ def scan_files(dirname):
             if meta_filename.exists() and bin_filename.exists():
                 meta = read_meta_file(meta_filename)
                 info = extract_stream_info(meta_filename, meta)
+
                 info['meta_file'] = str(meta_filename)
                 info['bin_file'] = str(bin_filename)
                 info_list.append(info)
-    
-    total_gate = max([info['gate_num'] for info in info_list]) + 1
+
+    total_gate = max([info['gate_num'] for info in info_list if info['gate_num'] is not None]) + 1
     total_trigger_per_gate = []
     for gate_num in range(total_gate):
         max_trigger = 0
@@ -264,7 +265,7 @@ def scan_files(dirname):
                 continue
             max_trigger = max(max_trigger, info['trigger_num'])
         total_trigger_per_gate.append(max_trigger+1)
-    
+
     for info in info_list:
         g, t = info['gate_num'], info['trigger_num']
         if g == 0:
@@ -272,7 +273,7 @@ def scan_files(dirname):
         else:
             seg_index = sum(total_trigger_per_gate[:g]) + t
         info['seg_index'] = seg_index
-    
+
     return info_list
 
 
@@ -313,21 +314,31 @@ def parse_spikeglx_fname(fname):
         The trigger identifier, e.g. 1.
     device: str
         The probe identifier, e.g. "imec2"
-    stream_kind: str
-        The data type identifier, "lf" or "ap"
+    stream_kind: str or None
+        The data type identifier, "lf" or "ap" or None
     """
     r = re.findall(r'(\S*)_g(\d*)_t(\d*)\.(\S*).(ap|lf)', fname)
-    if len(r) >0:
-        # standard case
+    if len(r) == 1:
+        # standard case with probe
         run_name, gate_num, trigger_num, device, stream_kind = r[0]
-        gate_num = int(gate_num)
-        trigger_num = int(trigger_num)
     else:
-        # the naming do not correspond lets try something more easy
-        r = re.findall(r'(\S*)\.(\S*).(ap|lf)', fname)
-        if len(r) > 0:
-            run_name, device, stream_kind = r[0]
-            gate_num, trigger_num = None, None
+        r = re.findall(r'(\S*)_g(\d*)_t(\d*)\.(\S*)', fname)
+        if len(r) == 1:
+            # case for nidaq
+            run_name, gate_num, trigger_num, device = r[0]
+            stream_kind = None
+        else:
+            # the naming do not correspond lets try something more easy
+            r = re.findall(r'(\S*)\.(\S*).(ap|lf)', fname)
+            if len(r) == 1:
+                run_name, device, stream_kind = r[0]
+                gate_num, trigger_num = None, None
+
+    if gate_num is not None:
+        gate_num = int(gate_num)
+    if trigger_num is not None:
+        trigger_num = int(trigger_num)
+
     return (run_name, gate_num, trigger_num, device, stream_kind)
 
 
