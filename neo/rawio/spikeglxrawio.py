@@ -264,7 +264,7 @@ def scan_files(dirname):
             if info['gate_num'] != gate_num:
                 continue
             max_trigger = max(max_trigger, info['trigger_num'])
-        total_trigger_per_gate.append(max_trigger+1)
+        total_trigger_per_gate.append(max_trigger + 1)
 
     for info in info_list:
         g, t = info['gate_num'], info['trigger_num']
@@ -288,7 +288,7 @@ def parse_spikeglx_fname(fname):
     Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
     The filenames consist of 3 or 4 parts separated by `.`
     1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user at recording time.
-    2. "_g0_" is the "gate_num" 
+    2. "_g0_" is the "gate_num"
     3. "_t0_" is the "trigger_num"
     4. "nidq" or "imec0" will give the `device`
     5. "lf" or "ap" will be the `stream_kind`
@@ -370,9 +370,9 @@ def extract_stream_info(meta_file, meta):
     num_chan = int(meta['nSavedChans'])
     
     fname = Path(meta_file).stem
-    
+
     run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
-    
+
     device = fname.split('.')[1]
     if 'imec' in device:
         stream_kind = fname.split('.')[2]
@@ -435,7 +435,6 @@ def extract_stream_info(meta_file, meta):
     info['num_chan'] = num_chan
 
     info['sample_length'] = int(meta['fileSizeBytes']) // 2 // num_chan
-    #~ info['seg_index'] = seg_index
     info['gate_num'] = gate_num
     info['trigger_num'] = trigger_num
     info['device'] = device
