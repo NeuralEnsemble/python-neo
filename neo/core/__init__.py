@@ -37,9 +37,9 @@ from neo.core.segment import Segment
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
-from neo.core.container import FilterEqual, FilterIsIn, FilterIsNot,\
-    FilterInRange, FilterGreaterThan, FilterLessThan,\
-    FilterGreaterThanEqual, FilterLessThanEqual
+from neo.core.filters import Equal, IsIn, IsNot,\
+    InRange, GreaterThan, LessThan,\
+    GreaterThanEqual, LessThanEqual
 
 from neo.core.event import Event
 from neo.core.epoch import Epoch

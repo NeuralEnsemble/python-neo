@@ -6,6 +6,8 @@ object inherit from.  It provides shared methods for all container types.
 """
 
 from copy import deepcopy
+
+from neo.core import filters
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
 from neo.core.spiketrain import SpikeTrain
 from neo.core.spiketrainlist import SpikeTrainList
@@ -28,7 +30,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
     argument after data or to the argument targdict.
     A key of a provided dictionary is the name of the requested annotation
     and the value is a FilterCondition object.
-    E.g.: FilterEqual(x), FilterLessThan(x), FilterInRange(x, y).
+    E.g.: Equal(x), LessThan(x), InRange(x, y).
 
     targdict can also
     be a list of dictionaries, in which case the filters are applied
@@ -77,7 +79,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
                 if (hasattr(obj, key) and getattr(obj, key) == value and
                         all([obj is not res for res in results])):
                     results.append(obj)
-                elif (isinstance(value, FilterCondition)):
+                elif (isinstance(value, filters.FilterCondition)):
                     if (key in obj.annotations and value.evaluate(obj.annotations[key]) and all(
                             [obj is not res for res in results])):
                         results.append(obj)
@@ -94,111 +96,6 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         return SpikeTrainList(results)
     else:
         return results
-
-
-class FilterCondition():
-    """
-        FilterCondition object is given as parameter to container.filter():
-
-        segment.filter(my_annotation=<FilterCondition>) or
-        segment=filter({'my_annotation': <FilterCondition>})
-    """
-
-    def __init__(self, z):
-        pass
-
-    def evaluate(self, x):
-        raise NotImplementedError()
-
-
-class FilterEqual(FilterCondition):
-
-    def __init__(self, z):
-        self.control = z
-
-    def evaluate(self, x):
-        return x == self.control
-
-
-class FilterIsNot(FilterCondition):
-
-    def __init__(self, z):
-        self.control = z
-
-    def evaluate(self, x):
-        return x != self.control
-
-
-class FilterLessThanEqual(FilterCondition):
-
-    def __init__(self, z):
-        self.control = z
-
-    def evaluate(self, x):
-        return x <= self.control
-
-
-class FilterGreaterThanEqual(FilterCondition):
-    def __init__(self, z):
-        self.control = z
-
-    def evaluate(self, x):
-        return x >= self.control
-
-
-class FilterLessThan(FilterCondition):
-
-    def __init__(self, z):
-        self.control = z
-
-    def evaluate(self, x):
-        return x < self.control
-
-
-class FilterGreaterThan(FilterCondition):
-
-    def __init__(self, z):
-        self.control = z
-
-    def evaluate(self, x):
-        return x > self.control
-
-
-class FilterIsIn(FilterCondition):
-
-    def __init__(self, z):
-        self.control = z
-
-    def evaluate(self, x):
-        if (type(self.control) == list):
-            return x in self.control
-        elif (type(self.control) == int):
-            return x == self.control
-        else:
-            raise SyntaxError('parameter not of type list or int')
-
-
-class FilterInRange(FilterCondition):
-
-    def __init__(self, a, b, left_closed=False, right_closed=False):
-        if (type(a) != int or type(b) != int):
-            raise SyntaxError("parameters not of type int")
-        else:
-            self.a = a
-            self.b = b
-            self.left_closed = left_closed
-            self.right_closed = right_closed
-
-    def evaluate(self, x):
-        if (not self.left_closed and not self.right_closed):
-            return (x >= self.a and x <= self.b)
-        elif (not self.left_closed and self.right_closed):
-            return (x >= self.a and x < self.b)
-        elif (self.left_closed and not self.right_closed):
-            return (x > self.a and x <= self.b)
-        else:
-            return (x > self.a and x < self.b)
-
 
 class Container(BaseNeo):
     """
@@ -480,7 +377,7 @@ class Container(BaseNeo):
         argument after data or to the argument targdict.
         A key of a provided dictionary is the name of the requested annotation
         and the value is a FilterCondition object.
-        E.g.: equal(x), less_than(x), FilterInRange(x, y).
+        E.g.: equal(x), less_than(x), InRange(x, y).
 
         targdict can also
         be a list of dictionaries, in which case the filters are applied
@@ -510,8 +407,8 @@ class Container(BaseNeo):
             >>> obj.filter(name="Vm")
             >>> obj.filter(objects=neo.SpikeTrain)
             >>> obj.filter(targdict={'myannotation':3})
-            >>> obj.filter(name=neo.core.container.FilterEqual(5))
-            >>> obj.filter({'name': neo.core.container.FilterLessThan(5)})
+            >>> obj.filter(name=neo.core.container.Equal(5))
+            >>> obj.filter({'name': neo.core.container.LessThan(5)})
         """
 
         if isinstance(targdict, str):
