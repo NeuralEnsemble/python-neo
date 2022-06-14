@@ -22,6 +22,7 @@ Classes:
 * :attr:`AxonaIO`
 * :attr:`AxonIO`
 * :attr:`BCI2000IO`
+* :attr:`BiocamIO`
 * :attr:`BlackrockIO`
 * :attr:`BlkIO`
 * :attr:`BrainVisionIO`
@@ -91,6 +92,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.BCI2000IO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.BiocamIO
 
     .. autoattribute:: extensions
 
@@ -277,6 +282,7 @@ from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axographio import AxographIO
 from neo.io.axonaio import AxonaIO
 from neo.io.axonio import AxonIO
+from neo.io.biocamio import BiocamIO
 from neo.io.blackrockio import BlackrockIO
 from neo.io.blkio import BlkIO
 from neo.io.bci2000io import BCI2000IO
@@ -285,6 +291,7 @@ from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.cedio import CedIO
+from neo.io.edfio import EDFIO
 from neo.io.elanio import ElanIO
 from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
@@ -335,6 +342,7 @@ iolist = [
     BrainwareF32IO,
     BrainwareSrcIO,
     CedIO,
+    EDFIO,
     ElanIO,
     # ElphyIO,
     ExampleIO,

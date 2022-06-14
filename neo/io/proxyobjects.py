@@ -282,6 +282,10 @@ class AnalogSignalProxy(BaseProxy):
                                     channel_indexes=fixed_chan_indexes)
             units = self.units
 
+        else:
+            raise ValueError(f'Invalid magnitude_mode {magnitude_mode}. Accepted values are '
+                             f'"rescaled" and "raw"')
+
         anasig = AnalogSignal(sig, units=units, copy=False, t_start=sig_t_start,
                     sampling_rate=self.sampling_rate, name=name,
                     file_origin=self.file_origin, description=self.description,

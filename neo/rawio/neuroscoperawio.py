@@ -15,29 +15,43 @@ This should be done (but maybe never will):
 Author: Samuel Garcia
 
 """
+from pathlib import Path
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+                        _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 from xml.etree import ElementTree
 
 
 class NeuroScopeRawIO(BaseRawIO):
-    extensions = ['xml', 'dat']
+    extensions = ['xml', 'dat', 'lfp', 'eeg']
     rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename='', binary_file=None):
+        """raw reader for Neuroscope
+
+        Parameters
+        ----------
+        filename : str, optional
+            Usually the file_path of an xml file
+        binary_file : _type_, optional
+            The binary data file corresponding to the xml file:
+            Supported formats: ['.dat', '.lfp', '.eeg']
+        """
         BaseRawIO.__init__(self)
         self.filename = filename
+        self.binary_file = binary_file
 
     def _source_name(self):
-        return self.filename.replace('.xml', '').replace('.dat', '')
+        return Path(self.filename).stem
 
     def _parse_header(self):
-        filename = self.filename.replace('.xml', '').replace('.dat', '')
+        # Load the right paths to xml and data
+        self._resolve_xml_and_data_paths()
 
-        tree = ElementTree.parse(filename + '.xml')
+        # Parse XML-file
+        tree = ElementTree.parse(self.xml_file_path)
         root = tree.getroot()
         acq = root.find('acquisitionSystem')
         nbits = int(acq.find('nBits').text)
@@ -64,7 +78,8 @@ class NeuroScopeRawIO(BaseRawIO):
         else:
             raise (NotImplementedError)
 
-        self._raw_signals = np.memmap(filename + '.dat', dtype=sig_dtype,
+        # Extract signal from the data file
+        self._raw_signals = np.memmap(self.data_file_path, dtype=sig_dtype,
                                       mode='r', offset=0).reshape(-1, nb_channel)
 
         # one unique stream
@@ -73,7 +88,7 @@ class NeuroScopeRawIO(BaseRawIO):
         # signals
         sig_channels = []
         for c in range(nb_channel):
-            name = 'ch{}grp{}'.format(c, channel_group[c])
+            name = 'ch{}grp{}'.format(c, channel_group.get(c, 'none'))
             chan_id = str(c)
             units = 'mV'
             offset = 0.
@@ -122,3 +137,43 @@ class NeuroScopeRawIO(BaseRawIO):
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals
+
+    def _resolve_xml_and_data_paths(self):
+        file_path = Path(self.filename)
+        supported_data_extensions = ['.dat', '.lfp', '.eeg']
+        suffix = file_path.suffix
+        if suffix == '.xml':
+            xml_file_path = file_path
+            data_file_path = self.binary_file
+            # If no binary file provided iterate over the formats
+            if data_file_path is None:
+                for extension in supported_data_extensions:
+                    data_file_path = file_path.with_suffix(extension)
+                    if data_file_path.is_file():
+                        break
+                assert data_file_path.is_file(), "data binary not found for file " \
+                f"{data_file_path} with supported extensions: {supported_data_extensions}"
+        elif suffix == '':
+            xml_file_path = file_path.with_suffix(".xml")
+            data_file_path = self.binary_file
+            # Empty suffix to keep testing behavior with non-existing
+            # file passing for backwards compatibility
+            if data_file_path is None:
+                data_file_path = file_path.with_suffix(".dat")
+        elif suffix in supported_data_extensions:
+            xml_file_path = file_path.with_suffix(".xml")
+            data_file_path = file_path
+        else:
+            error_string = (
+                f"Format {suffix} not supported "
+                f"filename format should be {supported_data_extensions} or .xml"
+            )
+            raise KeyError(error_string)
+
+        msg = f"xml file not found at the expected location {xml_file_path}"
+        assert xml_file_path.is_file(), msg
+        msg = f"binary file not found at the expected location {data_file_path}"
+        assert data_file_path.is_file(), msg
+
+        self.xml_file_path = xml_file_path
+        self.data_file_path = data_file_path

@@ -14,7 +14,8 @@ class TestSpikeGLXIO(BaseTestIO, unittest.TestCase):
         'spikeglx'
     ]
     entities_to_test = [
-        'spikeglx/Noise4Sam_g0'
+        'spikeglx/Noise4Sam_g0',
+        'spikeglx/TEST_20210920_0_g0'
     ]
     
 

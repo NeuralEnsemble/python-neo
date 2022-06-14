@@ -1,0 +1,52 @@
+name: NeoCoreTest
+
+on:
+  pull_request:
+    branches: [master]
+    types: [synchronize, opened, reopened, ready_for_review]
+
+  # run checks on any change of master, including merge of PRs
+  push:
+    branches: [master]
+
+
+
+jobs:
+  multi-os-python-numpy:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ["ubuntu-latest", "windows-latest"]
+        # "macos-latest", 
+        python-version: ['3.7', '3.8', '3.9']
+        numpy-version: ['1.16.6', '1.17.5', '1.18.5', '1.19.5', '1.20.3', '1.21.5', '1.22.3']
+        exclude:
+           - python-version: '3.7'
+             numpy-version: '1.22.3'
+
+    steps:
+        - name: Set up Python ${{ matrix.python-version }}
+          uses: actions/setup-python@v2
+          with:
+            python-version: ${{ matrix.python-version }}
+
+        - name: Checkout repository
+          uses: actions/checkout@v2
+
+        - name: Install numpy ${{ matrix.numpy-version }}
+          run: |
+            python -m pip install --upgrade pip
+            pip install numpy==${{ matrix.numpy-version }}
+            pip install pytest pytest-cov
+            pip install .
+
+        - name: List pip packages
+          run: |
+            pip -V
+            pip list
+
+        - name: Run tests
+          run: |
+            pytest --cov=neo neo/test/coretest

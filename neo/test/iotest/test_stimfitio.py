@@ -8,8 +8,14 @@ import sys
 import unittest
 
 from neo.io import StimfitIO
-from neo.io.stimfitio import HAS_STFIO
 from neo.test.iotest.common_io_test import BaseTestIO
+
+try:
+    import stfio
+except Exception:
+    HAS_STFIO = False
+else:
+    HAS_STFIO = True
 
 
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")

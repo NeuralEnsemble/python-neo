@@ -14,7 +14,12 @@ class TestTdtIO(BaseTestIO, unittest.TestCase, ):
         'tdt'
     ]
     entities_to_test = [
-        'tdt/aep_05'
+        # test structure directory with multiple blocks
+        'tdt/aep_05',
+        # test single block
+        'tdt/dataset_0_single_block/512ch_reconly_all-181123_B24_rest.Tdx',
+        'tdt/dataset_1_single_block/ECTest-220207-135355_ECTest_B1.Tdx',
+        'tdt/aep_05/Block-1/aep_05_Block-1.Tdx'
     ]
 
     def test_signal_group_mode(self):

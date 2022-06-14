@@ -23,7 +23,7 @@ import platform
 from urllib.request import urlopen
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+                        _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 
@@ -75,13 +75,15 @@ class MaxwellRawIO(BaseRawIO):
                 rec_names = list(h5['wells'][stream_id].keys())
                 if len(rec_names) > 1:
                     if self.rec_name is None:
-                        raise ValueError("Detected multiple recordings. Please select a single recording using"
-                            f' the `rec_name` paramter.\nPossible rec_name {rec_names}')
+                        raise ValueError("Detected multiple recordings. Please select a "
+                                         "single recording using the `rec_name` paramter. "
+                                         f"Possible rec_name {rec_names}")
                 else:
                     self.rec_name = rec_names[0]
                 signal_streams.append((stream_id, stream_id))
         else:
-            raise NotImplementedError(f'This version {version} is not supported')
+            raise NotImplementedError(
+                f'This version {version} is not supported')
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # create signal channels
@@ -185,15 +187,31 @@ class MaxwellRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = sigs.shape[1]
 
+        resorted_indexes = None
         if channel_indexes is None:
             channel_indexes = slice(None)
+        else:
+            if np.array(channel_indexes).size > 1 and np.any(np.diff(channel_indexes) < 0):
+                # get around h5py constraint that it does not allow datasets
+                # to be indexed out of order
+                sorted_channel_indexes = np.sort(channel_indexes)
+                resorted_indexes = np.array(
+                    [list(channel_indexes).index(ch) for ch in sorted_channel_indexes])
 
         try:
-            if self._old_format:
-                sigs = sigs[self._channel_slice, i_start:i_stop]
-                sigs = sigs[channel_indexes]
+            if resorted_indexes is None:
+                if self._old_format:
+                    sigs = sigs[self._channel_slice, i_start:i_stop]
+                    sigs = sigs[channel_indexes]
+                else:
+                    sigs = sigs[channel_indexes, i_start:i_stop]
             else:
-                sigs = sigs[channel_indexes, i_start:i_stop]
+                if self._old_format:
+                    sigs = sigs[self._channel_slice, i_start:i_stop]
+                    sigs = sigs[sorted_channel_indexes]
+                else:
+                    sigs = sigs[sorted_channel_indexes, i_start:i_stop]
+                sigs = sigs[resorted_indexes]
         except OSError as e:
             print('*' * 10)
             print(_hdf_maxwell_error)

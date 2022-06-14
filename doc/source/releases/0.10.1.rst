@@ -1,0 +1,33 @@
+========================
+Neo 0.10.1 release notes
+========================
+
+2nd March 2022
+
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+* :class:`NeuralynxIO` memory performace was improved during initialization [#998](https://github.com/NeuralEnsemble/python-neo/pull/990) and new arguments for file selection were added [#1023](https://github.com/NeuralEnsemble/python-neo/pull/1023) [#1043](https://github.com/NeuralEnsemble/python-neo/pull/1043)
+* :class:`TdtIO` can load single block tdt datasets [#1057](https://github.com/NeuralEnsemble/python-neo/pull/1057)
+* :class:`SpikeGLXIO` supports neuropixel 2.0 format [#1045](https://github.com/NeuralEnsemble/python-neo/pull/1045) and uses corrected gain values [#1069](https://github.com/NeuralEnsemble/python-neo/pull/1069)
+* :class:`NixIO` some bug fix related to nixio module
+* :class:`NwbIO` various improvement [#1052](https://github.com/NeuralEnsemble/python-neo/pull/1052) [#1054](https://github.com/NeuralEnsemble/python-neo/pull/1054)
+* :class:`OpenEphysIO` small bug fix [#1062](https://github.com/NeuralEnsemble/python-neo/pull/1062)
+* :class:`MaxwellIO` bug fix [#1074](https://github.com/NeuralEnsemble/python-neo/pull/1074)
+* :class:`NeuroscopeIO` bug fix [#1078](https://github.com/NeuralEnsemble/python-neo/pull/1078)
+* The IO modules of this release have been tested with version 0.1.1 of the `ephy_testing_data`_.
+
+Documentation
+-------------
+A project governance guide has been added [#1048](https://github.com/NeuralEnsemble/python-neo/pull/1048)
+
+
+Acknowledgements
+----------------
+
+Thanks to Samuel Garcia, Julia Sprenger, Andrew Davison, Alessio Buccino, Ben Dichter,
+Elodie Legouée, Eric Larson and Heberto Mayorquin for their contributions to this release.
+
+.. _`ephy_testing_data`: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/v0.1.1
+

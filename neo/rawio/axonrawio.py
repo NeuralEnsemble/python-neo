@@ -209,7 +209,7 @@ class AxonRawIO(BaseRawIO):
         for i, tag in enumerate(info['listTag']):
             timestamps.append(tag['lTagTime'])
             labels.append(str(tag['nTagType']))
-            comments.append(clean_string(tag['sComment']))
+            comments.append(str(clean_string(tag['sComment'])))
         self._raw_ev_timestamps = np.array(timestamps)
         self._ev_labels = np.array(labels, dtype='U')
         self._ev_comments = np.array(comments, dtype='U')
