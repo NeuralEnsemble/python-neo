@@ -561,7 +561,8 @@ class NWBIO(BaseIO):
             additional_metadata["conversion"] = conversion
         else:
             units = signal.units
-        if hasattr(signal, 'proxy_for') and signal.proxy_for in [AnalogSignal, IrregularlySampledSignal]:
+        if hasattr(signal, 'proxy_for') and signal.proxy_for in [AnalogSignal,
+                                                                 IrregularlySampledSignal]:
             signal = signal.load()
         if isinstance(signal, AnalogSignal):
             sampling_rate = signal.sampling_rate.rescale("Hz")
