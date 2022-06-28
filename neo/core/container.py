@@ -91,10 +91,10 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
 
     # keep only objects of the correct classes
     if objects:
-        results = [result for result in res if
+        res = [result for result in res if
                    result.__class__ in objects or result.__class__.__name__ in objects]
 
-    if results and all(isinstance(obj, SpikeTrain) for obj in res):
+    if res and all(isinstance(obj, SpikeTrain) for obj in res):
         return SpikeTrainList(res)
     else:
         return res
@@ -409,8 +409,8 @@ class Container(BaseNeo):
             >>> obj.filter(name="Vm")
             >>> obj.filter(objects=neo.SpikeTrain)
             >>> obj.filter(targdict={'myannotation':3})
-            >>> obj.filter(name=neo.core.container.Equal(5))
-            >>> obj.filter({'name': neo.core.container.LessThan(5)})
+            >>> obj.filter(name=neo.core.filters.Equal(5))
+            >>> obj.filter({'name': neo.core.filters.LessThan(5)})
         """
 
         if isinstance(targdict, str):
