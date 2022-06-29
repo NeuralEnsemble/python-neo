@@ -453,7 +453,6 @@ class NWBIO(BaseIO):
                 raise Exception("Writing to NWB requires an annotation 'session_start_time'")
         self.annotations = {"rec_datetime": "rec_datetime"}
         self.annotations["rec_datetime"] = blocks[0].rec_datetime
-        self.annotations = {"subject": "subject"}
         nwbfile = NWBFile(**annotations)
         if "subject" not in annotations:
             nwbfile.subject = Subject(subject_id="subject_id",
