@@ -258,29 +258,19 @@ def scan_files(dirname):
 
     # the segment index will depend on both 'gate_num' and 'trigger_num'
     # so we order by 'gate_num' then 'trigger_num'
-    order_key = list({(info['gate_num'], info['trigger_num']) for info in info_list})
+    # None is before any int
+    def make_key(info):
+        k0 = info['gate_num']
+        if k0 is None:
+            k0 = -1
+        k1 = info['trigger_num']
+        if k1 is None:
+            k1 = -1
+        return (k0, k1)
+    order_key = list({make_key(info) for info in info_list})
     order_key = sorted(order_key)
-    
-    print(order_key)
-    exit()
-    
-    total_gate = max([info['gate_num'] for info in info_list if info['gate_num'] is not None]) + 1
-    total_trigger_per_gate = []
-    for gate_num in range(total_gate):
-        max_trigger = 0
-        for info in info_list:
-            if info['gate_num'] != gate_num:
-                continue
-            max_trigger = max(max_trigger, info['trigger_num'])
-        total_trigger_per_gate.append(max_trigger + 1)
-
     for info in info_list:
-        g, t = info['gate_num'], info['trigger_num']
-        if g == 0:
-            seg_index = t
-        else:
-            seg_index = sum(total_trigger_per_gate[:g]) + t
-        info['seg_index'] = seg_index
+        info['seg_index'] = order_key.index(make_key(info))
 
     return info_list
 
