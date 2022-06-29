@@ -483,7 +483,7 @@ class NWBIO(BaseIO):
             block_name = block.name
             self.write_block(nwbfile, block, arr)
         arr2 = np.sort(arr)
-        self._write_epoch(nwbfile, arr2, block)
+        self._write_epoch(nwbfile, block, arr2)
 
         io_nwb.write(nwbfile)
         io_nwb.close()
@@ -692,7 +692,7 @@ class NWBIO(BaseIO):
                 arr[0].append(t_start)
                 arr[1].append(t_stop)
 
-    def _write_epoch(self, nwbfile, arr2, block):
+    def _write_epoch(self, nwbfile, block, arr2):
         for i in range(len(arr2[0])):
             t_start = arr2[0][i]
             t_stop = arr2[1][i]
