@@ -37,8 +37,8 @@ else:
         SCIPY_ERR = None
 
 from neo.io.baseio import BaseIO
-from neo.core import (Block, Segment, AnalogSignal, Event, Epoch, SpikeTrain,
-                      objectnames, class_by_name)
+from neo.core import (Block, Segment, AnalogSignal, IrregularlySampledSignal,
+                      Event, Epoch, SpikeTrain, objectnames, class_by_name)
 
 classname_lower_to_upper = {}
 for k in objectnames:
@@ -190,7 +190,8 @@ class NeoMatlabIO(BaseIO):
     is_readable = True
     is_writable = True
 
-    supported_objects = [Block, Segment, AnalogSignal, Epoch, Event, SpikeTrain]
+    supported_objects = [Block, Segment, AnalogSignal, IrregularlySampledSignal,
+                         Epoch, Event, SpikeTrain]
     readable_objects = [Block]
     writeable_objects = [Block]
 
@@ -250,6 +251,10 @@ class NeoMatlabIO(BaseIO):
             for anasig in seg.analogsignals:
                 anasig_struct = self.create_struct_from_obj(anasig)
                 seg_struct['analogsignals'].append(anasig_struct)
+
+            for irrsig in seg.irregularlysampledsignals:
+                irrsig_struct = self.create_struct_from_obj(irrsig)
+                seg_struct['irregularlysampledsignals'].append(irrsig_struct)
 
             for ea in seg.events:
                 ea_struct = self.create_struct_from_obj(ea)
@@ -348,7 +353,13 @@ class NeoMatlabIO(BaseIO):
                 else:
                     data_complement["t_start"] = 0.0
 
-            ob = cl(arr, **data_complement)
+            if "times" in (at[0] for at in cl._necessary_attrs) and quantity_attr != "times":
+                # handle IrregularlySampledSignal
+                times = getattr(struct, "times")
+                data_complement["time_units"] = getattr(struct, "times_units")
+                ob = cl(times, arr, **data_complement)
+            else:
+                ob = cl(arr, **data_complement)
         else:
             ob = cl()
 
