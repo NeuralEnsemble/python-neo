@@ -455,6 +455,17 @@ class NWBIO(BaseIO):
         self.annotations["rec_datetime"] = blocks[0].rec_datetime
         nwbfile = NWBFile(**annotations)
         if "subject" not in annotations:
+            # create neo dummy subject
+            # All following arguments are decided by this IO and are free
+            read_neo_dummy_params = {
+                Subject: [
+                        ("subject_id", {"value": "subject_id", "label": "empty_neo_subject_id"}),
+                        ("age", {"value": "P0D", "label": "Period x days old"}),
+                        ("description", {"value": "no description", "label": "Description"}),
+                        ("species", {"value": "Mus musculus", "label": "Species by default"}),
+                        ("sex", {"value": "U", "label": "Sex unknown"}),
+                        ],
+            }
             nwbfile.subject = Subject(subject_id="subject_id",
                                       age="P0D",  # Period x days old
                                       description="no description",
