@@ -12,7 +12,8 @@ extras_require = {
     'neomatlabio': ['scipy>=1.0.0'],
     'nixio': ['nixio>=1.5.0'],
     'stimfitio': ['stfio'],
-    'tiffio': ['pillow']
+    'tiffio': ['pillow'],
+    'nwbio': ['pynwb', 'nwbinspector']
 }
 
 with open("neo/version.py") as fp:
