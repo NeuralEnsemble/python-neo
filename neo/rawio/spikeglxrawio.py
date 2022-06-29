@@ -256,6 +256,14 @@ def scan_files(dirname):
                 info['bin_file'] = str(bin_filename)
                 info_list.append(info)
 
+    # the segment index will depend on both 'gate_num' and 'trigger_num'
+    # so we order by 'gate_num' then 'trigger_num'
+    order_key = list({(info['gate_num'], info['trigger_num']) for info in info_list})
+    order_key = sorted(order_key)
+    
+    print(order_key)
+    exit()
+    
     total_gate = max([info['gate_num'] for info in info_list if info['gate_num'] is not None]) + 1
     total_trigger_per_gate = []
     for gate_num in range(total_gate):
