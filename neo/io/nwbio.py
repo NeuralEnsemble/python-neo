@@ -475,8 +475,12 @@ class NWBIO(BaseIO):
                 'block', 'the name of the Neo Block to which the SpikeTrain belongs')
 
         if sum(statistics(block)["Epoch"]["count"] for block in blocks) > 0:
-            nwbfile.add_trial_column('segment', 'name of the Segment to which the Epoch belongs')
-            nwbfile.add_trial_column('block', 'name of the Block to which the Epoch belongs')
+            nwbfile.add_epoch_column('_name', 'the name attribute of the Epoch')
+            # nwbfile.add_epoch_column('_description', 'the description attribute of the Epoch')
+            nwbfile.add_epoch_column(
+                'segment', 'the name of the Neo Segment to which the Epoch belongs')
+            nwbfile.add_epoch_column('block',
+                                     'the name of the Neo Block to which the Epoch belongs')
 
         arr = [[], []]  # epoch array for ascending t_start and t_stop
         for i, block in enumerate(blocks):
@@ -698,13 +702,13 @@ class NWBIO(BaseIO):
             t_stop = arr2[1][i]
             for k in block.segments:
                 segment_name = k.name
-            nwbfile.add_trial(start_time=t_start,
-                              stop_time=t_stop,
-                              tags=[" "],
+            nwbfile.add_epoch(start_time=t_start, 
+                              stop_time=t_stop, 
+                              tags=[" "], 
                               timeseries=[],
+                              _name=k.name,
                               segment=segment_name,
-                              block=block.name,
-                              )
+                              block=block.name)
         return nwbfile.epochs
 
 
