@@ -152,14 +152,14 @@ class NlxHeader(OrderedDict):
 
         # convert channel ids
         if 'channel_ids' in self:
-            chid_entries = re.findall(r'\w+', self['channel_ids'])
+            chid_entries = re.findall(r'\S+', self['channel_ids'])
             self['channel_ids'] = [int(c) for c in chid_entries]
         else:
             self['channel_ids'] = ['unknown']
 
         # convert channel names
         if 'channel_names' in self:
-            name_entries = re.findall(r'\w+', self['channel_names'])
+            name_entries = re.findall(r'\S+', self['channel_names'])
             if len(name_entries) == 1:
                 self['channel_names'] = name_entries * len(self['channel_ids'])
             assert len(self['channel_names']) == len(self['channel_ids']), \
@@ -287,6 +287,13 @@ class NlxHeader(OrderedDict):
             # DigitalLynxSX
             elif self['HardwareSubSystemType'] == 'DigitalLynxSX':
                 return 'DIGITALLYNXSX'
+
+            # Cheetah64
+            elif self['HardwareSubSystemType'] == 'Cheetah64':
+                return 'CHEETAH64'
+
+            else:
+                return 'UNKNOWN'
 
         elif 'FileType' in self:
 

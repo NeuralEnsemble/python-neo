@@ -14,6 +14,7 @@ extras_require = {
     'stimfitio': ['stfio'],
     'tiffio': ['pillow'],
     'nwbio': ['pynwb', 'nwbinspector']
+    'edf': ['pyedflib']
 }
 
 with open("neo/version.py") as fp:

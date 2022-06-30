@@ -6,6 +6,7 @@ which supports a multiplexed representation of spike trains
 neuron/channel the spike is from).
 """
 
+import warnings
 import numpy as np
 import quantities as pq
 from .spiketrain import SpikeTrain, normalize_times_array
@@ -13,6 +14,22 @@ from .spiketrain import SpikeTrain, normalize_times_array
 
 def is_spiketrain_or_proxy(obj):
     return isinstance(obj, SpikeTrain) or getattr(obj, "proxy_for", None) == SpikeTrain
+
+
+def unique(quantities):
+    """np.unique doesn't work with a list of quantities of different scale,
+    this function can be used instead."""
+    # todo: add a tolerance to handle floating point discrepancies
+    #       due to scaling.
+    if len(quantities) > 0:
+        common_units = quantities[0].units
+        scaled_quantities = pq.Quantity(
+            [q.rescale(common_units) for q in quantities],
+            common_units)
+        return np.unique(scaled_quantities)
+    else:
+        return quantities
+
 
 
 class SpikeTrainList(object):
@@ -70,7 +87,7 @@ class SpikeTrainList(object):
         self._spike_time_array = None
         self._channel_id_array = None
         self._all_channel_ids = None
-        self._spiketrain_metadata = None
+        self._spiketrain_metadata = {}
         self.segment = segment
 
     def __iter__(self):
@@ -263,7 +280,10 @@ class SpikeTrainList(object):
             "t_stop": t_stop
         }
         for name, ann_value in annotations.items():
-            if len(ann_value) != len(obj):
+            if (not isinstance(ann_value, str)
+                and hasattr(ann_value, "__len__")
+                and len(ann_value) != len(all_channel_ids)
+               ):
                 raise ValueError(f"incorrect length for annotation '{name}'")
         obj._annotations = annotations
         return obj
@@ -278,10 +298,14 @@ class SpikeTrainList(object):
                 mask = self._channel_id_array == channel_id
                 times = self._spike_time_array[mask]
                 spiketrain = SpikeTrain(times, **self._spiketrain_metadata)
-                spiketrain.annotations = {
-                    name: value[i]
-                    for name, value in self._annotations.items()
-                }
+                for name, value in self._annotations.items():
+                    if (not isinstance(value, str)
+                        and hasattr(value, "__len__")
+                        and len(value) == len(self._all_channel_ids)
+                       ):
+                        spiketrain.annotate(**{name: value[i]})
+                    else:
+                        spiketrain.annotate(**{name: value})
                 spiketrain.annotate(channel_id=channel_id)
                 spiketrain.segment = self.segment
                 self._items.append(spiketrain)
@@ -319,3 +343,51 @@ class SpikeTrainList(object):
                 self._spike_time_array = np.hstack(spike_times) * self._items[0].units
                 self._channel_id_array = np.hstack(channel_ids)
         return self._channel_id_array, self._spike_time_array
+
+    @property
+    def t_start(self):
+        if "t_start" in self._spiketrain_metadata:
+            return self._spiketrain_metadata["t_start"]
+        else:
+            t_start_values = unique([item.t_start for item in self._items
+                                    if isinstance(item, SpikeTrain)])  # ignore proxy objects
+            if len(t_start_values) == 0:
+                raise ValueError("t_start not defined for an empty spike train list")
+            elif len(t_start_values) > 1:
+                warnings.warn("Found multiple values of t_start, returning the earliest")
+                t_start = t_start_values.min()
+            else:
+                t_start = t_start_values[0]
+            self._spiketrain_metadata["t_start"] = t_start
+            return t_start
+
+    @property
+    def t_stop(self):
+        if "t_stop" in self._spiketrain_metadata:
+            return self._spiketrain_metadata["t_stop"]
+        else:
+            t_stop_values = unique([item.t_stop for item in self._items
+                                    if isinstance(item, SpikeTrain)])  # ignore proxy objects
+            if len(t_stop_values) == 0:
+                raise ValueError("t_stop not defined for an empty spike train list")
+            elif len(t_stop_values) > 1:
+                warnings.warn("Found multiple values of t_stop, returning the latest")
+                t_stop = t_stop_values.max()
+            else:
+                t_stop = t_stop_values[0]
+            self._spiketrain_metadata["t_stop"] = t_stop
+            return t_stop
+
+    @property
+    def all_channel_ids(self):
+        if self._all_channel_ids is None:
+            self._all_channel_ids = []
+            for i, spiketrain in enumerate(self._items):
+                if ("channel_id" in spiketrain.annotations
+                    and isinstance(spiketrain.annotations["channel_id"], int)
+                   ):
+                    ch_id = spiketrain.annotations["channel_id"]
+                else:
+                    ch_id = i
+                self._all_channel_ids.append(ch_id)
+        return self._all_channel_ids

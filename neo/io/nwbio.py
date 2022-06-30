@@ -624,6 +624,9 @@ class NWBIO(BaseIO):
             additional_metadata["conversion"] = conversion
         else:
             units = signal.units
+        if hasattr(signal, 'proxy_for') and signal.proxy_for in [AnalogSignal,
+                                                                 IrregularlySampledSignal]:
+            signal = signal.load()
         if isinstance(signal, AnalogSignal):
             sampling_rate = signal.sampling_rate.rescale("Hz")
             tS = timeseries_class(name=signal.name,
@@ -658,19 +661,24 @@ class NWBIO(BaseIO):
         return tS
 
     def _write_spiketrain(self, nwbfile, spiketrain):
+        segment = spiketrain.segment
+        if hasattr(spiketrain, 'proxy_for') and spiketrain.proxy_for is SpikeTrain:
+            spiketrain = spiketrain.load()
         nwbfile.add_unit(spike_times=spiketrain.rescale('s').magnitude,
                          obs_intervals=[[float(spiketrain.t_start.rescale('s')),
                                          float(spiketrain.t_stop.rescale('s'))]],
                          _name=spiketrain.name,
                          # _description=spiketrain.description,
-                         segment=spiketrain.segment.name,
-                         block=spiketrain.segment.block.name)
+                         segment=segment.name,
+                         block=segment.block.name)
         # todo: handle annotations (using add_unit_column()?)
         # todo: handle Neo Units
         # todo: handle spike waveforms, if any (see SpikeEventSeries)
         return nwbfile.units
 
     def _write_event(self, nwbfile, event):
+        if hasattr(event, 'proxy_for') and event.proxy_for == Event:
+            event = event.load()
         hierarchy = {'block': event.segment.block.name, 'segment': event.segment.name}
         # if constant timestamps
         timestamps = event.times.rescale('second').magnitude
@@ -694,6 +702,8 @@ class NWBIO(BaseIO):
         return tS_evt
 
     def _write_manage_epoch(self, nwbfile, segment, epoch, arr):
+        if hasattr(epoch, 'proxy_for') and epoch.proxy_for == Epoch:
+            epoch = epoch.load()
         for t_start, duration, label in zip(epoch.rescale('s').magnitude,
                                             epoch.durations.rescale('s').magnitude,
                                             epoch.labels,
