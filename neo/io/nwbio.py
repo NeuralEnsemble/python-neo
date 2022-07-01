@@ -677,9 +677,10 @@ class NWBIO(BaseIO):
         return nwbfile.units
 
     def _write_event(self, nwbfile, event):
+        segment = event.segment
         if hasattr(event, 'proxy_for') and event.proxy_for == Event:
             event = event.load()
-        hierarchy = {'block': event.segment.block.name, 'segment': event.segment.name}
+        hierarchy = {'block': segment.block.name, 'segment': segment.name}
         # if constant timestamps
         timestamps = event.times.rescale('second').magnitude
         if any(timestamps) == any(timestamps):
