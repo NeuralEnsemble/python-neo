@@ -17,7 +17,6 @@ def can_use_network():
         HAVE_DATALAD = True
     except:
         HAVE_DATALAD = False
-    
     if not HAVE_DATALAD:
         return False
     if os.environ.get('NOSETESTS_NO_NETWORK', False):
