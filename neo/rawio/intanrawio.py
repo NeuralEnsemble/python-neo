@@ -22,7 +22,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 import numpy as np
 from collections import OrderedDict
-from distutils.version import LooseVersion as V
+from packaging.version import Version as V
 
 
 class IntanRawIO(BaseRawIO):

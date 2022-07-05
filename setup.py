@@ -4,7 +4,8 @@ from setuptools import setup, find_packages
 import os
 
 long_description = open("README.rst").read()
-install_requires = ['numpy>=1.16.1',
+install_requires = ['packaging',
+                    'numpy>=1.16.1',
                     'quantities>=0.12.1']
 extras_require = {
     'igorproio': ['igor'],
