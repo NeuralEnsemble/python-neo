@@ -428,20 +428,20 @@ def read_rhd(filename):
 
         version = V('{major_version}.{minor_version}'.format(**global_info))
 
-        # the header size depend on the version :-(
+        # the header size depends on the version :-(
         header = list(rhd_global_header_part1)  # make a copy
 
-        if version >= '1.1':
+        if version >= V('1.1'):
             header = header + rhd_global_header_v11
         else:
             global_info['num_temp_sensor_channels'] = 0
 
-        if version >= '1.3':
+        if version >= V('1.3'):
             header = header + rhd_global_header_v13
         else:
             global_info['eval_board_mode'] = 0
 
-        if version >= '2.0':
+        if version >= V('2.0'):
             header = header + rhd_global_header_v20
         else:
             global_info['reference_channel'] = ''
@@ -466,14 +466,14 @@ def read_rhd(filename):
     sr = global_info['sampling_rate']
 
     # construct the data block dtype and reorder channels
-    if version >= '2.0':
+    if version >= V('2.0'):
         BLOCK_SIZE = 128
     else:
         BLOCK_SIZE = 60  # 256 channels
 
     ordered_channels = []
 
-    if version >= '1.2':
+    if version >= V('1.2'):
         data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
     else:
         data_dtype = [('timestamp', 'uint32', BLOCK_SIZE)]
