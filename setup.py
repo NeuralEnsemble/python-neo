@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 import os
 
 long_description = open("README.rst").read()
-install_requires = ['numpy>=1.16.1',
+install_requires = ['numpy>=1.18.5',
                     'quantities>=0.12.1']
 extras_require = {
     'igorproio': ['igor'],
@@ -46,6 +46,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3 :: Only',
         'Topic :: Scientific/Engineering']
 )
