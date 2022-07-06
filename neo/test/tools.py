@@ -189,6 +189,8 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                  the comparison
 
     '''
+    if isinstance(ob1, SpikeTrainList) and isinstance(ob2, list):  # for debugging occasional test failure
+        raise Exception("items={}\nspike_time_array={}\nlist length: {}".format(str(ob1._items), str(ob1._spike_time_array), len(ob2)))
     assert type(ob1) == type(ob2), 'type({}) != type({})'.format(type(ob1), type(ob2))
     classname = ob1.__class__.__name__
 
