@@ -189,6 +189,8 @@ class NlxHeader(OrderedDict):
             self['ApplicationName'] = 'Neuraview'
             app_version = '2'
 
+        if " Development" in app_version:
+            app_version = app_version.replace(" Development", ".dev0")
         self['ApplicationVersion'] = Version(app_version)
 
         # convert bit_to_microvolt
