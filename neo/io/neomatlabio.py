@@ -13,7 +13,6 @@ Author: sgarcia, Robert Pröpper
 """
 
 from datetime import datetime
-from distutils import version
 import re
 
 import numpy as np
@@ -21,13 +20,14 @@ import quantities as pq
 
 # check scipy
 try:
+    from packaging.version import Version
     import scipy.io
     import scipy.version
 except ImportError as err:
     HAVE_SCIPY = False
     SCIPY_ERR = err
 else:
-    if version.LooseVersion(scipy.version.version) < '0.12.0':
+    if Version(scipy.version.version) < Version('0.12.0'):
         HAVE_SCIPY = False
         SCIPY_ERR = ImportError("your scipy version is too old to support "
                                 + "MatlabIO, you need at least 0.12.0. "
