@@ -1,3 +1,8 @@
+"""
+This module implements :class:`FilterCondition`, which enables use of different filter conditions for
+neo.core.container.filter.
+"""
+
 
 class FilterCondition:
     """
