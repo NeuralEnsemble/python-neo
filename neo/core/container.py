@@ -78,26 +78,26 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
             for obj in data:
                 if (hasattr(obj, key) and getattr(obj, key) == value):
                     results.append(obj)
-                elif (isinstance(value, filters.FilterCondition)):
-                    if (key in obj.annotations and value.evaluate(obj.annotations[key])):
-                        results.append(obj)
-                elif key in obj.annotations and obj.annotations[key] == value:
+                if (isinstance(value, filters.FilterCondition)) and (
+                        key in obj.annotations and value.evaluate(obj.annotations[key])):
+                    results.append(obj)
+                if key in obj.annotations and obj.annotations[key] == value:
                     results.append(obj)
 
+    # remove duplicates from results
     res = []
-    for elem in results:
-        if all([elem is not tmp for tmp in res]):
-            res.append(elem)
+    [res.append(result) for result in results if not any([result is elem for elem in res])]
 
     # keep only objects of the correct classes
     if objects:
         res = [result for result in res if
-                   result.__class__ in objects or result.__class__.__name__ in objects]
+               result.__class__ in objects or result.__class__.__name__ in objects]
 
     if res and all(isinstance(obj, SpikeTrain) for obj in res):
         return SpikeTrainList(res)
     else:
         return res
+
 
 class Container(BaseNeo):
     """

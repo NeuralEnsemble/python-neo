@@ -8,7 +8,7 @@ class FilterCondition():
     """
 
     def __init__(self, z):
-        pass
+        self.control = z
 
     def evaluate(self, x):
         raise NotImplementedError()
@@ -17,7 +17,7 @@ class FilterCondition():
 class Equal(FilterCondition):
 
     def __init__(self, z):
-        self.control = z
+        super().__init__(z)
 
     def evaluate(self, x):
         return x == self.control
@@ -26,7 +26,7 @@ class Equal(FilterCondition):
 class IsNot(FilterCondition):
 
     def __init__(self, z):
-        self.control = z
+        super().__init__(z)
 
     def evaluate(self, x):
         return x != self.control
@@ -35,7 +35,7 @@ class IsNot(FilterCondition):
 class LessThanEqual(FilterCondition):
 
     def __init__(self, z):
-        self.control = z
+        super().__init__(z)
 
     def evaluate(self, x):
         return x <= self.control
@@ -43,7 +43,7 @@ class LessThanEqual(FilterCondition):
 
 class GreaterThanEqual(FilterCondition):
     def __init__(self, z):
-        self.control = z
+        super().__init__(z)
 
     def evaluate(self, x):
         return x >= self.control
@@ -52,7 +52,7 @@ class GreaterThanEqual(FilterCondition):
 class LessThan(FilterCondition):
 
     def __init__(self, z):
-        self.control = z
+        super().__init__(z)
 
     def evaluate(self, x):
         return x < self.control
@@ -61,7 +61,7 @@ class LessThan(FilterCondition):
 class GreaterThan(FilterCondition):
 
     def __init__(self, z):
-        self.control = z
+        super().__init__(z)
 
     def evaluate(self, x):
         return x > self.control
@@ -70,12 +70,12 @@ class GreaterThan(FilterCondition):
 class IsIn(FilterCondition):
 
     def __init__(self, z):
-        self.control = z
+        super().__init__(z)
 
     def evaluate(self, x):
-        if (type(self.control) == list):
+        if type(self.control) == list:
             return x in self.control
-        elif (type(self.control) == int):
+        elif type(self.control) == int:
             return x == self.control
         else:
             raise SyntaxError('parameter not of type list or int')
@@ -84,7 +84,7 @@ class IsIn(FilterCondition):
 class InRange(FilterCondition):
 
     def __init__(self, a, b, left_closed=False, right_closed=False):
-        if (type(a) != int or type(b) != int):
+        if type(a) != int or type(b) != int:
             raise SyntaxError("parameters not of type int")
         else:
             self.a = a
@@ -93,11 +93,11 @@ class InRange(FilterCondition):
             self.right_closed = right_closed
 
     def evaluate(self, x):
-        if (not self.left_closed and not self.right_closed):
-            return (x >= self.a and x <= self.b)
-        elif (not self.left_closed and self.right_closed):
-            return (x >= self.a and x < self.b)
-        elif (self.left_closed and not self.right_closed):
-            return (x > self.a and x <= self.b)
+        if not self.left_closed and not self.right_closed:
+            return self.a <= x <= self.b
+        elif not self.left_closed and self.right_closed:
+            return self.a <= x < self.b
+        elif self.left_closed and not self.right_closed:
+            return self.a < x <= self.b
         else:
-            return (x > self.a and x < self.b)
+            return self.a < x < self.b
