@@ -13,7 +13,7 @@ class FilterCondition:
     """
 
     def __init__(self, z):
-        self.control = z
+        pass
 
     def evaluate(self, x):
         raise NotImplementedError()
@@ -27,11 +27,17 @@ class Equal(FilterCondition):
 
 class IsNot(FilterCondition):
 
+    def __init__(self, z):
+        self.control = z
+
     def evaluate(self, x):
         return x != self.control
 
 
 class LessThanEqual(FilterCondition):
+
+    def __init__(self, z):
+        self.control = z
 
     def evaluate(self, x):
         return x <= self.control
@@ -39,11 +45,17 @@ class LessThanEqual(FilterCondition):
 
 class GreaterThanEqual(FilterCondition):
 
+    def __init__(self, z):
+        self.control = z
+
     def evaluate(self, x):
         return x >= self.control
 
 
 class LessThan(FilterCondition):
+
+    def __init__(self, z):
+        self.control = z
 
     def evaluate(self, x):
         return x < self.control
@@ -51,11 +63,17 @@ class LessThan(FilterCondition):
 
 class GreaterThan(FilterCondition):
 
+    def __init__(self, z):
+        self.control = z
+
     def evaluate(self, x):
         return x > self.control
 
 
 class IsIn(FilterCondition):
+
+    def __init__(self, z):
+        self.control = z
 
     def evaluate(self, x):
         if type(self.control) == list:
