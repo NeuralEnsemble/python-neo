@@ -86,21 +86,21 @@ class IsIn(FilterCondition):
 
 class InRange(FilterCondition):
 
-    def __init__(self, left_limit, right_limit, left_closed=False, right_closed=False):
-        if type(left_limit) != int or type(right_limit) != int:
+    def __init__(self, a, b, left_closed=False, right_closed=False):
+        if type(a) != int or type(b) != int:
             raise SyntaxError("parameters not of type int")
         else:
-            self.left_limit = left_limit
-            self.right_limit = right_limit
+            self.a = a
+            self.b = b
             self.left_closed = left_closed
             self.right_closed = right_closed
 
     def evaluate(self, x):
         if not self.left_closed and not self.right_closed:
-            return self.left_limit <= x <= self.right_limit
+            return self.a <= x <= self.b
         elif not self.left_closed and self.right_closed:
-            return self.left_limit <= x < self.right_limit
+            return self.a <= x < self.b
         elif self.left_closed and not self.right_closed:
-            return self.left_limit < x <= self.right_limit
+            return self.a < x <= self.b
         else:
-            return self.left_limit < x < self.right_limit
+            return self.a < x < self.b
