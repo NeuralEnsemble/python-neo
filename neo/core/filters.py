@@ -21,6 +21,9 @@ class FilterCondition:
 
 class Equal(FilterCondition):
 
+    def __init__(self, z):
+        self.control = z
+
     def evaluate(self, x):
         return x == self.control
 
