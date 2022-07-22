@@ -844,6 +844,6 @@ def pprint_vector(vector, lim=8):
         part2 = ' , '.join(e for e in vector[-lim // 2:])
         txt = f"[{part1} ... {part2}]"
     else:
-        part1 = ', '.join(e for e in vector[:lim // 2])
+        part1 = ', '.join(e for e in vector)
         txt = f"[{part1}]"
     return txt
