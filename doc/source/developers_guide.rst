@@ -38,7 +38,7 @@ a GitHub account and then set to watch the repository at `GitHub Repository`_
 Requirements
 ------------
 
-    * Python_ 3.5 or later
+    * Python_ 3.7 or later
     * numpy_ >= 1.11.0
     * quantities_ >= 0.12.1
     * nose_ >= 1.1.2 (for running tests)
@@ -193,7 +193,7 @@ open a pull request on GitHub
 Python version
 --------------
 
-Neo should work with Python 3.5 or newer. If you need support for Python 2.7,
+Neo should work with Python 3.7 or newer. If you need support for Python 2.7,
 use Neo v0.8.0 or earlier.
 
 
@@ -201,7 +201,7 @@ Coding standards and style
 --------------------------
 
 All code should conform as much as possible to `PEP 8`_, and should run with
-Python 3.5 or newer.
+Python 3.7 or newer.
 
 You can use the `pep8`_ program to check the code for PEP 8 conformity.
 You can also use `flake8`_, which combines pep8 and pyflakes.
