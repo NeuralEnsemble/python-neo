@@ -149,5 +149,5 @@ Using :class:`ChannelView` and :class:`Group`::
     block.groups.extend(units)
 
 
-Now each putative neuron is represented by a :class:`Group` containing the spiktrains of that neuron
+Now each putative neuron is represented by a :class:`Group` containing the spiketrains of that neuron
 and a view of the signal selecting only those channels from which the spikes were obtained.

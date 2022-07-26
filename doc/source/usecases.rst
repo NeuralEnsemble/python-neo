@@ -190,7 +190,7 @@ how you could iterate over the contained signals and extract spike times.
     # extract spike trains from all channels
     st_list = []
     for signal in seg.analogsignals:
-        # use a simple threshhold detector
+        # use a simple threshold detector
         spike_mask = np.where(np.min(signal.magnitude, axis=1) < -1.0)[0]
 
         # create a spike train
