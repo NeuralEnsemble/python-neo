@@ -63,7 +63,7 @@ An IO module can be based on a single file, a directory containing files, or a d
 This is described in the :attr:`mode` attribute of the IO class.
 
     >>> from neo.io import MyFormatIO
-    >>> print MyFormatIO.mode
+    >>> print(MyFormatIO.mode)
     'file'
 
 
@@ -105,7 +105,7 @@ The first element of the previous list is the highest level for reading the file
 All IOs have a read() method that returns a list of :class:`Block` objects (representing the whole content of the file)::
 
     >>> bl = reader.read()
-    >>> print bl[0].segments[0]
+    >>> print(bl[0].segments[0])
     neo.core.Segment
 
 
