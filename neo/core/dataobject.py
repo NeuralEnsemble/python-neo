@@ -124,7 +124,7 @@ def _normalize_array_annotations(value, length):
 
             # Check the first element for correctness
             # If its type is correct for annotations, all others are correct as well
-            # Note: Emtpy lists cannot reach this point
+            # Note: Empty lists cannot reach this point
             _check_single_elem(value[0])
 
     return value

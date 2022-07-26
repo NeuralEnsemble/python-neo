@@ -288,7 +288,7 @@ class AxonaRawIO(BaseRawIO):
         and three samples of 2 bytes each for 64 channels (384 bytes), which
         are jumbled up in a strange order. Each channel is remapped to a
         certain position (see get_channel_offset), and a channel's samples are
-        allcoated as follows (example for channel 7):
+        allocated as follows (example for channel 7):
 
         sample 1: 32b (head) + 2*38b (remappedID) and 2*38b + 1b (2nd byte)
         sample 2: 32b (head) + 128 (all chan. 1st entry) + 2*38b and ...

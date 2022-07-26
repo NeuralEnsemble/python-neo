@@ -2,7 +2,7 @@
 This module implements :class:`AnalogSignal`, an array of analog signals.
 
 :class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` which
-derives from :class:`BaseNeo`, and from :class:`quantites.Quantity`which
+derives from :class:`BaseNeo`, and from :class:`quantities.Quantity`which
 in turn inherits from :class:`numpy.array`.
 
 Inheritance from :class:`numpy.array` is explained here:

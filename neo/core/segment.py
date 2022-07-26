@@ -20,7 +20,7 @@ class Segment(Container):
     '''
     A container for data sharing a common time basis.
 
-    A :class:`Segment` is a heterogeneous container for discrete or continous
+    A :class:`Segment` is a heterogeneous container for discrete or continuous
     data sharing a common clock (time basis) but not necessary the same
     sampling rate, start or end time.
 

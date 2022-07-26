@@ -7,11 +7,11 @@ Note:
     If someone have some file in that new format we could also
     integrate it in neo
   * NeuroExplorer now provide there own python class for
-    reading/writting nex and nex5. This could be usefull
+    reading/writing nex and nex5. This could be useful
     for testing this class.
 
 Porting NeuroExplorerIO to NeuroExplorerRawIO have some
-limitation because in neuro explorer signals can differents sampling
+limitation because in neuro explorer signals can have different sampling
 rate and shape. So NeuroExplorerRawIO can read only one channel
 at once.
 
@@ -71,7 +71,7 @@ class NeuroExplorerRawIO(BaseRawIO):
             elif entity_header['type'] == 2:  # interval = Epoch
                 event_channels.append((name, _id, 'epoch'))
 
-            elif entity_header['type'] == 3:  # spiketrain and wavefoms
+            elif entity_header['type'] == 3:  # spiketrain and waveforms
                 wf_units = 'mV'
                 wf_gain = entity_header['ADtoMV']
                 wf_offset = entity_header['MVOffset']
@@ -107,7 +107,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        # each signal channel have a dierent groups that force reading
+        # each signal channel has different groups that force reading
         # them one by one
         sig_channels['stream_id'] = np.arange(sig_channels.size).astype('U')
         signal_streams = np.zeros(sig_channels.size, dtype=_signal_stream_dtype)

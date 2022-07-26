@@ -23,7 +23,7 @@ Note:
 
 
 # Not implemented yet in this reader:
-  * contact SpkeGLX developer to see how to deal with absolut t_start when several segment
+  * contact SpkeGLX developer to see how to deal with absolute t_start when several segment
   * contact SpkeGLX developer to understand the last channel SY0 function
   * better handling of annotations at object level by sub group of device (after rawio change)
   * better handling of channel location
@@ -285,7 +285,7 @@ def extract_stream_info(meta_file, meta):
     # Example file name structure:
     # Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
     # The filenames consist of 3 or 4 parts separated by `.`
-    # 1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user
+    # 1. "Noise4Sam_g0_t0" will be the `name` variable. This is chosen by the user
     #    at recording time.
     # 2. "_gt0_" will give the `seg_index` (here 0)
     # 3. "nidq" or "imec0" will give the `device` variable
