@@ -145,25 +145,22 @@ class Segment(Container):
         Creates a time slice of a Segment containing slices of all child
         objects.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         t_start: Quantity
             Starting time of the sliced time window.
         t_stop: Quantity
             Stop time of the sliced time window.
-        reset_time: bool
+        reset_time: bool, optional, default: False
             If True the time stamps of all sliced objects are set to fall
             in the range from t_start to t_stop.
             If False, original time stamps are retained.
-            Default is False.
-
-        Keyword Arguments:
-        ------------------
+        **kwargs
             Additional keyword arguments used for initialization of the sliced
             Segment object.
 
-        Returns:
-        --------
+        Returns
+        -------
         subseg: Segment
             Temporal slice of the original Segment from t_start to t_stop.
         """

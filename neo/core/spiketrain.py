@@ -640,13 +640,13 @@ class SpikeTrain(DataObject):
         """
         Shifts a :class:`SpikeTrain` to start at a new time.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         t_shift: Quantity (time)
             Amount of time by which to shift the :class:`SpikeTrain`.
 
-        Returns:
-        --------
+        Returns
+        -------
         spiketrain: :class:`SpikeTrain`
             New instance of a :class:`SpikeTrain` object starting at t_shift later than the
             original :class:`SpikeTrain` (the original :class:`SpikeTrain` is not modified).

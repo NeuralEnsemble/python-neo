@@ -3811,8 +3811,10 @@ class ElphyIO(BaseIO):
         """
         Return :class:`Block`.
 
-        Parameters:
-             lazy : postpone actual reading of the file.
+        Parameters
+        ----------
+        lazy : bool
+            Postpone actual reading of the file.
         """
         assert not lazy, 'Do not support lazy'
 
@@ -4211,9 +4213,11 @@ class ElphyIO(BaseIO):
     def read_segment(self, episode):
         """
         Internal method used to return :class:`Segment` data to the main read method.
-        Parameters:
-            elphy_file : is the elphy object.
-            episode : number of elphy episode, roughly corresponding to a segment
+
+        Parameters
+        ----------
+        episode : int
+            Number of elphy episode, roughly corresponding to a segment
         """
         # print "name:",self.elphy_file.layout.get_episode_name(episode)
         episode_name = self.elphy_file.layout.get_episode_name(episode)
@@ -4254,10 +4258,12 @@ class ElphyIO(BaseIO):
         Internal method used to return a list of elphy :class:`EventArray` acquired from event
         channels.
 
-        Parameters:
-            elphy_file : is the elphy object.
-            episode : number of elphy episode, roughly corresponding to a segment.
-            evt : index of the event.
+        Parameters
+        ----------
+        episode : int
+            Number of elphy episode, roughly corresponding to a segment.
+        evt : int
+            Index of the event.
         """
         event = self.elphy_file.get_event(episode, evt)
         neo_event = Event(
@@ -4270,10 +4276,12 @@ class ElphyIO(BaseIO):
         """
         Internal method used to return an elphy object :class:`SpikeTrain`.
 
-        Parameters:
-            elphy_file : is the elphy object.
-            episode : number of elphy episode, roughly corresponding to a segment.
-            spk : index of the spike array.
+        Parameters
+        ----------
+        episode : int
+            Number of elphy episode, roughly corresponding to a segment.
+        spk : int
+            Index of the spike array.
         """
         block = self.elphy_file.layout.episode_block(episode)
         spike = self.elphy_file.get_spiketrain(episode, spk)

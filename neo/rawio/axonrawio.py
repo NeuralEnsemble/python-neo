@@ -305,8 +305,10 @@ class AxonRawIO(BaseRawIO):
         function works with ABF2 only. Protocols can be reconstructed
         from the ABF1 header.
 
-        Returns: list of segments (one for every episode)
-                 with list of analog signals (one for every DAC).
+        Returns
+        -------
+        segments : list of segments
+            Segments, one for every episode, with list of analog signls (one for every DAC).
 
         Author:  JS Nowacki
         """

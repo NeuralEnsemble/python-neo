@@ -318,13 +318,13 @@ class Epoch(DataObject):
         """
         Shifts an :class:`Epoch` by an amount of time.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         t_shift: Quantity (time)
             Amount of time by which to shift the :class:`Epoch`.
 
-        Returns:
-        --------
+        Returns
+        -------
         epoch: :class:`Epoch`
             New instance of an :class:`Epoch` object starting at t_shift later than the
             original :class:`Epoch` (the original :class:`Epoch` is not modified).

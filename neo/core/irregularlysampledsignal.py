@@ -356,14 +356,14 @@ class IrregularlySampledSignal(BaseSignal):
         arguments, except for specifying the axis of resampling which is fixed to the first axis
         here, and the sample positions. .
 
-        Parameters:
-        -----------
-        sample_count: integer
+        Parameters
+        ----------
+        sample_count: int
             Number of desired samples. The resulting signal starts at the same sample as the
             original and is sampled regularly.
 
-        Returns:
-        --------
+        Returns
+        -------
         resampled_signal: :class:`AnalogSignal`
             New instance of a :class:`AnalogSignal` object containing the resampled data points.
             The original :class:`AnalogSignal` is not modified.
@@ -431,13 +431,13 @@ class IrregularlySampledSignal(BaseSignal):
         """
         Shifts a :class:`IrregularlySampledSignal` to start at a new time.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         t_shift: Quantity (time)
             Amount of time by which to shift the :class:`IrregularlySampledSignal`.
 
-        Returns:
-        --------
+        Returns
+        -------
         new_sig: :class:`SpikeTrain`
             New instance of a :class:`IrregularlySampledSignal` object
             starting at t_shift later than the original :class:`IrregularlySampledSignal`

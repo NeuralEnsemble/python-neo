@@ -46,8 +46,8 @@ def download_dataset(repo=default_testing_repo, remote_path=None,
         The local folder where to download the data.
         If None, a default project testing folder is used. Default: None
 
-    Returns:
-    --------
+    Returns
+    -------
     local_path:
         The local path of the downloaded file or folder
     """
