@@ -76,7 +76,7 @@ class MaxwellRawIO(BaseRawIO):
                 if len(rec_names) > 1:
                     if self.rec_name is None:
                         raise ValueError("Detected multiple recordings. Please select a "
-                                         "single recording using the `rec_name` paramter. "
+                                         "single recording using the `rec_name` parameter. "
                                          f"Possible rec_name {rec_names}")
                 else:
                     self.rec_name = rec_names[0]
@@ -228,7 +228,7 @@ This is a big pain for the end user.
 You, as a end user, should ask Maxwell company to change this.
 Please visit this page and install the missing decompression libraries:
 https://share.mxwbio.com/d/4742248b2e674a85be97/
-Then, link the decompression library by setting the `HDF5_PLUGIN_PATH` to your 
+Then, link the decompression library by setting the `HDF5_PLUGIN_PATH` to your
 installation location, e.g. via
 os.environ['HDF5_PLUGIN_PATH'] = '/path/to/cutum/hdf5/plugin/'
 

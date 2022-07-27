@@ -99,7 +99,7 @@ class PlexonRawIO(BaseRawIO):
                                 2 ** 32 + bl_header['TimeStamp']
 
         # ... and finalize them in self._data_blocks
-        # for a faster acces depending on type (1, 4, 5)
+        # for a faster access depending on type (1, 4, 5)
         self._data_blocks = {}
         dt_base = [('pos', 'int64'), ('timestamp', 'int64'), ('size', 'int64')]
         dtype_by_bltype = {
@@ -135,7 +135,7 @@ class PlexonRawIO(BaseRawIO):
                     data_block['label'] = bl_header['Unit']
                 elif bl_type == 5:  # Signals
                     if data_block.size > 0:
-                        # cumulative some of sample index for fast acces to chunks
+                        # cumulative some of sample index for fast access to chunks
                         data_block['cumsum'][0] = 0
                         data_block['cumsum'][1:] = np.cumsum(data_block['size'][:-1]) // 2
 
@@ -154,7 +154,7 @@ class PlexonRawIO(BaseRawIO):
             all_sig_length.append(length)
             sampling_rate = float(h['ADFreq'])
             sig_dtype = 'int16'
-            units = ''  # I dont't knwon units
+            units = ''  # I don't know units
             if global_header['Version'] in [100, 101]:
                 gain = 5000. / (2048 * h['Gain'] * 1000.)
             elif global_header['Version'] in [102]:
@@ -174,7 +174,7 @@ class PlexonRawIO(BaseRawIO):
             signal_streams = np.array([], dtype=_signal_stream_dtype)
 
         else:
-            # detect grousp (aka streams)
+            # detect groups (aka streams)
             all_sig_length = all_sig_length = np.array(all_sig_length)
             groups = set(zip(sig_channels['sampling_rate'], all_sig_length))
 
@@ -305,7 +305,7 @@ class PlexonRawIO(BaseRawIO):
                 data = self._memmap[ind0:ind1].view('int16')
                 if bl == bl1 - 1:
                     # right border
-                    # be carfull that bl could be both bl0 and bl1!!
+                    # be careful that bl could be both bl0 and bl1!!
                     border = data.size - (i_stop - data_blocks[bl]['cumsum'])
                     data = data[:-border]
                 if bl == bl0:

@@ -272,7 +272,7 @@ class ExampleRawIO(BaseRawIO):
         # limited with i_start/i_stop (can be None)
         # channel_indexes can be None (=all channel in the stream) or a list or numpy.array
         # This must return a numpy array 2D (even with one channel).
-        # This must return the orignal dtype. No conversion here.
+        # This must return the original dtype. No conversion here.
         # This must as fast as possible.
         # To speed up this call all preparatory calculations should be implemented
         # in _parse_header().
@@ -280,7 +280,7 @@ class ExampleRawIO(BaseRawIO):
         # Here we are lucky:  our signals is always zeros!!
         # it is not always the case :)
         # internally signals are int16
-        # convertion to real units is done with self.header['signal_channels']
+        # conversion to real units is done with self.header['signal_channels']
 
         if i_start is None:
             i_start = 0
@@ -327,7 +327,7 @@ class ExampleRawIO(BaseRawIO):
         spike_timestamps = np.arange(0, 10000, 500) + ts_start
 
         if t_start is not None or t_stop is not None:
-            # restricte spikes to given limits (in seconds)
+            # restrict spikes to given limits (in seconds)
             lim0 = int(t_start * 10000)
             lim1 = int(t_stop * 10000)
             mask = (spike_timestamps >= lim0) & (spike_timestamps <= lim1)
@@ -337,7 +337,7 @@ class ExampleRawIO(BaseRawIO):
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         # must rescale to second a particular spike_timestamps
-        # with a fixed dtype so the user can choose the precisino he want.
+        # with a fixed dtype so the user can choose the precision he want.
         spike_times = spike_timestamps.astype(dtype)
         spike_times /= 10000.  # because 10kHz
         return spike_times
@@ -354,7 +354,7 @@ class ExampleRawIO(BaseRawIO):
 
         # In our IO waveforms come from all channels
         # they are int16
-        # convertion to real units is done with self.header['spike_channels']
+        # conversion to real units is done with self.header['spike_channels']
         # Here, we have a realistic case: all waveforms are only noise.
         # it is not always the case
         # we 20 spikes with a sweep of 50 (5ms)
@@ -412,7 +412,7 @@ class ExampleRawIO(BaseRawIO):
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         # must rescale to second a particular event_timestamps
-        # with a fixed dtype so the user can choose the precisino he want.
+        # with a fixed dtype so the user can choose the precision he want.
 
         # really easy here because in our case it is already seconds
         event_times = event_timestamps.astype(dtype)

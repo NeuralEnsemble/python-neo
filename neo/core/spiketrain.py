@@ -2,7 +2,7 @@
 This module implements :class:`SpikeTrain`, an array of spike times.
 
 :class:`SpikeTrain` derives from :class:`BaseNeo`, from
-:module:`neo.core.baseneo`, and from :class:`quantites.Quantity`, which
+:module:`neo.core.baseneo`, and from :class:`quantities.Quantity`, which
 inherits from :class:`numpy.array`.
 
 Inheritance from :class:`numpy.array` is explained here:
@@ -261,13 +261,13 @@ class SpikeTrain(DataObject):
                 t_start=0.0 * pq.s, waveforms=None, left_sweep=None, name=None, file_origin=None,
                 description=None, array_annotations=None, **annotations):
         '''
-        Constructs a new :clas:`Spiketrain` instance from data.
+        Constructs a new :class:`Spiketrain` instance from data.
 
         This is called whenever a new :class:`SpikeTrain` is created from the
         constructor, but not when slicing.
         '''
         if len(times) != 0 and waveforms is not None and len(times) != waveforms.shape[0]:
-            # len(times)!=0 has been used to workaround a bug occuring during neo import
+            # len(times)!=0 has been used to workaround a bug occurring during neo import
             raise ValueError("the number of waveforms should be equal to the number of spikes")
 
         if dtype is not None and hasattr(times, 'dtype') and times.dtype != dtype:
@@ -382,7 +382,7 @@ class SpikeTrain(DataObject):
         constructor, and these are set in __new__. Then they are just
         copied over here.
 
-        Note that the :attr:`waveforms` attibute is not sliced here. Nor is
+        Note that the :attr:`waveforms` attribute is not sliced here. Nor is
         :attr:`t_start` or :attr:`t_stop` modified.
         '''
         # This calls Quantity.__array_finalize__ which deals with
@@ -640,13 +640,13 @@ class SpikeTrain(DataObject):
         """
         Shifts a :class:`SpikeTrain` to start at a new time.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         t_shift: Quantity (time)
             Amount of time by which to shift the :class:`SpikeTrain`.
 
-        Returns:
-        --------
+        Returns
+        -------
         spiketrain: :class:`SpikeTrain`
             New instance of a :class:`SpikeTrain` object starting at t_shift later than the
             original :class:`SpikeTrain` (the original :class:`SpikeTrain` is not modified).

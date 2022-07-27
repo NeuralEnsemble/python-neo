@@ -59,7 +59,7 @@ class OpenEphysRawIO(BaseRawIO):
         Instead it will raise an error.
 
     Special cases:
-      * Normaly all continuous files have the same first timestamp and length. In situations
+      * Normally all continuous files have the same first timestamp and length. In situations
         where it is not the case all files are clipped to the smallest one so that they are all
         aligned,
         and a warning is emitted.
@@ -127,7 +127,7 @@ class OpenEphysRawIO(BaseRawIO):
                     signal_channels.append((ch_name, chan_id, chan_info['sampleRate'],
                                 'int16', units, chan_info['bitVolts'], 0., processor_id))
 
-            # In some cases, continuous do not have the same lentgh because
+            # In some cases, continuous do not have the same length because
             # one record block is missing when the "OE GUI is freezing"
             # So we need to clip to the smallest files
             if not all(all_sigs_length[0] == e for e in all_sigs_length) or\
@@ -156,7 +156,7 @@ class OpenEphysRawIO(BaseRawIO):
                     all_first_timestamps.append(data_chan[0]['timestamp'])
                     all_last_timestamps.append(data_chan[-1]['timestamp'])
 
-            # check that all signals have the same lentgh and timestamp0 for this segment
+            # check that all signals have the same length and timestamp0 for this segment
             assert all(all_sigs_length[0] == e for e in all_sigs_length),\
                        'Not all signals have the same length'
             assert all(all_first_timestamps[0] == e for e in all_first_timestamps),\
@@ -224,7 +224,7 @@ class OpenEphysRawIO(BaseRawIO):
                     all_sorted_ids += np.unique(data_spike['sorted_id']).tolist()
                 all_sorted_ids = np.unique(all_sorted_ids)
 
-                # supose all channel have the same gain
+                # suppose all channels have the same gain
                 wf_units = 'uV'
                 wf_gain = 1000. / data_spike[0]['gains'][0]
                 wf_offset = - (2**15) * wf_gain
@@ -271,7 +271,7 @@ class OpenEphysRawIO(BaseRawIO):
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
-        # Annotate some objects from coninuous files
+        # Annotate some objects from continuous files
         self._generate_minimal_annotations()
         bl_ann = self.raw_annotations['blocks'][0]
         for seg_index, oe_index in enumerate(oe_indices):
@@ -285,7 +285,7 @@ class OpenEphysRawIO(BaseRawIO):
                 seg_ann['openephys_segment_index'] = oe_index + 1
 
     def _segment_t_start(self, block_index, seg_index):
-        # segment start/stop are difine by  continuous channels
+        # segment start/stop are defined by continuous channels
         return self._sig_timestamp0[seg_index] / self._sig_sampling_rate
 
     def _segment_t_stop(self, block_index, seg_index):
@@ -380,7 +380,7 @@ class OpenEphysRawIO(BaseRawIO):
         subdata = self._events_memmap[seg_index][keep]
         timestamps = subdata['timestamp']
         # question what is the label????
-        # here I put a combinaison
+        # here I put a combination
         labels = np.array(['{}#{}#{}'.format(int(d['event_type']),
                                              int(d['processor_id']),
                                              int(d['chan_id']))
@@ -426,7 +426,7 @@ def make_spikes_dtype(filename):
     See documentation of file format.
     """
 
-    # strangly the header do not have the sample size
+    # strangely the header do not have the sample size
     # So this do not work (too bad):
     # spike_info = read_file_header(filename)
     # N = spike_info['num_channels']
@@ -457,7 +457,7 @@ def make_spikes_dtype(filename):
 
 def explore_folder(dirname):
     """
-    This explores a folder and dispatch coninuous, event and spikes
+    This explores a folder and dispatch continuous, event and spikes
     files by segment (aka recording session).
 
     The number of segments is checked with these rules

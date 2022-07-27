@@ -552,7 +552,7 @@ class NeuralynxRawIO(BaseRawIO):
         """
         Retrieve chunk of analog signal, a chunk being a set of contiguous samples.
 
-        PARAMETERS
+        Parameters
         ----------
         block_index:
             index of block in dataset, ignored as only 1 block in this implementation
@@ -565,7 +565,7 @@ class NeuralynxRawIO(BaseRawIO):
         channel_indexes:
             list of channel indices to return data for
 
-        RETURNS
+        Returns
         -------
             array of samples, with each requested channel in a column
         """
@@ -727,12 +727,13 @@ class NeuralynxRawIO(BaseRawIO):
         Ncs files have to have common sampling_rate, number of packets and t_start
         (be part of a single stream)
 
-        PARAMETERS:
-        ------
-        ncs_filenames - list of ncs filenames to scan.
+        Parameters
+        ----------
+        ncs_filenames: list
+            List of ncs filenames to scan.
 
-        RETURNS:
-        ------
+        Returns
+        -------
         memmaps
             [ {} for seg_index in range(self._nb_segment) ][chan_uid]
         seg_time_limits

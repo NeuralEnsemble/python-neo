@@ -173,15 +173,21 @@ def key_value_string_parser(itemsep=";", kvsep=":"):
     """
     Parses a string into a dict.
 
-    Arguments:
-        itemsep - character which separates items
-        kvsep - character which separates the key and value within an item
+    Parameters
+    ----------
+    itemsep : str
+        Character which separates items
+    kvsep : str
+        Character which separates the key and value within an item
 
-    Returns:
+    Returns
+    -------
+    callable
         a function which takes the string to be parsed as the sole argument
         and returns a dict.
 
-    Example:
+    Examples
+    --------
 
         >>> parse = key_value_string_parser(itemsep=";", kvsep=":")
         >>> parse("a:2;b:3")
