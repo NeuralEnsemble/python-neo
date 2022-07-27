@@ -11,7 +11,7 @@ writing to a subset of these formats plus non-proprietary formats including Kwik
 The goal of Neo is to improve interoperability between Python tools for
 analyzing, visualizing and generating electrophysiology data, by providing a common,
 shared object model. In order to be as lightweight a dependency as possible,
-Neo is deliberately limited to represention of data, with no functions for data
+Neo is deliberately limited to representation of data, with no functions for data
 analysis or visualization.
 
 Neo is used by a number of other software tools, including
@@ -53,7 +53,7 @@ Documentation
 License
 -------
 
-Neo is free software, distributed under a 3-clause Revised BSD licence (BSD-3-Clause).
+Neo is free software, distributed under a 3-clause Revised BSD license (BSD-3-Clause).
 
 
 Support
