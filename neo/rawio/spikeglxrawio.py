@@ -256,7 +256,7 @@ def scan_files(dirname):
                 info['meta_file'] = str(meta_filename)
                 info['bin_file'] = str(bin_filename)
                 info_list.append(info)
-            
+
             # Let see if this will be anoying or not.
             if bin_filename.stat().st_size != meta['fileSizeBytes']:
                 warnings.warn('.meta file has faulty value for .bin file size on disc')
