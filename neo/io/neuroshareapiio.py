@@ -181,11 +181,14 @@ class NeuroshareapiIO(BaseIO):
         Return a Segment containing all analog and spike channels, as well as
         all trigger events.
 
-        Parameters:
-            segment_duration :is the size in secend of the segment.
-            num_analogsignal : number of AnalogSignal in this segment
-            num_spiketrain : number of SpikeTrain in this segment
-
+        Parameters
+        ----------
+        segment_duration : float
+            The size in seconds of the segment.
+        num_analogsignal : int
+            Number of AnalogSignal in this segment.
+        num_spiketrain : int
+            Number of SpikeTrain in this segment.
         """
         assert not lazy, 'Do not support lazy'
 

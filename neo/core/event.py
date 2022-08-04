@@ -287,13 +287,13 @@ class Event(DataObject):
         """
         Shifts an :class:`Event` by an amount of time.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         t_shift: Quantity (time)
             Amount of time by which to shift the :class:`Event`.
 
-        Returns:
-        --------
+        Returns
+        -------
         epoch: Event
             New instance of an :class:`Event` object starting at t_shift later than the
             original :class:`Event` (the original :class:`Event` is not modified).

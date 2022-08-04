@@ -26,7 +26,7 @@ from collections import OrderedDict
 import itertools
 from uuid import uuid4
 import warnings
-from distutils.version import LooseVersion as Version
+from packaging.version import Version
 from itertools import chain
 
 import quantities as pq

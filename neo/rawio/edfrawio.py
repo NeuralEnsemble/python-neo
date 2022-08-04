@@ -198,7 +198,7 @@ class EDFRawIO(BaseRawIO):
             data.append(buffer)
 
         # downgrade to int16 as this is what is used in the edf file format
-        # use fortran (column major) order to be more efficient after transposal
+        # use fortran (column major) order to be more efficient after transposing
         data = np.asarray(data, dtype=np.int16, order='F')
 
         # use dimensions (time, channel)

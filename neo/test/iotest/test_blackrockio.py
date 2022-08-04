@@ -18,14 +18,14 @@ from neo.test.rawiotest.test_blackrockrawio import TestBlackrockRawIO
 
 # check scipy
 try:
-    from distutils import version
+    from packaging.version import Version
     import scipy.io
     import scipy.version
 except ImportError as err:
     HAVE_SCIPY = False
     SCIPY_ERR = err
 else:
-    if version.LooseVersion(scipy.version.version) < '0.8':
+    if Version(scipy.version.version) < Version('0.8'):
         HAVE_SCIPY = False
         SCIPY_ERR = ImportError("your scipy version is too old to support " +
                                 "MatlabIO, you need at least 0.8. " +

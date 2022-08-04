@@ -95,7 +95,8 @@ class KwikIO(BaseIO):
         """
         Reads a block with segments and groups
 
-        Parameters:
+        Parameters
+        ----------
         get_waveforms: bool, default = False
             Wether or not to get the waveforms
         get_raw_data: bool, default = False
@@ -152,7 +153,8 @@ class KwikIO(BaseIO):
         """
         Reads analogsignals
 
-        Parameters:
+        Parameters
+        ----------
         units: str, default = "uV"
             SI units of the raw trace according to voltage_gain given to klusta
         """
@@ -172,7 +174,8 @@ class KwikIO(BaseIO):
         """
         Reads sorted spiketrains
 
-        Parameters:
+        Parameters
+        ----------
         get_waveforms: bool, default = False
             Wether or not to get the waveforms
         cluster_id: int,

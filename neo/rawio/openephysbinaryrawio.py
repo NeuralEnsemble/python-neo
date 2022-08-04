@@ -53,7 +53,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
         event_stream_names = sorted(list(all_streams[0][0]['events'].keys()))
 
-        # first loop to reasign stream by "stream_index" instead of "stream_name"
+        # first loop to reassign stream by "stream_index" instead of "stream_name"
         self._sig_streams = {}
         self._evt_streams = {}
         for block_index in range(nb_block):
@@ -318,10 +318,10 @@ def explore_folder(dirname):
     - block_index is the neo Block index
     - segment_index is the neo Segment index
     - stream_type can be 'continuous'/'events'/'spikes'
-    - stream_information is a dictionionary containing e.g. the sampling rate
+    - stream_information is a dictionary containing e.g. the sampling rate
 
-    Parmeters
-    ---------
+    Parameters
+    ----------
     dirname (str): Root folder of the dataset
 
     Returns

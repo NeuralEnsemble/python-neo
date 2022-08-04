@@ -4,7 +4,7 @@ Support for intan tech rhd  and rhs files.
 
 This 2 formats are more or less the same but:
   * some variance in headers.
-  * rhs amplifier is more complexe because the optional DC channel
+  * rhs amplifier is more complex because the optional DC channel
 
 RHS supported version 1.0
 RHD supported version  1.0 1.1 1.2 1.3 2.0
@@ -22,7 +22,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 import numpy as np
 from collections import OrderedDict
-from distutils.version import LooseVersion as V
+from packaging.version import Version as V
 
 
 class IntanRawIO(BaseRawIO):
@@ -428,20 +428,20 @@ def read_rhd(filename):
 
         version = V('{major_version}.{minor_version}'.format(**global_info))
 
-        # the header size depend on the version :-(
+        # the header size depends on the version :-(
         header = list(rhd_global_header_part1)  # make a copy
 
-        if version >= '1.1':
+        if version >= V('1.1'):
             header = header + rhd_global_header_v11
         else:
             global_info['num_temp_sensor_channels'] = 0
 
-        if version >= '1.3':
+        if version >= V('1.3'):
             header = header + rhd_global_header_v13
         else:
             global_info['eval_board_mode'] = 0
 
-        if version >= '2.0':
+        if version >= V('2.0'):
             header = header + rhd_global_header_v20
         else:
             global_info['reference_channel'] = ''
@@ -466,14 +466,14 @@ def read_rhd(filename):
     sr = global_info['sampling_rate']
 
     # construct the data block dtype and reorder channels
-    if version >= '2.0':
+    if version >= V('2.0'):
         BLOCK_SIZE = 128
     else:
         BLOCK_SIZE = 60  # 256 channels
 
     ordered_channels = []
 
-    if version >= '1.2':
+    if version >= V('1.2'):
         data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
     else:
         data_dtype = [('timestamp', 'uint32', BLOCK_SIZE)]

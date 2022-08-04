@@ -14,14 +14,14 @@
 import os
 import sys
 
-from distutils.version import LooseVersion
+from packaging.version import Version
 
 with open("../../neo/version.py") as fp:
     d = {}
     exec(fp.read(), d)
     neo_release = d['version']
 
-neo_version = '.'.join(str(e) for e in LooseVersion(neo_release).version[:2])
+neo_version = '.'.join((str(e) for e in Version(neo_release).release[:2]))
 
 
 AUTHORS = 'Neo authors and contributors <neuralensemble@googlegroups.com>'

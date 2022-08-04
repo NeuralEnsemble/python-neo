@@ -18,8 +18,8 @@ def get_events(container, **properties):
     This function returns a list of Event objects, corresponding to given
     key-value pairs in the attributes or annotations of the Event.
 
-    Parameter:
-    ---------
+    Parameters
+    ----------
     container: Block or Segment
         The Block or Segment object to extract data from.
 
@@ -43,12 +43,12 @@ def get_events(container, **properties):
     If no keyword arguments is passed, all Event Objects will
     be returned in a list.
 
-    Returns:
-    --------
+    Returns
+    -------
     events: list
         A list of Event objects matching the given criteria.
 
-    Example:
+    Examples
     --------
         >>> import neo
         >>> from neo.utils import get_events
@@ -90,8 +90,8 @@ def get_epochs(container, **properties):
     This function returns a list of Epoch objects, corresponding to given
     key-value pairs in the attributes or annotations of the Epoch.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     container: Block or Segment
         The Block or Segment object to extract data from.
 
@@ -115,12 +115,12 @@ def get_epochs(container, **properties):
     If no keyword arguments is passed, all Epoch Objects will
     be returned in a list.
 
-    Returns:
-    --------
+    Returns
+    -------
     epochs: list
         A list of Epoch objects matching the given criteria.
 
-    Example:
+    Examples
     --------
         >>> import neo
         >>> from neo.utils import get_epochs
@@ -193,8 +193,8 @@ def _filter_event_epoch(obj, annotation_key, annotation_value):
     contains attributes or annotations corresponding to requested key-value
     pairs.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     obj : Event
         The Event or Epoch object to modify.
     annotation_key : string, int or float
@@ -206,8 +206,8 @@ def _filter_event_epoch(obj, annotation_key, annotation_value):
         annotation value. The entry of obj is kept if the attribute or
         annotation is equal or contained in annotation_value.
 
-    Returns:
-    --------
+    Returns
+    -------
     obj : Event or Epoch
         The Event or Epoch object with every event or epoch removed that does
         not match the filter criteria (i.e., where none of the entries in
@@ -272,8 +272,8 @@ def add_epoch(
     before the and after the event(s). Additional keywords will be directly
     forwarded to the Epoch intialization.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     segment : Segment
         The segment in which the final Epoch object is added.
     event1 : Event
@@ -291,18 +291,16 @@ def add_epoch(
         event1 times to 25 ms after event2 times
     attach_result: bool
         If True, the resulting Epoch object is added to segment.
+    **kwargs
+        Additional keyword arguments passed to the Epoch object.
 
-    Keyword Arguments:
-    ------------------
-    Passed to the Epoch object.
-
-    Returns:
-    --------
+    Returns
+    -------
     epoch: Epoch
         An Epoch object with the calculated epochs (one per entry in event1).
 
-    See also:
-    ---------
+    See also
+    --------
     Event.to_epoch()
     """
     if event2 is None:
@@ -365,13 +363,13 @@ def match_events(event1, event2):
     Returns filtered two events of identical length, which contain matched
     entries.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     event1, event2: Event
         The two Event objects to match up.
 
-    Returns:
-    --------
+    Returns
+    -------
     event1, event2: Event
         Event objects with identical number of events, containing only those
         events that could be matched against each other. A warning is issued if
@@ -468,9 +466,10 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         If False, original time stamps are retained.
         Default is False.
 
-    Returns:
-    --------
-    None
+    Returns
+    -------
+    new_block : Block
+        Updated block.
     """
     if not isinstance(block, neo.Block):
         raise TypeError(
@@ -525,8 +524,8 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
         If False, original time stamps are retained.
         Default is False.
 
-    Returns:
-    --------
+    Returns
+    -------
     segments: list of Segments
         Per epoch in the input, a Segment with AnalogSignal and/or
         SpikeTrain Objects will be generated and returned. Each Segment will
@@ -568,8 +567,8 @@ def clean_annotations(dictionary):
     dictionary: dict
         annotation dictionary to be cleaned
 
-    Returns:
-    --------
+    Returns
+    -------
     dict
         A cleaned version of the annotations
     """
@@ -593,8 +592,8 @@ def is_block_rawio_compatible(block, return_problems=False):
     return_problems: bool (False by default)
         Controls whether a list of str that describe problems is also provided as return value
 
-    Returns:
-    --------
+    Returns
+    -------
     is_rawio_compatible: bool
         Compatible or not.
     problems: list of str

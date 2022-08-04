@@ -25,13 +25,13 @@ to a more standard format when you want to share/collaborate.
 Introduction
 ============
 
-There is an intrinsic structure in the different Neo objects, that could be seen as a hierachy with cross-links. See :doc:`core`.
+There is an intrinsic structure in the different Neo objects, that could be seen as a hierarchy with cross-links. See :doc:`core`.
 The highest level object is the :class:`Block` object, which is the high level container able to encapsulate all the others.
 
 A :class:`Block` has therefore a list of :class:`Segment` objects, that can, in some file formats, be accessed individually.
 Depending on the file format, i.e. if it is streamable or not, the whole :class:`Block` may need to be loaded, but sometimes
 particular :class:`Segment` objects can be accessed individually.
-Within a :class:`Segment`, the same hierarchical organisation applies.
+Within a :class:`Segment`, the same hierarchical organization applies.
 A :class:`Segment` embeds several objects, such as :class:`SpikeTrain`,
 :class:`AnalogSignal`, :class:`IrregularlySampledSignal`, :class:`Epoch`, :class:`Event`
 (basically, all the different Neo objects).
@@ -63,7 +63,7 @@ An IO module can be based on a single file, a directory containing files, or a d
 This is described in the :attr:`mode` attribute of the IO class.
 
     >>> from neo.io import MyFormatIO
-    >>> print MyFormatIO.mode
+    >>> print(MyFormatIO.mode)
     'file'
 
 
@@ -105,7 +105,7 @@ The first element of the previous list is the highest level for reading the file
 All IOs have a read() method that returns a list of :class:`Block` objects (representing the whole content of the file)::
 
     >>> bl = reader.read()
-    >>> print bl[0].segments[0]
+    >>> print(bl[0].segments[0])
     neo.core.Segment
 
 
@@ -114,7 +114,7 @@ Read a time slice of Segment
 
 Some objects support the ``time_slice`` argument in ``read_segment()``.
 This is useful to read only a subset of a dataset clipped in time.
-By default  ``time_slice=None`` meaning load eveything.
+By default  ``time_slice=None`` meaning load everything.
 
 This reads everything::
 
@@ -132,7 +132,7 @@ Lazy option and proxy objects
 
 In some cases you may not want to load everything in memory because it could be too big.
 For this scenario, some IOs implement ``lazy=True/False``.
-Since neo 0.7, a new lazy sytem have been added for some IO modules (all IO classes that inherit from rawio).
+Since neo 0.7, a new lazy system has been added for some IO modules (all IO classes that inherit from rawio).
 To know if a class supports lazy mode use ``ClassIO.support_lazy``.
 
 With ``lazy=True`` all data objects (AnalogSignal/SpikeTrain/Event/Epoch) are replaced by
@@ -197,7 +197,7 @@ The :mod:`neo.io` API is designed to be simple and intuitive:
     - each file format has an IO class (for example for Spike2 files you have a :class:`Spike2IO` class).
     - each IO class inherits from the :class:`BaseIO` class.
     - each IO class can read or write directly one or several Neo objects (for example :class:`Segment`, :class:`Block`, ...): see the :attr:`readable_objects` and :attr:`writable_objects` attributes of the IO class.
-    - each IO class supports part of the :mod:`neo.core` hierachy, though not necessarily all of it (see :attr:`supported_objects`).
+    - each IO class supports part of the :mod:`neo.core` hierarchy, though not necessarily all of it (see :attr:`supported_objects`).
     - each IO class has a :meth:`read()` method that returns a list of :class:`Block` objects. If the IO only supports :class:`Segment` reading, the list will contain one block with all segments from the file.
     - each IO class that supports writing has a :meth:`write()` method that takes as a parameter a list of blocks, a single block or a single segment, depending on the IO's :attr:`writable_objects`.
     - some IO are able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data.

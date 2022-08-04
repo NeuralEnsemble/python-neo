@@ -23,7 +23,7 @@ Note:
 
 
 # Not implemented yet in this reader:
-  * contact SpkeGLX developer to see how to deal with absolut t_start when several segment
+  * contact SpkeGLX developer to see how to deal with absolute t_start when several segment
   * contact SpkeGLX developer to understand the last channel SY0 function
   * better handling of annotations at object level by sub group of device (after rawio change)
   * better handling of channel location
@@ -371,12 +371,10 @@ def extract_stream_info(meta_file, meta):
     """Extract info from the meta dict"""
 
     num_chan = int(meta['nSavedChans'])
-    
     fname = Path(meta_file).stem
-
     run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
-
     device = fname.split('.')[1]
+
     if 'imec' in device:
         stream_kind = fname.split('.')[2]
         stream_name = device + '.' + stream_kind

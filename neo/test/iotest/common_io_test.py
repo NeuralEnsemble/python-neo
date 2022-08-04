@@ -33,8 +33,13 @@ from neo.test.tools import (assert_same_sub_schema,
 from neo.test.rawiotest.tools import can_use_network
 from neo.test.rawiotest.common_rawio_test import repo_for_test
 from neo.utils import (download_dataset,
-    get_local_testing_data_folder, HAVE_DATALAD)
+    get_local_testing_data_folder)
 
+try:
+    import datalad
+    HAVE_DATALAD = True
+except:
+    HAVE_DATALAD = False
 
 from neo.test.iotest.tools import (cleanup_test_file,
                                    close_object_safe, create_generic_io_object,

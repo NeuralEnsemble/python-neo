@@ -106,7 +106,7 @@ class BlackrockRawIO(BaseRawIO):
             IDs of nsX file from which to load data, e.g., if set to
             5 only data from the ns5 file are loaded.
             If 'all', then all nsX will be loaded.
-            Contrary to previsous version of the IO  (<0.7), nsx_to_load
+            Contrary to previous version of the IO  (<0.7), nsx_to_load
             must be set at the init before parse_header().
 
     Examples:
@@ -371,7 +371,7 @@ class BlackrockRawIO(BaseRawIO):
                         units = chan['units']
                     sig_dtype = 'int16'
                     # max_analog_val/min_analog_val/max_digital_val/min_analog_val are int16!!!!!
-                    # dangarous situation so cast to float everyone
+                    # dangerous situation so cast to float everyone
                     if np.isnan(float(chan['min_analog_val'])):
                         gain = 1
                         offset = 0
@@ -387,7 +387,7 @@ class BlackrockRawIO(BaseRawIO):
             # check nb segment per nsx
             nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]
             assert all(nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx),\
-                   'Segment nb not consistanent across nsX files'
+                   'Segment nb not consistent across nsX files'
             self._nb_segment = nb_segments_for_nsx[0]
 
             self.__delete_empty_segments()
@@ -494,7 +494,7 @@ class BlackrockRawIO(BaseRawIO):
             seg_ann['description'] = "Segment containing data from t_start to t_stop"
             if seg_index == 0:
                 # if more than 1 segment means pause
-                # so datetime is valide only for seg_index=0
+                # so datetime is valid only for seg_index=0
                 seg_ann['rec_datetime'] = rec_datetime
 
             for c in range(signal_streams.size):
@@ -768,7 +768,7 @@ class BlackrockRawIO(BaseRawIO):
         # basic header (file_id: NEURALCD)
         dt0 = [
             ('file_id', 'S8'),
-            # label of sampling groun (e.g. "1kS/s" or "LFP Low")
+            # label of sampling group (e.g. "1kS/s" or "LFP Low")
             ('label', 'S16'),
             # number of 1/30000 seconds between data points
             # (e.g., if sampling rate "1 kS/s", period equals "30")
@@ -1119,7 +1119,7 @@ class BlackrockRawIO(BaseRawIO):
             reset_ev_ids = np.where(reset_ev_mask)[0]
 
             # consistency check for monotone increasing time stamps
-            # explicitely converting to int to allow for negative diff values
+            # explicitly converting to int to allow for negative diff values
             jump_ids = \
                 np.where(np.diff(np.asarray(raw_event_data['timestamp'], dtype=int)) < 0)[0] + 1
             overlap = np.in1d(jump_ids, reset_ev_ids)
@@ -1594,7 +1594,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extracts the actual waveform dtype set for each channel.
         """
-        # Blackrock code giving the approiate dtype
+        # Blackrock code giving the appropriate dtype
         conv = {0: 'int8', 1: 'int8', 2: 'int16', 4: 'int32'}
 
         # get all electrode ids from nev ext header
@@ -1639,7 +1639,7 @@ class BlackrockRawIO(BaseRawIO):
 
     def __get_waveform_size_variant_a(self):
         """
-        Returns wavform sizes for all channels for file spec 2.1 and 2.2
+        Returns waveform sizes for all channels for file spec 2.1 and 2.2
         """
         wf_dtypes = self.__get_waveforms_dtype()
         nb_bytes_wf = self.__nev_basic_header['bytes_in_data_packets'] - 8
@@ -1652,7 +1652,7 @@ class BlackrockRawIO(BaseRawIO):
 
     def __get_waveform_size_variant_b(self):
         """
-        Returns wavform sizes for all channels for file spec 2.3
+        Returns waveform sizes for all channels for file spec 2.3
         """
         elids = self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
         spike_widths = self.__nev_ext_header[b'NEUEVWAV']['spike_width']

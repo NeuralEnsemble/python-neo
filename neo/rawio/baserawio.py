@@ -47,7 +47,7 @@ of the sections of the channels for a Block and Segment of a stream.
 So this handles **only** one simplified but very frequent case of dataset:
     * Only one channel set  for AnalogSignal stable along Segment
     * Only one channel set  for SpikeTrain stable along Segment
-    * AnalogSignal have all the same sampling_rate acroos all Segment
+    * AnalogSignal have all the same sampling_rate across all Segment
     * t_start/t_stop are the same for many object (SpikeTrain, Event) inside a Segment
 
 Signal channels are handled by group of "stream".
@@ -448,7 +448,7 @@ class BaseRawIO:
             # also check that channel_id is unique inside a stream
             channel_ids = signal_channels[mask]['id']
             assert np.unique(channel_ids).size == channel_ids.size, \
-                f'signal_channels dont have unique ids for stream {stream_index}'
+                f'signal_channels do not have unique ids for stream {stream_index}'
 
         self._several_channel_groups = signal_streams.size > 1
 
@@ -733,7 +733,7 @@ class BaseRawIO:
         d = dict(ressource_name=resource_name, mtime=os.path.getmtime(resource_name))
         hash = joblib.hash(d, hash_name='md5')
 
-        # name is constructed from the real_n,ame and the hash
+        # name is constructed from the resource_name and the hash
         name = '{}_{}'.format(os.path.basename(resource_name), hash)
         self.cache_filename = os.path.join(dirname, name)
 
@@ -844,6 +844,6 @@ def pprint_vector(vector, lim=8):
         part2 = ' , '.join(e for e in vector[-lim // 2:])
         txt = f"[{part1} ... {part2}]"
     else:
-        part1 = ', '.join(e for e in vector[:lim // 2])
+        part1 = ', '.join(e for e in vector)
         txt = f"[{part1}]"
     return txt

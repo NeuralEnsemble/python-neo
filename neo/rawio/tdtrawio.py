@@ -179,6 +179,7 @@ class TdtRawIO(BaseRawIO):
                               for seg_index in range(nb_segment)}  # key = seg_index then group_id
 
         keep = info_channel_groups['TankEvType'] == EVTYPE_STREAM
+        missing_sev_channels = []
         for stream_index, info in enumerate(info_channel_groups[keep]):
             self._sig_sample_per_chunk[stream_index] = info['NumPoints']
 
@@ -252,7 +253,7 @@ class TdtRawIO(BaseRawIO):
 
                         # in case non or multiple sev files are found for current stream + channel
                         if len(sev_filename) != 1:
-                            warnings.warn(f'Could not identify sev file for channel {chan_id}.')
+                            missing_sev_channels.append(chan_id)
                             sev_filename = None
 
                     if (sev_filename is not None) and sev_filename.exists():
@@ -269,6 +270,10 @@ class TdtRawIO(BaseRawIO):
                 offset = 0.
                 signal_channels.append((chan_name, str(chan_id), sampling_rate, dtype,
                                         units, gain, offset, stream_id))
+
+        if missing_sev_channels:
+            warnings.warn(f'Could not identify sev files for channels {missing_sev_channels}.')
+
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -279,7 +284,7 @@ class TdtRawIO(BaseRawIO):
         spike_channels = []
         keep = info_channel_groups['TankEvType'] == EVTYPE_SNIP
         tsq = np.hstack(self._tsq)
-        # If there is no chance the differet TSQ files will have different units,
+        # If there is no chance the different TSQ files will have different units,
         #  then we can do tsq = self._tsq[0]
         for info in info_channel_groups[keep]:
             for c in range(info['NumChan']):
@@ -576,7 +581,7 @@ data_formats = {
 
 
 def is_tdtblock(blockpath):
-    """Is tha path a  TDT block (=neo.Segment) ?"""
+    """Is the path a TDT block (=neo.Segment) ?"""
     file_ext = list()
     if blockpath.is_dir():
         # for every file, get extension, convert to lowercase and append

@@ -228,7 +228,7 @@ class Container(BaseNeo):
     def __init__(self, name=None, description=None, file_origin=None,
                  **annotations):
         """
-        Initalize a new :class:`Container` instance.
+        Initialize a new :class:`Container` instance.
         """
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
@@ -466,7 +466,7 @@ class Container(BaseNeo):
         that this method will link up.
 
         If force is True overwrite any existing relationships
-        If recursive is True desecend into child objects and create
+        If recursive is True descend into child objects and create
         relationships there
         """
         parent_name = _reference_name(self.__class__.__name__)
@@ -485,7 +485,7 @@ class Container(BaseNeo):
         of this type, put the current object in the parent list.
 
         If append is True add it to the list, otherwise overwrite the list.
-        If recursive is True desecend into child objects and create
+        If recursive is True descend into child objects and create
         relationships there
         """
         parent_name = _container_name(self.__class__.__name__)
@@ -517,7 +517,7 @@ class Container(BaseNeo):
 
         If force is True overwrite any existing relationships
         If append is True add it to the list, otherwise overwrite the list.
-        If recursive is True desecend into child objects and create
+        If recursive is True descend into child objects and create
         relationships there
         """
         self.create_many_to_one_relationship(force=force, recursive=False)

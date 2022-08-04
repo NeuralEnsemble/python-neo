@@ -34,7 +34,7 @@ also available in :mod:`neo.io`.
 
 Possible uses of the :mod:`neo.rawio` API are:
     * fast reading chunks of signals in int16 and do the scaling of units (uV)
-      on a GPU while scaling the zoom. This should improve bandwith HD to RAM
+      on a GPU while scaling the zoom. This should improve bandwidth HD to RAM
       and RAM to GPU memory.
     * load only some small chunk of data for heavy computations. For instance
       the spike sorting module tridesclous_ does this.
@@ -42,7 +42,7 @@ Possible uses of the :mod:`neo.rawio` API are:
 
 The :mod:`neo.rawio` API is less flexible than :mod:`neo.io` and has some limitations:
   * read-only
-  * AnalogSignals must have the same characteristcs across all Blocks and Segments:
+  * AnalogSignals must have the same characteristics across all Blocks and Segments:
     ``sampling_rate``, ``shape[1]``, ``dtype``
   * AnalogSignals should all have the same value of ``sampling_rate``, otherwise they won't be read
     at the same time.

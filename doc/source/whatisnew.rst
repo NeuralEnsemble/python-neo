@@ -68,7 +68,7 @@ Version 0.3.0
 
   * various bug fixes in neo.io
   * added ElphyIO
-  * SpikeTrain performence improved
+  * SpikeTrain performance improved
   * An IO class now can return a list of Block (see read_all_blocks in IOs)
   * python3 compatibility improved
 
@@ -96,7 +96,7 @@ New features compared to neo 0.1:
  * Neuron is now Unit
  * use the quantities_ module for everything that can have units.
  * Some objects directly inherit from Quantity: SpikeTrain, AnalogSignal, AnalogSignalArray, instead of having an attribute for data.
- * Attributes are classifyed in 3 categories: necessary, recommended, free.
+ * Attributes are classified in 3 categories: necessary, recommended, free.
  * lazy and cascade keywords are added to all IOs
  * Python 3 support
  * better tests

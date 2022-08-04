@@ -147,7 +147,8 @@ class NcsSectionsFactory:
         Parse sections in memory mapped file when microsPerSampUsed and sampFreqUsed are known,
         filling in an NcsSections object.
 
-        PARAMETERS
+        Parameters
+        ----------
         ncsMemMap:
             memmap of Ncs file
         ncsSections:
@@ -160,7 +161,8 @@ class NcsSectionsFactory:
         blkOnePredTime:
             predicted starting time of second record in block
 
-        RETURN
+        Returns
+        -------
         NcsSections object with block locations marked
         """
         startBlockPredTime = blkOnePredTime
@@ -212,7 +214,8 @@ class NcsSectionsFactory:
         records is the inverse of the sampling frequency stated in the header truncated to
         whole microseconds.
 
-        PARAMETERS
+        Parameters
+        ----------
         ncsMemMap:
             memmap of Ncs file
         actualSampFreq:
@@ -220,7 +223,8 @@ class NcsSectionsFactory:
         reqFreq:
             frequency to require in records
 
-        RETURN:
+        Returns
+        -------
             NcsSections object
         """
         # check frequency in first record
@@ -265,7 +269,8 @@ class NcsSectionsFactory:
         Parse blocks of records from file, allowing a maximum gap in timestamps between records
         in sections. Estimates frequency being used based on timestamps.
 
-        PARAMETERS
+        Parameters
+        ----------
         ncsMemMap:
             memmap of Ncs file
         ncsSects:
@@ -275,7 +280,8 @@ class NcsSectionsFactory:
             maximum difference within a block between predicted time of start of record and
             recorded time
 
-        RETURN:
+        Returns
+        -------
             NcsSections object with sampFreqUsed and microsPerSamp set based on estimate from
             largest block
         """
@@ -354,13 +360,15 @@ class NcsSectionsFactory:
         Determine sections of records in memory mapped Ncs file given a nominal frequency of
         the file, using the default values of frequency tolerance and maximum gap between blocks.
 
-        PARAMETERS
+        Parameters
+        ----------
         ncsMemMap:
             memmap of Ncs file
         nomFreq:
             nominal sampling frequency used, normally from header of file
 
-        RETURN:
+        Returns
+        -------
             NcsSections object
         """
         nb = NcsSections()
@@ -404,13 +412,15 @@ class NcsSectionsFactory:
         Build an NcsSections object for an NcsFile, given as a memmap and NlxHeader,
         handling gap detection appropriately given the file type as specified by the header.
 
-        PARAMETERS
+        Parameters
+        ----------
         ncsMemMap:
             memory map of file
         nlxHdr:
             NlxHeader from corresponding file.
 
-        RETURNS
+        Returns
+        -------
         An NcsSections corresponding to the provided ncsMemMap and nlxHdr
         """
         acqType = nlxHdr.type_of_recording()
@@ -452,12 +462,15 @@ class NcsSectionsFactory:
         Provides a more rapid verification of structure than building a new NcsSections
         and checking equality.
 
-        PARAMETERS
+        Parameters
+        ----------
         ncsMemMap:
             memmap of file to be checked
         ncsSects
             existing block structure to be checked
-        RETURN:
+
+        Returns
+        -------
             true if all timestamps and block record starts and stops agree, otherwise false.
         """
         for blki in range(0, len(ncsSects.sects)):
