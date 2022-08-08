@@ -58,7 +58,6 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
         for block_index in range(nb_block):
             sig_stream_names[block_index] = {}
-
             for stream_name in sorted(list(all_streams[block_index][0]['continuous'].keys())):
                 sig_stream_names[block_index][sig_stream_index] = stream_name
                 sig_stream_index += 1
@@ -191,7 +190,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
                 # loop over events
                 for stream_ind, stream_name in event_stream_names[block_index].items():
-                    d = self._evt_streams[block_index][0][stream_index]
+                    d = self._evt_streams[block_index][0][stream_ind]
                     if d['timestamps'].size == 0:
                         continue
                     t_start = d['timestamps'][0] / d['sample_rate']
