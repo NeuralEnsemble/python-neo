@@ -50,8 +50,22 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     def _parse_header(self):
         all_streams, nb_block, nb_segment_per_block = explore_folder(self.dirname)
 
-        sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
-        event_stream_names = sorted(list(all_streams[0][0]['events'].keys()))
+        # streams can be different across blocks. Gather all and assign a stream index
+        sig_stream_names = {}
+        event_stream_names = {}
+        sig_stream_index = 0
+        evt_stream_index = 0
+
+        for block_index in range(nb_block):
+            sig_stream_names[block_index] = {}
+
+            for stream_name in sorted(list(all_streams[block_index][0]['continuous'].keys())):
+                sig_stream_names[block_index][sig_stream_index] = stream_name
+                sig_stream_index += 1
+            event_stream_names[block_index] = {}
+            for stream_name in sorted(list(all_streams[block_index][0]['events'].keys())):
+                event_stream_names[block_index][evt_stream_index] = stream_name
+                evt_stream_index += 1
 
         # first loop to reassign stream by "stream_index" instead of "stream_name"
         self._sig_streams = {}
@@ -62,11 +76,11 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             for seg_index in range(nb_segment_per_block[block_index]):
                 self._sig_streams[block_index][seg_index] = {}
                 self._evt_streams[block_index][seg_index] = {}
-                for stream_index, stream_name in enumerate(sig_stream_names):
+                for stream_index, stream_name in sig_stream_names[block_index].items():
                     d = all_streams[block_index][seg_index]['continuous'][stream_name]
                     d['stream_name'] = stream_name
                     self._sig_streams[block_index][seg_index][stream_index] = d
-                for i, stream_name in enumerate(event_stream_names):
+                for i, stream_name in event_stream_names[block_index].items():
                     d = all_streams[block_index][seg_index]['events'][stream_name]
                     d['stream_name'] = stream_name
                     self._evt_streams[block_index][seg_index][i] = d
@@ -74,28 +88,30 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         # signals zone
         # create signals channel map: several channel per stream
         signal_channels = []
-        for stream_index, stream_name in enumerate(sig_stream_names):
-            # stream_index is the index in vector sytream names
-            stream_id = str(stream_index)
-            d = self._sig_streams[0][0][stream_index]
-            new_channels = []
-            for chan_info in d['channels']:
-                chan_id = chan_info['channel_name']
-                if chan_info["units"] == "":
-                    # in some cases for some OE version the unit is "", but the gain is to "uV"
-                    units = "uV"
-                else:
-                    units = chan_info["units"]
-                new_channels.append((chan_info['channel_name'],
-                    chan_id, float(d['sample_rate']), d['dtype'], units,
-                    chan_info['bit_volts'], 0., stream_id))
-            signal_channels.extend(new_channels)
+        for block_index in range(nb_block):
+            for stream_index, stream_name in sig_stream_names[block_index].items():
+                # stream_index is the index in vector stream names
+                stream_id = str(stream_index)
+                d = self._sig_streams[block_index][0][stream_index]
+                new_channels = []
+                for chan_info in d['channels']:
+                    chan_id = chan_info['channel_name']
+                    if chan_info["units"] == "":
+                        # in some cases for some OE version the unit is "", but the gain is to "uV"
+                        units = "uV"
+                    else:
+                        units = chan_info["units"]
+                    new_channels.append((chan_info['channel_name'],
+                        chan_id, float(d['sample_rate']), d['dtype'], units,
+                        chan_info['bit_volts'], 0., stream_id))
+                signal_channels.extend(new_channels)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         signal_streams = []
-        for stream_index, stream_name in enumerate(sig_stream_names):
-            stream_id = str(stream_index)
-            signal_streams.append((stream_name, stream_id))
+        for block_index in range(nb_block):
+            for stream_index, stream_name in sig_stream_names[block_index].items():
+                stream_id = str(stream_index)
+                signal_streams.append((stream_name, stream_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # create memmap for signals
@@ -110,42 +126,44 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         # events zone
         # channel map: one channel one stream
         event_channels = []
-        for stream_ind, stream_name in enumerate(event_stream_names):
-            d = self._evt_streams[0][0][stream_ind]
-            event_channels.append((d['channel_name'], stream_ind, 'event'))
+        for block_index in range(nb_block):
+            for stream_ind, stream_name in event_stream_names[block_index].items():
+                d = self._evt_streams[block_index][0][stream_ind]
+                event_channels.append((d['channel_name'], stream_ind, 'event'))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # create memmap
-        for stream_ind, stream_name in enumerate(event_stream_names):
-            # inject memmap loaded into main dict structure
-            d = self._evt_streams[0][0][stream_ind]
+        for block_index in range(nb_block):
+            for stream_ind, stream_name in event_stream_names[block_index].items():
+                # inject memmap loaded into main dict structure
+                d = self._evt_streams[block_index][0][stream_ind]
 
-            for name in _possible_event_stream_names:
-                if name + '_npy' in d:
-                    data = np.load(d[name + '_npy'], mmap_mode='r')
-                    d[name] = data
+                for name in _possible_event_stream_names:
+                    if name + '_npy' in d:
+                        data = np.load(d[name + '_npy'], mmap_mode='r')
+                        d[name] = data
 
-            # check that events have timestamps
-            assert 'timestamps' in d
+                # check that events have timestamps
+                assert 'timestamps' in d
 
-            # for event the neo "label" will change depending the nature
-            #  of event (ttl, text, binary)
-            # and this is transform into unicode
-            # all theses data are put in event array annotations
-            if 'text' in d:
-                # text case
-                d['labels'] = d['text'].astype('U')
-            elif 'metadata' in d:
-                # binary case
-                d['labels'] = d['channels'].astype('U')
-            elif 'channels' in d:
-                # ttl case use channels
-                d['labels'] = d['channels'].astype('U')
-            elif 'states' in d:
-                # ttl case use states
-                d['labels'] = d['states'].astype('U')
-            else:
-                raise ValueError(f'There is no possible labels for this event: {stream_name}')
+                # for event the neo "label" will change depending the nature
+                #  of event (ttl, text, binary)
+                # and this is transform into unicode
+                # all theses data are put in event array annotations
+                if 'text' in d:
+                    # text case
+                    d['labels'] = d['text'].astype('U')
+                elif 'metadata' in d:
+                    # binary case
+                    d['labels'] = d['channels'].astype('U')
+                elif 'channels' in d:
+                    # ttl case use channels
+                    d['labels'] = d['channels'].astype('U')
+                elif 'states' in d:
+                    # ttl case use states
+                    d['labels'] = d['states'].astype('U')
+                else:
+                    raise ValueError(f'There is no possible labels for this event: {stream_name}')
 
         # no spike read yet
         # can be implemented on user demand
@@ -172,8 +190,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         global_t_stop = t_stop
 
                 # loop over events
-                for stream_index, stream_name in enumerate(event_stream_names):
-                    d = self._evt_streams[0][0][stream_index]
+                for stream_ind, stream_name in event_stream_names[block_index].items():
+                    d = self._evt_streams[block_index][0][stream_index]
                     if d['timestamps'].size == 0:
                         continue
                     t_start = d['timestamps'][0] / d['sample_rate']
@@ -203,9 +221,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 seg_ann = bl_ann['segments'][seg_index]
 
                 # array annotations for signal channels
-                for stream_index, stream_name in enumerate(sig_stream_names):
+                for stream_index, stream_name in sig_stream_names[block_index].items():
                     sig_ann = seg_ann['signals'][stream_index]
-                    d = self._sig_streams[0][0][stream_index]
+                    d = self._sig_streams[block_index][0][stream_index]
                     for k in ('identifier', 'history', 'source_processor_index',
                               'recorded_processor_index'):
                         if k in d['channels'][0]:
@@ -214,9 +232,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
                 # array annotations for event channels
                 # use other possible data in _possible_event_stream_names
-                for stream_index, stream_name in enumerate(event_stream_names):
+                for stream_index, stream_name in event_stream_names[block_index].items():
                     ev_ann = seg_ann['events'][stream_index]
-                    d = self._evt_streams[0][0][stream_index]
+                    d = self._evt_streams[block_index][0][stream_index]
                     for k in _possible_event_stream_names:
                         if k in ('timestamps', ):
                             continue
@@ -329,7 +347,7 @@ def explore_folder(dirname):
     nested dictionaries containing structure and stream information
     """
     nb_block = 0
-    nb_segment_per_block = []
+    nb_segment_per_block = {}
     # nested dictionary: block_index > seg_index > data_type > stream_name
     all_streams = {}
     for root, dirs, files in os.walk(dirname):
@@ -347,9 +365,8 @@ def explore_folder(dirname):
             block_index = int(root.parents[0].stem.lower().replace('experiment', '')) - 1
             if block_index not in all_streams:
                 all_streams[block_index] = {}
-                if block_index >= nb_block:
-                    nb_block = block_index + 1
-                    nb_segment_per_block.append(0)
+                nb_block += 1
+                nb_segment_per_block[block_index] = 0
 
             seg_index = int(root.stem.replace('recording', '')) - 1
             if seg_index not in all_streams[block_index]:
