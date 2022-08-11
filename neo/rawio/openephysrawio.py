@@ -166,28 +166,32 @@ class OpenEphysRawIO(BaseRawIO):
 
             self._sig_length[seg_index] = all_sigs_length[0]
             self._sig_timestamp0[seg_index] = all_first_timestamps[0]
+        
+        if len(signal_channels)>0:
+            signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+            self._sig_sampling_rate = signal_channels['sampling_rate'][0]  # unique for channel
 
-        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        self._sig_sampling_rate = signal_channels['sampling_rate'][0]  # unique for channel
+            # split channels in stream depending the name CHxxx ADCxxx
+            chan_stream_ids = [name[:2] if name.startswith('CH') else name[:3]
+                        for name in signal_channels['name']]
+            signal_channels['stream_id'] = chan_stream_ids
 
-        # split channels in stream depending the name CHxxx ADCxxx
-        chan_stream_ids = [name[:2] if name.startswith('CH') else name[:3]
-                      for name in signal_channels['name']]
-        signal_channels['stream_id'] = chan_stream_ids
-
-        # and create streams channels (keep natural order 'CH' first)
-        stream_ids, order = np.unique(chan_stream_ids, return_index=True)
-        stream_ids = stream_ids[np.argsort(order)]
-        signal_streams = [(f'Signals {stream_id}', f'{stream_id}') for stream_id in stream_ids]
-        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
-
+            # and create streams channels (keep natural order 'CH' first)
+            stream_ids, order = np.unique(chan_stream_ids, return_index=True)
+            stream_ids = stream_ids[np.argsort(order)]
+            signal_streams = [(f'Signals {stream_id}', f'{stream_id}') for stream_id in stream_ids]
+            signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        else:
+            signal_streams = np.array([])
         # scan for spikes files
         spike_channels = []
 
         if len(info['spikes']) > 0:
-
+            self._first_spk_timestamps = []
+            self._last_spk_timestamps = []
             self._spikes_memmap = {}
-            for seg_index, oe_index in enumerate(oe_indices):
+            oe_indices_spk = sorted(list(info['spikes'].keys()))
+            for seg_index, oe_index in enumerate(oe_indices_spk):
                 self._spikes_memmap[seg_index] = {}
                 for spike_filename in info['spikes'][oe_index]:
                     fullname = os.path.join(self.dirname, spike_filename)
@@ -202,6 +206,9 @@ class OpenEphysRawIO(BaseRawIO):
                     data_spike = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
                                         dtype=spikes_dtype)
                     self._spikes_memmap[seg_index][name] = data_spike
+
+                    self._first_spk_timestamps.append(data_spike[0]['timestamp'])
+                    self._last_spk_timestamps.append(data_spike[-1]['timestamp'])
 
             # In each file 'sorted_id' indicate the number of cluster so number of units
             # so need to scan file for all segment to get units
@@ -331,9 +338,9 @@ class OpenEphysRawIO(BaseRawIO):
         data_spike = self._spikes_memmap[seg_index][name]
 
         if t_start is None:
-            t_start = self._segment_t_start(0, seg_index)
+            t_start = self._first_spk_timestamps[seg_index]
         if t_stop is None:
-            t_stop = self._segment_t_stop(0, seg_index)
+            t_stop = self._last_spk_timestamps[seg_index]
         ts0 = int(t_start * self._spike_sampling_rate)
         ts1 = int(t_stop * self._spike_sampling_rate)
 
@@ -486,10 +493,10 @@ def explore_folder(dirname):
                 info['nb_segment'] += 1
         elif filename.endswith('.spikes'):
             s = filename.replace('.spikes', '').split('_')
-            if len(s) == 1:
+            if len(s) == 2:
                 seg_index = 0
             else:
-                seg_index = int(s[1]) - 1
+                seg_index = int(s[2]) - 1
             if seg_index not in info['spikes'].keys():
                 info['spikes'][seg_index] = []
             info['spikes'][seg_index].append(filename)
