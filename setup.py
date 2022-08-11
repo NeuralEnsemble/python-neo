@@ -14,6 +14,7 @@ extras_require = {
     'nixio': ['nixio>=1.5.0'],
     'stimfitio': ['stfio'],
     'tiffio': ['pillow'],
+    'nwbio': ['pynwb', 'nwbinspector'],
     'edf': ['pyedflib']
 }
 

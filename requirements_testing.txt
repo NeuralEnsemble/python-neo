@@ -15,4 +15,5 @@ coveralls
 pillow
 sonpy
 pynwb
+nwbinspector
 probeinterface
