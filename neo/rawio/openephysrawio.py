@@ -166,8 +166,8 @@ class OpenEphysRawIO(BaseRawIO):
 
             self._sig_length[seg_index] = all_sigs_length[0]
             self._sig_timestamp0[seg_index] = all_first_timestamps[0]
-        
-        if len(signal_channels)>0:
+
+        if len(signal_channels) > 0:
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
             self._sig_sampling_rate = signal_channels['sampling_rate'][0]  # unique for channel
 
