@@ -221,7 +221,7 @@ class PhyRawIO(BaseRawIO):
     def _parse_tsv_or_csv_to_list_of_dict(filename):
         list_of_dict = list()
         letter_pattern = re.compile('[a-zA-Z]')
-        float_pattern = re.compile(r'\d*\.')
+        float_pattern = re.compile(r'-?\d*\.')
         with open(filename) as csvfile:
             if filename.suffix == '.csv':
                 reader = csv.DictReader(csvfile, delimiter=',')
