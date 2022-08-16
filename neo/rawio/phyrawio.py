@@ -233,15 +233,19 @@ class PhyRawIO(BaseRawIO):
 
             for row in reader:
                 if line == 0:
-                    key1, key2 = tuple(row.keys())
+                    cluster_id_key, *annotation_keys = tuple(row.keys())
                 # Convert cluster ID to int
-                row[key1] = int(row[key1])
+                row[cluster_id_key] = int(row[cluster_id_key])
                 # Convert strings without letters
-                if letter_pattern.match(row[key2]) is None:
-                    if float_pattern.match(row[key2]) is None:
-                        row[key2] = int(row[key2])
-                    else:
-                        row[key2] = float(row[key2])
+                for key in annotation_keys:
+                    value = row[key]
+                    if not len(value):
+                        row[key] = None
+                    elif letter_pattern.match(value) is None:
+                        if float_pattern.match(value) is None:
+                            row[key] = int(value)
+                        else:
+                            row[key] = float(value)
 
                 list_of_dict.append(row)
                 line += 1
