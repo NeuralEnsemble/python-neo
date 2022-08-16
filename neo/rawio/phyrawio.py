@@ -138,17 +138,18 @@ class PhyRawIO(BaseRawIO):
 
             # Loop over list of list of dict and annotate each st
             for annotation_list in annotation_lists:
-                clust_key, property_name = tuple(annotation_list[0].
-                                                 keys())
-                if property_name == 'KSLabel':
-                    annotation_name = 'quality'
-                else:
-                    annotation_name = property_name.lower()
-                for annotation_dict in annotation_list:
-                    if int(annotation_dict[clust_key]) == clust_id:
-                        spiketrain_an[annotation_name] = \
-                            annotation_dict[property_name]
-                        break
+                clust_key, *property_names = tuple(annotation_list[0].
+                                                  keys())
+                for property_name in property_names:
+                    if property_name == 'KSLabel':
+                        annotation_name = 'quality'
+                    else:
+                        annotation_name = property_name.lower()
+                    for annotation_dict in annotation_list:
+                        if int(annotation_dict[clust_key]) == clust_id:
+                            spiketrain_an[annotation_name] = \
+                                annotation_dict[property_name]
+                            break
 
     def _segment_t_start(self, block_index, seg_index):
         assert block_index == 0
