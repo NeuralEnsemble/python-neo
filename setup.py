@@ -14,7 +14,9 @@ extras_require = {
     'nixio': ['nixio>=1.5.0'],
     'stimfitio': ['stfio'],
     'tiffio': ['pillow'],
-    'edf': ['pyedflib']
+    'edf': ['pyedflib'],
+    'ced': ['sonpy'],
+    'nwb': ['pynwb'],
 }
 
 with open("neo/version.py") as fp:
