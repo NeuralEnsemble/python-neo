@@ -59,7 +59,7 @@ from neo.rawio.neuralynxrawio.nlxheader import NlxHeader
 
 
 class NeuralynxRawIO(BaseRawIO):
-    """"
+    """
     Class for reading datasets recorded by Neuralynx.
 
     This version works with rawmode of one-dir for a single directory of files or one-file for
