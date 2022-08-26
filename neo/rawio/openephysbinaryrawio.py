@@ -352,6 +352,7 @@ def explore_folder(dirname, experiment_names=None):
     nb_segment_per_block = {}
     # nested dictionary: block_index > seg_index > data_type > stream_name
     all_streams = {}
+    block_names_dict = {}
     possible_experiment_names = []
     for root, dirs, files in os.walk(dirname):
         for file in files:
@@ -365,26 +366,32 @@ def explore_folder(dirname, experiment_names=None):
                 # so no node_name
                 node_name = ''
 
-            # here we skip if self.experiment_names is not None
+            # here we skip if experiment_names is not None
             experiment_name = root.parents[0].stem
             possible_experiment_names.append(experiment_name)
             if experiment_names is not None and experiment_name not in experiment_names:
                 continue
-            block_index = int(root.parents[0].stem.lower().replace('experiment', '')) - 1
-            if block_index not in all_streams:
+            block_name = experiment_name
+            if block_name not in block_names_dict:
+                block_index = nb_block
+                segment_names_dict = {}
+                block_names_dict[experiment_name] = block_index
                 all_streams[block_index] = {}
-                nb_block += 1
                 nb_segment_per_block[block_index] = 0
+                nb_block += 1
+                seg_index = -1
 
-            seg_index = int(root.stem.replace('recording', '')) - 1
-            if seg_index not in all_streams[block_index]:
+            recording_name = root.stem
+            if recording_name not in segment_names_dict:
+                # segment index restarts from zero for each block (index)
+                seg_index += 1
                 all_streams[block_index][seg_index] = {
                     'continuous': {},
                     'events': {},
                     'spikes': {},
                 }
-                if seg_index >= nb_segment_per_block[block_index]:
-                    nb_segment_per_block[block_index] = seg_index + 1
+                segment_names_dict[recording_name] = seg_index
+                nb_segment_per_block[block_index] += 1
 
             # metadata
             with open(root / 'structure.oebin', encoding='utf8', mode='r') as f:
@@ -440,7 +447,7 @@ def check_stream_consistency(all_streams, nb_block, nb_segment_per_block, possib
     for block_index in range(nb_block):
         segment_stream_names = None
         if nb_segment_per_block[block_index] > 1:
-            for segment_index in range(nb_segment_per_block[block_index]):
+            for segment_index in all_streams[block_index]:
                 stream_names = sorted(list(all_streams[block_index][segment_index]["continuous"].keys()))
                 if segment_stream_names is None:
                     segment_stream_names = stream_names
