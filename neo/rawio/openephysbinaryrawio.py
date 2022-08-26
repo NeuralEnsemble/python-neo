@@ -6,7 +6,7 @@ In this format channels are interleaved in one file.
 See
 https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html
 
-Author: Julia Sprenger and Samuel Garcia
+Author: Julia Sprenger, Samuel Garcia, and Alessio Buccino
 """
 
 
@@ -26,6 +26,19 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     """
     Handle several Blocks and several Segments.
 
+    Parameters
+    ----------
+    dirname : str
+        Path to Open Ephys directory
+    experiment_names : str or list or None
+        If multiple experiments are available, this argument allows users to select one or more experiments. 
+        If None, all experiements are loaded as blocks.
+        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
+
+    Note
+    ----
+    For multi-experiment datasets, the streams need to be consistent across experiments. If this is not the case, 
+    you can select a subset of experiments with the `experiment_names` argument
 
     # Correspondencies
     Neo          OpenEphys
@@ -40,31 +53,25 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     extensions = []
     rawmode = 'one-dir'
 
-    def __init__(self, dirname=''):
+    def __init__(self, dirname='', experiment_names=None):
         BaseRawIO.__init__(self)
         self.dirname = dirname
+        if experiment_names is not None:
+            if isinstance(experiment_names, str):
+                experiment_names = [experiment_names]
+        self.experiment_names = experiment_names
 
     def _source_name(self):
         return self.dirname
 
     def _parse_header(self):
-        all_streams, nb_block, nb_segment_per_block = explore_folder(self.dirname)
+        all_streams, nb_block, nb_segment_per_block, possible_experiments = explore_folder(self.dirname,
+                                                                                           self.experiment_names)
+        check_stream_consistency(all_streams, nb_block, nb_segment_per_block, possible_experiments)
 
-        # streams can be different across blocks. Gather all and assign a stream index
-        sig_stream_names = {}
-        event_stream_names = {}
-        sig_stream_index = 0
-        evt_stream_index = 0
-
-        for block_index in range(nb_block):
-            sig_stream_names[block_index] = {}
-            for stream_name in sorted(list(all_streams[block_index][0]['continuous'].keys())):
-                sig_stream_names[block_index][sig_stream_index] = stream_name
-                sig_stream_index += 1
-            event_stream_names[block_index] = {}
-            for stream_name in sorted(list(all_streams[block_index][0]['events'].keys())):
-                event_stream_names[block_index][evt_stream_index] = stream_name
-                evt_stream_index += 1
+        # all streams are consistent across blocks and segments
+        sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
+        event_stream_names = sorted(list(all_streams[0][0]['events'].keys()))
 
         # first loop to reassign stream by "stream_index" instead of "stream_name"
         self._sig_streams = {}
@@ -75,11 +82,11 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             for seg_index in range(nb_segment_per_block[block_index]):
                 self._sig_streams[block_index][seg_index] = {}
                 self._evt_streams[block_index][seg_index] = {}
-                for stream_index, stream_name in sig_stream_names[block_index].items():
+                for stream_index, stream_name in enumerate(sig_stream_names):
                     d = all_streams[block_index][seg_index]['continuous'][stream_name]
                     d['stream_name'] = stream_name
                     self._sig_streams[block_index][seg_index][stream_index] = d
-                for i, stream_name in event_stream_names[block_index].items():
+                for i, stream_name in enumerate(event_stream_names):
                     d = all_streams[block_index][seg_index]['events'][stream_name]
                     d['stream_name'] = stream_name
                     self._evt_streams[block_index][seg_index][i] = d
@@ -87,30 +94,28 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         # signals zone
         # create signals channel map: several channel per stream
         signal_channels = []
-        for block_index in range(nb_block):
-            for stream_index, stream_name in sig_stream_names[block_index].items():
-                # stream_index is the index in vector stream names
-                stream_id = str(stream_index)
-                d = self._sig_streams[block_index][0][stream_index]
-                new_channels = []
-                for chan_info in d['channels']:
-                    chan_id = chan_info['channel_name']
-                    if chan_info["units"] == "":
-                        # in some cases for some OE version the unit is "", but the gain is to "uV"
-                        units = "uV"
-                    else:
-                        units = chan_info["units"]
-                    new_channels.append((chan_info['channel_name'],
-                        chan_id, float(d['sample_rate']), d['dtype'], units,
-                        chan_info['bit_volts'], 0., stream_id))
-                signal_channels.extend(new_channels)
+        for stream_index, stream_name in enumerate(sig_stream_names):
+            # stream_index is the index in vector sytream names
+            stream_id = str(stream_index)
+            d = self._sig_streams[0][0][stream_index]
+            new_channels = []
+            for chan_info in d['channels']:
+                chan_id = chan_info['channel_name']
+                if chan_info["units"] == "":
+                    # in some cases for some OE version the unit is "", but the gain is to "uV"
+                    units = "uV"
+                else:
+                    units = chan_info["units"]
+                new_channels.append((chan_info['channel_name'],
+                    chan_id, float(d['sample_rate']), d['dtype'], units,
+                    chan_info['bit_volts'], 0., stream_id))
+            signal_channels.extend(new_channels)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         signal_streams = []
-        for block_index in range(nb_block):
-            for stream_index, stream_name in sig_stream_names[block_index].items():
-                stream_id = str(stream_index)
-                signal_streams.append((stream_name, stream_id))
+        for stream_index, stream_name in enumerate(sig_stream_names):
+            stream_id = str(stream_index)
+            signal_streams.append((stream_name, stream_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # create memmap for signals
@@ -125,44 +130,42 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         # events zone
         # channel map: one channel one stream
         event_channels = []
-        for block_index in range(nb_block):
-            for stream_ind, stream_name in event_stream_names[block_index].items():
-                d = self._evt_streams[block_index][0][stream_ind]
-                event_channels.append((d['channel_name'], stream_ind, 'event'))
+        for stream_ind, stream_name in enumerate(event_stream_names):
+            d = self._evt_streams[0][0][stream_ind]
+            event_channels.append((d['channel_name'], stream_ind, 'event'))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # create memmap
-        for block_index in range(nb_block):
-            for stream_ind, stream_name in event_stream_names[block_index].items():
-                # inject memmap loaded into main dict structure
-                d = self._evt_streams[block_index][0][stream_ind]
+        for stream_ind, stream_name in enumerate(event_stream_names):
+            # inject memmap loaded into main dict structure
+            d = self._evt_streams[0][0][stream_ind]
 
-                for name in _possible_event_stream_names:
-                    if name + '_npy' in d:
-                        data = np.load(d[name + '_npy'], mmap_mode='r')
-                        d[name] = data
+            for name in _possible_event_stream_names:
+                if name + '_npy' in d:
+                    data = np.load(d[name + '_npy'], mmap_mode='r')
+                    d[name] = data
 
-                # check that events have timestamps
-                assert 'timestamps' in d
+            # check that events have timestamps
+            assert 'timestamps' in d
 
-                # for event the neo "label" will change depending the nature
-                #  of event (ttl, text, binary)
-                # and this is transform into unicode
-                # all theses data are put in event array annotations
-                if 'text' in d:
-                    # text case
-                    d['labels'] = d['text'].astype('U')
-                elif 'metadata' in d:
-                    # binary case
-                    d['labels'] = d['channels'].astype('U')
-                elif 'channels' in d:
-                    # ttl case use channels
-                    d['labels'] = d['channels'].astype('U')
-                elif 'states' in d:
-                    # ttl case use states
-                    d['labels'] = d['states'].astype('U')
-                else:
-                    raise ValueError(f'There is no possible labels for this event: {stream_name}')
+            # for event the neo "label" will change depending the nature
+            #  of event (ttl, text, binary)
+            # and this is transform into unicode
+            # all theses data are put in event array annotations
+            if 'text' in d:
+                # text case
+                d['labels'] = d['text'].astype('U')
+            elif 'metadata' in d:
+                # binary case
+                d['labels'] = d['channels'].astype('U')
+            elif 'channels' in d:
+                # ttl case use channels
+                d['labels'] = d['channels'].astype('U')
+            elif 'states' in d:
+                # ttl case use states
+                d['labels'] = d['states'].astype('U')
+            else:
+                raise ValueError(f'There is no possible labels for this event: {stream_name}')
 
         # no spike read yet
         # can be implemented on user demand
@@ -189,8 +192,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         global_t_stop = t_stop
 
                 # loop over events
-                for stream_ind, stream_name in event_stream_names[block_index].items():
-                    d = self._evt_streams[block_index][0][stream_ind]
+                for stream_index, stream_name in enumerate(event_stream_names):
+                    d = self._evt_streams[0][0][stream_index]
                     if d['timestamps'].size == 0:
                         continue
                     t_start = d['timestamps'][0] / d['sample_rate']
@@ -220,9 +223,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 seg_ann = bl_ann['segments'][seg_index]
 
                 # array annotations for signal channels
-                for stream_index, stream_name in sig_stream_names[block_index].items():
+                for stream_index, stream_name in enumerate(sig_stream_names):
                     sig_ann = seg_ann['signals'][stream_index]
-                    d = self._sig_streams[block_index][0][stream_index]
+                    d = self._sig_streams[0][0][stream_index]
                     for k in ('identifier', 'history', 'source_processor_index',
                               'recorded_processor_index'):
                         if k in d['channels'][0]:
@@ -231,9 +234,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
                 # array annotations for event channels
                 # use other possible data in _possible_event_stream_names
-                for stream_index, stream_name in event_stream_names[block_index].items():
+                for stream_index, stream_name in enumerate(event_stream_names):
                     ev_ann = seg_ann['events'][stream_index]
-                    d = self._evt_streams[block_index][0][stream_index]
+                    d = self._evt_streams[0][0][stream_index]
                     for k in _possible_event_stream_names:
                         if k in ('timestamps', ):
                             continue
@@ -324,7 +327,7 @@ _possible_event_stream_names = ('timestamps', 'channels', 'text', 'states',
                                 'full_word', 'channel_states', 'data_array', 'metadata')
 
 
-def explore_folder(dirname):
+def explore_folder(dirname, experiment_names=None):
     """
     Exploring the OpenEphys folder structure and structure.oebin
 
@@ -349,6 +352,7 @@ def explore_folder(dirname):
     nb_segment_per_block = {}
     # nested dictionary: block_index > seg_index > data_type > stream_name
     all_streams = {}
+    possible_experiment_names = []
     for root, dirs, files in os.walk(dirname):
         for file in files:
             if not file == 'structure.oebin':
@@ -361,6 +365,11 @@ def explore_folder(dirname):
                 # so no node_name
                 node_name = ''
 
+            # here we skip if self.experiment_names is not None
+            experiment_name = root.parents[0].stem
+            possible_experiment_names.append(experiment_name)
+            if experiment_names is not None and experiment_name not in experiment_names:
+                continue
             block_index = int(root.parents[0].stem.lower().replace('experiment', '')) - 1
             if block_index not in all_streams:
                 all_streams[block_index] = {}
@@ -389,7 +398,13 @@ def explore_folder(dirname):
 
                     raw_filename = root / 'continuous' / d['folder_name'] / 'continuous.dat'
 
-                    timestamp_file = root / 'continuous' / d['folder_name'] / 'timestamps.npy'
+                    # Updates for OpenEphys v0.6:
+                    # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
+                    # see https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#continuous
+                    if (root / 'continuous' / d['folder_name'] / 'sample_numbers.npy').is_file():
+                        timestamp_file = root / 'continuous' / d['folder_name'] / 'sample_numbers.npy'
+                    else:
+                        timestamp_file = root / 'continuous' / d['folder_name'] / 'timestamps.npy'
                     timestamps = np.load(str(timestamp_file), mmap_mode='r')
                     timestamp0 = timestamps[0]
                     t_start = timestamp0 / d['sample_rate']
@@ -415,6 +430,32 @@ def explore_folder(dirname):
 
                     all_streams[block_index][seg_index]['events'][stream_name] = event_stream
 
-    # TODO for later: check stream / channel consistency across segment
+    possible_experiment_names = list(np.unique(possible_experiment_names))
 
-    return all_streams, nb_block, nb_segment_per_block
+    return all_streams, nb_block, nb_segment_per_block, possible_experiment_names
+
+
+def check_stream_consistency(all_streams, nb_block, nb_segment_per_block, possible_experiment_names=None):
+    # "continuous" streams across segments
+    for block_index in range(nb_block):
+        segment_stream_names = None
+        if nb_segment_per_block[block_index] > 1:
+            for segment_index in range(nb_segment_per_block[block_index]):
+                stream_names = sorted(list(all_streams[block_index][segment_index]["continuous"].keys()))
+                if segment_stream_names is None:
+                    segment_stream_names = stream_names
+                assert segment_stream_names == stream_names, \
+                    ("Inconsistent continuous streams across segments! Streams for different segments in the "
+                     "same experiment must be the same. Check your open ephys folder.")
+
+    # "continuous" streams across blocks
+    block_stream_names = None
+    for block_index in range(nb_block):
+        # use 1st segment
+        stream_names = sorted(list(all_streams[block_index][0]["continuous"].keys()))
+        if block_stream_names is None:
+            block_stream_names = stream_names
+        assert block_stream_names == stream_names, \
+            (f"Inconsistent continuous streams across blocks (experiments)! Streams for different experiments in the "
+             f"same folder must be the same. You can load a subset of experiments with the 'experiment_names' "
+             f"argument: {possible_experiment_names}")
