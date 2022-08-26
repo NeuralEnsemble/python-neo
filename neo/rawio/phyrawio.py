@@ -179,7 +179,7 @@ class PhyRawIO(BaseRawIO):
                                 current_pc_features[:, pc_idx, channel_idx]
 
             if self._pc_feature_ind is not None:
-                spiketrain_an['pc_feature_ind'] = self._pc_feature_ind[index]
+                spiketrain_an['pc_feature_ind'] = self._pc_feature_ind[unique_templates]
 
     def _segment_t_start(self, block_index, seg_index):
         assert block_index == 0
