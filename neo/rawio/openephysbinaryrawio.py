@@ -31,14 +31,15 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     dirname : str
         Path to Open Ephys directory
     experiment_names : str or list or None
-        If multiple experiments are available, this argument allows users to select one or more experiments. 
-        If None, all experiements are loaded as blocks.
+        If multiple experiments are available, this argument allows users to select one
+        or more experiments. If None, all experiements are loaded as blocks.
         E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
 
     Note
     ----
-    For multi-experiment datasets, the streams need to be consistent across experiments. If this is not the case, 
-    you can select a subset of experiments with the `experiment_names` argument
+    For multi-experiment datasets, the streams need to be consistent across experiments.
+    If this is not the case, you can select a subset of experiments with the `experiment_names`
+    argument.
 
     # Correspondencies
     Neo          OpenEphys
@@ -65,9 +66,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         return self.dirname
 
     def _parse_header(self):
-        all_streams, nb_block, nb_segment_per_block, possible_experiments = explore_folder(self.dirname,
-                                                                                           self.experiment_names)
-        check_stream_consistency(all_streams, nb_block, nb_segment_per_block, possible_experiments)
+        all_streams, nb_block, nb_segment_per_block, possible_experiments = \
+            explore_folder(self.dirname, self.experiment_names)
+        check_stream_consistency(all_streams, nb_block, nb_segment_per_block, 
+                                 possible_experiments)
 
         # all streams are consistent across blocks and segments
         sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
@@ -409,7 +411,8 @@ def explore_folder(dirname, experiment_names=None):
                     # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
                     # see https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#continuous
                     if (root / 'continuous' / d['folder_name'] / 'sample_numbers.npy').is_file():
-                        timestamp_file = root / 'continuous' / d['folder_name'] / 'sample_numbers.npy'
+                        timestamp_file = root / 'continuous' / d['folder_name'] / \
+                            'sample_numbers.npy'
                     else:
                         timestamp_file = root / 'continuous' / d['folder_name'] / 'timestamps.npy'
                     timestamps = np.load(str(timestamp_file), mmap_mode='r')
@@ -442,18 +445,21 @@ def explore_folder(dirname, experiment_names=None):
     return all_streams, nb_block, nb_segment_per_block, possible_experiment_names
 
 
-def check_stream_consistency(all_streams, nb_block, nb_segment_per_block, possible_experiment_names=None):
+def check_stream_consistency(all_streams, nb_block, nb_segment_per_block,
+                             possible_experiment_names=None):
     # "continuous" streams across segments
     for block_index in range(nb_block):
         segment_stream_names = None
         if nb_segment_per_block[block_index] > 1:
             for segment_index in all_streams[block_index]:
-                stream_names = sorted(list(all_streams[block_index][segment_index]["continuous"].keys()))
+                stream_names = sorted(list(all_streams[block_index]
+                                           [segment_index]["continuous"].keys()))
                 if segment_stream_names is None:
                     segment_stream_names = stream_names
                 assert segment_stream_names == stream_names, \
-                    ("Inconsistent continuous streams across segments! Streams for different segments in the "
-                     "same experiment must be the same. Check your open ephys folder.")
+                    ("Inconsistent continuous streams across segments! Streams for different "
+                     "segments in the same experiment must be the same. Check your open ephys "
+                     "folder.")
 
     # "continuous" streams across blocks
     block_stream_names = None
@@ -463,6 +469,6 @@ def check_stream_consistency(all_streams, nb_block, nb_segment_per_block, possib
         if block_stream_names is None:
             block_stream_names = stream_names
         assert block_stream_names == stream_names, \
-            (f"Inconsistent continuous streams across blocks (experiments)! Streams for different experiments in the "
-             f"same folder must be the same. You can load a subset of experiments with the 'experiment_names' "
-             f"argument: {possible_experiment_names}")
+            (f"Inconsistent continuous streams across blocks (experiments)! Streams for "
+             f"different experiments in the same folder must be the same. You can load a subset "
+             f"of experiments with the 'experiment_names' argument: {possible_experiment_names}")
