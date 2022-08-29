@@ -485,7 +485,7 @@ def check_folder_consistency(folder_structure, possible_experiment_names=None):
         segment_stream_names = None
         if len(experiment['recordings']) > 1:
             for recording in experiment['recordings']:
-                stream_names = sorted(list(recording['streams'].keys()))
+                stream_names = sorted(list(recording['streams']['continuous'].keys()))
                 if segment_stream_names is None:
                     segment_stream_names = stream_names
                 assert segment_stream_names == stream_names, \
@@ -498,10 +498,12 @@ def check_folder_consistency(folder_structure, possible_experiment_names=None):
     if len(experiments) > 1:
         for experiment in experiments:
             # use 1st segment
-            stream_names = sorted(list(experiment['recordings'][0]['streams'].keys()))
+            stream_names = list(experiment['recordings'][0]['streams']['continuous'].keys())
+            stream_names = sorted(stream_names)
             if block_stream_names is None:
                 block_stream_names = stream_names
             assert block_stream_names == stream_names, \
                 (f"Inconsistent continuous streams across blocks (experiments)! Streams for "
-                 f"different experiments in the same folder must be the same. You can load a subset "
-                 f"of experiments with the 'experiment_names' argument: {possible_experiment_names}")
+                 f"different experiments in the same folder must be the same. You can load a "
+                 f"subset of experiments with the 'experiment_names' argument: "
+                 f"{possible_experiment_names}")
