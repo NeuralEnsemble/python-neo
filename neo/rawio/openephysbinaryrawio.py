@@ -390,7 +390,7 @@ def explore_folder(dirname, experiment_names=None):
                     settings_file = node_folder / "settings.xml"
                 else:
                     settings_file = node_folder / f"settings_{experiment_folder.stem.replace('experiment', '')}.xml"
-                experiment['settings'] = settings_file
+                experiment['settings_file'] = settings_file
                 experiment['recordings'] = []
                 folder_structure[node_name]['experiments'].append(experiment)
 
