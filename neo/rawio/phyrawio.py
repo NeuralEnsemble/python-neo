@@ -36,10 +36,11 @@ class PhyRawIO(BaseRawIO):
     extensions = []
     rawmode = 'one-dir'
 
-    def __init__(self, dirname='', load_pcs=False):
+    def __init__(self, dirname='', load_amplitudes=False, load_pcs=False):
         BaseRawIO.__init__(self)
         self.dirname = dirname
         self.load_pcs = load_pcs
+        self.load_amplitudes = load_amplitudes
 
     def _source_name(self):
         return self.dirname
@@ -55,10 +56,13 @@ class PhyRawIO(BaseRawIO):
         else:
             self._spike_clusters = self._spike_templates
 
-        if (phy_folder / 'amplitudes.npy').is_file():
-            self._amplitudes = np.squeeze(np.load(phy_folder / 'amplitudes.npy'))
-        else:
-            self._amplitudes = None
+        self._amplitudes = None
+        if self.load_amplitudes:
+            if (phy_folder / 'amplitudes.npy').is_file():
+                self._amplitudes = np.squeeze(np.load(phy_folder / 'amplitudes.npy'))
+            else:
+                warnings.warn('Amplitudes requested but "amplitudes.npy"'
+                              'not found in the data folder.')
 
         self._pc_features = None
         self._pc_feature_ind = None
