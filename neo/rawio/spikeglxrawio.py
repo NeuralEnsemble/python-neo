@@ -45,7 +45,6 @@ Author : Samuel Garcia
 Some functions are copied from Graham Findlay
 """
 
-import warnings
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                 _spike_channel_dtype, _event_channel_dtype)
 
@@ -256,10 +255,6 @@ def scan_files(dirname):
                 info['meta_file'] = str(meta_filename)
                 info['bin_file'] = str(bin_filename)
                 info_list.append(info)
-
-            # Let see if this will be anoying or not.
-            if bin_filename.stat().st_size != meta['fileSizeBytes']:
-                warnings.warn('.meta file has faulty value for .bin file size on disc')
 
     # the segment index will depend on both 'gate_num' and 'trigger_num'
     # so we order by 'gate_num' then 'trigger_num'
