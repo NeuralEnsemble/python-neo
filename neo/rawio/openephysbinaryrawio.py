@@ -61,15 +61,16 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             if isinstance(experiment_names, str):
                 experiment_names = [experiment_names]
         self.experiment_names = experiment_names
+        self.folder_structure = None
 
     def _source_name(self):
         return self.dirname
 
     def _parse_header(self):
-        all_streams, nb_block, nb_segment_per_block, possible_experiments = \
+        folder_structure, all_streams, nb_block, nb_segment_per_block, possible_experiments = \
             explore_folder(self.dirname, self.experiment_names)
-        check_stream_consistency(all_streams, nb_block, nb_segment_per_block, 
-                                 possible_experiments)
+        check_folder_consistency(folder_structure, possible_experiments)
+        self.folder_structure = folder_structure
 
         # all streams are consistent across blocks and segments
         sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
@@ -354,106 +355,137 @@ def explore_folder(dirname, experiment_names=None):
     nb_segment_per_block = {}
     # nested dictionary: block_index > seg_index > data_type > stream_name
     all_streams = {}
-    block_names_dict = {}
     possible_experiment_names = []
+
+    # folder with nodes, experiments, setting files, recordings, and streams
+    folder_structure = {}
+
     for root, dirs, files in os.walk(dirname):
         for file in files:
             if not file == 'structure.oebin':
                 continue
             root = Path(root)
 
-            node_name = root.parents[1].stem
+            node_folder = root.parents[1]
+            node_name = node_folder.stem
             if not node_name.startswith('Record'):
                 # before version 5.x.x there was not multi Node recording
                 # so no node_name
                 node_name = ''
 
+            if node_name not in folder_structure:
+                folder_structure[node_name] = {}
+                folder_structure[node_name]['experiments'] = []
+
             # here we skip if experiment_names is not None
-            experiment_name = root.parents[0].stem
+            experiment_folder = root.parents[0]
+            experiment_name = experiment_folder.stem
             possible_experiment_names.append(experiment_name)
             if experiment_names is not None and experiment_name not in experiment_names:
                 continue
-            block_name = experiment_name
-            if block_name not in block_names_dict:
-                block_index = nb_block
-                segment_names_dict = {}
-                block_names_dict[experiment_name] = block_index
-                all_streams[block_index] = {}
-                nb_segment_per_block[block_index] = 0
-                nb_block += 1
-                seg_index = -1
+            if experiment_name not in [e['name'] for e in folder_structure[node_name]['experiments']]:
+                experiment = {}
+                experiment['name'] = experiment_name
+                if experiment_name == 'experiment1':
+                    settings_file = node_folder / "settings.xml"
+                else:
+                    settings_file = node_folder / f"settings_{experiment_folder.stem.replace('experiment', '')}.xml"
+                experiment['settings'] = settings_file
+                experiment['recordings'] = []
+                folder_structure[node_name]['experiments'].append(experiment)
 
+            recording_folder = root
             recording_name = root.stem
-            if recording_name not in segment_names_dict:
-                # segment index restarts from zero for each block (index)
-                seg_index += 1
-                all_streams[block_index][seg_index] = {
-                    'continuous': {},
-                    'events': {},
-                    'spikes': {},
-                }
-                segment_names_dict[recording_name] = seg_index
-                nb_segment_per_block[block_index] += 1
+            if recording_name not in [r['name'] for r in folder_structure[node_name]['experiments'][-1]['recordings']]:
+                recording = {}
+                recording['name'] = recording_name
+                recording['streams'] = {}
 
-            # metadata
-            with open(root / 'structure.oebin', encoding='utf8', mode='r') as f:
-                structure = json.load(f)
+                # metadata
+                with open(recording_folder / 'structure.oebin', encoding='utf8', mode='r') as f:
+                    rec_structure = json.load(f)
 
-            if (root / 'continuous').exists() and len(structure['continuous']) > 0:
-                for d in structure['continuous']:
-                    # when multi Record Node the stream name also contains
-                    # the node name to make it unique
-                    stream_name = node_name + '#' + d['folder_name']
+                if (recording_folder / 'continuous').exists() and len(rec_structure['continuous']) > 0:
+                    recording['streams']['continuous'] = {}
+                    for d in rec_structure['continuous']:
+                        # when multi Record Node the stream name also contains
+                        # the node name to make it unique
+                        oe_stream_name = Path(d["folder_name"]).name # remove trailing slash
+                        stream_name = node_name + '#' + oe_stream_name
+                        raw_filename = recording_folder / 'continuous' / d['folder_name'] / 'continuous.dat'
 
-                    raw_filename = root / 'continuous' / d['folder_name'] / 'continuous.dat'
+                        # Updates for OpenEphys v0.6:
+                        # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
+                        # see https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#continuous
+                        if (recording_folder / 'continuous' / d['folder_name'] / 'sample_numbers.npy').is_file():
+                            timestamp_file = recording_folder / 'continuous' / d['folder_name'] / \
+                                'sample_numbers.npy'
+                        else:
+                            timestamp_file = recording_folder / 'continuous' / d['folder_name'] / 'timestamps.npy'
+                        timestamps = np.load(str(timestamp_file), mmap_mode='r')
+                        timestamp0 = timestamps[0]
+                        t_start = timestamp0 / d['sample_rate']
 
-                    # Updates for OpenEphys v0.6:
-                    # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
-                    # see https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#continuous
-                    if (root / 'continuous' / d['folder_name'] / 'sample_numbers.npy').is_file():
-                        timestamp_file = root / 'continuous' / d['folder_name'] / \
-                            'sample_numbers.npy'
-                    else:
-                        timestamp_file = root / 'continuous' / d['folder_name'] / 'timestamps.npy'
-                    timestamps = np.load(str(timestamp_file), mmap_mode='r')
-                    timestamp0 = timestamps[0]
-                    t_start = timestamp0 / d['sample_rate']
+                        # TODO for later : gap checking
+                        signal_stream = d.copy()
+                        signal_stream['raw_filename'] = str(raw_filename)
+                        signal_stream['dtype'] = 'int16'
+                        signal_stream['timestamp0'] = timestamp0
+                        signal_stream['t_start'] = t_start
 
-                    # TODO for later : gap checking
-                    signal_stream = d.copy()
-                    signal_stream['raw_filename'] = str(raw_filename)
-                    signal_stream['dtype'] = 'int16'
-                    signal_stream['timestamp0'] = timestamp0
-                    signal_stream['t_start'] = t_start
+                        recording['streams']['continuous'][stream_name] = signal_stream
 
-                    all_streams[block_index][seg_index]['continuous'][stream_name] = signal_stream
+                if (root / 'events').exists() and len(rec_structure['events']) > 0:
+                    recording['streams']['events'] = {}
+                    for d in rec_structure['events']:
+                        oe_stream_name = Path(d["folder_name"]).name # remove trailing slash
+                        stream_name = node_name + '#' + oe_stream_name
 
-            if (root / 'events').exists() and len(structure['events']) > 0:
-                for d in structure['events']:
-                    stream_name = node_name + '#' + d['folder_name']
+                        event_stream = d.copy()
+                        for name in _possible_event_stream_names:
+                            npy_filename = root / 'events' / d['folder_name'] / f'{name}.npy'
+                            if npy_filename.is_file():
+                                event_stream[f'{name}_npy'] = str(npy_filename)
 
-                    event_stream = d.copy()
-                    for name in _possible_event_stream_names:
-                        npz_filename = root / 'events' / d['folder_name'] / f'{name}.npy'
-                        if npz_filename.is_file():
-                            event_stream[f'{name}_npy'] = str(npz_filename)
+                        recording['streams']['events'][stream_name] = event_stream
 
-                    all_streams[block_index][seg_index]['events'][stream_name] = event_stream
+                folder_structure[node_name]['experiments'][-1]['recordings'].append(recording)
 
-    possible_experiment_names = list(np.unique(possible_experiment_names))
+    # now create all_streams, nb_block, nb_segment_per_block (from first recording Node)
+    recording_node = folder_structure[list(folder_structure.keys())[0]]
+    nb_block = len(recording_node['experiments'])
+    for block_index, experiment in enumerate(recording_node['experiments']):
+        nb_segment_per_block[block_index] = len(experiment['recordings'])
+        all_streams[block_index] = {}
+        for seg_index, recording in enumerate(experiment['recordings']):
+            all_streams[block_index][seg_index] = {}
+            for stream_type in recording['streams']:
+                all_streams[block_index][seg_index][stream_type] = {}
+                for stream_name, signal_stream in recording['streams'][stream_type].items():
+                    all_streams[block_index][seg_index][stream_type][stream_name] = signal_stream
 
-    return all_streams, nb_block, nb_segment_per_block, possible_experiment_names
+    return folder_structure, all_streams, nb_block, nb_segment_per_block, possible_experiment_names
 
 
-def check_stream_consistency(all_streams, nb_block, nb_segment_per_block,
-                             possible_experiment_names=None):
+def check_folder_consistency(folder_structure, possible_experiment_names=None):
+    # experiments across nodes
+    if len(folder_structure) > 1:
+        experiments = None
+        for node in folder_structure.values():
+            experiments_node = node['experiments']
+            if experiments is None:
+                experiments = experiments_node
+            experiment_names = [e['name'] for e in experiments]
+            assert all(ename['name'] in experiment_names for ename in experiments_node), \
+                ("Inconsistent experiments across recording nodes!")
+
     # "continuous" streams across segments
-    for block_index in range(nb_block):
+    experiments = folder_structure[list(folder_structure.keys())[0]]['experiments']
+    for experiment in experiments:
         segment_stream_names = None
-        if nb_segment_per_block[block_index] > 1:
-            for segment_index in all_streams[block_index]:
-                stream_names = sorted(list(all_streams[block_index]
-                                           [segment_index]["continuous"].keys()))
+        if len(experiment['recordings']) > 1:
+            for recording in experiment['recordings']:
+                stream_names = sorted(list(recording['streams'].keys()))
                 if segment_stream_names is None:
                     segment_stream_names = stream_names
                 assert segment_stream_names == stream_names, \
@@ -463,12 +495,13 @@ def check_stream_consistency(all_streams, nb_block, nb_segment_per_block,
 
     # "continuous" streams across blocks
     block_stream_names = None
-    for block_index in range(nb_block):
-        # use 1st segment
-        stream_names = sorted(list(all_streams[block_index][0]["continuous"].keys()))
-        if block_stream_names is None:
-            block_stream_names = stream_names
-        assert block_stream_names == stream_names, \
-            (f"Inconsistent continuous streams across blocks (experiments)! Streams for "
-             f"different experiments in the same folder must be the same. You can load a subset "
-             f"of experiments with the 'experiment_names' argument: {possible_experiment_names}")
+    if len(experiments) > 1:
+        for experiment in experiments:
+            # use 1st segment
+            stream_names = sorted(list(experiment['recordings'][0]['streams'].keys()))
+            if block_stream_names is None:
+                block_stream_names = stream_names
+            assert block_stream_names == stream_names, \
+                (f"Inconsistent continuous streams across blocks (experiments)! Streams for "
+                 f"different experiments in the same folder must be the same. You can load a subset "
+                 f"of experiments with the 'experiment_names' argument: {possible_experiment_names}")
