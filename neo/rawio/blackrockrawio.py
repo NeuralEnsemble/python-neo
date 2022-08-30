@@ -412,7 +412,7 @@ class BlackrockRawIO(BaseRawIO):
                     for k, (data, ev_ids) in self.nev_data.items():
                         segment_mask = ev_ids == data_bl
                         if data[segment_mask].size > 0:
-                            t = (data[segment_mask][-1]['timestamp'] + 1) / self.__nev_basic_header[
+                            t = (data[segment_mask][-1]['timestamp']) / self.__nev_basic_header[
                                 'timestamp_resolution']
                             max_nev_time = max(max_nev_time, t)
                     if max_nev_time > t_stop:
@@ -450,8 +450,7 @@ class BlackrockRawIO(BaseRawIO):
             # Calculate t_start and t_stop for each segment in seconds
             resolution = self.__nev_basic_header['timestamp_resolution']
             self._seg_t_starts = [v / float(resolution) for k, v in sorted(min_nev_times.items())]
-            self._seg_t_stops = [(v + 1) / float(resolution)
-                                    for k, v in sorted(max_nev_times.items())]
+            self._seg_t_stops = [v / float(resolution) for k, v in sorted(max_nev_times.items())]
             self._nb_segment = len(self._seg_t_starts)
             self._sigs_t_starts = [None] * self._nb_segment
 
@@ -614,7 +613,8 @@ class BlackrockRawIO(BaseRawIO):
             if t_start is None:
                 t_start = self._seg_t_starts[seg_index]
             if t_stop is None:
-                t_stop = self._seg_t_stops[seg_index]
+                t_stop = self._seg_t_stops[seg_index] + 1 / float(
+                    self.__nev_basic_header['timestamp_resolution'])
 
         if t_start is None:
             ind_start = None
