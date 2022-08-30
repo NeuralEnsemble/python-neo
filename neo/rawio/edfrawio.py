@@ -30,7 +30,7 @@ class EDFRawIO(BaseRawIO):
 
     Usage:
         >>> import neo.rawio
-        >>> r = neo.rawio.EdfRawIO(filename='file.edf')
+        >>> r = neo.rawio.EDFRawIO(filename='file.edf')
         >>> r.parse_header()
         >>> print(r)
         >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
