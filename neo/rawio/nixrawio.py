@@ -43,9 +43,9 @@ class NIXRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        import nixio as nix
+        import nixio
 
-        self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
+        self.file = nixio.File.open(self.filename, nixio.FileMode.ReadOnly)
         signal_channels = []
         anasig_ids = {0: []}  # ids of analogsignals by segment
         stream_ids = []

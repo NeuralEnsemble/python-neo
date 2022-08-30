@@ -21,14 +21,6 @@ import shutil
 # note neo.core need only numpy and quantitie
 import numpy as np
 
-try:
-    import matplotlib.mlab as mlab
-except ImportError as err:
-    HAVE_MLAB = False
-    MLAB_ERR = err
-else:
-    HAVE_MLAB = True
-    MLAB_ERR = None
 
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -105,8 +97,6 @@ class KlustaKwikIO(BaseIO):
         sampling_rate : in Hz, necessary because the KlustaKwik files
             stores data in samples.
         """
-        if not HAVE_MLAB:
-            raise MLAB_ERR
         BaseIO.__init__(self)
         # self.filename = os.path.normpath(filename)
         self.filename, self.basename = os.path.split(os.path.abspath(filename))

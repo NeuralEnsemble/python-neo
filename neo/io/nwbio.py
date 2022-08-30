@@ -35,36 +35,6 @@ from neo.io.proxyobjects import (
     SpikeTrainProxy as BaseSpikeTrainProxy
 )
 
-# PyNWB imports
-try:
-    import pynwb
-    from pynwb import NWBFile, TimeSeries
-    from pynwb.base import ProcessingModule
-    from pynwb.ecephys import ElectricalSeries, Device, EventDetection
-    from pynwb.behavior import SpatialSeries
-    from pynwb.misc import AnnotationSeries
-    from pynwb import image
-    from pynwb.image import ImageSeries
-    from pynwb.spec import NWBAttributeSpec, NWBDatasetSpec, NWBGroupSpec, NWBNamespace, \
-        NWBNamespaceBuilder
-    from pynwb.device import Device
-    # For calcium imaging data
-    from pynwb.ophys import TwoPhotonSeries, OpticalChannel, ImageSegmentation, Fluorescence
-
-    have_pynwb = True
-except ImportError:
-    have_pynwb = False
-
-# hdmf imports
-try:
-    from hdmf.spec import (LinkSpec, GroupSpec, DatasetSpec, SpecNamespace,
-                           NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec)
-
-    have_hdmf = True
-except ImportError:
-    have_hdmf = False
-except SyntaxError:
-    have_hdmf = False
 
 logger = logging.getLogger("Neo")
 
@@ -110,6 +80,8 @@ def get_class(module, name):
     """
     Given a module path and a class name, return the class object
     """
+    import pynwb
+
     module_path = module.split(".")
     assert len(module_path) == 2  # todo: handle the general case where this isn't 2
     return getattr(getattr(pynwb, module_path[1]), name)
@@ -240,10 +212,8 @@ class NWBIO(BaseIO):
         Arguments:
             filename : the filename
         """
-        if not have_pynwb:
-            raise Exception("Please install the pynwb package to use NWBIO")
-        if not have_hdmf:
-            raise Exception("Please install the hdmf package to use NWBIO")
+        import pynwb
+
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
         self.blocks_written = 0
@@ -253,6 +223,8 @@ class NWBIO(BaseIO):
         """
         Load all blocks in the file.
         """
+        import pynwb
+
         assert self.nwb_file_mode in ('r',)
         io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode,
                              load_namespaces=True)  # Open a file with NWBHDF5IO
@@ -344,6 +316,8 @@ class NWBIO(BaseIO):
                 epoch.segment = segment
 
     def _read_timeseries_group(self, group_name, lazy):
+        import pynwb
+
         group = getattr(self._file, group_name)
         for timeseries in group.values():
             try:
@@ -360,7 +334,7 @@ class NWBIO(BaseIO):
                 block_name = hierarchy["block"]
                 segment_name = hierarchy["segment"]
             segment = self._get_segment(block_name, segment_name)
-            if isinstance(timeseries, AnnotationSeries):
+            if isinstance(timeseries, pynwb.misc.AnnotationSeries):
                 event = EventProxy(timeseries, group_name)
                 if not lazy:
                     event = event.load()
@@ -408,6 +382,8 @@ class NWBIO(BaseIO):
         """
         Write list of blocks to the file
         """
+        import pynwb
+
         # todo: allow metadata in NWBFile constructor to be taken from kwargs
         annotations = defaultdict(set)
         for annotation_name in GLOBAL_ANNOTATIONS:
@@ -442,7 +418,7 @@ class NWBIO(BaseIO):
         self.annotations = {"rec_datetime": "rec_datetime"}
         self.annotations["rec_datetime"] = blocks[0].rec_datetime
         # todo: handle subject
-        nwbfile = NWBFile(**annotations)
+        nwbfile = pynwb.NWBFile(**annotations)
         assert self.nwb_file_mode in ('w',)  # possibly expand to 'a'ppend later
         if self.nwb_file_mode == "w" and os.path.exists(self.filename):
             os.remove(self.filename)
@@ -545,18 +521,20 @@ class NWBIO(BaseIO):
             self._write_epoch(nwbfile, epoch)
 
     def _write_signal(self, nwbfile, signal, electrodes):
+        import pynwb
+
         hierarchy = {'block': signal.segment.block.name, 'segment': signal.segment.name}
         if "nwb_neurodata_type" in signal.annotations:
             timeseries_class = get_class(*signal.annotations["nwb_neurodata_type"])
         else:
-            timeseries_class = TimeSeries  # default
+            timeseries_class = pynwb.TimeSeries  # default
         additional_metadata = {name[4:]: value
                                for name, value in signal.annotations.items()
                                if name.startswith("nwb:")}
         if "nwb_electrode" in signal.annotations:
             electrode_name = signal.annotations["nwb_electrode"]["name"]
             additional_metadata["electrode"] = electrodes[electrode_name]
-        if timeseries_class != TimeSeries:
+        if timeseries_class != pynwb.TimeSeries:
             conversion, units = get_units_conversion(signal, timeseries_class)
             additional_metadata["conversion"] = conversion
         else:
@@ -616,11 +594,13 @@ class NWBIO(BaseIO):
         return nwbfile.units
 
     def _write_event(self, nwbfile, event):
+        import pynwb
+
         segment = event.segment
         if hasattr(event, 'proxy_for') and event.proxy_for == Event:
             event = event.load()
         hierarchy = {'block': segment.block.name, 'segment': segment.name}
-        tS_evt = AnnotationSeries(
+        tS_evt = pynwb.misc.AnnotationSeries(
             name=event.name,
             data=event.labels,
             timestamps=event.times.rescale('second').magnitude,
