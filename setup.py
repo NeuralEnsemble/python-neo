@@ -17,6 +17,8 @@ extras_require = {
     'edf': ['pyedflib'],
     'ced': ['sonpy'],
     'nwb': ['pynwb'],
+    'maxwell': ['h5py'],
+    'biocam': ['h5py'],
 }
 
 with open("neo/version.py") as fp:
