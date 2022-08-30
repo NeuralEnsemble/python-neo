@@ -15,13 +15,6 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                         _spike_channel_dtype, _event_channel_dtype)
 from ..io.nixio import check_nix_version
 
-try:
-    import nixio as nix
-
-    HAVE_NIX = True
-except ImportError:
-    HAVE_NIX = False
-    nix = None
 
 
 # When reading metadata properties, the following keys are ignored since they
@@ -50,6 +43,8 @@ class NIXRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
+        import nixio as nix
+
         self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
         signal_channels = []
         anasig_ids = {0: []}  # ids of analogsignals by segment
