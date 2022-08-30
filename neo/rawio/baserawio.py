@@ -75,12 +75,6 @@ import sys
 
 from neo import logging_handler
 
-try:
-    import joblib
-
-    HAVE_JOBLIB = True
-except ImportError:
-    HAVE_JOBLIB = False
 
 possible_raw_modes = ['one-file', 'multi-file', 'one-dir', ]  # 'multi-dir', 'url', 'other'
 
@@ -162,7 +156,7 @@ class BaseRawIO:
 
         self.use_cache = use_cache
         if use_cache:
-            assert HAVE_JOBLIB, 'You need to install joblib for cache'
+            import joblib
             self.setup_cache(cache_path)
         else:
             self._cache = None
@@ -703,6 +697,8 @@ class BaseRawIO:
         return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
     def setup_cache(self, cache_path, **init_kargs):
+        import joblib
+
         if self.rawmode in ('one-file', 'multi-file'):
             resource_name = self.filename
         elif self.rawmode == 'one-dir':
