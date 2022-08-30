@@ -30,6 +30,7 @@ Classes:
 * :attr:`BrainwareF32IO`
 * :attr:`BrainwareSrcIO`
 * :attr:`CedIO`
+* :attr:`EDFIO`
 * :attr:`ElanIO`
 * :attr:`IgorIO`
 * :attr:`IntanIO`
@@ -124,6 +125,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.CedIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.EDFIO
 
     .. autoattribute:: extensions
 
@@ -335,6 +340,7 @@ iolist = [
     AxonaIO,
     AxonIO,
     BCI2000IO,
+    BiocamIO,
     BlackrockIO,
     BlkIO,
     BrainVisionIO,
