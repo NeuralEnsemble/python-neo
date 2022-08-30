@@ -492,11 +492,11 @@ def explore_folder(dirname):
             if (seg_index + 1) > info['nb_segment']:
                 info['nb_segment'] += 1
         elif filename.endswith('.spikes'):
-            s = filename.replace('.spikes', '').split('_')
-            if len(s) == 2:
-                seg_index = 0
+            s = re.findall("(_\d+)$", filename.replace('.spikes', ''))
+            if s:
+                seg_index = int(s[0][1:]) - 1
             else:
-                seg_index = int(s[2]) - 1
+                seg_index = 0
             if seg_index not in info['spikes'].keys():
                 info['spikes'][seg_index] = []
             info['spikes'][seg_index].append(filename)
