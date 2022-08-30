@@ -15,6 +15,7 @@ import re
 import json
 
 from pathlib import Path
+from natsort import natsorted
 
 import numpy as np
 
@@ -476,10 +477,18 @@ def explore_folder(dirname, experiment_names=None):
     # now create all_streams, nb_block, nb_segment_per_block (from first recording Node)
     recording_node = folder_structure[list(folder_structure.keys())[0]]
     nb_block = len(recording_node['experiments'])
-    for block_index, experiment in enumerate(recording_node['experiments']):
+    # natural sort experiment names so that block_index sequentially indicate experiments
+    experiment_names = [e['name'] for e in recording_node['experiments']]
+    experiment_order = np.argsort([int(ename.replace('experiment', '')) for ename in experiment_names])
+    for block_index, exp_index in enumerate(experiment_order):
+        experiment = recording_node['experiments'][exp_index]
         nb_segment_per_block[block_index] = len(experiment['recordings'])
         all_streams[block_index] = {}
-        for seg_index, recording in enumerate(experiment['recordings']):
+        # natural sort recording names so that seg_index sequentially indicate recordings
+        recording_names = [r['name'] for r in experiment['recordings']]
+        recording_order = np.argsort([int(rname.replace('recording', '')) for rname in recording_names])
+        for seg_index, rec_index in enumerate(recording_order):
+            recording = experiment['recordings'][rec_index]
             all_streams[block_index][seg_index] = {}
             for stream_type in recording['streams']:
                 all_streams[block_index][seg_index][stream_type] = {}
