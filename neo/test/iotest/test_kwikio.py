@@ -14,7 +14,7 @@ from neo.io import kwikio
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-@unittest.skipUnless(   HAVE_KWIK, "requires klusta")
+@unittest.skipUnless(HAVE_KWIK, "requires klusta")
 class TestKwikIO(BaseTestIO, unittest.TestCase):
     ioclass = kwikio.KwikIO
     entities_to_download = [
