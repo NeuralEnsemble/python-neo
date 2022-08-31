@@ -15,10 +15,9 @@ import quantities as pq
 import neo
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import assert_arrays_almost_equal
-from neo.io.klustakwikio import KlustaKwikIO, HAVE_MLAB
+from neo.io.klustakwikio import KlustaKwikIO
 
 
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
 class testFilenameParser(unittest.TestCase):
     """Tests that filenames can be loaded with or without basename.
 
@@ -75,7 +74,6 @@ class testFilenameParser(unittest.TestCase):
                                                       'basename2.clu.1')))
 
 
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
 class testRead(unittest.TestCase):
     """Tests that data can be read from KlustaKwik files"""
 
@@ -140,7 +138,6 @@ class testRead(unittest.TestCase):
                                                                      0.228])))
 
 
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
 class testWrite(unittest.TestCase):
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
@@ -249,7 +246,6 @@ class testWrite(unittest.TestCase):
         delete_test_session()
 
 
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
 class testWriteWithFeatures(unittest.TestCase):
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
@@ -333,7 +329,6 @@ class testWriteWithFeatures(unittest.TestCase):
         delete_test_session(self.dirname)
 
 
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = KlustaKwikIO
     entities_to_download = [
