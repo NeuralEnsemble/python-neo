@@ -388,7 +388,7 @@ def explore_folder(dirname, experiment_names=None):
             # here we skip if experiment_names is not None
             experiment_folder = root.parents[0]
             experiment_name = experiment_folder.stem
-            experiment_id = experiment_name.replace('experiment', '')
+            experiment_id = int(experiment_name.replace('experiment', ''))
             if experiment_name not in possible_experiment_names:
                 possible_experiment_names.append(experiment_name)
             if experiment_names is not None and experiment_name not in experiment_names:
@@ -406,7 +406,7 @@ def explore_folder(dirname, experiment_names=None):
 
             recording_folder = root
             recording_name = root.stem
-            recording_id = recording_name.replace('recording', '')
+            recording_id = int(recording_name.replace('recording', ''))
             # add recording
             recording = {}
             recording['name'] = recording_name
@@ -468,27 +468,35 @@ def explore_folder(dirname, experiment_names=None):
             folder_structure[node_name]['experiments'][experiment_id]['recordings'][recording_id] \
                 = recording
 
-    # now create all_streams, nb_block, nb_segment_per_block (from first recording Node)
+    # now create all_streams, nb_block, nb_segment_per_block
     # nested dictionary: block_index > seg_index > data_type > stream_name
     all_streams = {}
     nb_segment_per_block = {}
     recording_node = folder_structure[list(folder_structure.keys())[0]]
+
+    # nb_block needs to be consistent across record nodes. Use the first one
     nb_block = len(recording_node['experiments'])
 
-    exp_ids_sorted = sorted(list(recording_node['experiments'].keys()))
-    for block_index, exp_id in enumerate(exp_ids_sorted):
-        experiment = recording_node['experiments'][exp_id]
-        nb_segment_per_block[block_index] = len(experiment['recordings'])
-        all_streams[block_index] = {}
+    for node_id, recording_node in folder_structure.items():
+        exp_ids_sorted = sorted(list(recording_node['experiments'].keys()))
+        for block_index, exp_id in enumerate(exp_ids_sorted):
+            experiment = recording_node['experiments'][exp_id]
+            nb_segment_per_block[block_index] = len(experiment['recordings'])
+            if block_index not in all_streams:
+                all_streams[block_index] = {}
 
-        rec_ids_sorted = sorted(list(experiment['recordings'].keys()))
-        for seg_index, rec_id in enumerate(rec_ids_sorted):
-            recording = experiment['recordings'][rec_id]
-            all_streams[block_index][seg_index] = {}
-            for stream_type in recording['streams']:
-                all_streams[block_index][seg_index][stream_type] = {}
-                for stream_name, signal_stream in recording['streams'][stream_type].items():
-                    all_streams[block_index][seg_index][stream_type][stream_name] = signal_stream
+            rec_ids_sorted = sorted(list(experiment['recordings'].keys()))
+            for seg_index, rec_id in enumerate(rec_ids_sorted):
+                recording = experiment['recordings'][rec_id]
+                if seg_index not in all_streams[block_index]:
+                    all_streams[block_index][seg_index] = {}
+                for stream_type in recording['streams']:
+                    if stream_type not in all_streams[block_index][seg_index]:
+                        all_streams[block_index][seg_index][stream_type] = {}
+                    for stream_name, signal_stream in recording['streams'][stream_type].items():
+                        all_streams[block_index][seg_index][stream_type][stream_name] = \
+                            signal_stream
+
     # natural sort possible experiment names
     experiment_order = np.argsort([int(exp.replace('experiment', ''))
                                    for exp in possible_experiment_names])
