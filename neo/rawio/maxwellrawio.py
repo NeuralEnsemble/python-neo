@@ -27,12 +27,6 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 import numpy as np
 
-try:
-    import h5py
-    HAVE_H5 = True
-except ImportError:
-    HAVE_H5 = False
-
 
 class MaxwellRawIO(BaseRawIO):
     """
@@ -50,12 +44,7 @@ class MaxwellRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        try:
-            import MEArec as mr
-            HAVE_MEAREC = True
-        except ImportError:
-            HAVE_MEAREC = False
-        assert HAVE_H5, 'h5py is not installed'
+        import h5py
 
         h5 = h5py.File(self.filename, mode='r')
         self.h5_file = h5
