@@ -18,23 +18,8 @@ import re
 import numpy as np
 import quantities as pq
 
-# check scipy
-try:
-    from packaging.version import Version
-    import scipy.io
-    import scipy.version
-except ImportError as err:
-    HAVE_SCIPY = False
-    SCIPY_ERR = err
-else:
-    if Version(scipy.version.version) < Version('0.12.0'):
-        HAVE_SCIPY = False
-        SCIPY_ERR = ImportError("your scipy version is too old to support "
-                                + "MatlabIO, you need at least 0.12.0. "
-                                + "You have %s" % scipy.version.version)
-    else:
-        HAVE_SCIPY = True
-        SCIPY_ERR = None
+from packaging.version import Version
+
 
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment, AnalogSignal, IrregularlySampledSignal,
@@ -212,8 +197,13 @@ class NeoMatlabIO(BaseIO):
         Arguments:
             filename : the filename to read
         """
-        if not HAVE_SCIPY:
-            raise SCIPY_ERR
+        import scipy
+
+        if Version(scipy.version.version) < Version('0.12.0'):
+            raise ImportError("your scipy version is too old to support "
+                                    + "MatlabIO, you need at least 0.12.0. "
+                                    + "You have %s" % scipy.version.version)
+
         BaseIO.__init__(self)
         self.filename = filename
 
@@ -222,6 +212,7 @@ class NeoMatlabIO(BaseIO):
         Arguments:
 
         """
+        import scipy.io
         assert not lazy, 'Do not support lazy'
 
         d = scipy.io.loadmat(self.filename, struct_as_record=False,
@@ -241,7 +232,7 @@ class NeoMatlabIO(BaseIO):
         Arguments:
             bl: the block to b saved
         """
-
+        import scipy.io
         bl_struct = self.create_struct_from_obj(bl)
 
         for seg in bl.segments:

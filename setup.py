@@ -9,7 +9,7 @@ install_requires = ['packaging',
                     'quantities>=0.12.1']
 extras_require = {
     'igorproio': ['igor'],
-    'kwikio': ['scipy', 'klusta'],
+    'kwikio': ['klusta'],
     'neomatlabio': ['scipy>=1.0.0'],
     'nixio': ['nixio>=1.5.0'],
     'stimfitio': ['stfio'],
@@ -17,6 +17,8 @@ extras_require = {
     'edf': ['pyedflib'],
     'ced': ['sonpy'],
     'nwb': ['pynwb'],
+    'maxwell': ['h5py'],
+    'biocam': ['h5py'],
 }
 
 with open("neo/version.py") as fp:
