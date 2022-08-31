@@ -15,7 +15,7 @@ from neo.io.neomatlabio import NeoMatlabIO
 try:
     import scipy.io
     HAVE_SCIPY = True
-except:
+except ImportError:
     HAVE_SCIPY = False
 
 
