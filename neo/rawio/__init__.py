@@ -20,7 +20,7 @@ Classes:
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
 * :attr:`CedRawIO`
-* :attr: `EdfRawIO`
+* :attr: `EDFRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
 * :attr:`MaxwellRawIO`
@@ -76,7 +76,7 @@ Classes:
 
     .. autoattribute:: extensions
 
-.. autoclass:: neo.rawio.EdfRawIO
+.. autoclass:: neo.rawio.EDFRawIO
 
     .. autoattribute:: extensions
 
