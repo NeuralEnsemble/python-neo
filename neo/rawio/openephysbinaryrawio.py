@@ -30,6 +30,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     ----------
     dirname : str
         Path to Open Ephys directory
+    load_sync_channel : bool
+        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
+        If True, the SYNC channel is loaded and can be accessed in the analog signals.
     experiment_names : str or list or None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
@@ -54,13 +57,14 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     extensions = []
     rawmode = 'one-dir'
 
-    def __init__(self, dirname='', experiment_names=None):
+    def __init__(self, dirname='', load_sync_channel=False, experiment_names=None):
         BaseRawIO.__init__(self)
         self.dirname = dirname
         if experiment_names is not None:
             if isinstance(experiment_names, str):
                 experiment_names = [experiment_names]
         self.experiment_names = experiment_names
+        self.load_sync_channel = load_sync_channel
         self.folder_structure = None
 
     def _source_name(self):
@@ -104,6 +108,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             new_channels = []
             for chan_info in d['channels']:
                 chan_id = chan_info['channel_name']
+                if "SYNC" in chan_id and not self.load_sync_channel:
+                    continue
                 if chan_info["units"] == "":
                     # in some cases for some OE version the unit is "", but the gain is to "uV"
                     units = "uV"
@@ -127,8 +133,24 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 for stream_index, d in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(d['channels'])
                     memmap_sigs = np.memmap(d['raw_filename'], d['dtype'],
-                                 order='C', mode='r').reshape(-1, num_channels)
+                                            order='C', mode='r').reshape(-1, num_channels)
+                    channel_names = [ch["channel_name"] for ch in d["channels"]]
+                    # if there is a sync channel and it should not be loaded,
+                    # find the right channel index and slice the memmap
+                    if any(["SYNC" in ch for ch in channel_names]) and \
+                        not self.load_sync_channel:
+                        sync_channel_name = [ch for ch in channel_names if "SYNC" in ch][0]
+                        sync_channel_index = channel_names.index(sync_channel_name)
+
+                        # only sync channel in last position is supported to keep memmap
+                        if sync_channel_index == num_channels - 1:
+                            memmap_sigs = memmap_sigs[:, :-1]
+                        else:
+                            raise NotImplementedError("SYNC channel removal is only supported "
+                                                      "when the sync channel is in the last "
+                                                      "position")
                     d['memmap'] = memmap_sigs
+
 
         # events zone
         # channel map: one channel one stream
