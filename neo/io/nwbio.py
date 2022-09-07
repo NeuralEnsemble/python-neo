@@ -228,7 +228,11 @@ class NWBIO(BaseIO):
         assert self.nwb_file_mode in ('r',)
         io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode,
                              load_namespaces=True)  # Open a file with NWBHDF5IO
-        self._file = io.read()
+        try:
+            self._file = io.read()
+        except ValueError:
+            print ("Error: Unable to read this version of NWB file. Please convert to a later NWB format.")
+            raise
 
         self.global_block_metadata = {}
         for annotation_name in GLOBAL_ANNOTATIONS:
