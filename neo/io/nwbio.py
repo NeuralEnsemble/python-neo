@@ -231,7 +231,8 @@ class NWBIO(BaseIO):
         try:
             self._file = io.read()
         except ValueError:
-            print ("Error: Unable to read this version of NWB file. Please convert to a later NWB format.")
+            print("Error: Unable to read this version of NWB file.")
+            print("Please convert to a later NWB format.")
             raise
 
         self.global_block_metadata = {}
