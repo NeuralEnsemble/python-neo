@@ -24,7 +24,7 @@ from json.decoder import JSONDecodeError
 
 import numpy as np
 import quantities as pq
-
+from datetime import datetime
 from neo.core import (Segment, SpikeTrain, Epoch, Event, AnalogSignal,
                       IrregularlySampledSignal, Block, ImageSequence)
 from neo.io.baseio import BaseIO
@@ -207,7 +207,7 @@ class NWBIO(BaseIO):
     is_writable = True
     is_streameable = False
 
-    def __init__(self, filename, mode='r'):
+    def __init__(self, filename, mode='rw+', **kwargs):
         """
         Arguments:
             filename : the filename
@@ -218,6 +218,46 @@ class NWBIO(BaseIO):
         self.filename = filename
         self.blocks_written = 0
         self.nwb_file_mode = mode
+        self._blocks = {}
+
+        annotations = defaultdict(set)
+        for annotation_name in GLOBAL_ANNOTATIONS:
+            if annotation_name in kwargs:
+                annotations[annotation_name] = kwargs[annotation_name]
+            else:
+                for block in self._blocks:
+                    if annotation_name in block.annotations:
+                        try:
+                            annotations[annotation_name].add(block.annotations[annotation_name])
+                        except TypeError:
+                            if annotation_name in POSSIBLE_JSON_FIELDS:
+                                encoded = json.dumps(block.annotations[annotation_name])
+                                annotations[annotation_name].add(encoded)
+                            else:
+                                raise
+                if annotation_name in annotations:
+                    if len(annotations[annotation_name]) > 1:
+                        raise NotImplementedError(
+                            "We don't yet support multiple values for {}".format(annotation_name))
+                    # take single value from set
+                    annotations[annotation_name], = annotations[annotation_name]
+
+        if "identifier" not in annotations:
+            annotations["identifier"] = self.filename
+        if "session_description" not in annotations:
+            annotations["session_description"] = self._blocks or self.filename
+        if "session_start_time" not in annotations:
+            annotations["session_start_time"] = datetime.now()
+            if annotations["session_start_time"] is None:
+                raise Exception("Writing to NWB requires an annotation 'session_start_time'")
+        self.annotations = {"rec_datetime": "rec_datetime"}
+        self.nwbfile = pynwb.NWBFile(**annotations)
+
+        if self.nwb_file_mode == "w" :
+            assert self.nwb_file_mode in ('w',)  # possibly expand to 'a'ppend later
+        if self.nwb_file_mode == "w" and os.path.exists(self.filename):
+            os.remove(self.filename)
+        self.io_nwb = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode)
 
     def read_all_blocks(self, lazy=False, **kwargs):
         """
@@ -384,87 +424,46 @@ class NWBIO(BaseIO):
         """
         import pynwb
 
-        # todo: allow metadata in NWBFile constructor to be taken from kwargs
-        annotations = defaultdict(set)
-        for annotation_name in GLOBAL_ANNOTATIONS:
-            if annotation_name in kwargs:
-                annotations[annotation_name] = kwargs[annotation_name]
-            else:
-                for block in blocks:
-                    if annotation_name in block.annotations:
-                        try:
-                            annotations[annotation_name].add(block.annotations[annotation_name])
-                        except TypeError:
-                            if annotation_name in POSSIBLE_JSON_FIELDS:
-                                encoded = json.dumps(block.annotations[annotation_name])
-                                annotations[annotation_name].add(encoded)
-                            else:
-                                raise
-                if annotation_name in annotations:
-                    if len(annotations[annotation_name]) > 1:
-                        raise NotImplementedError(
-                            "We don't yet support multiple values for {}".format(annotation_name))
-                    # take single value from set
-                    annotations[annotation_name], = annotations[annotation_name]
-        if "identifier" not in annotations:
-            annotations["identifier"] = self.filename
-        if "session_description" not in annotations:
-            annotations["session_description"] = blocks[0].description or self.filename
-            # todo: concatenate descriptions of multiple blocks if different
-        if "session_start_time" not in annotations:
-            annotations["session_start_time"] = blocks[0].rec_datetime
-            if annotations["session_start_time"] is None:
-                raise Exception("Writing to NWB requires an annotation 'session_start_time'")
-        self.annotations = {"rec_datetime": "rec_datetime"}
-        self.annotations["rec_datetime"] = blocks[0].rec_datetime
-        # todo: handle subject
-        nwbfile = pynwb.NWBFile(**annotations)
-        assert self.nwb_file_mode in ('w',)  # possibly expand to 'a'ppend later
-        if self.nwb_file_mode == "w" and os.path.exists(self.filename):
-            os.remove(self.filename)
-        io_nwb = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode)
-
         if sum(statistics(block)["SpikeTrain"]["count"] for block in blocks) > 0:
-            nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
+            self.nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
             # nwbfile.add_unit_column('_description',
             # 'the description attribute of the SpikeTrain')
-            nwbfile.add_unit_column(
+            self.nwbfile.add_unit_column(
                 'segment', 'the name of the Neo Segment to which the SpikeTrain belongs')
-            nwbfile.add_unit_column(
+            self.nwbfile.add_unit_column(
                 'block', 'the name of the Neo Block to which the SpikeTrain belongs')
 
         if sum(statistics(block)["Epoch"]["count"] for block in blocks) > 0:
-            nwbfile.add_epoch_column('_name', 'the name attribute of the Epoch')
+            self.nwbfile.add_epoch_column('_name', 'the name attribute of the Epoch')
             # nwbfile.add_epoch_column('_description', 'the description attribute of the Epoch')
-            nwbfile.add_epoch_column(
+            self.nwbfile.add_epoch_column(
                 'segment', 'the name of the Neo Segment to which the Epoch belongs')
-            nwbfile.add_epoch_column('block',
+            self.nwbfile.add_epoch_column('block',
                                      'the name of the Neo Block to which the Epoch belongs')
 
         for i, block in enumerate(blocks):
-            self.write_block(nwbfile, block)
-        io_nwb.write(nwbfile)
-        io_nwb.close()
+            self.write_block(block)
+        self.io_nwb.write(self.nwbfile)
+        self.io_nwb.close()
 
         with pynwb.NWBHDF5IO(self.filename, "r") as io_validate:
             errors = pynwb.validate(io_validate, namespace="core")
             if errors:
                 raise Exception(f"Errors found when validating {self.filename}")
 
-    def write_block(self, nwbfile, block, **kwargs):
+    def write_block(self, block, **kwargs):
         """
         Write a Block to the file
             :param block: Block to be written
-            :param nwbfile: Representation of an NWB file
         """
-        electrodes = self._write_electrodes(nwbfile, block)
+        electrodes = self._write_electrodes(self.nwbfile, block)
         if not block.name:
             block.name = "block%d" % self.blocks_written
         for i, segment in enumerate(block.segments):
             assert segment.block is block
             if not segment.name:
                 segment.name = "%s : segment%d" % (block.name, i)
-            self._write_segment(nwbfile, segment, electrodes)
+            self._write_segment(self.nwbfile, segment, electrodes)
         self.blocks_written += 1
 
     def _write_electrodes(self, nwbfile, block):
@@ -480,10 +479,10 @@ class NWBIO(BaseIO):
                         if elec_meta["device"]["name"] in devices:
                             device = devices[elec_meta["device"]["name"]]
                         else:
-                            device = nwbfile.create_device(**elec_meta["device"])
+                            device = self.nwbfile.create_device(**elec_meta["device"])
                             devices[elec_meta["device"]["name"]] = device
                         elec_meta.pop("device")
-                        electrodes[elec_meta["name"]] = nwbfile.create_icephys_electrode(
+                        electrodes[elec_meta["name"]] = self.nwbfile.create_icephys_electrode(
                             device=device, **elec_meta
                         )
         return electrodes
@@ -498,13 +497,13 @@ class NWBIO(BaseIO):
                 logging.warning("Warning signal name exists. New name: %s" % (signal.name))
             else:
                 signal.name = "%s : analogsignal%s %i" % (segment.name, signal.name, i)
-            self._write_signal(nwbfile, signal, electrodes)
+            self._write_signal(self.nwbfile, signal, electrodes)
 
         for i, train in enumerate(segment.spiketrains):
             assert train.segment is segment
             if not train.name:
                 train.name = "%s : spiketrain%d" % (segment.name, i)
-            self._write_spiketrain(nwbfile, train)
+            self._write_spiketrain(self.nwbfile, train)
 
         for i, event in enumerate(segment.events):
             assert event.segment is segment
@@ -513,12 +512,12 @@ class NWBIO(BaseIO):
                 logging.warning("Warning event name exists. New name: %s" % (event.name))
             else:
                 event.name = "%s : event%s %d" % (segment.name, event.name, i)
-            self._write_event(nwbfile, event)
+            self._write_event(self.nwbfile, event)
 
         for i, epoch in enumerate(segment.epochs):
             if not epoch.name:
                 epoch.name = "%s : epoch%d" % (segment.name, i)
-            self._write_epoch(nwbfile, epoch)
+            self._write_epoch(self.nwbfile, epoch)
 
     def _write_signal(self, nwbfile, signal, electrodes):
         import pynwb
@@ -567,8 +566,8 @@ class NWBIO(BaseIO):
                     signal.__class__.__name__))
         nwb_group = signal.annotations.get("nwb_group", "acquisition")
         add_method_map = {
-            "acquisition": nwbfile.add_acquisition,
-            "stimulus": nwbfile.add_stimulus
+            "acquisition": self.nwbfile.add_acquisition,
+            "stimulus": self.nwbfile.add_stimulus
         }
         if nwb_group in add_method_map:
             add_time_series = add_method_map[nwb_group]
@@ -581,7 +580,8 @@ class NWBIO(BaseIO):
         segment = spiketrain.segment
         if hasattr(spiketrain, 'proxy_for') and spiketrain.proxy_for is SpikeTrain:
             spiketrain = spiketrain.load()
-        nwbfile.add_unit(spike_times=spiketrain.rescale('s').magnitude,
+        self.nwbfile.add_unit(
+                         spike_times=spiketrain.rescale('s').magnitude,
                          obs_intervals=[[float(spiketrain.t_start.rescale('s')),
                                          float(spiketrain.t_stop.rescale('s'))]],
                          _name=spiketrain.name,
@@ -591,7 +591,7 @@ class NWBIO(BaseIO):
         # todo: handle annotations (using add_unit_column()?)
         # todo: handle Neo Units
         # todo: handle spike waveforms, if any (see SpikeEventSeries)
-        return nwbfile.units
+        return self.nwbfile.units
 
     def _write_event(self, nwbfile, event):
         import pynwb
@@ -606,7 +606,7 @@ class NWBIO(BaseIO):
             timestamps=event.times.rescale('second').magnitude,
             description=event.description or "",
             comments=json.dumps(hierarchy))
-        nwbfile.add_acquisition(tS_evt)
+        self.nwbfile.add_acquisition(tS_evt)
         return tS_evt
 
     def _write_epoch(self, nwbfile, epoch):
@@ -616,11 +616,11 @@ class NWBIO(BaseIO):
         for t_start, duration, label in zip(epoch.rescale('s').magnitude,
                                             epoch.durations.rescale('s').magnitude,
                                             epoch.labels):
-            nwbfile.add_epoch(t_start, t_start + duration, [label], [],
+            self.nwbfile.add_epoch(t_start, t_start + duration, [label], [],
                               _name=epoch.name,
                               segment=segment.name,
                               block=segment.block.name)
-        return nwbfile.epochs
+        return self.nwbfile.epochs
 
 
 class AnalogSignalProxy(BaseAnalogSignalProxy):
