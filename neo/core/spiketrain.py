@@ -346,7 +346,21 @@ class SpikeTrain(DataObject):
                             array_annotations=array_annotations, **annotations)
 
     def _repr_pretty_(self, pp, cycle):
-        super()._repr_pretty_(pp, cycle)
+        waveforms = ""
+        if self.waveforms:
+            waveforms = "with waveforms"
+        pp.text(f"{self.__class__.__name__} containing {self.size} spikes{waveforms}; "
+                f"units {self.units.dimensionality.string}; datatype {self.dtype} ")
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
+
+        def _pp(line):
+            pp.breakable()
+            with pp.group(indent=1):
+                pp.text(line)
+
+        _pp(f"time: {self.t_start} to {self.t_stop}")
 
     def rescale(self, units):
         '''

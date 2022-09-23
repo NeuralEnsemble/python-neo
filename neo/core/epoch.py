@@ -6,6 +6,7 @@ This module defines :class:`Epoch`, an array of epochs.
 '''
 
 from copy import deepcopy, copy
+from numbers import Number
 
 import numpy as np
 import quantities as pq
@@ -88,8 +89,10 @@ class Epoch(DataObject):
             raise ValueError("Times array has more than 1 dimension")
         if isinstance(durations, (list, tuple)):
             durations = np.array(durations)
-        if durations is None:
+        elif durations is None:
             durations = np.array([]) * pq.s
+        elif isinstance(durations, Number):
+            durations = durations * np.ones(times.shape)
         elif durations.size != times.size:
             if durations.size == 1:
                 durations = durations * np.ones_like(times.magnitude)
@@ -170,7 +173,14 @@ class Epoch(DataObject):
         return '<Epoch: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
-        super()._repr_pretty_(pp, cycle)
+        labels = ""
+        if self._labels is not None:
+            labels = " with labels"
+        pp.text(f"{self.__class__.__name__} containing {self.size} epochs{labels}; "
+        f"time units {self.units.dimensionality.string}; datatype {self.dtype} ")
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
 
     def rescale(self, units):
         '''
