@@ -66,6 +66,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         self.experiment_names = experiment_names
         self.load_sync_channel = load_sync_channel
         self.folder_structure = None
+        self._use_direct_evt_timestamps = None
 
     def _source_name(self):
         return self.dirname
@@ -160,37 +161,48 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             event_channels.append((d['channel_name'], stream_ind, 'event'))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        # create memmap
-        for stream_ind, stream_name in enumerate(event_stream_names):
-            # inject memmap loaded into main dict structure
-            d = self._evt_streams[0][0][stream_ind]
+        # create memmap for events
+        for block_index in range(nb_block):
+            for seg_index in range(nb_segment_per_block[block_index]):
+                for stream_index, d in self._evt_streams[block_index][seg_index].items():
+        # for stream_ind, stream_name in enumerate(event_stream_names):
+                    # inject memmap loaded into main dict structure
+                    # d = self._evt_streams[0][0][stream_ind]
 
-            for name in _possible_event_stream_names:
-                if name + '_npy' in d:
-                    data = np.load(d[name + '_npy'], mmap_mode='r')
-                    d[name] = data
+                    for name in _possible_event_stream_names:
+                        if name + '_npy' in d:
+                            data = np.load(d[name + '_npy'], mmap_mode='r')
+                            d[name] = data
 
-            # check that events have timestamps
-            assert 'timestamps' in d
+                    # check that events have timestamps
+                    assert 'timestamps' in d
+                    # Updates for OpenEphys v0.6:
+                    # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
+                    # The timestamps are already in seconds, so that event times don't require scaling
+                    # see https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#events
+                    if 'sample_numbers' in d:
+                        self._use_direct_evt_timestamps = True
+                    else:
+                        self._use_direct_evt_timestamps = False
 
-            # for event the neo "label" will change depending the nature
-            #  of event (ttl, text, binary)
-            # and this is transform into unicode
-            # all theses data are put in event array annotations
-            if 'text' in d:
-                # text case
-                d['labels'] = d['text'].astype('U')
-            elif 'metadata' in d:
-                # binary case
-                d['labels'] = d['channels'].astype('U')
-            elif 'channels' in d:
-                # ttl case use channels
-                d['labels'] = d['channels'].astype('U')
-            elif 'states' in d:
-                # ttl case use states
-                d['labels'] = d['states'].astype('U')
-            else:
-                raise ValueError(f'There is no possible labels for this event: {stream_name}')
+                    # for event the neo "label" will change depending the nature
+                    #  of event (ttl, text, binary)
+                    # and this is transform into unicode
+                    # all theses data are put in event array annotations
+                    if 'text' in d:
+                        # text case
+                        d['labels'] = d['text'].astype('U')
+                    elif 'metadata' in d:
+                        # binary case
+                        d['labels'] = d['channels'].astype('U')
+                    elif 'channels' in d:
+                        # ttl case use channels
+                        d['labels'] = d['channels'].astype('U')
+                    elif 'states' in d:
+                        # ttl case use states
+                        d['labels'] = d['states'].astype('U')
+                    else:
+                        raise ValueError(f'There is no possible labels for this event: {stream_name}')
 
         # no spike read yet
         # can be implemented on user demand
@@ -218,11 +230,16 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
                 # loop over events
                 for stream_index, stream_name in enumerate(event_stream_names):
-                    d = self._evt_streams[0][0][stream_index]
+                    d = self._evt_streams[block_index][seg_index][stream_index]
                     if d['timestamps'].size == 0:
                         continue
-                    t_start = d['timestamps'][0] / d['sample_rate']
-                    t_stop = d['timestamps'][-1] / d['sample_rate']
+                    t_start = d['timestamps'][0]
+                    t_stop = d['timestamps'][-1]
+
+                    if not self._use_direct_evt_timestamps:
+                        t_start /= d['sample_rate']
+                        t_stop /= d['sample_rate']
+
                     if global_t_start is None or global_t_start > t_start:
                         global_t_start = t_start
                     if global_t_stop is None or global_t_stop < t_stop:
@@ -317,38 +334,69 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         pass
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        d = self._evt_streams[0][0][event_channel_index]
+        d = self._evt_streams[block_index][seg_index][event_channel_index]
         return d['timestamps'].size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        d = self._evt_streams[0][0][event_channel_index]
+        d = self._evt_streams[block_index][seg_index][event_channel_index]
         timestamps = d['timestamps']
         durations = None
         labels = d['labels']
 
+        # If available, use 'states' to compute event duration
+        if 'states' in d:
+            states = d["states"]
+            rising = np.where(states > 0)[0]
+            falling = np.where(states < 0)[0]
+            # make sure first event is rising and last is falling
+            if states[0] < 0:
+                falling = falling[1:]
+            if states[-1] > 0:
+                rising = rising[:-1]
+
+            if len(rising) == len(falling):
+                durations = timestamps[falling] - timestamps[rising]
+            else:
+                # something wrong if we get here
+                durations = None
+
+            timestamps = timestamps[rising]
+            labels = labels[rising]
+        else:
+            durations = None
+
         # slice it if needed
         if t_start is not None:
-            ind_start = int(t_start * d['sample_rate'])
-            mask = timestamps >= ind_start
+            if not self._use_direct_evt_timestamps:
+                ind_start = int(t_start * d['sample_rate'])
+                mask = timestamps >= ind_start
+            else:
+                mask = timestamps >= t_start
             timestamps = timestamps[mask]
             labels = labels[mask]
         if t_stop is not None:
-            ind_stop = int(t_stop * d['sample_rate'])
-            mask = timestamps < ind_stop
+            if not self._use_direct_evt_timestamps:
+                ind_stop = int(t_stop * d['sample_rate'])
+                mask = timestamps < ind_stop
+            else:
+                mask = timestamps < t_stop
             timestamps = timestamps[mask]
             labels = labels[mask]
         return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         d = self._evt_streams[0][0][event_channel_index]
-        event_times = event_timestamps.astype(dtype) / float(d['sample_rate'])
+        if not self._use_direct_evt_timestamps:
+            event_times = event_timestamps.astype(dtype) / float(d['sample_rate'])
+        else:
+            event_times = event_timestamps.astype(dtype)
         return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
         pass
 
 
-_possible_event_stream_names = ('timestamps', 'channels', 'text', 'states',
+_possible_event_stream_names = ('timestamps', 'sample_numbers', 'channels', 'text', 'states',
                                 'full_word', 'channel_states', 'data_array', 'metadata')
 
 
