@@ -1,24 +1,23 @@
-========================
-Download and install Neo
-========================
+************
+Installation
+************
 
 Neo is a pure Python package, so it should be easy to get it running on any
 system.
 
-Installing with pip
-===================
-
-You can install the latest published version of Neo and its dependencies using::
-
-    $ pip install neo
-
+Installing from the Python Package Index
+========================================
 
 Dependencies
 ------------
 
     * Python_ >= 3.7
-    * numpy_ >= 1.16.1
+    * numpy_ >= 1.18.5
     * quantities_ >= 0.12.1
+
+You can install the latest published version of Neo and its dependencies using::
+
+    $ pip install neo
 
 Certain IO modules have additional dependencies. If these are not satisfied,
 Neo will still install but the IO module that uses them will fail on loading:
@@ -72,18 +71,6 @@ To install the latest version of Neo from the Git repository::
     $ git clone git://github.com/NeuralEnsemble/python-neo.git
     $ cd python-neo
     $ python setup.py install
-
-
-Installing with Conda
-=====================
-
-TODO
-
-
-Installing from a package repository
-====================================
-
-TODO (NeuroFedora, Neurodebian, Spack)
 
 
 .. _`Python`: https://www.python.org/

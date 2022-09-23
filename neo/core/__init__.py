@@ -5,7 +5,7 @@ analog signals, while others are containers to organize other classes
 (including both data classes and other container classes).
 
 Classes from :mod:`neo.io` return nested data structures containing one
-or more class from this module.
+or more classes from this module.
 
 Classes:
 
