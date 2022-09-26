@@ -158,24 +158,24 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         event_channels = []
         for stream_ind, stream_name in enumerate(event_stream_names):
             d = self._evt_streams[0][0][stream_ind]
-            event_channels.append((d['channel_name'], stream_ind, 'event'))
+            if 'states' in d:
+                evt_channel_type = "epoch"
+            else:
+                evt_channel_type = "event"
+            event_channels.append((d['channel_name'], stream_ind, evt_channel_type))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # create memmap for events
         for block_index in range(nb_block):
             for seg_index in range(nb_segment_per_block[block_index]):
                 for stream_index, d in self._evt_streams[block_index][seg_index].items():
-        # for stream_ind, stream_name in enumerate(event_stream_names):
-                    # inject memmap loaded into main dict structure
-                    # d = self._evt_streams[0][0][stream_ind]
-
                     for name in _possible_event_stream_names:
                         if name + '_npy' in d:
                             data = np.load(d[name + '_npy'], mmap_mode='r')
                             d[name] = data
 
                     # check that events have timestamps
-                    assert 'timestamps' in d
+                    assert 'timestamps' in d, "Event stream does not have timestamps!"
                     # Updates for OpenEphys v0.6:
                     # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
                     # The timestamps are already in seconds, so that event times don't require scaling
@@ -334,8 +334,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         pass
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        d = self._evt_streams[block_index][seg_index][event_channel_index]
-        return d['timestamps'].size
+        timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_index,
+                                                      None, None)
+        return timestamps.size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         d = self._evt_streams[block_index][seg_index][event_channel_index]
