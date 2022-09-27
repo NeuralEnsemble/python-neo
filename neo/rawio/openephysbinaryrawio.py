@@ -204,6 +204,32 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     else:
                         raise ValueError(f'There is no possible labels for this event: {stream_name}')
 
+                    # # If available, use 'states' to compute event duration
+                    if 'states' in d:
+                        states = d["states"]
+                        timestamps = d["timestamps"]
+                        labels = d["labels"]
+                        rising = np.where(states > 0)[0]
+                        falling = np.where(states < 0)[0]
+                        # make sure first event is rising and last is falling
+                        if states[0] < 0:
+                            falling = falling[1:]
+                        if states[-1] > 0:
+                            rising = rising[:-1]
+
+                        if len(rising) == len(falling):
+                            durations = timestamps[falling] - timestamps[rising]
+                        else:
+                            # something wrong if we get here
+                            durations = None
+
+                        d["rising"] = rising
+                        d["timestamps"] = timestamps[rising]
+                        d["labels"] = labels[rising]
+                        d["durations"] = durations
+                    else:
+                        d["durations"] = None
+
         # no spike read yet
         # can be implemented on user demand
         spike_channels = np.array([], dtype=_spike_channel_dtype)
@@ -279,16 +305,26 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 for stream_index, stream_name in enumerate(event_stream_names):
                     ev_ann = seg_ann['events'][stream_index]
                     d = self._evt_streams[0][0][stream_index]
+                    if 'rising' in d:
+                        selected_indices = d["rising"]
+                    else:
+                        selected_indices = None
                     for k in _possible_event_stream_names:
-                        if k in ('timestamps', ):
+                        if k in ('timestamps', 'rising'):
                             continue
                         if k in d:
                             # split custom dtypes into separate annotations
                             if d[k].dtype.names:
                                 for name in d[k].dtype.names:
-                                    ev_ann['__array_annotations__'][name] = d[k][name].flatten()
+                                    arr_ann = d[k][name].flatten()
+                                    if selected_indices is not None:
+                                        arr_ann = arr_ann[selected_indices]
+                                    ev_ann['__array_annotations__'][name] = arr_ann
                             else:
-                                ev_ann['__array_annotations__'][k] = d[k]
+                                arr_ann = d[k]
+                                if selected_indices is not None:
+                                    arr_ann = arr_ann[selected_indices]
+                                ev_ann['__array_annotations__'][k] = arr_ann
 
     def _segment_t_start(self, block_index, seg_index):
         return self._t_start_segments[block_index][seg_index]
@@ -341,30 +377,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         d = self._evt_streams[block_index][seg_index][event_channel_index]
         timestamps = d['timestamps']
-        durations = None
+        durations = d["durations"]
         labels = d['labels']
-
-        # If available, use 'states' to compute event duration
-        if 'states' in d:
-            states = d["states"]
-            rising = np.where(states > 0)[0]
-            falling = np.where(states < 0)[0]
-            # make sure first event is rising and last is falling
-            if states[0] < 0:
-                falling = falling[1:]
-            if states[-1] > 0:
-                rising = rising[:-1]
-
-            if len(rising) == len(falling):
-                durations = timestamps[falling] - timestamps[rising]
-            else:
-                # something wrong if we get here
-                durations = None
-
-            timestamps = timestamps[rising]
-            labels = labels[rising]
-        else:
-            durations = None
 
         # slice it if needed
         if t_start is not None:
@@ -393,8 +407,13 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             event_times = event_timestamps.astype(dtype)
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
-        pass
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
+        d = self._evt_streams[0][0][event_channel_index]
+        if not self._use_direct_evt_timestamps:
+            durations = raw_duration.astype(dtype) / float(d['sample_rate'])
+        else:
+            durations = raw_duration.astype(dtype)
+        return durations
 
 
 _possible_event_stream_names = ('timestamps', 'sample_numbers', 'channels', 'text', 'states',
