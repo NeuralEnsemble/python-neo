@@ -131,6 +131,8 @@ class NeuralynxRawIO(BaseRawIO):
         self.nse_ntt_filenames = OrderedDict()  # (chan_name, chan_id): filename
         self.nev_filenames = OrderedDict()  # chan_id: filename
 
+        self.file_headers = OrderedDict()  # filename: file header dict
+
         self._nev_memmap = {}
         self._spike_memmap = {}
         self.internal_unit_ids = []  # channel_index > ((channel_name, channel_id), unit_id)
@@ -185,6 +187,7 @@ class NeuralynxRawIO(BaseRawIO):
 
             # All file have more or less the same header structure
             info = NlxHeader(filename)
+            self.file_headers[filename] = info
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
