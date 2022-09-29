@@ -249,12 +249,12 @@ specify the array of times at which the samples were made.
 
     In [26]: from neo import IrregularlySampledSignal
 
-    In [27]: signal = IrregularlySampledSignal(
+    In [27]: isignal = IrregularlySampledSignal(
        ....:              times=[0.0, 1.11, 4.27, 16.38, 19.33] * ms,
        ....:              signal=[0.5, 0.8, 0.5, 0.7, 0.2] * nA,
        ....:              description="input current")
 
-    In [28]: signal
+    In [28]: isignal
     Out[28]:
     IrregularlySampledSignal with 1 channels of length 5; units nA; datatype float64
     description: 'input current'
@@ -272,9 +272,9 @@ A :class:`SpikeTrain` represents the times of occurrence of action potentials (s
 
     In [29]: from neo import SpikeTrain
 
-    In [30]: st = SpikeTrain([3, 4, 5], units='sec', t_stop=10.0)
+    In [30]: spike_train = SpikeTrain([3, 4, 5], units='sec', t_stop=10.0)
 
-    In [31]: st
+    In [31]: spike_train
     Out[31]:
     SpikeTrain containing 3 spikes; units s; datatype float64
     time: 0.0 s to 10.0 s
@@ -348,6 +348,7 @@ It behaves similarly to :class:`AnalogSignal`, but in 3D rather than 2D.
        ....:                                spatial_scale=1 * micrometer)
 
     In [42]: image_sequence
+    Out[42]:
     ImageSequence 10 frames with width 20 px and height 20 px; units dimensionless; datatype int64
     sampling rate: 1.0 Hz
     spatial_scale: 1.0 um
@@ -360,20 +361,119 @@ Annotations
 
 .. and array annotations
 
+Neo objects have certain *required* metadata, such as the :attr:`sampling_rate` for :class:`AnalogSignals`.
+There are also certain *recommended* metadata, such as a name and description.
+For any metadata not covered by the required or recommended fields, additional annotations can be added, e.g.:
+
+.. ipython::
+
+    In [43]: from quantities import um as µm
+
+    In [44]: signal.annotate(pipette_tip_diameter=1.5 * µm)
+
+    In [45]: signal.annotations
+    Out[45]: {'pipette_tip_diameter': array(1.5) * um}
+
+For those IO modules that support writing data to file, annotations will also be written,
+provided they are capable of being serialized to JSON format.
+
+.. todo: we should provide a custom ``JSONEncoder`` that supports quantities
+
+Array annotations
+-----------------
+
+Since certain Neo objects contain array data,
+it is sometimes necessary to annotate individual array elements, or individual columns.
+
+For 1D arrays, the array annotations should have the same length as the array, e.g.
+
+.. ipython::
+
+    In [46]: events.shape
+
+    In [47]: events.array_annotate(secondary_labels=["red", "green", "blue"])
+
+For 2D arrays, the array annotations should match the shape of the channel dimension, e.g.
+
+.. ipython::
+
+    In [48]: signal.shape
+
+    In [49]: signal.array_annotate(quality=["good", "good", "noisy", "good", "noisy"])
+
 
 Dataset structure
 =================
 
+The overall structure of a Neo dataset is shown in this figure:
+
+.. image:: images/base_schematic.png
+   :height: 500 px
+   :alt: Illustration of the main Neo data types
+   :align: center
+
+Beyond the core data classes, Neo has various classes for grouping and structuring different data objects.
+We have already met two of them, the :class:`Block` and :class:`Segment`.
+
 Tree structure
 --------------
 
-.. Blocks, segments, etc.
+:class:`Block` and :class:`Segment` provide a basic two-level hierarchical structure:
+:class:`Blocks` contain :class:`Segments`, which contain data objects.
 
+:class:`Segments` are used to group data that have a common time basis, i.e. that were recorded at the same time.
+A :class:`Segment` can be considered as equivalent to a "trial", "episode", "run", "recording", etc.,
+depending on the experimental context.
+
+:class:`Segments` have the following attributes, used to access lists of data objects:
+
+- :attr:`analogsignals`
+- :attr:`epochs`
+- :attr:`events`
+- :attr:`imagesequences`
+- :attr:`irregularlysampledsignals`
+- :attr:`spiketrains`
+
+:class:`Block` is the top-level container gathering all of the data, discrete and continuous, for a given recording session.
+It contains :class:`Segment` and :class:`Group` (see next section) objects in the attributes :attr:`segments` and :attr:`groups`.
 
 Grouping and linking objects
 ----------------------------
 
-.. linking objects (Group, ChannelView, ROI)
+Sometimes your data have a structure that goes beyond a simple two-level hierarchy,
+for example suppose that you wish to group together signals that were recorded from the same tetrode in multi-tetrode recording setup.
+
+For this, Neo provides a :class:`Group` class:
+
+.. ipython::
+
+    In [50]: from neo import Group
+
+    In [51]: signal1 = AnalogSignal(np.random.normal(-65.0, 5.0, size=(100, 5)), units=mV, sampling_rate=1 * kHz)
+
+    In [52]: signal2 = AnalogSignal(np.random.normal(-65.0, 5.0, size=(1000, 5)), units=nA, sampling_rate=10 * kHz)
+
+    In [53]: group = Group(objects=(signal1, signal2))
+
+    In [54]: group
+    Out[54]: Group with 2 analogsignals
+
+Since :class:`AnalogSignals` can contain data from multiple channels,
+sometimes we wish to include only a subset of channels in a group.
+For this, Neo provides the :class:`ChannelView` class, e.g.:
+
+.. ipython::
+
+    In [55]: from neo import ChannelView
+
+    In [56]: channel_of_interest = ChannelView(obj=signal1, index=[2])
+
+    In [57]: signal_with_spikes = Group(objects=(channel_of_interest, spike_train))
+
+    In [58]: signal_with_spikes
+    Out[58]: Group with 1 spiketrains, 1 channelviews
+
+.. todo: give some examples of using ROI with ImageSequence
 
 
 .. _section-performance-memory:
@@ -383,6 +483,34 @@ Performance and memory consumption
 
 .. lazy loading
 
+In some cases you may not wish to load everything in memory, because it could be too big,
+or you know you only need to access a subset of the data in a file.
+
+For this scenario, some IO modules provide an optional argument to their :attr:`read()` methods: ``lazy=True/False``.
+
+With ``lazy=True`` all data objects (:class:`AnalogSignal`/:class:`SpikeTrain`/:class:`Event`/:class:`Epoch`/:class:`ImageSequence`)
+are replaced by proxy objects (:class:`AnalogSignalProxy`/:class:`SpikeTrainProxy`/:class:`EventProxy`/:class:`EpochProxy`/:class:`ImageSequenceProxy`).
+
+.. todo: implement ImageSequenceProxy
+
+By default (if not specified), ``lazy=False``, i.e. all data are loaded.
+
+These proxy objects contain metadata (:attr:`name`, :attr:`sampling_rate`, ...) so they can be inspected,
+but they do not contain any array-like data.
+
+When you want to load the actual data from a proxy object, use the :func:`load()` method
+to return a real data object of the appropriate type.
+
+Furthermore :func:`load()` has a ``time_slice`` argument, which allows you to load only a slice of data from the file.
+In this way the consumption of memory can be finely controlled.
+
+..  ipython: :
+
+..    In [59]: lazy_data = AsciiSignalIO("source/example_data.txt", delimiter=" ").read(lazy=True)
+
+..    In [60]: lazy_data
+
+.. todo: implement AsciiSignalRawIO
 
 Examples
 ========

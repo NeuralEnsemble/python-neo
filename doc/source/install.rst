@@ -17,7 +17,7 @@ Dependencies
 ------------
 
     * Python_ >= 3.7
-    * numpy_ >= 1.16.1
+    * numpy_ >= 1.18.5
     * quantities_ >= 0.12.1
 
 Certain IO modules have additional dependencies. If these are not satisfied,
@@ -40,15 +40,18 @@ Or when installing a specific version of neo::
 
     $ pip install neo[nixio,tiffio]==0.9.0
 
-These additional dependencies for IO modules are available::
+The following IO modules have additional dependencies:
 
-  * igorproio
-  * kwikio
-  * neomatlabio
-  * nixio
-  * stimfitio
-  * tiffio
+   * igorproio
+   * kwikio
+   * neomatlabio
+   * nixio
+   * stimfitio
+   * tiffio
 
+
+Installing from source
+======================
 
 To download and install the package manually, download:
 
@@ -63,11 +66,7 @@ Then:
     $ cd neo-|release|
     $ python setup.py install
 
-
-Installing from source
-======================
-
-To install the latest version of Neo from the Git repository::
+Alternatively, to install the latest version of Neo from the Git repository::
 
     $ git clone git://github.com/NeuralEnsemble/python-neo.git
     $ cd python-neo
@@ -77,13 +76,25 @@ To install the latest version of Neo from the Git repository::
 Installing with Conda
 =====================
 
-TODO
+::
+
+    $ conda config --add channels conda-forge
+    $ conda config --set channel_priority strict
+    $ conda install -c conda-forge python-neo
 
 
 Installing from a package repository
 ====================================
 
-TODO (NeuroFedora, Neurodebian, Spack)
+To install Neo if you're using Fedora_ Linux::
+
+    $ sudo dnf install python-neo
+
+.. NeuroDebian seems out of date - still has Trac as homepage - how to update?
+
+To install Neo if you're using the Spack_ package manager::
+
+    $ spack install py-neo
 
 
 .. _`Python`: https://www.python.org/
@@ -92,3 +103,5 @@ TODO (NeuroFedora, Neurodebian, Spack)
 .. _`pip`: https://pypi.org/project/pip/
 .. _`setuptools`: http://pypi.python.org/pypi/setuptools
 .. _Anaconda: https://www.anaconda.com/distribution/
+.. _Fedora: https://src.fedoraproject.org/rpms/python-neo
+.. _Spack: https://spack.readthedocs.io/en/latest/package_list.html#py-neo
