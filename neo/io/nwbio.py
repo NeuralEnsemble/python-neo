@@ -411,6 +411,7 @@ class NWBIO(BaseIO):
             annotations["identifier"] = str(self.filename)
         if "session_description" not in annotations:
             annotations["session_description"] = blocks[0].description or str(self.filename)
+            # need to use str() here because self.filename may be a pathlib path object
             # todo: concatenate descriptions of multiple blocks if different
         if annotations.get("session_start_time", None) is None:
             if "rec_datetime" in annotations:
