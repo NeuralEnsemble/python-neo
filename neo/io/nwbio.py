@@ -245,7 +245,7 @@ class NWBIO(BaseIO):
         if "identifier" not in annotations:
             annotations["identifier"] = self.filename
         if "session_description" not in annotations:
-            annotations["session_description"] = self._blocks or self.filename
+            annotations["session_description"] = self._blocks or str(self.filename)
         if "session_start_time" not in annotations:
             annotations["session_start_time"] = datetime.now()
             if annotations["session_start_time"] is None:
