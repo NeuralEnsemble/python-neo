@@ -20,6 +20,7 @@ extras_require = {
     'maxwell': ['h5py'],
     'biocam': ['h5py'],
 }
+extras_require["all"] = sum(extras_require.values(), [])
 
 with open("neo/version.py") as fp:
     d = {}
