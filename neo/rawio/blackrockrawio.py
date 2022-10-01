@@ -179,44 +179,64 @@ class BlackrockRawIO(BaseRawIO):
         self.__nsx_header_reader = {
             '2.1': self.__read_nsx_header_variant_a,
             '2.2': self.__read_nsx_header_variant_b,
-            '2.3': self.__read_nsx_header_variant_b}
+            '2.3': self.__read_nsx_header_variant_b,
+            '3.0': self.__read_nsx_header_variant_b,
+        }
         self.__nsx_dataheader_reader = {
             '2.1': self.__read_nsx_dataheader_variant_a,
             '2.2': self.__read_nsx_dataheader_variant_b,
-            '2.3': self.__read_nsx_dataheader_variant_b}
+            '2.3': self.__read_nsx_dataheader_variant_b,
+            '3.0': self.__read_nsx_dataheader_variant_b
+        }
         self.__nsx_data_reader = {
             '2.1': self.__read_nsx_data_variant_a,
             '2.2': self.__read_nsx_data_variant_b,
-            '2.3': self.__read_nsx_data_variant_b}
+            '2.3': self.__read_nsx_data_variant_b,
+            '3.0': self.__read_nsx_data_variant_b
+        }
         self.__nsx_params = {
             '2.1': self.__get_nsx_param_variant_a,
             '2.2': self.__get_nsx_param_variant_b,
-            '2.3': self.__get_nsx_param_variant_b}
+            '2.3': self.__get_nsx_param_variant_b,
+            '3.0': self.__get_nsx_param_variant_b
+        }
         # NEV
         self.__nev_header_reader = {
             '2.1': self.__read_nev_header_variant_a,
             '2.2': self.__read_nev_header_variant_b,
-            '2.3': self.__read_nev_header_variant_c}
+            '2.3': self.__read_nev_header_variant_c,
+            '3.0': self.__read_nev_header_variant_c,
+        }
         self.__nev_data_reader = {
             '2.1': self.__read_nev_data_variant_a,
             '2.2': self.__read_nev_data_variant_a,
-            '2.3': self.__read_nev_data_variant_b}
+            '2.3': self.__read_nev_data_variant_b,
+            '3.0': self.__read_nev_data_variant_b
+        }
         self.__waveform_size = {
             '2.1': self.__get_waveform_size_variant_a,
             '2.2': self.__get_waveform_size_variant_a,
-            '2.3': self.__get_waveform_size_variant_b}
+            '2.3': self.__get_waveform_size_variant_b,
+            '3.0': self.__get_waveform_size_variant_b
+        }
         self.__channel_labels = {
             '2.1': self.__get_channel_labels_variant_a,
             '2.2': self.__get_channel_labels_variant_b,
-            '2.3': self.__get_channel_labels_variant_b}
+            '2.3': self.__get_channel_labels_variant_b,
+            '3.0': self.__get_channel_labels_variant_b
+        }
         self.__nonneural_evdicts = {
             '2.1': self.__get_nonneural_evdicts_variant_a,
             '2.2': self.__get_nonneural_evdicts_variant_a,
-            '2.3': self.__get_nonneural_evdicts_variant_b}
+            '2.3': self.__get_nonneural_evdicts_variant_b,
+            '3.0': self.__get_nonneural_evdicts_variant_b
+        }
         self.__comment_evdict = {
             '2.1': self.__get_comment_evdict_variant_a,
             '2.2': self.__get_comment_evdict_variant_a,
-            '2.3': self.__get_comment_evdict_variant_a}
+            '2.3': self.__get_comment_evdict_variant_a,
+            '3.0': self.__get_comment_evdict_variant_a
+        }
 
     def _parse_header(self):
 
@@ -345,7 +365,7 @@ class BlackrockRawIO(BaseRawIO):
                 sr = float(main_sampling_rate / self.__nsx_basic_header[nsx_nb]['period'])
                 self.sig_sampling_rates[nsx_nb] = sr
 
-                if spec in ['2.2', '2.3']:
+                if spec in ['2.2', '2.3', '3.0']:
                     ext_header = self.__nsx_ext_header[nsx_nb]
                 elif spec == '2.1':
                     ext_header = []
@@ -361,7 +381,7 @@ class BlackrockRawIO(BaseRawIO):
                 if len(ext_header) > 0:
                     signal_streams.append((f'nsx{nsx_nb}', str(nsx_nb)))
                 for i, chan in enumerate(ext_header):
-                    if spec in ['2.2', '2.3']:
+                    if spec in ['2.2', '2.3', '3.0']:
                         ch_name = chan['electrode_label'].decode()
                         ch_id = str(chan['electrode_id'])
                         units = chan['units'].decode()
@@ -729,7 +749,7 @@ class BlackrockRawIO(BaseRawIO):
         nsx_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
         if nsx_file_id['file_id'].decode() == 'NEURALSG':
             spec = '2.1'
-        elif nsx_file_id['file_id'].decode() == 'NEURALCD':
+        elif nsx_file_id['file_id'].decode() in ['NEURALCD', 'BRSMPGRP']:
             spec = '{}.{}'.format(
                 nsx_file_id['ver_major'], nsx_file_id['ver_minor'])
         else:
@@ -798,7 +818,7 @@ class BlackrockRawIO(BaseRawIO):
 
         # basic header (file_id: NEURALCD)
         dt0 = [
-            ('file_id', 'S8'),
+            ('file_id', 'S8'),  # achFileType
             # file specification split into major and minor version number
             ('ver_major', 'uint8'),
             ('ver_minor', 'uint8'),
@@ -860,10 +880,12 @@ class BlackrockRawIO(BaseRawIO):
         """
         filename = '.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb])
 
+        ts_size = 'uint64' if self.__nsx_basic_header[nsx_nb]['ver_major'] >= 3 else 'uint32'
+
         # dtypes data header
         dt2 = [
             ('header', 'uint8'),
-            ('timestamp', 'uint32'),
+            ('timestamp', ts_size),
             ('nb_data_points', 'uint32')]
 
         return np.memmap(filename, dtype=dt2, shape=1, offset=offset, mode='r')[0]
