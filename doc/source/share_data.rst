@@ -103,7 +103,7 @@ To quickly take a look at the data, let's plot it:
 
     In [15]: plt.ylabel(f"Voltage ({signal.units.dimensionality.string})")
 
-    In [16]: plt.savefig("source/open_format_example_cc_step.png")
+    In [16]: plt.savefig("open_format_example_cc_step.png")
 
 
 .. image:: open_format_example_cc_step.png

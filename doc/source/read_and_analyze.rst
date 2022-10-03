@@ -22,7 +22,7 @@ so we use the :class:`~neo.io.AsciiSignalIO` module:
 
     In [1]: from neo.io import AsciiSignalIO
 
-    In [2]: data = AsciiSignalIO("source/example_data.txt", delimiter=" ").read()
+    In [2]: data = AsciiSignalIO("example_data.txt", delimiter=" ").read()
 
 .. link to list of IO modules
 
@@ -80,7 +80,7 @@ For example, they can be plotted just like arrays:
     In [8]: plt.ylabel(f"Membrane potential ({signal.units.dimensionality.string})")
     Out[8]: Text(0, 0.5, 'Membrane potential (mV)')
 
-    In [9]: plt.savefig("source/example_plot.png")
+    In [9]: plt.savefig("example_plot.png")
 
 
 .. image:: example_plot.png
@@ -506,7 +506,7 @@ In this way the consumption of memory can be finely controlled.
 
 ..  ipython: :
 
-..    In [59]: lazy_data = AsciiSignalIO("source/example_data.txt", delimiter=" ").read(lazy=True)
+..    In [59]: lazy_data = AsciiSignalIO("example_data.txt", delimiter=" ").read(lazy=True)
 
 ..    In [60]: lazy_data
 

@@ -72,7 +72,7 @@ Basic usage
    url_repo = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/'
 
    for distantfile in ('plexon/File_plexon_2.plx', 'plexon/File_plexon_3.plx', 'blackrock/FileSpec2.3001.nev', 'blackrock/FileSpec2.3001.ns5'):
-       localfile = f'../examples/{distantfile.split("/")[1]}'
+       localfile = distantfile.split("/")[1]
        if not os.path.exists(localfile):
           urlretrieve(url_repo + distantfile, localfile)
 
@@ -83,7 +83,7 @@ First create a reader from a class:
 
     In [1]: from neo.rawio import PlexonRawIO
 
-    In [2]: reader = PlexonRawIO(filename='../examples/File_plexon_3.plx')
+    In [2]: reader = PlexonRawIO(filename='File_plexon_3.plx')
 
 Then browse the internal header and display information:
 
@@ -165,7 +165,7 @@ Example with BlackrockRawIO for the recording `FileSpec2.3001`_:
 
     In [15]: from neo.rawio import BlackrockRawIO
 
-    In [16]: reader = BlackrockRawIO(filename="../examples/FileSpec2.3001")
+    In [16]: reader = BlackrockRawIO(filename="FileSpec2.3001")
 
     In [17]: reader.parse_header()
 
@@ -244,7 +244,7 @@ Count events per channel
 
 .. ipython::
 
-    In [34]: reader = PlexonRawIO(filename='../examples/File_plexon_2.plx')
+    In [34]: reader = PlexonRawIO(filename='File_plexon_2.plx')
 
     In [35]: reader.parse_header()
 
