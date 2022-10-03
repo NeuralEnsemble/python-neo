@@ -21,6 +21,8 @@ with the caveats that (i) only one vote per institution is allowed (i.e. in the 
 maintainers belong to the same institution they will have to agree among themselves how to vote)
 and (ii) a quorum of three maintainers must be achieved.
 
+.. _section-maintainers:
+
 Maintainers
 ===========
 
@@ -29,6 +31,17 @@ Nominations must be approved by at least two existing maintainers, with no disse
 In case of disagreement, decisions on accepting new maintainers will be based on a majority vote
 as above. Decisions on removing maintainers from the list are based on majority vote.
 
+The current maintainers are:
+
+- Andrew Davison (`@apdavison`_)
+- Samuel Garcia (`@samuelgarcia`_)
+- Julia Sprenger (`@JuliaSprenger`_)
+- Michael Denker (`@mdenker`_)
+
 
 .. _`Neo maintainers team`: https://github.com/orgs/NeuralEnsemble/teams/neo-maintainers
 .. _`CODE_OF_CONDUCT.md`: https://github.com/NeuralEnsemble/python-neo/blob/master/CODE_OF_CONDUCT.md
+.. _`@apdavison`: https://github.com/apdavison
+.. _`@samuelgarcia`: https://github.com/samuelgarcia
+.. _`@JuliaSprenger`: https://github.com/JuliaSprenger
+.. _`@mdenker`: https://github.com/mdenker

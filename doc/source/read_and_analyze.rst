@@ -32,17 +32,17 @@ so we use the :class:`~neo.io.AsciiSignalIO` module:
 
 .. ipython::
 
-    In [3]: data
-    Out[3]:
-    [Block with 1 segments
-    file_origin: 'example_data.txt'
-    # segments (N=1)
-    0: Segment with 1 analogsignals
-        # analogsignals (N=1)
-        0: AnalogSignal with 4 channels of length 10001; units mV; datatype float32
-           name: 'multichannel'
-           sampling rate: 1.0 kHz
-           time: 0.0 s to 10.001 s]
+   In [3]: data
+   Out[3]:
+   [Block with 1 segments
+   file_origin: 'example_data.txt'
+   # segments (N=1)
+   0: Segment with 1 analogsignals
+       # analogsignals (N=1)
+       0: AnalogSignal with 4 channels of length 10001; units mV; datatype float32
+          name: 'multichannel'
+          sampling rate: 1.0 kHz
+          time: 0.0 s to 10.001 s]
 
 Different data files can contain different amounts of data, from single traces to multiple
 recording sessions. To provide consistent behaviour, for all IO modules, the :meth:`read()` method returns a list of data blocks.
@@ -518,4 +518,35 @@ Examples
 For more examples of using Neo, see :doc:`../auto_examples/index`.
 
 
+Citing Neo
+==========
+
+If you use Neo in your work, please mention the use of Neo in your Methods section,
+using our RRID_: ``RRID:SCR_000634``.
+
+If you wish to cite Neo in publications, please use:
+
+    Garcia S., Guarino D., Jaillet F., Jennings T.R., Pröpper R., Rautenberg P.L.,
+    Rodgers C., Sobolev A.,Wachtler T., Yger P. and Davison A.P. (2014)
+    Neo: an object model for handling electrophysiology data in multiple formats.
+    Frontiers in Neuroinformatics 8:10: doi:`10.3389/fninf.2014.00010`_
+
+A BibTeX entry for LaTeX users is::
+
+    @article{neo14,
+        author = {Garcia S. and Guarino D. and Jaillet F. and Jennings T.R. and Pröpper R. and
+                  Rautenberg P.L. and Rodgers C. and Sobolev A. and Wachtler T. and Yger P.
+                  and Davison A.P.},
+        doi = {10.3389/fninf.2014.00010},
+        full_text = {https://www.frontiersin.org/articles/10.3389/fninf.2014.00010/full},
+        journal = {Frontiers in Neuroinformatics},
+        month = {February},
+        title = {Neo: an object model for handling electrophysiology data in multiple formats},
+        volume = {8:10},
+        year = {2014}
+    }
+
+
 .. _NumPy: https://numpy.org/
+.. _`10.3389/fninf.2014.00010`: https://doi.org/10.3389/fninf.2014.00010
+.. _RRID: https://www.rrids.org

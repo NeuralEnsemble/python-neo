@@ -1,12 +1,12 @@
 """
-neo.io have been split in 2 level API:
-  * neo.io: this API give neo object
-  * neo.rawio: this API give raw data as they are in files.
+neo.io has been split into a 2-level API:
+  * neo.io: this API gives Neo objects
+  * neo.rawio: this API gives raw data as they are in files.
 
-Developper are encourage to use neo.rawio.
+Developers are encourage to use neo.rawio.
 
-When this is done the neo.io is done automagically with
-this king of following code.
+When this is done the neo.io can be implemented trivially
+using code like shown in this file.
 
 Author: sgarcia
 

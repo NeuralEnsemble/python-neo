@@ -12,11 +12,13 @@ Table of Contents
    share_data
    use_neo_as_dependency
    add_file_format
-   contributing
    bug_reports
+   contributing
    neo_users
    api_reference
+   rawio
    iolist
+   rawiolist
    releases
    authors
    governance

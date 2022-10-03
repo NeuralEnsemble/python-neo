@@ -1,6 +1,6 @@
 """
-:mod:`neo.rawio` provides classes for reading with low level API
-electrophysiological data files.
+:mod:`neo.rawio` provides classes for reading
+electrophysiological data files with a low-level API
 
 :attr:`neo.rawio.rawiolist` provides a list of successfully imported rawio
 classes.
@@ -20,7 +20,7 @@ Classes:
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
 * :attr:`CedRawIO`
-* :attr: `EDFRawIO`
+* :attr:`EDFRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
 * :attr:`MaxwellRawIO`
