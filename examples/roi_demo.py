@@ -1,5 +1,7 @@
 """
-Example of working with RegionOfInterest objects
+Working with RegionOfInterest objects
+=====================================
+
 """
 
 import matplotlib.pyplot as plt

@@ -22,3 +22,4 @@ Table of Contents
    releases
    authors
    governance
+   auto_examples/index

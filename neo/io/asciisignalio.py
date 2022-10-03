@@ -268,8 +268,8 @@ class AsciiSignalIO(BaseIO):
             else:
                 ana_sig = AnalogSignal(signal * self.units, sampling_rate=sampling_rate,
                                        t_start=t_start,
-                                       channel_index=self.usecols or np.arange(signal.shape[1]),
                                        name='multichannel')
+                ana_sig.array_annotate(channel_index=self.usecols or np.arange(signal.shape[1]))
                 seg.analogsignals.append(ana_sig)
         else:
             if self.timecolumn is not None and self.timecolumn < 0:

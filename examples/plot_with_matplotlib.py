@@ -1,5 +1,7 @@
 """
-This is an example for plotting a Neo object with matplotlib.
+Plotting a Neo object with matplotlib
+=====================================
+
 """
 
 import urllib

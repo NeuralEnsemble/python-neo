@@ -1,5 +1,6 @@
 """
-This is an example demonstrate the lazy load and proxy objects.
+Demonstration of lazy load and proxy objects
+============================================
 
 """
 

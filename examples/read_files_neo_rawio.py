@@ -1,5 +1,7 @@
 """
-This is an example for reading files with neo.rawio
+Reading files with neo.rawio
+============================
+
 compare with read_files_neo_io.py
 """
 
@@ -52,12 +54,12 @@ print(raw_waveforms.shape, raw_waveforms.dtype, raw_waveforms[0, 0, :4])
 float_waveforms = reader.rescale_waveforms_to_float(raw_waveforms, dtype='float32', spike_channel_index=0)
 print(float_waveforms.shape, float_waveforms.dtype, float_waveforms[0, 0, :4])
 
-# Read event timestamps and times (take anotehr file)
+# Read event timestamps and times (take another file)
 distantfile = url_repo + 'plexon/File_plexon_2.plx'
 localfile = './File_plexon_2.plx'
 urllib.request.urlretrieve(distantfile, localfile)
 
-# Count event per channel
+# Count events per channel
 reader = PlexonRawIO(filename='File_plexon_2.plx')
 reader.parse_header()
 nb_event_channel = reader.event_channels_count()

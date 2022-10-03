@@ -1,5 +1,7 @@
 """
-docstring needed here
+ImageSequences
+==============
+
 """
 
 from neo.core import ImageSequence

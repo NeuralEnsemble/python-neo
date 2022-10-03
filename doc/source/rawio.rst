@@ -49,8 +49,8 @@ The :mod:`neo.rawio` API is less flexible than :mod:`neo.io` and has some limita
 
 For an intuitive comparison of :mod:`neo.io` and :mod:`neo.rawio` see:
 
-- :file:`example/read_file_neo_io.py`
-- :file:`example/read_file_neo_rawio.py`
+- :doc:`auto_examples/read_files_neo_io`
+- :doc:`auto_examples/read_files_neo_rawio`
 
 
 One benefit of the :mod:`neo.rawio` API is that a developer
@@ -60,6 +60,22 @@ objects or of the :mod:`quantities` package.
 
 Basic usage
 ===========
+
+.. Download example files
+
+.. ipython:: python
+   :suppress:
+
+   import os.path
+   from urllib.request import urlretrieve
+
+   url_repo = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/'
+
+   for distantfile in ('plexon/File_plexon_2.plx', 'plexon/File_plexon_3.plx', 'blackrock/FileSpec2.3001.nev', 'blackrock/FileSpec2.3001.ns5'):
+       localfile = f'../examples/{distantfile.split("/")[1]}'
+       if not os.path.exists(localfile):
+          urlretrieve(url_repo + distantfile, localfile)
+
 
 First create a reader from a class:
 

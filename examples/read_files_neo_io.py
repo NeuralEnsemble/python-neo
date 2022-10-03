@@ -1,5 +1,7 @@
 """
-This is an example for reading files with neo.io
+Reading files with neo.io
+=========================
+
 """
 
 import urllib
