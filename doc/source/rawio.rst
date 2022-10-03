@@ -49,8 +49,8 @@ The :mod:`neo.rawio` API is less flexible than :mod:`neo.io` and has some limita
 
 For an intuitive comparison of :mod:`neo.io` and :mod:`neo.rawio` see:
 
-- :doc:`auto_examples/read_files_neo_io`
-- :doc:`auto_examples/read_files_neo_rawio`
+- :doc:`examples/read_files_neo_io`
+- :doc:`examples/read_files_neo_rawio`
 
 
 One benefit of the :mod:`neo.rawio` API is that a developer

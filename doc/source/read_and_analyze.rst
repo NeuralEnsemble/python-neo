@@ -87,7 +87,7 @@ For example, they can be plotted just like arrays:
 
 .. link to examples.
 
-You now know enough to start using Neo. For more examples, see :doc:`../auto_examples/index`.
+You now know enough to start using Neo. For more examples, see :doc:`../examples/index`.
 If you want to know more, read on.
 
 NumPy
@@ -515,7 +515,7 @@ In this way the consumption of memory can be finely controlled.
 Examples
 ========
 
-For more examples of using Neo, see :doc:`../auto_examples/index`.
+For more examples of using Neo, see :doc:`../examples/index`.
 
 
 Citing Neo
