@@ -438,8 +438,7 @@ class BlackrockRawIO(BaseRawIO):
             # Find maximal and minimal time for each nev segment
             for k, (data, ev_ids) in self.nev_data.items():
                 for i in np.unique(ev_ids):
-                    mask = [ev_ids == i]
-                    curr_data = data[mask]
+                    curr_data = data[ev_ids == i]
                     if curr_data.size > 0:
                         if max(curr_data['timestamp']) >= max_nev_times.get(i, 0):
                             max_nev_times[i] = max(curr_data['timestamp'])
