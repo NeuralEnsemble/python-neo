@@ -12,7 +12,7 @@ url_repo = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/mast
 
 # Plexon files
 distantfile = url_repo + 'plexon/File_plexon_3.plx'
-localfile = './File_plexon_3.plx'
+localfile = 'File_plexon_3.plx'
 urllib.request.urlretrieve(distantfile, localfile)
 
 # create a reader
