@@ -13,16 +13,15 @@
 
 import os
 import sys
+import re
 
 from packaging.version import Version
 
-with open("../../neo/version.py") as fp:
-    d = {}
-    exec(fp.read(), d)
-    neo_release = d['version']
+with open('../../pyproject.toml', mode='r') as f:
+    txt = f.read()
+    neo_release = re.findall('version = "(\S+)"', txt)[0]
 
 neo_version = '.'.join((str(e) for e in Version(neo_release).release[:2]))
-
 
 AUTHORS = 'Neo authors and contributors <neuralensemble@googlegroups.com>'
 
