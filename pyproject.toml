@@ -2,12 +2,7 @@
 name = "neo"
 version = "0.12.0.dev0"
 
-authors = [
-  { name="Samuel Garcia", email="samuel.garcia@cnrs.fr" },
-  { name="Andrew Davison", email="andrew.davison@cnrs.fr" },
-  { name="Julia Sprenger", email="julia.sprenger@univ-amu.fr" },
-  { name="Michael Denker", email="m.denker@fz-juelich.de" },
-]
+authors = "Neo authors and contributors"
 
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 

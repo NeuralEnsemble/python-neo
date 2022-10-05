@@ -74,8 +74,8 @@ jobs:
 
       - name: Install neo
         run: |
-          pip install .[test]
           pip install --upgrade -e .
+          pip install .[test]
 
       - name: Test with pytest
         run: |
