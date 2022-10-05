@@ -59,7 +59,7 @@ jobs:
         id: cache-conda-env
         with:
           path: /usr/share/miniconda/envs/neo-test-env
-          key: ${{ runner.os }}-conda-env-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/requirements_testing.txt') }}-${{ hashFiles('**/environment_testing.txt') }}-${{ steps.date.outputs.date }}
+          key: ${{ runner.os }}-conda-env-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
 
       - name: Install testing dependencies
         # testing environment is only installed if no cache was found
@@ -74,6 +74,7 @@ jobs:
 
       - name: Install neo
         run: |
+          pip install .[test]
           pip install --upgrade -e .
 
       - name: Test with pytest
