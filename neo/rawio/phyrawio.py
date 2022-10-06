@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 import csv
 import ast
+import warnings
 
 
 class PhyRawIO(BaseRawIO):
@@ -35,9 +36,11 @@ class PhyRawIO(BaseRawIO):
     extensions = []
     rawmode = 'one-dir'
 
-    def __init__(self, dirname=''):
+    def __init__(self, dirname='', load_amplitudes=False, load_pcs=False):
         BaseRawIO.__init__(self)
         self.dirname = dirname
+        self.load_pcs = load_pcs
+        self.load_amplitudes = load_amplitudes
 
     def _source_name(self):
         return self.dirname
@@ -53,16 +56,24 @@ class PhyRawIO(BaseRawIO):
         else:
             self._spike_clusters = self._spike_templates
 
-        # TODO: Add this when array_annotations are ready
-        # if (phy_folder / 'amplitudes.npy').is_file():
-        #     amplitudes = np.squeeze(np.load(phy_folder / 'amplitudes.npy'))
-        # else:
-        #     amplitudes = np.ones(len(spike_times))
-        #
-        # if (phy_folder / 'pc_features.npy').is_file():
-        #     pc_features = np.squeeze(np.load(phy_folder / 'pc_features.npy'))
-        # else:
-        #     pc_features = None
+        self._amplitudes = None
+        if self.load_amplitudes:
+            if (phy_folder / 'amplitudes.npy').is_file():
+                self._amplitudes = np.squeeze(np.load(phy_folder / 'amplitudes.npy'))
+            else:
+                warnings.warn('Amplitudes requested but "amplitudes.npy"'
+                              'not found in the data folder.')
+
+        self._pc_features = None
+        self._pc_feature_ind = None
+        if self.load_pcs:
+            if ((phy_folder / 'pc_features.npy').is_file()
+                    and (phy_folder / 'pc_feature_ind.npy').is_file()):
+                self._pc_features = np.squeeze(np.load(phy_folder / 'pc_features.npy'))
+                self._pc_feature_ind = np.squeeze(np.load(phy_folder / 'pc_feature_ind.npy'))
+            else:
+                warnings.warn('PCs requested but "pc_features.npy" and/or'
+                              '"pc_feature_ind.npy" not found in the data folder.')
 
         # SEE: https://stackoverflow.com/questions/4388626/
         #  python-safe-eval-string-to-bool-int-float-none-string
@@ -149,6 +160,30 @@ class PhyRawIO(BaseRawIO):
                         spiketrain_an[annotation_name] = \
                             annotation_dict[property_name]
                         break
+
+            cluster_mask = (self._spike_clusters == clust_id).flatten()
+
+            current_templates = self._spike_templates[cluster_mask].flatten()
+            unique_templates = np.unique(current_templates)
+            spiketrain_an['templates'] = unique_templates
+            spiketrain_an['__array_annotations__']['templates'] = current_templates
+
+            if self._amplitudes is not None:
+                spiketrain_an['__array_annotations__']['amplitudes'] = \
+                    self._amplitudes[cluster_mask]
+
+            if self._pc_features is not None:
+                current_pc_features = self._pc_features[cluster_mask]
+                _, num_pcs, num_pc_channels = current_pc_features.shape
+                for pc_idx in range(num_pcs):
+                    for channel_idx in range(num_pc_channels):
+                        key = 'channel{channel_idx}_pc{pc_idx}'.format(channel_idx=channel_idx,
+                                                                       pc_idx=pc_idx)
+                        spiketrain_an['__array_annotations__'][key] = \
+                                current_pc_features[:, pc_idx, channel_idx]
+
+            if self._pc_feature_ind is not None:
+                spiketrain_an['pc_feature_ind'] = self._pc_feature_ind[unique_templates]
 
     def _segment_t_start(self, block_index, seg_index):
         assert block_index == 0
