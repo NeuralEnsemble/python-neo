@@ -149,17 +149,17 @@ class PhyRawIO(BaseRawIO):
 
             # Loop over list of list of dict and annotate each st
             for annotation_list in annotation_lists:
-                clust_key, property_name = tuple(annotation_list[0].
-                                                 keys())
-                if property_name == 'KSLabel':
-                    annotation_name = 'quality'
-                else:
-                    annotation_name = property_name.lower()
-                for annotation_dict in annotation_list:
-                    if int(annotation_dict[clust_key]) == clust_id:
-                        spiketrain_an[annotation_name] = \
-                            annotation_dict[property_name]
-                        break
+                clust_key, *property_names = tuple(annotation_list[0].keys())
+                for property_name in property_names:
+                    if property_name == 'KSLabel':
+                        annotation_name = 'quality'
+                    else:
+                        annotation_name = property_name.lower()
+                    for annotation_dict in annotation_list:
+                        if int(annotation_dict[clust_key]) == clust_id:
+                            spiketrain_an[annotation_name] = \
+                                annotation_dict[property_name]
+                            break
 
             cluster_mask = (self._spike_clusters == clust_id).flatten()
 
@@ -256,7 +256,7 @@ class PhyRawIO(BaseRawIO):
     def _parse_tsv_or_csv_to_list_of_dict(filename):
         list_of_dict = list()
         letter_pattern = re.compile('[a-zA-Z]')
-        float_pattern = re.compile(r'\d*\.')
+        float_pattern = re.compile(r'-?\d*\.')
         with open(filename) as csvfile:
             if filename.suffix == '.csv':
                 reader = csv.DictReader(csvfile, delimiter=',')
@@ -268,15 +268,19 @@ class PhyRawIO(BaseRawIO):
 
             for row in reader:
                 if line == 0:
-                    key1, key2 = tuple(row.keys())
+                    cluster_id_key, *annotation_keys = tuple(row.keys())
                 # Convert cluster ID to int
-                row[key1] = int(row[key1])
+                row[cluster_id_key] = int(row[cluster_id_key])
                 # Convert strings without letters
-                if letter_pattern.match(row[key2]) is None:
-                    if float_pattern.match(row[key2]) is None:
-                        row[key2] = int(row[key2])
-                    else:
-                        row[key2] = float(row[key2])
+                for key in annotation_keys:
+                    value = row[key]
+                    if not len(value):
+                        row[key] = None
+                    elif letter_pattern.match(value) is None:
+                        if float_pattern.match(value) is None:
+                            row[key] = int(value)
+                        else:
+                            row[key] = float(value)
 
                 list_of_dict.append(row)
                 line += 1
