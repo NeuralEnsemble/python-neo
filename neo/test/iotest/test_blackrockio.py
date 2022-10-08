@@ -42,7 +42,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
     ]
     entities_to_test = [
         'blackrock/FileSpec2.3001',
-        'blackrock/blackrock_2_1/l101210-001'
+        'blackrock/blackrock_2_1/l101210-001',
+        'blackrock/blackrock_3_0/file_spec_3_0'
     ]
 
     def test_load_waveforms(self):
