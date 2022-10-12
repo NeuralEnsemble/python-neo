@@ -162,7 +162,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 evt_channel_type = "epoch"
             else:
                 evt_channel_type = "event"
-            event_channels.append((d['channel_name'], stream_ind, evt_channel_type))
+            event_channels.append((d['channel_name'], d['channel_name'], evt_channel_type))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # create memmap for events
