@@ -1149,7 +1149,7 @@ class BlackrockRawIO(BaseRawIO):
             # consistency check for monotone increasing time stamps
             # - Use logical comparator (instead of np.diff) to avoid unsigned dtype issues.
             # - Only consider handled/known event types.
-            mask_handled = np.any(np.vstack([value[nev_data_masks[key]] for key, value in masks.items()]), axis=0)
+            mask_handled = np.any([value[nev_data_masks[key]] for key, value in masks.items()], axis=0)
             jump_ids_handled = np.where(
                 raw_event_data['timestamp'][mask_handled][1:] < raw_event_data['timestamp'][mask_handled][:-1]
             )[0] + 1
