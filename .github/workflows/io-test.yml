@@ -19,7 +19,7 @@ jobs:
       matrix:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", ]
-        python-version: ['3.8', ]
+        python-version: ['3.9', ]
     defaults:
       # by default run in bash mode (required for conda usage)
       run:
