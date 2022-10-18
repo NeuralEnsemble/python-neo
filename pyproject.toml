@@ -27,11 +27,12 @@ dependencies = [
 "Homepage" = "https://neuralensemble.org/neo"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=62.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools]
+packages = ["neo"]
+package-dir = {"neo" = "neo"}
 
 [project.optional-dependencies]
 
