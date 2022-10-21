@@ -22,6 +22,9 @@ extras_require = {
 }
 extras_require["all"] = sum(extras_require.values(), [])
 
+# explicitly removing stfio from list of all as it is not pip installable
+extras_require["all"].remove('stfio')
+
 with open("neo/version.py") as fp:
     d = {}
     exec(fp.read(), d)
