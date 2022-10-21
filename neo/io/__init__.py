@@ -262,7 +262,8 @@ Classes:
 
 """
 
-import os.path
+import pathlib
+from collections import Counter
 
 # try to import the neuroshare library.
 # if it is present, use the neuroshareapiio to load neuroshare files
@@ -384,14 +385,56 @@ iolist = [
     WinWcpIO
 ]
 
+# for each supported extension list the ios supporting it
+io_by_extension = {}
+for io in iolist:
+    for extension in io.extensions:
+        # extension handling should not be case sensitive
+        io_by_extension.setdefault(extension, []).append(io)
 
-def get_io(filename, *args, **kwargs):
+
+def get_io(file_or_folder, *args, **kwargs):
     """
     Return a Neo IO instance, guessing the type based on the filename suffix.
     """
-    extension = os.path.splitext(filename)[1][1:]
+    file_or_folder = pathlib.Path(file_or_folder)
+
+    if file_or_folder.is_file():
+        return get_io_from_filename(file_or_folder, *args, **kwargs)
+
+    elif file_or_folder.is_dir():
+        # find the io that fits the best with the files contained in the folder
+        potential_ios = []
+
+        # scan files in folder to determine io type
+        filenames = [f for f in file_or_folder.glob('*') if f.is_file()]
+        for filename in filenames:
+            extension = filename.suffix[1:].lower()
+            for io in iolist:
+                if extension in io.extensions:
+                    potential_ios.append(io)
+
+        if potential_ios:
+            most_common_io = Counter(potential_ios).most_common()[0][0]
+            return most_common_io(file_or_folder, *args, **kwargs)
+
+    raise IOError(f"Could not identify IO for {file_or_folder}")
+
+
+def get_io_from_filename(filename, *args, **kwargs):
+    """
+    Return a Neo IO instance, guessing the type based on the filename suffix.
+    """
+    extension = pathlib.Path(filename).suffix[1:].lower()
+
+
+    print(extension)
     for io in iolist:
         if extension in io.extensions:
-            return io(filename, *args, **kwargs)
+            # some extensions are used by multiple systems.
+            try:
+                return io(filename, *args, **kwargs)
+            except:
+                continue
 
-    raise IOError("File extension %s not registered" % extension)
+    raise IOError(f"Could not identify IO for {filename}")

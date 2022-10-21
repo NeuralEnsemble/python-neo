@@ -34,6 +34,7 @@ from neo.test.rawiotest.tools import can_use_network
 from neo.test.rawiotest.common_rawio_test import repo_for_test
 from neo.utils import (download_dataset,
     get_local_testing_data_folder)
+from neo import get_io
 
 try:
     import datalad
@@ -528,3 +529,10 @@ class BaseTestIO:
                 self.ioclass(filename=pathlib_filename)
             elif self.ioclass.mode == 'dir':
                 self.ioclass(dirname=pathlib_filename)
+
+    def test_get_io(self):
+        for entity in self.entities_to_test:
+            entity = get_test_file_full_path(self.ioclass, filename=entity,
+                                             directory=self.local_test_dir)
+            io = get_io(entity)
+            assert isinstance(io, self.ioclass)
