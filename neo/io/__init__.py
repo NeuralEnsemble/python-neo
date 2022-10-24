@@ -389,6 +389,7 @@ iolist = [
 io_by_extension = {}
 for io in iolist:
     for extension in io.extensions:
+        extension = extension.lower()
         # extension handling should not be case sensitive
         io_by_extension.setdefault(extension, []).append(io)
 
@@ -397,44 +398,61 @@ def get_io(file_or_folder, *args, **kwargs):
     """
     Return a Neo IO instance, guessing the type based on the filename suffix.
     """
-    file_or_folder = pathlib.Path(file_or_folder)
-
-    if file_or_folder.is_file():
-        return get_io_from_filename(file_or_folder, *args, **kwargs)
-
-    elif file_or_folder.is_dir():
-        # find the io that fits the best with the files contained in the folder
-        potential_ios = []
-
-        # scan files in folder to determine io type
-        filenames = [f for f in file_or_folder.glob('*') if f.is_file()]
-        for filename in filenames:
-            extension = filename.suffix[1:].lower()
-            for io in iolist:
-                if extension in io.extensions:
-                    potential_ios.append(io)
-
-        if potential_ios:
-            most_common_io = Counter(potential_ios).most_common()[0][0]
-            return most_common_io(file_or_folder, *args, **kwargs)
+    ios = list_candidate_ios(file_or_folder)
+    for io in ios:
+        try:
+            return io(file_or_folder, *args, **kwargs)
+        except:
+            continue
 
     raise IOError(f"Could not identify IO for {file_or_folder}")
 
 
-def get_io_from_filename(filename, *args, **kwargs):
+def list_candidate_ios(file_or_folder):
     """
-    Return a Neo IO instance, guessing the type based on the filename suffix.
+    Identify neo IO that can potentially load data in the file or folder
+
+    Parameters
+    ----------
+    file_or_folder (str, pathlib.Path)
+        Path to the file or folder to load
+
+    Returns
+    -------
+    list
+        List of neo io classes that are associated with the file extensions detected
     """
-    extension = pathlib.Path(filename).suffix[1:].lower()
+    file_or_folder = pathlib.Path(file_or_folder)
+
+    if file_or_folder.is_file():
+        suffix = file_or_folder.suffix[1:].lower()
+        if suffix not in io_by_extension:
+            print(f'{suffix} not found')
+        return io_by_extension[suffix]
+
+    elif file_or_folder.is_dir():
+        # scan files in folder to determine io type
+        filenames = [f for f in file_or_folder.glob('*') if f.is_file()]
+
+    # if only file prefix was provided, e.g /mydatafolder/session1-
+    # to select all files sharing the `session1-` prefix
+    elif file_or_folder.parent.exists():
+        filenames = file_or_folder.parent.glob(file_or_folder.name + '*')
+
+    # find the io that fits the best with the files contained in the folder
+    potential_ios = []
+    for filename in filenames:
+        for suffix in filename.suffixes:
+            suffix = suffix[1:].lower()
+            if suffix in io_by_extension:
+                potential_ios.extend(io_by_extension[suffix])
+
+    if not potential_ios:
+        raise ValueError(f'Could not determine io to load {file_or_folder}')
+
+    # return ios ordered by number of files supported
+    counter = Counter(potential_ios).most_common()
+    return [io for io, count in counter]
 
 
-    print(extension)
-    for io in iolist:
-        if extension in io.extensions:
-            # some extensions are used by multiple systems.
-            try:
-                return io(filename, *args, **kwargs)
-            except:
-                continue
 
-    raise IOError(f"Could not identify IO for {filename}")
