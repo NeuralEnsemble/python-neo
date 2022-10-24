@@ -33,7 +33,8 @@ class PhyRawIO(BaseRawIO):
         >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, 'float64')
 
     """
-    extensions = []
+    # file formats used by phy
+    extensions = ['npy', 'mat', 'tsv', 'dat']
     rawmode = 'one-dir'
 
     def __init__(self, dirname='', load_amplitudes=False, load_pcs=False):

@@ -122,7 +122,7 @@ class BlackrockRawIO(BaseRawIO):
     """
 
     extensions = ['ns' + str(_) for _ in range(1, 7)]
-    extensions.extend(['nev', ])  # 'sif', 'ccf' not yet supported
+    extensions.extend(['nev', 'sif', 'ccf'])  # 'sif', 'ccf' not yet supported
     rawmode = 'multi-file'
 
     def __init__(self, filename=None, nsx_override=None, nev_override=None,
@@ -153,6 +153,9 @@ class BlackrockRawIO(BaseRawIO):
                 os.path.extsep + 'nev$', '', nev_override)
         else:
             self._filenames['nev'] = self.filename
+
+        self._filenames['sif'] = self.filename
+        self._filenames['ccf'] = self.filename
 
         # check which files are available
         self._avail_files = dict.fromkeys(self.extensions, False)

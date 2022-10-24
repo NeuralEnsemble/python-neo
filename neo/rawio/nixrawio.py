@@ -31,7 +31,7 @@ neo_attributes = {
 
 class NIXRawIO(BaseRawIO):
 
-    extensions = ['nix']
+    extensions = ['nix', 'h5']
     rawmode = 'one-file'
 
     def __init__(self, filename=''):

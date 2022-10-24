@@ -351,7 +351,7 @@ iolist = [
     CedIO,
     EDFIO,
     ElanIO,
-    # ElphyIO,
+    ElphyIO,
     ExampleIO,
     IgorIO,
     IntanIO,
