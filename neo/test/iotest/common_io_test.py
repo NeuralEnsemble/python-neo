@@ -34,7 +34,7 @@ from neo.test.rawiotest.tools import can_use_network
 from neo.test.rawiotest.common_rawio_test import repo_for_test
 from neo.utils import (download_dataset,
     get_local_testing_data_folder)
-from neo import get_io
+from neo import list_candidate_ios
 
 try:
     import datalad
@@ -530,9 +530,11 @@ class BaseTestIO:
             elif self.ioclass.mode == 'dir':
                 self.ioclass(dirname=pathlib_filename)
 
-    def test_get_io(self):
+    def test_list_candidate_ios(self):
         for entity in self.entities_to_test:
             entity = get_test_file_full_path(self.ioclass, filename=entity,
                                              directory=self.local_test_dir)
-            io = get_io(entity)
-            assert isinstance(io, self.ioclass)
+            ios = list_candidate_ios(entity)
+            if self.ioclass not in ios:
+                print(f'{entity} does not list {self.ioclass} in list of ios: {ios}')
+            assert self.ioclass in ios
