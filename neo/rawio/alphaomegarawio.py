@@ -90,18 +90,17 @@ class AlphaOmegaRawIO(BaseRawIO):
     def __init__(self, dirname="", lsx_files=None, prune_channels=True):
         super().__init__(dirname=dirname)
         self.dirname = Path(dirname)
-        if not self.dirname.is_dir():
-            raise ValueError(f'{dirname} is not a directory.')
 
         self._lsx_files = lsx_files
         self._mpx_files = None
-        if self.dirname.is_dir():
-            self._explore_folder()
-        else:
-            self.logger.error(f"{self.dirname} is not a folder")
         self._prune_channels = prune_channels
         self._opened_files = {}
         self._ignore_unknown_datablocks = True  # internal debug property
+
+        if self.dirname.is_dir():
+            self._explore_folder()
+        else:
+            raise IOError(f"{self.dirname} is not a folder")
 
     def _explore_folder(self):
         """
