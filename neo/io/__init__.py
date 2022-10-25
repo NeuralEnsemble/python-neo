@@ -10,6 +10,7 @@ raise an error but a warning.
 Functions:
 
 .. autofunction:: neo.io.get_io
+.. autofunction:: neo.io.list_candidate_ios
 
 
 Classes:
@@ -387,11 +388,11 @@ iolist = [
 
 # for each supported extension list the ios supporting it
 io_by_extension = {}
-for io in iolist:
-    for extension in io.extensions:
+for current_io in iolist:  # do not use `io` as variable name here as this overwrites the module io
+    for extension in current_io.extensions:
         extension = extension.lower()
         # extension handling should not be case sensitive
-        io_by_extension.setdefault(extension, []).append(io)
+        io_by_extension.setdefault(extension, []).append(current_io)
 
 
 def get_io(file_or_folder, *args, **kwargs):
@@ -453,6 +454,3 @@ def list_candidate_ios(file_or_folder):
     # return ios ordered by number of files supported
     counter = Counter(potential_ios).most_common()
     return [io for io, count in counter]
-
-
-
