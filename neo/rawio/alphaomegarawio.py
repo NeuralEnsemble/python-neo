@@ -100,7 +100,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         if self.dirname.is_dir():
             self._explore_folder()
         else:
-            raise IOError(f"{self.dirname} is not a folder")
+            raise ValueError(f"{self.dirname} is not a folder")
 
     def _explore_folder(self):
         """
