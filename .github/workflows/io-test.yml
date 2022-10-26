@@ -35,16 +35,16 @@ jobs:
 
       - name: Get ephy_testing_data current head hash
         # the key depend on the last commit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-        id: vars
+        id: ephy_testing_data_hash
         run: |
-          echo "::set-output name=HASH_EPHY_DATASET::$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
+          echo "latest_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> GITHUB_OUTPUT
 
       - uses: actions/cache@v3
         # Loading cache of ephys_testing_dataset
         id: cache-datasets
         with:
           path: ~/ephy_testing_data
-          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data_hash.outputs.latest_hash }}
 
       - uses: conda-incubator/setup-miniconda@v2
         with:
