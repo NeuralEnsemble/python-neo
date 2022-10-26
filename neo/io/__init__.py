@@ -361,7 +361,8 @@ iolist = [
     MEArecIO,
     MaxwellIO,
     MicromedIO,
-    NixIO,  # place NixIO before other IOs that use HDF5 to make it the default for .h5 files
+    NixIO,
+    NixIOFr,
     NeoMatlabIO,
     NestIO,
     NeuralynxIO,
