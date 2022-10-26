@@ -51,7 +51,7 @@ from neo.test.generate_datasets import generate_from_supported_objects
 
 
 class BaseTestIO:
-    '''
+    """
     This class make common tests for all IOs.
 
     Several strategies:
@@ -82,10 +82,8 @@ class BaseTestIO:
 
     local_test_dir = get_local_testing_data_folder()
 
-    def setUp(self):
-        '''
-        Set up the test fixture.  This is run for every test
-        '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.higher = self.ioclass.supported_objects[0]
         self.shortname = self.ioclass.__name__.lower().rstrip('io')
         # these objects can both be written and read
@@ -94,7 +92,6 @@ class BaseTestIO:
         # these objects can be either written or read
         self.io_readorwrite = list(set(self.ioclass.readable_objects) |
                                    set(self.ioclass.writeable_objects))
-
         if HAVE_DATALAD:
             for remote_path in self.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
