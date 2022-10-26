@@ -33,6 +33,13 @@ class TestExampleIO(BaseTestIO, unittest.TestCase, ):
                                                 directory=self.local_test_dir)
             pathlib.Path(full_path).touch()
 
+    def tearDown(self) -> None:
+        super().tearDown()
+        for entity in self.entities_to_test:
+            full_path = get_test_file_full_path(self.ioclass, filename=entity,
+                                                directory=self.local_test_dir)
+            pathlib.Path(full_path).unlink(missing_ok=True)
+
 # This is the minimal variables that are required
 # to run the common IO tests.  IO specific tests
 # can be added here and will be run automatically
