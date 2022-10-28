@@ -436,10 +436,18 @@ def list_candidate_ios(file_or_folder):
         # scan files in folder to determine io type
         filenames = [f for f in file_or_folder.glob('*') if f.is_file()]
 
+        # if no files are found in the folder, check subfolders
+        # this is necessary for nested-folder based formats like spikeglx
+        if not filenames:
+            filenames = [f for f in file_or_folder.glob('**/*') if f.is_file()]
+
     # if only file prefix was provided, e.g /mydatafolder/session1-
     # to select all files sharing the `session1-` prefix
     elif file_or_folder.parent.exists():
         filenames = file_or_folder.parent.glob(file_or_folder.name + '*')
+
+    else:
+        raise ValueError(f'{file_or_folder} does not contain data files of a supported format')
 
     # find the io that fits the best with the files contained in the folder
     potential_ios = []
@@ -450,7 +458,7 @@ def list_candidate_ios(file_or_folder):
                 potential_ios.extend(io_by_extension[suffix])
 
     if not potential_ios:
-        raise ValueError(f'Could not determine io to load {file_or_folder}')
+        raise ValueError(f'Could not determine IO to load {file_or_folder}')
 
     # return ios ordered by number of files supported
     counter = Counter(potential_ios).most_common()
