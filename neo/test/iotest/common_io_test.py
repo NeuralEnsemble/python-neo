@@ -82,8 +82,10 @@ class BaseTestIO:
 
     local_test_dir = get_local_testing_data_folder()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def setUp(self):
+        '''
+        Set up the test fixture.  This is run for every test
+        '''
         self.higher = self.ioclass.supported_objects[0]
         self.shortname = self.ioclass.__name__.lower().rstrip('io')
         # these objects can both be written and read
