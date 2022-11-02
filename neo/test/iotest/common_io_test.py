@@ -9,7 +9,7 @@ See BaseTestIO.
 
 The public URL is in url_for_tests.
 
-To deposite new testing files,  please create a account at
+To deposit new testing files, please create a account at
 gin.g-node.org and upload files at NeuralEnsemble/ephy_testing_data
 data repo.
 
@@ -52,7 +52,7 @@ from neo.test.generate_datasets import generate_from_supported_objects
 
 class BaseTestIO:
     """
-    This class make common tests for all IOs.
+    This class defines common tests for all IOs.
 
     Several strategies:
       * for IO able to read write : test_write_then_read
