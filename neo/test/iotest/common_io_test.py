@@ -81,6 +81,9 @@ class BaseTestIO:
     entities_to_test = []  # list of files to test compliances
     entities_to_download = []  # when files are at gin
 
+    default_arguments = []
+    default_keyword_arguments = {}
+
     # when reading then writing produces files with identical hashes
     hash_conserved_when_write_read = False
     # when writing then reading creates an identical neo object
@@ -529,6 +532,10 @@ class BaseTestIO:
             pathlib_filename = pathlib.Path(filename)
 
             if self.ioclass.mode == 'file':
-                self.ioclass(filename=pathlib_filename)
+                self.ioclass(filename=pathlib_filename,
+                             *self.default_arguments,
+                             **self.default_keyword_arguments)
             elif self.ioclass.mode == 'dir':
-                self.ioclass(dirname=pathlib_filename)
+                self.ioclass(dirname=pathlib_filename,
+                             *self.default_arguments,
+                             **self.default_keyword_arguments)
