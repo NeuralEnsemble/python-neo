@@ -95,68 +95,45 @@ class BaseTestIO:
     local_test_dir = get_local_testing_data_folder()
 
     def setUp(self):
-        '''
-        Set up the test fixture.  This is run for every test
-        '''
-        self.higher = self.ioclass.supported_objects[0]
-        self.shortname = self.ioclass.__name__.lower().rstrip('io')
-        # these objects can both be written and read
-        self.io_readandwrite = list(set(self.ioclass.readable_objects) &
-                                    set(self.ioclass.writeable_objects))
-        # these objects can be either written or read
-        self.io_readorwrite = list(set(self.ioclass.readable_objects) |
-                                   set(self.ioclass.writeable_objects))
+        """
+        This is run once per test case
+        """
+        pass
 
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """
+        This is run once per test class instance
+        """
+        if cls == BaseTestIO:
+            cls.run = lambda self, *args, **kwargs: None
+            return
+
+        super(BaseTestIO, cls).setUpClass()
+        cls.higher = cls.ioclass.supported_objects[0]
+        cls.shortname = cls.ioclass.__name__.lower().rstrip('io')
+        # these objects can both be written and read
+        cls.io_readandwrite = list(set(cls.ioclass.readable_objects) &
+                                    set(cls.ioclass.writeable_objects))
+        # these objects can be either written or read
+        cls.io_readorwrite = list(set(cls.ioclass.readable_objects) |
+                                   set(cls.ioclass.writeable_objects))
         if HAVE_DATALAD:
-            for remote_path in self.entities_to_download:
+            for remote_path in cls.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
 
-            self.files_generated = []
-            self.generate_files_for_io_able_to_write()
+            cls.files_generated = []
+            cls.generate_files_for_io_able_to_write()
 
-            # be carefull self.entities_to_test is class attributes
-            self.files_to_test = [self.get_local_path(e) for e in self.entities_to_test]
+            # be careful cls.entities_to_test is class attributes
+            cls.files_to_test = [cls.get_local_path(e) for e in cls.entities_to_test]
         else:
-            self.files_to_test = []
+            cls.files_to_test = []
             raise unittest.SkipTest("Requires datalad download of data from the web")
 
-    def create_local_dir_if_not_exists(self):
-        '''
-        Create a local directory to store testing files and return it.
-
-        The directory path is also written to self.local_test_dir
-        '''
-        self.local_test_dir = create_local_temp_dir(
-            self.shortname, directory=os.environ.get("NEO_TEST_FILE_DIR", None))
-        return self.local_test_dir
-
-    def download_test_files_if_not_present(self):
-        '''
-        Download %s file at G-node for testing
-        url_for_tests is global at beginning of this file.
-
-        ''' % self.ioclass.__name__
-        if not self.use_network:
-            raise unittest.SkipTest("Requires download of data from the web")
-
-        url = url_for_tests + self.shortname
-        try:
-            make_all_directories(self.files_to_download, self.local_test_dir)
-            download_test_file(self.files_to_download,
-                               self.local_test_dir, url)
-        except OSError as exc:
-            raise unittest.TestCase.failureException(exc)
-
-    download_test_files_if_not_present.__test__ = False
-
-    def cleanup_file(self, path):
-        '''
-        Remove test files or directories safely.
-        '''
-        cleanup_test_file(self.ioclass, path, directory=self.local_test_dir)
-
-    def able_to_write_or_read(self, writeread=False, readwrite=False):
-        '''
+    @classmethod
+    def able_to_write_or_read(cls, writeread=False, readwrite=False):
+        """
         Return True if generalized writing or reading is possible.
 
         If writeread=True, return True if writing then reading is
@@ -164,44 +141,47 @@ class BaseTestIO:
 
         If readwrite=True, return True if reading then writing is possible
         and produces files with identical hashes.
-        '''
+        """
         # Find the highest object that is supported by the IO
         # Test only if it is a Block or Segment, and if it can both read
         # and write this object.
-        if self.higher not in self.io_readandwrite:
+        if cls.higher not in cls.io_readandwrite:
             return False
-        if self.higher not in [Block, Segment]:
+        if cls.higher not in [Block, Segment]:
             return False
 
-        # when io need external knowldge for writting or read such as
-        # sampling_rate (RawBinaryIO...) the test is too much complex to design
-        # genericaly.
-        if (self.higher in self.ioclass.read_params and
-                len(self.ioclass.read_params[self.higher]) != 0):
+        # when io need external knowledge for writing or reading such as
+        # sampling_rate (RawBinaryIO...) the test is too complex to design
+        # generically.
+        if (cls.higher in cls.ioclass.read_params and
+                len(cls.ioclass.read_params[cls.higher]) != 0):
             return False
 
         # handle cases where the test should write then read
-        if writeread and not self.read_and_write_is_bijective:
+        if writeread and not cls.read_and_write_is_bijective:
             return False
 
         # handle cases where the test should read then write
-        if readwrite and not self.hash_conserved_when_write_read:
+        if readwrite and not cls.hash_conserved_when_write_read:
             return False
 
         return True
 
-    def get_local_base_folder(self):
+    @staticmethod
+    def get_local_base_folder():
         return get_local_testing_data_folder()
 
-    def get_local_path(self, sub_path):
-        root_local_path = self.get_local_base_folder()
+    @classmethod
+    def get_local_path(cls, sub_path):
+        root_local_path = cls.get_local_base_folder()
         local_path = root_local_path / sub_path
         # TODO later : remove the str when all IOs handle the pathlib.Path objects
         local_path = str(local_path)
         return local_path
 
-    def generic_io_object(self, filename=None, return_path=False, clean=False):
-        '''
+    @classmethod
+    def generic_io_object(cls, filename=None, return_path=False, clean=False):
+        """
         Create an io object in a generic way that can work with both
         file-based and directory-based io objects.
 
@@ -212,10 +192,10 @@ class BaseTestIO:
 
         If clean is True, try to delete existing versions of the file
         before creating the io object.  Default is False.
-        '''
-        return create_generic_io_object(ioclass=self.ioclass,
+        """
+        return create_generic_io_object(ioclass=cls.ioclass,
                                         filename=filename,
-                                        directory=self.local_test_dir,
+                                        directory=cls.local_test_dir,
                                         return_path=return_path,
                                         clean=clean)
 
@@ -369,28 +349,29 @@ class BaseTestIO:
                                  clean=clean, readall=readall,
                                  lazy=lazy)
 
-    def generate_files_for_io_able_to_write(self):
-        '''
+    @classmethod
+    def generate_files_for_io_able_to_write(cls):
+        """
         Write files for use in testing.
-        '''
-        self.files_generated = []
-        if not self.able_to_write_or_read():
+        """
+        cls.files_generated = []
+        if not cls.able_to_write_or_read():
             return
 
-        generate_from_supported_objects(self.ioclass.supported_objects)
+        generate_from_supported_objects(cls.ioclass.supported_objects)
 
-        ioobj, path = self.generic_io_object(return_path=True, clean=True)
+        ioobj, path = cls.generic_io_object(return_path=True, clean=True)
         if ioobj is None:
             return
 
-        self.files_generated.append(path)
+        cls.files_generated.append(path)
 
-        write_generic(ioobj, target=self.higher)
+        write_generic(ioobj, target=cls.higher)
 
         close_object_safe(ioobj)
 
     def test_write_then_read(self):
-        '''
+        """
         Test for IO that are able to write and read - here %s:
           1 - Generate a full schema with supported objects.
           2 - Write to a file
@@ -400,7 +381,7 @@ class BaseTestIO:
 
         Work only for IO for Block and Segment for the highest object
         (main cases).
-        ''' % self.ioclass.__name__
+        """ % self.ioclass.__name__
 
         if not self.able_to_write_or_read(writeread=True):
             return
