@@ -410,7 +410,7 @@ def get_io(file_or_folder, *args, **kwargs):
     raise IOError(f"Could not identify IO for {file_or_folder}")
 
 
-def list_candidate_ios(file_or_folder):
+def list_candidate_ios(file_or_folder, ignore_suffix=['ini']):
     """
     Identify neo IO that can potentially load data in the file or folder
 
@@ -418,6 +418,8 @@ def list_candidate_ios(file_or_folder):
     ----------
     file_or_folder (str, pathlib.Path)
         Path to the file or folder to load
+    ignore_suffix (list)
+        List of suffixes to ignore when scanning for known formats. Default: ['ini']
 
     Returns
     -------
@@ -435,11 +437,15 @@ def list_candidate_ios(file_or_folder):
     elif file_or_folder.is_dir():
         # scan files in folder to determine io type
         filenames = [f for f in file_or_folder.glob('*') if f.is_file()]
+        # keep only relevant filenames
+        filenames = [f for f in filenames if f.suffix and f.suffix[1:].lower() not in ignore_suffix]
 
         # if no files are found in the folder, check subfolders
         # this is necessary for nested-folder based formats like spikeglx
         if not filenames:
             filenames = [f for f in file_or_folder.glob('**/*') if f.is_file()]
+            # keep only relevant filenames
+            filenames = [f for f in filenames if f.suffix and f.suffix[1:].lower() not in ignore_suffix]
 
     # if only file prefix was provided, e.g /mydatafolder/session1-
     # to select all files sharing the `session1-` prefix
