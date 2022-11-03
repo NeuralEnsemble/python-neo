@@ -431,7 +431,7 @@ def list_candidate_ios(file_or_folder, ignore_suffix=['ini']):
     if file_or_folder.is_file():
         suffix = file_or_folder.suffix[1:].lower()
         if suffix not in io_by_extension:
-            print(f'{suffix} not found')
+            raise ValueError(f'{suffix} is not a supported format of any IO.')
         return io_by_extension[suffix]
 
     elif file_or_folder.is_dir():
