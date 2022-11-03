@@ -494,6 +494,4 @@ class BaseTestIO:
             entity = get_test_file_full_path(self.ioclass, filename=entity,
                                              directory=self.local_test_dir)
             ios = list_candidate_ios(entity)
-            if self.ioclass not in ios:
-                print(f'{entity} does not list {self.ioclass} in list of ios: {ios}')
             assert self.ioclass in ios
