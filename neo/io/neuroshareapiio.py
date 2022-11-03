@@ -333,13 +333,13 @@ class NeuroshareapiIO(BaseIO):
         numIndx = endat - startat
         # get the end point using segment duration
         # create a numpy empty array to store the waveforms
-        waveforms = np.array(np.zeros([numIndx, tempSpks.max_sample_count]))
+        waveforms = np.array(np.zeros([numIndx, 1, tempSpks.max_sample_count]))
         # loop through the data from the specific channel index
         for i in range(startat, endat, 1):
             # get cutout, timestamp, cutout duration, and spike unit
             tempCuts, timeStamp, duration, unit = tempSpks.get_data(i)
             # save the cutout in the waveform matrix
-            waveforms[i] = tempCuts[0]
+            waveforms[i, 0, :] = tempCuts[0]
             # append time stamp to list
             times.append(timeStamp)
 
