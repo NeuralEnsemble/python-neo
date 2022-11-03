@@ -78,11 +78,8 @@ class BaseTestIO:
     # all IO test need to modify this:
     ioclass = None  # the IOclass to be tested
 
-    entities_to_test = []  # list of files to test compliances
+    entities_to_test = []  # list of files to test compliance
     entities_to_download = []  # when files are at gin
-
-    default_arguments = []
-    default_keyword_arguments = {}
 
     # when reading then writing produces files with identical hashes
     hash_conserved_when_write_read = False
@@ -110,6 +107,8 @@ class BaseTestIO:
             return
 
         super(BaseTestIO, cls).setUpClass()
+        cls.default_arguments = []
+        cls.default_keyword_arguments = {}
         cls.higher = cls.ioclass.supported_objects[0]
         cls.shortname = cls.ioclass.__name__.lower().rstrip('io')
         # these objects can both be written and read
