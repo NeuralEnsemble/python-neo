@@ -108,7 +108,7 @@ class NeurosharectypesIO(BaseIO):
     write_params = None
 
     name = 'neuroshare'
-    extensions = []
+    extensions = ['mcd']
     mode = 'file'
 
     def __init__(self, filename='', dllname=''):
