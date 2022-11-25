@@ -205,7 +205,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         raise ValueError(f'There is no possible labels for this event: {stream_name}')
 
                     # # If available, use 'states' to compute event duration
-                    if 'states' in d:
+                    if 'states' in d and d["states"].size:
                         states = d["states"]
                         timestamps = d["timestamps"]
                         labels = d["labels"]
