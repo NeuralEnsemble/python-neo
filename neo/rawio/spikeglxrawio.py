@@ -167,7 +167,7 @@ class SpikeGLXRawIO(BaseRawIO):
                     # need probeinterface to be installed
                     import probeinterface
                     info = self.signals_info_dict[seg_index, stream_name]
-                    if 'imroTbl' in info['meta'] and info['stream_kind'] == 'ap':
+                    if 'imroTbl' in info['meta'] and info['stream_kind'] in ['ap','lf']:
                         # only for ap channel
                         probe = probeinterface.read_spikeglx(info['meta_file'])
                         loc = probe.contact_positions
@@ -393,7 +393,7 @@ def extract_stream_info(meta_file, meta):
                 per_channel_gain[c] = 1. / float(v)
             gain_factor = float(meta['imAiRangeMax']) / 512
             channel_gains = gain_factor * per_channel_gain * 1e6
-        elif meta['imDatPrb_type'] in ('21', '24') and stream_kind == 'ap':
+        elif meta['imDatPrb_type'] in ('21', '24') and stream_kind in ['ap','lf']:
             # This work with NP 2.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
