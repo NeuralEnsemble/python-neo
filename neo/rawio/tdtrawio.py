@@ -31,7 +31,6 @@ import re
 import warnings
 from collections import OrderedDict
 from pathlib import Path
-import tdt
 
 
 class TdtRawIO(BaseRawIO):
