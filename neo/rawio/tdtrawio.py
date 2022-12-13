@@ -249,10 +249,13 @@ class TdtRawIO(BaseRawIO):
                         sev_filename = (path / sev_stem).with_suffix('.sev')
                     else:
                         # for single block datasets the exact name of sev files in not known
-                        store = info['StoreName'].decode('ascii')
-                        # sev_regex = f".*_ch{chan_id}.sev"
-                        sev_regex = f'*_{store}_Ch{chan_id}.sev'
+                        sev_regex = f"*_Ch{chan_id}.sev"
                         sev_filename = list(self.dirname.parent.glob(str(sev_regex)))
+                        # in case multiple sev files are found, try to find the one for current stream
+                        if len(sev_filename) > 1:
+                            store = info['StoreName'].decode('ascii')
+                            sev_regex = f'*_{store}_Ch{chan_id}.sev'
+                            sev_filename = list(self.dirname.parent.glob(str(sev_regex)))
 
                         # in case non or multiple sev files are found for current stream + channel
                         if len(sev_filename) != 1:
@@ -260,12 +263,9 @@ class TdtRawIO(BaseRawIO):
                             sev_filename = None
                         else:
                             sev_filename = sev_filename[0]
-
+                            
                     if (sev_filename is not None) and sev_filename.exists():
                         data = np.memmap(sev_filename, mode='r', offset=0, dtype='uint8')
-                        # sev_info = tdt.read_sev(sev_filename)
-                        # data = sev_info[store].data
-                        # sampling_rate = sev_info[store].fs
                     else:
                         data = self._tev_datas[seg_index]
                     assert data is not None, 'no TEV nor SEV'
