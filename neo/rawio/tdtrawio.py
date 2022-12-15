@@ -36,7 +36,7 @@ from pathlib import Path
 class TdtRawIO(BaseRawIO):
     rawmode = 'one-dir'
 
-    def __init__(self, dirname='', sortname=''):
+    def __init__(self, dirname='', sortname='', stream_name_neo=None):
         """
         Initialize reader for one or multiple TDT data blocks.
 
@@ -48,6 +48,9 @@ class TdtRawIO(BaseRawIO):
             if sortname=='PLX', there should be a ./sort/PLX/*.SortResult file in the tdt block,
             which stores the sortcode for every spike
             Default: '', uses the original online sort.
+        stream_name (str):
+            If there are several streams, specify the stream name you want to load.
+            Default: None, load all streams.
 
 
         """
@@ -64,6 +67,7 @@ class TdtRawIO(BaseRawIO):
             raise ValueError(f'No data folder or file found for {dirname}')
 
         self.sortname = sortname
+        self.stream_name_neo = stream_name_neo
 
     def _source_name(self):
         return self.dirname
@@ -178,12 +182,16 @@ class TdtRawIO(BaseRawIO):
         self._sigs_t_start = {seg_index: {}
                               for seg_index in range(nb_segment)}  # key = seg_index then group_id
 
-        keep = info_channel_groups['TankEvType'] == EVTYPE_STREAM
+        if self.stream_name_neo is not None:
+            keep = info_channel_groups['StoreName'].astype(str) == self.stream_name_neo 
+        else:
+            keep = info_channel_groups['TankEvType'] == EVTYPE_STREAM
+            
         missing_sev_channels = []
         for stream_index, info in enumerate(info_channel_groups[keep]):
             self._sig_sample_per_chunk[stream_index] = info['NumPoints']
 
-            stream_name = str(info['StoreName'])
+            stream_name = info['StoreName'].astype(str)
             stream_id = f'{stream_index}'
             signal_streams.append((stream_name, stream_id))
 
