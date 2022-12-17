@@ -441,8 +441,9 @@ class BaseRawIO:
 
             # also check that channel_id is unique inside a stream
             channel_ids = signal_channels[mask]['id']
-            assert np.unique(channel_ids).size == channel_ids.size, \
-                f'signal_channels do not have unique ids for stream {stream_index}'
+
+#            assert np.unique(channel_ids).size == channel_ids.size, \  see Easy Electrophysiology forked repo README.md. All repeat streams will be ignored - only the first one used. This is for Igor converted ABF files
+#            f'signal_channels dont have unique ids for stream {stream_index}'
 
         self._several_channel_groups = signal_streams.size > 1
 

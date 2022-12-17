@@ -239,8 +239,10 @@ class BaseFromRaw(BaseIO):
 
             if not lazy:
                 # ... and get the real AnalogSignal if not lazy
-                anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
-
+                try:  #  see Easy Electrophysiology forked repo README.md. All repeat streams will be ignored - only the first one used. This is for Igor converted ABF files
+                    anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
+                except IndexError:
+                    continue
             anasig.segment = seg
             seg.analogsignals.append(anasig)
 
