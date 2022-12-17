@@ -148,7 +148,14 @@ class Event(DataObject):
         return '<Event: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
-        super()._repr_pretty_(pp, cycle)
+        labels = ""
+        if self._labels is not None:
+            labels = " with labels"
+        pp.text(f"{self.__class__.__name__} containing {self.size} events{labels}; "
+        f"time units {self.units.dimensionality.string}; datatype {self.dtype} ")
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
 
     def rescale(self, units):
         '''
@@ -287,13 +294,13 @@ class Event(DataObject):
         """
         Shifts an :class:`Event` by an amount of time.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         t_shift: Quantity (time)
             Amount of time by which to shift the :class:`Event`.
 
-        Returns:
-        --------
+        Returns
+        -------
         epoch: Event
             New instance of an :class:`Event` object starting at t_shift later than the
             original :class:`Event` (the original :class:`Event` is not modified).

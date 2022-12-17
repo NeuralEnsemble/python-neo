@@ -1,5 +1,5 @@
 import datetime
-import distutils.version
+from packaging.version import Version
 import os
 import re
 from collections import OrderedDict
@@ -152,14 +152,14 @@ class NlxHeader(OrderedDict):
 
         # convert channel ids
         if 'channel_ids' in self:
-            chid_entries = re.findall(r'\w+', self['channel_ids'])
+            chid_entries = re.findall(r'\S+', self['channel_ids'])
             self['channel_ids'] = [int(c) for c in chid_entries]
         else:
             self['channel_ids'] = ['unknown']
 
         # convert channel names
         if 'channel_names' in self:
-            name_entries = re.findall(r'\w+', self['channel_names'])
+            name_entries = re.findall(r'\S+', self['channel_names'])
             if len(name_entries) == 1:
                 self['channel_names'] = name_entries * len(self['channel_ids'])
             assert len(self['channel_names']) == len(self['channel_ids']), \
@@ -189,7 +189,9 @@ class NlxHeader(OrderedDict):
             self['ApplicationName'] = 'Neuraview'
             app_version = '2'
 
-        self['ApplicationVersion'] = distutils.version.LooseVersion(app_version)
+        if " Development" in app_version:
+            app_version = app_version.replace(" Development", ".dev0")
+        self['ApplicationVersion'] = Version(app_version)
 
         # convert bit_to_microvolt
         if 'bit_to_microVolt' in self:
@@ -215,22 +217,22 @@ class NlxHeader(OrderedDict):
         an = self['ApplicationName']
         if an == 'Cheetah':
             av = self['ApplicationVersion']
-            if av <= '2':  # version 1 uses same as older versions
+            if av <= Version('2'):  # version 1 uses same as older versions
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
-            elif av < '5':
+            elif av < Version('5'):
                 hpd = NlxHeader.header_pattern_dicts['bv5']
-            elif av <= '5.4.0':
+            elif av <= Version('5.4.0'):
                 hpd = NlxHeader.header_pattern_dicts['v5.4.0']
-            elif av <= '5.6.4':
+            elif av <= Version('5.6.4'):
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
             else:
                 hpd = NlxHeader.header_pattern_dicts['def']
         elif an == 'BML':
             hpd = NlxHeader.header_pattern_dicts['bml']
-            av = "2"
+            av = Version("2")
         elif an == 'Neuraview':
             hpd = NlxHeader.header_pattern_dicts['neuraview2']
-            av = "2"
+            av = Version("2")
         else:
             an = "Unknown"
             av = "NA"
@@ -287,6 +289,13 @@ class NlxHeader(OrderedDict):
             # DigitalLynxSX
             elif self['HardwareSubSystemType'] == 'DigitalLynxSX':
                 return 'DIGITALLYNXSX'
+
+            # Cheetah64
+            elif self['HardwareSubSystemType'] == 'Cheetah64':
+                return 'CHEETAH64'
+
+            else:
+                return 'UNKNOWN'
 
         elif 'FileType' in self:
 

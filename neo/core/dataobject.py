@@ -18,16 +18,22 @@ def _normalize_array_annotations(value, length):
     Recursively check that value is either an array or list containing only "simple" types
     (number, string, date/time) or is a dict of those.
 
-    Args:
-        :value: (np.ndarray, list or dict) value to be checked for consistency
-        :length: (int) required length of the array annotation
+    Parameters
+    ----------
+    value : np.ndarray or list or dict
+        Value to be checked for consistency.
+    length : int
+        Required length of the array annotation.
 
-    Returns:
-        np.ndarray The array_annotations from value in correct form
+    Returns
+    -------
+    np.ndarray
+        The array_annotations from value in correct form
 
-    Raises:
-        ValueError: In case value is not accepted as array_annotation(s)
-
+    Raises
+    ------
+    ValueError
+        In case value is not accepted as array_annotation(s)
     """
 
     # First stage, resolve dict of annotations into single annotations
@@ -124,7 +130,7 @@ def _normalize_array_annotations(value, length):
 
             # Check the first element for correctness
             # If its type is correct for annotations, all others are correct as well
-            # Note: Emtpy lists cannot reach this point
+            # Note: Empty lists cannot reach this point
             _check_single_elem(value[0])
 
     return value

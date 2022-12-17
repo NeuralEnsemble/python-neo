@@ -26,11 +26,6 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 import numpy as np
 from copy import deepcopy
 
-try:
-    import sonpy
-    HAVE_SONPY = True
-except ImportError:
-    HAVE_SONPY = False
 
 
 class CedRawIO(BaseRawIO):
@@ -53,7 +48,7 @@ class CedRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        assert HAVE_SONPY, 'sonpy must be installed'
+        import sonpy
 
         self.smrx_file = sonpy.lib.SonFile(sName=str(self.filename), bReadOnly=True)
         smrx = self.smrx_file

@@ -35,6 +35,9 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         ----------
         dirname : str
             Directory containing data files
+        filename : str
+            Name of a single ncs, nse, nev, or ntt file to include in dataset. Will be ignored,
+            if dirname is provided.
         use_cache : bool, optional
             Cache results of initial file scans for faster loading in subsequent runs.
             Default: False

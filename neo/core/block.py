@@ -1,6 +1,6 @@
 '''
 This module defines :class:`Block`, the main container gathering all the data,
-whether discrete or continous, for a given recording session. base class
+whether discrete or continuous, for a given recording session. base class
 used by all :module:`neo.core` classes.
 
 :class:`Block` derives from :class:`Container`,
@@ -14,7 +14,7 @@ from neo.core.container import Container, unique_objs
 
 class Block(Container):
     '''
-    Main container gathering all the data, whether discrete or continous, for a
+    Main container gathering all the data, whether discrete or continuous, for a
     given recording session.
 
     A block is not necessarily temporally homogeneous, in contrast to :class:`Segment`.
@@ -78,7 +78,7 @@ class Block(Container):
                  file_datetime=None, rec_datetime=None, index=None,
                  **annotations):
         '''
-        Initalize a new :class:`Block` instance.
+        Initialize a new :class:`Block` instance.
         '''
         super().__init__(name=name, description=description,
                                     file_origin=file_origin, **annotations)

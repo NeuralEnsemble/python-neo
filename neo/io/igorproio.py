@@ -17,13 +17,6 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
 
-try:
-    import igor.binarywave as bw
-    import igor.packed as pxp
-    from igor.record.wave import WaveRecord
-    HAVE_IGOR = True
-except ImportError:
-    HAVE_IGOR = False
 
 
 class IgorIO(BaseIO):
@@ -83,6 +76,9 @@ class IgorIO(BaseIO):
         return block
 
     def read_segment(self, lazy=False):
+        import igor.packed as pxp
+        from igor.record.wave import WaveRecord
+
         assert not lazy, 'This IO does not support lazy mode'
         segment = Segment(file_origin=str(self.filename))
 
@@ -104,11 +100,11 @@ class IgorIO(BaseIO):
         return segment
 
     def read_analogsignal(self, path=None, lazy=False):
+        import igor.binarywave as bw
+        import igor.packed as pxp
+
         assert not lazy, 'This IO does not support lazy mode'
 
-        if not HAVE_IGOR:
-            raise Exception("`igor` package not installed. "
-                             "Try `pip install igor`")
         if self.extension == 'ibw':
             data = bw.load(str(self.filename))
             version = data['version']
@@ -173,15 +169,21 @@ def key_value_string_parser(itemsep=";", kvsep=":"):
     """
     Parses a string into a dict.
 
-    Arguments:
-        itemsep - character which separates items
-        kvsep - character which separates the key and value within an item
+    Parameters
+    ----------
+    itemsep : str
+        Character which separates items
+    kvsep : str
+        Character which separates the key and value within an item
 
-    Returns:
+    Returns
+    -------
+    callable
         a function which takes the string to be parsed as the sole argument
         and returns a dict.
 
-    Example:
+    Examples
+    --------
 
         >>> parse = key_value_string_parser(itemsep=";", kvsep=":")
         >>> parse("a:2;b:3")

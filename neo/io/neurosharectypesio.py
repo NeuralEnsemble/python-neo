@@ -19,6 +19,7 @@ Author: sgarcia
 import sys
 import ctypes
 import os
+import warnings
 
 import numpy as np
 import quantities as pq
@@ -118,7 +119,7 @@ class NeurosharectypesIO(BaseIO):
         """
         BaseIO.__init__(self)
         self.dllname = dllname
-        self.filename = filename
+        self.filename = str(filename)
 
     def read_segment(self, import_neuroshare_segment=True,
                      lazy=False):
@@ -130,6 +131,10 @@ class NeurosharectypesIO(BaseIO):
         assert not lazy, 'Do not support lazy'
 
         seg = Segment(file_origin=os.path.basename(self.filename), )
+
+        if self.dllname == '':
+            warnings.warn('No neuroshare dll provided. Can not load data.')
+            return Segment()
 
         if sys.platform.startswith('win'):
             neuroshare = ctypes.windll.LoadLibrary(self.dllname)
@@ -147,7 +152,7 @@ class NeurosharectypesIO(BaseIO):
 
         # open file
         hFile = ctypes.c_uint32(0)
-        neuroshare.ns_OpenFile(ctypes.c_char_p(self.filename), ctypes.byref(hFile))
+        neuroshare.ns_OpenFile(ctypes.c_char_p(bytes(self.filename, 'utf-8')), ctypes.byref(hFile))
         fileinfo = ns_FILEINFO()
         neuroshare.ns_GetFileInfo(hFile, ctypes.byref(fileinfo), ctypes.sizeof(fileinfo))
 
@@ -176,8 +181,6 @@ class NeurosharectypesIO(BaseIO):
                 pdTimeStamp = ctypes.c_double(0.)
                 pdwDataRetSize = ctypes.c_uint32(0)
 
-                ea = Event(name=str(entityInfo.szEntityLabel), )
-
                 times = []
                 labels = []
                 for dwIndex in range(entityInfo.dwItemCount):
@@ -186,9 +189,10 @@ class NeurosharectypesIO(BaseIO):
                                                ctypes.sizeof(pData), ctypes.byref(pdwDataRetSize))
                     times.append(pdTimeStamp.value)
                     labels.append(str(pData.value))
-                ea.times = times * pq.s
-                ea.labels = np.array(labels, dtype='U')
+                times = times * pq.s
+                labels = np.array(labels, dtype='U')
 
+                ea = Event(name=str(entityInfo.szEntityLabel), times=times, labels=labels)
                 seg.events.append(ea)
 
             # analog
@@ -212,7 +216,12 @@ class NeurosharectypesIO(BaseIO):
                                                     ctypes.POINTER(ctypes.c_double)))
                     total_read += pdwContCount.value
 
-                signal = pq.Quantity(pData, units=pAnalogInfo.szUnits, copy=False)
+                try:
+                    signal = pq.Quantity(pData, units=pAnalogInfo.szUnits.decode(), copy=False)
+                    unit_annotation = None
+                except LookupError:
+                    signal = pq.Quantity(pData, units='dimensionless', copy=False)
+                    unit_annotation = pAnalogInfo.szUnits.decode()
 
                 # t_start
                 dwIndex = 0
@@ -225,6 +234,8 @@ class NeurosharectypesIO(BaseIO):
                                       name=str(entityInfo.szEntityLabel),
                                       )
                 anaSig.annotate(probe_info=str(pAnalogInfo.szProbeInfo))
+                if unit_annotation is not None:
+                    anaSig.annotate(units=unit_annotation)
                 seg.analogsignals.append(anaSig)
 
             # segment

@@ -2,7 +2,7 @@
 This module implements :class:`AnalogSignal`, an array of analog signals.
 
 :class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` which
-derives from :class:`BaseNeo`, and from :class:`quantites.Quantity`which
+derives from :class:`BaseNeo`, and from :class:`quantities.Quantity`which
 in turn inherits from :class:`numpy.array`.
 
 Inheritance from :class:`numpy.array` is explained here:
@@ -265,6 +265,10 @@ class AnalogSignal(BaseSignal):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
+                elif k is None:
+                    # matplotlib _check_1d() calls__getitem__ with (:, None) and
+                    # reacts appropriately if an IndexError or ValueError is raised
+                    raise IndexError("Cannot add dimensions to an AnalogSignal")
                 obj.array_annotate(**deepcopy(self.array_annotations_at_index(k)))
         elif isinstance(i, slice):
             obj = super().__getitem__(i)
@@ -477,13 +481,13 @@ class AnalogSignal(BaseSignal):
         """
         Shifts a :class:`AnalogSignal` to start at a new time.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         t_shift: Quantity (time)
             Amount of time by which to shift the :class:`AnalogSignal`.
 
-        Returns:
-        --------
+        Returns
+        -------
         new_sig: :class:`AnalogSignal`
             New instance of a :class:`AnalogSignal` object starting at t_shift later than the
             original :class:`AnalogSignal` (the original :class:`AnalogSignal` is not modified).
@@ -534,19 +538,19 @@ class AnalogSignal(BaseSignal):
         arguments, except for specifying the axis of resampling, which is fixed to the first axis
         here.
 
-        Parameters:
-        -----------
-        downsampling_factor: integer
+        Parameters
+        ----------
+        downsampling_factor: int
             Factor used for decimation of samples. Scipy recommends to call decimate multiple times
             for downsampling factors higher than 13 when using IIR downsampling (default).
 
-        Returns:
-        --------
+        Returns
+        -------
         downsampled_signal: :class:`AnalogSignal`
             New instance of a :class:`AnalogSignal` object containing the resampled data points.
             The original :class:`AnalogSignal` is not modified.
 
-        Note:
+        Notes
         -----
         For resampling the signal with a fixed number of samples, see `resample` method.
         """
@@ -577,19 +581,19 @@ class AnalogSignal(BaseSignal):
         arguments, except for specifying the axis of resampling which is fixed to the first axis
         here, and the sample positions. .
 
-        Parameters:
-        -----------
-        sample_count: integer
+        Parameters
+        ----------
+        sample_count: int
             Number of desired samples. The resulting signal starts at the same sample as the
             original and is sampled regularly.
 
-        Returns:
-        --------
+        Returns
+        -------
         resampled_signal: :class:`AnalogSignal`
             New instance of a :class:`AnalogSignal` object containing the resampled data points.
             The original :class:`AnalogSignal` is not modified.
 
-        Note:
+        Notes
         -----
         For reducing the number of samples to a fraction of the original, see `downsample` method
         """
@@ -621,8 +625,8 @@ class AnalogSignal(BaseSignal):
         This method is a wrapper of numpy.absolute() and accepts the same set of keyword
         arguments.
 
-        Returns:
-        --------
+        Returns
+        -------
         resampled_signal: :class:`AnalogSignal`
             New instance of a :class:`AnalogSignal` object containing the rectified data points.
             The original :class:`AnalogSignal` is not modified.

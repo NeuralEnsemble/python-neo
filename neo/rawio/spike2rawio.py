@@ -1,9 +1,9 @@
 """
-Classe for reading data in CED spike2 files (.smr).
+Class for reading data in CED spike2 files (.smr).
 
 This code is based on:
  - sonpy, written by Antonio Gonzalez <Antonio.Gonzalez@cantab.net>
-    Disponible here ::
+    Available here ::
     http://www.neuro.ki.se/broberger/
 
 and sonpy come from :
@@ -111,7 +111,7 @@ class Spike2RawIO(BaseRawIO):
             data_blocks = np.array(data_blocks, dtype=[(
                 'pos', 'int32'), ('size', 'int32'), ('cumsum', 'int32'),
                 ('start_time', 'int32'), ('end_time', 'int32')])
-            data_blocks['pos'] += 20  # 20 is ths header size
+            data_blocks['pos'] += 20  # 20 is the header size
 
             self._all_data_blocks[chan_id] = data_blocks
             self._by_seg_data_blocks[chan_id] = []
@@ -133,7 +133,7 @@ class Spike2RawIO(BaseRawIO):
                     gaps_block_ind, = np.nonzero(inter_block_sizes > interval)
                     all_gaps_block_ind[chan_id] = gaps_block_ind
 
-        # find t_start/t_stop for each seg based on gaps indexe
+        # find t_start/t_stop for each seg based on gaps index
         self._sig_t_starts = {}
         self._sig_t_stops = {}
         if len(all_gaps_block_ind) == 0:
@@ -154,7 +154,7 @@ class Spike2RawIO(BaseRawIO):
         else:
             all_nb_seg = np.array([v.size + 1 for v in all_gaps_block_ind.values()])
             assert np.all(all_nb_seg[0] == all_nb_seg), \
-                'Signal channel have differents pause so diffrents nb_segment'
+                'Signal channel have different pause so different nb_segment'
             nb_segment = int(all_nb_seg[0])
 
             for chan_id, gaps_block_ind in all_gaps_block_ind.items():
@@ -239,7 +239,7 @@ class Spike2RawIO(BaseRawIO):
                     wf_left_sweep = chan_info['n_extra'] // 8
                 wf_sampling_rate = sampling_rate
                 if self.ced_units:
-                    # this is a hudge pain because need
+                    # this is a huge pain because need
                     # to jump over all blocks
                     data_blocks = self._all_data_blocks[chan_id]
                     dt = get_channel_dtype(chan_info)
@@ -391,9 +391,9 @@ class Spike2RawIO(BaseRawIO):
         raw_signals = np.zeros((i_stop - i_start, len(chan_ids)), dtype=dt)
         for c, chan_id in enumerate(chan_ids):
             chan_id = int(chan_id)
-            # NOTE: this actual way is slow because we run throught
+            # NOTE: this actual way is slow because we run through
             # the file for each channel. The loop should be reversed.
-            # But there is no garanty that channels shared the same data block
+            # But there is no guarantee that channels shared the same data block
             # indexes. So this make the job too difficult.
             data_blocks = self._by_seg_data_blocks[chan_id][seg_index]
 
@@ -407,7 +407,7 @@ class Spike2RawIO(BaseRawIO):
                 data = self._memmap[ind0:ind1].view(dt)
                 if bl == bl1 - 1:
                     # right border
-                    # be carfull that bl could be both bl0 and bl1!!
+                    # be careful that bl could be both bl0 and bl1!!
                     border = data.size - (i_stop - data_blocks[bl]['cumsum'])
                     if border > 0:
                         data = data[:-border]

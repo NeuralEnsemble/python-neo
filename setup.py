@@ -4,16 +4,26 @@ from setuptools import setup, find_packages
 import os
 
 long_description = open("README.rst").read()
-install_requires = ['numpy>=1.16.1',
+install_requires = ['packaging',
+                    'numpy>=1.18.5',
                     'quantities>=0.12.1']
 extras_require = {
     'igorproio': ['igor'],
-    'kwikio': ['scipy', 'klusta'],
+    'kwikio': ['klusta'],
     'neomatlabio': ['scipy>=1.0.0'],
     'nixio': ['nixio>=1.5.0'],
     'stimfitio': ['stfio'],
-    'tiffio': ['pillow']
+    'tiffio': ['pillow'],
+    'edf': ['pyedflib'],
+    'ced': ['sonpy'],
+    'nwb': ['pynwb'],
+    'maxwell': ['h5py'],
+    'biocam': ['h5py'],
 }
+extras_require["all"] = sum(extras_require.values(), [])
+
+# explicitly removing stfio from list of all as it is not pip installable
+extras_require["all"].remove('stfio')
 
 with open("neo/version.py") as fp:
     d = {}
@@ -45,6 +55,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3 :: Only',
         'Topic :: Scientific/Engineering']
 )

@@ -44,12 +44,7 @@ class MEArecRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        try:
-            import MEArec as mr
-            HAVE_MEAREC = True
-        except ImportError:
-            HAVE_MEAREC = False
-        assert HAVE_MEAREC, 'MEArec is not installed'
+        import MEArec as mr
         self._recgen = mr.load_recordings(recordings=self.filename, return_h5_objects=True,
                                           check_suffix=False,
                                           load=['recordings', 'spiketrains', 'channel_positions'],
