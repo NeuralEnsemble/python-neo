@@ -7,6 +7,7 @@ using the "double" argument to load the data as 64-bit double.
 """
 import numpy as np
 import quantities as pq
+import re
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
@@ -21,6 +22,29 @@ else:
     HAS_PYWAVESURFER = True
     PYWAVESURFER_ERR = None
 
+
+def get_ordered_list_of_sweeps(ws_rec_keys):
+    """
+    In some cases the sweep number in wavesurfer file do not start
+    at zero/one. e.g. ws_rec.keys() == ["header", "sweep_0004", "sweep_0005"].
+    In order to process these, we need to get their order. If this order is
+    incorrect it would be very bad as traces will be presented in wrong order.
+
+    Parse the "sweep_xxxx" dict keys and return them in order. Do some sanity
+    checks to be 100% sure the returned keys are in order.
+    """
+    data_keys = list(ws_rec_keys)
+    data_keys.remove("header")
+
+    idx_order = np.argsort([int(sweep_name.split("_")[1]) for sweep_name in data_keys])
+    sweeps_ordered = [data_keys[idx] for idx in idx_order]
+
+    sanity_check_order = [int(re.search(r'\d+', sweep).group()) for sweep in sweeps_ordered]
+
+    assert sorted(sanity_check_order) == sanity_check_order
+    assert len(sweeps_ordered) == len(data_keys)
+
+    return sweeps_ordered
 
 class WaveSurferIO(BaseIO):
     """
@@ -77,13 +101,16 @@ class WaveSurferIO(BaseIO):
 
         bl = Block()
 
+        sweeps_ordered = get_ordered_list_of_sweeps(self.ws_rec.keys())
+
         # iterate over sections first:
-        for seg_index in range(int(self.ws_rec["header"]["NSweepsPerRun"])):
+        for seg_index, sweep_key in enumerate(sweeps_ordered):
 
             seg = Segment(index=seg_index)
-            seg_id = "sweep_{0:04d}".format(seg_index + 1)  # e.g. "sweep_0050"
+            # seg_id = "sweep_{0:04d}".format(seg_index + 1)  # e.g. "sweep_0050"
 
-            ws_seg = self.ws_rec[seg_id]
+            ws_seg = self.ws_rec[sweep_key]
+
             t_start = np.float64(ws_seg["timestamp"]) * pq.s
 
             # iterate over channels:
