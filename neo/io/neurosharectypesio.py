@@ -119,7 +119,7 @@ class NeurosharectypesIO(BaseIO):
         """
         BaseIO.__init__(self)
         self.dllname = dllname
-        self.filename = filename
+        self.filename = str(filename)
 
     def read_segment(self, import_neuroshare_segment=True,
                      lazy=False):
