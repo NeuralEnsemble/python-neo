@@ -514,7 +514,7 @@ class BaseTestIO:
             elif self.ioclass.mode == 'dir':
                 self.ioclass(dirname=pathlib_filename,
                              *self.default_arguments,
-                             **self.default_keyword_arguments))
+                             **self.default_keyword_arguments)
 
     def test_list_candidate_ios(self):
         for entity in self.entities_to_test:
