@@ -17,7 +17,7 @@ jobs:
         uses: wei/git-sync@v3
         with:
           source_repo: https://github.com/NeuralEnsemble/python-neo
-          source_branch: "put the branch that will be pushed to the mirror"
+          source_branch: "master"
           destination_repo: "https://ghpusher:${{ secrets.EBRAINS_GITLAB_ACCESS_TOKEN }}@gitlab.ebrains.eu/NeuralEnsemble/neo.git"
           destination_branch: "main"
       # this task will push all tags from the source_repo to the destination_repo
