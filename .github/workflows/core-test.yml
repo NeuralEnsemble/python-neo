@@ -29,6 +29,8 @@ jobs:
              numpy-version: '1.19.5'
            - python-version: '3.11'
              numpy-version: '1.20.3'
+           - python-version: '3.11'
+             numpy-version: '1.21.6'
     steps:
         - name: Set up Python ${{ matrix.python-version }}
           uses: actions/setup-python@v4
