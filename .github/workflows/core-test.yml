@@ -9,14 +9,12 @@ on:
   push:
     branches: [master]
 
-
-
 jobs:
   multi-os-python-numpy:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false   # temporary for extending matrix, should normally be true
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
         # "macos-latest",
