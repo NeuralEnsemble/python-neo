@@ -54,7 +54,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     The current implementation does not handle spiking data, this will be added upon user request
 
     """
-    extensions = []
+    extensions = ['xml', 'oebin', 'txt', 'dat', 'npy']
     rawmode = 'one-dir'
 
     def __init__(self, dirname='', load_sync_channel=False, experiment_names=None):
