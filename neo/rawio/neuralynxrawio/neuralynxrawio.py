@@ -850,20 +850,21 @@ def get_nse_or_ntt_dtype(info, ext):
     """
     dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('unit_id', 'uint32')]
 
-    # count feature
-    nb_feature = 0
-    for k in info.keys():
-        if k.startswith('Feature '):
-            nb_feature += 1
+    # for purpose of dtypes, features in the file are always fixed 8 presently,
+    # whether mentioned in the header or not. Features may not be listed in the header
+    # if no feature names are assigned in Neuralynx software.
+    nb_feature = 8
     dtype += [('features', 'int32', (nb_feature,))]
 
-    # count sample
+    # Number of samples are fixed in the file at 32 for .nse 32 * 4 for .ntt.
+    # WaveformLength may or may not be listed in the file depending on settings
+    # in the Neuralynx software, so don't try retrieving it.
     if ext == 'nse':
-        nb_sample = info['WaveformLength']
+        nb_sample = 32
         dtype += [('samples', 'int16', (nb_sample,))]
     elif ext == 'ntt':
-        nb_sample = info['WaveformLength']
-        nb_chan = 4  # check this if not tetrode
+        nb_sample = 32
+        nb_chan = 4
         dtype += [('samples', 'int16', (nb_sample, nb_chan))]
 
     return dtype
