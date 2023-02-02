@@ -10,6 +10,7 @@ Author: Samuel Garcia
 
 import os
 import re
+import warnings
 
 import numpy as np
 
@@ -114,9 +115,11 @@ class OpenEphysRawIO(BaseRawIO):
 
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
-                assert np.all(diff == RECORD_SIZE), \
-                    'Not continuous timestamps for {}. ' \
-                    'Maybe because recording was paused/stopped.'.format(continuous_filename)
+                if not np.all(diff == RECORD_SIZE):
+                    warnings.warn(
+                        'Not continuous timestamps for {}. ' \
+                        'Maybe because recording was paused/stopped.'.format(continuous_filename)
+                    )
 
                 if seg_index == 0:
                     # add in channel list
