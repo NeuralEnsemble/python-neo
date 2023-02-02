@@ -18,17 +18,17 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         'spikeglx/TEST_20210920_0_g0',
 
         # this is only g0 multi index
-        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI0/5-19-2022-CI0_g0'
+        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI0/5-19-2022-CI0_g0',
         # this is only g1 multi index
-        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI0/5-19-2022-CI0_g1'
+        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI0/5-19-2022-CI0_g1',
         # this mix both multi gate and multi trigger (and also multi probe)
-        'spikeglx/sample_data_v2/SpikeGLX/5-19-2022-CI0',
+        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI0',
 
-        'spikeglx/sample_data_v2/SpikeGLX/5-19-2022-CI1',
-        'spikeglx/sample_data_v2/SpikeGLX/5-19-2022-CI2',
-        'spikeglx/sample_data_v2/SpikeGLX/5-19-2022-CI3',
-        'spikeglx/sample_data_v2/SpikeGLX/5-19-2022-CI4',
-        'spikeglx/sample_data_v2/SpikeGLX/5-19-2022-CI5',
+        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI1',
+        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI2',
+        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI3',
+        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI4',
+        'spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI5',
 
     ]
 

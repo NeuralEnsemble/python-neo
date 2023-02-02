@@ -64,7 +64,8 @@ class SpikeGLXRawIO(BaseRawIO):
     load_sync_channel=False/True
         The last channel (SY0) of each stream is a fake channel used for synchronisation.
     """
-    extensions = []
+    # file formats used by spikeglxio
+    extensions = ['meta', 'bin']
     rawmode = 'one-dir'
 
     def __init__(self, dirname='', load_sync_channel=False, load_channel_location=False):

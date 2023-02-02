@@ -218,7 +218,7 @@ class AxographRawIO(BaseRawIO):
     """
     name = 'AxographRawIO'
     description = 'This IO reads .axgd/.axgx files created with AxoGraph'
-    extensions = ['axgd', 'axgx']
+    extensions = ['axgd', 'axgx', '']
     rawmode = 'one-file'
 
     def __init__(self, filename, force_single_segment=False):

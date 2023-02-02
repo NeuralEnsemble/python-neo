@@ -5,7 +5,7 @@ import os
 
 long_description = open("README.rst").read()
 install_requires = ['packaging',
-                    'numpy>=1.18.5',
+                    'numpy>=1.19.5',
                     'quantities>=0.12.1']
 extras_require = {
     'igorproio': ['igor'],
@@ -21,6 +21,9 @@ extras_require = {
     'biocam': ['h5py'],
 }
 extras_require["all"] = sum(extras_require.values(), [])
+
+# explicitly removing stfio from list of all as it is not pip installable
+extras_require["all"].remove('stfio')
 
 with open("neo/version.py") as fp:
     d = {}
@@ -41,7 +44,7 @@ setup(
     long_description=long_description,
     license="BSD-3-Clause",
     url='https://neuralensemble.org/neo',
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
@@ -49,10 +52,10 @@ setup(
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3 :: Only',
         'Topic :: Scientific/Engineering']
 )

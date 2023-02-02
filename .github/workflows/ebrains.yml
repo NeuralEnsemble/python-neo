@@ -1,0 +1,30 @@
+name: Mirror to EBRAINS
+
+# Configure the events that are going to trigger tha automated update of the mirror
+on:
+  push:
+    branches: [ master ]
+
+# Configure what will be updated
+jobs:
+  # set the job name
+  to_ebrains:
+    runs-on: ubuntu-latest
+    steps:
+      # this task will push the master branch of the source_repo (github) to the
+      # destination_repo (ebrains gitlab)
+      - name: syncmaster
+        uses: wei/git-sync@v3
+        with:
+          source_repo: https://github.com/NeuralEnsemble/python-neo
+          source_branch: "master"
+          destination_repo: "https://ghpusher:${{ secrets.EBRAINS_GITLAB_ACCESS_TOKEN }}@gitlab.ebrains.eu/NeuralEnsemble/neo.git"
+          destination_branch: "main"
+      # this task will push all tags from the source_repo to the destination_repo
+      - name: synctags
+        uses: wei/git-sync@v3
+        with:
+          source_repo: https://github.com/NeuralEnsemble/python-neo
+          source_branch: "refs/tags/*"
+          destination_repo: "https://ghpusher:${{ secrets.EBRAINS_GITLAB_ACCESS_TOKEN }}@gitlab.ebrains.eu/NeuralEnsemble/neo.git"
+          destination_branch: "refs/tags/*"

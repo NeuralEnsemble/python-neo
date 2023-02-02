@@ -3,8 +3,6 @@
 Tests of neo.io.nwbio
 """
 
-from __future__ import unicode_literals, print_function, division, absolute_import
-
 import os
 import unittest
 from datetime import datetime

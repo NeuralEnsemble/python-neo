@@ -65,7 +65,8 @@ class OpenEphysRawIO(BaseRawIO):
         aligned,
         and a warning is emitted.
     """
-    extensions = []
+    # file formats used by openephys
+    extensions = ['continuous', 'openephys', 'spikes', 'events', 'xml']
     rawmode = 'one-dir'
 
     def __init__(self, dirname=''):
