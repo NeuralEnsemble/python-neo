@@ -345,7 +345,7 @@ class Plexon2RawIO(BaseRawIO):
         nb_chan = len(channel_indexes)
 
         raw_signals = np.empty((i_stop - i_start, nb_chan), dtype='int16')
-        for channel_idx in channel_indexes:
+        for i, channel_idx in enumerate(channel_indexes):
             channel_name = stream_channels['name'][channel_idx]
 
             # use previously loaded channel data if possible
@@ -355,7 +355,7 @@ class Plexon2RawIO(BaseRawIO):
                 fragment_timestamps, fragment_counts, values = self.pl2reader.pl2_get_analog_channel_data_by_name(channel_name)
                 self._analogsignal_cache[channel_name] = values
 
-            raw_signals[:, channel_idx] = values[i_start: i_stop]
+            raw_signals[:, i] = values[i_start: i_stop]
 
         return raw_signals
 
@@ -424,7 +424,7 @@ class Plexon2RawIO(BaseRawIO):
             lim1 = int(t_stop * self.pl2reader.pl2_file_info.m_TimestampFrequency)
             time_mask = (spike_timestamps >= lim0) & (spike_timestamps <= lim1)
         else:
-            time_mask = np.ones_like(unit_ids)
+            time_mask = slice(None, None)
 
         unit_mask = unit_ids[time_mask] == int(channel_unit_id)
         waveforms = waveforms[time_mask][unit_mask]
