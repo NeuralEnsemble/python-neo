@@ -1,43 +1,15 @@
 """
-ExampleRawIO is a class of a  fake example.
-This is to be used when coding a new RawIO.
+Plexon2RawIO is a class to read Plexon PL2 files.
 
+Note: This IO is only partially lazy: To load a data chunk of an individual
+signal channels, the complete data of that channel will be loaded into memory
+and cached. This occurs as a limitation of the pypl2 package and might be improved
+in future versions by exploiting the block-wise loading of signals.
 
-Rules for creating a new class:
-  1. Step 1: Create the main class
-    * Create a file in **neo/rawio/** that endith with "rawio.py"
-    * Create the class that inherits from BaseRawIO
-    * copy/paste all methods that need to be implemented.
-    * code hard! The main difficulty is `_parse_header()`.
-      In short you have to create a mandatory dict that
-      contains channel informations::
-
-            self.header = {}
-            self.header['nb_block'] = 2
-            self.header['nb_segment'] = [2, 3]
-            self.header['signal_streams'] = signal_streams
-            self.header['signal_channels'] = signal_channels
-            self.header['spike_channels'] = spike_channels
-            self.header['event_channels'] = event_channels
-
-  2. Step 2: RawIO test:
-    * create a file in neo/rawio/tests with the same name with "test_" prefix
-    * copy paste neo/rawio/tests/test_examplerawio.py and do the same
-
-  3. Step 3 : Create the neo.io class with the wrapper
-    * Create a file in neo/io/ that ends with "io.py"
-    * Create a class that inherits both your RawIO class and BaseFromRaw class
-    * copy/paste from neo/io/exampleio.py
-
-  4.Step 4 : IO test
-    * create a file in neo/test/iotest with the same previous name with "test_" prefix
-    * copy/paste from neo/test/iotest/test_exampleio.py
-
-
+To clear the currently cached signal data use the `clear_analogsignal_cache()()` method.
 
 """
 import pathlib
-import warnings
 import numpy as np
 from collections import namedtuple
 from ..baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
@@ -46,40 +18,21 @@ from ..baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 class Plexon2RawIO(BaseRawIO):
     """
-    Class for "reading" fake data from an imaginary file.
-
-    For the user, it gives access to raw data (signals, event, spikes) as they
-    are in the (fake) file int16 and int64.
-
-    For a developer, it is just an example showing guidelines for someone who wants
-    to develop a new IO module.
-
-    Two rules for developers:
-      * Respect the :ref:`neo_rawio_API`
-      * Follow the :ref:`io_guiline`
-
-    This fake IO:
-        * has 2 blocks
-        * blocks have 2 and 3 segments
-        * has  2 signals streams  of 8 channel each (sample_rate = 10000) so 16 channels in total
-        * has 3 spike_channels
-        * has 2 event channels: one has *type=event*, the other has
-          *type=epoch*
-
+    Class for "reading" data from a PL2 file
 
     Usage:
         >>> import neo.rawio
-        >>> r = neo.rawio.ExampleRawIO(filename='itisafake.nof')
+        >>> r = neo.rawio.Plexon2RawIO(filename='my_data.pl2')
         >>> r.parse_header()
         >>> print(r)
         >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            i_start=0, i_stop=1024,  channel_names=channel_names)
-        >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
+                            i_start=0, i_stop=1024,  stream_index=0, channel_indexes=range(10))
+        >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
                             channel_indexes=[0, 3, 6])
-        >>> spike_timestamp = reader.spike_timestamps(spike_channel_index=0,
-                            t_start=None, t_stop=None)
-        >>> spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
-        >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
+        >>> spike_timestamp = r.get_spike_timestamps(spike_channel_index=0, t_start=None,
+                            t_stop=None)
+        >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, 'float64')
+        >>> ev_timestamps, _, ev_labels = r.get_event_timestamps(event_channel_index=0)
 
     """
     extensions = ['pl2']
@@ -87,42 +40,40 @@ class Plexon2RawIO(BaseRawIO):
 
     def __init__(self, filename='', pl2_dll_path=None):
 
+        # signals, event and spiking data will be cached
+        # cached signal data can be cleared using `clear_analogsignal_cache()()`
+        self._analogsignal_cache = {}
+        self._event_channel_cache = {}
+        self._spike_channel_cache = {}
+
         # note that this filename is used in self._source_name
         self.filename = pathlib.Path(filename)
-        self._analogsignal_cache = {}
 
         if (not self.filename.exists()) or (not self.filename.is_file()):
             raise ValueError(f'{self.filename} is not a file.')
 
-        from neo.rawio.plexon2rawio.pypl2.pypl2lib import PyPL2FileReader, PL2FileInfo
         BaseRawIO.__init__(self)
 
+        # Instatiate wrapper for Windows DLL
+        from neo.rawio.plexon2rawio.pypl2.pypl2lib import PyPL2FileReader
         self.pl2reader = PyPL2FileReader(pl2_dll_path=pl2_dll_path)
 
         # Open the file.
         self.pl2reader.pl2_open_file(self.filename)
 
     def _source_name(self):
-        # this function is used by __repr__
-        # for general cases self.filename is good
-        # But for URL you could mask some part of the URL to keep
-        # the main part.
         return self.filename
 
     def _parse_header(self):
-        # This is the central part of a RawIO
-        # we need to collect from the original format all
-        # information required for fast access
-        # at any place in the file
-        # In short `_parse_header()` can be slow but
-        # `_get_analogsignal_chunk()` need to be as fast as possible
+        """
+        Collect information about the file, construct neo header and provide annotations
+        """
 
-        signal_streams = []
-        Stream = namedtuple('Stream', 'id name sampling_rate n_samples')
-
-        # The real signal will be evaluated as `(raw_signal * gain + offset) * pq.Quantity(units)`
+        # Scanning sources and populating signal channels at the same time. Sources have to have
+        # same sammpling rate and number of samples to belong to one stream.
         signal_channels = []
-        stream_characteristics = {}
+        source_characteristics = {}
+        Source = namedtuple('Source', 'id name sampling_rate n_samples')
         for c in range(self.pl2reader.pl2_file_info.m_TotalNumberOfAnalogChannels):
             achannel_info = self.pl2reader.pl2_get_analog_channel_info(c)
 
@@ -131,41 +82,36 @@ class Plexon2RawIO(BaseRawIO):
                 continue
 
             # assign to matching stream or create new stream based on signal characteristics
-            sampling_rate = achannel_info.m_SamplesPerSecond
+            rate = achannel_info.m_SamplesPerSecond
             n_samples = achannel_info.m_NumberOfValues
-            stream_characteristic = (sampling_rate, n_samples)
-            if stream_characteristic in stream_characteristics:
-                stream_id = stream_characteristics[stream_characteristic].id
-            else:
-                stream_id = str(len(stream_characteristics))
-                stream_name = f'stream@{sampling_rate}Hz'
-                new_stream = Stream(stream_id, stream_name, sampling_rate, n_samples)
-                stream_characteristics[stream_characteristic] = new_stream
+            source_id = str(achannel_info.m_Source)
+
+            channel_source = Source(source_id, f'stream@{rate}Hz', rate, n_samples)
+            existing_source = source_characteristics.setdefault(source_id, channel_source)
+
+            # ensure that stream of this channel and existing stream have same properties
+            assert channel_source == existing_source
 
             ch_name = achannel_info.m_Name.decode()
-            chan_id = f'source_{achannel_info.m_Source}#channel_{achannel_info.m_Channel}'
-            sr = achannel_info.m_SamplesPerSecond  # Hz
-            dtype = 'int16' # TODO: Check if this is the correct correspondance to c_short
+            chan_id = f'source{achannel_info.m_Source}.{achannel_info.m_Channel}'
+            dtype = 'int16'  # TODO: Check if this is the correct correspondence to c_short
             units = achannel_info.m_Units.decode()
             gain = achannel_info.m_CoeffToConvertToUnits
-            offset = 0.
-            stream_id = stream_id
-            signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+            offset = 0.  # PL2 files don't contain information on signal offset
+            stream_id = source_id
+            signal_channels.append((ch_name, chan_id, rate, dtype, units, gain, offset, stream_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        self.signal_stream_characteristics = stream_characteristics
-        signal_streams = np.array([(name, id) for (id, name, _, _) in stream_characteristics.values()],
-                                  dtype=_signal_stream_dtype)
+        self.signal_stream_characteristics = source_characteristics
 
-        # create fake units channels
-        # This is mandatory!!!!
-        # Note that if there is no waveform at all in the file
-        # then wf_units/wf_gain/wf_offset/wf_left_sweep/wf_sampling_rate
-        # can be set to any value because _spike_raw_waveforms
-        # will return None
+        # create signal streams from source information
+        signal_streams = []
+        for stream_idx, source in source_characteristics.items():
+            signal_streams.append((source.name, str(source.id)))
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+
         # pre-loading spike channel_data for later usage
-        self._spikechannel_cache = {}
-
+        self._spike_channel_cache = {}
         spike_channels = []
         for c in range(self.pl2reader.pl2_file_info.m_TotalNumberOfSpikeChannels):
             schannel_info = self.pl2reader.pl2_get_spike_channel_info(c)
@@ -175,11 +121,11 @@ class Plexon2RawIO(BaseRawIO):
                 continue
 
             for channel_unit_id in range(schannel_info.m_NumberOfUnits):
-                unit_name = f'{schannel_info.m_Name.decode()}-{channel_unit_id}'
-                unit_id = f'#{schannel_info.m_Channel}-{channel_unit_id}'
+                unit_name = f'{schannel_info.m_Name.decode()}.{channel_unit_id}'
+                unit_id = f'unit{schannel_info.m_Channel}.{channel_unit_id}'
                 wf_units = schannel_info.m_Units
                 wf_gain = schannel_info.m_CoeffToConvertToUnits
-                wf_offset = 0.
+                wf_offset = 0.  # A waveform offset is not provided in PL2 files
                 wf_left_sweep = schannel_info.m_PreThresholdSamples
                 wf_sampling_rate = schannel_info.m_SamplesPerSecond
                 spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
@@ -187,11 +133,9 @@ class Plexon2RawIO(BaseRawIO):
 
             # pre-loading spiking data
             schannel_name = schannel_info.m_Name.decode()
-            self._spikechannel_cache[schannel_name] = self.pl2reader.pl2_get_spike_channel_data_by_name(schannel_name)
+            self._spike_channel_cache[schannel_name] = self.pl2reader.pl2_get_spike_channel_data_by_name(schannel_name)
 
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
-
-
 
         # creating event/epoch channel
         self._event_channel_cache = {}
@@ -203,10 +147,9 @@ class Plexon2RawIO(BaseRawIO):
             if not echannel_info.m_ChannelEnabled:
                 continue
 
-            channel_name = echannel_info.m_Name.decode()
             # event channels are characterized by (name, id, type), with type in ['event', 'epoch']
+            channel_name = echannel_info.m_Name.decode()
             event_channels.append((channel_name, echannel_info.m_Channel, 'event'))
-
             self._event_channel_cache[channel_name] = self.pl2reader.pl2_get_digital_channel_data_by_name(channel_name)
 
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
@@ -220,31 +163,25 @@ class Plexon2RawIO(BaseRawIO):
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
-        # insert some annotations/array_annotations at some place
-        # at neo.io level. IOs can add annotations
-        # to any object. To keep this functionality with the wrapper
-        # BaseFromRaw you can add annotations in a nested dict.
-
-        # `_generate_minimal_annotations()` must be called to generate the nested
-        # dict of annotations/array_annotations
         self._generate_minimal_annotations()
+
         # this pprint lines really help for understand the nested (and complicated sometimes) dict
         # from pprint import pprint
         # pprint(self.raw_annotations)
 
 
-        # TODO: pl2_file_info.m_ReprocessorDateTime seems to be empty. Check with original implementation
+        # TODO: pl2_file_info.m_ReprocessorDateTime seems to be empty.
+        #  Check with original implementation
 
-        # Until here all mandatory operations for setting up a rawio are implemented.
-        # The following lines provide additional, recommended annotations for the
-        # final neo objects.
+        # Provide additional, recommended annotations for the final neo objects.
         block_index = 0
         bl_ann = self.raw_annotations['blocks'][block_index]
         bl_ann['name'] = 'Block containing PL2 data#{}'.format(block_index)
         bl_ann['file_origin'] = self.filename
-        pl2_file_info = {attr: getattr(self.pl2reader.pl2_file_info, attr) for attr, _ in self.pl2reader.pl2_file_info._fields_}
-        bl_ann.update(pl2_file_info)
-        for seg_index in range(1): # TODO: Check if PL2 file can contain multiple segments
+        file_info = self.pl2reader.pl2_file_info
+        block_info = {attr: getattr(file_info, attr) for attr, _ in file_info._fields_}
+        bl_ann.update(block_info)
+        for seg_index in range(1):  # TODO: Check if PL2 file can contain multiple segments
             seg_ann = bl_ann['segments'][seg_index]
             # seg_ann['name'] = 'Seg #{} Block #{}'.format(
             #     seg_index, block_index)
@@ -256,13 +193,18 @@ class Plexon2RawIO(BaseRawIO):
             #     # add some array annotations (8 channels)
             #     sig_an = seg_ann['signals'][c]['__array_annotations__']['impedance'] = \
             #         np.random.rand(8) * 10000
-            # for c in range(3):
-            #     spiketrain_an = seg_ann['spikes'][c]
-            #     spiketrain_an['quality'] = 'Good!!'
-            #     # add some array annotations
-            #     num_spikes = self.spike_count(block_index, seg_index, c)
-            #     spiketrain_an['__array_annotations__']['amplitudes'] = \
-            #         np.random.randn(num_spikes)
+
+            # some attributes don't apply to subunits used here
+            annotation_keys = ['m_SortEnabled', 'm_SortRangeStart', 'm_SortRangeEnd',
+                               'm_SourceTrodality', 'm_OneBasedTrode', 'm_OneBasedChannelInTrode',
+                               'm_Source', 'm_Channel']
+            for spike_channel_idx, spike_header in enumerate(self.header['spike_channels']):
+                schannel_name = spike_header['name'].split('.')[0]
+                schannel_info = self.pl2reader.pl2_get_spike_channel_info_by_name(schannel_name)
+
+                spiketrain_an = seg_ann['spikes'][spike_channel_idx]
+                for key in annotation_keys:
+                    spiketrain_an[key] = getattr(schannel_info, key)
 
             # for c in range(2):
             #     event_an = seg_ann['events'][c]
@@ -359,7 +301,7 @@ class Plexon2RawIO(BaseRawIO):
 
         return raw_signals
 
-    def clean_analogsignal_cache(self):
+    def clear_analogsignal_cache(self):
         for channel_name, values in self._analogsignal_cache.items():
             del values
         self._analogsignal_cache = {}
@@ -369,17 +311,17 @@ class Plexon2RawIO(BaseRawIO):
         channel_name, channel_unit_id = channel_header['name'].split('-')
         channel_unit_id = int(channel_unit_id)
 
-        spike_timestamps, unit_ids, waveforms = self._spikechannel_cache[channel_name]
+        spike_timestamps, unit_ids, waveforms = self._spike_channel_cache[channel_name]
         nb_spikes = np.count_nonzero(unit_ids == channel_unit_id)
 
         return nb_spikes
 
     def _get_spike_timestamps(self, block_index, seg_index, spike_channel_index, t_start, t_stop):
         channel_header = self.header['spike_channels'][spike_channel_index]
-        channel_name, channel_unit_id = channel_header['name'].split('-')
+        channel_name, channel_unit_id = channel_header['name'].split('.')
         channel_unit_id = int(channel_unit_id)
 
-        spike_timestamps, unit_ids, waveforms = self._spikechannel_cache[channel_name]
+        spike_timestamps, unit_ids, waveforms = self._spike_channel_cache[channel_name]
 
         if t_start is not None or t_stop is not None:
             # restrict spikes to given limits (in seconds)
@@ -413,9 +355,9 @@ class Plexon2RawIO(BaseRawIO):
         # IO them _spike_raw_waveforms must return None
 
         channel_header = self.header['spike_channels'][spike_channel_index]
-        channel_name, channel_unit_id = channel_header['name'].split('-')
+        channel_name, channel_unit_id = channel_header['name'].split('.')
 
-        spike_timestamps, unit_ids, waveforms = self._spikechannel_cache[channel_name]
+        spike_timestamps, unit_ids, waveforms = self._spike_channel_cache[channel_name]
 
         if t_start is not None or t_stop is not None:
             # restrict spikes to given limits (in seconds)
