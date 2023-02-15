@@ -1,17 +1,28 @@
 """
 Plexon2RawIO is a class to read Plexon PL2 files.
 
-Note: This IO is only partially lazy: To load a data chunk of an individual
+Note on IO performance and memory consumption:
+This IO is only partially lazy: To load a data chunk of an individual
 signal channels, the complete data of that channel will be loaded into memory
 and cached. This occurs as a limitation of the pypl2 package and might be improved
 in future versions by exploiting the block-wise loading of signals.
 
-To clear the currently cached signal data use the `clear_analogsignal_cache()()` method.
+To clear the currently cached signal data use the `clear_analogsignal_cache()` method.
+
+Note on Neo header and spike channels:
+The IO only considers enabled channels and will not list disabled channels in its header.
+
+There is no 1-1 correspondence of PL2 spike channels and neo spike channels as each unit of
+a PL2 spike channel will be represented as an individual neo spike channel.
 
 """
 import pathlib
-import numpy as np
 from collections import namedtuple
+from datetime import datetime
+
+import numpy as np
+
+
 from ..baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                          _spike_channel_dtype, _event_channel_dtype)
 
@@ -70,7 +81,7 @@ class Plexon2RawIO(BaseRawIO):
         """
 
         # Scanning sources and populating signal channels at the same time. Sources have to have
-        # same sammpling rate and number of samples to belong to one stream.
+        # same sampling rate and number of samples to belong to one stream.
         signal_channels = []
         source_characteristics = {}
         Source = namedtuple('Source', 'id name sampling_rate n_samples')
@@ -94,7 +105,7 @@ class Plexon2RawIO(BaseRawIO):
 
             ch_name = achannel_info.m_Name.decode()
             chan_id = f'source{achannel_info.m_Source}.{achannel_info.m_Channel}'
-            dtype = 'int16'  # TODO: Check if this is the correct correspondence to c_short
+            dtype = 'int16'
             units = achannel_info.m_Units.decode()
             gain = achannel_info.m_CoeffToConvertToUnits
             offset = 0.  # PL2 files don't contain information on signal offset
@@ -157,7 +168,7 @@ class Plexon2RawIO(BaseRawIO):
         # fill into header dict
         self.header = {}
         self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]  # TODO: Check if pl2 format can contain multiple segments
+        self.header['nb_segment'] = [1]  # It seems pl2 can only contain a single segment
         self.header['signal_streams'] = signal_streams
         self.header['signal_channels'] = signal_channels
         self.header['spike_channels'] = spike_channels
@@ -170,8 +181,8 @@ class Plexon2RawIO(BaseRawIO):
         # pprint(self.raw_annotations)
 
 
-        # TODO: pl2_file_info.m_ReprocessorDateTime seems to be empty.
-        #  Check with original implementation
+        # Note: pl2_file_info.m_ReprocessorDateTime seems to be always empty.
+        # To be checked against alternative pl2 reader.
 
         # Provide additional, recommended annotations for the final neo objects.
         block_index = 0
@@ -180,22 +191,23 @@ class Plexon2RawIO(BaseRawIO):
         bl_ann['file_origin'] = self.filename
         file_info = self.pl2reader.pl2_file_info
         block_info = {attr: getattr(file_info, attr) for attr, _ in file_info._fields_}
-        bl_ann.update(block_info)
-        for seg_index in range(1):  # TODO: Check if PL2 file can contain multiple segments
-            seg_ann = bl_ann['segments'][seg_index]
-            # seg_ann['name'] = 'Seg #{} Block #{}'.format(
-            #     seg_index, block_index)
-            # seg_ann['seg_extra_info'] = 'This is the seg {} of block {}'.format(
-            #     seg_index, block_index)
-            # for c in range(2):
-            #     sig_an = seg_ann['signals'][c]['nickname'] = \
-            #         f'This stream {c} is from a subdevice'
-            #     # add some array annotations (8 channels)
-            #     sig_an = seg_ann['signals'][c]['__array_annotations__']['impedance'] = \
-            #         np.random.rand(8) * 10000
 
-            # some attributes don't apply to subunits used here
-            annotation_keys = ['m_SortEnabled', 'm_SortRangeStart', 'm_SortRangeEnd',
+        # convert ctypes datetime objects to datetime.datetime objects for annotations
+        from .pypl2.pypl2lib import tm
+        for anno_key, anno_value in block_info.items():
+            if isinstance(anno_value, tm):
+                tmo = anno_value
+                dt = datetime(year=tmo.tm_year, month=tmo.tm_mon, day=tmo.tm_mday, hour=tmo.tm_hour,
+                              minute=tmo.tm_min, second=tmo.tm_sec, microsecond=block_info['m_CreatorDateTimeMilliseconds'])
+                block_info[anno_key] = dt
+
+        bl_ann.update(block_info)
+        for seg_index in range(1):
+            seg_ann = bl_ann['segments'][seg_index]
+
+            # some attributes don't apply to neo spike channels as these cover only a subpart of
+            # the data of a PL2 spike channel
+            spike_annotation_keys = ['m_SortEnabled', 'm_SortRangeStart', 'm_SortRangeEnd',
                                'm_SourceTrodality', 'm_OneBasedTrode', 'm_OneBasedChannelInTrode',
                                'm_Source', 'm_Channel']
             for spike_channel_idx, spike_header in enumerate(self.header['spike_channels']):
@@ -203,23 +215,42 @@ class Plexon2RawIO(BaseRawIO):
                 schannel_info = self.pl2reader.pl2_get_spike_channel_info_by_name(schannel_name)
 
                 spiketrain_an = seg_ann['spikes'][spike_channel_idx]
-                for key in annotation_keys:
+                for key in spike_annotation_keys:
                     spiketrain_an[key] = getattr(schannel_info, key)
 
-            # for c in range(2):
-            #     event_an = seg_ann['events'][c]
-            #     if c == 0:
-            #         event_an['nickname'] = 'Miss Event 0'
-            #         # add some array annotations
-            #         num_ev = self.event_count(block_index, seg_index, c)
-            #         event_an['__array_annotations__']['button'] = ['A'] * num_ev
-            #     elif c == 1:
-            #         event_an['nickname'] = 'MrEpoch 1'
+
+            event_annotation_keys = ['m_Source', 'm_Channel', 'm_Name']
+            for event_channel_idx, event_header in enumerate(self.header['event_channels']):
+                dchannel_name = event_header['name']
+                dchannel_info = self.pl2reader.pl2_get_digital_channel_info_by_name(dchannel_name)
+
+                event_an = seg_ann['events'][event_channel_idx]
+                for key in event_annotation_keys:
+                    event_an[key] = getattr(dchannel_info, key)
+
+            signal_array_annotation_keys = [
+                'm_SourceTrodality', 'm_OneBasedTrode', 'm_OneBasedChannelInTrode',
+                'm_Source', 'm_Channel', 'm_Name', 'm_MaximumNumberOfFragments'
+            ]
+
+            for stream_idx, stream_header in enumerate(self.header['signal_streams']):
+                signal_array_annotations = {key: [] for key in signal_array_annotation_keys}
+                stream_id = stream_header['id']
+                # extract values of individual signals
+
+                stream_channel_mask = self.header['signal_channels']['stream_id'] == stream_id
+                for signal_idx, signal_header in enumerate(self.header['signal_channels'][stream_channel_mask]):
+                    achannel_name = signal_header['name']
+                    achannel_info = self.pl2reader.pl2_get_analog_channel_info_by_name(achannel_name)
+                    for key in signal_array_annotation_keys:
+                        signal_array_annotations[key].append(getattr(achannel_info, key))
+
+                seg_ann['signals'][stream_idx]['__array_annotations__'] = signal_array_annotations
+
 
     def _segment_t_start(self, block_index, seg_index):
         # this must return an float scale in second
-        # this t_start will be shared by all object in the segment
-        # except AnalogSignal
+        # this t_start will be shared by all object in the segment except AnalogSignal
         return self.pl2reader.pl2_file_info.m_StartRecordingTime / self.pl2reader.pl2_file_info.m_TimestampFrequency
 
     def _segment_t_stop(self, block_index, seg_index):
@@ -253,11 +284,6 @@ class Plexon2RawIO(BaseRawIO):
         # To speed up this call all preparatory calculations should be implemented
         # in _parse_header().
 
-        # Here we are lucky:  our signals is always zeros!!
-        # it is not always the case :)
-        # internally signals are int16
-        # conversion to real units is done with self.header['signal_channels']
-
         stream_id = self.header['signal_streams'][stream_index]['id']
         mask = self.header['signal_channels']['stream_id'] == stream_id
         stream_channels = self.header['signal_channels'][mask]
@@ -281,6 +307,7 @@ class Plexon2RawIO(BaseRawIO):
         else:
             channel_indexes = np.asarray(channel_indexes)
 
+        # channel index sanity check
         if any(channel_indexes < 0) or any(channel_indexes >= n_channels):
             raise IndexError(f'Channel index out of range {channel_indexes} for stream with {n_channels} channels')
 
@@ -294,7 +321,8 @@ class Plexon2RawIO(BaseRawIO):
             if channel_name in self._analogsignal_cache:
                 values = self._analogsignal_cache[channel_name]
             else:
-                fragment_timestamps, fragment_counts, values = self.pl2reader.pl2_get_analog_channel_data_by_name(channel_name)
+                res = self.pl2reader.pl2_get_analog_channel_data_by_name(channel_name)
+                fragment_timestamps, fragment_counts, values = res
                 self._analogsignal_cache[channel_name] = values
 
             raw_signals[:, i] = values[i_start: i_stop]
@@ -308,7 +336,7 @@ class Plexon2RawIO(BaseRawIO):
 
     def _spike_count(self, block_index, seg_index, spike_channel_index):
         channel_header = self.header['spike_channels'][spike_channel_index]
-        channel_name, channel_unit_id = channel_header['name'].split('-')
+        channel_name, channel_unit_id = channel_header['name'].split('.')
         channel_unit_id = int(channel_unit_id)
 
         spike_timestamps, unit_ids, waveforms = self._spike_channel_cache[channel_name]
@@ -351,9 +379,6 @@ class Plexon2RawIO(BaseRawIO):
         # this must be as fast as possible.
         # the same clip t_start/t_start must be used in _spike_timestamps()
 
-        # If there there is no waveform supported in the
-        # IO them _spike_raw_waveforms must return None
-
         channel_header = self.header['spike_channels'][spike_channel_index]
         channel_name, channel_unit_id = channel_header['name'].split('.')
 
@@ -395,7 +420,6 @@ class Plexon2RawIO(BaseRawIO):
 
         event_times, labels = self._event_channel_cache[channel_name]
         labels = np.asarray(labels, dtype='U')
-        durations = None
 
         if t_start is not None or t_stop is not None:
             # restrict events to given limits (in seconds)
@@ -406,6 +430,7 @@ class Plexon2RawIO(BaseRawIO):
         else:
             time_mask = np.ones_like(event_times)
 
+        # events don't have a duration. Epochs are not supported
         durations = None
 
         return event_times[time_mask], durations, labels[time_mask]
@@ -414,13 +439,11 @@ class Plexon2RawIO(BaseRawIO):
         # must rescale to second a particular event_timestamps
         # with a fixed dtype so the user can choose the precision he want.
 
-        # really easy here because in our case it is already seconds
         event_times = event_timestamps.astype(dtype)
         event_times /= self.pl2reader.pl2_file_info.m_TimestampFrequency
         return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
-        # really easy here because in our case it is already seconds
         durations = raw_duration.astype(dtype)
         durations /= self.pl2reader.pl2_file_info.m_TimestampFrequency
         return durations

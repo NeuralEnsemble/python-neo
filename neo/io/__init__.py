@@ -53,6 +53,7 @@ Classes:
 * :attr:`PhyIO`
 * :attr:`PickleIO`
 * :attr:`PlexonIO`
+* :attr:`Plexon2IO`
 * :attr:`RawBinarySignalIO`
 * :attr:`RawMCSIO`
 * :attr:`Spike2IO`
@@ -221,6 +222,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.Plexon2IO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.RawBinarySignalIO
 
     .. autoattribute:: extensions
@@ -322,6 +327,7 @@ from neo.io.openephysbinaryio import OpenEphysBinaryIO
 from neo.io.phyio import PhyIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
+from neo.io.plexon2io import Plexon2IO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
@@ -375,6 +381,7 @@ iolist = [
     PhyIO,
     PickleIO,
     PlexonIO,
+    Plexon2IO,
     RawBinarySignalIO,
     RawMCSIO,
     Spike2IO,
