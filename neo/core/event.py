@@ -148,12 +148,20 @@ class Event(DataObject):
         return '<Event: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
-        super()._repr_pretty_(pp, cycle)
+        labels = ""
+        if self._labels is not None:
+            labels = " with labels"
+        pp.text(f"{self.__class__.__name__} containing {self.size} events{labels}; "
+        f"time units {self.units.dimensionality.string}; datatype {self.dtype} ")
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
 
-    def rescale(self, units):
+    def rescale(self, units, dtype=None):
         '''
-        Return a copy of the :class:`Event` converted to the specified
-        units
+        Return a copy of the :class:`Event` converted to the specified units
+        The `dtype` argument exists only for backward compatibility within quantities, see
+        https://github.com/python-quantities/python-quantities/pull/204
         :return: Copy of self with specified units
         '''
         # Use simpler functionality, if nothing will be changed

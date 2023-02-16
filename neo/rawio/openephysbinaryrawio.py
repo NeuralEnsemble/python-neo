@@ -54,7 +54,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     The current implementation does not handle spiking data, this will be added upon user request
 
     """
-    extensions = []
+    extensions = ['xml', 'oebin', 'txt', 'dat', 'npy']
     rawmode = 'one-dir'
 
     def __init__(self, dirname='', load_sync_channel=False, experiment_names=None):
@@ -205,7 +205,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         raise ValueError(f'There is no possible labels for this event: {stream_name}')
 
                     # # If available, use 'states' to compute event duration
-                    if 'states' in d:
+                    if 'states' in d and d["states"].size:
                         states = d["states"]
                         timestamps = d["timestamps"]
                         labels = d["labels"]

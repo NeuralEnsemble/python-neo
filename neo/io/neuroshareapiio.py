@@ -72,15 +72,16 @@ class NeuroshareapiIO(BaseIO):
 
     name = "Neuroshare"
 
-    extensions = []
+    extensions = ['mcd']
 
     # This object operates on neuroshare files
     mode = "file"
 
-    def __init__(self, filename=None, dllpath=None):
+    def __init__(self, filename=None, dllname=None):
         """
         Arguments:
             filename : the filename
+            dllname: the path of the library to use for reading
         The init function will run automatically upon calling of the class, as
         in: test = MultichannelIO(filename = filetoberead.mcd), therefore the first
         operations with the file are set here, so that the user doesn't have to
@@ -88,7 +89,7 @@ class NeuroshareapiIO(BaseIO):
 
         """
         BaseIO.__init__(self)
-        self.filename = filename
+        self.filename = str(filename)
         # set the flags for each event type
         eventID = 1
         analogID = 2
@@ -96,7 +97,9 @@ class NeuroshareapiIO(BaseIO):
         # if a filename was given, create a dictionary with information that will
         # be needed later on.
         if self.filename is not None:
-            if dllpath is not None:
+            if dllname is not None:
+                # converting to string to also accept pathlib objects
+                dllpath = str(dllname)
                 name = os.path.splitext(os.path.basename(dllpath))[0]
                 library = ns.Library(name, dllpath)
             else:
@@ -330,13 +333,13 @@ class NeuroshareapiIO(BaseIO):
         numIndx = endat - startat
         # get the end point using segment duration
         # create a numpy empty array to store the waveforms
-        waveforms = np.array(np.zeros([numIndx, tempSpks.max_sample_count]))
+        waveforms = np.array(np.zeros([numIndx, 1, tempSpks.max_sample_count]))
         # loop through the data from the specific channel index
         for i in range(startat, endat, 1):
             # get cutout, timestamp, cutout duration, and spike unit
             tempCuts, timeStamp, duration, unit = tempSpks.get_data(i)
             # save the cutout in the waveform matrix
-            waveforms[i] = tempCuts[0]
+            waveforms[i, 0, :] = tempCuts[0]
             # append time stamp to list
             times.append(timeStamp)
 

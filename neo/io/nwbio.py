@@ -227,10 +227,10 @@ class NWBIO(BaseIO):
         import pynwb
 
         assert self.nwb_file_mode in ('r',)
-        io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode,
+        self._io_nwb = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode,
                              load_namespaces=True)  # Open a file with NWBHDF5IO
         try:
-            self._file = io.read()
+            self._file = self._io_nwb.read()
         except ValueError:
             print("Error: Unable to read this version of NWB file.")
             print("Please convert to a later NWB format.")
@@ -644,6 +644,10 @@ class NWBIO(BaseIO):
                               segment=segment.name,
                               block=segment.block.name)
         return self._nwbfile.epochs
+
+    def close(self):
+        if self._io_nwb:
+            self._io_nwb.close()
 
 
 class AnalogSignalProxy(BaseAnalogSignalProxy):
