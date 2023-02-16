@@ -4,5 +4,3 @@ channels:
 dependencies:
   - datalad
   - pip
-  - pip:
-    - -r requirements_testing.txt
