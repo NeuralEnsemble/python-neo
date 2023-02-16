@@ -278,6 +278,7 @@ class Plexon2RawIO(BaseRawIO):
         # This give the t_start of signals.
         # this must return an float scale in second
 
+        # TODO: Does the fragment_timestamp[0] need to be added here as for digital signals?
         return self._segment_t_start(block_index, seg_index)
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
@@ -405,6 +406,10 @@ class Plexon2RawIO(BaseRawIO):
             lim0 = int(t_start * timestamp_frequency)
             lim1 = int(t_stop * self.pl2reader.pl2_file_info.m_TimestampFrequency)
             time_mask = (spike_timestamps >= lim0) & (spike_timestamps <= lim1)
+
+            # limits are with respect to segment t_start and not to time 0
+            lim0 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
+            lim1 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
         else:
             time_mask = slice(None, None)
 
@@ -442,13 +447,20 @@ class Plexon2RawIO(BaseRawIO):
             lim0 = int(t_start * timestamp_frequency)
             lim1 = int(t_stop * self.pl2reader.pl2_file_info.m_TimestampFrequency)
             time_mask = (event_times >= lim0) & (event_times <= lim1)
+
+            # limits are with respect to segment t_start and not to time 0
+            lim0 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
+            lim1 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
         else:
             time_mask = np.ones_like(event_times)
 
         # events don't have a duration. Epochs are not supported
         durations = None
 
-        return event_times[time_mask], durations, labels[time_mask]
+        # event timestamps are counted from the session start recording time
+        return_times = event_times[time_mask] + self.pl2reader.pl2_file_info.m_StartRecordingTime
+
+        return return_times, durations, labels[time_mask]
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         # must rescale to second a particular event_timestamps
