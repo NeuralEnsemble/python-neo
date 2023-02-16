@@ -87,13 +87,13 @@ all = [
     "matplotlib",
     "nixio>=1.5.0",
     "pillow",
-    "probeinterface"
+    "probeinterface",
     "pyedflib",
     "pynwb",
     "pytest",
     "pytest-cov",
     "scipy>=1.0.0",
     "sonpy",
-    "tqdm,
+    "tqdm",
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable
