@@ -1,45 +1,48 @@
 [project]
 name = "neo"
 version = "0.12.0.dev0"
-
 authors = [{name = "Neo authors and contributors"}]
-
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
-
 readme = "README.rst"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = {text = "BSD 3-Clause License"}
 classifiers = [
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
     "Natural Language :: English",
     "Topic :: Scientific/Engineering",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3 :: Only",
 ]
 
 dependencies = [
     "packaging",
-    "numpy>=1.18.5",
-    "quantities>=0.12.1",
+    "numpy>=1.19.5",
+    "quantities>=0.14.0",
 ]
 
 [project.urls]
-"Homepage" = "https://neuralensemble.org/neo"
+homepage = "https://neuralensemble.org/neo"
+documentation = "http://neo.readthedocs.io/"
+repository = "https://github.com/NeuralEnsemble/python-neo"
+download = "http://pypi.python.org/pypi/neo"
+
 
 [build-system]
 requires = ["setuptools>=62.0"]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-packages = ["neo"]
-package-dir = {"neo" = "neo"}
 
 [project.optional-dependencies]
 
 test = [
     "pytest",
     "pytest-cov",
-    
     # datalad   # this dependency is covered by conda (environment_testing.yml)
     "scipy>=1.0.0",
     "pyedflib",
@@ -62,19 +65,35 @@ docs = [
     "docutils<0.18",
 ]
 
-igorproio = ['igor']
-kwikio = ['klusta']
-neomatlabio = ['scipy>=1.0.0']
-nixio = ['nixio>=1.5.0']
-stimfitio = ['stfio']
-tiffio = ['pillow']
-edf = ['pyedflib']
-ced = ['sonpy']
-nwb = ['pynwb']
-maxwell = ['h5py']
-biocam = ['h5py']
+igorproio = ["igor"]
+kwikio = ["klusta"]
+neomatlabio = ["scipy>=1.0.0"]
+nixio = ["nixio>=1.5.0"]
+stimfitio = ["stfio"]
+tiffio = ["pillow"]
+edf = ["pyedflib"]
+ced = ["sonpy"]
+nwb = ["pynwb"]
+maxwell = ["h5py"]
+biocam = ["h5py"]
 
-# TODO [all]
-
-
-
+all = [
+    "coverage",
+    "coveralls",
+    "h5py",
+    "igor",
+    "ipython",
+    "klusta",
+    "matplotlib",
+    "nixio>=1.5.0",
+    "pillow",
+    "probeinterface"
+    "pyedflib",
+    "pynwb",
+    "pytest",
+    "pytest-cov",
+    "scipy>=1.0.0",
+    "sonpy",
+    "tqdm,
+]
+# we do not include 'stfio' in 'all' as it is not pip installable
