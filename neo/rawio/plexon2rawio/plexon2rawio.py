@@ -197,8 +197,15 @@ class Plexon2RawIO(BaseRawIO):
         for anno_key, anno_value in block_info.items():
             if isinstance(anno_value, tm):
                 tmo = anno_value
-                dt = datetime(year=tmo.tm_year, month=tmo.tm_mon, day=tmo.tm_mday, hour=tmo.tm_hour,
-                              minute=tmo.tm_min, second=tmo.tm_sec, microsecond=block_info['m_CreatorDateTimeMilliseconds'])
+                # invalid datetime information if year is <1
+                if tmo.tm_year != 0:
+                    dt = datetime(year=tmo.tm_year, month=tmo.tm_mon, day=tmo.tm_mday, hour=tmo.tm_hour,
+                                  minute=tmo.tm_min, second=tmo.tm_sec, microsecond=block_info['m_CreatorDateTimeMilliseconds'])
+                    # ignoring daylight saving time information for now as timezone is unknown
+
+                else:
+                    dt = None
+
                 block_info[anno_key] = dt
 
         bl_ann.update(block_info)
