@@ -272,12 +272,14 @@ class DataObject(BaseNeo, pq.Quantity):
         # Return the merged array_annotations
         return merged_array_annotations
 
-    def rescale(self, units):
+    def rescale(self, units, dtype=None):
         '''
-        Return a copy of the object converted to the specified
-        units
+        Return a copy of the object converted to the specified units.
+        The `dtype` argument exists only for backward compatibility within quantities, see
+        https://github.com/python-quantities/python-quantities/pull/204
         :return: Copy of self with specified units
         '''
+
         # Use simpler functionality, if nothing will be changed
         dim = pq.quantity.validate_dimensionality(units)
         if self.dimensionality == dim:

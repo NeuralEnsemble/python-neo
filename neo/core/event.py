@@ -157,10 +157,11 @@ class Event(DataObject):
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
 
-    def rescale(self, units):
+    def rescale(self, units, dtype=None):
         '''
-        Return a copy of the :class:`Event` converted to the specified
-        units
+        Return a copy of the :class:`Event` converted to the specified units
+        The `dtype` argument exists only for backward compatibility within quantities, see
+        https://github.com/python-quantities/python-quantities/pull/204
         :return: Copy of self with specified units
         '''
         # Use simpler functionality, if nothing will be changed
