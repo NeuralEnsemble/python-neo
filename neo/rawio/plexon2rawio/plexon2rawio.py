@@ -363,12 +363,20 @@ class Plexon2RawIO(BaseRawIO):
             timestamp_frequency = self.pl2reader.pl2_file_info.m_TimestampFrequency
             lim0 = int(t_start * timestamp_frequency)
             lim1 = int(t_stop * self.pl2reader.pl2_file_info.m_TimestampFrequency)
+
+            # limits are with respect to segment t_start and not to time 0
+            lim0 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
+            lim1 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
+
             time_mask = (spike_timestamps >= lim0) & (spike_timestamps <= lim1)
         else:
             time_mask = slice(None, None)
 
         unit_mask = unit_ids[time_mask] == channel_unit_id
         spike_timestamps = spike_timestamps[time_mask][unit_mask]
+
+        # spike timestamps are counted from the session start recording time
+        spike_timestamps += self.pl2reader.pl2_file_info.m_StartRecordingTime
 
         return spike_timestamps
 
