@@ -37,7 +37,7 @@ class NestIO(BaseIO):
 
         >>> files = ['membrane_voltages-1261-0.dat',
                  'spikes-1258-0.gdf']
-        >>> r = NestIO(filename=files)
+        >>> r = NestIO(filenames=files)
         >>> seg = r.read_segment(gid_list=[], t_start=400 * pq.ms,
                              t_stop=600 * pq.ms,
                              id_column_gdf=0, time_column_gdf=1,
@@ -60,24 +60,32 @@ class NestIO(BaseIO):
     supported_target_objects = ['SpikeTrain', 'AnalogSignal']
     mode = 'file'
 
-    def __init__(self, filename=None, target_object='SpikeTrain',
+    def __init__(self, filenames=None, target_object='SpikeTrain',
                  additional_parameters={}):
         """
         Parameters
         ----------
-            filename: string or list of strings, default=None
+            filenames: string or list of strings, default=None
                 The filename or list of filename to load.
             target_object : string or list of strings, default='SpikeTrain'
                 The type of neo object that should be read out from the input.
                 Options are: 'SpikeTrain', 'AnalogSignal'
         """
         if target_object not in self.supported_target_objects:
-            raise ValueError(f'{obj} is not a valid object type. '
+            raise ValueError(f'{target_object} is not a valid object type. '
                              f'Valid values are {self.objects}.')
 
-        self.filename = filename
+        # Ensure right dimensionality
+        if isinstance(filenames, str):
+            filenames = [filenames]
+
+        # Turn kwargs to attributes
+        self.filenames = filenames
         self.target_object = target_object
-        self.IO = ColumnIO(filename, additional_parameters)
+
+        self.IOs = []
+        for filename in filenames:
+            self.IOs.append(ColumnIO(filename, additional_parameters))
 
     def __read_analogsignals(self, gid_list, time_unit, t_start=None,
                              t_stop=None, sampling_period=None,
@@ -126,54 +134,59 @@ class NestIO(BaseIO):
                                                             gid_list,
                                                             t_start,
                                                             t_stop)
-        # loading raw data columns
-        data = self.IO.get_columns(
-            column_ids=column_ids,
-            condition=condition,
-            condition_column=condition_column,
-            sorting_columns=sorting_column)
 
-        sampling_period = self._check_input_sampling_period(sampling_period,
-                                                            time_column,
-                                                            time_unit,
-                                                            data)
         analogsignal_list = []
+        for col in self.IOs:
 
-        # extracting complete gid list for anasig generation
-        if (gid_list == []) and id_column is not None:
-            gid_list = np.unique(data[:, id_column])
+            # loading raw data columns
+            data = col.get_columns(
+                column_ids=column_ids,
+                condition=condition,
+                condition_column=condition_column,
+                sorting_columns=sorting_column)
 
-        # generate analogsignals for each neuron ID
-        for i in gid_list:
-            selected_ids = self._get_selected_ids(
-                i, id_column, time_column, t_start, t_stop, time_unit,
-                data)
+            sampling_period = self._check_input_sampling_period(
+                                  sampling_period,
+                                  time_column,
+                                  time_unit,
+                                  data)
 
-            # extract starting time of analogsignal
-            if (time_column is not None) and data.size:
-                anasig_start_time = data[selected_ids[0], 1] * time_unit
-            else:
-                # set t_start equal to sampling_period because NEST starts
-                #  recording only after 1 sampling_period
-                anasig_start_time = 1. * sampling_period
+            # extracting complete gid list for anasig generation
+            if (gid_list == []) and id_column is not None:
+                gid_list = np.unique(data[:, id_column])
 
-            if value_columns is not None:
-                # create one analogsignal per value column requested
-                for v_id, value_column in enumerate(value_columns):
-                    signal = data[
-                        selected_ids[0]:selected_ids[1], value_column]
+            # generate analogsignals for each neuron ID
+            for i in gid_list:
+                selected_ids = self._get_selected_ids(
+                    i, id_column, time_column, t_start, t_stop, time_unit,
+                    data)
 
-                    # create AnalogSignal objects and annotate them with
-                    #  the neuron ID
-                    analogsignal_list.append(AnalogSignal(
-                        signal * value_units[v_id],
-                        sampling_period=sampling_period,
-                        t_start=anasig_start_time,
-                        id=i,
-                        type=value_types[v_id]))
-                    # check for correct length of analogsignal
-                    assert (analogsignal_list[-1].t_stop
-                            == anasig_start_time + len(signal) * sampling_period)
+                # extract starting time of analogsignal
+                if (time_column is not None) and data.size:
+                    anasig_start_time = data[selected_ids[0], 1] * time_unit
+                else:
+                    # set t_start equal to sampling_period because NEST starts
+                    #  recording only after 1 sampling_period
+                    anasig_start_time = 1. * sampling_period
+
+                if value_columns is not None:
+                    # create one analogsignal per value column requested
+                    for v_id, value_column in enumerate(value_columns):
+                        signal = data[
+                            selected_ids[0]:selected_ids[1], value_column]
+
+                        # create AnalogSignal objects and annotate them with
+                        #  the neuron ID
+                        analogsignal_list.append(AnalogSignal(
+                            signal * value_units[v_id],
+                            sampling_period=sampling_period,
+                            t_start=anasig_start_time,
+                            id=i,
+                            type=value_types[v_id]))
+                        # check for correct length of analogsignal
+                        assert (analogsignal_list[-1].t_stop
+                                == anasig_start_time + len(signal) *
+                                sampling_period)
         return analogsignal_list
 
     def __read_spiketrains(self, gdf_id_list, time_unit,
@@ -209,37 +222,46 @@ class NestIO(BaseIO):
             self._get_conditions_and_sorting(id_column, time_column,
                                              gdf_id_list, t_start, t_stop)
 
-        data = self.IO.get_columns(
-            column_ids=column_ids,
-            condition=condition,
-            condition_column=condition_column,
-            sorting_columns=sorting_column)
+        spiketrain_list = []
+        for col in self.IOs:
 
-        # create a list of SpikeTrains for all neuron IDs in gdf_id_list
-        # assign spike times to neuron IDs if id_column is given
-        if id_column is not None:
-            if (gdf_id_list == []) and id_column is not None:
-                gdf_id_list = np.unique(data[:, id_column])
+            data = col.get_columns(
+                column_ids=column_ids,
+                condition=condition,
+                condition_column=condition_column,
+                sorting_columns=sorting_column)
+            
+            # create a list of SpikeTrains for all neuron IDs in gdf_id_list
+            # assign spike times to neuron IDs if id_column is given
+            if id_column is not None:
+                if (gdf_id_list == []) and id_column is not None:
+                    current_file_ids = np.unique(data[:, id_column])
+                else:
+                    current_file_ids = gdf_id_list
 
-            spiketrain_list = []
-            for nid in gdf_id_list:
-                selected_ids = self._get_selected_ids(nid, id_column,
-                                                      time_column, t_start,
-                                                      t_stop, time_unit, data)
-                times = data[selected_ids[0]:selected_ids[1], time_column]
-                spiketrain_list.append(SpikeTrain(
+                for nid in current_file_ids:
+                    selected_ids = self._get_selected_ids(nid, id_column,
+                                                          time_column, t_start,
+                                                          t_stop, time_unit,
+                                                          data)
+                    times = data[selected_ids[0]:selected_ids[1], time_column]
+                    spiketrain_list.append(SpikeTrain(times, units=time_unit,
+                                                      t_start=t_start,
+                                                      t_stop=t_stop,
+                                                      id=nid,
+                                                      source_file=col.filename,
+                                                      **args))
 
-                    times, units=time_unit,
-                    t_start=t_start, t_stop=t_stop,
-                    id=nid, **args))
-
-        # if id_column is not given, all spike times are collected in one
-        #  spike train with id=None
-        else:
-            train = data[:, time_column]
-            spiketrain_list = [SpikeTrain(train, units=time_unit,
-                                          t_start=t_start, t_stop=t_stop,
-                                          id=None, **args)]
+            # if id_column is not given, all spike times are collected in one
+            #  spike train with id=None
+            else:
+                train = data[:, time_column]
+                spiketrain_list.append([SpikeTrain(train, units=time_unit,
+                                                   t_start=t_start,
+                                                   t_stop=t_stop,
+                                                   id=None,
+                                                   source_file=col.filename,
+                                                   **args)])
         return spiketrain_list
 
     def _check_input_times(self, t_start, t_stop, mandatory=True):
@@ -423,11 +445,11 @@ class NestIO(BaseIO):
         Returns
         list of selected gids
         """
-        gid_ids = np.array([0, data.shape[0]])
+        gids = np.array([0, data.shape[0]])
         if id_column is not None:
-            gid_ids = np.array([np.searchsorted(data[:, 0], gid, side='left'),
-                                np.searchsorted(data[:, 0], gid, side='right')])
-        gid_data = data[gid_ids[0]:gid_ids[1], :]
+            gids = np.array([np.searchsorted(data[:, 0], gid, side='left'),
+                             np.searchsorted(data[:, 0], gid, side='right')])
+        gid_data = data[gids[0]:gids[1], :]
 
         # select only requested time range
         id_shifts = np.array([0, 0])
@@ -441,7 +463,7 @@ class NestIO(BaseIO):
                                                 time_unit).magnitude,
                                             side='left') - gid_data.shape[0])
 
-        selected_ids = gid_ids + id_shifts
+        selected_ids = gids + id_shifts
         return selected_ids
 
     def read_block(self, gid_list=None, time_unit=pq.ms, t_start=None,
@@ -456,7 +478,8 @@ class NestIO(BaseIO):
                                 time_column_dat, value_columns_dat,
                                 id_column_gdf, time_column_gdf, value_types,
                                 value_units)
-        blk = Block(file_origin=seg.file_origin, file_datetime=seg.file_datetime)
+        blk = Block(file_origin=seg.file_origin,
+                    file_datetime=seg.file_datetime)
         blk.segments.append(seg)
         return blk
 
@@ -474,8 +497,8 @@ class NestIO(BaseIO):
         gid_list : list, default: None
             A list of GDF IDs of which to return SpikeTrain(s). gid_list must
             be specified if the GDF file contains neuron IDs, the default None
-            then raises an error. Specify an empty list [] to retrieve the spike
-            trains of all neurons.
+            then raises an error. Specify an empty list [] to retrieve the
+            spike trains of all neurons.
         time_unit : Quantity (time), optional, default: quantities.ms
             The time unit of recorded time stamps in DAT as well as GDF files.
         t_start : Quantity (time), optional, default: 0 * pq.ms
@@ -520,10 +543,9 @@ class NestIO(BaseIO):
             gid_list = [None]
 
         # create an empty Segment
-        seg = Segment(file_origin=",".join(self.filename))
-        seg.file_datetime = datetime.fromtimestamp(os.stat(self.filename).st_mtime)
-        # todo: rather than take the first file for the timestamp, we should take the oldest
-        #       in practice, there won't be much difference
+        seg = Segment(file_origin=",".join(self.filenames))
+        seg.file_datetime = datetime.fromtimestamp(
+                                os.stat(self.filenames[-1]).st_mtime)
 
         # Load analogsignals and attach to Segment
         if 'AnalogSignal' == self.target_object:
@@ -679,7 +701,7 @@ class ColumnIO:
         if '.' not in line:
             additional_parameters['dtype'] = np.int32
         else:
-            additional_parameters['dtype'] = np.float
+            additional_parameters['dtype'] = np.float32
 
         self.data = np.loadtxt(self.filename, skiprows=header_size,
                                **additional_parameters)
