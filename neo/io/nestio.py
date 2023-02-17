@@ -153,10 +153,12 @@ class NestIO(BaseIO):
 
             # extracting complete gid list for anasig generation
             if (gid_list == []) and id_column is not None:
-                gid_list = np.unique(data[:, id_column])
+                current_gid_list = np.unique(data[:, id_column])
+            else:
+                current_gid_list = gid_list
 
             # generate analogsignals for each neuron ID
-            for i in gid_list:
+            for i in current_gid_list:
                 selected_ids = self._get_selected_ids(
                     i, id_column, time_column, t_start, t_stop, time_unit,
                     data)
@@ -182,6 +184,7 @@ class NestIO(BaseIO):
                             sampling_period=sampling_period,
                             t_start=anasig_start_time,
                             id=i,
+                            source_file=col.filename,
                             type=value_types[v_id]))
                         # check for correct length of analogsignal
                         assert (analogsignal_list[-1].t_stop
