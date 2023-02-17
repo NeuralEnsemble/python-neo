@@ -37,7 +37,7 @@ class NestIO(BaseIO):
 
         >>> files = ['membrane_voltages-1261-0.dat',
                  'spikes-1258-0.gdf']
-        >>> r = NestIO(filename=files)
+        >>> r = NestIO(filenames=files)
         >>> seg = r.read_segment(gid_list=[], t_start=400 * pq.ms,
                              t_stop=600 * pq.ms,
                              id_column_gdf=0, time_column_gdf=1,
@@ -60,7 +60,7 @@ class NestIO(BaseIO):
     supported_target_objects = ['SpikeTrain', 'AnalogSignal']
     mode = 'file'
 
-    def __init__(self, filename=None, target_object='SpikeTrain',
+    def __init__(self, filenames=None, target_object='SpikeTrain',
                  additional_parameters={}):
         """
         Parameters
