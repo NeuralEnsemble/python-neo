@@ -15,9 +15,11 @@ The IO only considers enabled channels and will not list disabled channels in it
 There is no 1-1 correspondence of PL2 spike channels and neo spike channels as each unit of
 a PL2 spike channel will be represented as an individual neo spike channel.
 
+Author: Julia Sprenger
 """
 import pathlib
 from collections import namedtuple
+from urllib.request import urlopen
 from datetime import datetime
 
 import numpy as np
@@ -49,7 +51,7 @@ class Plexon2RawIO(BaseRawIO):
     extensions = ['pl2']
     rawmode = 'one-file'
 
-    def __init__(self, filename='', pl2_dll_path=None):
+    def __init__(self, filename='', pl2_dll_file_path=None):
 
         # signals, event and spiking data will be cached
         # cached signal data can be cleared using `clear_analogsignal_cache()()`
@@ -65,9 +67,20 @@ class Plexon2RawIO(BaseRawIO):
 
         BaseRawIO.__init__(self)
 
-        # Instatiate wrapper for Windows DLL
+        # download default PL2 dll once if not yet available
+        if pl2_dll_file_path is None:
+            pl2_dll_folder = pathlib.Path .home() / '.plexon_dlls_for_neo'
+            pl2_dll_folder.mkdir(exist_ok=True)
+            pl2_dll_file_path = pl2_dll_folder / 'PL2FileReader.dll'
+
+            dist = urlopen('https://github.com/Neuralensemble/pypl2/blob/master/bin/PL2FileReader.dll?raw=true')
+            with open(pl2_dll_file_path, 'wb') as f:
+                print(f'Downloading plexon dll to {pl2_dll_file_path}')
+                f.write(dist.read())
+
+        # Instantiate wrapper for Windows DLL
         from neo.rawio.plexon2rawio.pypl2.pypl2lib import PyPL2FileReader
-        self.pl2reader = PyPL2FileReader(pl2_dll_path=pl2_dll_path)
+        self.pl2reader = PyPL2FileReader(pl2_dll_file_path=pl2_dll_file_path)
 
         # Open the file.
         self.pl2reader.pl2_open_file(self.filename)
