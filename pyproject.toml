@@ -63,7 +63,9 @@ test = [
     "sonpy",
     "pynwb",
     "probeinterface",
-    "joblib>=1.0.0"
+    "joblib>=1.0.0",
+    "zugbruecke>=0.2",
+    "wenv"
 ]
 
 docs = [
@@ -81,6 +83,7 @@ ced = ["sonpy"]
 nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
+plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32'"]
 
 all = [
     "coverage",
@@ -92,6 +95,7 @@ all = [
     "matplotlib",
     "nixio>=1.5.0",
     "pillow",
+    "plexon2",
     "probeinterface",
     "pyedflib",
     "pynwb",
