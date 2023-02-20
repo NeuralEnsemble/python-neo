@@ -99,6 +99,10 @@ jobs:
         run: |
           pip install --no-dependencies -e .
 
+      - name: Install wine
+        run: |
+          sudo apt install wine64
+
       - name: Test with pytest
         run: |
           # only neo.rawio and neo.io

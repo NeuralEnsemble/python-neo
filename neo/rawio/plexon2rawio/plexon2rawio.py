@@ -1,6 +1,8 @@
 """
 Plexon2RawIO is a class to read Plexon PL2 files.
 
+On non-windows systems this IO requires Wine, see https://www.winehq.org/
+
 Note on IO performance and memory consumption:
 This IO is only partially lazy: To load a data chunk of an individual
 signal channels, the complete data of that channel will be loaded into memory
