@@ -105,10 +105,7 @@ jobs:
           sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
           sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
           sudo apt update
-          sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
-          sudo apt-get purge -yqq libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
-          echo "/opt/wine-staging/bin" >> $GITHUB_PATH
-          sudo apt install -y --install-recommends wine-staging
+          sudo apt install --install-recommends winehq-stable
 
       - name: Test with pytest
         run: |
