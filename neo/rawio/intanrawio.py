@@ -1,13 +1,13 @@
 """
 
-Support for intan tech rhd  and rhs files.
+Support for intan tech rhd and rhs files.
 
-This 2 formats are more or less the same but:
+These 2 formats are more or less the same but:
   * some variance in headers.
   * rhs amplifier is more complex because the optional DC channel
 
 RHS supported version 1.0
-RHD supported version  1.0 1.1 1.2 1.3 2.0
+RHD supported version  1.0 1.1 1.2 1.3 2.0 3.0, 3.1
 
 See:
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
