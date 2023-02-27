@@ -333,6 +333,11 @@ def read_rhs(filename):
         if len(channels_by_type[sig_type]) > 0:
             name = {5: 'DIGITAL-IN', 6: 'DIGITAL-OUT'}[sig_type]
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
+           
+    if bool(global_info['notch_filter_mode']) and global_info['major_version'] >= 3:
+        global_info['notch_filter_applied'] = True
+    else:
+        global_info['notch_filter_applied'] = False
 
     return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
 
@@ -360,6 +365,7 @@ rhd_global_header_part1 = [
     ('desired_upper_bandwidth', 'float32'),
 
     ('notch_filter_mode', 'int16'),
+    
 
     ('desired_impedance_test_frequency', 'float32'),
     ('actual_impedance_test_frequency', 'float32'),
@@ -544,5 +550,10 @@ def read_rhd(filename):
         if len(channels_by_type[sig_type]) > 0:
             name = {4: 'DIGITAL-IN', 5: 'DIGITAL-OUT'}[sig_type]
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
-
+    
+    if bool(global_info['notch_filter_mode']) and version >= V('3.0'):
+        global_info['notch_filter_applied'] = True
+    else:
+        global_info['notch_filter_applied'] = False
+    
     return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
