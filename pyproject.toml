@@ -83,7 +83,7 @@ all = [
     "coveralls",
     "h5py",
     "igor",
-    "ipython",    
+    "ipython",
     "klusta",
     "matplotlib",
     "nixio>=1.5.0",
