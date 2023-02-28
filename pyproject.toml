@@ -25,6 +25,7 @@ dependencies = [
     "packaging",
     "numpy>=1.19.5",
     "quantities>=0.14.1",
+    "joblib>=1.2.0"
 ]
 
 [project.urls]
@@ -82,7 +83,7 @@ all = [
     "coveralls",
     "h5py",
     "igor",
-    "ipython",
+    "ipython",    
     "klusta",
     "matplotlib",
     "nixio>=1.5.0",
