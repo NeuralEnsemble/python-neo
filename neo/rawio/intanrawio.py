@@ -351,7 +351,6 @@ rhd_global_header_base = [
     ('minor_version', 'int16'),
 ]
 
-
 rhd_global_header_part1 = [
     ('sampling_rate', 'float32'),
 
@@ -366,7 +365,6 @@ rhd_global_header_part1 = [
 
     ('notch_filter_mode', 'int16'),
     
-
     ('desired_impedance_test_frequency', 'float32'),
     ('actual_impedance_test_frequency', 'float32'),
 
