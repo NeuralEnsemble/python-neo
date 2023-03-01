@@ -37,7 +37,7 @@ jobs:
         # the key depend on the last commit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: ephy_testing_data_hash
         run: |
-          echo "latest_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> GITHUB_OUTPUT
+          echo "latest_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
 
       - uses: actions/cache@v3
         # Loading cache of ephys_testing_dataset
