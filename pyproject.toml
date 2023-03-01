@@ -25,7 +25,7 @@ dependencies = [
     "packaging",
     "numpy>=1.19.5",
     "quantities>=0.14.1",
-    "joblib>=1.2.0"
+    "joblib>=1.0.0"
 ]
 
 [project.urls]
