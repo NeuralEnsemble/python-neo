@@ -36,11 +36,22 @@ Rules for creating a new class:
 
 
 """
-
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+import pathlib
+from typing import Tuple, TypedDict, Union
 
 import numpy as np
+
+from .baserawio import (BaseRawIO, _event_channel_dtype, _signal_channel_dtype,
+                        _signal_stream_dtype, _spike_channel_dtype)
+
+
+class ExampleRawIOHeader(TypedDict):
+    nb_block: int
+    nb_segment: list[int]
+    signal_streams: np.ndarray  # with dtype `_signal_stream_dtype`
+    signal_channels: np.ndarray  # with dtype `_signal_channel_dtype`
+    spike_channels: np.ndarray  # with dtype `_spike_channel_dtype`
+    event_channels: np.ndarray  # width dtype `_event_channel_dtype`
 
 
 class ExampleRawIO(BaseRawIO):
@@ -84,7 +95,7 @@ class ExampleRawIO(BaseRawIO):
     extensions = ['fake']
     rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename: Union[str, pathlib.Path] = ''):
         BaseRawIO.__init__(self)
         # note that this filename is ued in self._source_name
         self.filename = filename
@@ -173,7 +184,7 @@ class ExampleRawIO(BaseRawIO):
 
         # fille into header dict
         # This is mandatory!!!!!
-        self.header = {}
+        self.header = ExampleRawIOHeader()
         self.header['nb_block'] = 2
         self.header['nb_segment'] = [2, 3]
         self.header['signal_streams'] = signal_streams
@@ -230,19 +241,19 @@ class ExampleRawIO(BaseRawIO):
                     elif c == 1:
                         event_an['nickname'] = 'MrEpoch 1'
 
-    def _segment_t_start(self, block_index, seg_index):
+    def _segment_t_start(self, block_index: int, seg_index: int) -> float:
         # this must return an float scale in second
         # this t_start will be shared by all object in the segment
         # except AnalogSignal
         all_starts = [[0., 15.], [0., 20., 60.]]
         return all_starts[block_index][seg_index]
 
-    def _segment_t_stop(self, block_index, seg_index):
+    def _segment_t_stop(self, block_index: int, seg_index: int) -> float:
         # this must return an float scale in second
         all_stops = [[10., 25.], [10., 30., 70.]]
         return all_stops[block_index][seg_index]
 
-    def _get_signal_size(self, block_index, seg_index, stream_index):
+    def _get_signal_size(self, block_index: int, seg_index: int, stream_index: int) -> int:
         # We generate fake data in which the two stream signals have the same shape
         # across all segments (10.0 seconds)
         # This is not the case for real data, instead you should return the signal
@@ -253,7 +264,7 @@ class ExampleRawIO(BaseRawIO):
         # except for several sampling rate.
         return 100000
 
-    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+    def _get_signal_t_start(self, block_index: int, seg_index: int, stream_index: int) -> float:
         # This give the t_start of signals.
         # Very often this equal to _segment_t_start but not
         # always.
@@ -266,8 +277,12 @@ class ExampleRawIO(BaseRawIO):
         # this is not always the case
         return self._segment_t_start(block_index, seg_index)
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
-                                stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index: int, seg_index: int,
+                                i_start: Union[int, None], i_stop: Union[int, None],
+                                stream_index: int,
+                                channel_indexes: Union[np.ndarray,
+                                                       list, slice, None]
+                                ) -> np.ndarray:
         # this must return a signal chunk in a signal stream
         # limited with i_start/i_stop (can be None)
         # channel_indexes can be None (=all channel in the stream) or a list or numpy.array
@@ -307,14 +322,15 @@ class ExampleRawIO(BaseRawIO):
         raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
         return raw_signals
 
-    def _spike_count(self, block_index, seg_index, spike_channel_index):
+    def _spike_count(self, block_index: int, seg_index: int, spike_channel_index: int) -> int:
         # Must return the nb of spikes for given (block_index, seg_index, spike_channel_index)
         # we are lucky:  our units have all the same nb of spikes!!
         # it is not always the case
         nb_spikes = 20
         return nb_spikes
 
-    def _get_spike_timestamps(self, block_index, seg_index, spike_channel_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index: int, seg_index: int, spike_channel_index: int,
+                              t_start: Union[float, None], t_stop: Union[float, None]) -> np.ndarray:
         # In our IO, timestamp are internally coded 'int64' and they
         # represent the index of the signals 10kHz
         # we are lucky: spikes have the same discharge in all segments!!
@@ -335,15 +351,15 @@ class ExampleRawIO(BaseRawIO):
 
         return spike_timestamps
 
-    def _rescale_spike_timestamp(self, spike_timestamps, dtype):
+    def _rescale_spike_timestamp(self, spike_timestamps: np.dtype, dtype: np.dtype) -> np.ndarray:
         # must rescale to second a particular spike_timestamps
         # with a fixed dtype so the user can choose the precision he want.
         spike_times = spike_timestamps.astype(dtype)
         spike_times /= 10000.  # because 10kHz
         return spike_times
 
-    def _get_spike_raw_waveforms(self, block_index, seg_index, spike_channel_index,
-                                 t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index: int, seg_index: int, spike_channel_index: int,
+                                 t_start: Union[float, None], t_stop: Union[float, None]) -> np.ndarray:
         # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
         # in the original dtype
         # this must be as fast as possible.
@@ -379,7 +395,9 @@ class ExampleRawIO(BaseRawIO):
             # epoch channel
             return 10
 
-    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index: int, seg_index: int, event_channel_index: int,
+                              t_start: Union[float, None], t_stop: Union[float, None]
+                              ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         # the main difference between spike channel and event channel
         # is that for here we have 3 numpy array timestamp, durations, labels
         # durations must be None for 'event'
@@ -410,7 +428,8 @@ class ExampleRawIO(BaseRawIO):
 
         return timestamp, durations, labels
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
+    def _rescale_event_timestamp(self, event_timestamps: np.ndarray, dtype: np.dtype,
+                                 event_channel_index: int) -> np.ndarray:
         # must rescale to second a particular event_timestamps
         # with a fixed dtype so the user can choose the precision he want.
 
@@ -418,7 +437,8 @@ class ExampleRawIO(BaseRawIO):
         event_times = event_timestamps.astype(dtype)
         return event_times
 
-    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
+    def _rescale_epoch_duration(self, raw_duration: np.ndarray, dtype: np.dtype,
+                                event_channel_index: int):
         # really easy here because in our case it is already seconds
         durations = raw_duration.astype(dtype)
         return durations
