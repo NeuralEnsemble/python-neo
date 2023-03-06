@@ -21,12 +21,17 @@ import logging
 import unittest
 
 from neo.utils.datasets import (download_dataset,
-    get_local_testing_data_folder, HAVE_DATALAD, default_testing_repo)
+    get_local_testing_data_folder, default_testing_repo)
 
 from neo.test.rawiotest.tools import can_use_network
 
 from neo.test.rawiotest import rawio_compliance as compliance
 
+try:
+    import datalad
+    HAVE_DATALAD = True
+except:
+    HAVE_DATALAD = False
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
 repo_for_test = default_testing_repo

@@ -10,6 +10,7 @@ raise an error but a warning.
 Functions:
 
 .. autofunction:: neo.io.get_io
+.. autofunction:: neo.io.list_candidate_ios
 
 
 Classes:
@@ -22,6 +23,7 @@ Classes:
 * :attr:`AxonaIO`
 * :attr:`AxonIO`
 * :attr:`BCI2000IO`
+* :attr:`BiocamIO`
 * :attr:`BlackrockIO`
 * :attr:`BlkIO`
 * :attr:`BrainVisionIO`
@@ -29,6 +31,7 @@ Classes:
 * :attr:`BrainwareF32IO`
 * :attr:`BrainwareSrcIO`
 * :attr:`CedIO`
+* :attr:`EDFIO`
 * :attr:`ElanIO`
 * :attr:`IgorIO`
 * :attr:`IntanIO`
@@ -95,6 +98,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.BiocamIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.BlackrockIO
 
     .. autoattribute:: extensions
@@ -120,6 +127,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.CedIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.EDFIO
 
     .. autoattribute:: extensions
 
@@ -257,7 +268,8 @@ Classes:
 
 """
 
-import os.path
+import pathlib
+from collections import Counter
 
 # try to import the neuroshare library.
 # if it is present, use the neuroshareapiio to load neuroshare files
@@ -282,6 +294,7 @@ from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axographio import AxographIO
 from neo.io.axonaio import AxonaIO
 from neo.io.axonio import AxonIO
+from neo.io.biocamio import BiocamIO
 from neo.io.blackrockio import BlackrockIO
 from neo.io.blkio import BlkIO
 from neo.io.bci2000io import BCI2000IO
@@ -290,6 +303,7 @@ from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.cedio import CedIO
+from neo.io.edfio import EDFIO
 from neo.io.elanio import ElanIO
 from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
@@ -334,6 +348,7 @@ iolist = [
     AxonaIO,
     AxonIO,
     BCI2000IO,
+    BiocamIO,
     BlackrockIO,
     BlkIO,
     BrainVisionIO,
@@ -341,8 +356,9 @@ iolist = [
     BrainwareF32IO,
     BrainwareSrcIO,
     CedIO,
+    EDFIO,
     ElanIO,
-    # ElphyIO,
+    ElphyIO,
     ExampleIO,
     IgorIO,
     IntanIO,
@@ -353,6 +369,7 @@ iolist = [
     MicromedIO,
     MonkeyLogicIO,
     NixIO,  # place NixIO before other IOs that use HDF5 to make it the default for .h5 files
+    NixIOFr,
     NeoMatlabIO,
     NestIO,
     NeuralynxIO,
@@ -377,14 +394,86 @@ iolist = [
     WinWcpIO
 ]
 
+# for each supported extension list the ios supporting it
+io_by_extension = {}
+for current_io in iolist:  # do not use `io` as variable name here as this overwrites the module io
+    for extension in current_io.extensions:
+        extension = extension.lower()
+        # extension handling should not be case sensitive
+        io_by_extension.setdefault(extension, []).append(current_io)
 
-def get_io(filename, *args, **kwargs):
+
+def get_io(file_or_folder, *args, **kwargs):
     """
     Return a Neo IO instance, guessing the type based on the filename suffix.
     """
-    extension = os.path.splitext(filename)[1][1:]
-    for io in iolist:
-        if extension in io.extensions:
-            return io(filename, *args, **kwargs)
+    ios = list_candidate_ios(file_or_folder)
+    for io in ios:
+        try:
+            return io(file_or_folder, *args, **kwargs)
+        except:
+            continue
 
-    raise IOError("File extension %s not registered" % extension)
+    raise IOError(f"Could not identify IO for {file_or_folder}")
+
+
+def list_candidate_ios(file_or_folder, ignore_patterns=['*.ini', 'README.txt', 'README.md']):
+    """
+    Identify neo IO that can potentially load data in the file or folder
+
+    Parameters
+    ----------
+    file_or_folder (str, pathlib.Path)
+        Path to the file or folder to load
+    ignore_patterns (list)
+        List of patterns to ignore when scanning for known formats. See pathlib.PurePath.match().
+        Default: ['ini']
+
+    Returns
+    -------
+    list
+        List of neo io classes that are associated with the file extensions detected
+    """
+    file_or_folder = pathlib.Path(file_or_folder)
+
+    if file_or_folder.is_file():
+        suffix = file_or_folder.suffix[1:].lower()
+        if suffix not in io_by_extension:
+            raise ValueError(f'{suffix} is not a supported format of any IO.')
+        return io_by_extension[suffix]
+
+    elif file_or_folder.is_dir():
+        # scan files in folder to determine io type
+        filenames = [f for f in file_or_folder.glob('*') if f.is_file()]
+        # keep only relevant filenames
+        filenames = [f for f in filenames if f.suffix and not any([f.match(p) for p in ignore_patterns])]
+
+        # if no files are found in the folder, check subfolders
+        # this is necessary for nested-folder based formats like spikeglx
+        if not filenames:
+            filenames = [f for f in file_or_folder.glob('**/*') if f.is_file()]
+            # keep only relevant filenames
+            filenames = [f for f in filenames if f.suffix and not any([f.match(p) for p in ignore_patterns])]
+
+    # if only file prefix was provided, e.g /mydatafolder/session1-
+    # to select all files sharing the `session1-` prefix
+    elif file_or_folder.parent.exists():
+        filenames = file_or_folder.parent.glob(file_or_folder.name + '*')
+
+    else:
+        raise ValueError(f'{file_or_folder} does not contain data files of a supported format')
+
+    # find the io that fits the best with the files contained in the folder
+    potential_ios = []
+    for filename in filenames:
+        for suffix in filename.suffixes:
+            suffix = suffix[1:].lower()
+            if suffix in io_by_extension:
+                potential_ios.extend(io_by_extension[suffix])
+
+    if not potential_ios:
+        raise ValueError(f'Could not determine IO to load {file_or_folder}')
+
+    # return ios ordered by number of files supported
+    counter = Counter(potential_ios).most_common()
+    return [io for io, count in counter]

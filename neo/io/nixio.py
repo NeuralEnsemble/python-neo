@@ -26,7 +26,7 @@ from collections import OrderedDict
 import itertools
 from uuid import uuid4
 import warnings
-from distutils.version import LooseVersion as Version
+from packaging.version import Version
 from itertools import chain
 
 import quantities as pq
@@ -37,14 +37,7 @@ from ..core import (Block, Segment, AnalogSignal,
                     IrregularlySampledSignal, Epoch, Event, SpikeTrain,
                     ImageSequence, ChannelView, Group)
 from ..io.proxyobjects import BaseProxy
-from ..version import version as neover
-
-try:
-    import nixio as nix
-
-    HAVE_NIX = True
-except ImportError:
-    HAVE_NIX = False
+from .. import __version__ as neover
 
 
 datetime_types = (date, time, datetime)
@@ -121,16 +114,17 @@ def dt_from_nix(nixdt, annotype):
 
 
 def check_nix_version():
-    if not HAVE_NIX:
+    try:
+        import nixio
+    except ImportError:
         raise Exception(
             "Failed to import NIX. "
             "The NixIO requires the Python package for NIX "
             "(nixio on PyPi). Try `pip install nixio`."
-
         )
 
     # nixio version numbers have a 'v' prefix which breaks the comparison
-    nixverstr = nix.__version__.lstrip("v")
+    nixverstr = nixio.__version__.lstrip("v")
     try:
         nixver = Version(nixverstr)
     except ValueError:
@@ -174,25 +168,27 @@ class NixIO(BaseIO):
         :param filename: Full path to the file
         """
         check_nix_version()
+        import nixio
+
         BaseIO.__init__(self, filename)
         self.filename = str(filename)
         if mode == "ro":
-            filemode = nix.FileMode.ReadOnly
+            filemode = nixio.FileMode.ReadOnly
         elif mode == "rw":
-            filemode = nix.FileMode.ReadWrite
+            filemode = nixio.FileMode.ReadWrite
         elif mode == "ow":
-            filemode = nix.FileMode.Overwrite
+            filemode = nixio.FileMode.Overwrite
         else:
             raise ValueError(f"Invalid mode specified '{mode}'. "
                              "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
                              " 'ow' (Overwrite).")
-        self.nix_file = nix.File.open(self.filename, filemode)
+        self.nix_file = nixio.File.open(self.filename, filemode)
 
-        if self.nix_file.mode == nix.FileMode.ReadOnly:
+        if self.nix_file.mode == nixio.FileMode.ReadOnly:
             self._file_version = '0.5.2'
             if "neo" in self.nix_file.sections:
                 self._file_version = self.nix_file.sections["neo"]["version"]
-        elif self.nix_file.mode == nix.FileMode.ReadWrite:
+        elif self.nix_file.mode == nixio.FileMode.ReadWrite:
             if "neo" in self.nix_file.sections:
                 self._file_version = self.nix_file.sections["neo"]["version"]
             else:
@@ -1154,6 +1150,8 @@ class NixIO(BaseIO):
         :param nixblock: NIX Block where the MultiTag will be created
         :param nixgroup: NIX Group where the MultiTag will be attached
         """
+        import nixio
+
         if "nix_name" in spiketrain.annotations:
             nix_name = spiketrain.annotations["nix_name"]
         else:
@@ -1167,7 +1165,7 @@ class NixIO(BaseIO):
             return
 
         if isinstance(spiketrain, BaseProxy):
-            spiketrain = spiketrain.load()
+            spiketrain = spiketrain.load(load_waveforms=True)
 
         times = spiketrain.times.magnitude
         tunits = units_to_string(spiketrain.times.units)
@@ -1208,7 +1206,7 @@ class NixIO(BaseIO):
                                               data=wfdata)
             wfda.unit = wfunits
             wfda.metadata = nixmt.metadata.create_section(wfda.name, "neo.waveforms.metadata")
-            nixmt.create_feature(wfda, nix.LinkType.Indexed)
+            nixmt.create_feature(wfda, nixio.LinkType.Indexed)
             # TODO: Move time dimension first for PR #457
             # https://github.com/NeuralEnsemble/python-neo/pull/457
             wfda.append_set_dimension()
@@ -1234,14 +1232,9 @@ class NixIO(BaseIO):
         :param v: The value to write
         :return: The newly created property
         """
+        import nixio
 
-        if isinstance(v, pq.Quantity):
-            if len(v.shape):
-                section.create_property(name, tuple(v.magnitude))
-            else:
-                section.create_property(name, v.magnitude.item())
-            section.props[name].unit = str(v.dimensionality)
-        elif isinstance(v, datetime_types):
+        if isinstance(v, datetime_types):
             value, annotype = dt_to_nix(v)
             prop = section.create_property(name, value)
             prop.definition = annotype
@@ -1249,29 +1242,34 @@ class NixIO(BaseIO):
             if len(v):
                 section.create_property(name, v)
             else:
-                section.create_property(name, nix.DataType.String)
+                section.create_property(name, nixio.DataType.String)
         elif isinstance(v, bytes):
             section.create_property(name, v.decode())
         elif isinstance(v, Iterable):
             values = []
             unit = None
             definition = None
-            if len(v) == 0:
+            # handling (quantity) arrays with only a single element
+            if hasattr(v, "ndim") and v.ndim == 0:
+                values = v.item()
+            # handling empty arrays or lists
+            elif (hasattr(v, 'size') and (v.size == 0)) or (len(v) == 0):
                 # NIX supports empty properties but dtype must be specified
                 # Defaulting to String and using definition to signify empty
                 # iterable as opposed to empty string
-                values = nix.DataType.String
+                values = nixio.DataType.String
                 definition = EMPTYANNOTATION
-            elif hasattr(v, "ndim") and v.ndim == 0:
-                values = v.item()
-                if isinstance(v, pq.Quantity):
-                    unit = str(v.dimensionality)
             else:
                 for item in v:
                     if isinstance(item, str):
                         item = item
                     elif isinstance(item, pq.Quantity):
-                        unit = str(item.dimensionality)
+                        current_unit = str(item.dimensionality)
+                        if unit is None:
+                            unit = current_unit
+                        elif unit != current_unit:
+                            raise ValueError(f'Inconsistent units detected for '
+                                             f'property {name}: {v}')
                         item = item.magnitude.item()
                     elif isinstance(item, Iterable):
                         self.logger.warn("Multidimensional arrays and nested "
@@ -1281,6 +1279,8 @@ class NixIO(BaseIO):
                     else:
                         item = item
                     values.append(item)
+            if hasattr(v, 'dimensionality'):
+                unit = str(v.dimensionality)
             section.create_property(name, values)
             section.props[name].unit = unit
             section.props[name].definition = definition
@@ -1302,22 +1302,24 @@ class NixIO(BaseIO):
         Metadata: For properties that specify a 'unit', a Quantity object is
                   created.
         """
+        import nixio
+
         neo_attrs = dict()
         neo_attrs["nix_name"] = nix_obj.name
         neo_attrs["description"] = stringify(nix_obj.definition)
         if nix_obj.metadata:
             for prop in nix_obj.metadata.inherited_properties():
                 values = list(prop.values)
-                if prop.unit:
-                    units = prop.unit
-                    values = create_quantity(values, units)
                 if not len(values):
                     if prop.definition == EMPTYANNOTATION:
                         values = list()
-                    elif prop.data_type == nix.DataType.String:
+                    elif prop.data_type == nixio.DataType.String:
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
+                if prop.unit:
+                    units = prop.unit
+                    values = create_quantity(values, units)
                 if prop.definition in (DATEANNOTATION, TIMEANNOTATION, DATETIMEANNOTATION):
                     values = dt_from_nix(values, prop.definition)
                 if prop.type == ARRAYANNOTATION:

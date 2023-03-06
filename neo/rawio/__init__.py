@@ -12,12 +12,15 @@ Functions:
 
 Classes:
 
+* :attr:`AlphaOmegaRawIO`
 * :attr:`AxographRawIO`
 * :attr:`AxonaRawIO`
 * :attr:`AxonRawIO`
+* :attr:`BiocamRawIO`
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
 * :attr:`CedRawIO`
+* :attr: `EDFRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
 * :attr:`MaxwellRawIO`
@@ -29,7 +32,7 @@ Classes:
 * :attr:`NIXRawIO`
 * :attr:`OpenEphysRawIO`
 * :attr:`OpenEphysBinaryRawIO`
-* :attr:'PhyRawIO'
+* :attr:`PhyRawIO`
 * :attr:`PlexonRawIO`
 * :attr:`RawBinarySignalRawIO`
 * :attr:`RawMCSRawIO`
@@ -40,6 +43,10 @@ Classes:
 * :attr:`WinEdrRawIO`
 * :attr:`WinWcpRawIO`
 
+
+.. autoclass:: neo.rawio.AlphaOmegaRawIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.AxographRawIO
 
@@ -53,6 +60,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.BiocamRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.BlackrockRawIO
 
     .. autoattribute:: extensions
@@ -62,6 +73,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.CedRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.EDFRawIO
 
     .. autoattribute:: extensions
 
@@ -152,12 +167,15 @@ Classes:
 """
 import os
 
+from neo.rawio.alphaomegarawio import AlphaOmegaRawIO
 from neo.rawio.axographrawio import AxographRawIO
 from neo.rawio.axonarawio import AxonaRawIO
 from neo.rawio.axonrawio import AxonRawIO
+from neo.rawio.biocamrawio import BiocamRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
 from neo.rawio.cedrawio import CedRawIO
+from neo.rawio.edfrawio import EDFRawIO
 from neo.rawio.elanrawio import ElanRawIO
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
@@ -182,12 +200,15 @@ from neo.rawio.winedrrawio import WinEdrRawIO
 from neo.rawio.winwcprawio import WinWcpRawIO
 
 rawiolist = [
+    AlphaOmegaRawIO,
     AxographRawIO,
     AxonaRawIO,
     AxonRawIO,
+    BiocamRawIO,
     BlackrockRawIO,
     BrainVisionRawIO,
     CedRawIO,
+    EDFRawIO,
     ElanRawIO,
     IntanRawIO,
     MicromedRawIO,
@@ -214,7 +235,7 @@ rawiolist = [
 
 def get_rawio_class(filename_or_dirname):
     """
-    Return a neo.rawio class guess from file extention.
+    Return a neo.rawio class guess from file extension.
     """
     _, ext = os.path.splitext(filename_or_dirname)
     ext = ext[1:]

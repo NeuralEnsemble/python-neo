@@ -28,9 +28,9 @@ class AxonIO(AxonRawIO, BaseFromRaw):
      - `AxonIO._sampling_rate`
 
     The current AxonIO.read_protocol() method utilizes a subset of these.
-    In particular I know it doesn't consider `nDigitalEnable`, `EpochInfo`, or `nActiveDACChannel` and it doesn't account 
+    In particular I know it doesn't consider `nDigitalEnable`, `EpochInfo`, or `nActiveDACChannel` and it doesn't account
     for different types of Epochs offered by Clampex/pClamp other than discrete steps (such as ramp, pulse train, etc and
-    encoded by `nEpochType` in the EpochInfoPerDAC section). I'm currently parsing a superset of the properties used 
+    encoded by `nEpochType` in the EpochInfoPerDAC section). I'm currently parsing a superset of the properties used
     by read_protocol() in my analysis scripts, but that code still doesn't parse the full information and isn't in a state
     where it could be committed and I can't currently prioritize putting together all the code that would parse the full
     set of data. The `AxonIO._axon_info['EpochInfo']` section doesn't currently exist.
@@ -47,8 +47,11 @@ class AxonIO(AxonRawIO, BaseFromRaw):
         Read the protocol waveform of the file, if present;
         function works with ABF2 only. Protocols can be reconstructed
         from the ABF1 header.
-        Returns: list of segments (one for every episode)
-                 with list of analog signls (one for every DAC).
+
+        Returns
+        -------
+        segments : list of segments
+            Segments, one for every episode, with list of analog signls (one for every DAC).
         """
         sigs_by_segments, sig_names, sig_units = self.read_raw_protocol()
         segments = []

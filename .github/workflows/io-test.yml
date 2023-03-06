@@ -1,0 +1,84 @@
+name: NeoIoTest
+
+on:
+  pull_request:
+    branches: [master]
+    types: [synchronize, opened, reopened, ready_for_review]
+
+  # run checks on any change of master, including merge of PRs
+  push:
+    branches: [master]
+
+
+jobs:
+  build-and-test:
+    name: Test on (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        # "macos-latest", "windows-latest"
+        os: ["ubuntu-latest", ]
+        python-version: ['3.9', ]
+    defaults:
+      # by default run in bash mode (required for conda usage)
+      run:
+        shell: bash -l {0}
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Get current year-month
+        id: date
+        run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
+
+      - name: Get ephy_testing_data current head hash
+        # the key depend on the last commit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+        id: ephy_testing_data_hash
+        run: |
+          echo "latest_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        # Loading cache of ephys_testing_dataset
+        id: cache-datasets
+        with:
+          path: ~/ephy_testing_data
+          key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data_hash.outputs.latest_hash }}
+
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: neo-test-env
+          python-version: ${{ matrix.python-version }}
+          clean-patched-environment-file: false
+
+      - uses: actions/cache@v3
+        # the cache for python package is reset:
+        #   * every month
+        #   * when requirements/requirements_testing change
+        id: cache-conda-env
+        with:
+          path: /usr/share/miniconda/envs/neo-test-env
+          key: ${{ runner.os }}-conda-env-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
+
+      - name: Install testing dependencies
+        # testing environment is only installed if no cache was found
+        if: steps.cache-conda-env.outputs.cache-hit != 'true'
+        run: |
+          conda env update neo-test-env --file environment_testing.yml
+
+      - name: Configure git
+        run: |
+          git config --global user.email "neo_ci@fake_mail.com"
+          git config --global user.name "neo CI"
+
+      - name: Install neo
+        run: |
+          pip install --upgrade -e .
+          pip install .[test]
+
+      - name: Test with pytest
+        run: |
+          # only neo.rawio and neo.io
+          pytest --cov=neo neo/test/rawiotest
+          pytest --cov=neo neo/test/iotest

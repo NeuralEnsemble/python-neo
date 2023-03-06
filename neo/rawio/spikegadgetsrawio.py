@@ -89,7 +89,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
             stream_bytes[stream_id] = packet_size
             packet_size += num_bytes
 
-        # timesteamps 4 uint32
+        # timestamps 4 uint32
         self._timestamp_byte = packet_size
         packet_size += 4
 

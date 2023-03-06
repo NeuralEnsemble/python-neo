@@ -2,7 +2,7 @@
 This module implements :class:`ImageSequence`, a 3D array.
 
 :class:`ImageSequence` inherits from :class:`basesignal.BaseSignal` which
-derives from :class:`BaseNeo`, and from :class:`quantites.Quantity`which
+derives from :class:`BaseNeo`, and from :class:`quantities.Quantity`which
 in turn inherits from :class:`numpy.array`.
 
 Inheritance from :class:`numpy.array` is explained here:

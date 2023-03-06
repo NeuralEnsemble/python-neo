@@ -23,7 +23,7 @@ ABF1 (clampfit <=9) and ABF2 (clampfit >10)
 All possible mode are possible :
     - event-driven variable-length mode 1 -> return several Segments per Block
     - event-driven fixed-length mode 2 or 5 -> return several Segments
-    - gap free mode -> return one (or sevral) Segment in the Block
+    - gap free mode -> return one (or several) Segment in the Block
 
 Supported : Read
 
@@ -209,7 +209,7 @@ class AxonRawIO(BaseRawIO):
         for i, tag in enumerate(info['listTag']):
             timestamps.append(tag['lTagTime'])
             labels.append(str(tag['nTagType']))
-            comments.append(clean_string(tag['sComment']))
+            comments.append(str(clean_string(tag['sComment'])))
         self._raw_ev_timestamps = np.array(timestamps)
         self._ev_labels = np.array(labels, dtype='U')
         self._ev_comments = np.array(comments, dtype='U')
@@ -277,8 +277,8 @@ class AxonRawIO(BaseRawIO):
         return self._raw_ev_timestamps.size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        # In ABF timstamps are not attached too any particular segment
-        # so each segmetn acees all event
+        # In ABF timestamps are not attached too any particular segment
+        # so each segment accesses all events
         timestamp = self._raw_ev_timestamps
         labels = self._ev_labels
         durations = None
@@ -305,8 +305,10 @@ class AxonRawIO(BaseRawIO):
         function works with ABF2 only. Protocols can be reconstructed
         from the ABF1 header.
 
-        Returns: list of segments (one for every episode)
-                 with list of analog signls (one for every DAC).
+        Returns
+        -------
+        segments : list of segments
+            Segments, one for every episode, with list of analog signls (one for every DAC).
 
         Author:  JS Nowacki
         """
@@ -447,9 +449,9 @@ def parse_axon_soup(filename):
             # hack for reading channels names and units
             # this section is not very detailed and so the code
             # not very robust. The idea is to remove the first
-            # part by find ing one of th fowoling KEY
-            # unfortunatly the later part contains a the file
-            # taht can contain by accident also one of theses keys...
+            # part by finding one of th following KEY
+            # unfortunately the later part contains a the file
+            # that can contain by accident also one of theses keys...
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1

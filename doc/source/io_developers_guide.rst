@@ -38,7 +38,7 @@ Miscellaneous
 =============
 
     * If your IO supports several versions of a format (like ABF1, ABF2), upload to the gin.g-node.org test file repository all file versions possible. (for test coverage).
-    * :py:func:`neo.core.Block.create_many_to_one_relationship` offers a utility to complete the hierachy when all one-to-many relationships have been created.
+    * :py:func:`neo.core.Block.create_many_to_one_relationship` offers a utility to complete the hierarchy when all one-to-many relationships have been created.
     * In the docstring, explain where you obtained the file format specification if it is a closed one.
     * If your IO is based on a database mapper, keep in mind that the returned object MUST be detached,
       because this object can be written to another url for copying.
@@ -51,7 +51,7 @@ Tests
 To use these you need to upload some sample data files at `gin-gnode`_. They will be publicly accessible for testing Neo.
 These tests:
 
-  * check the compliance with the schema: hierachy, attribute types, ...
+  * check the compliance with the schema: hierarchy, attribute types, ...
   * For IO modules able to both write and read data, it compares a generated dataset with the same data after a write/read cycle.
 
 The test scripts download all files from `gin-gnode`_ and stores them locally in ``/tmp/files_for_tests/``.

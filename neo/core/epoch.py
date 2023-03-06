@@ -6,6 +6,7 @@ This module defines :class:`Epoch`, an array of epochs.
 '''
 
 from copy import deepcopy, copy
+from numbers import Number
 
 import numpy as np
 import quantities as pq
@@ -53,10 +54,12 @@ class Epoch(DataObject):
     *Required attributes/properties*:
         :times: (quantity array 1D, numpy array 1D or list) The start times
            of each time period.
-        :durations: (quantity array 1D, numpy array 1D, list, or quantity scalar)
+        :durations: (quantity array 1D, numpy array 1D, list, quantity scalar or float)
            The length(s) of each time period.
-           If a scalar, the same value is used for all time periods.
+           If a scalar/float, the same value is used for all time periods.
         :labels: (numpy.array 1D dtype='U' or list) Names or labels for the time periods.
+        :units: (quantity units or str) Required if the times is a list or NumPy
+                array, not if it is a :class:`Quantity`
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset,
@@ -88,8 +91,10 @@ class Epoch(DataObject):
             raise ValueError("Times array has more than 1 dimension")
         if isinstance(durations, (list, tuple)):
             durations = np.array(durations)
-        if durations is None:
+        elif durations is None:
             durations = np.array([]) * pq.s
+        elif isinstance(durations, Number):
+            durations = durations * np.ones(times.shape)
         elif durations.size != times.size:
             if durations.size == 1:
                 durations = durations * np.ones_like(times.magnitude)
@@ -170,12 +175,20 @@ class Epoch(DataObject):
         return '<Epoch: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
-        super()._repr_pretty_(pp, cycle)
+        labels = ""
+        if self._labels is not None:
+            labels = " with labels"
+        pp.text(f"{self.__class__.__name__} containing {self.size} epochs{labels}; "
+        f"time units {self.units.dimensionality.string}; datatype {self.dtype} ")
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
 
-    def rescale(self, units):
+    def rescale(self, units, dtype=None):
         '''
-        Return a copy of the :class:`Epoch` converted to the specified
-        units
+        Return a copy of the :class:`Epoch` converted to the specified units
+        The `dtype` argument exists only for backward compatibility within quantities, see
+        https://github.com/python-quantities/python-quantities/pull/204
         :return: Copy of self with specified units
         '''
         # Use simpler functionality, if nothing will be changed
@@ -318,13 +331,13 @@ class Epoch(DataObject):
         """
         Shifts an :class:`Epoch` by an amount of time.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         t_shift: Quantity (time)
             Amount of time by which to shift the :class:`Epoch`.
 
-        Returns:
-        --------
+        Returns
+        -------
         epoch: :class:`Epoch`
             New instance of an :class:`Epoch` object starting at t_shift later than the
             original :class:`Epoch` (the original :class:`Epoch` is not modified).

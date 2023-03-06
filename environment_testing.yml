@@ -1,0 +1,6 @@
+name: neo-test-env
+channels:
+  - conda-forge
+dependencies:
+  - datalad
+  - pip

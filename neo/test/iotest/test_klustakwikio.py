@@ -2,10 +2,8 @@
 Tests of neo.io.klustakwikio
 """
 
-import glob
-import os.path
-import sys
-import tempfile
+from pathlib import Path
+import shutil
 
 import unittest
 
@@ -15,81 +13,67 @@ import quantities as pq
 import neo
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import assert_arrays_almost_equal
-from neo.io.klustakwikio import KlustaKwikIO, HAVE_MLAB
+from neo.io.klustakwikio import KlustaKwikIO
 
 
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-class testFilenameParser(unittest.TestCase):
-    """Tests that filenames can be loaded with or without basename.
+class KlustaKwikTests(BaseTestIO, unittest.TestCase):
+    ioclass = KlustaKwikIO
+    entities_to_download = [
+        'klustakwik'
+    ]
+    entities_to_test = [
+        'klustakwik/test2/base',
+        'klustakwik/test2/base2',
+    ]
 
-    The test directory contains two basenames and some decoy files with
-    malformed group numbers."""
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        super(KlustaKwikTests, cls).setUpClass(*args, **kwargs)
+        dirname = Path(cls.get_local_path('klustakwik'))
 
-    def setUp(self):
-        self.dirname = os.path.join(tempfile.gettempdir(),
-                                    'files_for_testing_neo',
-                                    'klustakwik/test1')
-        if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist: ' +
-                                    self.dirname)
+        cls.session1 = dirname / 'test1'
+        cls.session2 = dirname / 'test2'
+        cls.session3 = dirname / 'test3'
+        cls.tmp_session = dirname / 'tmp_session'
+        cls.tmp_session.mkdir(exist_ok=True)
 
-    def test1(self):
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp_session, ignore_errors=True)
+        self.tmp_session.mkdir(exist_ok=True)
+
+    def test_load_by_basename(self):
         """Tests that files can be loaded by basename"""
-        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'basename'))
-        if not BaseTestIO.use_network:
-            raise unittest.SkipTest("Requires download of data from the web")
+        kio = KlustaKwikIO(dirname=self.session1 / 'basename')
         fetfiles = kio._fp.read_filenames('fet')
 
         self.assertEqual(len(fetfiles), 2)
-        self.assertEqual(os.path.abspath(fetfiles[0]),
-                         os.path.abspath(os.path.join(self.dirname,
-                                                      'basename.fet.0')))
-        self.assertEqual(os.path.abspath(fetfiles[1]),
-                         os.path.abspath(os.path.join(self.dirname,
-                                                      'basename.fet.1')))
+        self.assertEqual(Path(fetfiles[0]).absolute(), self.session1 / 'basename.fet.0')
+        self.assertEqual(Path(fetfiles[1]).absolute(), self.session1 / 'basename.fet.1')
 
-    def test2(self):
-        """Tests that files are loaded even without basename"""
-        pass
+    # def test_load_without_basename(self):
+    #     """Tests that files are loaded even without basename"""
+    #     pass
+    #
+    #     # this test is in flux, should probably have it default to
+    #     # basename = os.path.split(dirname)[1] when dirname is a directory)
+    #     kio = KlustaKwikIO(dirname=self.session1)
+    #     fetfiles = kio._fp.read_filenames('fet')
+    #
+    #     # It will just choose one of the two basenames, depending on which
+    #     # is first, so just assert that it did something without error.
+    #     self.assertNotEqual(len(fetfiles), 0)
 
-        # this test is in flux, should probably have it default to
-        # basename = os.path.split(dirname)[1] when dirname is a directory
-        # dirname = os.path.normpath('./files_for_tests/klustakwik/test1')
-        # kio = KlustaKwikIO(filename=dirname)
-        # fetfiles = kio._fp.read_filenames('fet')
-
-        # It will just choose one of the two basenames, depending on which
-        # is first, so just assert that it did something without error.
-        # self.assertNotEqual(len(fetfiles), 0)
-
-    def test3(self):
+    def test_load_by_basename_2(self):
         """Tests that files can be loaded by basename2"""
-        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'basename2'))
-        if not BaseTestIO.use_network:
-            raise unittest.SkipTest("Requires download of data from the web")
+        kio = KlustaKwikIO(dirname=self.session1 / 'basename2')
         clufiles = kio._fp.read_filenames('clu')
 
         self.assertEqual(len(clufiles), 1)
-        self.assertEqual(os.path.abspath(clufiles[1]),
-                         os.path.abspath(os.path.join(self.dirname,
-                                                      'basename2.clu.1')))
+        self.assertEqual(Path(clufiles[1]).absolute(), self.session1 /'basename2.clu.1')
 
-
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-class testRead(unittest.TestCase):
-    """Tests that data can be read from KlustaKwik files"""
-
-    def setUp(self):
-        self.dirname = os.path.join(tempfile.gettempdir(),
-                                    'files_for_testing_neo',
-                                    'klustakwik/test2')
-        if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist: ' +
-                                    self.dirname)
-
-    def test1(self):
+    def test_read_data(self):
         """Tests that data and metadata are read correctly"""
-        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base'),
+        kio = KlustaKwikIO(dirname=self.session2 / 'base',
                            sampling_rate=1000.)
         block = kio.read()[0]
         seg = block.segments[0]
@@ -124,9 +108,9 @@ class testRead(unittest.TestCase):
         self.assertTrue(np.all(seg.spiketrains[3].times == np.array([.050,
                                                                      .152])))
 
-    def test2(self):
+    def test_default_cluster_id_0(self):
         """Checks that cluster id autosets to 0 without clu file"""
-        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
+        kio = KlustaKwikIO(dirname=self.session2 / 'base2',
                            sampling_rate=1000.)
         block = kio.read()[0]
         seg = block.segments[0]
@@ -139,18 +123,7 @@ class testRead(unittest.TestCase):
                                                                      0.122,
                                                                      0.228])))
 
-
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-class testWrite(unittest.TestCase):
-    def setUp(self):
-        self.dirname = os.path.join(tempfile.gettempdir(),
-                                    'files_for_testing_neo',
-                                    'klustakwik/test3')
-        if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist: ' +
-                                    self.dirname)
-
-    def test1(self):
+    def test_write_clu_and_fet(self):
         """Create clu and fet files based on spiketrains in a block.
 
         Checks that
@@ -195,71 +168,53 @@ class testWrite(unittest.TestCase):
         st4.annotations['group'] = 2
         segment.spiketrains.append(st4)
 
-        # Create empty directory for writing
-        delete_test_session()
-
         # Create writer with default sampling rate
-        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base1'),
+        kio = KlustaKwikIO(dirname=self.tmp_session / 'base1',
                            sampling_rate=1000.)
         kio.write_block(block)
 
         # Check files were created
         for fn in ['.fet.0', '.fet.1', '.clu.0', '.clu.1']:
-            self.assertTrue(os.path.exists(os.path.join(self.dirname,
-                                                        'base1' + fn)))
+            self.assertTrue((self.tmp_session / ('base1' + fn)).exists())
 
         # Check files contain correct content
         # Spike times on group 0
-        with open(os.path.join(self.dirname, 'base1.fet.0'), mode='r') as f:
+        with open(self.tmp_session / 'base1.fet.0', mode='r') as f:
             data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [0, 2, 4, 6, 1, 3, 11, 106])
 
         # Clusters on group 0
-        with open(os.path.join(self.dirname, 'base1.clu.0'), mode='r') as f:
+        with open(self.tmp_session / 'base1.clu.0', mode='r') as f:
             data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [2, 0, 0, 0, 1, 1, 1, 0])
 
         # Spike times on group 1
-        with open(os.path.join(self.dirname, 'base1.fet.1'), mode='r') as f:
+        with open(self.tmp_session / 'base1.fet.1', mode='r') as f:
             data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [0, 50, 90, 100])
 
         # Clusters on group 1
-        with open(os.path.join(self.dirname, 'base1.clu.1')) as f:
+        with open(self.tmp_session / 'base1.clu.1') as f:
             data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [1, -1, -1, -1])
 
         # Spike times on group 2
-        with open(os.path.join(self.dirname, 'base1.fet.2')) as f:
+        with open(self.tmp_session / 'base1.fet.2') as f:
             data = f.readlines()
             data = [int(d) for d in data]
         self.assertEqual(data, [0, 5, 9])
 
         # Clusters on group 2
-        with open(os.path.join(self.dirname, 'base1.clu.2')) as f:
+        with open(self.tmp_session / 'base1.clu.2') as f:
             data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [1, 0, 0])
 
-        # Empty out test session again
-        delete_test_session()
-
-
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-class testWriteWithFeatures(unittest.TestCase):
-    def setUp(self):
-        self.dirname = os.path.join(tempfile.gettempdir(),
-                                    'files_for_testing_neo',
-                                    'klustakwik/test4')
-        if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist: ' +
-                                    self.dirname)
-
-    def test1(self):
+    def test_write_clu_and_fet_1(self):
         """Create clu and fet files based on spiketrains in a block.
 
         Checks that
@@ -286,71 +241,42 @@ class testWriteWithFeatures(unittest.TestCase):
         st1.annotations['waveform_features'] = wff
         segment.spiketrains.append(st1)
 
-        # Create empty directory for writing
-        if not os.path.exists(self.dirname):
-            os.mkdir(self.dirname)
-        delete_test_session(self.dirname)
-
         # Create writer
-        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
+        kio = KlustaKwikIO(dirname=self.tmp_session / 'base2',
                            sampling_rate=1000.)
         kio.write_block(block)
 
         # Check files were created
         for fn in ['.fet.0', '.clu.0']:
-            self.assertTrue(os.path.exists(os.path.join(self.dirname,
-                                                        'base2' + fn)))
+            self.assertTrue(self.tmp_session / ('base2' + fn))
 
         # Check files contain correct content
-        fi = file(os.path.join(self.dirname, 'base2.fet.0'))
+        with open(self.tmp_session / 'base2.fet.0') as fi:
+            # first line is nbFeatures
+            self.assertEqual(fi.readline(), '2\n')
 
-        # first line is nbFeatures
-        self.assertEqual(fi.readline(), '2\n')
-
-        # Now check waveforms and times are same
-        data = fi.readlines()
-        new_wff = []
-        new_times = []
-        for line in data:
-            line_split = line.split()
-            new_wff.append([float(val) for val in line_split[:-1]])
-            new_times.append(int(line_split[-1]))
-        self.assertEqual(new_times, [2, 4, 6])
-        assert_arrays_almost_equal(wff, np.array(new_wff), .00001)
+            # Now check waveforms and times are same
+            data = fi.readlines()
+            new_wff = []
+            new_times = []
+            for line in data:
+                line_split = line.split()
+                new_wff.append([float(val) for val in line_split[:-1]])
+                new_times.append(int(line_split[-1]))
+            self.assertEqual(new_times, [2, 4, 6])
+            assert_arrays_almost_equal(wff, np.array(new_wff), .00001)
 
         # Clusters on group 0
-        data = file(os.path.join(self.dirname, 'base2.clu.0')).readlines()
-        data = [int(d) for d in data]
-        self.assertEqual(data, [1, 0, 0, 0])
+        with open(self.tmp_session / 'base2.clu.0') as fi:
+            data = fi.readlines()
+            data = [int(d) for d in data]
+            self.assertEqual(data, [1, 0, 0, 0])
 
-        # Now read the features and test same
-        block = kio.read_block()
-        train = block.segments[0].spiketrains[0]
-        assert_arrays_almost_equal(wff, train.annotations['waveform_features'],
-                                   .00001)
-
-        # Empty out test session again
-        delete_test_session(self.dirname)
-
-
-@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-class CommonTests(BaseTestIO, unittest.TestCase):
-    ioclass = KlustaKwikIO
-    entities_to_download = [
-        'klustakwik'
-    ]
-    entities_to_test = [
-        'klustakwik/test2/base',
-        'klustakwik/test2/base2',
-    ]
-
-def delete_test_session(dirname=None):
-    """Removes all file in directory so we can test writing to it"""
-    if dirname is None:
-        dirname = os.path.join(os.path.dirname(__file__),
-                               'files_for_tests/klustakwik/test3')
-    for fi in glob.glob(os.path.join(dirname, '*')):
-        os.remove(fi)
+            # Now read the features and test same
+            block = kio.read_block()
+            train = block.segments[0].spiketrains[0]
+            assert_arrays_almost_equal(wff, train.annotations['waveform_features'],
+                                       .00001)
 
 
 if __name__ == '__main__':

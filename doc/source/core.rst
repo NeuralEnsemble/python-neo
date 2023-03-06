@@ -31,7 +31,7 @@ Container objects
 
 There is a simple hierarchy of containers:
 
-  * :py:class:`Segment`: A container for heterogeneous discrete or continous data sharing a common
+  * :py:class:`Segment`: A container for heterogeneous discrete or continuous data sharing a common
     clock (time basis) but not necessarily the same sampling rate, start time or end time.
     A :py:class:`Segment` can be considered as equivalent to a "trial", "episode", "run",
     "recording", etc., depending on the experimental context.
@@ -165,7 +165,7 @@ the channels on which that neuron spiked::
     # ...
 
 
-Now each putative neuron is represented by a :class:`Group` containing the spiktrains of that neuron
+Now each putative neuron is represented by a :class:`Group` containing the spiketrains of that neuron
 and a view of the signal selecting only those channels from which the spikes were obtained.
 
 

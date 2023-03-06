@@ -1,13 +1,13 @@
 """
 
-Support for intan tech rhd  and rhs files.
+Support for intan tech rhd and rhs files.
 
-This 2 formats are more or less the same but:
+These 2 formats are more or less the same but:
   * some variance in headers.
-  * rhs amplifier is more complexe because the optional DC channel
+  * rhs amplifier is more complex because the optional DC channel
 
 RHS supported version 1.0
-RHD supported version  1.0 1.1 1.2 1.3 2.0
+RHD supported version  1.0 1.1 1.2 1.3 2.0 3.0, 3.1
 
 See:
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
@@ -22,7 +22,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 import numpy as np
 from collections import OrderedDict
-from distutils.version import LooseVersion as V
+from packaging.version import Version as V
 
 
 class IntanRawIO(BaseRawIO):
@@ -333,6 +333,11 @@ def read_rhs(filename):
         if len(channels_by_type[sig_type]) > 0:
             name = {5: 'DIGITAL-IN', 6: 'DIGITAL-OUT'}[sig_type]
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
+           
+    if bool(global_info['notch_filter_mode']) and global_info['major_version'] >= 3:
+        global_info['notch_filter_applied'] = True
+    else:
+        global_info['notch_filter_applied'] = False
 
     return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
 
@@ -345,7 +350,6 @@ rhd_global_header_base = [
     ('major_version', 'int16'),
     ('minor_version', 'int16'),
 ]
-
 
 rhd_global_header_part1 = [
     ('sampling_rate', 'float32'),
@@ -360,7 +364,7 @@ rhd_global_header_part1 = [
     ('desired_upper_bandwidth', 'float32'),
 
     ('notch_filter_mode', 'int16'),
-
+    
     ('desired_impedance_test_frequency', 'float32'),
     ('actual_impedance_test_frequency', 'float32'),
 
@@ -428,20 +432,20 @@ def read_rhd(filename):
 
         version = V('{major_version}.{minor_version}'.format(**global_info))
 
-        # the header size depend on the version :-(
+        # the header size depends on the version :-(
         header = list(rhd_global_header_part1)  # make a copy
 
-        if version >= '1.1':
+        if version >= V('1.1'):
             header = header + rhd_global_header_v11
         else:
             global_info['num_temp_sensor_channels'] = 0
 
-        if version >= '1.3':
+        if version >= V('1.3'):
             header = header + rhd_global_header_v13
         else:
             global_info['eval_board_mode'] = 0
 
-        if version >= '2.0':
+        if version >= V('2.0'):
             header = header + rhd_global_header_v20
         else:
             global_info['reference_channel'] = ''
@@ -466,14 +470,14 @@ def read_rhd(filename):
     sr = global_info['sampling_rate']
 
     # construct the data block dtype and reorder channels
-    if version >= '2.0':
+    if version >= V('2.0'):
         BLOCK_SIZE = 128
     else:
         BLOCK_SIZE = 60  # 256 channels
 
     ordered_channels = []
 
-    if version >= '1.2':
+    if version >= V('1.2'):
         data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
     else:
         data_dtype = [('timestamp', 'uint32', BLOCK_SIZE)]
@@ -544,5 +548,10 @@ def read_rhd(filename):
         if len(channels_by_type[sig_type]) > 0:
             name = {4: 'DIGITAL-IN', 5: 'DIGITAL-OUT'}[sig_type]
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
-
+    
+    if bool(global_info['notch_filter_mode']) and version >= V('3.0'):
+        global_info['notch_filter_applied'] = True
+    else:
+        global_info['notch_filter_applied'] = False
+    
     return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE

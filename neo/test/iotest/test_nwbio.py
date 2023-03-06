@@ -3,8 +3,6 @@
 Tests of neo.io.nwbio
 """
 
-from __future__ import unicode_literals, print_function, division, absolute_import
-
 import os
 import unittest
 from datetime import datetime
@@ -16,6 +14,9 @@ except ImportError:
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import AnalogSignal, SpikeTrain, Event, Epoch, IrregularlySampledSignal, Segment, \
     Block
+
+from neo.rawio.examplerawio import ExampleRawIO
+from neo.io.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy)
 
 try:
     import pynwb
@@ -63,16 +64,18 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
             for seg in blk.segments:  # AnalogSignal objects
 
                 # 3 Neo AnalogSignals
-                a = AnalogSignal(np.random.randn(44, num_chan) * pq.nA,
+                a = AnalogSignal(name='Signal_a %s' % (seg.name),
+                                 signal=np.random.randn(44, num_chan) * pq.nA,
                                  sampling_rate=10 * pq.kHz,
                                  t_start=50 * pq.ms)
-                b = AnalogSignal(np.random.randn(64, num_chan) * pq.mV,
+                b = AnalogSignal(name='Signal_b %s' % (seg.name),
+                                 signal=np.random.randn(64, num_chan) * pq.mV,
                                  sampling_rate=8 * pq.kHz,
                                  t_start=40 * pq.ms)
-                c = AnalogSignal(np.random.randn(33, num_chan) * pq.uA,
+                c = AnalogSignal(name='Signal_c %s' % (seg.name),
+                                 signal=np.random.randn(33, num_chan) * pq.uA,
                                  sampling_rate=10 * pq.kHz,
                                  t_start=120 * pq.ms)
-
                 # 2 Neo IrregularlySampledSignals
                 d = IrregularlySampledSignal(np.arange(7.0) * pq.ms,
                                              np.random.randn(7, num_chan) * pq.mV)
@@ -83,7 +86,8 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
                 # todo: add waveforms
 
                 # 1 Neo Event
-                evt = Event(times=np.arange(0, 30, 10) * pq.ms,
+                evt = Event(name='Event',
+                            times=np.arange(0, 30, 10) * pq.ms,
                             labels=np.array(['ev0', 'ev1', 'ev2']))
 
                 # 2 Neo Epochs
@@ -228,17 +232,17 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
 
         nwbfile = pynwb.NWBHDF5IO(test_file_name, mode="r").read()
 
-        self.assertIsInstance(nwbfile.acquisition["response"], pynwb.icephys.CurrentClampSeries)
-        self.assertIsInstance(nwbfile.stimulus["stimulus"],
+        self.assertIsInstance(nwbfile.acquisition[response.name], pynwb.icephys.CurrentClampSeries)
+        self.assertIsInstance(nwbfile.stimulus[stimulus.name],
                               pynwb.icephys.CurrentClampStimulusSeries)
-        self.assertEqual(nwbfile.acquisition["response"].bridge_balance,
+        self.assertEqual(nwbfile.acquisition[response.name].bridge_balance,
                          response_annotations["nwb:bridge_balance"])
 
         ior = NWBIO(filename=test_file_name, mode='r')
         retrieved_block = ior.read_all_blocks()[0]
 
-        original_response = original_block.segments[0].filter(name="response")[0]
-        retrieved_response = retrieved_block.segments[0].filter(name="response")[0]
+        original_response = original_block.segments[0].filter(name=response.name)[0]
+        retrieved_response = retrieved_block.segments[0].filter(name=response.name)[0]
         for attr_name in ("name", "units", "sampling_rate", "t_start"):
             retrieved_attribute = getattr(retrieved_response, attr_name)
             original_attribute = getattr(original_response, attr_name)
@@ -247,6 +251,62 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
 
         os.remove(test_file_name)
 
+    def test_write_proxy_objects(self):
+        test_file_name = self.local_test_dir / "test_round_trip_with_annotations.nwb"
+
+        # generate dummy IO as basis for ProxyObjects
+        self.proxy_reader = ExampleRawIO(filename='my_filename.fake')
+        self.proxy_reader.parse_header()
+
+        # generate test structure with proxy objects
+        original_block = Block(name='myblock', session_start_time=datetime.now().astimezone(),
+                               session_description=str(test_file_name),
+                               identifier=str(test_file_name))
+        seg = Segment(name='mysegment')
+        original_block.segments.append(seg)
+
+        # create proxy objects
+        proxy_anasig = AnalogSignalProxy(rawio=self.proxy_reader, stream_index=0,
+                                         inner_stream_channels=None, block_index=0, seg_index=0,)
+        proxy_anasig.segment = seg
+        seg.analogsignals.append(proxy_anasig)
+
+        proxy_sptr = SpikeTrainProxy(rawio=self.proxy_reader, spike_channel_index=0, block_index=0,
+                                     seg_index=0)
+        proxy_sptr.segment = seg
+        seg.spiketrains.append(proxy_sptr)
+
+        proxy_event = EventProxy(rawio=self.proxy_reader, event_channel_index=0, block_index=0,
+                                 seg_index=0)
+        proxy_event.segment = seg
+        seg.events.append(proxy_event)
+
+        proxy_epoch = EpochProxy(rawio=self.proxy_reader, event_channel_index=1, block_index=0,
+                                 seg_index=0)
+        proxy_epoch.segment = seg
+        seg.epochs.append(proxy_epoch)
+
+        original_block.create_relationship()
+
+        iow = NWBIO(filename=test_file_name, mode='w')
+
+        # writing data via proxyobjects
+        iow.write_all_blocks([original_block])
+
+        # checking written data
+        ior = NWBIO(filename=test_file_name, mode='r')
+        retrieved_block = ior.read_all_blocks()[0]
+
+        for original_segment, retrieved_segment in zip(original_block.segments,
+                                                       retrieved_block.segments):
+            assert_array_equal(original_segment.analogsignals[0].load().magnitude,
+                               retrieved_segment.analogsignals[0].magnitude)
+            assert_array_equal(original_segment.spiketrains[0].load().magnitude,
+                               retrieved_segment.spiketrains[0].magnitude)
+            assert_array_equal(original_segment.events[0].load().magnitude,
+                               retrieved_segment.events[0].magnitude)
+            assert_array_equal(original_segment.epochs[0].load().magnitude,
+                               retrieved_segment.epochs[0].magnitude)
 
 if __name__ == "__main__":
     if HAVE_PYNWB:
