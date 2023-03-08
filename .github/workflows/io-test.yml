@@ -51,11 +51,6 @@ jobs:
           activate-environment: neo-test-env
           python-version: ${{ matrix.python-version }}
 
-      - name: Get current year-month
-        id: date
-        run: |
-          echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-
       - name: Get current dependencies hash
         id: dependencies
         run: |
