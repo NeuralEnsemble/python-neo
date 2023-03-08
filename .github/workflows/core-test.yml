@@ -11,9 +11,6 @@ on:
   # run checks on any change of master, including merge of PRs
   push:
     branches: [master]
-    paths:
-      - 'neo/core/**'
-      - 'pyproject.toml'
 
 concurrency: # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
