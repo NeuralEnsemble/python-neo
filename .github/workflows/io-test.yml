@@ -42,7 +42,7 @@ jobs:
         run: |
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - uses: actions/cache/restore@v3
         # Loading cache of ephys_testing_dataset
         id: cache-datasets
         with:
@@ -59,7 +59,7 @@ jobs:
         run: |
           echo "hash=${{hashFiles('**/pyproject.toml', '**/environment_testing.yml')}}" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - uses: actions/cache/restore@v3
         # the cache for python package is reset:
         #   * every month
         #   * when package dependencies change
