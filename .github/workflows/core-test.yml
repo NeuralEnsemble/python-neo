@@ -55,8 +55,8 @@ jobs:
               fi
             done
 
-      - name: Core changed?
-        run: echo "Core changed == ${{steps.modules-changed.outputs.CORE_CHANGED == 'true'}}"
+        - name: Core changed?
+          run: echo "Core changed == ${{steps.modules-changed.outputs.CORE_CHANGED == 'true'}}"
 
         - name: Install numpy ${{ matrix.numpy-version }}
           if: ${{ steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
