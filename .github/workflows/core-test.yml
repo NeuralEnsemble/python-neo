@@ -58,6 +58,7 @@ jobs:
                 echo "CORE_CHANGED=true" >> $GITHUB_OUTPUT
               fi
             done
+          shell: bash  # Necessary for pipeline to work on windows
 
         - name: Core changed?
           run: echo "Core changed == ${{steps.modules-changed.outputs.CORE_CHANGED == 'true'}}"
