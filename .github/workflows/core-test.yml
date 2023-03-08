@@ -9,6 +9,10 @@ on:
   push:
     branches: [master]
 
+concurrency: # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   multi-os-python-numpy:
     runs-on: ${{ matrix.os }}
