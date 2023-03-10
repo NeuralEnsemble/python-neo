@@ -1,6 +1,6 @@
 [project]
 name = "neo"
-version = "0.12.1.dev0"
+version = "0.13.0.dev0"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
