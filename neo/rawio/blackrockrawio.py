@@ -108,6 +108,9 @@ class BlackrockRawIO(BaseRawIO):
             If 'all', then all nsX will be loaded.
             Contrary to previous version of the IO  (<0.7), nsx_to_load
             must be set at the init before parse_header().
+        load_nev (bool):
+            Load (or not) events/spikes by ignoring or not the nev file.
+            Default: True
 
     Examples:
         >>> reader = BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
@@ -126,7 +129,7 @@ class BlackrockRawIO(BaseRawIO):
     rawmode = 'multi-file'
 
     def __init__(self, filename=None, nsx_override=None, nev_override=None,
-                 nsx_to_load=None, verbose=False):
+                 nsx_to_load=None, load_nev=True, verbose=False):
         """
         Initialize the BlackrockIO class.
         """
@@ -172,6 +175,9 @@ class BlackrockRawIO(BaseRawIO):
                 self._avail_files[ext] = True
                 if ext.startswith('ns'):
                     self._avail_nsx.append(int(ext[-1]))
+        
+        if not load_nev:
+            self._avail_files['nev'] = False
 
         if not self._avail_files['nev'] and not self._avail_nsx:
             raise IOError("No Blackrock files found in specified path")

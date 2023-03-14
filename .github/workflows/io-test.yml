@@ -19,7 +19,7 @@ jobs:
       matrix:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", ]
-        python-version: ['3.8', ]
+        python-version: ['3.9', ]
     defaults:
       # by default run in bash mode (required for conda usage)
       run:
@@ -37,7 +37,7 @@ jobs:
         # the key depend on the last commit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: ephy_testing_data_hash
         run: |
-          echo "latest_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> GITHUB_OUTPUT
+          echo "latest_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
 
       - uses: actions/cache@v3
         # Loading cache of ephys_testing_dataset
@@ -59,7 +59,7 @@ jobs:
         id: cache-conda-env
         with:
           path: /usr/share/miniconda/envs/neo-test-env
-          key: ${{ runner.os }}-conda-env-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/requirements_testing.txt') }}-${{ hashFiles('**/environment_testing.txt') }}-${{ steps.date.outputs.date }}
+          key: ${{ runner.os }}-conda-env-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
 
       - name: Install testing dependencies
         # testing environment is only installed if no cache was found
@@ -75,6 +75,7 @@ jobs:
       - name: Install neo
         run: |
           pip install --upgrade -e .
+          pip install .[test]
 
       - name: Test with pytest
         run: |

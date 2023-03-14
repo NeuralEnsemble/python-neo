@@ -37,7 +37,7 @@ from ..core import (Block, Segment, AnalogSignal,
                     IrregularlySampledSignal, Epoch, Event, SpikeTrain,
                     ImageSequence, ChannelView, Group)
 from ..io.proxyobjects import BaseProxy
-from ..version import version as neover
+from .. import __version__ as neover
 
 
 datetime_types = (date, time, datetime)
