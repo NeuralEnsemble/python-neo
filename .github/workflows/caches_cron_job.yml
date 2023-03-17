@@ -15,8 +15,6 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       fail-fast: true
-    matrix:
-      python-version: [ '3.9',]
     defaults:
       # by default run in bash mode (required for conda usage)
       run:
@@ -51,7 +49,7 @@ jobs:
         if: steps.cache-venv.outputs.cache-hit != 'true'
         with:
           activate-environment: neo-test-env
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.9
 
       - name: Create the conda environment to be cached
         if: steps.cache-venv.outputs.cache-hit != 'true'
