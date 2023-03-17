@@ -46,13 +46,13 @@ jobs:
 
       # activate environment if not restored from cache
       - uses: conda-incubator/setup-miniconda@v2
-        if: steps.cache-venv.outputs.cache-hit != 'true'
+        if: steps.cache-conda-env.outputs.cache-hit != 'true'
         with:
           activate-environment: neo-test-env
           python-version: 3.9
 
       - name: Create the conda environment to be cached
-        if: steps.cache-venv.outputs.cache-hit != 'true'
+        if: steps.cache-conda-env.outputs.cache-hit != 'true'
         # create conda env, configure git and install pip, neo and test dependencies from master
         # for PRs that change dependencies, this environment will be updated in the test workflow
         run: |
