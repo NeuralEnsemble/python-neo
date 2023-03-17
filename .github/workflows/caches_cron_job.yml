@@ -98,6 +98,7 @@ jobs:
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         # Download repository and also fetch data
         run: |
+          cd ~
           datalad install --recursive --get-data https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
 
       - name: Show size of the cache to assert data is downloaded
