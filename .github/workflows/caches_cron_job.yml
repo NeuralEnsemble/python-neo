@@ -1,4 +1,4 @@
-name: Create caches for gin ecephys data and virtual env
+name: Create caches for ephy_testing_data and conda env
 
 on:
   workflow_dispatch: # Workflow can be triggered manually via GH actions webinterface
