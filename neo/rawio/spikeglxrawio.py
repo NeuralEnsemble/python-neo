@@ -40,9 +40,9 @@ This reader handle:
 imDatPrb_type=1 (NP 1.0)
 imDatPrb_type=21 (NP 2.0, single multiplexed shank)
 imDatPrb_type=24 (NP 2.0, 4-shank)
-imDatPrb_type=1030 (NP 1.0-NHP 45mm SOI90 - NHP long 90um wide)
-imDatPrb_type=1031 (NP 1.0-NHP 45mm SOI125 - NHP long 125um wide)
-imDatPrb_type=1032 (NP 1.0-NHP 45mm SOI115 / 125 linear - NHP long 125um wide)
+imDatPrb_type=1030 (NP 1.0-NHP 45mm SOI90 - NHP long 90um wide, staggered contacts)
+imDatPrb_type=1031 (NP 1.0-NHP 45mm SOI125 - NHP long 125um wide, staggered contacts)
+imDatPrb_type=1032 (NP 1.0-NHP 45mm SOI115 / 125 linear - NHP long 125um wide, linear contacts)
 imDatPrb_type=1022 (NP 1.0-NHP 25mm - NHP medium)
 imDatPrb_type=1015 (NP 1.0-NHP 10mm - NHP short)
 
