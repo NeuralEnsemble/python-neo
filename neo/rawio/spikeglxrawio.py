@@ -40,6 +40,11 @@ This reader handle:
 imDatPrb_type=1 (NP 1.0)
 imDatPrb_type=21 (NP 2.0, single multiplexed shank)
 imDatPrb_type=24 (NP 2.0, 4-shank)
+imDatPrb_type=1030 (NP 1.0-NHP 45mm SOI90 - NHP long 90um wide, staggered contacts)
+imDatPrb_type=1031 (NP 1.0-NHP 45mm SOI125 - NHP long 125um wide, staggered contacts)
+imDatPrb_type=1032 (NP 1.0-NHP 45mm SOI115 / 125 linear - NHP long 125um wide, linear contacts)
+imDatPrb_type=1022 (NP 1.0-NHP 25mm - NHP medium)
+imDatPrb_type=1015 (NP 1.0-NHP 10mm - NHP short)
 
 Author : Samuel Garcia
 Some functions are copied from Graham Findlay
@@ -380,7 +385,7 @@ def extract_stream_info(meta_file, meta):
         # metad['imroTbl'] contain two gain per channel  AP and LF
         # except for the last fake channel
         per_channel_gain = np.ones(num_chan, dtype='float64')
-        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0':
+        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0' or meta['imDatPrb_type'] in ('1015', '1022', '1030', '1031', '1032'):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec
@@ -404,7 +409,7 @@ def extract_stream_info(meta_file, meta):
             channel_gains = gain_factor * per_channel_gain * 1e6
         else:
             raise NotImplementedError('This meta file version of spikeglx'
-                                      'is not implemented')
+                                      ' is not implemented')
     else:
         stream_kind = ''
         stream_name = device
