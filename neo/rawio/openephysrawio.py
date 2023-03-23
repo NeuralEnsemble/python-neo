@@ -10,7 +10,6 @@ Author: Samuel Garcia
 
 import os
 import re
-import warnings
 
 import numpy as np
 
@@ -69,9 +68,10 @@ class OpenEphysRawIO(BaseRawIO):
     extensions = ['continuous', 'openephys', 'spikes', 'events', 'xml']
     rawmode = 'one-dir'
 
-    def __init__(self, dirname=''):
+    def __init__(self, dirname='', ignore_timestamps_errors=False):
         BaseRawIO.__init__(self)
         self.dirname = dirname
+        self._ignore_timestamps_errors = ignore_timestamps_errors
 
     def _source_name(self):
         return self.dirname
@@ -116,8 +116,8 @@ class OpenEphysRawIO(BaseRawIO):
 
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
-                if not np.all(diff == RECORD_SIZE):
-                    warnings.warn(
+                if not np.all(diff == RECORD_SIZE) and not self._ignore_timestamps_errors:
+                    raise Exception(
                         'Not continuous timestamps for {}. ' \
                         'Maybe because recording was paused/stopped.'.format(continuous_filename)
                     )
