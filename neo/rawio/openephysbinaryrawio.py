@@ -211,17 +211,18 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         labels = d["labels"]
                         rising = np.where(states > 0)[0]
                         falling = np.where(states < 0)[0]
-                        # make sure first event is rising and last is falling
-                        if states[0] < 0:
-                            falling = falling[1:]
-                        if states[-1] > 0:
-                            rising = rising[:-1]
 
-                        if len(rising) == len(falling):
-                            durations = timestamps[falling] - timestamps[rising]
-                        else:
-                            # something wrong if we get here
-                            durations = None
+                        # infer durations
+                        durations = None
+                        if len(states) > 0:
+                            # make sure first event is rising and last is falling
+                            if states[0] < 0:
+                                falling = falling[1:]
+                            if states[-1] > 0:
+                                rising = rising[:-1]
+
+                            if len(rising) == len(falling):
+                                durations = timestamps[falling] - timestamps[rising]
 
                         d["rising"] = rising
                         d["timestamps"] = timestamps[rising]
