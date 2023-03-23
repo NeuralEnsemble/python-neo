@@ -9,6 +9,9 @@ on:
   push:
     branches: [master]
 
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
@@ -35,34 +38,44 @@ jobs:
 
       - name: Get ephy_testing_data current head hash
         # the key depend on the last commit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-        id: ephy_testing_data_hash
+        id: ephy_testing_data
         run: |
-          echo "latest_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - uses: actions/cache/restore@v3
         # Loading cache of ephys_testing_dataset
         id: cache-datasets
         with:
           path: ~/ephy_testing_data
-          key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data_hash.outputs.latest_hash }}
+          key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data.outputs.dataset_hash }}
+          restore-keys: ${{ runner.os }}-datasets-
 
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: neo-test-env
           python-version: ${{ matrix.python-version }}
-          clean-patched-environment-file: false
 
-      - uses: actions/cache@v3
+      - name: Get current dependencies hash
+        id: dependencies
+        run: |
+          echo "hash=${{hashFiles('**/pyproject.toml', '**/environment_testing.yml')}}" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache/restore@v3
         # the cache for python package is reset:
         #   * every month
-        #   * when requirements/requirements_testing change
+        #   * when package dependencies change
         id: cache-conda-env
         with:
           path: /usr/share/miniconda/envs/neo-test-env
-          key: ${{ runner.os }}-conda-env-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
+          key: ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
+          # restore-keys match any key that starts with the restore-key
+          restore-keys: |
+            ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-
+            ${{ runner.os }}-conda-env-
 
       - name: Install testing dependencies
-        # testing environment is only installed if no cache was found
+        # testing environment is only created from yml if no cache was found
+        # restore-key hits should result in `cache-hit` == 'false'
         if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
           conda env update neo-test-env --file environment_testing.yml
@@ -72,10 +85,19 @@ jobs:
           git config --global user.email "neo_ci@fake_mail.com"
           git config --global user.name "neo CI"
 
-      - name: Install neo
+      - name: Install neo including dependencies
+        # installation with dependencies is only required if no cache was found
+        # restore-key hits should result in `cache-hit` == 'false'
+        if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
           pip install --upgrade -e .
           pip install .[test]
+
+      - name: Install neo without dependencies
+        # only installing neo version to test as dependencies should be in cached conda env already
+        if: steps.cache-conda-env.outputs.cache-hit == 'true'
+        run: |
+          pip install --no-dependencies -e .
 
       - name: Test with pytest
         run: |

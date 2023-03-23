@@ -293,6 +293,10 @@ class NlxHeader(OrderedDict):
             # Cheetah64
             elif self['HardwareSubSystemType'] == 'Cheetah64':
                 return 'CHEETAH64'
+            
+            # RawDataFile
+            elif self['HardwareSubSystemType'] == 'RawDataFile':
+                return 'RAWDATAFILE'           
 
             else:
                 return 'UNKNOWN'
