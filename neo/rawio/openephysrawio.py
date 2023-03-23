@@ -117,7 +117,7 @@ class OpenEphysRawIO(BaseRawIO):
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
                 if not np.all(diff == RECORD_SIZE) and not self._ignore_timestamps_errors:
-                    raise Exception(
+                    raise ValueError(
                         'Not continuous timestamps for {}. ' \
                         'Maybe because recording was paused/stopped.'.format(continuous_filename)
                     )
