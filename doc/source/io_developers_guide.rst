@@ -51,8 +51,8 @@ Tests
 To use these you need to upload some sample data files at `gin-gnode`_. They will be publicly accessible for testing Neo.
 These tests:
 
-  * check the compliance with the schema: hierarchy, attribute types, ...
-  * For IO modules confirms it is able to both write and read data; they compare a generated dataset with the same data after a write/read cycle.
+  * check for compliance with the schema: hierarchy, attribute types, ...
+  * For IO modules confirms they able to both write and read data; they compare a generated dataset with the same data after a write/read cycle.
 
 The test scripts download all files from `gin-gnode`_ and store them locally in ``/tmp/files_for_tests/``.
 Subsequent test runs use the previously downloaded files, rather than trying to download them each time.
