@@ -22,9 +22,9 @@ For read/write classes you can mix the two levels neo.rawio for reading and neo.
 
 Recipe to develop an IO module for a new data format:
     1. Fully understand the object model. See :doc:`core`. If in doubt ask the `mailing list`_.
-    2. Fully understand :mod:`neo.rawio.examplerawio`, It is a fake IO to explain the API. If in doubt ask the list.
+    2. Fully understand :mod:`neo.rawio.examplerawio`. It is a fake IO to explain the API. If in doubt ask the list.
     3. Copy/paste ``examplerawio.py`` and choose clear file and class names for your IO.
-    4. implement all methods that **raise(NotImplementedError)** in :mod:`neo.rawio.baserawio`. Return None when the object is not supported (spike/waveform)
+    4. Implement all methods that **raise(NotImplementedError)** in :mod:`neo.rawio.baserawio`. Return None when the object is not supported (spike/waveform)
     5. Write good docstrings. List dependencies, including minimum version numbers.
     6. Add your class to :mod:`neo.rawio.__init__`. Keep imports inside ``try/except`` for dependency reasons.
     7. Create a class in :file:`neo/io/`
@@ -52,9 +52,9 @@ To use these you need to upload some sample data files at `gin-gnode`_. They wil
 These tests:
 
   * check the compliance with the schema: hierarchy, attribute types, ...
-  * For IO modules able to both write and read data, it compares a generated dataset with the same data after a write/read cycle.
+  * For IO modules confirms it is able to both write and read data; they compare a generated dataset with the same data after a write/read cycle.
 
-The test scripts download all files from `gin-gnode`_ and stores them locally in ``/tmp/files_for_tests/``.
+The test scripts download all files from `gin-gnode`_ and store them locally in ``/tmp/files_for_tests/``.
 Subsequent test runs use the previously downloaded files, rather than trying to download them each time.
 
 Each test must have at least one class that inherits ``BaseTestRawIO`` and that has 3 attributes:
@@ -70,7 +70,7 @@ Here is an example test script taken from the distribution: :file:`test_axonrawi
 Logging
 =======
 
-All IO classes by default have logging using the standard :mod:`logging` module: already set up.
+All IO classes by default have logging using the standard :mod:`logging` module already set up.
 The logger name is the same as the fully qualified class name, e.g. :class:`neo.io.nixio.NixIO`.
 The :attr:`class.logger` attribute holds the logger for easy access.
 
