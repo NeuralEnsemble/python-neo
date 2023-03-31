@@ -314,8 +314,7 @@ class NIXRawIO(BaseRawIO):
                             stdict['waveforms'] = waveforms
                         else:
                             stdict['waveforms'] = None
-                        # assume one spiketrain one waveform feature object
-                        st_idx += 1
+                    st_idx += 1
 
         self.header = {}
         self.header['nb_block'] = 1
