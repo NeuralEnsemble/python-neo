@@ -217,6 +217,10 @@ class NIXRawIO(BaseRawIO):
                             if len(unit_sources) == 1:
                                 unit_id = unit_sources[0].name
 
+                            elif len(unit_groups) == 0:
+                                warnings.warn('No unit information found. Using default unit id.')
+                                unit_id = default_unit_id
+
                             elif len(unit_sources) != 1:
                                 raise ValueError('Ambiguous or missing unit assignment detected. '
                                                  'Use `autogenerate_unit_ids=True` to ignore '
@@ -230,7 +234,11 @@ class NIXRawIO(BaseRawIO):
                             if len(unit_groups) == 1:
                                 unit_id = unit_groups[0].metadata.props['neo_name'].values[0]
 
-                            elif len(unit_groups) != 1:
+                            elif len(unit_groups) == 0:
+                                warnings.warn('No unit information found. Using default unit id.')
+                                unit_id = default_unit_id
+
+                            elif len(unit_groups) > 1:
                                 raise ValueError('Ambiguous or missing unit assignment detected. '
                                                  'Use `autogenerate_unit_ids=True` to ignore '
                                                  'unit_ids in nix file and regenerate new ids.')
