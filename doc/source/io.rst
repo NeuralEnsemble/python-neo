@@ -114,7 +114,7 @@ Read a time slice of Segment
 
 Some objects support the ``time_slice`` argument in ``read_segment()``.
 This is useful to read only a subset of a dataset clipped in time.
-By default  ``time_slice=None`` meaning load everything.
+By default  ``time_slice=None`` will load everything.
 
 This reads everything::
 
@@ -130,7 +130,7 @@ This reads only the first 5 seconds::
 Lazy option and proxy objects
 =============================
 
-In some cases you may not want to load everything in memory because it could be too big.
+In some cases you may not want to load everything in memory (RAM) because it could be too big.
 For this scenario, some IOs implement ``lazy=True/False``.
 Since neo 0.7, a new lazy system has been added for some IO modules (all IO classes that inherit from rawio).
 To know if a class supports lazy mode use ``ClassIO.support_lazy``.
@@ -144,12 +144,12 @@ These proxy objects contain metadata (name, sampling_rate, id, ...) so they can 
 but they do not contain any array-like data.
 All proxy objects contain a ``load()`` method to postpone the real load of array like data.
 
-Further more the  ``load()`` method has a ``time_slice`` argument to load only a slice
+Furthermore the  ``load()`` method has a ``time_slice`` argument to load only a slice
 from the file. In this way the consumption of memory can be finely controlled.
 
 
 Here are two examples that read a dataset, extract sections of the signal based on recorded events,
-and averages the sections.
+and average the sections.
 
 The first example is without lazy mode, so it consumes more memory::
 
@@ -178,7 +178,7 @@ The second example uses lazy mode, so it consumes less memory::
     apply_my_fancy_average(all_sig_chunks)
 
 In addition to ``time_slice``, AnalogSignalProxy supports the ``channel_indexes`` argument.
-This allows loading only a subset of channels. This is useful where the channel count is very high.
+This allows loading only a subset of channels. This is useful when the channel count is very high.
 
  .. TODO: add something about magnitude mode when implemented for all objects.
 
@@ -295,7 +295,7 @@ For more complex logging, please see the documentation for the logging_ module.
 
 .. note:: If you wish to implement more advanced logging as describe in the documentation for the logging_ module or elsewhere on the internet, please do so before calling any :mod:`neo` functions or initializing any :mod:`neo` classes.
           This is because the default handler is created when :mod:`neo` is imported, but it is not attached to the :mod:`neo` logger until a class that uses logging is initialized or a function that uses logging is called.
-          Further, the handler is only attached if there are no handlers already attached to the root logger or the :mod:`neo` logger, so adding your own logger will override the default one.
+          Furthermore, the handler is only attached if there are no handlers already attached to the root logger or the :mod:`neo` logger, so adding your own logger will override the default one.
           Additional functions and/or classes may get logging during bugfix releases, so code relying on particular modules not having logging may break at any time without warning.
 
 .. _`logging`: https://docs.python.org/3/library/logging.html
