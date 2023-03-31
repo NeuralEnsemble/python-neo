@@ -146,7 +146,7 @@ example can be copied and pasted as-is.
 The documentation is written in `reStructuredText`_, using the `Sphinx`_
 documentation system. Any mention of another Neo module, class, attribute,
 method, or function should be properly marked up so automatic
-links can be generated.  The same goes for quantities or numpy.
+links can be generated.  The same goes for quantities or NumPy.
 
 To build the documentation::
 
