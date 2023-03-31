@@ -15,7 +15,7 @@ For performance and memory consumption reasons a new layer has been added to Neo
 In brief:
     * **neo.io** is the user-oriented read/write layer. Reading consists of getting a tree
       of Neo objects from a data source (file, url, or directory).
-      When  reading, all Neo objects are correctly scaled to the correct units.
+      When  reading, all Neo objects are scaled to the correct units.
       Writing consists of making a set of Neo objects persistent in a file format.
     * **neo.rawio** is a low-level layer for reading data only. Reading consists of getting
       NumPy buffers (often int16/int64) of signals/spikes/events.
@@ -34,9 +34,9 @@ also available in :mod:`neo.io`.
 
 Possible uses of the :mod:`neo.rawio` API are:
     * fast reading chunks of signals in int16 and do the scaling of units (uV)
-      on a GPU while scaling the zoom. This should improve bandwidth HD to RAM
-      and RAM to GPU memory.
-    * load only some small chunk of data for heavy computations. For instance
+      on a GPU while scaling the zoom. This should improve bandwidth from HD/SSD to RAM
+      and from RAM to GPU memory.
+    * load only a small chunk of data for heavy computations. For instance
       the spike sorting module tridesclous_ does this.
 
 
@@ -114,7 +114,7 @@ Read signal chunks of data and scale them::
 
 
 There are 3 ways to select a subset of channels: by index (0 based), by id or by name.
-By index is unambiguous 0 to n-1 (included), whereas for some IOs channel_names
+By index is unambiguous 0 to n-1 (inclusive), whereas for some IOs channel_names
 (and sometimes channel_ids) have no guarantees to
 be unique. In such cases, using names or ids may raise an error.
 
