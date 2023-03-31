@@ -451,8 +451,7 @@ class NIXRawIO(BaseRawIO):
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index,
                               t_start, t_stop):
-        block = self.unit_list['blocks'][block_index]
-        segment = block['segments'][seg_index]
+        segment = self.unit_list_by_segment[seg_index]
         spike_dict = segment['spiketrains']
         spike_timestamps = spike_dict[unit_index]
         spike_timestamps = np.transpose(spike_timestamps)
@@ -471,7 +470,7 @@ class NIXRawIO(BaseRawIO):
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
                                  t_start, t_stop):
         # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
-        seg = self.unit_list['blocks'][block_index]['segments'][seg_index]
+        seg = self.unit_list_by_segment[seg_index]
         waveforms = seg['spiketrains_unit'][unit_index]['waveforms']
         if not waveforms:
             return None
