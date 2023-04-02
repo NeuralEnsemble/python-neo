@@ -54,7 +54,7 @@ These tests:
   * check for compliance with the schema: hierarchy, attribute types, ...
   * For IO modules confirm they able to both write and read data; they compare a generated dataset with the same data after a write/read cycle.
 
-The test scripts download all files from `gin-gnode`_ and store them locally in ``/tmp/files_for_tests/``.
+The test scripts download all files from `gin-gnode`_ and store them locally in ``<home>/ 'ephy_testing_data'``.
 Subsequent test runs use the previously downloaded files, rather than trying to download them each time.
 
 Each test must have at least one class that inherits ``BaseTestRawIO`` and that has 3 attributes:
