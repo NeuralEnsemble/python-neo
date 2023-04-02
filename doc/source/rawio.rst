@@ -15,7 +15,7 @@ For performance and memory consumption reasons a new layer has been added to Neo
 In brief:
     * **neo.io** is the user-oriented read/write layer. Reading consists of getting a tree
       of Neo objects from a data source (file, url, or directory).
-      When  reading, all Neo objects are scaled to the correct units.
+      When reading, all Neo objects are scaled to the correct units.
       Writing consists of making a set of Neo objects persistent in a file format.
     * **neo.rawio** is a low-level layer for reading data only. Reading consists of getting
       NumPy buffers (often int16/int64) of signals/spikes/events.
