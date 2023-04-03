@@ -571,7 +571,7 @@ def read_rhd(filename):
         # dig signals and process them at the same time
         if len(channels_by_type[sig_type]) > 0:
             name = {4: 'DIGITAL-IN', 5: 'DIGITAL-OUT'}[sig_type]
-            chan_info = channels_by_type[sig_type]
+            chan_info = channels_by_type[sig_type][0]
             chan_info['native_channel_name'] = name # overwite to allow memmap to work
             chan_info['sampling_rate'] = sr
             chan_info['units'] = 'TTL' # arbitrary units so I did TTL for the logic
