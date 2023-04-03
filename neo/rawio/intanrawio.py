@@ -27,7 +27,31 @@ from packaging.version import Version as V
 
 class IntanRawIO(BaseRawIO):
     """
-
+    Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
+    check for the file extension and will gather the header information based on the
+    extension. Additionally it functions with RHS v 1.0 and RHD 1.0, 1.1, 1.2, 1.3, 2.0, 
+    3.0, and 3.1 files. 
+    
+    Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D' 
+    depending on the port in which they were recorded along with the following
+    additional channels.
+    
+    1: 'RHD2000 auxiliary input channel',
+    2: 'RHD2000 supply voltage channel',
+    3: 'USB board ADC input channel',
+    4: 'USB board digital input channel',
+    5: 'USB board digital output channel'
+    
+    Due to the structure of the digital input and output 
+    channels these can be accessed as one long vector where the `digital-in` channel
+    is given by the magnitude of the nonzero values (e.g. channel 1: array of 0s, 1s, 
+    channel 2: array of 0s, 2s, etc).
+    
+    Parameters
+    ===============
+    filename: str of filename or full filepath
+    
+    
     """
     extensions = ['rhd', 'rhs']
     rawmode = 'one-file'
@@ -543,10 +567,17 @@ def read_rhd(filename):
     # 4: USB board digital input channel
     # 5: USB board digital output channel
     for sig_type in [4, 5]:
-        # at the moment theses channel are not in sig channel list
-        # but they are in the raw memamp
+        # Now these are included so that user can obtain the 
+        # dig signals and process them at the same time
         if len(channels_by_type[sig_type]) > 0:
             name = {4: 'DIGITAL-IN', 5: 'DIGITAL-OUT'}[sig_type]
+            chan_info = channels_by_type[sig_type]
+            chan_info['native_channel_name'] = name # overwite to allow memmap to work
+            chan_info['sampling_rate'] = sr
+            chan_info['units'] = 'TTL' # arbitrary units so I did TTL for the logic
+            chan_info['gain'] = 1.0
+            chan_info['offset'] = 0.0
+            ordered_channels.append(chan_info)
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
     
     if bool(global_info['notch_filter_mode']) and version >= V('3.0'):
