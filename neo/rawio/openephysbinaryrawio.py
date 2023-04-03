@@ -54,7 +54,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     The current implementation does not handle spiking data, this will be added upon user request
 
     """
-    extensions = []
+    extensions = ['xml', 'oebin', 'txt', 'dat', 'npy']
     rawmode = 'one-dir'
 
     def __init__(self, dirname='', load_sync_channel=False, experiment_names=None):
@@ -162,7 +162,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 evt_channel_type = "epoch"
             else:
                 evt_channel_type = "event"
-            event_channels.append((d['channel_name'], stream_ind, evt_channel_type))
+            event_channels.append((d['channel_name'], d['channel_name'], evt_channel_type))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # create memmap for events
@@ -205,23 +205,24 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         raise ValueError(f'There is no possible labels for this event: {stream_name}')
 
                     # # If available, use 'states' to compute event duration
-                    if 'states' in d:
+                    if 'states' in d and d["states"].size:
                         states = d["states"]
                         timestamps = d["timestamps"]
                         labels = d["labels"]
                         rising = np.where(states > 0)[0]
                         falling = np.where(states < 0)[0]
-                        # make sure first event is rising and last is falling
-                        if states[0] < 0:
-                            falling = falling[1:]
-                        if states[-1] > 0:
-                            rising = rising[:-1]
 
-                        if len(rising) == len(falling):
-                            durations = timestamps[falling] - timestamps[rising]
-                        else:
-                            # something wrong if we get here
-                            durations = None
+                        # infer durations
+                        durations = None
+                        if len(states) > 0:
+                            # make sure first event is rising and last is falling
+                            if states[0] < 0:
+                                falling = falling[1:]
+                            if states[-1] > 0:
+                                rising = rising[:-1]
+
+                            if len(rising) == len(falling):
+                                durations = timestamps[falling] - timestamps[rising]
 
                         d["rising"] = rising
                         d["timestamps"] = timestamps[rising]

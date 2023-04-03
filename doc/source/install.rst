@@ -16,8 +16,8 @@ You can install the latest published version of Neo and its dependencies using::
 Dependencies
 ------------
 
-    * Python_ >= 3.7
-    * numpy_ >= 1.18.5
+    * Python_ >= 3.8
+    * numpy_ >= 1.19.5
     * quantities_ >= 0.12.1
 
 Certain IO modules have additional dependencies. If these are not satisfied,

@@ -1,3 +1,0 @@
-packaging
-numpy>=1.18.5
-quantities>=0.12.1

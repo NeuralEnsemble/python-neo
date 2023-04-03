@@ -37,7 +37,7 @@ from ..core import (Block, Segment, AnalogSignal,
                     IrregularlySampledSignal, Epoch, Event, SpikeTrain,
                     ImageSequence, ChannelView, Group)
 from ..io.proxyobjects import BaseProxy
-from ..version import version as neover
+from .. import __version__ as neover
 
 
 datetime_types = (date, time, datetime)
@@ -630,7 +630,7 @@ class NixIO(BaseIO):
         metadata["neo_name"] = neoname
         nixblock.definition = block.description
         if block.rec_datetime:
-            nix_rec_dt = int(block.rec_datetime.strftime("%s"))
+            nix_rec_dt = int(block.rec_datetime.timestamp())
             nixblock.force_created_at(nix_rec_dt)
         if block.file_datetime:
             fdt, annotype = dt_to_nix(block.file_datetime)

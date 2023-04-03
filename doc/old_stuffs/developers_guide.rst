@@ -38,16 +38,15 @@ a GitHub account and then set to watch the repository at `GitHub Repository`_
 Requirements
 ------------
 
-    * Python_ 3.7 or later
-    * numpy_ >= 1.11.0
-    * quantities_ >= 0.12.1
-    * nose_ >= 1.1.2 (for running tests)
+    * Python_ 3.8 or later
+    * numpy_ >= 1.19.5
+    * quantities_ >= 0.14.1
+    * joblib >= 1.0.0
+    * pytest (for running tests)
     * Sphinx_ (for building documentation)
-    * (optional) coverage_ >= 2.85 (for measuring test coverage)
-    * (optional) scipy >= 0.12 (for MatlabIO)
-    * (optional) h5py >= 2.5 (for KwikIO)
-    * (optional) nixio (for NixIO)
-    * (optional) pillow (for TiffIO)
+
+There are many optional dependencies for different IO modules (see below).
+If you don't install these, tests for those modules will be skipped.
 
 We strongly recommend you develop within a virtual environment (from virtualenv, venv or conda).
 
@@ -65,26 +64,20 @@ To get a local copy of the repository::
     $ git clone git@github.com:<username>/python-neo.git
 
 Now you need to make sure that the ``neo`` package is on your PYTHONPATH.
-You can do this either by installing Neo::
+You can do this by installing Neo with the *editable* option,
+which avoids reinstalling when there are changes in the code::
 
     $ cd python-neo
-    $ python3 setup.py install
+    $ pip install -e .
 
-(if you do this, you will have to re-run ``setup.py install`` any time you make
-changes to the code) *or* by creating symbolic links from somewhere on your
-PYTHONPATH, for example::
+To install all dependencies needed for testing, including optional dependencies
+for IO modules, run::
 
-    $ ln -s python-neo/neo
-    $ export PYTHONPATH=/some/directory:${PYTHONPATH}
+    $ pip install -e .[test]
 
-An alternate solution is to install Neo with the *develop* option, this avoids
-reinstalling when there are changes in the code::
+or if using the zsh shell::
 
-    $ sudo python setup.py develop
-
-or using the "-e" option to pip::
-
-    $ pip install -e python-neo
+    $ pip install -e ".[test]"
 
 To update to the latest version from the repository::
 
@@ -97,12 +90,7 @@ Running the test suite
 Before you make any changes, run the test suite to make sure all the tests pass
 on your system::
 
-    $ cd neo/test
-    $ python3 -m unittest discover
-
-If you have nose installed::
-
-    $ nosetests
+    $ pytest
 
 At the end, if you see "OK", then all the tests
 passed (or were skipped because certain dependencies are not installed),
@@ -110,7 +98,7 @@ otherwise it will report on tests that failed or produced errors.
 
 To run tests from an individual file::
 
-    $ python3 test_analogsignal.py
+    $ pytest test_analogsignal.py
 
 
 Writing tests
@@ -123,7 +111,7 @@ check that the test now passes.
 
 To see how well the tests cover the code base, run::
 
-    $ nosetests --with-coverage --cover-package=neo --cover-erase
+    $ pytest --cov=neo
 
 
 Working on the documentation
@@ -159,7 +147,7 @@ example can be copied and pasted as-is.
 The documentation is written in `reStructuredText`_, using the `Sphinx`_
 documentation system. Any mention of another Neo module, class, attribute,
 method, or function should be properly marked up so automatic
-links can be generated.  The same goes for quantities or numpy.
+links can be generated.  The same goes for quantities or NumPy.
 
 To build the documentation::
 
@@ -193,7 +181,7 @@ open a pull request on GitHub
 Python version
 --------------
 
-Neo should work with Python 3.7 or newer. If you need support for Python 2.7,
+Neo should work with Python 3.8 or newer. If you need support for Python 2.7,
 use Neo v0.8.0 or earlier.
 
 
@@ -201,7 +189,7 @@ Coding standards and style
 --------------------------
 
 All code should conform as much as possible to `PEP 8`_, and should run with
-Python 3.7 or newer.
+Python 3.8 or newer.
 
 You can use the `pep8`_ program to check the code for PEP 8 conformity.
 You can also use `flake8`_, which combines pep8 and pyflakes.
@@ -221,11 +209,11 @@ Making a release
 
 Add a section in :file:`/doc/source/whatisnew.rst` for the release.
 
-First check that the version string (in :file:`neo/version.py`) is correct.
+First check that the version string (in :file:`pyproject.toml`) is correct.
 
-To build a source package::
+To build source and wheel packages::
 
-    $ python setup.py sdist
+    $ python -m build
 
 
 Tag the release in the Git repository and push it::
@@ -237,7 +225,7 @@ Tag the release in the Git repository and push it::
 
 To upload the package to `PyPI`_ (the members of the `maintainers team`_ have the necessary permissions to do this)::
 
-    $ twine upload dist/neo-0.X.Y.tar.gz
+    $ twine upload dist/neo-0.X.Y.tar.gz dist/neo-0.X.Y-py3-none-any.whl
 
 .. talk about readthedocs
 

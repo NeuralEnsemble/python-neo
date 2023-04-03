@@ -82,7 +82,7 @@ class NestIO(BaseIO):
             if ext in self.extensions:
                 if ext in self.avail_IOs:
                     raise ValueError('Received multiple files with "%s" '
-                                     'extention. Can only load single file of '
+                                     'extension. Can only load single file of '
                                      'this type.' % ext)
                 self.avail_IOs[ext] = ColumnIO(filename)
             self.avail_formats[ext] = path

@@ -108,6 +108,9 @@ class BlackrockRawIO(BaseRawIO):
             If 'all', then all nsX will be loaded.
             Contrary to previous version of the IO  (<0.7), nsx_to_load
             must be set at the init before parse_header().
+        load_nev (bool):
+            Load (or not) events/spikes by ignoring or not the nev file.
+            Default: True
 
     Examples:
         >>> reader = BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
@@ -122,11 +125,11 @@ class BlackrockRawIO(BaseRawIO):
     """
 
     extensions = ['ns' + str(_) for _ in range(1, 7)]
-    extensions.extend(['nev', ])  # 'sif', 'ccf' not yet supported
+    extensions.extend(['nev', 'sif', 'ccf'])  # 'sif', 'ccf' not yet supported
     rawmode = 'multi-file'
 
     def __init__(self, filename=None, nsx_override=None, nev_override=None,
-                 nsx_to_load=None, verbose=False):
+                 nsx_to_load=None, load_nev=True, verbose=False):
         """
         Initialize the BlackrockIO class.
         """
@@ -154,6 +157,9 @@ class BlackrockRawIO(BaseRawIO):
         else:
             self._filenames['nev'] = self.filename
 
+        self._filenames['sif'] = self.filename
+        self._filenames['ccf'] = self.filename
+
         # check which files are available
         self._avail_files = dict.fromkeys(self.extensions, False)
         self._avail_nsx = []
@@ -169,6 +175,9 @@ class BlackrockRawIO(BaseRawIO):
                 self._avail_files[ext] = True
                 if ext.startswith('ns'):
                     self._avail_nsx.append(int(ext[-1]))
+        
+        if not load_nev:
+            self._avail_files['nev'] = False
 
         if not self._avail_files['nev'] and not self._avail_nsx:
             raise IOError("No Blackrock files found in specified path")
@@ -179,44 +188,64 @@ class BlackrockRawIO(BaseRawIO):
         self.__nsx_header_reader = {
             '2.1': self.__read_nsx_header_variant_a,
             '2.2': self.__read_nsx_header_variant_b,
-            '2.3': self.__read_nsx_header_variant_b}
+            '2.3': self.__read_nsx_header_variant_b,
+            '3.0': self.__read_nsx_header_variant_b,
+        }
         self.__nsx_dataheader_reader = {
             '2.1': self.__read_nsx_dataheader_variant_a,
             '2.2': self.__read_nsx_dataheader_variant_b,
-            '2.3': self.__read_nsx_dataheader_variant_b}
+            '2.3': self.__read_nsx_dataheader_variant_b,
+            '3.0': self.__read_nsx_dataheader_variant_b
+        }
         self.__nsx_data_reader = {
             '2.1': self.__read_nsx_data_variant_a,
             '2.2': self.__read_nsx_data_variant_b,
-            '2.3': self.__read_nsx_data_variant_b}
+            '2.3': self.__read_nsx_data_variant_b,
+            '3.0': self.__read_nsx_data_variant_b
+        }
         self.__nsx_params = {
             '2.1': self.__get_nsx_param_variant_a,
             '2.2': self.__get_nsx_param_variant_b,
-            '2.3': self.__get_nsx_param_variant_b}
+            '2.3': self.__get_nsx_param_variant_b,
+            '3.0': self.__get_nsx_param_variant_b
+        }
         # NEV
         self.__nev_header_reader = {
             '2.1': self.__read_nev_header_variant_a,
             '2.2': self.__read_nev_header_variant_b,
-            '2.3': self.__read_nev_header_variant_c}
+            '2.3': self.__read_nev_header_variant_c,
+            '3.0': self.__read_nev_header_variant_c,
+        }
         self.__nev_data_reader = {
             '2.1': self.__read_nev_data_variant_a,
             '2.2': self.__read_nev_data_variant_a,
-            '2.3': self.__read_nev_data_variant_b}
+            '2.3': self.__read_nev_data_variant_b,
+            '3.0': self.__read_nev_data_variant_c
+        }
         self.__waveform_size = {
             '2.1': self.__get_waveform_size_variant_a,
             '2.2': self.__get_waveform_size_variant_a,
-            '2.3': self.__get_waveform_size_variant_b}
+            '2.3': self.__get_waveform_size_variant_b,
+            '3.0': self.__get_waveform_size_variant_b
+        }
         self.__channel_labels = {
             '2.1': self.__get_channel_labels_variant_a,
             '2.2': self.__get_channel_labels_variant_b,
-            '2.3': self.__get_channel_labels_variant_b}
+            '2.3': self.__get_channel_labels_variant_b,
+            '3.0': self.__get_channel_labels_variant_b
+        }
         self.__nonneural_evdicts = {
             '2.1': self.__get_nonneural_evdicts_variant_a,
             '2.2': self.__get_nonneural_evdicts_variant_a,
-            '2.3': self.__get_nonneural_evdicts_variant_b}
+            '2.3': self.__get_nonneural_evdicts_variant_b,
+            '3.0': self.__get_nonneural_evdicts_variant_b
+        }
         self.__comment_evdict = {
             '2.1': self.__get_comment_evdict_variant_a,
             '2.2': self.__get_comment_evdict_variant_a,
-            '2.3': self.__get_comment_evdict_variant_a}
+            '2.3': self.__get_comment_evdict_variant_a,
+            '3.0': self.__get_comment_evdict_variant_a
+        }
 
     def _parse_header(self):
 
@@ -345,7 +374,7 @@ class BlackrockRawIO(BaseRawIO):
                 sr = float(main_sampling_rate / self.__nsx_basic_header[nsx_nb]['period'])
                 self.sig_sampling_rates[nsx_nb] = sr
 
-                if spec in ['2.2', '2.3']:
+                if spec in ['2.2', '2.3', '3.0']:
                     ext_header = self.__nsx_ext_header[nsx_nb]
                 elif spec == '2.1':
                     ext_header = []
@@ -361,7 +390,7 @@ class BlackrockRawIO(BaseRawIO):
                 if len(ext_header) > 0:
                     signal_streams.append((f'nsx{nsx_nb}', str(nsx_nb)))
                 for i, chan in enumerate(ext_header):
-                    if spec in ['2.2', '2.3']:
+                    if spec in ['2.2', '2.3', '3.0']:
                         ch_name = chan['electrode_label'].decode()
                         ch_id = str(chan['electrode_id'])
                         units = chan['units'].decode()
@@ -438,8 +467,7 @@ class BlackrockRawIO(BaseRawIO):
             # Find maximal and minimal time for each nev segment
             for k, (data, ev_ids) in self.nev_data.items():
                 for i in np.unique(ev_ids):
-                    mask = [ev_ids == i]
-                    curr_data = data[mask]
+                    curr_data = data[ev_ids == i]
                     if curr_data.size > 0:
                         if max(curr_data['timestamp']) >= max_nev_times.get(i, 0):
                             max_nev_times[i] = max(curr_data['timestamp'])
@@ -729,7 +757,7 @@ class BlackrockRawIO(BaseRawIO):
         nsx_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
         if nsx_file_id['file_id'].decode() == 'NEURALSG':
             spec = '2.1'
-        elif nsx_file_id['file_id'].decode() == 'NEURALCD':
+        elif nsx_file_id['file_id'].decode() in ['NEURALCD', 'BRSMPGRP']:
             spec = '{}.{}'.format(
                 nsx_file_id['ver_major'], nsx_file_id['ver_minor'])
         else:
@@ -750,12 +778,12 @@ class BlackrockRawIO(BaseRawIO):
             ('ver_minor', 'uint8')]
 
         nev_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
-        if nev_file_id['file_id'].decode() == 'NEURALEV':
+        if nev_file_id['file_id'].decode() in ['NEURALEV', 'BREVENTS']:
             spec = '{}.{}'.format(
                 nev_file_id['ver_major'], nev_file_id['ver_minor'])
         else:
             raise IOError('NEV file type {} is not supported'.format(
-                nev_file_id['file_id']))
+                nev_file_id['file_id'].decode()))
 
         return spec
 
@@ -798,7 +826,7 @@ class BlackrockRawIO(BaseRawIO):
 
         # basic header (file_id: NEURALCD)
         dt0 = [
-            ('file_id', 'S8'),
+            ('file_id', 'S8'),  # achFileType
             # file specification split into major and minor version number
             ('ver_major', 'uint8'),
             ('ver_minor', 'uint8'),
@@ -860,10 +888,12 @@ class BlackrockRawIO(BaseRawIO):
         """
         filename = '.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb])
 
+        ts_size = 'uint64' if self.__nsx_basic_header[nsx_nb]['ver_major'] >= 3 else 'uint32'
+
         # dtypes data header
         dt2 = [
             ('header', 'uint8'),
-            ('timestamp', 'uint32'),
+            ('timestamp', ts_size),
             ('nb_data_points', 'uint32')]
 
         return np.memmap(filename, dtype=dt2, shape=1, offset=offset, mode='r')[0]
@@ -1075,11 +1105,18 @@ class BlackrockRawIO(BaseRawIO):
         data_size = self.__nev_basic_header['bytes_in_data_packets']
         header_size = self.__nev_basic_header['bytes_in_headers']
 
+        if self.__nev_basic_header['ver_major'] >= 3:
+            ts_format = 'uint64'
+            header_skip = 10
+        else:
+            ts_format = 'uint32'
+            header_skip = 6
+
         # read all raw data packets and markers
         dt0 = [
-            ('timestamp', 'uint32'),
+            ('timestamp', ts_format),
             ('packet_id', 'uint16'),
-            ('value', 'S{}'.format(data_size - 6))]
+            ('value', 'S{}'.format(data_size - header_skip))]
 
         raw_data = np.memmap(filename, offset=header_size, dtype=dt0, mode='r')
 
@@ -1114,14 +1151,18 @@ class BlackrockRawIO(BaseRawIO):
             # No pause or reset mechanism present for file version 2.1 and 2.2
             return np.zeros(len(raw_event_data), dtype=int)
 
-        elif self.__nev_spec == '2.3':
+        elif self.__nev_spec in ['2.3', '3.0']:
             reset_ev_mask = self.__get_reset_event_mask(raw_event_data, masks, nev_data_masks)
             reset_ev_ids = np.where(reset_ev_mask)[0]
 
             # consistency check for monotone increasing time stamps
-            # explicitly converting to int to allow for negative diff values
-            jump_ids = \
-                np.where(np.diff(np.asarray(raw_event_data['timestamp'], dtype=int)) < 0)[0] + 1
+            # - Use logical comparator (instead of np.diff) to avoid unsigned dtype issues.
+            # - Only consider handled/known event types.
+            mask_handled = np.any([value[nev_data_masks[key]] for key, value in masks.items()], axis=0)
+            jump_ids_handled = np.where(
+                raw_event_data['timestamp'][mask_handled][1:] < raw_event_data['timestamp'][mask_handled][:-1]
+            )[0] + 1
+            jump_ids = np.where(mask_handled)[0][jump_ids_handled]  # jump ids in full set of events (incl. unhandled)
             overlap = np.in1d(jump_ids, reset_ev_ids)
             if not all(overlap):
                 # additional resets occurred without a reset event being stored
@@ -1137,6 +1178,9 @@ class BlackrockRawIO(BaseRawIO):
 
             self._nb_segment_nev = len(reset_ev_ids) + 1
             return event_segment_ids
+
+        else:
+            raise ValueError("Unknown File Spec {}".formate(self.__nev_spec))
 
     def __match_nsx_and_nev_segment_ids(self, nsx_nb):
         """
@@ -1276,6 +1320,30 @@ class BlackrockRawIO(BaseRawIO):
             'TrackingEvents': 'a',
             'ButtonTrigger': 'a',
             'ConfigEvent': 'a'}
+
+        return self.__read_nev_data(nev_data_masks, nev_data_types)
+
+    def __read_nev_data_variant_c(self):
+        """
+        Extract nev data from a 3.0 .nev file
+        """
+        nev_data_masks = {
+            'NonNeural': 'a',
+            'Spikes': 'b',
+            'Comments': 'a',
+            'VideoSync': 'a',
+            'TrackingEvents': 'a',
+            'ButtonTrigger': 'a',
+            'ConfigEvent': 'a'}
+
+        nev_data_types = {
+            'NonNeural': 'c',
+            'Spikes': 'b',
+            'Comments': 'b',
+            'VideoSync': 'b',
+            'TrackingEvents': 'b',
+            'ButtonTrigger': 'b',
+            'ConfigEvent': 'b'}
 
         return self.__read_nev_data(nev_data_masks, nev_data_types)
 
@@ -1441,22 +1509,43 @@ class BlackrockRawIO(BaseRawIO):
                     ('analog_input_channel_3', 'int16'),
                     ('analog_input_channel_4', 'int16'),
                     ('analog_input_channel_5', 'int16'),
-                    ('unused', 'S{}'.format(data_size - 20))],
-                # Version>=2.3
+                    ('unused', 'S{}'.format(data_size - 20))
+                ],
+                # Version=2.3
                 'b': [
                     ('timestamp', 'uint32'),
                     ('packet_id', 'uint16'),
                     ('packet_insertion_reason', 'uint8'),
                     ('reserved', 'uint8'),
                     ('digital_input', 'uint16'),
-                    ('unused', 'S{}'.format(data_size - 10))]},
+                    ('unused', 'S{}'.format(data_size - 10))
+                ],
+                # Version >= 3.0
+                'c': [
+                    ('timestamp', 'uint64'),
+                    ('packet_id', 'uint16'),
+                    ('packet_insertion_reason', 'uint8'),
+                    ('dlen', 'uint8'),
+                    ('digital_input', 'uint16'),
+                    ('unused', 'S{}'.format(data_size - 14))
+                ]
+            },
             'Spikes': {
                 'a': [
                     ('timestamp', 'uint32'),
                     ('packet_id', 'uint16'),
                     ('unit_class_nb', 'uint8'),
                     ('reserved', 'uint8'),
-                    ('waveform', 'S{}'.format(data_size - 8))]},
+                    ('waveform', 'S{}'.format(data_size - 8))
+                ],
+                'b': [
+                    ('timestamp', 'uint64'),
+                    ('packet_id', 'uint16'),
+                    ('unit_class_nb', 'uint8'),
+                    ('dlen', 'uint8'),
+                    ('waveform', 'S{}'.format(data_size - 12))
+                ]
+            },
             'Comments': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -1464,7 +1553,17 @@ class BlackrockRawIO(BaseRawIO):
                     ('char_set', 'uint8'),
                     ('flag', 'uint8'),
                     ('color', 'uint32'),
-                    ('comment', 'S{}'.format(data_size - 12))]},
+                    ('comment', 'S{}'.format(data_size - 12))
+                ],
+                'b': [
+                    ('timestamp', 'uint64'),
+                    ('packet_id', 'uint16'),
+                    ('char_set', 'uint8'),
+                    ('flag', 'uint8'),
+                    ('color', 'uint32'),
+                    ('comment', 'S{}'.format(data_size - 16))
+                ]
+            },
             'VideoSync': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -1473,7 +1572,18 @@ class BlackrockRawIO(BaseRawIO):
                     ('video_frame_nb', 'uint32'),
                     ('video_elapsed_time', 'uint32'),
                     ('video_source_id', 'uint32'),
-                    ('unused', 'int8', (data_size - 20,))]},
+                    ('unused', 'int8', (data_size - 20,))
+                ],
+                'b': [
+                    ('timestamp', 'uint64'),
+                    ('packet_id', 'uint16'),
+                    ('video_file_nb', 'uint16'),
+                    ('video_frame_nb', 'uint32'),
+                    ('video_elapsed_time', 'uint32'),
+                    ('video_source_id', 'uint32'),
+                    ('unused', 'int8', (data_size - 24,))
+                ]
+            },
             'TrackingEvents': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -1482,19 +1592,47 @@ class BlackrockRawIO(BaseRawIO):
                     ('node_id', 'uint16'),
                     ('node_count', 'uint16'),
                     ('point_count', 'uint16'),
-                    ('tracking_points', 'uint16', ((data_size - 14) // 2,))]},
+                    ('tracking_points', 'uint16', ((data_size - 14) // 2,))
+                ],
+                'b': [
+                    ('timestamp', 'uint64'),
+                    ('packet_id', 'uint16'),
+                    ('parent_id', 'uint16'),
+                    ('node_id', 'uint16'),
+                    ('node_count', 'uint16'),
+                    ('point_count', 'uint16'),
+                    ('tracking_points', 'uint16', ((data_size - 18) // 2,))
+                ]
+            },
             'ButtonTrigger': {
                 'a': [
                     ('timestamp', 'uint32'),
                     ('packet_id', 'uint16'),
                     ('trigger_type', 'uint16'),
-                    ('unused', 'int8', (data_size - 8,))]},
+                    ('unused', 'int8', (data_size - 8,))
+                ],
+                'b': [
+                    ('timestamp', 'uint64'),
+                    ('packet_id', 'uint16'),
+                    ('trigger_type', 'uint16'),
+                    ('unused', 'int8', (data_size - 12,))
+                ]
+            },
             'ConfigEvent': {
                 'a': [
                     ('timestamp', 'uint32'),
                     ('packet_id', 'uint16'),
                     ('config_change_type', 'uint16'),
-                    ('config_changed', 'S{}'.format(data_size - 8))]}}
+                    ('config_changed', 'S{}'.format(data_size - 8))
+                ],
+                'b': [
+                    ('timestamp', 'uint64'),
+                    ('packet_id', 'uint16'),
+                    ('config_change_type', 'uint16'),
+                    ('config_changed', 'S{}'.format(data_size - 12))
+                ]
+            }
+        }
 
         return __nev_data_types
 

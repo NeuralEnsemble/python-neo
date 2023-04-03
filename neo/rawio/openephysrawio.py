@@ -64,12 +64,14 @@ class OpenEphysRawIO(BaseRawIO):
         aligned,
         and a warning is emitted.
     """
-    extensions = []
+    # file formats used by openephys
+    extensions = ['continuous', 'openephys', 'spikes', 'events', 'xml']
     rawmode = 'one-dir'
 
-    def __init__(self, dirname=''):
+    def __init__(self, dirname='', ignore_timestamps_errors=False):
         BaseRawIO.__init__(self)
         self.dirname = dirname
+        self._ignore_timestamps_errors = ignore_timestamps_errors
 
     def _source_name(self):
         return self.dirname
@@ -114,9 +116,11 @@ class OpenEphysRawIO(BaseRawIO):
 
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
-                assert np.all(diff == RECORD_SIZE), \
-                    'Not continuous timestamps for {}. ' \
-                    'Maybe because recording was paused/stopped.'.format(continuous_filename)
+                if not np.all(diff == RECORD_SIZE) and not self._ignore_timestamps_errors:
+                    raise ValueError(
+                        'Not continuous timestamps for {}. ' \
+                        'Maybe because recording was paused/stopped.'.format(continuous_filename)
+                    )
 
                 if seg_index == 0:
                     # add in channel list

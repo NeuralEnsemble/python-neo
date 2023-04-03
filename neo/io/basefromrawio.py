@@ -63,7 +63,7 @@ class BaseFromRaw(BaseIO):
 
     name = 'BaseIO'
     description = ''
-    extentions = []
+    extensions = []
 
     mode = 'file'
 

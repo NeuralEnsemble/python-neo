@@ -29,7 +29,7 @@ class BiocamRawIO(BaseRawIO):
         >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
                                                         channel_indexes=[0, 3, 6])
     """
-    extensions = ['h5']
+    extensions = ['h5', 'brw']
     rawmode = 'one-file'
 
     def __init__(self, filename=''):
