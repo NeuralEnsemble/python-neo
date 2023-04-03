@@ -12,7 +12,7 @@ url_repo = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/mast
 
 # Get Plexon files
 distantfile = url_repo + 'plexon/File_plexon_3.plx'
-localfile = './File_plexon_3.plx'
+localfile = 'File_plexon_3.plx'
 urllib.request.urlretrieve(distantfile, localfile)
 
 # create a reader
@@ -56,7 +56,7 @@ print(float_waveforms.shape, float_waveforms.dtype, float_waveforms[0, 0, :4])
 
 # Read event timestamps and times (take another file)
 distantfile = url_repo + 'plexon/File_plexon_2.plx'
-localfile = './File_plexon_2.plx'
+localfile = 'File_plexon_2.plx'
 urllib.request.urlretrieve(distantfile, localfile)
 
 # Count events per channel

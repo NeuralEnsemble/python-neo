@@ -3,7 +3,7 @@ Reporting bugs, requesting new features
 =======================================
 
 If you find a bug, unclear documentation, or would like to add a new feature to Neo,
-please go to https://github.com/NeuralEnsemble/PyNN/issues/.
+please go to https://github.com/NeuralEnsemble/python-neo/issues/.
 
 
 Searching the issue tracker

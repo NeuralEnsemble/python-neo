@@ -111,15 +111,16 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
 # html_theme = 'default'
-html_theme = 'sphinxdoc'
+# html_theme = 'sphinxdoc'
 # html_theme = 'haiku'
 # html_theme = 'scrolls'
 # html_theme = 'agogo'
+html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-# html_theme_options = {}
+html_theme_options = {'logo': 'neologo_transparent.png'}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -133,13 +134,13 @@ html_theme = 'sphinxdoc'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/neologo_light.png'
+# html_logo = 'images/neologo_transparent.png'
 
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = None
+html_favicon = 'images/neologo_favicon.png'
 
 
 # Add any paths that contain custom static files (such as style sheets) here,
