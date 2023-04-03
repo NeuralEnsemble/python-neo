@@ -41,6 +41,7 @@ Requirements
     * Python_ 3.8 or later
     * numpy_ >= 1.19.5
     * quantities_ >= 0.14.1
+    * joblib >= 1.0.0
     * pytest (for running tests)
     * Sphinx_ (for building documentation)
 
