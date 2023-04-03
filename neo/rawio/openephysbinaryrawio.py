@@ -77,9 +77,16 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         check_folder_consistency(folder_structure, possible_experiments)
         self.folder_structure = folder_structure
 
-        # all streams are consistent across blocks and segments
-        sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
-        event_stream_names = sorted(list(all_streams[0][0]['events'].keys()))
+        # all streams are consistent across blocks and segments.
+        # also checks that 'continuous' and 'events' folder are present
+        if 'continuous' in all_streams[0][0]:
+            sig_stream_names = sorted(list(all_streams[0][0]['continuous'].keys()))
+        else:
+            sig_stream_names = []
+        if 'events' in all_streams[0][0]:
+            event_stream_names = sorted(list(all_streams[0][0]['events'].keys()))
+        else:
+            event_stream_names = []
 
         # first loop to reassign stream by "stream_index" instead of "stream_name"
         self._sig_streams = {}
@@ -563,7 +570,13 @@ def explore_folder(dirname, experiment_names=None):
     # nested dictionary: block_index > seg_index > data_type > stream_name
     all_streams = {}
     nb_segment_per_block = {}
-    recording_node = folder_structure[list(folder_structure.keys())[0]]
+    record_nodes = list(folder_structure.keys())
+    if len(record_nodes) == 0:
+        raise ValueError(
+            f"{dirname} is not a valid Open Ephys binary folder. No 'structure.oebin' "
+            f"files were found in sub-folders."
+        )
+    recording_node = folder_structure[record_nodes[0]]
 
     # nb_block needs to be consistent across record nodes. Use the first one
     nb_block = len(recording_node['experiments'])
@@ -609,7 +622,8 @@ def check_folder_consistency(folder_structure, possible_experiment_names=None):
                 ("Inconsistent experiments across recording nodes!")
 
     # check that "continuous" streams are the same across multiple segments (recordings)
-    experiments = folder_structure[list(folder_structure.keys())[0]]['experiments']
+    record_nodes = list(folder_structure.keys())
+    experiments = folder_structure[record_nodes[0]]['experiments']
     for exp_id, experiment in experiments.items():
         segment_stream_names = None
         if len(experiment['recordings']) > 1:
