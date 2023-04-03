@@ -374,10 +374,10 @@ def extract_stream_info(meta_file, meta):
     num_chan = int(meta['nSavedChans'])
     fname = Path(meta_file).stem
     run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
-    device = fname.split('.')[1]
+    device = fname.split('.')[-2]
 
     if 'imec' in device:
-        stream_kind = fname.split('.')[2]
+        stream_kind = fname.split('.')[-1]
         stream_name = device + '.' + stream_kind
         units = 'uV'
         # please note the 1e6 in gain for this uV
