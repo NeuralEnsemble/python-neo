@@ -570,13 +570,13 @@ def explore_folder(dirname, experiment_names=None):
     # nested dictionary: block_index > seg_index > data_type > stream_name
     all_streams = {}
     nb_segment_per_block = {}
-    record_nodes = list(folder_structure.keys())
-    if len(record_nodes) == 0:
+    record_node_names = list(folder_structure.keys())
+    if len(record_node_names) == 0:
         raise ValueError(
             f"{dirname} is not a valid Open Ephys binary folder. No 'structure.oebin' "
             f"files were found in sub-folders."
         )
-    recording_node = folder_structure[record_nodes[0]]
+    recording_node = folder_structure[record_node_names[0]]
 
     # nb_block needs to be consistent across record nodes. Use the first one
     nb_block = len(recording_node['experiments'])
@@ -622,8 +622,8 @@ def check_folder_consistency(folder_structure, possible_experiment_names=None):
                 ("Inconsistent experiments across recording nodes!")
 
     # check that "continuous" streams are the same across multiple segments (recordings)
-    record_nodes = list(folder_structure.keys())
-    experiments = folder_structure[record_nodes[0]]['experiments']
+    record_node_names = list(folder_structure.keys())
+    experiments = folder_structure[record_node_names[0]]['experiments']
     for exp_id, experiment in experiments.items():
         segment_stream_names = None
         if len(experiment['recordings']) > 1:
