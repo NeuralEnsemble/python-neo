@@ -106,7 +106,7 @@ To quickly take a look at the data, let's plot it:
     In [16]: plt.savefig("open_format_example_cc_step.png")
 
 
-.. image:: ../open_format_example_cc_step.png
+.. image:: open_format_example_cc_step.png
 
 
 Now we've read the data into Neo, we're ready to write them to an open format.
