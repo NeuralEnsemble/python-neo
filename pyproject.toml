@@ -24,8 +24,7 @@ classifiers = [
 dependencies = [
     "packaging",
     "numpy>=1.19.5",
-    "quantities>=0.14.1",
-    "joblib>=1.0.0"
+    "quantities>=0.14.1"
 ]
 
 [project.urls]
@@ -40,6 +39,10 @@ requires = ["setuptools>=62.0"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
+
+iocache = [
+    "joblib>=1.0.0"
+]
 
 test = [
     "pytest",
@@ -60,6 +63,7 @@ test = [
     "sonpy",
     "pynwb",
     "probeinterface",
+    "joblib>=1.0.0"
 ]
 
 docs = [
@@ -96,5 +100,6 @@ all = [
     "scipy>=1.0.0",
     "sonpy",
     "tqdm",
+    "joblib>=1.0.0"
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable
