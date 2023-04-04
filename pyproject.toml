@@ -66,10 +66,17 @@ docs = [
     "docutils<0.18",
     "sphinx-inline-tabs",
     "sphinx-gallery",
+    "pydata-sphinx-theme",
+    "sphinx-design",
     "ipython",
     "matplotlib",
     "nixio",
     "pynwb"
+]
+
+dev = [
+    "build",
+    "twine"
 ]
 
 igorproio = ["igor"]

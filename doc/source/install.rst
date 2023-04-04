@@ -32,7 +32,7 @@ Neo will still install but the IO module that uses them will fail on loading:
    * pillow for TiffIO
 
 These dependencies can be installed by specifying a comma-separated list with the
-``pip install`` command::
+``pip install`` command, e.g.::
 
     $ pip install neo[nixio,tiffio]
 
@@ -64,13 +64,13 @@ Then:
 
     $ unzip neo-|release|.zip
     $ cd neo-|release|
-    $ python setup.py install
+    $ pip install .
 
 Alternatively, to install the latest version of Neo from the Git repository::
 
     $ git clone git://github.com/NeuralEnsemble/python-neo.git
     $ cd python-neo
-    $ python setup.py install
+    $ pip install .
 
 
 Installing with Conda

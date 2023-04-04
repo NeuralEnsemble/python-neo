@@ -216,7 +216,7 @@ AnalogSignal
 We have already met the :class:`AnalogSignal`, which represents continuous time series
 sampled at a fixed interval.
 
-In addition to reading data from file, as above, it is also possible to create new signal
+In addition to reading data from a file, as above, it is also possible to create new signal
 objects directly, e.g.:
 
 .. ipython::
@@ -241,7 +241,7 @@ IrregularlySampledSignal
 
 :class:`IrregularlySampledSignal` represents continuous time series sampled at non-regular time points.
 This means that instead of specifying the sampling rate or sampling interval, you must
-specify the array of times at which the samples were made.
+specify the array of times at which the signal was sampled.
 
 .. ipython::
 
@@ -294,7 +294,7 @@ together with an *optional* array of labels for the events, e.g.:
 
     In [32]: from neo import Event
 
-    In [33]: events = Event(np.arange(0, 30, 10), units="second",
+    In [33]: events = Event(np.array([5, 15, 25]), units="second",
        ....:                labels=["apple", "rock", "elephant"],
        ....:                name="stimulus onset")
 
@@ -316,8 +316,8 @@ and an optional array of labels.
 
     In [35]: from neo import Epoch
 
-    In [36]: epochs = Epoch(times=np.arange(0, 30, 10),
-       ....:                durations=20.0,
+    In [36]: epochs = Epoch(times=np.array([5, 15, 25]),
+       ....:                durations=2.0,
        ....:                units="second",
        ....:                labels=["apple", "rock", "elephant"],
        ....:                name="stimulus presentations")
@@ -375,7 +375,7 @@ For any metadata not covered by the required or recommended fields, additional a
     Out[45]: {'pipette_tip_diameter': array(1.5) * um}
 
 For those IO modules that support writing data to file, annotations will also be written,
-provided they are capable of being serialized to JSON format.
+provided they can be serialized to JSON format.
 
 .. todo: we should provide a custom ``JSONEncoder`` that supports quantities
 
@@ -440,8 +440,8 @@ It contains :class:`Segment` and :class:`Group` (see next section) objects in th
 Grouping and linking objects
 ----------------------------
 
-Sometimes your data have a structure that goes beyond a simple two-level hierarchy,
-for example suppose that you wish to group together signals that were recorded from the same tetrode in multi-tetrode recording setup.
+Sometimes your data have a structure that goes beyond a simple two-level hierarchy.
+For example, suppose that you wish to group together signals that were recorded from the same tetrode in multi-tetrode recording setup.
 
 For this, Neo provides a :class:`Group` class:
 

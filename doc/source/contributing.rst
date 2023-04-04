@@ -53,7 +53,7 @@ If you choose the HTTPS method you will be asked for your Github username and pa
 To avoid this, you can `add an SSH key to your Github account`_.
 
 Now choose a location on your computer where you'd like to put the Neo source code, change to that directory,
-and run _one_ of the following commands (depending on whether you chose HTTPS or SSH):
+and run *one* of the following commands (depending on whether you chose HTTPS or SSH):
 
 ::
 
@@ -181,9 +181,7 @@ The following commands will install all the packages needed to use Neo, run test
 
     .. code-block:: bash
 
-        pip install -f requirements_dev.txt
-
-        pip install -e .
+        pip install -e .[test]
 
 This does not install all the optional dependencies for different file formats.
 If you're planning to work on a specific IO module, e.g. :class:`NixIO`,
@@ -264,7 +262,7 @@ Coding standards and style
 ==========================
 
 All code should conform as much as possible to `PEP 8`_, with a maximum line length of 99 characters,
-and should run with Python 3.7 or newer.
+and should run with Python 3.8 or newer.
 
 You can use the `pep8`_ program to check the code for PEP 8 conformity.
 You can also use `flake8`_, which combines pep8 and pyflakes.
@@ -307,6 +305,7 @@ links can be generated.
 
 To build the documentation::
 
+    pip install -e .[docs]
     cd doc
     make html
 
@@ -323,7 +322,7 @@ Working with Git
 ================
 
 If you're new to Git, there are many good learning resources on the web,
-such as `Blischak, Davenport and Wilson (2016)`.
+such as `Blischak, Davenport and Wilson (2016)`_.
 
 We recommend the following best practices, based on `this document by Luis Matos`_:
 
@@ -417,8 +416,7 @@ Making a release
 - Create a new file with the release notes in the folder :file:`doc/source/releases`
   then add a link to it in :file:`/doc/source/releases.rst`.
 - Ensure you are in the master branch.
-- Check that the version string (in :file:`neo/version.py`) is correct,
-  that all tests pass, and that the documentation builds correctly (see above).
+- Check that all tests pass, and that the documentation builds correctly (see above).
 - Tag the release in the Git repository and push it::
 
     git tag <version>
@@ -427,9 +425,9 @@ Making a release
 
 - Wait for the `continuous integration server`_ to run all the tests, ensure there are
   no failures. If there are failures, fix them, and move the tag to the new commit.
-- Build a source package::
+- Build source and wheel packages::
 
-    python setup.py sdist
+    python -m build
 
 - Upload the package to `PyPI`_ (the members of the :ref:`section-maintainers` team have the necessary permissions to do this)::
 

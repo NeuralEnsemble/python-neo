@@ -17,8 +17,8 @@ and some of the software tools built on top of Neo.
 .. image:: images/neo_ecosystem.svg
 
 To see more of the tools built on Neo, see the Github `dependency graph`_.
-At the time of writing, Github records 339 repositories that depend on Neo,
-of which 53 publish their own Python packages.
+At the time of writing, Github records 394 repositories that depend on Neo,
+of which 55 publish their own Python packages.
 
 
 Dependability

@@ -118,6 +118,6 @@ Here are the entire files:
 .. literalinclude:: ../../neo/io/exampleio.py
 
 
-.. _`mailing list`: https://groups.google.com/forum/#!forum/neuralensemble
+.. _`mailing list`: http://neuralensemble.org/community
 .. _gin-gnode: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
 .. _`NeuralEnsemble/ephy_testing_data`: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
