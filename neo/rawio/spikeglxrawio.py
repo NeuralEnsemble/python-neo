@@ -374,9 +374,9 @@ def extract_stream_info(meta_file, meta):
     num_chan = int(meta['nSavedChans'])
     fname = Path(meta_file).stem
     run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
-    device = fname.split('.')[-2]
-
-    if 'imec' in device:
+    
+    if 'imec' in fname.split('.')[-2]:
+        device = fname.split('.')[-2]
         stream_kind = fname.split('.')[-1]
         stream_name = device + '.' + stream_kind
         units = 'uV'
@@ -411,6 +411,7 @@ def extract_stream_info(meta_file, meta):
             raise NotImplementedError('This meta file version of spikeglx'
                                       ' is not implemented')
     else:
+        device = fname.split('.')[-1]
         stream_kind = ''
         stream_name = device
         units = 'V'

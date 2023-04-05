@@ -198,7 +198,8 @@ class TdtRawIO(BaseRawIO):
                 for seg_index, segment_name in enumerate(segment_names):
                     # get data index
                     tsq = self._tsq[seg_index]
-                    mask = (tsq['evtype'] == EVTYPE_STREAM) & \
+                    mask = ((tsq['evtype'] == EVTYPE_STREAM) | \
+                           (tsq['evtype'] == EVTYPE_STREAM_VARIANT)) & \
                            (tsq['evname'] == info['StoreName']) & \
                            (tsq['channel'] == chan_id)
                     data_index = tsq[mask].copy()
@@ -249,14 +250,21 @@ class TdtRawIO(BaseRawIO):
                         sev_filename = (path / sev_stem).with_suffix('.sev')
                     else:
                         # for single block datasets the exact name of sev files in not known
-                        sev_regex = f".*_ch{chan_id}.sev"
+                        sev_regex = f"*_[cC]h{chan_id}.sev"
                         sev_filename = list(self.dirname.parent.glob(str(sev_regex)))
+                        # in case multiple sev files are found, try to find the one for current stream
+                        if len(sev_filename) > 1:
+                            store = info['StoreName'].decode('ascii')
+                            sev_regex = f'*_{store}_Ch{chan_id}.sev'
+                            sev_filename = list(self.dirname.parent.glob(str(sev_regex)))
 
                         # in case non or multiple sev files are found for current stream + channel
                         if len(sev_filename) != 1:
                             missing_sev_channels.append(chan_id)
                             sev_filename = None
-
+                        else:
+                            sev_filename = sev_filename[0]
+                            
                     if (sev_filename is not None) and sev_filename.exists():
                         data = np.memmap(sev_filename, mode='r', offset=0, dtype='uint8')
                     else:
@@ -562,6 +570,7 @@ EVTYPE_STRON = int('00000101', 16)  # 257
 EVTYPE_STROFF = int('00000102', 16)  # 258
 EVTYPE_SCALAR = int('00000201', 16)  # 513
 EVTYPE_STREAM = int('00008101', 16)  # 33025
+EVTYPE_STREAM_VARIANT = int('00008111', 16)  # 33041
 EVTYPE_SNIP = int('00008201', 16)  # 33281
 EVTYPE_MARK = int('00008801', 16)  # 34817
 EVTYPE_HASDATA = int('00008000', 16)  # 32768
