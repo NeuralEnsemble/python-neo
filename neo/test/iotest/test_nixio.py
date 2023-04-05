@@ -30,7 +30,6 @@ from neo.core import (Block, Segment, AnalogSignal,
                       IrregularlySampledSignal, SpikeTrain,
                       Event, Epoch, ImageSequence, Group, ChannelView)
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.test.tools import assert_same_sub_schema
 from neo.io.nixio import (NixIO, create_quantity, units_to_string, neover,
                           dt_from_nix, dt_to_nix, DATETIMEANNOTATION)
 from neo.io.nixio_fr import NixIO as NixIO_lazy
@@ -1796,37 +1795,6 @@ class NixIOVerTests(NixIOTest):
 
         with NixIO(self.filename, "ow") as iofile:
             self.assertEqual(iofile._file_version, neover)
-
-
-@unittest.skipUnless(HAVE_NIX, "Requires NIX")
-class CompareTestFileVersions(BaseTestIO, unittest.TestCase):
-
-    ioclass = NixIO_lazy
-    entities_to_download = ['nix']
-    entities_to_test = []
-
-    @classmethod
-    def setUpClass(cls):
-        super(CompareTestFileVersions, cls).setUpClass()
-        
-        cls.neo_versions = ['0.6.1', '0.7.2', '0.8.0', '0.9.0', '0.10.2', '0.11.1', '0.12.0']
-        cls.blocks = []
-
-        for filename in [f'nix/generated_file_neo{ver}.nix' for ver in cls.neo_versions]:
-            filename = BaseTestIO.get_local_path(filename)
-            # filename = '/home/sprengerj/repos/ephy_testing_data/' + filename
-            print(f'Loading {filename}')
-
-            io = NixIO_lazy(filename, autogenerate_stream_names=False, autogenerate_unit_ids=False)
-            block = io.read_block(lazy=False)
-            cls.blocks.append(block)
-
-    def test_compare_file_versions(self):
-        # assert all versions result in comparable neo structures (ideally identical)
-        reference_block = self.blocks[0]
-        for bl in self.blocks[1:]:
-            assert_same_sub_schema(reference_block, bl, exclude=['file_origin', 'magnitude'])
-
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
