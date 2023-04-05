@@ -4,12 +4,17 @@ on:
   pull_request:
     branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
+    paths:
+      - 'neo/core/**'
+      - 'pyproject.toml'
 
   # run checks on any change of master, including merge of PRs
   push:
     branches: [master]
 
-
+concurrency: # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   multi-os-python-numpy:
@@ -20,19 +25,19 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
         # "macos-latest",
-        python-version: ['3.7', '3.8', '3.9', '3.10']
-        numpy-version: ['1.18.5', '1.19.5', '1.20.3', '1.21.6', '1.22.4', '1.23.0']
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+        numpy-version: ['1.19.5', '1.20.3', '1.21.6', '1.22.4', '1.23.5', '1.24.1']
         exclude:
-           - python-version: '3.7'
-             numpy-version: '1.22.4'
-           - python-version: '3.7'
-             numpy-version: '1.23.0'
-           - python-version: '3.10'
-             numpy-version: '1.18.5'
            - python-version: '3.10'
              numpy-version: '1.19.5'
            - python-version: '3.10'
              numpy-version: '1.20.3'
+           - python-version: '3.11'
+             numpy-version: '1.19.5'
+           - python-version: '3.11'
+             numpy-version: '1.20.3'
+           - python-version: '3.11'
+             numpy-version: '1.21.6'
     steps:
         - name: Set up Python ${{ matrix.python-version }}
           uses: actions/setup-python@v4

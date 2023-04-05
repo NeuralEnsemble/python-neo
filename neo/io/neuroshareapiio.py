@@ -72,7 +72,7 @@ class NeuroshareapiIO(BaseIO):
 
     name = "Neuroshare"
 
-    extensions = []
+    extensions = ['mcd']
 
     # This object operates on neuroshare files
     mode = "file"

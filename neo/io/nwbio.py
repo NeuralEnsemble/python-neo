@@ -227,10 +227,10 @@ class NWBIO(BaseIO):
         import pynwb
 
         assert self.nwb_file_mode in ('r',)
-        io = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode,
+        self._io_nwb = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode,
                              load_namespaces=True)  # Open a file with NWBHDF5IO
         try:
-            self._file = io.read()
+            self._file = self._io_nwb.read()
         except ValueError:
             print("Error: Unable to read this version of NWB file.")
             print("Please convert to a later NWB format.")
@@ -564,12 +564,22 @@ class NWBIO(BaseIO):
         if hasattr(signal, 'proxy_for') and signal.proxy_for in [AnalogSignal,
                                                                  IrregularlySampledSignal]:
             signal = signal.load()
+        if issubclass(timeseries_class, pynwb.icephys.PatchClampSeries):
+            if signal.shape[1] != 1:
+                raise ValueError(
+                    "To store patch clamp data in NWB, please ensure that each AnalogSignal"
+                    f"contains only one channel. The current signal has {signal.shape[1]} channels."
+                )
+            # see https://github.com/NeurodataWithoutBorders/pynwb/issues/1300
+            data = signal.ravel()  # convert to 1D
+        else:
+            data = signal
         if isinstance(signal, AnalogSignal):
             sampling_rate = signal.sampling_rate.rescale("Hz")
             tS = timeseries_class(
                 name=signal.name,
                 starting_time=time_in_seconds(signal.t_start),
-                data=signal,
+                data=data,
                 unit=units.dimensionality.string,
                 rate=float(sampling_rate),
                 comments=json.dumps(hierarchy),
@@ -578,7 +588,7 @@ class NWBIO(BaseIO):
         elif isinstance(signal, IrregularlySampledSignal):
             tS = timeseries_class(
                 name=signal.name,
-                data=signal,
+                data=data,
                 unit=units.dimensionality.string,
                 timestamps=signal.times.rescale('second').magnitude,
                 comments=json.dumps(hierarchy),
@@ -644,6 +654,10 @@ class NWBIO(BaseIO):
                               segment=segment.name,
                               block=segment.block.name)
         return self._nwbfile.epochs
+
+    def close(self):
+        if self._io_nwb:
+            self._io_nwb.close()
 
 
 class AnalogSignalProxy(BaseAnalogSignalProxy):

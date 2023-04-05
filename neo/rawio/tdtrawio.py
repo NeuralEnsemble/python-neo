@@ -34,6 +34,7 @@ from pathlib import Path
 
 
 class TdtRawIO(BaseRawIO):
+    extensions = ['tbk', 'tdx', 'tev', 'tin', 'tnt', 'tsq', 'sev', 'txt']
     rawmode = 'one-dir'
 
     def __init__(self, dirname='', sortname=''):

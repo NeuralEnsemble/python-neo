@@ -235,7 +235,7 @@ rawiolist = [
 
 def get_rawio_class(filename_or_dirname):
     """
-    Return a neo.rawio class guess from file extention.
+    Return a neo.rawio class guess from file extension.
     """
     _, ext = os.path.splitext(filename_or_dirname)
     ext = ext[1:]

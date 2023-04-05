@@ -219,7 +219,7 @@ Please visit this page and install the missing decompression libraries:
 https://share.mxwbio.com/d/4742248b2e674a85be97/
 Then, link the decompression library by setting the `HDF5_PLUGIN_PATH` to your
 installation location, e.g. via
-os.environ['HDF5_PLUGIN_PATH'] = '/path/to/cutum/hdf5/plugin/'
+os.environ['HDF5_PLUGIN_PATH'] = '/path/to/custom/hdf5/plugin/'
 
 Alternatively, you can use the auto_install_maxwell_hdf5_compression_plugin() below
 function that do it automagically.
@@ -246,7 +246,7 @@ def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None, force_do
         local_lib = hdf5_plugin_path / 'compression.dll'
 
     if not force_download and local_lib.is_file():
-        print(f'lib h5 compression for maxwell already already in {local_lib}')
+        print(f'The h5 compression library for Maxwell is already located in {local_lib}!')
         return
 
     dist = urlopen(remote_lib)

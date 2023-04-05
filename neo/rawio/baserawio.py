@@ -156,7 +156,6 @@ class BaseRawIO:
 
         self.use_cache = use_cache
         if use_cache:
-            import joblib
             self.setup_cache(cache_path)
         else:
             self._cache = None
@@ -697,7 +696,10 @@ class BaseRawIO:
         return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
     def setup_cache(self, cache_path, **init_kargs):
-        import joblib
+        try:
+            import joblib
+        except ImportError:
+            raise ImportError("Using the RawIO cache needs joblib to be installed")
 
         if self.rawmode in ('one-file', 'multi-file'):
             resource_name = self.filename

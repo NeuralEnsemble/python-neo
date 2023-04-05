@@ -362,10 +362,11 @@ class SpikeTrain(DataObject):
 
         _pp(f"time: {self.t_start} to {self.t_stop}")
 
-    def rescale(self, units):
+    def rescale(self, units, dtype=None):
         '''
-        Return a copy of the :class:`SpikeTrain` converted to the specified
-        units
+        Return a copy of the :class:`SpikeTrain` converted to the specified units
+        The `dtype` argument exists only for backward compatibility within quantities, see
+        https://github.com/python-quantities/python-quantities/pull/204
         '''
         obj = super().rescale(units)
         obj.t_start = self.t_start.rescale(units)

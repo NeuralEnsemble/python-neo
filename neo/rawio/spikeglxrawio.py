@@ -40,6 +40,11 @@ This reader handle:
 imDatPrb_type=1 (NP 1.0)
 imDatPrb_type=21 (NP 2.0, single multiplexed shank)
 imDatPrb_type=24 (NP 2.0, 4-shank)
+imDatPrb_type=1030 (NP 1.0-NHP 45mm SOI90 - NHP long 90um wide, staggered contacts)
+imDatPrb_type=1031 (NP 1.0-NHP 45mm SOI125 - NHP long 125um wide, staggered contacts)
+imDatPrb_type=1032 (NP 1.0-NHP 45mm SOI115 / 125 linear - NHP long 125um wide, linear contacts)
+imDatPrb_type=1022 (NP 1.0-NHP 25mm - NHP medium)
+imDatPrb_type=1015 (NP 1.0-NHP 10mm - NHP short)
 
 Author : Samuel Garcia
 Some functions are copied from Graham Findlay
@@ -64,7 +69,8 @@ class SpikeGLXRawIO(BaseRawIO):
     load_sync_channel=False/True
         The last channel (SY0) of each stream is a fake channel used for synchronisation.
     """
-    extensions = []
+    # file formats used by spikeglxio
+    extensions = ['meta', 'bin']
     rawmode = 'one-dir'
 
     def __init__(self, dirname='', load_sync_channel=False, load_channel_location=False):
@@ -368,10 +374,10 @@ def extract_stream_info(meta_file, meta):
     num_chan = int(meta['nSavedChans'])
     fname = Path(meta_file).stem
     run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
-    device = fname.split('.')[1]
-
-    if 'imec' in device:
-        stream_kind = fname.split('.')[2]
+    
+    if 'imec' in fname.split('.')[-2]:
+        device = fname.split('.')[-2]
+        stream_kind = fname.split('.')[-1]
         stream_name = device + '.' + stream_kind
         units = 'uV'
         # please note the 1e6 in gain for this uV
@@ -379,7 +385,7 @@ def extract_stream_info(meta_file, meta):
         # metad['imroTbl'] contain two gain per channel  AP and LF
         # except for the last fake channel
         per_channel_gain = np.ones(num_chan, dtype='float64')
-        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0':
+        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0' or meta['imDatPrb_type'] in ('1015', '1022', '1030', '1031', '1032'):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec
@@ -403,8 +409,9 @@ def extract_stream_info(meta_file, meta):
             channel_gains = gain_factor * per_channel_gain * 1e6
         else:
             raise NotImplementedError('This meta file version of spikeglx'
-                                      'is not implemented')
+                                      ' is not implemented')
     else:
+        device = fname.split('.')[-1]
         stream_kind = ''
         stream_name = device
         units = 'V'
