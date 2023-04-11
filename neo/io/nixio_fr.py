@@ -22,16 +22,16 @@ class NixIO(NIXRawIO, BaseFromRaw):
     def read_block(self, block_index=0, **kwargs):
         # sanity check to ensure constructed header and block to load match
         if block_index != 0:
-            warnings.warn(f'Initialized IO for block {self.block_index}.'
-                          f'Can only read that block. Ignoring additional {block_index=} argument.')
+            raise ValueError(f'Initialized IO for block {self.block_index}. '
+                             f'Can only read that block. Ignoring additional {block_index=} argument.')
 
         return super(NixIO, self).read_block(block_index=0, **kwargs)
 
     def read_segment(self, block_index=0, **kwargs):
         # sanity check to ensure constructed header and block to load match
         if block_index != 0:
-            warnings.warn(f'Initialized IO for block {self.block_index}.'
-                          f'Can only read that block. Ignoring additional {block_index=} argument.')
+            raise ValueError(f'Initialized IO for block {self.block_index}.'
+                             f'Can only read that block. Ignoring additional {block_index=} argument.')
 
         return super(NixIO, self).read_segment(block_index=0, **kwargs)
 
