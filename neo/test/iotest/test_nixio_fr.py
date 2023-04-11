@@ -9,6 +9,7 @@ import quantities as pq
 from neo.io.nixio import NixIO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
+from neo.test.tools import assert_same_sub_schema
 
 try:
     import nixio as nix
@@ -139,6 +140,34 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
                     assert anasig.shape[-1] == len(value)
         os.remove(self.testfilename)
 
+
+@unittest.skipUnless(HAVE_NIX, "Requires NIX")
+class CompareTestFileVersions(BaseTestIO, unittest.TestCase):
+    ioclass = NixIOfr
+    entities_to_download = ['nix']
+    entities_to_test = []
+
+    @classmethod
+    def setUpClass(cls):
+        super(CompareTestFileVersions, cls).setUpClass()
+
+        cls.neo_versions = ['0.6.1', '0.7.2', '0.8.0', '0.9.0', '0.10.2', '0.11.1', '0.12.0']
+        cls.blocks = []
+
+        for filename in [f'nix/generated_file_neo{ver}.nix' for ver in cls.neo_versions]:
+            filename = BaseTestIO.get_local_path(filename)
+            print(f'Loading {filename}')
+
+            io = NixIOfr(filename, autogenerate_stream_names=False, autogenerate_unit_ids=False)
+            block = io.read_block(lazy=False)
+            cls.blocks.append(block)
+            io.file.close()
+
+    def test_compare_file_versions(self):
+        # assert all versions result in comparable neo structures (ideally identical)
+        reference_block = self.blocks[0]
+        for bl in self.blocks[1:]:
+            assert_same_sub_schema(reference_block, bl, exclude=['file_origin', 'magnitude'])
 
 
 if __name__ == '__main__':
