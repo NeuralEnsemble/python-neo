@@ -1,14 +1,16 @@
 """
 Tests of neo.io.nixio_fr
 """
-import numpy as np
 import unittest
-from quantities import s
-from neo.io.nixio_fr import NixIO as NixIOfr
+
+import numpy as np
 import quantities as pq
-from neo.io.nixio import NixIO
-from neo.test.iotest.common_io_test import BaseTestIO
+from quantities import s
+
 from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
+from neo.io.nixio import NixIO
+from neo.io.nixio_fr import NixIO as NixIOfr
+from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import assert_same_sub_schema
 
 try:
@@ -25,18 +27,22 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
     ioclass = NixIOfr
 
     entities_to_download = [
-        'nix/nixio_fr.nix'
+        'nix/'
     ]
     entities_to_test = [
-        'nix/nixio_fr.nix'
+        # for BaseIO Tests use a rawio compatible file, that does not require special flags to be
+        # set for loading
+        'nix/nix_rawio_compatible.nix'
     ]
 
     def setUp(self):
         super().setUp()
+
         self.testfilename = self.get_local_path('nix/nixio_fr.nix')
-        self.reader_fr = NixIOfr(filename=self.testfilename)
+        self.reader_fr = NixIOfr(filename=self.testfilename, autogenerate_stream_names=True,
+                                 block_index=1)
         self.reader_norm = NixIO(filename=self.testfilename, mode='ro')
-        self.blk = self.reader_fr.read_block(block_index=1, load_waveforms=True)
+        self.blk = self.reader_fr.read_block(load_waveforms=True)
         # read block with NixIOfr
         self.blk1 = self.reader_norm.read_block(index=1)  # read same block with NixIO
 
@@ -106,17 +112,17 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
             bl = Block(**annotations)
             annotations = {'something': 'hello hello000'}
             seg = Segment(**annotations)
-            an =AnalogSignal([[1, 2, 3], [4, 5, 6]], units='V',
-                             sampling_rate=1 * pq.Hz)
+            an = AnalogSignal([[1, 2, 3], [4, 5, 6]], units='V',
+                              sampling_rate=1 * pq.Hz)
             an.annotate(ansigrandom='hello chars')
             an.array_annotate(custom_id=[1, 2, 3])
-            sp = SpikeTrain([3, 4, 5]* s, t_stop=10.0)
+            sp = SpikeTrain([3, 4, 5] * s, t_stop=10.0)
             sp.annotations['railway'] = 'hello train'
-            ev = Event(np.arange(0, 30, 10)*pq.Hz,
+            ev = Event(np.arange(0, 30, 10) * pq.Hz,
                        labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
             ev.annotations['venue'] = 'hello event'
             ev2 = Event(np.arange(0, 30, 10) * pq.Hz,
-                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
+                        labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
             ev2.annotations['evven'] = 'hello ev'
             seg.spiketrains.append(sp)
             seg.events.append(ev)
