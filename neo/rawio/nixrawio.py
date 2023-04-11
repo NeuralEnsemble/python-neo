@@ -199,55 +199,77 @@ class NIXRawIO(BaseRawIO):
                     len(group.multi_tags) == len(segment_groups)):
                 neo_spiketrain_groups.append(group)
 
+        self.unit_list_by_segment = []
+
         for seg in segment_groups:
             default_unit_id = 0
             spike_channels = []
+
+            st_dict = {'spiketrains': [],
+                 # 'spiketrains_id': [],
+                 'spiketrains_unit_id': [],
+                 'waveforms': []}
+            self.unit_list_by_segment.append(st_dict)
+
             for mt in seg.multi_tags:
-                if mt.type == "neo.spiketrain":
+                if mt.type != "neo.spiketrain":
+                    continue
 
-                    if self.autogenerate_unit_ids:
-                        unit_id = default_unit_id
+                if self.autogenerate_unit_ids:
+                    unit_id = default_unit_id
 
+                else:
+                    # files generated with neo <0.10.0: extract or define unit id of spiketrain from nix sources
+                    nix_generation_neo_version = Version(self.file.sections['neo'].props['version'].values[0])
+                    if nix_generation_neo_version < Version('0.10.0'):
+                        unit_sources = [s for s in mt.sources if s.type == 'neo.unit']
+
+                        if len(unit_sources) == 1:
+                            unit_id = unit_sources[0].name
+
+                        elif len(unit_sources) == 0:
+                            warnings.warn('No unit information found. Using default unit id.')
+                            unit_id = default_unit_id
+
+                        elif len(unit_sources) != 1:
+                            raise ValueError('Ambiguous or missing unit assignment detected. '
+                                             'Use `autogenerate_unit_ids=True` to ignore '
+                                             'unit_ids in nix file and regenerate new ids.')
+
+
+                    # files generated with recent neo versions use groups to groups spiketrains
+                    elif nix_generation_neo_version >= Version('0.10.0'):
+                        unit_groups = [g for g in neo_spiketrain_groups if mt in g.multi_tags]
+
+                        if len(unit_groups) == 1:
+                            unit_id = unit_groups[0].metadata.props['neo_name'].values[0]
+
+                        elif len(unit_groups) == 0:
+                            warnings.warn('No unit information found. Using default unit id.')
+                            unit_id = default_unit_id
+
+                        elif len(unit_groups) > 1:
+                            raise ValueError('Ambiguous or missing unit assignment detected. '
+                                             'Use `autogenerate_unit_ids=True` to ignore '
+                                             'unit_ids in nix file and regenerate new ids.')
+
+                # register spiketrain data for faster data retrieval later on
+                st_dict['spiketrains'].append(mt.positions)
+                st_dict['spiketrains_unit_id'].append(unit_id)
+                if mt.features and mt.features[0].data.type == "neo.waveforms":
+                    if mt.features[0].data:
+                        waveforms = mt.features[0].data
                     else:
-                        # files generated with neo <0.10.0: extract or define unit id of spiketrain from nix sources
-                        nix_generation_neo_version = Version(self.file.sections['neo'].props['version'].values[0])
-                        if nix_generation_neo_version < Version('0.10.0'):
-                            unit_sources = [s for s in mt.sources if s.type == 'neo.unit']
+                        waveforms = None
 
-                            if len(unit_sources) == 1:
-                                unit_id = unit_sources[0].name
+                    st_dict['waveforms'].append(waveforms)
 
-                            elif len(unit_groups) == 0:
-                                warnings.warn('No unit information found. Using default unit id.')
-                                unit_id = default_unit_id
-
-                            elif len(unit_sources) != 1:
-                                raise ValueError('Ambiguous or missing unit assignment detected. '
-                                                 'Use `autogenerate_unit_ids=True` to ignore '
-                                                 'unit_ids in nix file and regenerate new ids.')
-
-
-                        # files generated with recent neo versions use groups to groups spiketrains
-                        elif nix_generation_neo_version >= Version('0.10.0'):
-                            unit_groups = [g for g in neo_spiketrain_groups if mt in g.multi_tags]
-
-                            if len(unit_groups) == 1:
-                                unit_id = unit_groups[0].metadata.props['neo_name'].values[0]
-
-                            elif len(unit_groups) == 0:
-                                warnings.warn('No unit information found. Using default unit id.')
-                                unit_id = default_unit_id
-
-                            elif len(unit_groups) > 1:
-                                raise ValueError('Ambiguous or missing unit assignment detected. '
-                                                 'Use `autogenerate_unit_ids=True` to ignore '
-                                                 'unit_ids in nix file and regenerate new ids.')
-
-                    spike_channels.append(multi_tag_to_spike_channel(mt, unit_id))
-                    default_unit_id += 1
+                spike_channels.append(multi_tag_to_spike_channel(mt, unit_id))
+                default_unit_id += 1
 
             spike_channels = np.asarray(spike_channels, dtype=_spike_channel_dtype)
             segments_spike_channels.append(spike_channels)
+
 
         # verify consistency across segments
         assert_channel_consistency(segments_spike_channels)
@@ -278,8 +300,8 @@ class NIXRawIO(BaseRawIO):
         # precollecting data array information
         self.da_list_by_segments = []
         for seg_index, seg in enumerate(segment_groups):
-            d = {'signals': []}
-            self.da_list_by_segments.append(d)
+            st_dict = {'signals': []}
+            self.da_list_by_segments.append(st_dict)
             size_list = []
             data_list = []
             da_name_list = []
@@ -288,33 +310,9 @@ class NIXRawIO(BaseRawIO):
                     size_list.append(da.size)
                     data_list.append(da)
                     da_name_list.append(da.metadata['neo_name'])
-            d['data_size'] = size_list
-            d['data'] = data_list
-            d['ch_name'] = da_name_list
-
-        self.unit_list_by_segment = []
-
-        for seg_index, seg in enumerate(segment_groups):
-            d = {'spiketrains': [],
-                 'spiketrains_id': [],
-                 'spiketrains_unit': [],
-                 'waveforms': []}
-            self.unit_list_by_segment.append(d)
-            st_idx = 0
-            for st in seg.multi_tags:
-                if st.type == 'neo.spiketrain':
-                    # populate spiketrain metadata & waveform
-                    d['spiketrains'].append(st.positions)
-                    d['spiketrains_id'].append(st.id)
-                    d['spiketrains_unit'].append({'waveforms': []})
-                    if st.features and st.features[0].data.type == "neo.waveforms":
-                        waveforms = st.features[0].data
-                        stdict = d['spiketrains_unit'][st_idx]
-                        if waveforms:
-                            stdict['waveforms'] = waveforms
-                        else:
-                            stdict['waveforms'] = None
-                    st_idx += 1
+            st_dict['data_size'] = size_list
+            st_dict['data'] = data_list
+            st_dict['ch_name'] = da_name_list
 
         self.header = {}
         self.header['nb_block'] = 1
@@ -470,7 +468,7 @@ class NIXRawIO(BaseRawIO):
                                  t_start, t_stop):
         # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
         seg = self.unit_list_by_segment[seg_index]
-        waveforms = seg['spiketrains_unit'][unit_index]['waveforms']
+        waveforms = seg['waveforms'][unit_index]
         if not waveforms:
             return None
         raw_waveforms = np.array(waveforms)
