@@ -69,8 +69,13 @@ class MEArecRawIO(BaseRawIO):
                                           check_suffix=False,
                                           load=load,
                                           load_waveforms=False)
-        
-        self.info_dict = self._recgen.info
+
+        self.info_dict = deepcopy(self._recgen.info)
+        if self.load_recordings:
+            self._recordings = self._recgen.recordings
+        if self.load_spiketrains:
+            self._spiketrains = self._recgen.spiketrains
+
         self._sampling_rate = self.info_dict['recordings']['fs']
         self.duration_seconds = self.info_dict["recordings"]["duration"]
         self._num_frames = int(self._sampling_rate * self.duration_seconds)
@@ -80,8 +85,6 @@ class MEArecRawIO(BaseRawIO):
         signals = [('Signals', '0')] 
         signal_streams = np.array(signals, dtype=_signal_stream_dtype)
 
-        if self.load_recordings:
-            self._recordings = self._recgen.recordings
         
         sig_channels = []
         for c in range(self._num_channels):
@@ -100,7 +103,6 @@ class MEArecRawIO(BaseRawIO):
         # creating units channels
         spike_channels = []
         if self.load_spiketrains:
-            self._spiketrains = self._recgen.spiketrains
             for c in range(len(self._spiketrains)):
                 unit_name = 'unit{}'.format(c)
                 unit_id = '#{}'.format(c)
@@ -129,7 +131,7 @@ class MEArecRawIO(BaseRawIO):
         self._generate_minimal_annotations()
         for block_index in range(1):
             bl_ann = self.raw_annotations['blocks'][block_index]
-            bl_ann['mearec_info'] = deepcopy(self._recgen.info)
+            bl_ann['mearec_info'] = self.info_dict
 
     def _segment_t_start(self, block_index, seg_index):
         all_starts = [[0.]]
