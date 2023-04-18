@@ -20,6 +20,18 @@ class MEArecRawIO(BaseRawIO):
     """
     Class for "reading" fake data from a MEArec file.
 
+    This class provides a convenient way to read data from a MEArec file.
+
+    Parameters
+    ----------
+    filename : str
+        The filename of the MEArec file to read.
+    load_spiketrains : bool, optional
+        Whether or not to load spike train data. Defaults to `True`.
+    load_recordings : bool, optional
+        Whether or not to load continuous recording data. Defaults to `True`.
+
+
     Usage:
         >>> import neo.rawio
         >>> r = neo.rawio.MEArecRawIO(filename='mearec.h5')
@@ -46,35 +58,43 @@ class MEArecRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        import MEArec as mr
-        load = ['channel_positions'] 
+        load = [] 
         if self.load_recordings:
             load.append("recordings")
         if self.load_spiketrains:
             load.append("spiketrains")
         
+        import MEArec as mr
         self._recgen = mr.load_recordings(recordings=self.filename, return_h5_objects=True,
                                           check_suffix=False,
                                           load=load,
                                           load_waveforms=False)
-        self._sampling_rate = self._recgen.info['recordings']['fs']
+        
+        self.info_dict = self._recgen.info
+        self._sampling_rate = self.info_dict['recordings']['fs']
+        self.duration_seconds = self.info_dict["recordings"]["duration"]
+        self._num_frames = int(self._sampling_rate * self.duration_seconds)
+        self._num_channels = np.sum(self.info_dict["electrodes"]["dim"])
+        self._dtype = self.info_dict["recordings"]["dtype"]
+        
+        signals = [('Signals', '0')] 
+        signal_streams = np.array(signals, dtype=_signal_stream_dtype)
 
-        signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
-
-        sig_channels = []
         if self.load_recordings:
             self._recordings = self._recgen.recordings
-            self._num_frames, self._num_channels = self._recordings.shape
-            for c in range(self._num_channels):
-                ch_name = 'ch{}'.format(c)
-                chan_id = str(c + 1)
-                sr = self._sampling_rate  # Hz
-                dtype = self._recordings.dtype
-                units = 'uV'
-                gain = 1.
-                offset = 0.
-                stream_id = '0'
-                sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+        
+        sig_channels = []
+        for c in range(self._num_channels):
+            ch_name = 'ch{}'.format(c)
+            chan_id = str(c + 1)
+            sr = self._sampling_rate  # Hz
+            dtype = self._dtype
+            units = 'uV'
+            gain = 1.
+            offset = 0.
+            stream_id = '0'
+            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+    
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # creating units channels
@@ -92,7 +112,8 @@ class MEArecRawIO(BaseRawIO):
                 wf_sampling_rate = self._sampling_rate
                 spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                     wf_offset, wf_left_sweep, wf_sampling_rate))
-            spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
+        
+        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
