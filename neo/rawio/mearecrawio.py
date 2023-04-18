@@ -58,7 +58,7 @@ class MEArecRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        load = [] 
+        load = ["channel_positions"] 
         if self.load_recordings:
             load.append("recordings")
         if self.load_spiketrains:
@@ -71,6 +71,7 @@ class MEArecRawIO(BaseRawIO):
                                           load_waveforms=False)
 
         self.info_dict = deepcopy(self._recgen.info)
+        self.channel_positions = self._recgen.channel_positions
         if self.load_recordings:
             self._recordings = self._recgen.recordings
         if self.load_spiketrains:
@@ -79,7 +80,7 @@ class MEArecRawIO(BaseRawIO):
         self._sampling_rate = self.info_dict['recordings']['fs']
         self.duration_seconds = self.info_dict["recordings"]["duration"]
         self._num_frames = int(self._sampling_rate * self.duration_seconds)
-        self._num_channels = np.sum(self.info_dict["electrodes"]["dim"])
+        self._num_channels = self.channel_positions.shape[0]
         self._dtype = self.info_dict["recordings"]["dtype"]
         
         signals = [('Signals', '0')] 
