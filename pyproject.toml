@@ -63,7 +63,8 @@ test = [
     "sonpy",
     "pynwb",
     "probeinterface",
-    "joblib>=1.0.0"
+    "joblib>=1.0.0",
+    "dhn_med_py>=1.0.0"
 ]
 
 docs = [
@@ -81,6 +82,7 @@ ced = ["sonpy"]
 nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
+med = ["dhn_med_py>=1.0.0"]
 
 all = [
     "coverage",
@@ -100,6 +102,7 @@ all = [
     "scipy>=1.0.0",
     "sonpy",
     "tqdm",
-    "joblib>=1.0.0"
+    "joblib>=1.0.0",
+    "dhn_med_py>=1.0.0"
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable
