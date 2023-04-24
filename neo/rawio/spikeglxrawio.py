@@ -404,7 +404,7 @@ def extract_stream_info(meta_file, meta):
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_30.md#imec
-            per_channel_gain[:-1] = 1 / 80.
+            per_channel_gain[:] = 1 / 80.
             gain_factor = float(meta['imAiRangeMax']) / 8192
             channel_gains = gain_factor * per_channel_gain * 1e6
         else:
