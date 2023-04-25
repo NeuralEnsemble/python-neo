@@ -75,11 +75,7 @@ class PlexonRawIO(BaseRawIO):
 
         offset4 = offset3 + np.dtype(SlowChannelHeader).itemsize * nb_sig_chan
 
-        # loop over data blocks and put them by type and channel
-        block_headers = {1: {c: [] for c in dspChannelHeaders['Channel']},
-                         4: {c: [] for c in eventHeaders['Channel']},
-                         5: {c: [] for c in slowChannelHeaders['Channel']},
-                         }
+        # locate data blocks and group them by type and channel
         block_pos = {1: {c: [] for c in dspChannelHeaders['Channel']},
                      4: {c: [] for c in eventHeaders['Channel']},
                      5: {c: [] for c in slowChannelHeaders['Channel']},
@@ -91,7 +87,6 @@ class PlexonRawIO(BaseRawIO):
             length = bl_header['NumberOfWaveforms'] * bl_header['NumberOfWordsInWaveform'] * 2 + 16
             bl_type = int(bl_header['Type'])
             chan_id = int(bl_header['Channel'])
-            block_headers[bl_type][chan_id].append(bl_header)
             block_pos[bl_type][chan_id].append(pos)
             pos += length
 
@@ -110,34 +105,38 @@ class PlexonRawIO(BaseRawIO):
             # Signals
             5: np.dtype(dt_base + [('cumsum', 'int64'), ]),
         }
-        for bl_type in block_headers:
+        for bl_type in block_pos:
             self._data_blocks[bl_type] = {}
-            for chan_id in block_headers[bl_type]:
-                bl_header = np.array(block_headers[bl_type][chan_id], dtype=DataBlockHeader)
-                bl_pos = np.array(block_pos[bl_type][chan_id], dtype='int64')
-
-                timestamps = bl_header['UpperByteOf5ByteTimestamp'] * \
-                             2 ** 32 + bl_header['TimeStamp']
-
-                n1 = bl_header['NumberOfWaveforms']
-                n2 = bl_header['NumberOfWordsInWaveform']
+            for chan_id in block_pos[bl_type]:
+                positions = block_pos[bl_type][chan_id]
                 dt = dtype_by_bltype[bl_type]
-                data_block = np.empty(bl_pos.size, dtype=dt)
-                data_block['pos'] = bl_pos + 16
-                data_block['timestamp'] = timestamps
-                data_block['size'] = n1 * n2 * 2
+                data_block = np.empty((len(positions)), dtype=dt)
+                for index, pos in enumerate(positions):
+                    bl_header = data[pos:pos + 16].view(DataBlockHeader)[0]
 
-                if bl_type == 1:  # Spikes and waveforms
-                    data_block['unit_id'] = bl_header['Unit']
-                    data_block['n1'] = n1
-                    data_block['n2'] = n2
-                elif bl_type == 4:  # Events
-                    data_block['label'] = bl_header['Unit']
-                elif bl_type == 5:  # Signals
-                    if data_block.size > 0:
-                        # cumulative some of sample index for fast access to chunks
-                        data_block['cumsum'][0] = 0
-                        data_block['cumsum'][1:] = np.cumsum(data_block['size'][:-1]) // 2
+                    timestamp = bl_header['UpperByteOf5ByteTimestamp'] * 2 ** 32 \
+                        + bl_header['TimeStamp']
+                    n1 = bl_header['NumberOfWaveforms']
+                    n2 = bl_header['NumberOfWordsInWaveform']
+                    sample_count = n1 * n2
+
+                    data_block['pos'][index] = pos + 16
+                    data_block['timestamp'][index] = timestamp
+                    data_block['size'][index] = sample_count * 2
+
+                    if bl_type == 1:  # Spikes and waveforms
+                        data_block['unit_id'][index] = bl_header['Unit']
+                        data_block['n1'][index] = n1
+                        data_block['n2'][index] = n2
+                    elif bl_type == 4:  # Events
+                        data_block['label'][index] = bl_header['Unit']
+                    elif bl_type == 5:  # Signals
+                        if data_block.size > 0:
+                            # cumulative some of sample index for fast access to chunks
+                            if index == 0:
+                                data_block['cumsum'][index] = 0
+                            else:
+                                data_block['cumsum'][index] = data_block['cumsum'][index - 1] + sample_count
 
                 self._data_blocks[bl_type][chan_id] = data_block
 
