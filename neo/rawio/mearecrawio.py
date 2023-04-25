@@ -28,7 +28,7 @@ class MEArecRawIO(BaseRawIO):
         The filename of the MEArec file to read.
     load_spiketrains : bool, optional
         Whether or not to load spike train data. Defaults to `True`.
-    load_recordings : bool, optional
+    load_analogsignal : bool, optional
         Whether or not to load continuous recording data. Defaults to `True`.
 
 
@@ -48,18 +48,18 @@ class MEArecRawIO(BaseRawIO):
     extensions = ['h5']
     rawmode = 'one-file'
 
-    def __init__(self, filename='', load_spiketrains=True, load_recordings=True):
+    def __init__(self, filename='', load_spiketrains=True, load_analogsignal=True):
         BaseRawIO.__init__(self)
         self.filename = filename
         self.load_spiketrains = load_spiketrains
-        self.load_recordings = load_recordings
+        self.load_analogsignal = load_analogsignal
         
     def _source_name(self):
         return self.filename
 
     def _parse_header(self):
         load = ["channel_positions"] 
-        if self.load_recordings:
+        if self.load_analogsignal:
             load.append("recordings")
         if self.load_spiketrains:
             load.append("spiketrains")
@@ -72,7 +72,7 @@ class MEArecRawIO(BaseRawIO):
 
         self.info_dict = deepcopy(self._recgen.info)
         self.channel_positions = self._recgen.channel_positions
-        if self.load_recordings:
+        if self.load_analogsignal:
             self._recordings = self._recgen.recordings
         if self.load_spiketrains:
             self._spiketrains = self._recgen.spiketrains
@@ -154,8 +154,8 @@ class MEArecRawIO(BaseRawIO):
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
         
-        if not self.load_recordings:
-            raise AttributeError("Recordings not loaded. Set load_recordings=True in MEArecRawIO constructor")
+        if not self.load_analogsignal:
+            raise AttributeError("Recordings not loaded. Set load_analogsignal=True in MEArecRawIO constructor")
         
         if i_start is None:
             i_start = 0
