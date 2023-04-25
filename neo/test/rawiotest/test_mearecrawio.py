@@ -31,7 +31,7 @@ class TestMEArecRawIO(BaseTestRawIO, unittest.TestCase, ):
         
         filename = self.entities_to_test[0]
         filename = self.get_local_path(filename)
-        rawio = self.rawioclass(filename=filename, load_recordings=False)
+        rawio = self.rawioclass(filename=filename, load_analogsignal=False)
         rawio.parse_header()
         
         # Test that rawio does not have a _recordings attribute
@@ -41,7 +41,7 @@ class TestMEArecRawIO(BaseTestRawIO, unittest.TestCase, ):
         rawio.get_spike_timestamps()
 
         # Test that caling anlogsignal chunk raises the right error
-        error_message = "Recordings not loaded. Set load_recordings=True in MEArecRawIO constructor"
+        error_message = "Recordings not loaded. Set load_analogsignal=True in MEArecRawIO constructor"
         with self.assertRaises(AttributeError, msg=error_message):
             rawio.get_analogsignal_chunk()
 
