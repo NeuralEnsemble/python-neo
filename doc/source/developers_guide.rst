@@ -100,6 +100,9 @@ To run tests from an individual file::
 
     $ pytest test_analogsignal.py
 
+By default some tests are downloading test datasets. For offline development
+use the environment variable `NEO_TESTS_NONETWORK` to `False` to skip tests
+that require file download.
 
 Writing tests
 -------------

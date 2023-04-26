@@ -28,7 +28,6 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant,
                             assert_sub_schema_is_lazy_loaded)
 
-from neo.test.rawiotest.tools import can_use_network
 from neo.test.rawiotest.common_rawio_test import repo_for_test
 from neo.utils import (download_dataset, get_local_testing_data_folder)
 from neo import list_candidate_ios
@@ -38,6 +37,11 @@ try:
     HAVE_DATALAD = True
 except:
     HAVE_DATALAD = False
+
+if os.getenv('NEO_TESTS_NONETWORK'):
+    USE_NETWORK = False
+else:
+    USE_NETWORK = True
 
 from neo.test.iotest.tools import (close_object_safe, create_generic_io_object,
                                    create_generic_reader,
@@ -82,9 +86,6 @@ class BaseTestIO:
     # when writing then reading creates an identical neo object
     read_and_write_is_bijective = True
 
-    # allow environment to tell avoid using network
-    use_network = can_use_network()
-
     local_test_dir = get_local_testing_data_folder()
 
     def setUp(self):
@@ -113,6 +114,11 @@ class BaseTestIO:
         # these objects can be either written or read
         cls.io_readorwrite = list(set(cls.ioclass.readable_objects) |
                                    set(cls.ioclass.writeable_objects))
+
+        if not USE_NETWORK:
+            cls.files_to_test = []
+            raise unittest.SkipTest('Running tests without network access')
+
         if HAVE_DATALAD:
             for remote_path in cls.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
