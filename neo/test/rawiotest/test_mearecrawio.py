@@ -41,8 +41,7 @@ class TestMEArecRawIO(BaseTestRawIO, unittest.TestCase, ):
         rawio.get_spike_timestamps()
 
         # Test that caling anlogsignal chunk raises the right error
-        error_message = "Recordings not loaded. Set load_analogsignal=True in MEArecRawIO constructor"
-        with self.assertRaises(AttributeError, msg=error_message):
+        with self.assertRaises(AttributeError):
             rawio.get_analogsignal_chunk()
 
 
@@ -60,8 +59,7 @@ class TestMEArecRawIO(BaseTestRawIO, unittest.TestCase, ):
         rawio.get_analogsignal_chunk()
 
         # Test that calling get_spike_timestamps raises an the right error
-        error_message = "Spiketrains not loaded. Set load_spiketrains=True in MEArecRawIO constructor"
-        with self.assertRaises(AttributeError, msg=error_message):
+        with self.assertRaises(AttributeError):
             rawio.get_spike_timestamps()
 
 if __name__ == "__main__":

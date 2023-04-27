@@ -83,21 +83,22 @@ class MEArecRawIO(BaseRawIO):
         self._num_channels = self.channel_positions.shape[0]
         self._dtype = self.info_dict["recordings"]["dtype"]
         
-        signals = [('Signals', '0')] 
+        signals = [('Signals', '0')] if self.load_analogsignal else []
         signal_streams = np.array(signals, dtype=_signal_stream_dtype)
 
         
         sig_channels = []
-        for c in range(self._num_channels):
-            ch_name = 'ch{}'.format(c)
-            chan_id = str(c + 1)
-            sr = self._sampling_rate  # Hz
-            dtype = self._dtype
-            units = 'uV'
-            gain = 1.
-            offset = 0.
-            stream_id = '0'
-            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+        if self.load_analogsignal:
+            for c in range(self._num_channels):
+                ch_name = 'ch{}'.format(c)
+                chan_id = str(c + 1)
+                sr = self._sampling_rate  # Hz
+                dtype = self._dtype
+                units = 'uV'
+                gain = 1.
+                offset = 0.
+                stream_id = '0'
+                sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
     
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -180,15 +181,9 @@ class MEArecRawIO(BaseRawIO):
 
     def _spike_count(self, block_index, seg_index, unit_index):
         
-        if not self.load_spiketrains:
-            raise AttributeError("Spiketrains not loaded. Set load_spiketrains=True in MEArecRawIO constructor")
-        
         return len(self._spiketrains[unit_index])
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        
-        if not self.load_spiketrains:
-            raise AttributeError("Spiketrains not loaded. Set load_spiketrains=True in MEArecRawIO constructor")
         
         spike_timestamps = self._spiketrains[unit_index].times.magnitude
         if t_start is None:
