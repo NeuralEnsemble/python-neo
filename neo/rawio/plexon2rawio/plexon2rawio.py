@@ -53,7 +53,7 @@ class Plexon2RawIO(BaseRawIO):
     extensions = ['pl2']
     rawmode = 'one-file'
 
-    def __init__(self, filename='', pl2_dll_file_path=None):
+    def __init__(self, filename, pl2_dll_file_path=None):
 
         # signals, event and spiking data will be cached
         # cached signal data can be cleared using `clear_analogsignal_cache()()`
