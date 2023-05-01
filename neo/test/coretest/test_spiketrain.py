@@ -1973,6 +1973,12 @@ class TestPropertiesMethods(unittest.TestCase):
         res = pretty(self.train1)
         targ = ("SpikeTrain\n" + "name: '%s'\ndescription: '%s'\nannotations: %s"
                                  "" % (self.name1, self.description1, pretty(self.ann1)))
+        targ = (f"SpikeTrain containing {len(self.train1)} spikes with waveforms; "
+                f"units {self.train1.units.dimensionality.string}; datatype float64 "
+                f"\nname: '{self.name1}'\ndescription: '{self.description1}'"
+                f"\nannotations: {pretty(self.ann1)}"
+                f"\ntime: {self.train1.t_start} to {self.train1.t_stop}")
+
         self.assertEqual(res, targ)
 
 
