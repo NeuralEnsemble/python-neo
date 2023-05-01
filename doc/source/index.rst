@@ -18,7 +18,7 @@ Neo documentation
 
     .. grid-item-card::
 
-       Neo is a Python package for working with **electrophysiology data** in Python.
+       Neo is a Python package for working with **electrophysiology data**.
 
        It implements a hierarchical data model well adapted to intracellular and
        extracellular electrophysiology and EEG data.
