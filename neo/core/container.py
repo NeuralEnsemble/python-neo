@@ -233,10 +233,6 @@ class Container(BaseNeo):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
 
-        # initialize containers
-        for container in self._child_containers:
-            setattr(self, container, [])
-
     @property
     def _single_child_objects(self):
         """

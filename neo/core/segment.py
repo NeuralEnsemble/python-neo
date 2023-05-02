@@ -91,7 +91,16 @@ class Segment(Container):
         '''
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
+
+        self.analogsignals = []
+        self.irregularlysampledsignals = []
         self.spiketrains = SpikeTrainList(segment=self)
+        self.events = []
+        self.epochs = []
+        self.channelviews = []
+        self.imagesequences = []
+        self.block = None
+
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index

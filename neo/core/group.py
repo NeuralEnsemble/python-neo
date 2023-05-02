@@ -48,10 +48,23 @@ class Group(Container):
                  allowed_types=None, **annotations):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
+
+        self.analogsignals = []
+        self.irregularlysampledsignals = []
+        self.spiketrains = []
+        self.events = []
+        self.epochs = []
+        self.channelviews = []
+        self.imagesequences = []
+        self.segments = []  # to remove?
+        self.groups = []
+        self.block = None
+
         if allowed_types is None:
             self.allowed_types = None
         else:
             self.allowed_types = tuple(allowed_types)
+
         if objects:
             self.add(*objects)
 
