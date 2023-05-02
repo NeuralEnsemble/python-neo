@@ -103,9 +103,7 @@ class Container(BaseNeo):
     Each class can define one or more of the following class attributes
     (in  addition to those of BaseNeo):
         :_container_child_objects: Neo container objects that can be children
-                                   of this object. This attribute is used in
-                                   cases where the child can only have one
-                                   parent of this type. An instance attribute
+                                   of this object. An instance attribute
                                    named class.__name__.lower()+'s' will be
                                    automatically defined to hold this child and
                                    will be initialized to an empty list.
@@ -119,8 +117,7 @@ class Container(BaseNeo):
 
     The following helper properties are available
     (in  addition to those of BaseNeo):
-        :_child_objects: All neo container objects that can be children
-                                of this object.
+        :_child_objects: All neo objects that can be children of this object.
                                 :_container_child_objects: +
                                 :_data_child_objects:
         :_container_child_containers: The names of the container attributes
@@ -183,9 +180,9 @@ class Container(BaseNeo):
         2) process its non-universal recommended arguments (in its __new__ or
            __init__ method
     """
-    # Child objects that are a container and have a single parent
+    # Child objects that are a container
     _container_child_objects = ()
-    # Child objects that have data and have a single parent
+    # Child objects that have data
     _data_child_objects = ()
     # Containers that are listed when pretty-printing
     _repr_pretty_containers = ()
@@ -200,13 +197,13 @@ class Container(BaseNeo):
 
     def _get_object_list(self, name):
         """
-
+        todo
         """
         return getattr(self, name)
 
     def _set_object_list(self, name, value):
         """
-
+        todo
         """
         assert isinstance(value, list)
         object_list = getattr(self, name)
@@ -396,6 +393,17 @@ class Container(BaseNeo):
         for child in self.container_children_recur:
             objs.extend(getattr(child, container_name, []))
         return objs
+
+    def check_relationships(self, recursive=True):
+        """
+        Check that the expected child-parent relationships exist.
+        """
+        parent_name = _reference_name(self.__class__.__name__)
+        for child in self._single_children:
+            assert getattr(child, parent_name, None) is self
+        if recursive:
+            for child in self.container_children:
+                child.check_relationships(recursive=True)
 
     def create_relationship(self, force=False, recursive=True):
         """

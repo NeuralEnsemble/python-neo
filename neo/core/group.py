@@ -59,15 +59,18 @@ class Group(Container):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
 
+        # note that we create the ObjectLists here _without_ a parent argument
+        # since objects do not have a reference to the group(s)
+        # they are contained in.
         self._analogsignals = ObjectList(AnalogSignal)
         self._irregularlysampledsignals = ObjectList(IrregularlySampledSignal)
-        self.spiketrains = SpikeTrainList(segment=self)
+        self._spiketrains = SpikeTrainList(parent=self)
         self._events = ObjectList(Event)
         self._epochs = ObjectList(Epoch)
         self._channelviews = ObjectList(ChannelView)
         self._imagesequences = ObjectList(ImageSequence)
-        self.segments = ObjectList(Segment)  # to remove?
-        self.groups = ObjectList(Group)
+        self._segments = ObjectList(Segment)  # to remove?
+        self._groups = ObjectList(Group)
 
         if allowed_types is None:
             self.allowed_types = None
@@ -111,6 +114,23 @@ class Group(Container):
         fget=lambda self: self._get_object_list("_imagesequences"),
         fset=lambda self, value: self._set_object_list("_imagesequences", value),
         doc="todo"
+    )
+
+    spiketrains = property(
+        fget=lambda self: self._get_object_list("_spiketrains"),
+        fset=lambda self, value: self._set_object_list("_spiketrains", value),
+        doc="todo"
+
+    segments = property(
+        fget=lambda self: self._get_object_list("_segments"),
+        fset=lambda self, value: self._set_object_list("_segments", value),
+        doc="list of Segments contained in this group"
+    )
+
+    groups = property(
+        fget=lambda self: self._get_object_list("_groups"),
+        fset=lambda self, value: self._set_object_list("_groups", value),
+        doc="list of Groups contained in this group"
     )
 
     @property

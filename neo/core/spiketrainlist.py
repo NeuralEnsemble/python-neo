@@ -75,7 +75,7 @@ class SpikeTrainList(ObjectList):
 
     """
 
-    def __init__(self, items=None, segment=None):
+    def __init__(self, items=None, parent=None):
         """Initialize self"""
         if items is None:
             self._items = items
@@ -89,7 +89,7 @@ class SpikeTrainList(ObjectList):
         self._channel_id_array = None
         self._all_channel_ids = None
         self._spiketrain_metadata = {}
-        self.segment = segment
+        self.segment = parent
 
     def __iter__(self):
         """Implement iter(self)"""
@@ -183,7 +183,7 @@ class SpikeTrainList(ObjectList):
             return self._add_spiketrainlists(other)
         elif other and is_spiketrain_or_proxy(other[0]):
             return self._add_spiketrainlists(
-                self.__class__(items=other, segment=self.segment)
+                self.__class__(items=other, parent=self.segment)
             )
         else:
             if self._items is None:

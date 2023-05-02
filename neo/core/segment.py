@@ -99,13 +99,13 @@ class Segment(Container):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
 
-        self._analogsignals = ObjectList(AnalogSignal)
-        self._irregularlysampledsignals = ObjectList(IrregularlySampledSignal)
-        self.spiketrains = SpikeTrainList(segment=self)
-        self._events = ObjectList(Event)
-        self._epochs = ObjectList(Epoch)
-        self._channelviews = ObjectList(ChannelView)
-        self._imagesequences = ObjectList(ImageSequence)
+        self._analogsignals = ObjectList(AnalogSignal, parent=self)
+        self._irregularlysampledsignals = ObjectList(IrregularlySampledSignal, parent=self)
+        self._spiketrains = SpikeTrainList(parent=self)
+        self._events = ObjectList(Event, parent=self)
+        self._epochs = ObjectList(Epoch, parent=self)
+        self._channelviews = ObjectList(ChannelView, parent=self)
+        self._imagesequences = ObjectList(ImageSequence, parent=self)
         self.block = None
 
         self.file_datetime = file_datetime
@@ -145,6 +145,12 @@ class Segment(Container):
     imagesequences = property(
         fget=lambda self: self._get_object_list("_imagesequences"),
         fset=lambda self, value: self._set_object_list("_imagesequences", value),
+        doc="todo"
+    )
+
+    spiketrains = property(
+        fget=lambda self: self._get_object_list("_spiketrains"),
+        fset=lambda self, value: self._set_object_list("_spiketrains", value),
         doc="todo"
     )
 
@@ -286,6 +292,6 @@ class Segment(Container):
             if len(ep_time_slice):
                 subseg.epochs.append(ep_time_slice)
 
-        subseg.create_relationship()
+        subseg.check_relationships()
 
         return subseg

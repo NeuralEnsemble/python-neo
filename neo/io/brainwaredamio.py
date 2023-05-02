@@ -149,7 +149,7 @@ class BrainwareDamIO(BaseIO):
         # remove the file object
         self._fsrc = None
 
-        block.create_relationship()
+        block.check_relationships()
         return block
 
     # -------------------------------------------------------------------------

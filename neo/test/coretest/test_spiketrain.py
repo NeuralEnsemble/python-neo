@@ -1177,8 +1177,6 @@ class TestMerge(unittest.TestCase):
 
         self.segment = Segment()
         self.segment.spiketrains.extend([self.train1, self.train2])
-        self.train1.segment = self.segment
-        self.train2.segment = self.segment
 
     def test_compliant(self):
         assert_neo_object_is_compliant(self.train1)
@@ -1954,7 +1952,7 @@ class TestPropertiesMethods(unittest.TestCase):
     def test__children(self):
         segment = Segment(name='seg1')
         segment.spiketrains = [self.train1]
-        segment.create_relationship()
+        segment.check_relationships()
 
         self.assertEqual(self.train1._parent_objects, ('Segment',))
 

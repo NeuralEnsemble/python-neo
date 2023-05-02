@@ -183,7 +183,7 @@ class TestEpoch(unittest.TestCase):
 
         segment = Segment(name='seg1')
         segment.epochs = [epc]
-        segment.create_relationship()
+        segment.check_relationships()
 
         self.assertEqual(epc._parent_objects, ('Segment',))
 

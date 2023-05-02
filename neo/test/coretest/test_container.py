@@ -90,9 +90,7 @@ class TestContainerNeo(unittest.TestCase):
 
         self.assertEqual(container.size, {})
 
-        container.create_relationship()
-        container.create_relationship()
-
+        container.check_relationships()
     def test_filter(self):
         container = Container()
         self.assertRaises(TypeError, container.filter, "foo")

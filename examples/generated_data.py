@@ -56,7 +56,6 @@ def generate_block(n_segments=3, n_channels=4, n_units=3,
                 seg.spiketrains.append(train)
                 u.spiketrains.append(train)
 
-    block.create_relationship()
     return block
 
 

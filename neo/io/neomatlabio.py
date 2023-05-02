@@ -224,7 +224,7 @@ class NeoMatlabIO(BaseIO):
         bl_struct = d['block']
         bl = self.create_ob_from_struct(
             bl_struct, 'Block')
-        bl.create_relationship()
+        bl.check_relationships()
         return bl
 
     def write_block(self, bl, **kargs):

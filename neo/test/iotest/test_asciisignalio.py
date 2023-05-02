@@ -342,7 +342,6 @@ class TestAsciiSignalIO(unittest.TestCase):
         seg1 = Segment()
         block1 = Block()
         seg1.analogsignals.append(signal1)
-        seg1.block = block1
         block1.segments.append(seg1)
 
         iow = AsciiSignalIO(filename,
@@ -386,7 +385,6 @@ class TestAsciiSignalIO(unittest.TestCase):
         seg1 = Segment()
         block1 = Block()
         seg1.analogsignals.append(signal1)
-        seg1.block = block1
         block1.segments.append(seg1)
 
         iow = AsciiSignalIO(filename,
@@ -430,7 +428,6 @@ class TestAsciiSignalIO(unittest.TestCase):
         seg1 = Segment()
         block1 = Block()
         seg1.analogsignals.append(signal1)
-        seg1.block = block1
         block1.segments.append(seg1)
 
         iow = AsciiSignalIO(filename,
@@ -508,7 +505,6 @@ class TestAsciiSignalIO(unittest.TestCase):
         seg1 = Segment()
         block1 = Block()
         seg1.analogsignals.append(signal1)
-        seg1.block = block1
         block1.segments.append(seg1)
 
         iow = AsciiSignalIO(filename, metadata_filename=metadata_filename)

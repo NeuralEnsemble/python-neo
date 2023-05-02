@@ -11,7 +11,7 @@ class ObjectList:
     handle relationships within Neo hierarchy
     """
 
-    def __init__(self, allowed_contents):
+    def __init__(self, allowed_contents, parent=None):
         # validate allowed_contents and normalize it to a tuple
         if isinstance(allowed_contents, type) and issubclass(allowed_contents, BaseNeo):
             self.allowed_contents = (allowed_contents,)
@@ -20,6 +20,7 @@ class ObjectList:
                 assert issubclass(item, BaseNeo)
             self.allowed_contents = tuple(allowed_contents)
         self.contents = []
+        self.parent = parent
 
     def _handle_append(self, obj):
         if not (
@@ -29,6 +30,12 @@ class ObjectList:
             )
         ):
             raise TypeError(f"Object is a {type(obj)}. It should be one of {self.allowed_contents}.")
+        # set the child-parent relationship
+        if self.parent:
+            relationship_name = self.parent.__class__.__name__.lower()
+            current_parent = getattr(obj, relationship_name)
+            if current_parent != self.parent:
+                setattr(obj, relationship_name, self.parent)
 
     def __str__(self):
         return str(self.contents)

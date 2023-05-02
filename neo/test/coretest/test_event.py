@@ -450,7 +450,7 @@ class TestEvent(unittest.TestCase):
 
         segment = Segment(name='seg1')
         segment.events = [evt]
-        segment.create_relationship()
+        segment.check_relationships()
 
         self.assertEqual(evt._parent_objects, ('Segment',))
 

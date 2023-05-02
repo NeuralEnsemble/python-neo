@@ -89,9 +89,9 @@ class Block(Container):
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
-        self._segments = ObjectList(Segment)
-        self._groups = ObjectList(Group)
-        self._regionsofinterest = ObjectList(RegionOfInterest)
+        self._segments = ObjectList(Segment, parent=self)
+        self._groups = ObjectList(Group, parent=self)
+        self._regionsofinterest = ObjectList(RegionOfInterest, parent=self)
 
     segments = property(
         fget=lambda self: self._get_object_list("_segments"),
