@@ -166,12 +166,9 @@ class Container(BaseNeo):
                                          object recursively that are of a
                                          particular class.
 
-        :create_many_to_one_relationship(**args): For each child of the current
-                                                  object that can only have a
-                                                  single parent, set its parent
-                                                  to be the current object.
-
-        :create_relationship(**args): Same as :create_many_to_one_relationship:
+        :create_relationship(**args): For each child of the current
+                                      object, set its parent
+                                      to be the current object.
 
         :merge(**args): Annotations are merged based on the rules of
                         :merge_annotations:.  Child objects with the same name
@@ -209,7 +206,7 @@ class Container(BaseNeo):
                          file_origin=file_origin, **annotations)
 
     @property
-    def _single_child_objects(self):
+    def _child_objects(self):
         """
         Child objects that have a single parent.
         """
@@ -233,26 +230,12 @@ class Container(BaseNeo):
                       self._data_child_objects])
 
     @property
-    def _single_child_containers(self):
+    def _child_containers(self):
         """
         Containers for child objects with a single parent.
         """
         return tuple([_container_name(child) for child in
-                      self._single_child_objects])
-
-    @property
-    def _child_objects(self):
-        """
-        All types for child objects.
-        """
-        return self._single_child_objects
-
-    @property
-    def _child_containers(self):
-        """
-        All containers for child objects.
-        """
-        return self._single_child_containers
+                      self._child_objects])
 
     @property
     def _single_children(self):
@@ -260,7 +243,7 @@ class Container(BaseNeo):
         All child objects that can only have single parents.
         """
         childs = [list(getattr(self, attr)) for attr in
-                  self._single_child_containers]
+                  self._child_containers]
         return tuple(sum(childs, []))
 
     @property
@@ -405,18 +388,11 @@ class Container(BaseNeo):
             objs.extend(getattr(child, container_name, []))
         return objs
 
-    def create_many_to_one_relationship(self, force=False, recursive=True):
+    def create_relationship(self, force=False, recursive=True):
         """
         For each child of the current object that can only have a single
         parent, set its parent to be the current object.
-
-        Usage:
-        >>> a_block.create_many_to_one_relationship()
-        >>> a_block.create_many_to_one_relationship(force=True)
-
-        If the current object is a :class:`Block`, you want to run
-        populate_RecordingChannel first, because this will create new objects
-        that this method will link up.
+        For children of the current object, put the current object in the parent list.
 
         If force is True overwrite any existing relationships
         If recursive is True descend into child objects and create
@@ -429,30 +405,7 @@ class Container(BaseNeo):
                 setattr(child, parent_name, self)
         if recursive:
             for child in self.container_children:
-                child.create_many_to_one_relationship(force=force,
-                                                      recursive=True)
-
-    def create_relationship(self, force=False, append=True, recursive=True):
-        """
-        For each child of the current object that can only have a single
-        parent, set its parent to be the current object.
-        For children of the current object that can have more than one parent
-        of this type, put the current object in the parent list.
-
-        If the current object is a :class:`Block`, you want to run
-        populate_RecordingChannel first, because this will create new objects
-        that this method will link up.
-
-        If force is True overwrite any existing relationships
-        If append is True add it to the list, otherwise overwrite the list.
-        If recursive is True descend into child objects and create
-        relationships there
-        """
-        self.create_many_to_one_relationship(force=force, recursive=False)
-        if recursive:
-            for child in self.container_children:
-                child.create_relationship(force=force, append=append,
-                                          recursive=True)
+                child.create_relationship(force=force, recursive=True)
 
     def __deepcopy__(self, memo):
         """

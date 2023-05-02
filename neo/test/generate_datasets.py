@@ -280,7 +280,7 @@ def generate_one_simple_block(block_name='block_0', nb_segment=3, supported_obje
     # if RecordingChannel in objects:
     #    populate_RecordingChannel(bl)
 
-    bl.create_many_to_one_relationship()
+    bl.create_relationship()
     return bl
 
 
@@ -373,12 +373,11 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
 
     # TODO : Spike, Event
 
-    seg.create_many_to_one_relationship()
+    seg.create_relationship()
     return seg
 
 
 def generate_from_supported_objects(supported_objects):
-    # ~ create_many_to_one_relationship
     if not supported_objects:
         raise ValueError('No objects specified')
     objects = supported_objects
@@ -390,5 +389,5 @@ def generate_from_supported_objects(supported_objects):
         # TODO
         return None
 
-    higher.create_many_to_one_relationship()
+    higher.create_relationship()
     return higher

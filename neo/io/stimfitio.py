@@ -145,6 +145,6 @@ class StimfitIO(BaseIO):
             bl.segments.append(seg)
             t_start = t_start + length * dt
 
-        bl.create_many_to_one_relationship()
+        bl.create_relationship()
 
         return bl

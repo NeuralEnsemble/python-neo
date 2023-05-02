@@ -126,7 +126,7 @@ class BaseIO:
             bl = Block(name='One segment only')
             seg = self.read_segment(lazy=lazy, **kargs)
             bl.segments.append(seg)
-            bl.create_many_to_one_relationship()
+            bl.create_relationship()
             return [bl]
         else:
             raise NotImplementedError

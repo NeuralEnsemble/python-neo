@@ -279,7 +279,7 @@ class BrainwareSrcIO(BaseIO):
                 raise
 
         # since we read at a Block level we always do this
-        self._blk.create_many_to_one_relationship()
+        self._blk.create_relationship()
 
         # put the Block in a local object so it can be gargabe collected
         blockobj = self._blk

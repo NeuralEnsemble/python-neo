@@ -1954,7 +1954,7 @@ class TestPropertiesMethods(unittest.TestCase):
     def test__children(self):
         segment = Segment(name='seg1')
         segment.spiketrains = [self.train1]
-        segment.create_many_to_one_relationship()
+        segment.create_relationship()
 
         self.assertEqual(self.train1._parent_objects, ('Segment',))
 

@@ -292,7 +292,7 @@ class AsciiSignalIO(BaseIO):
                                            name='Column %d' % i)
                     seg.analogsignals.append(ana_sig)
 
-        seg.create_many_to_one_relationship()
+        seg.create_relationship()
         return seg
 
     def read_metadata(self):

@@ -178,7 +178,7 @@ class BaseFromRaw(BaseIO):
                 for c, sptr in enumerate(seg.spiketrains):
                     st_groups[c].add(sptr)
 
-        bl.create_many_to_one_relationship()
+        bl.create_relationship()
 
         return bl
 
@@ -278,7 +278,7 @@ class BaseFromRaw(BaseIO):
                 e.segment = seg
                 seg.epochs.append(e)
 
-        seg.create_many_to_one_relationship()
+        seg.create_relationship()
         return seg
 
     def get_sub_signal_streams(self, signal_group_mode='group-by-same-units'):

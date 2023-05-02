@@ -181,7 +181,7 @@ class KlustaKwikIO(BaseIO):
                 u.add(st)
                 seg.spiketrains.append(st)
 
-        block.create_many_to_one_relationship()
+        block.create_relationship()
         return block
 
     # Helper hidden functions for reading

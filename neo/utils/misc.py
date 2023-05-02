@@ -495,7 +495,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
                 seg, epoch=epoch, reset_time=reset_time)
             new_block.segments.extend(new_segments)
 
-    new_block.create_many_to_one_relationship(force=True)
+    new_block.create_relationship(force=True)
 
     return new_block
 
