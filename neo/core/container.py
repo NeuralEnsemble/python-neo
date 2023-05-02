@@ -197,13 +197,19 @@ class Container(BaseNeo):
 
     def _get_object_list(self, name):
         """
-        todo
+        Return the container's ObjectList with the given (private) attribute name
+
+        Example:
+        >>> segment._get_object_list("_analogsignals")
         """
         return getattr(self, name)
 
     def _set_object_list(self, name, value):
         """
-        todo
+        Set the contents of the container's ObjectList with the given (private) attribute name
+
+        Example:
+        >>> segment._set_object_list("_analogsignals", [sig1, sig2])
         """
         assert isinstance(value, list)
         object_list = getattr(self, name)

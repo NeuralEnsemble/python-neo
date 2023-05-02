@@ -115,43 +115,43 @@ class Segment(Container):
     analogsignals = property(
         fget=lambda self: self._get_object_list("_analogsignals"),
         fset=lambda self, value: self._set_object_list("_analogsignals", value),
-        doc="todo"
+        doc="list of AnalogSignals contained in this segment"
     )
 
     irregularlysampledsignals = property(
         fget=lambda self: self._get_object_list("_irregularlysampledsignals"),
         fset=lambda self, value: self._set_object_list("_irregularlysampledsignals", value),
-        doc="todo"
+        doc="list of IrregularlySignals contained in this segment"
     )
 
     events = property(
         fget=lambda self: self._get_object_list("_events"),
         fset=lambda self, value: self._set_object_list("_events", value),
-        doc="todo"
+        doc="list of Events contained in this segment"
     )
 
     epochs = property(
         fget=lambda self: self._get_object_list("_epochs"),
         fset=lambda self, value: self._set_object_list("_epochs", value),
-        doc="todo"
+        doc="list of Epochs contained in this segment"
     )
 
     channelviews = property(
         fget=lambda self: self._get_object_list("_channelviews"),
         fset=lambda self, value: self._set_object_list("_channelviews", value),
-        doc="todo"
+        doc="list of ChannelViews contained in this segment"
     )
 
     imagesequences = property(
         fget=lambda self: self._get_object_list("_imagesequences"),
         fset=lambda self, value: self._set_object_list("_imagesequences", value),
-        doc="todo"
+        doc="list of ImageSequences contained in this segment"
     )
 
     spiketrains = property(
         fget=lambda self: self._get_object_list("_spiketrains"),
         fset=lambda self, value: self._set_object_list("_spiketrains", value),
-        doc="todo"
+        doc="list of SpikeTrains contained in this segment"
     )
 
     # t_start attribute is handled as a property so type checking can be done

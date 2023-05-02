@@ -96,19 +96,19 @@ class Block(Container):
     segments = property(
         fget=lambda self: self._get_object_list("_segments"),
         fset=lambda self, value: self._set_object_list("_segments", value),
-        doc="todo"
+        doc="list of Segments contained in this block"
     )
 
     groups = property(
         fget=lambda self: self._get_object_list("_groups"),
         fset=lambda self, value: self._set_object_list("_groups", value),
-        doc="todo"
+        doc="list of Groups contained in this block"
     )
 
     regionsofinterest = property(
         fget=lambda self: self._get_object_list("_regionsofinterest"),
         fset=lambda self, value: self._set_object_list("_regionsofinterest", value),
-        doc="todo"
+        doc="list of RegionOfInterest objects contained in this block"
     )
 
     @property
