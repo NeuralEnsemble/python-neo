@@ -73,8 +73,7 @@ def generate_diagram(rect_pos, rect_width, figsize):
     alpha = [1., 1., 0.3]
     for name, pos in rect_pos.items():
         obj = objs[name]
-        relationships = [getattr(obj, '_single_child_objects', []),
-                         getattr(obj, '_child_properties', [])]
+        relationships = [getattr(obj, '_single_child_objects', [])]
 
         for r in range(3):
             for ch_name in relationships[r]:

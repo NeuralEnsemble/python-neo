@@ -114,20 +114,15 @@ class Container(BaseNeo):
                               class.__name__.lower()+'s' will be automatically
                               defined to hold this child and will be
                               initialized to an empty list.
-        :_child_properties: Properties that return sub-children of a particular
-                            type.  These properties must still be defined.
-                            This is mostly used for generate_diagram.
         :_repr_pretty_containers: The names of containers attributes printed
-                                  when pretty-printing using iPython.
+                                  when pretty-printing using IPython.
 
     The following helper properties are available
     (in  addition to those of BaseNeo):
-        :_single_child_objects: All neo container objects that can be children
-                                of this object and where the child can only
-                                have one parent of this type.
+        :_child_objects: All neo container objects that can be children
+                                of this object.
                                 :_container_child_objects: +
                                 :_data_child_objects:
-        :_child_objects: All child objects. Same as :_single_child_objects:
         :_container_child_containers: The names of the container attributes
                                       used to store :_container_child_objects:
         :_data_child_containers: The names of the container attributes used
@@ -192,8 +187,6 @@ class Container(BaseNeo):
     _container_child_objects = ()
     # Child objects that have data and have a single parent
     _data_child_objects = ()
-    # Properties returning children of children [of children...]
-    _child_properties = ()
     # Containers that are listed when pretty-printing
     _repr_pretty_containers = ()
 
@@ -208,7 +201,7 @@ class Container(BaseNeo):
     @property
     def _child_objects(self):
         """
-        Child objects that have a single parent.
+        Return the names of the classes that can be children of this container.
         """
         return self._container_child_objects + self._data_child_objects
 
