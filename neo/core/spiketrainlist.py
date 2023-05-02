@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 import quantities as pq
 from .spiketrain import SpikeTrain, normalize_times_array
+from .objectlist import ObjectList
 
 
 def is_spiketrain_or_proxy(obj):
@@ -32,7 +33,7 @@ def unique(quantities):
 
 
 
-class SpikeTrainList(object):
+class SpikeTrainList(ObjectList):
     """
     This class contains multiple spike trains, and can represent them
     either as a list of SpikeTrain objects or as a pair of arrays

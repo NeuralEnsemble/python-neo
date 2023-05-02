@@ -8,6 +8,16 @@ and :class:`Unit`.
 
 from os import close
 from neo.core.container import Container
+from neo.core.analogsignal import AnalogSignal
+from neo.core.container import Container
+from neo.core.objectlist import ObjectList
+from neo.core.epoch import Epoch
+from neo.core.event import Event
+from neo.core.imagesequence import ImageSequence
+from neo.core.irregularlysampledsignal import IrregularlySampledSignal
+from neo.core.segment import Segment
+from neo.core.spiketrainlist import SpikeTrainList
+from neo.core.view import ChannelView
 
 
 class Group(Container):
@@ -49,16 +59,15 @@ class Group(Container):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
 
-        self.analogsignals = []
-        self.irregularlysampledsignals = []
-        self.spiketrains = []
-        self.events = []
-        self.epochs = []
-        self.channelviews = []
-        self.imagesequences = []
-        self.segments = []  # to remove?
-        self.groups = []
-        self.block = None
+        self._analogsignals = ObjectList(AnalogSignal)
+        self._irregularlysampledsignals = ObjectList(IrregularlySampledSignal)
+        self.spiketrains = SpikeTrainList(segment=self)
+        self._events = ObjectList(Event)
+        self._epochs = ObjectList(Epoch)
+        self._channelviews = ObjectList(ChannelView)
+        self._imagesequences = ObjectList(ImageSequence)
+        self.segments = ObjectList(Segment)  # to remove?
+        self.groups = ObjectList(Group)
 
         if allowed_types is None:
             self.allowed_types = None
@@ -67,6 +76,42 @@ class Group(Container):
 
         if objects:
             self.add(*objects)
+
+    analogsignals = property(
+        fget=lambda self: self._get_object_list("_analogsignals"),
+        fset=lambda self, value: self._set_object_list("_analogsignals", value),
+        doc="todo"
+    )
+
+    irregularlysampledsignals = property(
+        fget=lambda self: self._get_object_list("_irregularlysampledsignals"),
+        fset=lambda self, value: self._set_object_list("_irregularlysampledsignals", value),
+        doc="todo"
+    )
+
+    events = property(
+        fget=lambda self: self._get_object_list("_events"),
+        fset=lambda self, value: self._set_object_list("_events", value),
+        doc="todo"
+    )
+
+    epochs = property(
+        fget=lambda self: self._get_object_list("_epochs"),
+        fset=lambda self, value: self._set_object_list("_epochs", value),
+        doc="todo"
+    )
+
+    channelviews = property(
+        fget=lambda self: self._get_object_list("_channelviews"),
+        fset=lambda self, value: self._set_object_list("_channelviews", value),
+        doc="todo"
+    )
+
+    imagesequences = property(
+        fget=lambda self: self._get_object_list("_imagesequences"),
+        fset=lambda self, value: self._set_object_list("_imagesequences", value),
+        doc="todo"
+    )
 
     @property
     def _container_lookup(self):

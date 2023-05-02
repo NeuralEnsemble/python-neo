@@ -198,6 +198,22 @@ class Container(BaseNeo):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
 
+    def _get_object_list(self, name):
+        """
+
+        """
+        return getattr(self, name)
+
+    def _set_object_list(self, name, value):
+        """
+
+        """
+        assert isinstance(value, list)
+        object_list = getattr(self, name)
+        if len(object_list) > 0:
+            raise Exception("Object list not empty")
+        object_list.extend(value)
+
     @property
     def _child_objects(self):
         """

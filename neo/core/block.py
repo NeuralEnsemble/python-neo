@@ -10,6 +10,10 @@ from :module:`neo.core.container`.
 from datetime import datetime
 
 from neo.core.container import Container, unique_objs
+from neo.core.group import Group
+from neo.core.objectlist import ObjectList
+from neo.core.regionofinterest import RegionOfInterest
+from neo.core.segment import Segment
 
 
 class Block(Container):
@@ -85,11 +89,27 @@ class Block(Container):
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
-        self.segments = []
-        self.groups = []
-        self.regionsofinterest = []   # temporary workaround.
-        # the goal is to store all sub-classes of RegionOfInterest in a single list
-        # but this will need substantial changes to container handling
+        self._segments = ObjectList(Segment)
+        self._groups = ObjectList(Group)
+        self._regionsofinterest = ObjectList(RegionOfInterest)
+
+    segments = property(
+        fget=lambda self: self._get_object_list("_segments"),
+        fset=lambda self, value: self._set_object_list("_segments", value),
+        doc="todo"
+    )
+
+    groups = property(
+        fget=lambda self: self._get_object_list("_groups"),
+        fset=lambda self, value: self._set_object_list("_groups", value),
+        doc="todo"
+    )
+
+    regionsofinterest = property(
+        fget=lambda self: self._get_object_list("_regionsofinterest"),
+        fset=lambda self, value: self._set_object_list("_regionsofinterest", value),
+        doc="todo"
+    )
 
     @property
     def data_children_recur(self):
