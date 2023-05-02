@@ -114,13 +114,6 @@ class Container(BaseNeo):
                               class.__name__.lower()+'s' will be automatically
                               defined to hold this child and will be
                               initialized to an empty list.
-        :_multi_child_objects: Neo container objects that can be children
-                               of this object. This attribute is used in
-                               cases where the child can have multiple
-                               parents of this type. An instance attribute
-                               named class.__name__.lower()+'s' will be
-                               automatically defined to hold this child and
-                               will be initialized to an empty list.
         :_child_properties: Properties that return sub-children of a particular
                             type.  These properties must still be defined.
                             This is mostly used for generate_diagram.
@@ -134,25 +127,17 @@ class Container(BaseNeo):
                                 have one parent of this type.
                                 :_container_child_objects: +
                                 :_data_child_objects:
-        :_child_objects: All child objects.
-                         :_single_child_objects: + :_multi_child_objects:
+        :_child_objects: All child objects. Same as :_single_child_objects:
         :_container_child_containers: The names of the container attributes
                                       used to store :_container_child_objects:
         :_data_child_containers: The names of the container attributes used
                                  to store :_data_child_objects:
         :_single_child_containers: The names of the container attributes used
                                    to store :_single_child_objects:
-        :_multi_child_containers: The names of the container attributes used
-                                  to store :_multi_child_objects:
-        :_child_containers: All child container attributes.
-                            :_single_child_containers: +
-                            :_multi_child_containers:
+        :_child_containers: All child container attributes. Same as :_single_child_containers:
         :_single_children: All objects that are children of the current object
                            where the child can only have one parent of
                            this type.
-        :_multi_children: All objects that are children of the current object
-                          where the child can have multiple parents of
-                          this type.
         :data_children: All data objects that are children of
                         the current object.
         :container_children: All container objects that are children of
@@ -186,15 +171,7 @@ class Container(BaseNeo):
                                                   single parent, set its parent
                                                   to be the current object.
 
-        :create_many_to_many_relationship(**args): For children of the current
-                                                   object that can have more
-                                                   than one parent of this
-                                                   type, put the current
-                                                   object in the parent list.
-
-        :create_relationship(**args): Combines
-                                      :create_many_to_one_relationship: and
-                                      :create_many_to_many_relationship:
+        :create_relationship(**args): Same as :create_many_to_one_relationship:
 
         :merge(**args): Annotations are merged based on the rules of
                         :merge_annotations:.  Child objects with the same name
@@ -218,8 +195,6 @@ class Container(BaseNeo):
     _container_child_objects = ()
     # Child objects that have data and have a single parent
     _data_child_objects = ()
-    # Child objects that can have multiple parents
-    _multi_child_objects = ()
     # Properties returning children of children [of children...]
     _child_properties = ()
     # Containers that are listed when pretty-printing
@@ -266,26 +241,18 @@ class Container(BaseNeo):
                       self._single_child_objects])
 
     @property
-    def _multi_child_containers(self):
-        """
-        Containers for child objects that can have multiple parents.
-        """
-        return tuple([_container_name(child) for child in
-                      self._multi_child_objects])
-
-    @property
     def _child_objects(self):
         """
         All types for child objects.
         """
-        return self._single_child_objects + self._multi_child_objects
+        return self._single_child_objects
 
     @property
     def _child_containers(self):
         """
         All containers for child objects.
         """
-        return self._single_child_containers + self._multi_child_containers
+        return self._single_child_containers
 
     @property
     def _single_children(self):
@@ -294,15 +261,6 @@ class Container(BaseNeo):
         """
         childs = [list(getattr(self, attr)) for attr in
                   self._single_child_containers]
-        return tuple(sum(childs, []))
-
-    @property
-    def _multi_children(self):
-        """
-        All child objects that can have multiple parents.
-        """
-        childs = [list(getattr(self, attr)) for attr in
-                  self._multi_child_containers]
         return tuple(sum(childs, []))
 
     @property
@@ -322,8 +280,7 @@ class Container(BaseNeo):
         Not recursive.
         """
         childs = [list(getattr(self, attr)) for attr in
-                  self._container_child_containers +
-                  self._multi_child_containers]
+                  self._container_child_containers]
         return tuple(sum(childs, []))
 
     @property
@@ -475,31 +432,6 @@ class Container(BaseNeo):
                 child.create_many_to_one_relationship(force=force,
                                                       recursive=True)
 
-    def create_many_to_many_relationship(self, append=True, recursive=True):
-        """
-        For children of the current object that can have more than one parent
-        of this type, put the current object in the parent list.
-
-        If append is True add it to the list, otherwise overwrite the list.
-        If recursive is True descend into child objects and create
-        relationships there
-        """
-        parent_name = _container_name(self.__class__.__name__)
-        for child in self._multi_children:
-            if not hasattr(child, parent_name):
-                continue
-            if append:
-                target = getattr(child, parent_name)
-                if self not in target:
-                    target.append(self)
-                continue
-            setattr(child, parent_name, [self])
-
-        if recursive:
-            for child in self.container_children:
-                child.create_many_to_many_relationship(append=append,
-                                                       recursive=True)
-
     def create_relationship(self, force=False, append=True, recursive=True):
         """
         For each child of the current object that can only have a single
@@ -517,7 +449,6 @@ class Container(BaseNeo):
         relationships there
         """
         self.create_many_to_one_relationship(force=force, recursive=False)
-        self.create_many_to_many_relationship(append=append, recursive=False)
         if recursive:
             for child in self.container_children:
                 child.create_relationship(force=force, append=append,
@@ -565,8 +496,7 @@ class Container(BaseNeo):
         after the merge operation and should not be used further.
         """
         # merge containers with the same name
-        for container in (self._container_child_containers +
-                              self._multi_child_containers):
+        for container in self._container_child_containers:
             lookup = {obj.name: obj for obj in getattr(self, container)}
             ids = [id(obj) for obj in getattr(self, container)]
             for obj in getattr(other, container):
