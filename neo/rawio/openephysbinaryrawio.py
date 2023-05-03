@@ -20,6 +20,7 @@ import numpy as np
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
     _spike_channel_dtype, _event_channel_dtype)
+from .utils import create_memmap_buffer, get_memmap_shape
 
 
 class OpenEphysBinaryRawIO(BaseRawIO):
@@ -133,8 +134,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             for seg_index in range(nb_segment_per_block[block_index]):
                 for stream_index, d in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(d['channels'])
-                    memmap_sigs = np.memmap(d['raw_filename'], d['dtype'],
-                                            order='C', mode='r').reshape(-1, num_channels)
+                    #~ memmap_sigs = np.memmap(d['raw_filename'], d['dtype'],
+                                            #~ order='C', mode='r').reshape(-1, num_channels)
                     channel_names = [ch["channel_name"] for ch in d["channels"]]
                     # if there is a sync channel and it should not be loaded,
                     # find the right channel index and slice the memmap
@@ -145,12 +146,19 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
                         # only sync channel in last position is supported to keep memmap
                         if sync_channel_index == num_channels - 1:
-                            memmap_sigs = memmap_sigs[:, :-1]
+                            #~ memmap_sigs = memmap_sigs[:, :-1]
+                            #~ pass
+                            d['remove_last_channel'] = True
                         else:
                             raise NotImplementedError("SYNC channel removal is only supported "
                                                       "when the sync channel is in the last "
                                                       "position")
-                    d['memmap'] = memmap_sigs
+                    else:
+                        d['remove_last_channel'] = False
+                    # d['memmap'] = memmap_sigs
+                    shape = get_memmap_shape(d['raw_filename'], d['dtype'], num_channels=num_channels)
+                    fid = open(d['raw_filename'], mode="rb")
+                    d['memmap_args'] = (fid, shape, np.dtype(d['dtype']), 0)
 
 
         # events zone
@@ -248,7 +256,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 # loop over signals
                 for stream_index, d in self._sig_streams[block_index][seg_index].items():
                     t_start = d['t_start']
-                    dur = d['memmap'].shape[0] / float(d['sample_rate'])
+                    #~ dur = d['memmap'].shape[0] / float(d['sample_rate'])
+                    memmap_sigs = create_memmap_buffer(*d['memmap_args'])
+                    dur = memmap_sigs.shape[0] / float(d['sample_rate'])
                     t_stop = t_start + dur
                     if global_t_start is None or global_t_start > t_start:
                         global_t_start = t_start
@@ -327,6 +337,14 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                                     arr_ann = arr_ann[selected_indices]
                                 ev_ann['__array_annotations__'][k] = arr_ann
 
+    def __del__(self):
+        # need an explicit close
+        for block_index in range(self.header['nb_block']):
+            for seg_index in range(self.header['nb_segment'][block_index]):
+                for stream_index, d in self._sig_streams[block_index][seg_index].items():
+                    fid, *_ = d['memmap_args']
+                    fid.close()                    
+
     def _segment_t_start(self, block_index, seg_index):
         return self._t_start_segments[block_index][seg_index]
 
@@ -343,8 +361,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         return group_id
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]['memmap']
-        return sigs.shape[0]
+        #~ sigs = self._sig_streams[block_index][seg_index][stream_index]['memmap']
+        memmap_sigs = create_memmap_buffer(*self._sig_streams[block_index][seg_index][stream_index]['memmap_args'])
+        return memmap_sigs.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         t_start = self._sig_streams[block_index][seg_index][stream_index]['t_start']
@@ -352,7 +371,11 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]['memmap']
+        #~ sigs = self._sig_streams[block_index][seg_index][stream_index]['memmap']
+        d = self._sig_streams[block_index][seg_index][stream_index]
+        sigs = create_memmap_buffer(*d['memmap_args'])
+        if d['remove_last_channel']:
+            sigs = sigs[:, :-1]
         sigs = sigs[i_start:i_stop, :]
         if channel_indexes is not None:
             sigs = sigs[:, channel_indexes]
