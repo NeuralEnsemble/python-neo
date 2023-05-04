@@ -20,6 +20,7 @@ a PL2 spike channel will be represented as an individual neo spike channel.
 Author: Julia Sprenger
 """
 import pathlib
+import warnings
 from collections import namedtuple
 from urllib.request import urlopen
 from datetime import datetime
@@ -75,10 +76,13 @@ class Plexon2RawIO(BaseRawIO):
             pl2_dll_folder.mkdir(exist_ok=True)
             pl2_dll_file_path = pl2_dll_folder / 'PL2FileReader.dll'
 
-            dist = urlopen('https://github.com/Neuralensemble/pypl2/blob/master/bin/PL2FileReader.dll?raw=true')
-            with open(pl2_dll_file_path, 'wb') as f:
-                print(f'Downloading plexon dll to {pl2_dll_file_path}')
-                f.write(dist.read())
+            if pl2_dll_file_path.exists():
+                warnings.warn(f'Using cached plexon dll at {pl2_dll_file_path}')
+            else:
+                dist = urlopen('https://github.com/Neuralensemble/pypl2/blob/master/bin/PL2FileReader.dll?raw=true')
+                with open(pl2_dll_file_path, 'wb') as f:
+                    print(f'Downloading plexon dll to {pl2_dll_file_path}')
+                    f.write(dist.read())
 
         # Instantiate wrapper for Windows DLL
         from neo.rawio.plexon2rawio.pypl2.pypl2lib import PyPL2FileReader
