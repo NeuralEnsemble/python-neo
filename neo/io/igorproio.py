@@ -58,6 +58,10 @@ class IgorIO(BaseIO):
             added to the object annotations.
 
         """
+
+        warn(f'{self.__class__} is deprecated and will be removed in neo version 0.14.0.',
+             FutureWarning)
+
         BaseIO.__init__(self)
         filename = pathlib.Path(filename)
         assert filename.suffix[1:] in self.extensions, \

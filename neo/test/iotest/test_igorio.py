@@ -13,8 +13,12 @@ except ImportError:
 from neo.io.igorproio import IgorIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
+import numpy as np
+from packaging.version import Version
+
 
 @unittest.skipUnless(HAVE_IGOR, "requires igor")
+@unittest.skipIf(Version(np.__version__) > Version('1.22.0'), "igor is not compatible with numpy > 1.22.0")
 class TestIgorIO(BaseTestIO, unittest.TestCase):
     ioclass = IgorIO
     entities_to_download = [
