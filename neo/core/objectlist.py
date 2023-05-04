@@ -1,14 +1,16 @@
 """
-
-
+This module implements the ObjectList class, which is used to peform type checks
+and handle relationships within the Neo Block-Segment-Data hierarchy.
 """
 
+import sys
 from neo.core.baseneo import BaseNeo
 
 
 class ObjectList:
     """
-    handle relationships within Neo hierarchy
+    This class behaves like a list, but has additional functionality
+    to handle relationships within Neo hierarchy, and perform type checks.
     """
 
     def __init__(self, allowed_contents, parent=None):
@@ -33,6 +35,8 @@ class ObjectList:
         # set the child-parent relationship
         if self.parent:
             relationship_name = self.parent.__class__.__name__.lower()
+            if relationship_name == "group":
+                raise Exception("Objects in groups should not link to the group as their parent")
             current_parent = getattr(obj, relationship_name)
             if current_parent != self.parent:
                 setattr(obj, relationship_name, self.parent)
@@ -63,6 +67,7 @@ class ObjectList:
         for obj in objects:
             self._handle_append(obj)
         self.contents.extend(objects)
+        return self
 
     def __iter__(self):
         return iter(self.contents)
@@ -73,11 +78,8 @@ class ObjectList:
     def __len__(self):
         return len(self.contents)
 
-    def __reversed__(self):
-        raise NotImplementedError
-
-    def __setitem__(self, i):
-        raise NotImplementedError
+    def __setitem__(self, key, value):
+        self.contents[key] = value
 
     def append(self, obj):
         self._handle_append(obj)
@@ -89,28 +91,26 @@ class ObjectList:
         self.contents.extend(objects)
 
     def clear(self):
-        raise NotImplementedError
+        self.contents = []
 
-    def copy(self):
-         raise NotImplementedError
+    def count(self, value):
+        return self.contents.count(value)
 
-    def count(self):
-        raise NotImplementedError
+    def index(self, value, start=0, stop=sys.maxsize):
+        return self.contents.index(value, start, stop)
 
-    def index(self):
-        raise NotImplementedError
+    def insert(self, index, obj):
+        self._handle_append(obj)
+        self.contents[index] = obj
 
-    def insert(self):
-        raise NotImplementedError
+    def pop(self, index=-1):
+        return self.contents.pop(index)
 
-    def pop(self):
-        raise NotImplementedError
-
-    def remove(self):
-        raise NotImplementedError
+    def remove(self, value):
+        return self.contents.remove(value)
 
     def reverse(self):
-        raise NotImplementedError
+        raise self.contents.reverse()
 
-    def sort(self):
-        raise NotImplementedError
+    def sort(self, *args, key=None, reverse=False):
+        self.contents.sort(*args, key=key, reverse=reverse)

@@ -7,6 +7,7 @@ object inherit from.  It provides shared methods for all container types.
 
 from copy import deepcopy
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
+from neo.core.objectlist import ObjectList
 from neo.core.spiketrain import SpikeTrain
 from neo.core.spiketrainlist import SpikeTrainList
 
@@ -211,11 +212,14 @@ class Container(BaseNeo):
         Example:
         >>> segment._set_object_list("_analogsignals", [sig1, sig2])
         """
-        assert isinstance(value, list)
-        object_list = getattr(self, name)
-        if len(object_list) > 0:
-            raise Exception("Object list not empty")
-        object_list.extend(value)
+        if isinstance(value, list):
+            object_list = getattr(self, name)
+            object_list.clear()
+            object_list.extend(value)
+        elif isinstance(value, ObjectList):  # from __iadd__
+            setattr(self, name, value)
+        else:
+            TypeError("value must be a list or an ObjectList")
 
     @property
     def _child_objects(self):
@@ -365,11 +369,7 @@ class Container(BaseNeo):
             data = True
             container = True
 
-        if objects == SpikeTrain:
-            children = SpikeTrainList()
-        else:
-            children = []
-
+        children = []
         # get the objects we want
         if data:
             if recursive:
@@ -382,8 +382,12 @@ class Container(BaseNeo):
             else:
                 children.extend(self.container_children)
 
-        return filterdata(children, objects=objects,
-                          targdict=targdict, **kwargs)
+        filtered = filterdata(children, objects=objects,
+                              targdict=targdict, **kwargs)
+        if objects == SpikeTrain:
+            return SpikeTrainList(items=filtered)
+        else:
+            return filtered
 
     def list_children_by_class(self, cls):
         """
@@ -406,7 +410,12 @@ class Container(BaseNeo):
         """
         parent_name = _reference_name(self.__class__.__name__)
         for child in self._single_children:
-            assert getattr(child, parent_name, None) is self
+            if hasattr(child, "proxy_for"):
+                container = getattr(self, _container_name(child.proxy_for.__name__))
+            else:
+                container = getattr(self, _container_name(child.__class__.__name__))
+            if container.parent is not None:
+                assert getattr(child, parent_name, None) is self
         if recursive:
             for child in self.container_children:
                 child.check_relationships(recursive=True)

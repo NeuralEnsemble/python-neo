@@ -64,7 +64,7 @@ class Group(Container):
         # they are contained in.
         self._analogsignals = ObjectList(AnalogSignal)
         self._irregularlysampledsignals = ObjectList(IrregularlySampledSignal)
-        self._spiketrains = SpikeTrainList(parent=self)
+        self._spiketrains = SpikeTrainList()
         self._events = ObjectList(Event)
         self._epochs = ObjectList(Epoch)
         self._channelviews = ObjectList(ChannelView)

@@ -265,7 +265,7 @@ class NeoMatlabIO(BaseIO):
         struct = {}
 
         # relationship
-        for childname in getattr(ob, '_single_child_containers', []):
+        for childname in getattr(ob, '_child_containers', []):
             supported_containers = [subob.__name__.lower() + 's' for subob in
                                     self.supported_objects]
             if childname in supported_containers:
@@ -356,7 +356,7 @@ class NeoMatlabIO(BaseIO):
 
         for attrname in struct._fieldnames:
             # check children
-            if attrname in getattr(ob, '_single_child_containers', []):
+            if attrname in getattr(ob, '_child_containers', []):
                 child_struct = getattr(struct, attrname)
                 try:
                     # try must only surround len() or other errors are captured
