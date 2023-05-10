@@ -1,16 +1,16 @@
 """
-ExampleRawIO is a class of a  fake example.
+ExampleRawIO is a class of a fake example.
 This is to be used when coding a new RawIO.
 
 
 Rules for creating a new class:
   1. Step 1: Create the main class
-    * Create a file in **neo/rawio/** that endith with "rawio.py"
+    * Create a file in **neo/rawio/** that ends with "rawio.py"
     * Create the class that inherits from BaseRawIO
     * copy/paste all methods that need to be implemented.
     * code hard! The main difficulty is `_parse_header()`.
       In short you have to create a mandatory dict that
-      contains channel informations::
+      contains channel information::
 
             self.header = {}
             self.header['nb_block'] = 2
@@ -24,16 +24,14 @@ Rules for creating a new class:
     * create a file in neo/rawio/tests with the same name with "test_" prefix
     * copy paste neo/rawio/tests/test_examplerawio.py and do the same
 
-  3. Step 3 : Create the neo.io class with the wrapper
+  3. Step 3: Create the neo.io class with the wrapper
     * Create a file in neo/io/ that ends with "io.py"
-    * Create a class that inherits both your RawIO class and BaseFromRaw class
+    * Create a class that inherits both your RawIO class and the BaseFromRaw class
     * copy/paste from neo/io/exampleio.py
 
-  4.Step 4 : IO test
-    * create a file in neo/test/iotest with the same previous name with "test_" prefix
+  4.Step 4: IO test
+    * create a file in neo/test/iotest with the same name as previously with "test_" prefix
     * copy/paste from neo/test/iotest/test_exampleio.py
-
-
 
 """
 
@@ -54,8 +52,8 @@ class ExampleRawIO(BaseRawIO):
     to develop a new IO module.
 
     Two rules for developers:
-      * Respect the :ref:`neo_rawio_API`
-      * Follow the :ref:`io_guiline`
+      * Respect the :ref:`section-neo-rawio-API`
+      * Follow the guidelines in :ref:`section-raw-io-recipe`
 
     This fake IO:
         * has 2 blocks
