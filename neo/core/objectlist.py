@@ -39,6 +39,7 @@ class ObjectList:
                 raise Exception("Objects in groups should not link to the group as their parent")
             current_parent = getattr(obj, relationship_name)
             if current_parent != self.parent:
+                # use weakref here? - see https://github.com/NeuralEnsemble/python-neo/issues/684
                 setattr(obj, relationship_name, self.parent)
 
     def __str__(self):
@@ -101,7 +102,7 @@ class ObjectList:
 
     def insert(self, index, obj):
         self._handle_append(obj)
-        self.contents[index] = obj
+        self.contents.insert(index, obj)
 
     def pop(self, index=-1):
         return self.contents.pop(index)
