@@ -11,7 +11,7 @@ Authors: Andrew Davison
 """
 
 
-import pickle  # Python 3
+import pickle
 
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment,
