@@ -48,7 +48,7 @@ test = [
     "scipy>=1.0.0",
     "pyedflib",
     "h5py",
-    "igor",
+    "igor2",
     "klusta",
     "tqdm",
     "nixio",
@@ -66,7 +66,7 @@ docs = [
     "docutils<0.18",
 ]
 
-igorproio = ["igor"]
+igorproio = ["igor2"]
 kwikio = ["klusta"]
 neomatlabio = ["scipy>=1.0.0"]
 nixio = ["nixio>=1.5.0"]
@@ -82,7 +82,7 @@ all = [
     "coverage",
     "coveralls",
     "h5py",
-    "igor",
+    "igor2",
     "ipython",
     "klusta",
     "matplotlib",

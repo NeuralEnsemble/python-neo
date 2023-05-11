@@ -25,7 +25,7 @@ Neo will still install but the IO module that uses them will fail on loading:
    * scipy >= 1.0.0 for NeoMatlabIO
    * h5py >= 2.5 for KwikIO
    * klusta for KwikIO
-   * igor >= 0.2 for IgorIO
+   * igor2 >= 0.5.2 for IgorIO
    * nixio >= 1.5 for NixIO
    * stfio for StimfitIO
    * pillow for TiffIO
