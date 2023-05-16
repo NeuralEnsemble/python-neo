@@ -34,7 +34,12 @@ AUTHORS = 'Neo authors and contributors <neuralensemble@googlegroups.com>'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo',
+              'IPython.sphinxext.ipython_console_highlighting',
+              'IPython.sphinxext.ipython_directive',
+              'matplotlib.sphinxext.plot_directive',
+              'sphinx_gallery.gen_gallery',
+              'sphinx_inline_tabs', "sphinx_design"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -105,15 +110,38 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
 # html_theme = 'default'
-html_theme = 'sphinxdoc'
+# html_theme = 'sphinxdoc'
 # html_theme = 'haiku'
 # html_theme = 'scrolls'
 # html_theme = 'agogo'
+# html_theme = 'alabaster'
+html_theme = 'pydata_sphinx_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-# html_theme_options = {}
+
+html_theme_options = {
+    "logo": {
+      "image_light": "images/neologo_small.png",
+      "image_dark": "images/neologo_small_darkmode.png",
+    },
+    'icon_links': [
+        {
+            "name": 'GitHub',
+            "url": 'https://github.com/NeuralEnsemble/python-neo',
+            "icon": 'fa-brands fa-square-github'
+        },
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/neo",
+            "icon": "fa-solid fa-box",
+        },
+    ],
+    'icon_links_label': 'External Links',  # for screen reader
+    'use_edit_page_button': False,
+    'navbar_end': ['theme-switcher', 'navbar-icon-links'],
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -127,19 +155,23 @@ html_theme = 'sphinxdoc'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'images/neologo_light.png'
+html_logo = 'images/neologo_small.png'
 
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = None
+html_favicon = 'images/neologo_favicon.png'
 
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['images']
+html_static_path = ['images', '_static']
+
+html_css_files = [
+    'css/custom.css',
+]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -154,7 +186,7 @@ html_static_path = ['images']
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
-# html_additional_pages = {}
+# html_additional_pages = {'index': 'index.html'}
 
 # If false, no module index is generated.
 # html_use_modindex = True
@@ -216,3 +248,8 @@ todo_include_todos = True  # set to False before releasing documentation
 rst_epilog = """
 .. |neo_github_url| replace:: https://github.com/NeuralEnsemble/python-neo/archive/neo-{}.zip
 """.format(neo_release)
+
+sphinx_gallery_conf = {
+    'examples_dirs': '../../examples',   # path to your example scripts
+    'gallery_dirs': 'examples',  # path to where to save gallery generated output
+}
