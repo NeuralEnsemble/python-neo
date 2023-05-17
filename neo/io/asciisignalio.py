@@ -39,7 +39,7 @@ class AsciiSignalIO(BaseIO):
             column delimiter in file, e.g. '\t', one space, two spaces, ',', ';'
         timecolumn:
             None or a valid integer that identifies which column contains the time vector
-            (counting from zero, within the list of selected columns, see also `usecols` Argument)
+            (counting from zero, within the list of selected columns, see also `usecols` argument)
         units:
             units of AnalogSignal can be a str or directly a Quantity
         time_units:
