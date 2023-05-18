@@ -270,7 +270,7 @@ class AsciiSignalIO(BaseIO):
                                        t_start=t_start,
                                        name='multichannel')
                 if self.timecolumn is not None:
-                    ana_sig.array_annotate(channel_index=self.usecols.remove(signal.shape[1] + self.timecolumn) or np.arange(signal.shape[1]))
+                    ana_sig.array_annotate(channel_index=list(self.usecols).remove(signal.shape[1] + self.timecolumn) or np.arange(signal.shape[1]))
                 else:
                     ana_sig.array_annotate(channel_index=self.usecols or np.arange(signal.shape[1]))
                
