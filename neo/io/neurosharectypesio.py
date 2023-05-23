@@ -315,7 +315,7 @@ class NeurosharectypesIO(BaseIO):
         # close
         neuroshare.ns_CloseFile(hFile)
 
-        seg.create_many_to_one_relationship()
+        seg.check_relationships()
         return seg
 
 

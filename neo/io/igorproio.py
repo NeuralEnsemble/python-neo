@@ -72,7 +72,6 @@ class IgorIO(BaseIO):
 
         block = Block(file_origin=str(self.filename))
         block.segments.append(self.read_segment(lazy=lazy))
-        block.segments[-1].block = block
         return block
 
     def read_segment(self, lazy=False):
@@ -89,14 +88,12 @@ class IgorIO(BaseIO):
             def callback(dirpath, key, value):
                 if isinstance(value, WaveRecord):
                     signal = self._wave_to_analogsignal(value.wave['wave'], dirpath)
-                    signal.segment = segment
                     segment.analogsignals.append(signal)
 
             pxp.walk(self.filesystem, callback)
         else:
             segment.analogsignals.append(
                 self.read_analogsignal(lazy=lazy))
-            segment.analogsignals[-1].segment = segment
         return segment
 
     def read_analogsignal(self, path=None, lazy=False):

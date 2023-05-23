@@ -176,7 +176,6 @@ class AsciiSignalIO(BaseIO):
     def read_block(self, lazy=False):
         block = Block(file_origin=os.path.basename(self.filename))
         segment = self.read_segment(lazy=lazy)
-        segment.block = block
         block.segments.append(segment)
         return block
 
@@ -295,7 +294,7 @@ class AsciiSignalIO(BaseIO):
                                            name='Column %d' % i)
                     seg.analogsignals.append(ana_sig)
 
-        seg.create_many_to_one_relationship()
+        seg.check_relationships()
         return seg
 
     def read_metadata(self):
