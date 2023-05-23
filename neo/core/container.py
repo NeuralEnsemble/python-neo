@@ -7,6 +7,7 @@ object inherit from.  It provides shared methods for all container types.
 
 from copy import deepcopy
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
+from neo.core.objectlist import ObjectList
 from neo.core.spiketrain import SpikeTrain
 from neo.core.spiketrainlist import SpikeTrainList
 
@@ -103,9 +104,7 @@ class Container(BaseNeo):
     Each class can define one or more of the following class attributes
     (in  addition to those of BaseNeo):
         :_container_child_objects: Neo container objects that can be children
-                                   of this object. This attribute is used in
-                                   cases where the child can only have one
-                                   parent of this type. An instance attribute
+                                   of this object. An instance attribute
                                    named class.__name__.lower()+'s' will be
                                    automatically defined to hold this child and
                                    will be initialized to an empty list.
@@ -114,45 +113,24 @@ class Container(BaseNeo):
                               class.__name__.lower()+'s' will be automatically
                               defined to hold this child and will be
                               initialized to an empty list.
-        :_multi_child_objects: Neo container objects that can be children
-                               of this object. This attribute is used in
-                               cases where the child can have multiple
-                               parents of this type. An instance attribute
-                               named class.__name__.lower()+'s' will be
-                               automatically defined to hold this child and
-                               will be initialized to an empty list.
-        :_child_properties: Properties that return sub-children of a particular
-                            type.  These properties must still be defined.
-                            This is mostly used for generate_diagram.
         :_repr_pretty_containers: The names of containers attributes printed
-                                  when pretty-printing using iPython.
+                                  when pretty-printing using IPython.
 
     The following helper properties are available
     (in  addition to those of BaseNeo):
-        :_single_child_objects: All neo container objects that can be children
-                                of this object and where the child can only
-                                have one parent of this type.
+        :_child_objects: All neo objects that can be children of this object.
                                 :_container_child_objects: +
                                 :_data_child_objects:
-        :_child_objects: All child objects.
-                         :_single_child_objects: + :_multi_child_objects:
         :_container_child_containers: The names of the container attributes
                                       used to store :_container_child_objects:
         :_data_child_containers: The names of the container attributes used
                                  to store :_data_child_objects:
         :_single_child_containers: The names of the container attributes used
                                    to store :_single_child_objects:
-        :_multi_child_containers: The names of the container attributes used
-                                  to store :_multi_child_objects:
-        :_child_containers: All child container attributes.
-                            :_single_child_containers: +
-                            :_multi_child_containers:
+        :_child_containers: All child container attributes. Same as :_single_child_containers:
         :_single_children: All objects that are children of the current object
                            where the child can only have one parent of
                            this type.
-        :_multi_children: All objects that are children of the current object
-                          where the child can have multiple parents of
-                          this type.
         :data_children: All data objects that are children of
                         the current object.
         :container_children: All container objects that are children of
@@ -181,20 +159,9 @@ class Container(BaseNeo):
                                          object recursively that are of a
                                          particular class.
 
-        :create_many_to_one_relationship(**args): For each child of the current
-                                                  object that can only have a
-                                                  single parent, set its parent
-                                                  to be the current object.
-
-        :create_many_to_many_relationship(**args): For children of the current
-                                                   object that can have more
-                                                   than one parent of this
-                                                   type, put the current
-                                                   object in the parent list.
-
-        :create_relationship(**args): Combines
-                                      :create_many_to_one_relationship: and
-                                      :create_many_to_many_relationship:
+        :create_relationship(**args): For each child of the current
+                                      object, set its parent
+                                      to be the current object.
 
         :merge(**args): Annotations are merged based on the rules of
                         :merge_annotations:.  Child objects with the same name
@@ -214,14 +181,10 @@ class Container(BaseNeo):
         2) process its non-universal recommended arguments (in its __new__ or
            __init__ method
     """
-    # Child objects that are a container and have a single parent
+    # Child objects that are a container
     _container_child_objects = ()
-    # Child objects that have data and have a single parent
+    # Child objects that have data
     _data_child_objects = ()
-    # Child objects that can have multiple parents
-    _multi_child_objects = ()
-    # Properties returning children of children [of children...]
-    _child_properties = ()
     # Containers that are listed when pretty-printing
     _repr_pretty_containers = ()
 
@@ -233,14 +196,35 @@ class Container(BaseNeo):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
 
-        # initialize containers
-        for container in self._child_containers:
-            setattr(self, container, [])
+    def _get_object_list(self, name):
+        """
+        Return the container's ObjectList with the given (private) attribute name
+
+        Example:
+        >>> segment._get_object_list("_analogsignals")
+        """
+        return getattr(self, name)
+
+    def _set_object_list(self, name, value):
+        """
+        Set the contents of the container's ObjectList with the given (private) attribute name
+
+        Example:
+        >>> segment._set_object_list("_analogsignals", [sig1, sig2])
+        """
+        if isinstance(value, list):
+            object_list = getattr(self, name)
+            object_list.clear()
+            object_list.extend(value)
+        elif isinstance(value, ObjectList):  # from __iadd__
+            setattr(self, name, value)
+        else:
+            TypeError("value must be a list or an ObjectList")
 
     @property
-    def _single_child_objects(self):
+    def _child_objects(self):
         """
-        Child objects that have a single parent.
+        Return the names of the classes that can be children of this container.
         """
         return self._container_child_objects + self._data_child_objects
 
@@ -262,34 +246,12 @@ class Container(BaseNeo):
                       self._data_child_objects])
 
     @property
-    def _single_child_containers(self):
+    def _child_containers(self):
         """
         Containers for child objects with a single parent.
         """
         return tuple([_container_name(child) for child in
-                      self._single_child_objects])
-
-    @property
-    def _multi_child_containers(self):
-        """
-        Containers for child objects that can have multiple parents.
-        """
-        return tuple([_container_name(child) for child in
-                      self._multi_child_objects])
-
-    @property
-    def _child_objects(self):
-        """
-        All types for child objects.
-        """
-        return self._single_child_objects + self._multi_child_objects
-
-    @property
-    def _child_containers(self):
-        """
-        All containers for child objects.
-        """
-        return self._single_child_containers + self._multi_child_containers
+                      self._child_objects])
 
     @property
     def _single_children(self):
@@ -297,16 +259,7 @@ class Container(BaseNeo):
         All child objects that can only have single parents.
         """
         childs = [list(getattr(self, attr)) for attr in
-                  self._single_child_containers]
-        return tuple(sum(childs, []))
-
-    @property
-    def _multi_children(self):
-        """
-        All child objects that can have multiple parents.
-        """
-        childs = [list(getattr(self, attr)) for attr in
-                  self._multi_child_containers]
+                  self._child_containers]
         return tuple(sum(childs, []))
 
     @property
@@ -326,8 +279,7 @@ class Container(BaseNeo):
         Not recursive.
         """
         childs = [list(getattr(self, attr)) for attr in
-                  self._container_child_containers +
-                  self._multi_child_containers]
+                  self._container_child_containers]
         return tuple(sum(childs, []))
 
     @property
@@ -417,11 +369,7 @@ class Container(BaseNeo):
             data = True
             container = True
 
-        if objects == SpikeTrain:
-            children = SpikeTrainList()
-        else:
-            children = []
-
+        children = []
         # get the objects we want
         if data:
             if recursive:
@@ -434,8 +382,12 @@ class Container(BaseNeo):
             else:
                 children.extend(self.container_children)
 
-        return filterdata(children, objects=objects,
-                          targdict=targdict, **kwargs)
+        filtered = filterdata(children, objects=objects,
+                              targdict=targdict, **kwargs)
+        if objects == SpikeTrain:
+            return SpikeTrainList(items=filtered)
+        else:
+            return filtered
 
     def list_children_by_class(self, cls):
         """
@@ -452,18 +404,27 @@ class Container(BaseNeo):
             objs.extend(getattr(child, container_name, []))
         return objs
 
-    def create_many_to_one_relationship(self, force=False, recursive=True):
+    def check_relationships(self, recursive=True):
+        """
+        Check that the expected child-parent relationships exist.
+        """
+        parent_name = _reference_name(self.__class__.__name__)
+        for child in self._single_children:
+            if hasattr(child, "proxy_for"):
+                container = getattr(self, _container_name(child.proxy_for.__name__))
+            else:
+                container = getattr(self, _container_name(child.__class__.__name__))
+            if container.parent is not None:
+                assert getattr(child, parent_name, None) is self
+        if recursive:
+            for child in self.container_children:
+                child.check_relationships(recursive=True)
+
+    def create_relationship(self, force=False, recursive=True):
         """
         For each child of the current object that can only have a single
         parent, set its parent to be the current object.
-
-        Usage:
-        >>> a_block.create_many_to_one_relationship()
-        >>> a_block.create_many_to_one_relationship(force=True)
-
-        If the current object is a :class:`Block`, you want to run
-        populate_RecordingChannel first, because this will create new objects
-        that this method will link up.
+        For children of the current object, put the current object in the parent list.
 
         If force is True overwrite any existing relationships
         If recursive is True descend into child objects and create
@@ -476,56 +437,7 @@ class Container(BaseNeo):
                 setattr(child, parent_name, self)
         if recursive:
             for child in self.container_children:
-                child.create_many_to_one_relationship(force=force,
-                                                      recursive=True)
-
-    def create_many_to_many_relationship(self, append=True, recursive=True):
-        """
-        For children of the current object that can have more than one parent
-        of this type, put the current object in the parent list.
-
-        If append is True add it to the list, otherwise overwrite the list.
-        If recursive is True descend into child objects and create
-        relationships there
-        """
-        parent_name = _container_name(self.__class__.__name__)
-        for child in self._multi_children:
-            if not hasattr(child, parent_name):
-                continue
-            if append:
-                target = getattr(child, parent_name)
-                if self not in target:
-                    target.append(self)
-                continue
-            setattr(child, parent_name, [self])
-
-        if recursive:
-            for child in self.container_children:
-                child.create_many_to_many_relationship(append=append,
-                                                       recursive=True)
-
-    def create_relationship(self, force=False, append=True, recursive=True):
-        """
-        For each child of the current object that can only have a single
-        parent, set its parent to be the current object.
-        For children of the current object that can have more than one parent
-        of this type, put the current object in the parent list.
-
-        If the current object is a :class:`Block`, you want to run
-        populate_RecordingChannel first, because this will create new objects
-        that this method will link up.
-
-        If force is True overwrite any existing relationships
-        If append is True add it to the list, otherwise overwrite the list.
-        If recursive is True descend into child objects and create
-        relationships there
-        """
-        self.create_many_to_one_relationship(force=force, recursive=False)
-        self.create_many_to_many_relationship(append=append, recursive=False)
-        if recursive:
-            for child in self.container_children:
-                child.create_relationship(force=force, append=append,
-                                          recursive=True)
+                child.create_relationship(force=force, recursive=True)
 
     def __deepcopy__(self, memo):
         """
@@ -569,8 +481,7 @@ class Container(BaseNeo):
         after the merge operation and should not be used further.
         """
         # merge containers with the same name
-        for container in (self._container_child_containers +
-                              self._multi_child_containers):
+        for container in self._container_child_containers:
             lookup = {obj.name: obj for obj in getattr(self, container)}
             ids = [id(obj) for obj in getattr(self, container)]
             for obj in getattr(other, container):

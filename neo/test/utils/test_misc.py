@@ -373,7 +373,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
 
         original_block = Block()
         original_block.segments = [seg, seg2]
-        original_block.create_many_to_one_relationship()
+        original_block.check_relationships()
 
         with warnings.catch_warnings(record=True) as w:
             # This should raise a warning as one segment does not contain epochs
@@ -432,7 +432,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
 
         original_block = Block()
         original_block.segments = [seg, seg2]
-        original_block.create_many_to_one_relationship()
+        original_block.check_relationships()
 
         with warnings.catch_warnings(record=True) as w:
             # This should raise a warning as one segment does not contain epochs
@@ -604,7 +604,7 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
 
         original_block = Block()
         original_block.segments = [seg]
-        original_block.create_many_to_one_relationship()
+        original_block.check_relationships()
 
         block = cut_block_by_epochs(original_block, properties={'pick': 'me'})
 
@@ -651,7 +651,7 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
         epoch.annotate(pick='me instead')
         seg2.epochs = [proxy_epoch, epoch]
         block2.segments = [seg2]
-        block2.create_many_to_one_relationship()
+        block2.check_relationships()
 
         # test correct loading and slicing of EpochProxy objects
         # (not tested above since we used the EpochProxy to cut the block)

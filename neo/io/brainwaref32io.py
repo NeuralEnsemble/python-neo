@@ -158,7 +158,7 @@ class BrainwareF32IO(BaseIO):
             while res:
                 res = self.__read_id()
 
-        block.create_many_to_one_relationship()
+        block.check_relationships()
 
         # cleanup attributes
         self._fsrc = None

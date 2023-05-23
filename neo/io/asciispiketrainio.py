@@ -107,7 +107,7 @@ class AsciiSpikeTrainIO(BaseIO):
                 sptr.annotate(channel_index=i)
                 seg.spiketrains.append(sptr)
 
-        seg.create_many_to_one_relationship()
+        seg.check_relationships()
         return seg
 
     def write_segment(self, segment,

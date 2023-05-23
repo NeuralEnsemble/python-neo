@@ -248,7 +248,7 @@ class NeuroshareapiIO(BaseIO):
             # add the spike object to segment
             seg.spiketrains += [sptr]
 
-        seg.create_many_to_one_relationship()
+        seg.check_relationships()
 
         return seg
 

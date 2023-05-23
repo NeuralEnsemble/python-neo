@@ -49,7 +49,7 @@ def proc_f32(filename):
             f32file = list(f32obj.items())[0][1].flatten()
     except OSError as exc:
         if 'as a pickle' in exc.message:
-            block.create_many_to_one_relationship()
+            block.check_relationships()
             return block
         else:
             raise
@@ -78,7 +78,7 @@ def proc_f32(filename):
             gr.spiketrains.append(train)
             block.segments.append(segment)
 
-    block.create_many_to_one_relationship()
+    block.check_relationships()
 
     return block
 

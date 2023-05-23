@@ -90,7 +90,6 @@ class AsciiImageIO(BaseIO):
         segment.imagesequences = [image_sequence]
 
         block = Block(file_origin=self.filename)
-        segment.block = block
         block.segments.append(segment)
         print("returning block")
 

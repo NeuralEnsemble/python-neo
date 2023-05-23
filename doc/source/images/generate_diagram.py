@@ -28,7 +28,6 @@ def get_rect_height(name, obj):
     nlines = 1.5
     nlines += len(getattr(obj, '_all_attrs', []))
     nlines += len(getattr(obj, '_single_child_objects', []))
-    nlines += len(getattr(obj, '_multi_child_objects', []))
     return nlines * line_heigth
 
 
@@ -74,9 +73,7 @@ def generate_diagram(rect_pos, rect_width, figsize):
     alpha = [1., 1., 0.3]
     for name, pos in rect_pos.items():
         obj = objs[name]
-        relationships = [getattr(obj, '_single_child_objects', []),
-                         getattr(obj, '_multi_child_objects', []),
-                         getattr(obj, '_child_properties', [])]
+        relationships = [getattr(obj, '_single_child_objects', [])]
 
         for r in range(3):
             for ch_name in relationships[r]:
@@ -120,16 +117,6 @@ def generate_diagram(rect_pos, rect_width, figsize):
 
         rect = Rectangle((pos[0], pos2), rect_width, rect_height,
                          facecolor='c', edgecolor='k', alpha=.5)
-        ax.add_patch(rect)
-
-        # multi relationship
-        relationship = list(getattr(obj, '_multi_child_objects', []))
-        pos2 = (pos[1] + htotal - line_heigth * (1.5 + len(relationship))
-                - rect_height)
-        rect_height = len(relationship) * line_heigth
-
-        rect = Rectangle((pos[0], pos2), rect_width, rect_height,
-                         facecolor='m', edgecolor='k', alpha=.5)
         ax.add_patch(rect)
 
         # necessary attr
