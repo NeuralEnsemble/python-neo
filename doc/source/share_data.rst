@@ -213,4 +213,4 @@ Now that we have annotated our dataset, we can write it to an NWB file:
 .. _`Whole cell patch-clamp recordings of cerebellar granule cells`: https://doi.org/10.25493/CHJG-7QC
 .. _EBRAINS: https://ebrains.eu/services/data-and-knowledge/
 .. _`NIX data model`: https://nixpy.readthedocs.io/
-.. _`FAIR guiding principles`: https://doi.org/10.1038/sdata.2016.18`
+.. _`FAIR guiding principles`: https://doi.org/10.1038/sdata.2016.18
