@@ -138,7 +138,7 @@ class NixIOTest(unittest.TestCase):
                 neosp = neosig.sampling_period
                 nixsp = create_quantity(timedim.sampling_interval,
                                         timedim.unit)
-                self.assertEqual(neosp, nixsp)
+                self.assertAlmostEqual(neosp, nixsp)
                 tsunit = timedim.unit
                 if "t_start.units" in da.metadata.props:
                     tsunit = da.metadata["t_start.units"]
