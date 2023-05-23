@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 import quantities as pq
 from .spiketrain import SpikeTrain, normalize_times_array
+from .objectlist import ObjectList
 
 
 def is_spiketrain_or_proxy(obj):
@@ -32,7 +33,7 @@ def unique(quantities):
 
 
 
-class SpikeTrainList(object):
+class SpikeTrainList(ObjectList):
     """
     This class contains multiple spike trains, and can represent them
     either as a list of SpikeTrain objects or as a pair of arrays
@@ -73,8 +74,9 @@ class SpikeTrainList(object):
          <SpikeTrain(array([], dtype=float64) * ms, [0.0 ms, 100.0 ms])>]
 
     """
+    allowed_contents = (SpikeTrain,)
 
-    def __init__(self, items=None, segment=None):
+    def __init__(self, items=None, parent=None):
         """Initialize self"""
         if items is None:
             self._items = items
@@ -88,7 +90,13 @@ class SpikeTrainList(object):
         self._channel_id_array = None
         self._all_channel_ids = None
         self._spiketrain_metadata = {}
-        self.segment = segment
+        if parent is not None:
+            assert parent.__class__.__name__ == "Segment"
+        self.segment = parent
+
+    @property
+    def parent(self):
+        return self.segment
 
     def __iter__(self):
         """Implement iter(self)"""
@@ -118,6 +126,9 @@ class SpikeTrainList(object):
                     len(self._all_channel_ids))
         else:
             return str(self._items)
+
+    def __repr__(self):
+        return "<SpikeTrainList>"
 
     def __len__(self):
         """Return len(self)"""
@@ -182,7 +193,7 @@ class SpikeTrainList(object):
             return self._add_spiketrainlists(other)
         elif other and is_spiketrain_or_proxy(other[0]):
             return self._add_spiketrainlists(
-                self.__class__(items=other, segment=self.segment)
+                self.__class__(items=other, parent=self.segment)
             )
         else:
             if self._items is None:
@@ -195,7 +206,7 @@ class SpikeTrainList(object):
             return self._add_spiketrainlists(other, in_place=True)
         elif other and is_spiketrain_or_proxy(other[0]):
             for obj in other:
-                obj.segment = self.segment
+                self._handle_append(obj)
             if self._items is None:
                 self._spiketrains_from_array()
             self._items.extend(other)
@@ -227,7 +238,7 @@ class SpikeTrainList(object):
             raise ValueError("Can only append SpikeTrain objects")
         if self._items is None:
             self._spiketrains_from_array()
-        obj.segment = self.segment
+        self._handle_append(obj)
         self._items.append(obj)
 
     def extend(self, iterable):
@@ -235,7 +246,7 @@ class SpikeTrainList(object):
         if self._items is None:
             self._spiketrains_from_array()
         for obj in iterable:
-            obj.segment = self.segment
+            self._handle_append(obj)
         self._items.extend(iterable)
 
     @classmethod

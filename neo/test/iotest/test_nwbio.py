@@ -58,7 +58,6 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
 
             for ind in range(num_seg):  # number of Segments
                 seg = Segment(index=ind)
-                seg.block = blk
                 blk.segments.append(seg)
 
             for seg in blk.segments:  # AnalogSignal objects
@@ -110,15 +109,6 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
                 seg.analogsignals.append(c)
                 seg.irregularlysampledsignals.append(d)
                 seg.events.append(evt)
-                a.segment = seg
-                b.segment = seg
-                c.segment = seg
-                d.segment = seg
-                evt.segment = seg
-                train.segment = seg
-                train2.segment = seg
-                epc.segment = seg
-                epc2.segment = seg
 
         # write to file
         test_file_name = "test_round_trip.nwb"
@@ -187,7 +177,6 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
         original_block = Block(name="experiment", session_start_time=datetime.now())
         segment = Segment(name="session 1")
         original_block.segments.append(segment)
-        segment.block = original_block
 
         electrode_annotations = {
             "name": "electrode #1",
@@ -224,7 +213,7 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
                                 name="response",
                                 **response_annotations)
         segment.analogsignals = [stimulus, response]
-        stimulus.segment = response.segment = segment
+        assert stimulus.segment is response.segment is segment
 
         test_file_name = "test_round_trip_with_annotations.nwb"
         iow = NWBIO(filename=test_file_name, mode='w')
@@ -268,25 +257,21 @@ class TestNWBIO(BaseTestIO, unittest.TestCase):
         # create proxy objects
         proxy_anasig = AnalogSignalProxy(rawio=self.proxy_reader, stream_index=0,
                                          inner_stream_channels=None, block_index=0, seg_index=0,)
-        proxy_anasig.segment = seg
         seg.analogsignals.append(proxy_anasig)
 
         proxy_sptr = SpikeTrainProxy(rawio=self.proxy_reader, spike_channel_index=0, block_index=0,
                                      seg_index=0)
-        proxy_sptr.segment = seg
         seg.spiketrains.append(proxy_sptr)
 
         proxy_event = EventProxy(rawio=self.proxy_reader, event_channel_index=0, block_index=0,
                                  seg_index=0)
-        proxy_event.segment = seg
         seg.events.append(proxy_event)
 
         proxy_epoch = EpochProxy(rawio=self.proxy_reader, event_channel_index=1, block_index=0,
                                  seg_index=0)
-        proxy_epoch.segment = seg
         seg.epochs.append(proxy_epoch)
 
-        original_block.create_relationship()
+        original_block.check_relationships()
 
         iow = NWBIO(filename=test_file_name, mode='w')
 

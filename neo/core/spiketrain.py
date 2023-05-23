@@ -347,8 +347,8 @@ class SpikeTrain(DataObject):
 
     def _repr_pretty_(self, pp, cycle):
         waveforms = ""
-        if self.waveforms:
-            waveforms = "with waveforms"
+        if self.waveforms is not None:
+            waveforms = " with waveforms"
         pp.text(f"{self.__class__.__name__} containing {self.size} spikes{waveforms}; "
                 f"units {self.units.dimensionality.string}; datatype {self.dtype} ")
         if self._has_repr_pretty_attrs_():

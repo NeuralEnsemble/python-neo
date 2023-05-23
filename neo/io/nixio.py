@@ -294,14 +294,10 @@ class NixIO(BaseIO):
             if grp.type == "neo.segment":
                 newseg = self._nix_to_neo_segment(grp)
                 neo_block.segments.append(newseg)
-                # parent reference
-                newseg.block = neo_block
             elif grp.type == "neo.group":
                 newgrp, parent_name = self._nix_to_neo_group(grp)
                 assert parent_name is None
                 neo_block.groups.append(newgrp)
-                # parent reference
-                newgrp.block = neo_block
             elif grp.type == "neo.subgroup":
                 newgrp, parent_name = self._nix_to_neo_group(grp)
                 groups_to_resolve.append((newgrp, parent_name))
@@ -328,7 +324,7 @@ class NixIO(BaseIO):
                 self._nix_to_neo_spiketrain(mt)
 
         # create object links
-        neo_block.create_relationship()
+        neo_block.check_relationships()
 
         # reset maps
         self._neo_map = dict()
@@ -358,36 +354,24 @@ class NixIO(BaseIO):
             if das[0].type == "neo.analogsignal":
                 newasig = self._nix_to_neo_analogsignal(das)
                 neo_segment.analogsignals.append(newasig)
-                # parent reference
-                newasig.segment = neo_segment
             elif das[0].type == "neo.irregularlysampledsignal":
                 newisig = self._nix_to_neo_irregularlysampledsignal(das)
                 neo_segment.irregularlysampledsignals.append(newisig)
-                # parent reference
-                newisig.segment = neo_segment
             elif das[0].type == "neo.imagesequence":
                 new_imgseq = self._nix_to_neo_imagesequence(das)
                 neo_segment.imagesequences.append(new_imgseq)
-                # parent reference
-                new_imgseq.segment = neo_segment
 
         # descend into MultiTags
         for mtag in nix_group.multi_tags:
             if mtag.type == "neo.event":
                 newevent = self._nix_to_neo_event(mtag)
                 neo_segment.events.append(newevent)
-                # parent reference
-                newevent.segment = neo_segment
             elif mtag.type == "neo.epoch":
                 newepoch = self._nix_to_neo_epoch(mtag)
                 neo_segment.epochs.append(newepoch)
-                # parent reference
-                newepoch.segment = neo_segment
             elif mtag.type == "neo.spiketrain":
                 newst = self._nix_to_neo_spiketrain(mtag)
                 neo_segment.spiketrains.append(newst)
-                # parent reference
-                newst.segment = neo_segment
 
         return neo_segment
 

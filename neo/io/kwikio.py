@@ -129,7 +129,7 @@ class KwikIO(BaseIO):
 
         seg.duration = model.duration * pq.s
 
-        blk.create_many_to_one_relationship()
+        blk.check_relationships()
         return blk
 
     def read_analogsignal(self, model, units='uV', lazy=False):

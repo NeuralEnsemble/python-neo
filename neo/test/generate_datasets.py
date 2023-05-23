@@ -158,8 +158,6 @@ def random_segment():
         seg.spiketrains.append(random_spiketrain())
     # todo: add some ImageSequence and ROI objects
 
-    for child in seg.data_children:
-        child.segment = seg
     return seg
 
 
@@ -206,7 +204,6 @@ def random_block():
     for i in range(n_seg):
         seg = random_segment()
         block.segments.append(seg)
-        seg.block = block
     children = list(block.data_children_recur)
     views = []
     for child in children:
@@ -222,7 +219,6 @@ def random_block():
         group = random_group(children)
         if group:
             block.groups.append(group)
-            group.block = block
             children.append(group)  # this can give us nested groups
     return block
 
@@ -240,8 +236,6 @@ def simple_block():
                 cell_type="pyramidal",
                 thing="amajig")
     ]
-    for segment in block.segments:
-        segment.block = block
     block.segments[0].analogsignals.extend((
         random_signal(name="signal #1 in segment #1", thing="wotsit"),
         random_signal(name="signal #2 in segment #1", thing="frooble"),
@@ -277,10 +271,7 @@ def generate_one_simple_block(block_name='block_0', nb_segment=3, supported_obje
                                               **kws)
             bl.segments.append(seg)
 
-    # if RecordingChannel in objects:
-    #    populate_RecordingChannel(bl)
-
-    bl.create_many_to_one_relationship()
+    bl.check_relationships()
     return bl
 
 
@@ -373,12 +364,11 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
 
     # TODO : Spike, Event
 
-    seg.create_many_to_one_relationship()
+    seg.check_relationships()
     return seg
 
 
 def generate_from_supported_objects(supported_objects):
-    # ~ create_many_to_one_relationship
     if not supported_objects:
         raise ValueError('No objects specified')
     objects = supported_objects
@@ -390,5 +380,5 @@ def generate_from_supported_objects(supported_objects):
         # TODO
         return None
 
-    higher.create_many_to_one_relationship()
+    higher.check_relationships()
     return higher

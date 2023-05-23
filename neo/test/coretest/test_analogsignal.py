@@ -256,7 +256,7 @@ class TestAnalogSignalProperties(unittest.TestCase):
 
         segment = Segment(name='seg1')
         segment.analogsignals = [signal]
-        segment.create_many_to_one_relationship()
+        segment.check_relationships()
 
         self.assertEqual(signal._parent_objects, ('Segment',))
 

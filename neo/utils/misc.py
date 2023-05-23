@@ -351,7 +351,7 @@ def add_epoch(
 
     if attach_result:
         segment.epochs.append(ep)
-        segment.create_relationship()
+        segment.check_relationships()
 
     return ep
 
@@ -495,7 +495,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
                 seg, epoch=epoch, reset_time=reset_time)
             new_block.segments.extend(new_segments)
 
-    new_block.create_many_to_one_relationship(force=True)
+    new_block.check_relationships()
 
     return new_block
 
