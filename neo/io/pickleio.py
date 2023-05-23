@@ -10,10 +10,8 @@ Supported: Read/Write
 Authors: Andrew Davison
 """
 
-try:
-    import cPickle as pickle  # Python 2
-except ImportError:
-    import pickle  # Python 3
+
+import pickle
 
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment,

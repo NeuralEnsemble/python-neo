@@ -78,7 +78,7 @@ jobs:
         # restore-key hits should result in `cache-hit` == 'false'
         if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
-          conda env update neo-test-env --file environment_testing.yml
+          conda env update --name neo-test-env --file environment_testing.yml --prune
 
       - name: Configure git
         run: |
