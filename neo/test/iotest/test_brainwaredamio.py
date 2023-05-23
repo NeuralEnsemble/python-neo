@@ -72,7 +72,7 @@ def proc_dam(filename):
         gr.analogsignals.append(sig)
         sig.group = gr
 
-    block.create_many_to_one_relationship()
+    block.check_relationships()
 
     return block
 

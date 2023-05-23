@@ -39,7 +39,6 @@ class TestPickleIO(unittest.TestCase):
         seg = Segment()
         seg.spiketrains.append(train)
         seg.epochs.append(epoch)
-        epoch.segment = seg
         blk.segments.append(seg)
 
         reader = PickleIO(filename="blk.pkl")
@@ -56,7 +55,6 @@ class TestPickleIO(unittest.TestCase):
         epoch = Epoch(times=np.arange(0, 30, 10) * pq.s,
                       durations=[10, 5, 7] * pq.ms,
                       labels=np.array(['btn0', 'btn1', 'btn2'], dtype='U'))
-        epoch.segment = Segment()
         blk = Block()
         seg = Segment()
         seg.epochs.append(epoch)
@@ -74,8 +72,6 @@ class TestPickleIO(unittest.TestCase):
         # Event
         event = Event(np.arange(0, 30, 10) * pq.s,
                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
-        event.segment = Segment()
-
         blk = Block()
         seg = Segment()
         seg.events.append(event)
@@ -93,13 +89,10 @@ class TestPickleIO(unittest.TestCase):
         # IrregularlySampledSignal
         signal = IrregularlySampledSignal(
             [0.0, 1.23, 6.78], [1, 2, 3], units='mV', time_units='ms')
-        signal.segment = Segment()
-
         blk = Block()
         seg = Segment()
         seg.irregularlysampledsignals.append(signal)
         blk.segments.append(seg)
-        blk.segments[0].block = blk
 
         reader = PickleIO(filename="blk.pkl")
         reader.write(blk)

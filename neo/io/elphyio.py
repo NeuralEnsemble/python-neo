@@ -3835,7 +3835,6 @@ class ElphyIO(BaseIO):
             return block
         for episode in range(1, self.elphy_file.n_episodes + 1):
             segment = self.read_segment(episode)
-            segment.block = block
             block.segments.append(segment)
 
         # close file
@@ -4237,7 +4236,6 @@ class ElphyIO(BaseIO):
                 sampling_period=signal.sampling_period * getattr(pq, x_unit),
                 channel_name="episode {}, channel {}".format(int(episode + 1), int(channel + 1))
             )
-            analog_signal.segment = segment
             segment.analogsignals.append(analog_signal)
         # create a spiketrain for each
         # spike channel in the episode
@@ -4248,7 +4246,6 @@ class ElphyIO(BaseIO):
         if n_spikes > 0:
             for spk in range(1, n_spikes + 1):
                 spiketrain = self.read_spiketrain(episode, spk)
-                spiketrain.segment = segment
                 segment.spiketrains.append(spiketrain)
         # segment
         return segment

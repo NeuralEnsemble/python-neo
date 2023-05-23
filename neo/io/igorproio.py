@@ -2,7 +2,7 @@
 Class for reading data created by IGOR Pro
 (WaveMetrics, Inc., Portland, OR, USA)
 
-Depends on: igor (https://pypi.python.org/pypi/igor/)
+Depends on: igor2 (https://pypi.python.org/pypi/igor2/)
 
 Supported: Read
 
@@ -25,7 +25,7 @@ class IgorIO(BaseIO):
     or Packed Experiment (.pxp) files written by WaveMetrics’
     IGOR Pro software.
 
-    It requires the `igor` Python package by W. Trevor King.
+    It requires the `igor2` Python package.
 
     Usage:
         >>> from neo import io
@@ -72,12 +72,11 @@ class IgorIO(BaseIO):
 
         block = Block(file_origin=str(self.filename))
         block.segments.append(self.read_segment(lazy=lazy))
-        block.segments[-1].block = block
         return block
 
     def read_segment(self, lazy=False):
-        import igor.packed as pxp
-        from igor.record.wave import WaveRecord
+        import igor2.packed as pxp
+        from igor2.record.wave import WaveRecord
 
         assert not lazy, 'This IO does not support lazy mode'
         segment = Segment(file_origin=str(self.filename))
@@ -89,19 +88,17 @@ class IgorIO(BaseIO):
             def callback(dirpath, key, value):
                 if isinstance(value, WaveRecord):
                     signal = self._wave_to_analogsignal(value.wave['wave'], dirpath)
-                    signal.segment = segment
                     segment.analogsignals.append(signal)
 
             pxp.walk(self.filesystem, callback)
         else:
             segment.analogsignals.append(
                 self.read_analogsignal(lazy=lazy))
-            segment.analogsignals[-1].segment = segment
         return segment
 
     def read_analogsignal(self, path=None, lazy=False):
-        import igor.binarywave as bw
-        import igor.packed as pxp
+        import igor2.binarywave as bw
+        import igor2.packed as pxp
 
         assert not lazy, 'This IO does not support lazy mode'
 

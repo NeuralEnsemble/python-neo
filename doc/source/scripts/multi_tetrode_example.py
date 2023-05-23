@@ -35,7 +35,6 @@ iter_group = cycle(groups)
 
 # Create dummy data, one segment at a time
 for segment in block.segments:
-    segment.block = block
 
     # create two 4-channel AnalogSignals with dummy data
     signals = {
@@ -46,8 +45,6 @@ for segment in block.segments:
     }
     if store_signals:
         segment.analogsignals.extend(signals.values())
-        for signal in signals:
-            signal.segment = segment
 
     # create spike trains with dummy data
     # we will pretend the spikes have been extracted from the dummy signal
@@ -56,7 +53,6 @@ for segment in block.segments:
             spiketrain = SpikeTrain(np.random.uniform(0, 100, size=30) * ms, t_stop=100 * ms)
             # assign each spiketrain to the appropriate segment
             segment.spiketrains.append(spiketrain)
-            spiketrain.segment = segment
             # assign each spiketrain to a given neuron
             current_group = next(iter_group)
             current_group.add(spiketrain)

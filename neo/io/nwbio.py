@@ -285,7 +285,6 @@ class NWBIO(BaseIO):
                 break
         if segment is None:
             segment = Segment(name=segment_name)
-            segment.block = block
             block.segments.append(segment)
         return segment
 
@@ -312,14 +311,12 @@ class NWBIO(BaseIO):
                     assert segment_name.size == block_name.size == 1
                     segment = self._get_segment(block_name[0], segment_name[0])
                     segment.epochs.append(epoch)
-                    epoch.segment = segment
             else:
                 epoch = EpochProxy(self._file.epochs)
                 if not lazy:
                     epoch = epoch.load()
                 segment = self._get_segment("default", "default")
                 segment.epochs.append(epoch)
-                epoch.segment = segment
 
     def _read_timeseries_group(self, group_name, lazy):
         import pynwb
@@ -345,19 +342,16 @@ class NWBIO(BaseIO):
                 if not lazy:
                     event = event.load()
                 segment.events.append(event)
-                event.segment = segment
             elif timeseries.rate:  # AnalogSignal
                 signal = AnalogSignalProxy(timeseries, group_name)
                 if not lazy:
                     signal = signal.load()
                 segment.analogsignals.append(signal)
-                signal.segment = segment
             else:  # IrregularlySampledSignal
                 signal = AnalogSignalProxy(timeseries, group_name)
                 if not lazy:
                     signal = signal.load()
                 segment.irregularlysampledsignals.append(signal)
-                signal.segment = segment
 
     def _read_units(self, lazy):
         if self._file.units:
@@ -376,7 +370,6 @@ class NWBIO(BaseIO):
                 if not lazy:
                     spiketrain = spiketrain.load()
                 segment.spiketrains.append(spiketrain)
-                spiketrain.segment = segment
 
     def _read_acquisition_group(self, lazy):
         self._read_timeseries_group("acquisition", lazy)

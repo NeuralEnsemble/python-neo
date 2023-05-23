@@ -183,7 +183,7 @@ class TestEpoch(unittest.TestCase):
 
         segment = Segment(name='seg1')
         segment.epochs = [epc]
-        segment.create_many_to_one_relationship()
+        segment.check_relationships()
 
         self.assertEqual(epc._parent_objects, ('Segment',))
 
@@ -206,8 +206,10 @@ class TestEpoch(unittest.TestCase):
         assert_neo_object_is_compliant(epc)
 
         prepr = pretty(epc)
-        targ = ("Epoch\nname: '%s'\ndescription: '%s'\nannotations: %s"
-                "" % (epc.name, epc.description, pretty(epc.annotations)))
+        targ = (f"Epoch containing {len(epc)} epochs with labels; "
+                f"time units {epc.units.dimensionality.string}; datatype float64 "
+                f"\nname: '{epc.name}'\ndescription: '{epc.description}'"
+                f"\nannotations: {pretty(epc.annotations)}")
 
         self.assertEqual(prepr, targ)
 

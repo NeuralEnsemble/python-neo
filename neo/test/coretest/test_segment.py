@@ -156,7 +156,7 @@ class TestSegment(unittest.TestCase):
             # and then we have to convert to a SpikeTrainList
             # to match the output of segment.filter
             if all(isinstance(obj, SpikeTrain) for obj in targ):
-                targ = SpikeTrainList(items=targ, segment=segment)
+                targ = SpikeTrainList(items=targ, parent=segment)
 
             res0 = segment.filter()
             res1 = segment.filter({})
@@ -461,7 +461,7 @@ class TestSegment(unittest.TestCase):
 
         block = Block()
         block.segments = [seg]
-        block.create_many_to_one_relationship()
+        block.check_relationships()
 
         # test without resetting the time
         sliced = seg.time_slice(time_slice[0], time_slice[1])
@@ -499,7 +499,7 @@ class TestSegment(unittest.TestCase):
 
         block = Block()
         block.segments = [seg]
-        block.create_many_to_one_relationship()
+        block.check_relationships()
 
         # test with resetting the time
         sliced = seg.time_slice(time_slice[0], time_slice[1], reset_time=True)
@@ -561,7 +561,7 @@ class TestSegment(unittest.TestCase):
 
         block = Block()
         block.segments = [seg]
-        block.create_many_to_one_relationship()
+        block.check_relationships()
 
         # test with proxy objects
         sliced = seg.time_slice(time_slice[0], time_slice[1])
@@ -607,7 +607,7 @@ class TestSegment(unittest.TestCase):
 
         block = Block()
         block.segments = [seg]
-        block.create_many_to_one_relationship()
+        block.check_relationships()
 
         # test without resetting the time
         for t_start, t_stop in time_slices:
