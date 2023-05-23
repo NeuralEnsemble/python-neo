@@ -5,7 +5,7 @@ Tests of neo.io.igorproio
 import unittest
 
 try:
-    import igor
+    import igor2
 
     HAVE_IGOR = True
 except ImportError:

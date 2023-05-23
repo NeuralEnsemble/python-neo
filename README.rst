@@ -45,7 +45,7 @@ More information
 ----------------
 
 - Home page: http://neuralensemble.org/neo
-- Mailing list: https://groups.google.com/forum/?fromgroups#!forum/neuralensemble
+- Mailing list: http://neuralensemble.org/community
 - Documentation: http://neo.readthedocs.io/
 - Bug reports: https://github.com/NeuralEnsemble/python-neo/issues
 
@@ -74,7 +74,7 @@ No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3).
 .. _NiBabel: http://nipy.sourceforge.net/nibabel/
 .. _PyNN: http://neuralensemble.org/PyNN
 .. _quantities: http://pypi.python.org/pypi/quantities
-.. _`NeuralEnsemble mailing list`: http://groups.google.com/group/neuralensemble
+.. _`NeuralEnsemble mailing list`: http://neuralensemble.org/community
 .. _`issue tracker`: https://github.c
 .. _tridesclous: https://github.com/tridesclous/tridesclous
 .. _ephyviewer: https://github.com/NeuralEnsemble/ephyviewer

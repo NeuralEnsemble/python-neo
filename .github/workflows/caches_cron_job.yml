@@ -60,8 +60,7 @@ jobs:
           git config --global user.email "neo_ci@fake_mail.com"
           git config --global user.name "neo CI"
           python -m pip install -U pip  # Official recommended way
-          pip install --upgrade -e .
-          pip install .[test]
+          pip install --upgrade -e .[test]
 
   create-data-cache-if-missing:
     name: Caching data env

@@ -1,5 +1,7 @@
 """
-This is an example for creating simple plots from various Neo structures.
+Creating simple plots from various Neo structures
+=================================================
+
 It includes a function that generates toy data.
 """
 

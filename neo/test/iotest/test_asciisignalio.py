@@ -61,7 +61,9 @@ class TestAsciiSignalIO(unittest.TestCase):
             for row in sample_data:
                 writer.writerow(row)
 
-        io = AsciiSignalIO(filename, usecols=(0, 1, 3), timecolumn=2,
+        usecols = (0, 1, 3)
+        timecolumn = 2
+        io = AsciiSignalIO(filename, usecols=usecols, timecolumn=timecolumn,
                            # note that timecolumn applies to the remaining columns
                            # after applying usecols
                            time_units="ms", delimiter=',', units="mV", method='csv',
@@ -75,6 +77,11 @@ class TestAsciiSignalIO(unittest.TestCase):
                                   np.array(sample_data)[:, 1],
                                   decimal=5)
         self.assertAlmostEqual(signal.sampling_period, 0.1 * pq.ms)
+
+        expected_channel_index = list(usecols)
+        # remove time column as it is not loaded as signal channel
+        expected_channel_index.pop(timecolumn)
+        assert_array_equal(expected_channel_index, signal.array_annotations['channel_index'])
 
         os.remove(filename)
     # test_csv_expect_failure

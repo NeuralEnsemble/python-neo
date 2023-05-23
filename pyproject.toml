@@ -51,7 +51,7 @@ test = [
     "scipy>=1.0.0",
     "pyedflib",
     "h5py",
-    "igor",
+    "igor2",
     "klusta",
     "tqdm",
     "nixio",
@@ -68,9 +68,22 @@ test = [
 
 docs = [
     "docutils<0.18",
+    "sphinx-inline-tabs",
+    "sphinx-gallery",
+    "pydata-sphinx-theme",
+    "sphinx-design",
+    "ipython",
+    "matplotlib",
+    "nixio",
+    "pynwb"
 ]
 
-igorproio = ["igor"]
+dev = [
+    "build",
+    "twine"
+]
+
+igorproio = ["igor2"]
 kwikio = ["klusta"]
 neomatlabio = ["scipy>=1.0.0"]
 nixio = ["nixio>=1.5.0"]
@@ -86,7 +99,7 @@ all = [
     "coverage",
     "coveralls",
     "h5py",
-    "igor",
+    "igor2",
     "ipython",
     "klusta",
     "matplotlib",
