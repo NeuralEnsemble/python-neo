@@ -61,9 +61,6 @@ class Segment(Container):
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
 
-    *Properties available on this object*:
-        :all_data: (list) A list of all child objects in the :class:`Segment`.
-
     *Container of*:
         :class:`Epoch`
         :class:`Event`

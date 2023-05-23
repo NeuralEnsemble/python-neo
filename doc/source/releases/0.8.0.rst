@@ -30,7 +30,7 @@ Here is an example, loading only certain sections of a signal::
 Not all IO modules support lazy loading (but many do). To know whether a given IO class supports lazy mode,
 use ``SomeIO.support_lazy``.
 
-For more details,  see :ref:`section-lazy`.
+For more details,  see :ref:`section-performance-memory`.
 
 Image sequence data
 -------------------
