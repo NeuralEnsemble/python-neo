@@ -102,10 +102,12 @@ jobs:
       - name: Install wine
         run: |
           sudo dpkg --add-architecture i386
-          sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
-          sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
+          wget -nc https://dl.winehq.org/wine-builds/winehq.key
+          sudo apt-key add winehq.key
+          sudo add-apt-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ impish main'
+          sudo apt-add-repository 'deb http://dl.winehq.org/wine-builds/debian/ bookworm main'
           sudo apt update
-          sudo apt install -y --install-recommends winehq-staging
+          sudo apt install -y --install-recommends winehq-stable
 
       - name: Test with pytest
         run: |
