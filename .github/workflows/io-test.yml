@@ -102,10 +102,13 @@ jobs:
       - name: Install wine
         run: |
           sudo dpkg --add-architecture i386
-          sudo mkdir -pm755 /etc/apt/keyrings
-          sudo wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
-          sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
-          sudo apt install -y --install-recommends winehq-stable
+          sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
+          sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
+          sudo apt update
+          sudo apt-get install -yqq --allow-downgrades libgd3/jammy libpcre2-8-0/jammy libpcre2-16-0/jammy libpcre2-32-0/jammy libpcre2-posix2/jammy
+          sudo apt-get purge -yqq libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
+          echo "/opt/wine-staging/bin" >> $GITHUB_PATH
+          sudo apt install -y --install-recommends wine-staging="7.17~jammy-1" wine-staging-i386="7.17~jammy-1" wine-staging-amd64="7.17~jammy-1"
 
       - name: Test with pytest
         run: |
