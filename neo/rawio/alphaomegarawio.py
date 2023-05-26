@@ -4,9 +4,9 @@ This module implements file reader for AlphaOmega MPX file format version 4.
 This module expect default channel names from the AlphaOmega record system (RAW
 ###, SPK ###, LFP ###, AI ###,…).
 
-This module reads all \*.mpx files in a directory (not recursively) by default.
-If you provide a list of \*.lsx files only the \*.mpx files referenced by those
-\*.lsx files will be loaded.
+This module reads all *.mpx files in a directory (not recursively) by default.
+If you provide a list of *.lsx files only the *.mpx files referenced by those
+*.lsx files will be loaded.
 
 The specifications are mostly extracted from the "AlphaRS User Manual V1.0.1.pdf"
 manual provided with the AlphaRS hardware. The specifications are described in

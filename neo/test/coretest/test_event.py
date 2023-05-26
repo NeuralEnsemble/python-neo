@@ -450,7 +450,7 @@ class TestEvent(unittest.TestCase):
 
         segment = Segment(name='seg1')
         segment.events = [evt]
-        segment.create_many_to_one_relationship()
+        segment.check_relationships()
 
         self.assertEqual(evt._parent_objects, ('Segment',))
 
@@ -473,8 +473,10 @@ class TestEvent(unittest.TestCase):
         assert_neo_object_is_compliant(evt)
 
         prepr = pretty(evt)
-        targ = ("Event\nname: '%s'\ndescription: '%s'\nannotations: %s"
-                "" % (evt.name, evt.description, pretty(evt.annotations)))
+        targ = (f"Event containing {len(evt)} events with labels; "
+                f"time units {evt.units.dimensionality.string}; datatype float64 "
+                f"\nname: '{evt.name}'\ndescription: '{evt.description}'"
+                f"\nannotations: {pretty(evt.annotations)}")
 
         self.assertEqual(prepr, targ)
 

@@ -279,7 +279,7 @@ class BrainwareSrcIO(BaseIO):
                 raise
 
         # since we read at a Block level we always do this
-        self._blk.create_many_to_one_relationship()
+        self._blk.check_relationships()
 
         # put the Block in a local object so it can be gargabe collected
         blockobj = self._blk
@@ -524,7 +524,6 @@ class BrainwareSrcIO(BaseIO):
         event_t_start = event.annotations.pop('t_start')
         segment.rec_datetime = self._convert_timestamp(event_t_start)
         segment.events = [event]
-        event.segment = segment
 
     def _combine_spiketrains(self, spiketrains):
         """

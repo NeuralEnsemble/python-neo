@@ -466,7 +466,6 @@ class NestIO(BaseIO):
                                 value_units)
         blk = Block(file_origin=seg.file_origin, file_datetime=seg.file_datetime)
         blk.segments.append(seg)
-        seg.block = blk
         return blk
 
     def read_segment(self, gid_list=None, time_unit=pq.ms, t_start=None,
