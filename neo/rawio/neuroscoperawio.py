@@ -57,8 +57,8 @@ class NeuroScopeRawIO(BaseRawIO):
             - It assumes that the XML file has the same name and a .xml extension.
         """
         BaseRawIO.__init__(self)
-        self.filename = Path(filename)
-        self.binary_file = Path(binary_file) if binary_file is not None else None
+        self.filename = filename
+        self.binary_file = binary_file
 
     def _source_name(self):
         return Path(self.filename).stem
@@ -166,7 +166,9 @@ class NeuroScopeRawIO(BaseRawIO):
         """
 
         supported_extensions = ['.dat', '.lfp', '.eeg']
-
+        self.filename = Path(self.filename)
+        self.binary_file = Path(self.binary_file) if self.binary_file is not None else None
+        
         if self.filename.suffix == '.xml':
             xml_file_path = self.filename
             data_file_path = self.binary_file 
