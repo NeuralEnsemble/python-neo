@@ -28,16 +28,33 @@ class NeuroScopeRawIO(BaseRawIO):
     extensions = ['xml', 'dat', 'lfp', 'eeg']
     rawmode = 'one-file'
 
-    def __init__(self, filename='', binary_file=None):
+    def __init__(self, filename, binary_file=None):
         """raw reader for Neuroscope
 
         Parameters
         ----------
-        filename : str, optional
-            Usually the file_path of an xml file
-        binary_file : _type_, optional
-            The binary data file corresponding to the xml file:
+        filename : str, Path
+            Usually the path of an xml file
+        binary_file : str or Path optional
+            The binary data file
             Supported formats: ['.dat', '.lfp', '.eeg']
+            
+        Neuroscope format is composed of two files: a xml file with metadata and a binary file
+        in either .dat, .lfp or .eeg format.
+        
+        For backwards compatibility, we offer three ways of initializing the reader.
+            
+        Cases:
+        filename provided with .xml extension:
+            - If binary_file is provided, it is used as the data file.
+            - If binary_file is not provided, it tries to find a binary file with the same name and the
+            supported extensions (.dat, .lfp, .eeg) in that order.
+        filename provided with empty extension:
+            - If binary_file is provided, it is used as the data file.
+            - If binary_file is not provided, it tries to find a binary file with the same name and the
+            supported extensions (.dat, .lfp, .eeg) in that order.
+        filename provided with a supported data extension (.dat, .lfp, .eeg):
+            - It assumes that the XML file has the same name and a .xml extension.
         """
         BaseRawIO.__init__(self)
         self.filename = filename
@@ -139,41 +156,40 @@ class NeuroScopeRawIO(BaseRawIO):
         return raw_signals
 
     def _resolve_xml_and_data_paths(self):
-        file_path = Path(self.filename)
-        supported_data_extensions = ['.dat', '.lfp', '.eeg']
-        suffix = file_path.suffix
-        if suffix == '.xml':
-            xml_file_path = file_path
-            data_file_path = self.binary_file
-            # If no binary file provided iterate over the formats
-            if data_file_path is None:
-                for extension in supported_data_extensions:
-                    data_file_path = file_path.with_suffix(extension)
-                    if data_file_path.is_file():
-                        break
-                assert data_file_path.is_file(), "data binary not found for file " \
-                f"{data_file_path} with supported extensions: {supported_data_extensions}"
-        elif suffix == '':
-            xml_file_path = file_path.with_suffix(".xml")
-            data_file_path = self.binary_file
-            # Empty suffix to keep testing behavior with non-existing
-            # file passing for backwards compatibility
-            if data_file_path is None:
-                data_file_path = file_path.with_suffix(".dat")
-        elif suffix in supported_data_extensions:
-            xml_file_path = file_path.with_suffix(".xml")
-            data_file_path = file_path
-        else:
-            error_string = (
-                f"Format {suffix} not supported "
-                f"filename format should be {supported_data_extensions} or .xml"
-            )
-            raise KeyError(error_string)
+        """
+        Resolves XML and data paths from the provided filename and binary_file attributes.
+        
+        See the __init__ of the class for more a description of the conditions.
+        
+        Using these conditions these function updates the self.xml_file_path and self.data_file_path attributes.        
 
-        msg = f"xml file not found at the expected location {xml_file_path}"
-        assert xml_file_path.is_file(), msg
-        msg = f"binary file not found at the expected location {data_file_path}"
-        assert data_file_path.is_file(), msg
+        """
+
+        supported_extensions = ['.dat', '.lfp', '.eeg']
+        self.filename = Path(self.filename)
+        self.binary_file = Path(self.binary_file) if self.binary_file is not None else None
+        
+        if self.filename.suffix == '.xml':
+            xml_file_path = self.filename
+            data_file_path = self.binary_file 
+        elif self.filename.suffix == '':
+            xml_file_path = self.filename.with_suffix(".xml")
+            data_file_path = self.binary_file
+        elif self.filename.suffix in supported_extensions:
+            xml_file_path = self.filename.with_suffix(".xml")
+            data_file_path = self.filename
+        else:
+            raise KeyError(f"Format {self.filename.suffix} not supported, filename format should be {supported_extensions} or .xml")
+        
+        if data_file_path is None:
+            possible_file_paths = (xml_file_path.with_suffix(extension) for extension in supported_extensions)
+            data_file_path = next((path for path in possible_file_paths if path.is_file()), None)
+            if data_file_path is None:
+                raise FileNotFoundError(f"data binary not found for file {xml_file_path.stem} with supported extensions: {supported_extensions}")
+
+        
+        assert xml_file_path.is_file(), f"xml file not found at the expected location {xml_file_path}"
+        assert data_file_path.is_file(), f"binary file not found at the expected location {data_file_path}"
 
         self.xml_file_path = xml_file_path
         self.data_file_path = data_file_path
