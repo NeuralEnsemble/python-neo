@@ -79,6 +79,12 @@ class Test_array_annotations(unittest.TestCase):
         self.assertIsInstance(list_ann['anno1'], np.ndarray)
         self.assertIsInstance(list_ann['anno2'], np.ndarray)
 
+        # Tuple are also made to np.ndarrays
+        list_ann = {'anno1': (3, 6), 'anno2': ('ABC', 'DEF')}
+        list_ann = _normalize_array_annotations(list_ann, datobj._get_arr_ann_length())
+        self.assertIsInstance(list_ann['anno1'], np.ndarray)
+        self.assertIsInstance(list_ann['anno2'], np.ndarray)
+
     def test_implicit_dict_check(self):
         # DataObject instance that handles checking
         datobj = DataObject([1, 2])  # Inherits from Quantity, so some data is required
