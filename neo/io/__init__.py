@@ -429,7 +429,7 @@ def list_candidate_ios(file_or_folder, ignore_patterns=['*.ini', 'README.txt', '
     """
     file_or_folder = pathlib.Path(file_or_folder)
 
-    if file_or_folder.suffix:
+    if file_or_folder.is_file():
         suffix = file_or_folder.suffix[1:].lower()
         if suffix not in io_by_extension:
             raise ValueError(f'{suffix} is not a supported format of any IO.')
@@ -452,6 +452,12 @@ def list_candidate_ios(file_or_folder, ignore_patterns=['*.ini', 'README.txt', '
     # to select all files sharing the `session1-` prefix
     elif file_or_folder.parent.exists():
         filenames = file_or_folder.parent.glob(file_or_folder.name + '*')
+
+    elif file_or_folder.suffix:
+        suffix = file_or_folder.suffix[1:].lower()
+        if suffix not in io_by_extension:
+            raise ValueError(f'{suffix} is not a supported format of any IO.')
+        return io_by_extension[suffix]
     
     else:
         raise ValueError(f'{file_or_folder} does not contain data files of a supported format')
