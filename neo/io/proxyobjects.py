@@ -201,7 +201,7 @@ class AnalogSignalProxy(BaseProxy):
                     assert self.t_start <= t_stop <= self.t_stop, 't_stop is outside'
                 else:
                     t_stop = min(t_stop, self.t_stop)
-                i_stop = int((t_stop - self.t_start).magnitude * sr.magnitude)
+                i_stop = int(np.ceil((t_stop - self.t_start).magnitude * sr.magnitude))
         return i_start, i_stop, sig_t_start
 
     def load(self, time_slice=None, strict_slicing=True,
