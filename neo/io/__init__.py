@@ -451,14 +451,13 @@ def list_candidate_ios(file_or_folder, ignore_patterns=['*.ini', 'README.txt', '
     # if only file prefix was provided, e.g /mydatafolder/session1-
     # to select all files sharing the `session1-` prefix
     elif file_or_folder.parent.exists():
-        filenames = file_or_folder.parent.glob(file_or_folder.name + '*')
+        filenames = list(file_or_folder.parent.glob(file_or_folder.name + '*'))
+        if len(filenames)==0 and file_or_folder.suffix:
+            suffix = file_or_folder.suffix[1:].lower()
+            if suffix not in io_by_extension:
+                raise ValueError(f'{suffix} is not a supported format of any IO.')
+            return io_by_extension[suffix]
 
-    elif file_or_folder.suffix:
-        suffix = file_or_folder.suffix[1:].lower()
-        if suffix not in io_by_extension:
-            raise ValueError(f'{suffix} is not a supported format of any IO.')
-        return io_by_extension[suffix]
-    
     else:
         raise ValueError(f'{file_or_folder} does not contain data files of a supported format')
 
