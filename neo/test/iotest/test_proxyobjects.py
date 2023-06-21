@@ -54,8 +54,8 @@ class TestAnalogSignalProxy(BaseProxyTest):
         # ceil next sample when slicing
         anasig = proxy_anasig.load(time_slice=(1.99999 * pq.s, 5.000001 * pq.s))
         assert anasig.t_start == 2. * pq.s
-        assert anasig.duration == 3.0001 * pq.s
-        assert anasig.shape == (30001, 8)
+        assert anasig.duration == 3. * pq.s
+        assert anasig.shape == (30000, 8)
 
         # buggy time slice
         with self.assertRaises(AssertionError):
