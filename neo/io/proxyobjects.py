@@ -188,7 +188,7 @@ class AnalogSignalProxy(BaseProxy):
                 else:
                     t_start = max(t_start, self.t_start)
                 # the i_start is necessary ceil
-                i_start = int(np.ceil((t_start - self.t_start).magnitude * sr.magnitude))
+                i_start = np.rint((t_start - self.t_start).magnitude * sr.magnitude)).astype(np.int64)
                 # this needed to get the real t_start of the first sample
                 # because do not necessary match what is demanded
                 sig_t_start = self.t_start + i_start / sr
@@ -201,7 +201,7 @@ class AnalogSignalProxy(BaseProxy):
                     assert self.t_start <= t_stop <= self.t_stop, 't_stop is outside'
                 else:
                     t_stop = min(t_stop, self.t_stop)
-                i_stop = int(np.ceil((t_stop - self.t_start).magnitude * sr.magnitude))
+                i_stop = np.rint((t_stop - self.t_start).magnitude * sr.magnitude)).astype(np.int64)
         return i_start, i_stop, sig_t_start
 
     def load(self, time_slice=None, strict_slicing=True,
