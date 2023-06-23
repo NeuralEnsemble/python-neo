@@ -1,14 +1,15 @@
 name: NeoIoTest
 
-workflow_call:
-  inputs:
-    os:
-      required: true
-      type: string
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
 
-concurrency:  # Cancel previous workflows on the same pull request
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  concurrency:  # Cancel previous workflows on the same pull request
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
   build-and-test:
