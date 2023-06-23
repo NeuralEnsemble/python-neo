@@ -1,26 +1,10 @@
 name: NeoIoTest
 
-on:
-  pull_request:
-    branches: [master]
-    types: [synchronize, opened, reopened, ready_for_review]
-    inputs:
-      os: 'ubuntu-latest'
-
-  # run checks on any change of master, including merge of PRs
-  push:
-    branches: [master]
-
-  workflow_dispatch:
-    inputs:
-      os:
-        description: 'The operating system to run the tests on'
-        required: True
-        default: 'ubuntu-latest'
-        type: choice
-        options:
-          - macos-latest
-          - windows-latest
+workflow_call:
+  inputs:
+    os:
+      required: true
+      type: string
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
