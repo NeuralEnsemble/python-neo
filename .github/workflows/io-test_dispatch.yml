@@ -1,15 +1,16 @@
 name: NeoIoTest-manual-trigger
 
-workflow_dispatch:
-  inputs:
-    os:
-      description: 'The operating system to run the tests on'
-      required: True
-      default: 'ubuntu-latest'
-      type: choice
-      options:
-        - macos-latest
-        - windows-latest
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        description: 'The operating system to run the tests on'
+        required: True
+        default: 'ubuntu-latest'
+        type: choice
+        options:
+          - macos-latest
+          - windows-latest
 
 jobs:
   call-iotests:
