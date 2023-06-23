@@ -14,6 +14,6 @@ on:
 
 jobs:
   call-iotests:
-    uses: Neuralensemble/python-neo/.github/workflows/io-test.yml
+    uses: ./.github/workflows/io-test.yml
     with:
       os: ${{ inputs.os }}
