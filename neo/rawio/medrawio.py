@@ -91,31 +91,33 @@ class MedRawIO(BaseRawIO):
         for chan_idx, chan_info in enumerate(self.sess.session_info['channels']):
             chan_freq = chan_info['metadata']['sampling_frequency']
             
+            # set MED session reference channel to be this channel, so the correct contigua is returned
+            self.sess.set_reference_channel(chan_info['metadata']['channel_name'])
+            contigua = self.sess.find_discontinuities()
+                
+            # find total number of samples in this channel
+            chan_num_samples = 0
+            for seg_idx in range(len(contigua)):
+                chan_num_samples += (contigua[seg_idx]['end_index'] - contigua[seg_idx]['start_index']) + 1
+            
             # see if we need a new stream, or add channel to existing stream
             add_to_existing_stream_info = False
             for stream_info in self._stream_info:
-                if chan_freq == stream_info['sampling_frequency']:
+                if chan_freq == stream_info['sampling_frequency'] and chan_num_samples == stream_info['num_samples']:
                     # found a match, so add it!
                     add_to_existing_stream_info = True
                     stream_info['chan_list'].append((chan_idx, chan_info['metadata']['channel_name']))
                     stream_info['raw_chans'].append(chan_info['metadata']['channel_name'])
+                    break
             
             if not add_to_existing_stream_info:
                 self._num_stream_info += 1
-                # set MED session reference channel to be this channel, so the correct contigua is returned
-                self.sess.set_reference_channel(chan_info['metadata']['channel_name'])
-                contigua = self.sess.find_discontinuities()
-                
-                # find total number of samples in this stream
-                num_samples_in_stream = 0
-                for seg_idx in range(len(contigua)):
-                    num_samples_in_stream += (contigua[seg_idx]['end_index'] - contigua[seg_idx]['start_index']) + 1
                             
                 new_stream_info = {'sampling_frequency': chan_info['metadata']['sampling_frequency'], \
                     'chan_list': [(chan_idx, chan_info['metadata']['channel_name'])], \
                     'contigua' : contigua, \
                     'raw_chans' : [chan_info['metadata']['channel_name']], \
-                    'num_samples' : num_samples_in_stream }
+                    'num_samples' : chan_num_samples}
 
                 self._stream_info.append(new_stream_info)
                     
@@ -126,8 +128,7 @@ class MedRawIO(BaseRawIO):
         signal_channels = []
         
         # fill in signal_streams and signal_channels info
-        signal_stream_counter = 0
-        for stream_info in self._stream_info:
+        for signal_stream_counter, stream_info in enumerate(self._stream_info):
             
             # get the stream start time, which is the start time of the first continuous section
             stream_start_time = (stream_info['contigua'][0]["start_time"] + self._session_time_offset ) / 1e6
@@ -140,8 +141,6 @@ class MedRawIO(BaseRawIO):
             # add entry for signal_channels for each channel in a stream
             for chan in stream_info['chan_list']:
                 signal_channels.append((chan[1], chan[0], stream_info['sampling_frequency'], 'int32', 'uV', 1, 0, stream_id))
-                    
-            signal_stream_counter += 1
         
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -233,7 +232,7 @@ class MedRawIO(BaseRawIO):
                 self.sess.set_channel_active(self._stream_info[stream_index]['raw_chans'][channel_idx])
             self.sess.set_reference_channel(self._stream_info[stream_index]['raw_chans'][channel_indexes[0]])
               
-        # Return empty dataset if start/stop sampes are equal
+        # Return empty dataset if start/stop samples are equal
         if i_start == i_stop:
             raw_signals = np.zeros((0, num_channels), dtype='int32')
             return raw_signals
@@ -245,10 +244,10 @@ class MedRawIO(BaseRawIO):
         # Create "sample_major" 2D numpy array from the result of read_by_index()
         samps_returned = len(self.sess.data['channels'][0]['data'])
         raw_signals = np.array([], dtype=np.int32)
-        for chan in self.sess.data['channels']:
-            raw_signals = np.concatenate((raw_signals, chan['data']))
-        raw_signals = raw_signals.reshape(num_channels, samps_returned)
-        raw_signals = raw_signals.transpose()  # this makes is sample_major rather than channel_major
+        
+        raw_signals = np.empty((i_stop - i_start, num_channels))
+        for i, chan in enumerate(self.sess.data['channels']):
+            raw_signals[:,i] = chan['data']
         
         return raw_signals
 

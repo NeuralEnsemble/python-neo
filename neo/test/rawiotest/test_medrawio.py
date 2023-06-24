@@ -43,7 +43,7 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(rawio.num_channels_in_session, 3)
         self.assertEqual(rawio.header['signal_channels'].size, 3)
         
-        # Verity if found the names of the 3 channels
+        # Verify if found the names of the 3 channels
         self.assertEqual(rawio.header['signal_channels'][0][0], 'CSC_0001')
         self.assertEqual(rawio.header['signal_channels'][1][0], 'CSC_0002')
         self.assertEqual(rawio.header['signal_channels'][2][0], 'CSC_0003')
@@ -156,9 +156,9 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         # They are 3 "Note" type events, and 2 "NlxP", or neuralynx, type events.
         # The first segment has one event, and the second and third segments
         # each have 2 events.
-        self.assertEqual(rawio._event_count(0, 0, 0), 1)
-        self.assertEqual(rawio._event_count(0, 1, 0), 2)
-        self.assertEqual(rawio._event_count(0, 2, 0), 2)
+        self.assertEqual(rawio.event_count(0, 0, 0), 1)
+        self.assertEqual(rawio.event_count(0, 1, 0), 2)
+        self.assertEqual(rawio.event_count(0, 2, 0), 2)
         
         # Get array of all events in first segment of data
         events = rawio._get_event_timestamps(0, 0, 0, rawio._segment_t_start(0, 0), rawio._segment_t_stop(0, 0))
@@ -206,9 +206,9 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         # They are 3 "Note" type events, and 2 "NlxP", or neuralynx, type events.
         # The first segment has one event, and the second and third segments
         # each have 2 events.
-        self.assertEqual(rawio._event_count(0, 0, 0), 1)
-        self.assertEqual(rawio._event_count(0, 1, 0), 2)
-        self.assertEqual(rawio._event_count(0, 2, 0), 2)
+        self.assertEqual(rawio.event_count(0, 0, 0), 1)
+        self.assertEqual(rawio.event_count(0, 1, 0), 2)
+        self.assertEqual(rawio.event_count(0, 2, 0), 2)
         
         # Get array of all events in first segment of data
         events = rawio._get_event_timestamps(0, 0, 0, rawio._segment_t_start(0, 0), rawio._segment_t_stop(0, 0))

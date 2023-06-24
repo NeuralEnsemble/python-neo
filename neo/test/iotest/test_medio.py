@@ -48,10 +48,8 @@ class TestMedIO(BaseTestIO, unittest.TestCase, ):
         np.testing.assert_array_equal(seg.analogsignals[0][0][:3], [-1, -4, -4])
         
         for anasig in seg.analogsignals:
-            assert isinstance(anasig, AnalogSignal)
             self.assertNotEqual(anasig.size, 0)
         for st in seg.spiketrains:
-            assert isinstance(st, SpikeTrain)
             self.assertNotEqual(st.size, 0)
 
         # annotations
