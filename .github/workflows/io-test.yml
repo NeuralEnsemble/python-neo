@@ -1,13 +1,11 @@
 name: NeoIoTest
 
 on:
-  pull_request:
-    branches: [master]
-    types: [synchronize, opened, reopened, ready_for_review]
-
-  # run checks on any change of master, including merge of PRs
-  push:
-    branches: [master]
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,13 +13,11 @@ concurrency:  # Cancel previous workflows on the same pull request
 
 jobs:
   build-and-test:
-    name: Test on (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Test on (${{ inputs.os }})
+    runs-on: ${{ inputs.os }}
     strategy:
       fail-fast: true
       matrix:
-        # "macos-latest", "windows-latest"
-        os: ["ubuntu-latest", ]
         python-version: ['3.9', ]
     defaults:
       # by default run in bash mode (required for conda usage)
