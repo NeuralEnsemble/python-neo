@@ -161,10 +161,6 @@ class Plexon2RawIO(BaseRawIO):
                 spike_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                       wf_offset, wf_left_sweep, wf_sampling_rate))
 
-            # pre-loading spiking data
-            schannel_name = schannel_info.m_Name.decode()
-            self._spike_channel_cache[schannel_name] = self.pl2reader.pl2_get_spike_channel_data_by_name(schannel_name)
-
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # creating event/epoch channel
@@ -366,6 +362,10 @@ class Plexon2RawIO(BaseRawIO):
         channel_name, channel_unit_id = channel_header['name'].split('.')
         channel_unit_id = int(channel_unit_id)
 
+        # loading spike channel data on demand when not already cached
+        if channel_name not in self._spike_channel_cache:
+            self._spike_channel_cache[channel_name] = self.pl2reader.pl2_get_spike_channel_data_by_name(channel_name)
+
         spike_timestamps, unit_ids, waveforms = self._spike_channel_cache[channel_name]
         nb_spikes = np.count_nonzero(unit_ids == channel_unit_id)
 
@@ -375,6 +375,10 @@ class Plexon2RawIO(BaseRawIO):
         channel_header = self.header['spike_channels'][spike_channel_index]
         channel_name, channel_unit_id = channel_header['name'].split('.')
         channel_unit_id = int(channel_unit_id)
+
+        # loading spike channel data on demand when not already cached
+        if channel_name not in self._spike_channel_cache:
+            self._spike_channel_cache[channel_name] = self.pl2reader.pl2_get_spike_channel_data_by_name(channel_name)
 
         spike_timestamps, unit_ids, waveforms = self._spike_channel_cache[channel_name]
 
@@ -416,6 +420,10 @@ class Plexon2RawIO(BaseRawIO):
 
         channel_header = self.header['spike_channels'][spike_channel_index]
         channel_name, channel_unit_id = channel_header['name'].split('.')
+
+        # loading spike channel data on demand when not already cached
+        if channel_name not in self._spike_channel_cache:
+            self._spike_channel_cache[channel_name] = self.pl2reader.pl2_get_spike_channel_data_by_name(channel_name)
 
         spike_timestamps, unit_ids, waveforms = self._spike_channel_cache[channel_name]
 
