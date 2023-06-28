@@ -213,8 +213,9 @@ class Plexon2RawIO(BaseRawIO):
                 tmo = anno_value
                 # invalid datetime information if year is <1
                 if tmo.tm_year != 0:
+                    microseconds = block_info['m_CreatorDateTimeMilliseconds'] * 1e3
                     dt = datetime(year=tmo.tm_year, month=tmo.tm_mon, day=tmo.tm_mday, hour=tmo.tm_hour,
-                                  minute=tmo.tm_min, second=tmo.tm_sec, microsecond=block_info['m_CreatorDateTimeMilliseconds'])
+                                  minute=tmo.tm_min, second=tmo.tm_sec, microsecond=microseconds)
                     # ignoring daylight saving time information for now as timezone is unknown
 
                 else:
