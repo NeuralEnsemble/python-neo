@@ -176,7 +176,6 @@ class Plexon2RawIO(BaseRawIO):
             # event channels are characterized by (name, id, type), with type in ['event', 'epoch']
             channel_name = echannel_info.m_Name.decode()
             event_channels.append((channel_name, echannel_info.m_Channel, 'event'))
-            self._event_channel_cache[channel_name] = self.pl2reader.pl2_get_digital_channel_data_by_name(channel_name)
 
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
@@ -452,6 +451,10 @@ class Plexon2RawIO(BaseRawIO):
         channel_header = self.header['event_channels'][event_channel_index]
         channel_name = channel_header['name']
 
+        # loading event channel data on demand when not already cached
+        if channel_name not in self._event_channel_cache:
+            self._event_channel_cache[channel_name] = self.pl2reader.pl2_get_digital_channel_data_by_name(channel_name)
+
         event_times, values = self._event_channel_cache[channel_name]
 
         return len(event_times)
@@ -464,6 +467,10 @@ class Plexon2RawIO(BaseRawIO):
 
         channel_header = self.header['event_channels'][event_channel_index]
         channel_name = channel_header['name']
+
+        # loading event channel data on demand when not already cached
+        if channel_name not in self._event_channel_cache:
+            self._event_channel_cache[channel_name] = self.pl2reader.pl2_get_digital_channel_data_by_name(channel_name)
 
         event_times, labels = self._event_channel_cache[channel_name]
         labels = np.asarray(labels, dtype='U')
