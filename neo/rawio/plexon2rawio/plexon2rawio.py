@@ -1,6 +1,8 @@
 """
 Plexon2RawIO is a class to read Plexon PL2 files.
 
+This IO is based on the pypl2lib module, see https://github.com/NeuralEnsemble/pypl2
+
 On non-windows systems this IO requires Wine, see https://www.winehq.org/
 
 Note on IO performance and memory consumption:
