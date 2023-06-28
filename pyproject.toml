@@ -63,7 +63,9 @@ test = [
     "sonpy",
     "pynwb",
     "probeinterface",
-    "joblib>=1.0.0"
+    "joblib>=1.0.0",
+    "zugbruecke>=0.2",
+    "wenv"
 ]
 
 docs = [
@@ -94,6 +96,7 @@ ced = ["sonpy"]
 nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
+plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32'"]
 
 all = [
     "coverage",
@@ -101,6 +104,7 @@ all = [
     "h5py",
     "igor2",
     "ipython",
+    "joblib>=1.0.0",
     "klusta",
     "matplotlib",
     "nixio>=1.5.0",
@@ -113,6 +117,8 @@ all = [
     "scipy>=1.0.0",
     "sonpy",
     "tqdm",
-    "joblib>=1.0.0"
+    "wenv; sys_platform!='win32'",
+    "zugbruecke>=0.2; sys_platform!='win32'",
+
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable

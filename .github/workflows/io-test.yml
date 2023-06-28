@@ -46,7 +46,7 @@ jobs:
           key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data.outputs.dataset_hash }}
           restore-keys: ${{ runner.os }}-datasets-
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2.2.0
         with:
           activate-environment: neo-test-env
           python-version: ${{ matrix.python-version }}
@@ -94,6 +94,13 @@ jobs:
         if: steps.cache-conda-env.outputs.cache-hit == 'true'
         run: |
           pip install --no-dependencies -e .
+
+      - name: Install wine
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -qq
+          sudo apt-get install -yqq --allow-downgrades libc6:i386 libgcc-s1:i386 libstdc++6:i386 wine
 
       - name: Test with pytest
         run: |
