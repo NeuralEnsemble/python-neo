@@ -271,18 +271,17 @@ class Plexon2RawIO(BaseRawIO):
 
 
     def _segment_t_start(self, block_index, seg_index):
-        # this must return an float scale in second
-        # this t_start will be shared by all object in the segment except AnalogSignal
+        # this must return a float values in seconds
         return self.pl2reader.pl2_file_info.m_StartRecordingTime / self.pl2reader.pl2_file_info.m_TimestampFrequency
 
     def _segment_t_stop(self, block_index, seg_index):
-        # this must return an float scale in second
+        # this must return a float value in seconds
         end_time = self.pl2reader.pl2_file_info.m_StartRecordingTime + self.pl2reader.pl2_file_info.m_DurationOfRecording
         return end_time / self.pl2reader.pl2_file_info.m_TimestampFrequency
 
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        # this must return an int = the number of sample
+        # this must return an integer value (the number of samples)
 
         stream_id = self.header['signal_streams'][stream_index]['id']
         stream_characteristic = list(self.signal_stream_characteristics.values())[stream_index]
@@ -290,10 +289,9 @@ class Plexon2RawIO(BaseRawIO):
         return stream_characteristic.n_samples
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        # This give the t_start of signals.
-        # this must return an float scale in second
+        # This returns the t_start of signals as a float value in seconds
 
-        # TODO: Does the fragment_timestamp[0] need to be added here as for digital signals?
+        # TODO: Does the fragment_timestamp[0] need to be added here for digital signals?
         return self._segment_t_start(block_index, seg_index)
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
