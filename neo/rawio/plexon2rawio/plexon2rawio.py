@@ -79,7 +79,7 @@ class Plexon2RawIO(BaseRawIO):
             if pl2_dll_file_path.exists():
                 warnings.warn(f'Using cached plexon dll at {pl2_dll_file_path}')
             else:
-                dist = urlopen('https://github.com/Neuralensemble/pypl2/blob/master/bin/PL2FileReader.dll?raw=true')
+                dist = urlopen('https://raw.githubusercontent.com/Neuralensemble/pypl2/master/bin/PL2FileReader.dll')
                 with open(pl2_dll_file_path, 'wb') as f:
                     print(f'Downloading plexon dll to {pl2_dll_file_path}')
                     f.write(dist.read())
