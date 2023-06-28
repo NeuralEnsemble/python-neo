@@ -380,19 +380,7 @@ class Plexon2RawIO(BaseRawIO):
 
         spike_timestamps, unit_ids, waveforms = self._spike_channel_cache[channel_name]
 
-        if t_start is not None or t_stop is not None:
-            # restrict spikes to given limits (in seconds)
-            timestamp_frequency = self.pl2reader.pl2_file_info.m_TimestampFrequency
-            lim0 = int(t_start * timestamp_frequency)
-            lim1 = int(t_stop * self.pl2reader.pl2_file_info.m_TimestampFrequency)
-
-            # limits are with respect to segment t_start and not to time 0
-            lim0 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
-            lim1 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
-
-            time_mask = (spike_timestamps >= lim0) & (spike_timestamps <= lim1)
-        else:
-            time_mask = slice(None, None)
+        time_mask = self._get_timestamp_time_mask(t_start, t_stop, spike_timestamps)
 
         unit_mask = unit_ids[time_mask] == channel_unit_id
         spike_timestamps = spike_timestamps[time_mask][unit_mask]
@@ -425,18 +413,7 @@ class Plexon2RawIO(BaseRawIO):
 
         spike_timestamps, unit_ids, waveforms = self._spike_channel_cache[channel_name]
 
-        if t_start is not None or t_stop is not None:
-            # restrict spikes to given limits (in seconds)
-            timestamp_frequency = self.pl2reader.pl2_file_info.m_TimestampFrequency
-            lim0 = int(t_start * timestamp_frequency)
-            lim1 = int(t_stop * self.pl2reader.pl2_file_info.m_TimestampFrequency)
-            time_mask = (spike_timestamps >= lim0) & (spike_timestamps <= lim1)
-
-            # limits are with respect to segment t_start and not to time 0
-            lim0 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
-            lim1 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
-        else:
-            time_mask = slice(None, None)
+        time_mask = self._get_timestamp_time_mask(t_start, t_stop, spike_timestamps)
 
         unit_mask = unit_ids[time_mask] == int(channel_unit_id)
         waveforms = waveforms[time_mask][unit_mask]
@@ -444,6 +421,25 @@ class Plexon2RawIO(BaseRawIO):
         # add tetrode dimension
         waveforms = np.expand_dims(waveforms, axis=1)
         return waveforms
+
+    def _get_timestamp_time_mask(self, t_start, t_stop, timestamps):
+
+        if t_start is not None or t_stop is not None:
+            # restrict spikes to given limits (in seconds)
+            timestamp_frequency = self.pl2reader.pl2_file_info.m_TimestampFrequency
+            lim0 = int(t_start * timestamp_frequency)
+            lim1 = int(t_stop * self.pl2reader.pl2_file_info.m_TimestampFrequency)
+
+            # limits are with respect to segment t_start and not to time 0
+            lim0 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
+            lim1 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
+
+            time_mask = (timestamps >= lim0) & (timestamps <= lim1)
+
+        else:
+            time_mask = slice(None, None)
+
+        return time_mask
 
     def _event_count(self, block_index, seg_index, event_channel_index):
 
@@ -474,18 +470,7 @@ class Plexon2RawIO(BaseRawIO):
         event_times, labels = self._event_channel_cache[channel_name]
         labels = np.asarray(labels, dtype='U')
 
-        if t_start is not None or t_stop is not None:
-            # restrict events to given limits (in seconds)
-            timestamp_frequency = self.pl2reader.pl2_file_info.m_TimestampFrequency
-            lim0 = int(t_start * timestamp_frequency)
-            lim1 = int(t_stop * self.pl2reader.pl2_file_info.m_TimestampFrequency)
-            time_mask = (event_times >= lim0) & (event_times <= lim1)
-
-            # limits are with respect to segment t_start and not to time 0
-            lim0 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
-            lim1 -= self.pl2reader.pl2_file_info.m_StartRecordingTime
-        else:
-            time_mask = np.ones_like(event_times)
+        time_mask = self._get_timestamp_time_mask(t_start, t_stop, event_times)
 
         # events don't have a duration. Epochs are not supported
         durations = None
