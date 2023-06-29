@@ -40,7 +40,7 @@ jobs:
         #   * when package dependencies change
         id: cache-conda-env
         with:
-          path: ${{ CONDA }}/envs/neo-test-env
+          path: envs/neo-test-env
           key: ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
 
       - name: Cache found?
@@ -50,7 +50,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2.2.0
         if: steps.cache-conda-env.outputs.cache-hit != 'true'
         with:
-          activate-environment: neo-test-env
+          activate-environment: ~/envs/neo-test-env
           environment-file: environment_testing.yml
           python-version: 3.9
 
@@ -61,7 +61,7 @@ jobs:
           git config --global user.name "neo CI"
           python -m pip install -U pip  # Official recommended way
           pip install datalad-installer
-          datalad-installer --sudo ok git-annex --method datalad/packages --bin-dir ${{CONDA}}/envs/neo-test-env/
+          datalad-installer --sudo ok git-annex --method datalad/packages --bin-dir ~/envs/neo-test-env/
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
 
