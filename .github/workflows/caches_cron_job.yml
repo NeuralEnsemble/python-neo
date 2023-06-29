@@ -12,7 +12,7 @@ jobs:
 
   create-conda-env-cache-if-missing:
     name: Caching conda env
-    runs-on: "ubuntu-latest"
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
