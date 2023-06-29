@@ -102,7 +102,7 @@ jobs:
           git config --global user.name "neo CI"
           python -m pip install -U pip  # Official recommended way
           pip install datalad-installer
-          datalad-installer --sudo ok git-annex --method datalad/packages
+          datalad-installer --sudo ok git-annex=8 --method datalad/packages
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
 
