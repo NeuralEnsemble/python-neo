@@ -12,7 +12,7 @@ from neo.core import Block, Segment, AnalogSignal
 from ..rawio.baserawio import _signal_channel_dtype, _signal_stream_dtype, _spike_channel_dtype, _event_channel_dtype
 
 try:
-    from load_heka.load_heka import LoadHeka
+    from load_heka_python.load_heka import LoadHeka
 except ImportError as err:
     HAS_LOADHEKA = False
     LOADHEKA_ERR = err
