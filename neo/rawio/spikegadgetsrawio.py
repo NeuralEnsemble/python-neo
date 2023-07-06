@@ -163,7 +163,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
             signal_streams.append((stream_name, stream_id))
             self._mask_channels_bytes[stream_id] = []
 
-            channel_ids = self._produce_channel_ids(num_ephy_channels, num_chan_per_chip)
+            channel_ids = self._produce_ephys_channel_ids(num_ephy_channels, num_chan_per_chip)
 
             chan_ind = 0
             for trode in sconf:
