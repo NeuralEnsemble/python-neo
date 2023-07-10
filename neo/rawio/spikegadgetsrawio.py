@@ -148,7 +148,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     units = ''
                     gain = 1.
                     offset = 0.
-                    signal_channels.append((name, chan_id, self._sampling_rate, 'int16',
+                    signal_channels.append((name, chan_id, self._sampling_rate, dtype,
                                          units, gain, offset, stream_id))
 
                     num_bytes = stream_bytes[stream_id] + int(channel.attrib['startByte'])
