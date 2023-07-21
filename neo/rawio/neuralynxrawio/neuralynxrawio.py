@@ -59,7 +59,7 @@ from neo.rawio.neuralynxrawio.nlxheader import NlxHeader
 
 
 class NeuralynxRawIO(BaseRawIO):
-    """"
+    """
     Class for reading datasets recorded by Neuralynx.
 
     This version works with rawmode of one-dir for a single directory of files or one-file for
@@ -75,7 +75,7 @@ class NeuralynxRawIO(BaseRawIO):
 
             Display all information about signal channels, units, segment size....
     """
-    extensions = ['nse', 'ncs', 'nev', 'ntt']
+    extensions = ['nse', 'ncs', 'nev', 'ntt', 'nvt', 'nrd']  # nvt and nrd are not yet supported
     rawmode = 'one-dir'
 
     _ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
@@ -131,6 +131,8 @@ class NeuralynxRawIO(BaseRawIO):
         self.nse_ntt_filenames = OrderedDict()  # (chan_name, chan_id): filename
         self.nev_filenames = OrderedDict()  # chan_id: filename
 
+        self.file_headers = OrderedDict()  # filename: file header dict
+
         self._nev_memmap = {}
         self._spike_memmap = {}
         self.internal_unit_ids = []  # channel_index > ((channel_name, channel_id), unit_id)
@@ -185,6 +187,7 @@ class NeuralynxRawIO(BaseRawIO):
 
             # All file have more or less the same header structure
             info = NlxHeader(filename)
+            self.file_headers[filename] = info
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
@@ -552,7 +555,7 @@ class NeuralynxRawIO(BaseRawIO):
         """
         Retrieve chunk of analog signal, a chunk being a set of contiguous samples.
 
-        PARAMETERS
+        Parameters
         ----------
         block_index:
             index of block in dataset, ignored as only 1 block in this implementation
@@ -565,7 +568,7 @@ class NeuralynxRawIO(BaseRawIO):
         channel_indexes:
             list of channel indices to return data for
 
-        RETURNS
+        Returns
         -------
             array of samples, with each requested channel in a column
         """
@@ -727,12 +730,13 @@ class NeuralynxRawIO(BaseRawIO):
         Ncs files have to have common sampling_rate, number of packets and t_start
         (be part of a single stream)
 
-        PARAMETERS:
-        ------
-        ncs_filenames - list of ncs filenames to scan.
+        Parameters
+        ----------
+        ncs_filenames: list
+            List of ncs filenames to scan.
 
-        RETURNS:
-        ------
+        Returns
+        -------
         memmaps
             [ {} for seg_index in range(self._nb_segment) ][chan_uid]
         seg_time_limits

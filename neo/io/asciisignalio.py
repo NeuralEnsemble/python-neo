@@ -39,7 +39,7 @@ class AsciiSignalIO(BaseIO):
             column delimiter in file, e.g. '\t', one space, two spaces, ',', ';'
         timecolumn:
             None or a valid integer that identifies which column contains the time vector
-            (counting from zero)
+            (counting from zero, within the list of selected columns, see also `usecols` argument)
         units:
             units of AnalogSignal can be a str or directly a Quantity
         time_units:
@@ -176,7 +176,6 @@ class AsciiSignalIO(BaseIO):
     def read_block(self, lazy=False):
         block = Block(file_origin=os.path.basename(self.filename))
         segment = self.read_segment(lazy=lazy)
-        segment.block = block
         block.segments.append(segment)
         return block
 
@@ -251,6 +250,8 @@ class AsciiSignalIO(BaseIO):
             t_start = sig[0, self.timecolumn] * self.time_units
 
         if self.signal_group_mode == 'all-in-one':
+            channel_index_annotation = self.usecols or np.arange(sig.shape[1])
+            channel_index_annotation = np.asarray(channel_index_annotation)
             if self.timecolumn is not None:
                 mask = list(range(sig.shape[1]))
                 if self.timecolumn >= 0:
@@ -258,6 +259,7 @@ class AsciiSignalIO(BaseIO):
                 else:  # allow negative column index
                     mask.remove(sig.shape[1] + self.timecolumn)
                 signal = sig[:, mask]
+                channel_index_annotation = channel_index_annotation[mask]
             else:
                 signal = sig
             if sampling_rate is None:
@@ -268,8 +270,8 @@ class AsciiSignalIO(BaseIO):
             else:
                 ana_sig = AnalogSignal(signal * self.units, sampling_rate=sampling_rate,
                                        t_start=t_start,
-                                       channel_index=self.usecols or np.arange(signal.shape[1]),
                                        name='multichannel')
+                ana_sig.array_annotate(channel_index=channel_index_annotation)
                 seg.analogsignals.append(ana_sig)
         else:
             if self.timecolumn is not None and self.timecolumn < 0:
@@ -292,7 +294,7 @@ class AsciiSignalIO(BaseIO):
                                            name='Column %d' % i)
                     seg.analogsignals.append(ana_sig)
 
-        seg.create_many_to_one_relationship()
+        seg.check_relationships()
         return seg
 
     def read_metadata(self):

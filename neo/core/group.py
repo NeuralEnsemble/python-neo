@@ -8,6 +8,16 @@ and :class:`Unit`.
 
 from os import close
 from neo.core.container import Container
+from neo.core.analogsignal import AnalogSignal
+from neo.core.container import Container
+from neo.core.objectlist import ObjectList
+from neo.core.epoch import Epoch
+from neo.core.event import Event
+from neo.core.imagesequence import ImageSequence
+from neo.core.irregularlysampledsignal import IrregularlySampledSignal
+from neo.core.segment import Segment
+from neo.core.spiketrainlist import SpikeTrainList
+from neo.core.view import ChannelView
 
 
 class Group(Container):
@@ -48,12 +58,81 @@ class Group(Container):
                  allowed_types=None, **annotations):
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
+
+        # note that we create the ObjectLists here _without_ a parent argument
+        # since objects do not have a reference to the group(s)
+        # they are contained in.
+        self._analogsignals = ObjectList(AnalogSignal)
+        self._irregularlysampledsignals = ObjectList(IrregularlySampledSignal)
+        self._spiketrains = SpikeTrainList()
+        self._events = ObjectList(Event)
+        self._epochs = ObjectList(Epoch)
+        self._channelviews = ObjectList(ChannelView)
+        self._imagesequences = ObjectList(ImageSequence)
+        self._segments = ObjectList(Segment)  # to remove?
+        self._groups = ObjectList(Group)
+
         if allowed_types is None:
             self.allowed_types = None
         else:
             self.allowed_types = tuple(allowed_types)
+
         if objects:
             self.add(*objects)
+
+    analogsignals = property(
+        fget=lambda self: self._get_object_list("_analogsignals"),
+        fset=lambda self, value: self._set_object_list("_analogsignals", value),
+        doc="list of AnalogSignals contained in this group"
+    )
+
+    irregularlysampledsignals = property(
+        fget=lambda self: self._get_object_list("_irregularlysampledsignals"),
+        fset=lambda self, value: self._set_object_list("_irregularlysampledsignals", value),
+        doc="list of IrregularlySignals contained in this group"
+    )
+
+    events = property(
+        fget=lambda self: self._get_object_list("_events"),
+        fset=lambda self, value: self._set_object_list("_events", value),
+        doc="list of Events contained in this group"
+    )
+
+    epochs = property(
+        fget=lambda self: self._get_object_list("_epochs"),
+        fset=lambda self, value: self._set_object_list("_epochs", value),
+        doc="list of Epochs contained in this group"
+    )
+
+    channelviews = property(
+        fget=lambda self: self._get_object_list("_channelviews"),
+        fset=lambda self, value: self._set_object_list("_channelviews", value),
+        doc="list of ChannelViews contained in this group"
+    )
+
+    imagesequences = property(
+        fget=lambda self: self._get_object_list("_imagesequences"),
+        fset=lambda self, value: self._set_object_list("_imagesequences", value),
+        doc="list of ImageSequences contained in this group"
+    )
+
+    spiketrains = property(
+        fget=lambda self: self._get_object_list("_spiketrains"),
+        fset=lambda self, value: self._set_object_list("_spiketrains", value),
+        doc="list of SpikeTrains contained in this group"
+    )
+
+    segments = property(
+        fget=lambda self: self._get_object_list("_segments"),
+        fset=lambda self, value: self._set_object_list("_segments", value),
+        doc="list of Segments contained in this group"
+    )
+
+    groups = property(
+        fget=lambda self: self._get_object_list("_groups"),
+        fset=lambda self, value: self._set_object_list("_groups", value),
+        doc="list of Groups contained in this group"
+    )
 
     @property
     def _container_lookup(self):

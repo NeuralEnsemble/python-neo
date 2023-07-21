@@ -1,6 +1,6 @@
 """
-:mod:`neo.rawio` provides classes for reading with low level API
-electrophysiological data files.
+:mod:`neo.rawio` provides classes for reading
+electrophysiological data files with a low-level API
 
 :attr:`neo.rawio.rawiolist` provides a list of successfully imported rawio
 classes.
@@ -20,7 +20,7 @@ Classes:
 * :attr:`BlackrockRawIO`
 * :attr:`BrainVisionRawIO`
 * :attr:`CedRawIO`
-* :attr: `EdfRawIO`
+* :attr:`EDFRawIO`
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
 * :attr:`MaxwellRawIO`
@@ -34,6 +34,7 @@ Classes:
 * :attr:`OpenEphysBinaryRawIO`
 * :attr:`PhyRawIO`
 * :attr:`PlexonRawIO`
+* :attr:`Plexon2RawIO`
 * :attr:`RawBinarySignalRawIO`
 * :attr:`RawMCSRawIO`
 * :attr:`Spike2RawIO`
@@ -76,7 +77,7 @@ Classes:
 
     .. autoattribute:: extensions
 
-.. autoclass:: neo.rawio.EdfRawIO
+.. autoclass:: neo.rawio.EDFRawIO
 
     .. autoattribute:: extensions
 
@@ -129,6 +130,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.PlexonRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.Plexon2RawIO
 
     .. autoattribute:: extensions
 
@@ -190,6 +195,7 @@ from neo.rawio.openephysrawio import OpenEphysRawIO
 from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
 from neo.rawio.phyrawio import PhyRawIO
 from neo.rawio.plexonrawio import PlexonRawIO
+from neo.rawio.plexon2rawio import Plexon2RawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 from neo.rawio.rawmcsrawio import RawMCSRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
@@ -222,6 +228,7 @@ rawiolist = [
     OpenEphysBinaryRawIO,
     PhyRawIO,
     PlexonRawIO,
+    Plexon2RawIO,
     RawBinarySignalRawIO,
     RawMCSRawIO,
     Spike2RawIO,
@@ -235,7 +242,7 @@ rawiolist = [
 
 def get_rawio_class(filename_or_dirname):
     """
-    Return a neo.rawio class guess from file extention.
+    Return a neo.rawio class guess from file extension.
     """
     _, ext = os.path.splitext(filename_or_dirname)
     ext = ext[1:]

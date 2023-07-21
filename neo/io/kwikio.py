@@ -15,23 +15,6 @@ import numpy as np
 import quantities as pq
 import os
 
-try:
-    from scipy import stats
-except ImportError as err:
-    HAVE_SCIPY = False
-    SCIPY_ERR = err
-else:
-    HAVE_SCIPY = True
-    SCIPY_ERR = None
-
-try:
-    from klusta import kwik
-except ImportError as err:
-    HAVE_KWIK = False
-    KWIK_ERR = err
-else:
-    HAVE_KWIK = True
-    KWIK_ERR = None
 
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -77,8 +60,8 @@ class KwikIO(BaseIO):
         Arguments:
             filename : the filename
         """
-        if not HAVE_KWIK:
-            raise KWIK_ERR
+        from klusta import kwik
+
         BaseIO.__init__(self)
         self.filename = os.path.abspath(filename)
         model = kwik.KwikModel(self.filename)  # TODO this group is loaded twice
@@ -95,7 +78,8 @@ class KwikIO(BaseIO):
         """
         Reads a block with segments and groups
 
-        Parameters:
+        Parameters
+        ----------
         get_waveforms: bool, default = False
             Wether or not to get the waveforms
         get_raw_data: bool, default = False
@@ -145,14 +129,15 @@ class KwikIO(BaseIO):
 
         seg.duration = model.duration * pq.s
 
-        blk.create_many_to_one_relationship()
+        blk.check_relationships()
         return blk
 
     def read_analogsignal(self, model, units='uV', lazy=False):
         """
         Reads analogsignals
 
-        Parameters:
+        Parameters
+        ----------
         units: str, default = "uV"
             SI units of the raw trace according to voltage_gain given to klusta
         """
@@ -172,7 +157,8 @@ class KwikIO(BaseIO):
         """
         Reads sorted spiketrains
 
-        Parameters:
+        Parameters
+        ----------
         get_waveforms: bool, default = False
             Wether or not to get the waveforms
         cluster_id: int,

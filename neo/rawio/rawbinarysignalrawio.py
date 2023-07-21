@@ -9,7 +9,7 @@ class RawBinarySignalIO
 
 Important release note:
   * Since the version neo 0.6.0 and the neo.rawio API,
-    argmuents of the IO (dtype, nb_channel, sampling_rate) must be
+    arguments of the IO (dtype, nb_channel, sampling_rate) must be
     given at the __init__ and not at read_segment() because there is
     no read_segment() in neo.rawio classes.
 
@@ -27,7 +27,7 @@ import sys
 
 
 class RawBinarySignalRawIO(BaseRawIO):
-    extensions = ['raw', '*']
+    extensions = ['raw', 'bin']
     rawmode = 'one-file'
 
     def __init__(self, filename='', dtype='int16', sampling_rate=10000.,

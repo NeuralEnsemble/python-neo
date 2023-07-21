@@ -138,7 +138,7 @@ class NixIOTest(unittest.TestCase):
                 neosp = neosig.sampling_period
                 nixsp = create_quantity(timedim.sampling_interval,
                                         timedim.unit)
-                self.assertEqual(neosp, nixsp)
+                self.assertAlmostEqual(neosp, nixsp)
                 tsunit = timedim.unit
                 if "t_start.units" in da.metadata.props:
                     tsunit = da.metadata["t_start.units"]
@@ -168,8 +168,10 @@ class NixIOTest(unittest.TestCase):
     def compare_eests_mtags(self, eestlist, mtaglist):
         self.assertEqual(len(eestlist), len(mtaglist))
         for eest in eestlist:
-            if isinstance(eest, (EventProxy, EpochProxy, SpikeTrainProxy)):
+            if isinstance(eest, (EventProxy, EpochProxy)):
                 eest = eest.load()
+            elif isinstance(eest, SpikeTrainProxy):
+                eest = eest.load(load_waveforms=True)
             mtag = mtaglist[eest.annotations["nix_name"]]
             if isinstance(eest, Epoch):
                 self.compare_epoch_mtag(eest, mtag)
@@ -888,9 +890,6 @@ class NixIOWriteTest(NixIOTest):
         seg.analogsignals.extend(signals)
         seg.spiketrains.extend(spiketrains)
         seg.epochs.extend(epochs)
-        for obj in chain(signals, spiketrains, epochs):
-            obj.segment = seg
-
         views = [ChannelView(index=np.array([0, 3, 4]), obj=signals[0], name="view_of_sig1")]
         groups = [
             Group(objects=(signals[0:1] + spiketrains[0:2] + epochs + views), name="group1"),
@@ -900,8 +899,6 @@ class NixIOWriteTest(NixIOTest):
         block = Block(name="block1")
         block.segments.append(seg)
         block.groups.extend(groups)
-        for obj in chain([seg], groups):
-            obj.block = block
 
         self.write_and_compare([block])
 
@@ -928,8 +925,6 @@ class NixIOWriteTest(NixIOTest):
         seg.analogsignals.extend(signals)
         seg.spiketrains.extend(spiketrains)
         seg.epochs.extend(epochs)
-        for obj in chain(signals, spiketrains, epochs):
-            obj.segment = seg
 
         views = [ChannelView(index=np.array([0, 3, 4]), obj=signals[0], name="view_of_sig1")]
 
@@ -942,8 +937,6 @@ class NixIOWriteTest(NixIOTest):
         block = Block(name="block1")
         block.segments.append(seg)
         block.groups.extend(groups)
-        for obj in chain([seg], groups):
-            obj.block = block
 
         self.write_and_compare([block])
 
@@ -1512,7 +1505,7 @@ class NixIOWriteTest(NixIOTest):
             unit.add(spiketrain)
 
             # make sure everything is linked properly
-            block.create_relationship()
+            block.check_relationships()
 
             return block
 

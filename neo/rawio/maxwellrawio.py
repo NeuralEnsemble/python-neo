@@ -27,12 +27,6 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 import numpy as np
 
-try:
-    import h5py
-    HAVE_H5 = True
-except ImportError:
-    HAVE_H5 = False
-
 
 class MaxwellRawIO(BaseRawIO):
     """
@@ -50,12 +44,7 @@ class MaxwellRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        try:
-            import MEArec as mr
-            HAVE_MEAREC = True
-        except ImportError:
-            HAVE_MEAREC = False
-        assert HAVE_H5, 'h5py is not installed'
+        import h5py
 
         h5 = h5py.File(self.filename, mode='r')
         self.h5_file = h5
@@ -76,7 +65,7 @@ class MaxwellRawIO(BaseRawIO):
                 if len(rec_names) > 1:
                     if self.rec_name is None:
                         raise ValueError("Detected multiple recordings. Please select a "
-                                         "single recording using the `rec_name` paramter. "
+                                         "single recording using the `rec_name` parameter. "
                                          f"Possible rec_name {rec_names}")
                 else:
                     self.rec_name = rec_names[0]
@@ -228,9 +217,9 @@ This is a big pain for the end user.
 You, as a end user, should ask Maxwell company to change this.
 Please visit this page and install the missing decompression libraries:
 https://share.mxwbio.com/d/4742248b2e674a85be97/
-Then, link the decompression library by setting the `HDF5_PLUGIN_PATH` to your 
+Then, link the decompression library by setting the `HDF5_PLUGIN_PATH` to your
 installation location, e.g. via
-os.environ['HDF5_PLUGIN_PATH'] = '/path/to/cutum/hdf5/plugin/'
+os.environ['HDF5_PLUGIN_PATH'] = '/path/to/custom/hdf5/plugin/'
 
 Alternatively, you can use the auto_install_maxwell_hdf5_compression_plugin() below
 function that do it automagically.
@@ -257,7 +246,7 @@ def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None, force_do
         local_lib = hdf5_plugin_path / 'compression.dll'
 
     if not force_download and local_lib.is_file():
-        print(f'lib h5 compression for maxwell already already in {local_lib}')
+        print(f'The h5 compression library for Maxwell is already located in {local_lib}!')
         return
 
     dist = urlopen(remote_lib)

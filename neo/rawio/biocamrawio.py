@@ -12,11 +12,6 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 import numpy as np
 
-try:
-    import h5py
-    HAVE_H5PY = True
-except ImportError:
-    HAVE_H5PY = False
 
 
 class BiocamRawIO(BaseRawIO):
@@ -29,12 +24,12 @@ class BiocamRawIO(BaseRawIO):
         >>> r.parse_header()
         >>> print(r)
         >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                                                 i_start=0, i_stop=1024,  
+                                                 i_start=0, i_stop=1024,
                                                  channel_names=channel_names)
         >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
                                                         channel_indexes=[0, 3, 6])
     """
-    extensions = ['h5']
+    extensions = ['h5', 'brw']
     rawmode = 'one-file'
 
     def __init__(self, filename=''):
@@ -45,7 +40,6 @@ class BiocamRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        assert HAVE_H5PY, 'h5py is not installed'
         self._header_dict = open_biocam_file_header(self.filename)
         self._num_channels = self._header_dict["num_channels"]
         self._num_frames = self._header_dict["num_frames"]
@@ -119,9 +113,9 @@ class BiocamRawIO(BaseRawIO):
 
 
 def open_biocam_file_header(filename):
-    """Open a Biocam hdf5 file, read and return the recording info, pick te correct method to access raw data,
+    """Open a Biocam hdf5 file, read and return the recording info, pick the correct method to access raw data,
     and return this to the caller."""
-    assert HAVE_H5PY, 'h5py is not installed'
+    import h5py
 
     rf = h5py.File(filename, 'r')
     # Read recording variables

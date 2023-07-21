@@ -4,9 +4,9 @@ This module implements file reader for AlphaOmega MPX file format version 4.
 This module expect default channel names from the AlphaOmega record system (RAW
 ###, SPK ###, LFP ###, AI ###,…).
 
-This module reads all \*.mpx files in a directory (not recursively) by default.
-If you provide a list of \*.lsx files only the \*.mpx files referenced by those
-\*.lsx files will be loaded.
+This module reads all *.mpx files in a directory (not recursively) by default.
+If you provide a list of *.lsx files only the *.mpx files referenced by those
+*.lsx files will be loaded.
 
 The specifications are mostly extracted from the "AlphaRS User Manual V1.0.1.pdf"
 manual provided with the AlphaRS hardware. The specifications are described in
@@ -90,19 +90,21 @@ class AlphaOmegaRawIO(BaseRawIO):
     def __init__(self, dirname="", lsx_files=None, prune_channels=True):
         super().__init__(dirname=dirname)
         self.dirname = Path(dirname)
+
         self._lsx_files = lsx_files
         self._mpx_files = None
-        if self.dirname.is_dir():
-            self._explore_folder()
-        else:
-            self.logger.error(f"{self.dirname} is not a folder")
         self._prune_channels = prune_channels
         self._opened_files = {}
         self._ignore_unknown_datablocks = True  # internal debug property
 
+        if self.dirname.is_dir():
+            self._explore_folder()
+        else:
+            raise ValueError(f"{self.dirname} is not a folder")
+
     def _explore_folder(self):
         """
-        If class was instanciated with lsx_files (list of .lsx files), load only
+        If class was instantiated with lsx_files (list of .lsx files), load only
         the files referenced in these lsx files otherwise, load all *.mpx files
         in `dirname`.
         It does not explores the subfolders.
@@ -114,7 +116,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                 with open(index_file, "r") as f:
                     for line in f:
                         # a line is a Microsoft Windows path. As we cannot
-                        # instanciate a WindowsPath on other OS than MS
+                        # instantiate a WindowsPath on other OS than MS
                         # Windows, we use the PureWindowsPath class
                         filename = PureWindowsPath(line.strip())
                         filename = self.dirname / filename.name
@@ -145,7 +147,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         :param prune_channels: Remove references to channels and ports which
             doesn't contain any data recorded. Be careful when using this option
             with multiple-file data since it could theoretically leads to
-            expection raised when data recorded in further files are merged into
+            exception raised when data recorded in further files are merged into
             the first file pruned from these channels.
         :type prune_channels: bool
         """
@@ -1127,7 +1129,7 @@ Then if is_analog and is_input:
     - mode_spike (2 bytes): read as hex data 0xMCCC:
         - M: 1=Master, 2=Slave
         - CCC: linked channel
-        Be carefull here, the first byte cover MC and the second byte the last
+        Be careful here, the first byte cover MC and the second byte the last
         part of the linked channel CC
 """
 SDefContinAnalog = struct.Struct("<fh")

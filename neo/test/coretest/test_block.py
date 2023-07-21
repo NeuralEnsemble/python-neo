@@ -18,6 +18,7 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.block import Block
+from neo.core.segment import Segment
 from neo.core.container import filterdata
 from neo.core import SpikeTrain, AnalogSignal, Event
 from neo.test.tools import (assert_neo_object_is_compliant,
@@ -450,6 +451,20 @@ class TestBlock(unittest.TestCase):
                 self.assertEqual(id(sig.segment), id(segment))
             for sptr in segment.spiketrains:
                 self.assertEqual(id(sptr.segment), id(segment))
+
+    def test_segment_list(self):
+        blk = Block()
+        assert len(blk.segments) == 0
+        blk.segments.append(Segment())
+        assert len(blk.segments) == 1
+        blk.segments.extend([Segment(), Segment()])
+        assert len(blk.segments) == 3
+        blk.segments = []
+        assert len(blk.segments) == 0
+        blk.segments = [Segment()]
+        assert len(blk.segments) == 1
+        blk.segments += [Segment(), Segment()]
+        assert len(blk.segments) == 3
 
 
 if __name__ == "__main__":

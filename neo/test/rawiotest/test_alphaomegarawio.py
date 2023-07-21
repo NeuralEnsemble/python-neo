@@ -82,9 +82,8 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             # just create a temporary folder that is removed
             pass
-        with self.assertLogs(logger=self.logger, level="ERROR") as cm:
+        with self.assertRaisesRegex(ValueError, "is not a folder"):
             reader = AlphaOmegaRawIO(dirname=tmpdir)
-        self.assertIn("is not a folder", cm.output[0])
 
     def test_empty_folder(self):
         with tempfile.TemporaryDirectory() as tmpdir:

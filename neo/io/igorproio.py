@@ -2,7 +2,7 @@
 Class for reading data created by IGOR Pro
 (WaveMetrics, Inc., Portland, OR, USA)
 
-Depends on: igor (https://pypi.python.org/pypi/igor/)
+Depends on: igor2 (https://pypi.python.org/pypi/igor2/)
 
 Supported: Read
 
@@ -17,13 +17,6 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
 
-try:
-    import igor.binarywave as bw
-    import igor.packed as pxp
-    from igor.record.wave import WaveRecord
-    HAVE_IGOR = True
-except ImportError:
-    HAVE_IGOR = False
 
 
 class IgorIO(BaseIO):
@@ -32,7 +25,7 @@ class IgorIO(BaseIO):
     or Packed Experiment (.pxp) files written by WaveMetrics’
     IGOR Pro software.
 
-    It requires the `igor` Python package by W. Trevor King.
+    It requires the `igor2` Python package.
 
     Usage:
         >>> from neo import io
@@ -79,10 +72,12 @@ class IgorIO(BaseIO):
 
         block = Block(file_origin=str(self.filename))
         block.segments.append(self.read_segment(lazy=lazy))
-        block.segments[-1].block = block
         return block
 
     def read_segment(self, lazy=False):
+        import igor2.packed as pxp
+        from igor2.record.wave import WaveRecord
+
         assert not lazy, 'This IO does not support lazy mode'
         segment = Segment(file_origin=str(self.filename))
 
@@ -93,22 +88,20 @@ class IgorIO(BaseIO):
             def callback(dirpath, key, value):
                 if isinstance(value, WaveRecord):
                     signal = self._wave_to_analogsignal(value.wave['wave'], dirpath)
-                    signal.segment = segment
                     segment.analogsignals.append(signal)
 
             pxp.walk(self.filesystem, callback)
         else:
             segment.analogsignals.append(
                 self.read_analogsignal(lazy=lazy))
-            segment.analogsignals[-1].segment = segment
         return segment
 
     def read_analogsignal(self, path=None, lazy=False):
+        import igor2.binarywave as bw
+        import igor2.packed as pxp
+
         assert not lazy, 'This IO does not support lazy mode'
 
-        if not HAVE_IGOR:
-            raise Exception("`igor` package not installed. "
-                             "Try `pip install igor`")
         if self.extension == 'ibw':
             data = bw.load(str(self.filename))
             version = data['version']
@@ -173,15 +166,21 @@ def key_value_string_parser(itemsep=";", kvsep=":"):
     """
     Parses a string into a dict.
 
-    Arguments:
-        itemsep - character which separates items
-        kvsep - character which separates the key and value within an item
+    Parameters
+    ----------
+    itemsep : str
+        Character which separates items
+    kvsep : str
+        Character which separates the key and value within an item
 
-    Returns:
+    Returns
+    -------
+    callable
         a function which takes the string to be parsed as the sole argument
         and returns a dict.
 
-    Example:
+    Examples
+    --------
 
         >>> parse = key_value_string_parser(itemsep=";", kvsep=":")
         >>> parse("a:2;b:3")

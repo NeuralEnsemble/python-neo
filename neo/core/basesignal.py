@@ -311,4 +311,4 @@ class BaseSignal(DataObject):
             If `other` object has incompatible attributes.
         '''
 
-        NotImplementedError('Patching need to be implemented in sublcasses')
+        NotImplementedError('Patching need to be implemented in subclasses')

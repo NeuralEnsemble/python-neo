@@ -61,22 +61,18 @@ class TestContainerNeo(unittest.TestCase):
 
         self.assertEqual(container._container_child_objects, ())
         self.assertEqual(container._data_child_objects, ())
-        self.assertEqual(container._multi_child_objects, ())
-        self.assertEqual(container._child_properties, ())
 
         self.assertEqual(container._repr_pretty_containers, ())
 
-        self.assertEqual(container._single_child_objects, ())
+        self.assertEqual(container._child_objects, ())
 
         self.assertEqual(container._container_child_containers, ())
         self.assertEqual(container._data_child_containers, ())
-        self.assertEqual(container._single_child_containers, ())
-        self.assertEqual(container._multi_child_containers, ())
+        self.assertEqual(container._child_containers, ())
 
         self.assertEqual(container._child_objects, ())
         self.assertEqual(container._child_containers, ())
 
-        self.assertEqual(container._multi_children, ())
         self.assertEqual(container._single_children, ())
         self.assertEqual(container.data_children, ())
         self.assertEqual(container.container_children, ())
@@ -99,11 +95,8 @@ class TestContainerNeo(unittest.TestCase):
 
         self.assertEqual(container.size, {})
 
-        container.create_many_to_one_relationship()
-        container.create_many_to_many_relationship()
-        container.create_relationship()
-
-    def test_filter_input(self):
+        container.check_relationships()
+    def test_filter(self):
         container = Container()
         self.assertRaises(TypeError, container.filter, "foo")
 
@@ -363,7 +356,8 @@ class Test_pprint(unittest.TestCase):
         description = 'this is a test'
         obj = Container(name=name, description=description)
         res = pretty(obj)
-        targ = "Container with  name: '{}' description: '{}'".format(name, description)
+        targ = "Container with  name: '{}' description: '{}'".format(name,
+                                                                 description)
         self.assertEqual(res, targ)
 
 

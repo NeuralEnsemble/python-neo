@@ -7,6 +7,9 @@ class PhyIO(PhyRawIO, BaseFromRaw):
     description = "Phy IO"
     mode = 'dir'
 
-    def __init__(self, dirname):
-        PhyRawIO.__init__(self, dirname=dirname)
+    def __init__(self, dirname, load_amplitudes=False, load_pcs=False):
+        PhyRawIO.__init__(self,
+                          dirname=dirname,
+                          load_amplitudes=load_amplitudes,
+                          load_pcs=load_pcs)
         BaseFromRaw.__init__(self, dirname)

@@ -66,7 +66,7 @@ Acquisition modes:
     data appears before the second column's. As an aside, because of this
     design choice AxoGraph cannot write data to disk as it is collected but
     must store it all in memory until data acquisition ends. This also affected
-    how file slicing was implmented for this RawIO: Instead of using a single
+    how file slicing was implemented for this RawIO: Instead of using a single
     memmap to address into a 2-dimensional block of data, AxographRawIO
     constructs multiple 1-dimensional memmaps, one for each column, each with
     its own offset.
@@ -127,7 +127,7 @@ Acquisition modes:
     Segments in Neo. Certain criteria have to be met, such as all groups
     containing equal numbers of traces and each group having homogeneous signal
     parameters. If trace grouping was modified by the user after data
-    acquisition, this may result in the file being interpretted as
+    acquisition, this may result in the file being interpreted as
     non-episodic. Older versions of the AxoGraph file format lack group headers
     entirely, so these files are never deemed safe to interpret as episodic,
     even if the column names follow a repeating sequence as described above.
@@ -218,7 +218,7 @@ class AxographRawIO(BaseRawIO):
     """
     name = 'AxographRawIO'
     description = 'This IO reads .axgd/.axgx files created with AxoGraph'
-    extensions = ['axgd', 'axgx']
+    extensions = ['axgd', 'axgx', '']
     rawmode = 'one-file'
 
     def __init__(self, filename, force_single_segment=False):
@@ -397,7 +397,7 @@ class AxographRawIO(BaseRawIO):
 
     def _safe_to_treat_as_episodic(self):
         """
-        The purpose of this fuction is to determine if the file contains any
+        The purpose of this function is to determine if the file contains any
         irregularities in its grouping of traces such that it cannot be treated
         as episodic. Even "continuous" recordings can be treated as
         single-episode recordings and could be identified as safe by this
@@ -627,7 +627,7 @@ class AxographRawIO(BaseRawIO):
                 # COLUMN TYPE
 
                 # depending on the format version, data columns may have a type
-                # - prior to verion 3, column types did not exist and data was
+                # - prior to version 3, column types did not exist and data was
                 #   stored in a fixed pattern
                 # - beginning with version 3, several data types are available
                 #   as documented in AxoGraph_ReadWrite.h

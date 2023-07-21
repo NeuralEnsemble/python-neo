@@ -1,0 +1,109 @@
+name: Create caches for ephy_testing_data and conda env
+
+on:
+  workflow_dispatch: # Workflow can be triggered manually via GH actions webinterface
+  push:  # When something is pushed into master this checks if caches need to re-created
+    branches:
+      - master
+  schedule:
+    - cron: "0 12 * * *"  # Daily at noon UTC
+
+jobs:
+
+  create-conda-env-cache-if-missing:
+    name: Caching conda env
+    runs-on: "ubuntu-latest"
+    strategy:
+      fail-fast: true
+    defaults:
+      # by default run in bash mode (required for conda usage)
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get current year-month
+        id: date
+        run: |
+          echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
+
+      - name: Get current dependencies hash
+        id: dependencies
+        run: |
+          echo "hash=${{hashFiles('**/pyproject.toml', '**/environment_testing.yml')}}" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        # the cache for python package is reset:
+        #   * every month
+        #   * when package dependencies change
+        id: cache-conda-env
+        with:
+          path: /usr/share/miniconda/envs/neo-test-env
+          key: ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
+
+      - name: Cache found?
+        run: echo "Cache-hit == ${{steps.cache-conda-env.outputs.cache-hit == 'true'}}"
+
+      # activate environment if not restored from cache
+      - uses: conda-incubator/setup-miniconda@v2.2.0
+        if: steps.cache-conda-env.outputs.cache-hit != 'true'
+        with:
+          activate-environment: neo-test-env
+          environment-file: environment_testing.yml
+          python-version: 3.9
+
+      - name: Create the conda environment to be cached
+        if: steps.cache-conda-env.outputs.cache-hit != 'true'
+        # create conda env, configure git and install pip, neo and test dependencies from master
+        # for PRs that change dependencies, this environment will be updated in the test workflow
+        run: |
+          git config --global user.email "neo_ci@fake_mail.com"
+          git config --global user.name "neo CI"
+          python -m pip install -U pip  # Official recommended way
+          pip install --upgrade -e .[test]
+
+  create-data-cache-if-missing:
+    name: Caching data env
+    runs-on: "ubuntu-latest"
+    steps:
+
+      - name: Get current hash (SHA) of the ephy_testing_data repo
+        id: ephy_testing_data
+        run: |
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        # Loading cache of ephys_testing_dataset
+        id: cache-datasets
+        with:
+          path: ~/ephy_testing_data
+          key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data.outputs.dataset_hash }}
+
+      - name: Cache found?
+        run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
+
+      - name: Installing datalad and git-annex
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
+        run: |
+          git config --global user.email "neo_ci@fake_mail.com"
+          git config --global user.name "neo CI"
+          python -m pip install -U pip  # Official recommended way
+          pip install datalad-installer
+          datalad-installer --sudo ok git-annex --method datalad/packages
+          pip install datalad
+          git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
+
+      - name: Download dataset
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
+        # Download repository and also fetch data
+        run: |
+          cd ~
+          datalad install --recursive --get-data https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
+
+      - name: Show size of the cache to assert data is downloaded
+        run: |
+          cd ~
+          pwd
+          du -hs ephy_testing_data
+          cd ephy_testing_data
+          pwd

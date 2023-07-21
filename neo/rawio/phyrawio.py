@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 import csv
 import ast
+import warnings
 
 
 class PhyRawIO(BaseRawIO):
@@ -32,12 +33,15 @@ class PhyRawIO(BaseRawIO):
         >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, 'float64')
 
     """
-    extensions = []
+    # file formats used by phy
+    extensions = ['npy', 'mat', 'tsv', 'dat']
     rawmode = 'one-dir'
 
-    def __init__(self, dirname=''):
+    def __init__(self, dirname='', load_amplitudes=False, load_pcs=False):
         BaseRawIO.__init__(self)
         self.dirname = dirname
+        self.load_pcs = load_pcs
+        self.load_amplitudes = load_amplitudes
 
     def _source_name(self):
         return self.dirname
@@ -53,16 +57,24 @@ class PhyRawIO(BaseRawIO):
         else:
             self._spike_clusters = self._spike_templates
 
-        # TODO: Add this when array_annotations are ready
-        # if (phy_folder / 'amplitudes.npy').is_file():
-        #     amplitudes = np.squeeze(np.load(phy_folder / 'amplitudes.npy'))
-        # else:
-        #     amplitudes = np.ones(len(spike_times))
-        #
-        # if (phy_folder / 'pc_features.npy').is_file():
-        #     pc_features = np.squeeze(np.load(phy_folder / 'pc_features.npy'))
-        # else:
-        #     pc_features = None
+        self._amplitudes = None
+        if self.load_amplitudes:
+            if (phy_folder / 'amplitudes.npy').is_file():
+                self._amplitudes = np.squeeze(np.load(phy_folder / 'amplitudes.npy'))
+            else:
+                warnings.warn('Amplitudes requested but "amplitudes.npy"'
+                              'not found in the data folder.')
+
+        self._pc_features = None
+        self._pc_feature_ind = None
+        if self.load_pcs:
+            if ((phy_folder / 'pc_features.npy').is_file()
+                    and (phy_folder / 'pc_feature_ind.npy').is_file()):
+                self._pc_features = np.squeeze(np.load(phy_folder / 'pc_features.npy'))
+                self._pc_feature_ind = np.squeeze(np.load(phy_folder / 'pc_feature_ind.npy'))
+            else:
+                warnings.warn('PCs requested but "pc_features.npy" and/or'
+                              '"pc_feature_ind.npy" not found in the data folder.')
 
         # SEE: https://stackoverflow.com/questions/4388626/
         #  python-safe-eval-string-to-bool-int-float-none-string
@@ -138,17 +150,41 @@ class PhyRawIO(BaseRawIO):
 
             # Loop over list of list of dict and annotate each st
             for annotation_list in annotation_lists:
-                clust_key, property_name = tuple(annotation_list[0].
-                                                 keys())
-                if property_name == 'KSLabel':
-                    annotation_name = 'quality'
-                else:
-                    annotation_name = property_name.lower()
-                for annotation_dict in annotation_list:
-                    if int(annotation_dict[clust_key]) == clust_id:
-                        spiketrain_an[annotation_name] = \
-                            annotation_dict[property_name]
-                        break
+                clust_key, *property_names = tuple(annotation_list[0].keys())
+                for property_name in property_names:
+                    if property_name == 'KSLabel':
+                        annotation_name = 'quality'
+                    else:
+                        annotation_name = property_name.lower()
+                    for annotation_dict in annotation_list:
+                        if int(annotation_dict[clust_key]) == clust_id:
+                            spiketrain_an[annotation_name] = \
+                                annotation_dict[property_name]
+                            break
+
+            cluster_mask = (self._spike_clusters == clust_id).flatten()
+
+            current_templates = self._spike_templates[cluster_mask].flatten()
+            unique_templates = np.unique(current_templates)
+            spiketrain_an['templates'] = unique_templates
+            spiketrain_an['__array_annotations__']['templates'] = current_templates
+
+            if self._amplitudes is not None:
+                spiketrain_an['__array_annotations__']['amplitudes'] = \
+                    self._amplitudes[cluster_mask]
+
+            if self._pc_features is not None:
+                current_pc_features = self._pc_features[cluster_mask]
+                _, num_pcs, num_pc_channels = current_pc_features.shape
+                for pc_idx in range(num_pcs):
+                    for channel_idx in range(num_pc_channels):
+                        key = 'channel{channel_idx}_pc{pc_idx}'.format(channel_idx=channel_idx,
+                                                                       pc_idx=pc_idx)
+                        spiketrain_an['__array_annotations__'][key] = \
+                                current_pc_features[:, pc_idx, channel_idx]
+
+            if self._pc_feature_ind is not None:
+                spiketrain_an['pc_feature_ind'] = self._pc_feature_ind[unique_templates]
 
     def _segment_t_start(self, block_index, seg_index):
         assert block_index == 0
@@ -221,7 +257,7 @@ class PhyRawIO(BaseRawIO):
     def _parse_tsv_or_csv_to_list_of_dict(filename):
         list_of_dict = list()
         letter_pattern = re.compile('[a-zA-Z]')
-        float_pattern = re.compile(r'\d*\.')
+        float_pattern = re.compile(r'-?\d*\.')
         with open(filename) as csvfile:
             if filename.suffix == '.csv':
                 reader = csv.DictReader(csvfile, delimiter=',')
@@ -233,15 +269,19 @@ class PhyRawIO(BaseRawIO):
 
             for row in reader:
                 if line == 0:
-                    key1, key2 = tuple(row.keys())
+                    cluster_id_key, *annotation_keys = tuple(row.keys())
                 # Convert cluster ID to int
-                row[key1] = int(row[key1])
+                row[cluster_id_key] = int(row[cluster_id_key])
                 # Convert strings without letters
-                if letter_pattern.match(row[key2]) is None:
-                    if float_pattern.match(row[key2]) is None:
-                        row[key2] = int(row[key2])
-                    else:
-                        row[key2] = float(row[key2])
+                for key in annotation_keys:
+                    value = row[key]
+                    if not len(value):
+                        row[key] = None
+                    elif letter_pattern.match(value) is None:
+                        if float_pattern.match(value) is None:
+                            row[key] = int(value)
+                        else:
+                            row[key] = float(value)
 
                 list_of_dict.append(row)
                 line += 1

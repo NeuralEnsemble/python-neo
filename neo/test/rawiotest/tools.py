@@ -5,8 +5,6 @@ Common tools that are useful for neo.io object tests
 import logging
 import os
 
-from neo.utils import HAVE_DATALAD
-
 logger = logging.getLogger("neo.test")
 
 
@@ -14,6 +12,11 @@ def can_use_network():
     """
     Return True if network access is allowed
     """
+    try:
+        import datalad
+        HAVE_DATALAD = True
+    except:
+        HAVE_DATALAD = False
     if not HAVE_DATALAD:
         return False
     if os.environ.get('NOSETESTS_NO_NETWORK', False):

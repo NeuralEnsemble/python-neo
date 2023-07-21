@@ -23,7 +23,7 @@ Note:
 
 
 # Not implemented yet in this reader:
-  * contact SpkeGLX developer to see how to deal with absolut t_start when several segment
+  * contact SpkeGLX developer to see how to deal with absolute t_start when several segment
   * contact SpkeGLX developer to understand the last channel SY0 function
   * better handling of annotations at object level by sub group of device (after rawio change)
   * better handling of channel location
@@ -40,8 +40,14 @@ This reader handle:
 imDatPrb_type=1 (NP 1.0)
 imDatPrb_type=21 (NP 2.0, single multiplexed shank)
 imDatPrb_type=24 (NP 2.0, 4-shank)
+imDatPrb_type=1030 (NP 1.0-NHP 45mm SOI90 - NHP long 90um wide, staggered contacts)
+imDatPrb_type=1031 (NP 1.0-NHP 45mm SOI125 - NHP long 125um wide, staggered contacts)
+imDatPrb_type=1032 (NP 1.0-NHP 45mm SOI115 / 125 linear - NHP long 125um wide, linear contacts)
+imDatPrb_type=1022 (NP 1.0-NHP 25mm - NHP medium)
+imDatPrb_type=1015 (NP 1.0-NHP 10mm - NHP short)
 
 Author : Samuel Garcia
+Some functions are copied from Graham Findlay
 """
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
@@ -63,7 +69,8 @@ class SpikeGLXRawIO(BaseRawIO):
     load_sync_channel=False/True
         The last channel (SY0) of each stream is a fake channel used for synchronisation.
     """
-    extensions = []
+    # file formats used by spikeglxio
+    extensions = ['meta', 'bin']
     rawmode = 'one-dir'
 
     def __init__(self, dirname='', load_sync_channel=False, load_channel_location=False):
@@ -89,6 +96,7 @@ class SpikeGLXRawIO(BaseRawIO):
         for info in self.signals_info_list:
             # key is (seg_index, stream_name)
             key = (info['seg_index'], info['stream_name'])
+            assert key not in self.signals_info_dict
             self.signals_info_dict[key] = info
 
             # create memmap
@@ -165,7 +173,7 @@ class SpikeGLXRawIO(BaseRawIO):
                     # need probeinterface to be installed
                     import probeinterface
                     info = self.signals_info_dict[seg_index, stream_name]
-                    if 'imroTbl' in info['meta'] and info['signal_kind'] == 'ap':
+                    if 'imroTbl' in info['meta'] and info['stream_kind'] == 'ap':
                         # only for ap channel
                         probe = probeinterface.read_spikeglx(info['meta_file'])
                         loc = probe.contact_positions
@@ -232,6 +240,11 @@ class SpikeGLXRawIO(BaseRawIO):
 def scan_files(dirname):
     """
     Scan for pairs of `.bin` and `.meta` files and return information about it.
+
+    After exploring the folder, the segment index (`seg_index`) is construct as follow:
+      * if only one `gate_num=0` then `trigger_num` = `seg_index`
+      * if only one `trigger_num=0` then `gate_num` = `seg_index`
+      * if both are increasing then seg_index increased by gate_num, trigger_num order.
     """
     info_list = []
 
@@ -244,11 +257,93 @@ def scan_files(dirname):
             if meta_filename.exists() and bin_filename.exists():
                 meta = read_meta_file(meta_filename)
                 info = extract_stream_info(meta_filename, meta)
+
                 info['meta_file'] = str(meta_filename)
                 info['bin_file'] = str(bin_filename)
                 info_list.append(info)
 
+    # the segment index will depend on both 'gate_num' and 'trigger_num'
+    # so we order by 'gate_num' then 'trigger_num'
+    # None is before any int
+    def make_key(info):
+        k0 = info['gate_num']
+        if k0 is None:
+            k0 = -1
+        k1 = info['trigger_num']
+        if k1 is None:
+            k1 = -1
+        return (k0, k1)
+    order_key = list({make_key(info) for info in info_list})
+    order_key = sorted(order_key)
+    for info in info_list:
+        info['seg_index'] = order_key.index(make_key(info))
+
     return info_list
+
+
+def parse_spikeglx_fname(fname):
+    """
+    Parse recording identifiers from a SpikeGLX style filename.
+
+    spikeglx naming follow this rules:
+    https://github.com/billkarsh/SpikeGLX/blob/master/Markdown/UserManual.md#gates-and-triggers
+
+    Example file name structure:
+    Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
+    The filenames consist of 3 or 4 parts separated by `.`
+    1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user at recording time.
+    2. "_g0_" is the "gate_num"
+    3. "_t0_" is the "trigger_num"
+    4. "nidq" or "imec0" will give the `device`
+    5. "lf" or "ap" will be the `stream_kind`
+        `stream_name` variable is the concatenation of `device.stream_kind`
+
+    This function is copied/modified from Graham Findlay.
+
+    Notes:
+       * Sometimes the original file name is modified by the user and "_gt0_" or "_t0_"
+          are manually removed. In that case gate_name and trigger_num will be None.
+
+    Parameters
+    ---------
+    fname: str
+        The filename to parse without the extension, e.g. "my-run-name_g0_t1.imec2.lf"
+    Returns
+    -------
+    run_name: str
+        The run name, e.g. "my-run-name".
+    gate_num: int or None
+        The gate identifier, e.g. 0.
+    trigger_num: int or None
+        The trigger identifier, e.g. 1.
+    device: str
+        The probe identifier, e.g. "imec2"
+    stream_kind: str or None
+        The data type identifier, "lf" or "ap" or None
+    """
+    r = re.findall(r'(\S*)_g(\d*)_t(\d*)\.(\S*).(ap|lf)', fname)
+    if len(r) == 1:
+        # standard case with probe
+        run_name, gate_num, trigger_num, device, stream_kind = r[0]
+    else:
+        r = re.findall(r'(\S*)_g(\d*)_t(\d*)\.(\S*)', fname)
+        if len(r) == 1:
+            # case for nidaq
+            run_name, gate_num, trigger_num, device = r[0]
+            stream_kind = None
+        else:
+            # the naming do not correspond lets try something more easy
+            r = re.findall(r'(\S*)\.(\S*).(ap|lf)', fname)
+            if len(r) == 1:
+                run_name, device, stream_kind = r[0]
+                gate_num, trigger_num = None, None
+
+    if gate_num is not None:
+        gate_num = int(gate_num)
+    if trigger_num is not None:
+        trigger_num = int(trigger_num)
+
+    return (run_name, gate_num, trigger_num, device, stream_kind)
 
 
 def read_meta_file(meta_file):
@@ -277,48 +372,34 @@ def extract_stream_info(meta_file, meta):
     """Extract info from the meta dict"""
 
     num_chan = int(meta['nSavedChans'])
-
-    # Example file name structure:
-    # Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
-    # The filenames consist of 3 or 4 parts separated by `.`
-    # 1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user
-    #    at recording time.
-    # 2. "_gt0_" will give the `seg_index` (here 0)
-    # 3. "nidq" or "imec0" will give the `device` variable
-    # 4. "lf" or "ap" will be the `signal_kind` variable
-    # `stream_name` variable is the concatenation of `device.signal_kind`
-    name = Path(meta_file).stem
-    r = re.findall(r'_g(\d*)_t', name)
-    if len(r) == 0:
-        # when manual renaming _g0_ can be removed
-        seg_index = 0
-    else:
-        seg_index = int(r[0][0])
-    device = name.split('.')[1]
-    if 'imec' in device:
-        signal_kind = name.split('.')[2]
-        stream_name = device + '.' + signal_kind
+    fname = Path(meta_file).stem
+    run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
+    
+    if 'imec' in fname.split('.')[-2]:
+        device = fname.split('.')[-2]
+        stream_kind = fname.split('.')[-1]
+        stream_name = device + '.' + stream_kind
         units = 'uV'
         # please note the 1e6 in gain for this uV
 
         # metad['imroTbl'] contain two gain per channel  AP and LF
         # except for the last fake channel
         per_channel_gain = np.ones(num_chan, dtype='float64')
-        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0':
+        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0' or meta['imDatPrb_type'] in ('1015', '1022', '1030', '1031', '1032'):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B2.md#imec
-            if signal_kind == 'ap':
+            if stream_kind == 'ap':
                 index_imroTbl = 3
-            elif signal_kind == 'lf':
+            elif stream_kind == 'lf':
                 index_imroTbl = 4
             for c in range(num_chan - 1):
                 v = meta['imroTbl'][c].split(' ')[index_imroTbl]
                 per_channel_gain[c] = 1. / float(v)
             gain_factor = float(meta['imAiRangeMax']) / 512
             channel_gains = gain_factor * per_channel_gain * 1e6
-        elif meta['imDatPrb_type'] in ('21', '24') and signal_kind == 'ap':
+        elif meta['imDatPrb_type'] in ('21', '24') and stream_kind == 'ap':
             # This work with NP 2.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
             # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
@@ -328,9 +409,10 @@ def extract_stream_info(meta_file, meta):
             channel_gains = gain_factor * per_channel_gain * 1e6
         else:
             raise NotImplementedError('This meta file version of spikeglx'
-                                      'is not implemented')
+                                      ' is not implemented')
     else:
-        signal_kind = ''
+        device = fname.split('.')[-1]
+        stream_kind = ''
         stream_name = device
         units = 'V'
         channel_gains = np.ones(num_chan)
@@ -348,7 +430,7 @@ def extract_stream_info(meta_file, meta):
         channel_gains = per_channel_gain * gain_factor
 
     info = {}
-    info['name'] = name
+    info['fname'] = fname
     info['meta'] = meta
     for k in ('niSampRate', 'imSampRate'):
         if k in meta:
@@ -356,9 +438,10 @@ def extract_stream_info(meta_file, meta):
     info['num_chan'] = num_chan
 
     info['sample_length'] = int(meta['fileSizeBytes']) // 2 // num_chan
-    info['seg_index'] = seg_index
+    info['gate_num'] = gate_num
+    info['trigger_num'] = trigger_num
     info['device'] = device
-    info['signal_kind'] = signal_kind
+    info['stream_kind'] = stream_kind
     info['stream_name'] = stream_name
     info['units'] = units
     info['channel_names'] = [txt.split(';')[0] for txt in meta['snsChanMap']]

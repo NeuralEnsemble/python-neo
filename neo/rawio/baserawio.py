@@ -47,7 +47,7 @@ of the sections of the channels for a Block and Segment of a stream.
 So this handles **only** one simplified but very frequent case of dataset:
     * Only one channel set  for AnalogSignal stable along Segment
     * Only one channel set  for SpikeTrain stable along Segment
-    * AnalogSignal have all the same sampling_rate acroos all Segment
+    * AnalogSignal have all the same sampling_rate across all Segment
     * t_start/t_stop are the same for many object (SpikeTrain, Event) inside a Segment
 
 Signal channels are handled by group of "stream".
@@ -75,12 +75,6 @@ import sys
 
 from neo import logging_handler
 
-try:
-    import joblib
-
-    HAVE_JOBLIB = True
-except ImportError:
-    HAVE_JOBLIB = False
 
 possible_raw_modes = ['one-file', 'multi-file', 'one-dir', ]  # 'multi-dir', 'url', 'other'
 
@@ -162,7 +156,6 @@ class BaseRawIO:
 
         self.use_cache = use_cache
         if use_cache:
-            assert HAVE_JOBLIB, 'You need to install joblib for cache'
             self.setup_cache(cache_path)
         else:
             self._cache = None
@@ -448,7 +441,7 @@ class BaseRawIO:
             # also check that channel_id is unique inside a stream
             channel_ids = signal_channels[mask]['id']
             assert np.unique(channel_ids).size == channel_ids.size, \
-                f'signal_channels dont have unique ids for stream {stream_index}'
+                f'signal_channels do not have unique ids for stream {stream_index}'
 
         self._several_channel_groups = signal_streams.size > 1
 
@@ -557,6 +550,18 @@ class BaseRawIO:
                               np.ndarray and are contiguous
         :return: array with raw signal samples
         """
+        
+        signal_streams = self.header['signal_streams']
+        signal_channels = self.header['signal_channels']
+        no_signal_streams = signal_streams.size == 0
+        no_channels = signal_channels.size == 0
+        if no_signal_streams or no_channels:
+            error_message = (
+                "get_analogsignal_chunk can't be called on a file with no signal streams or channels."
+                "Double check that your file contains signal streams and channels."
+            )
+            raise AttributeError(error_message)
+                
         stream_index = self._get_stream_index_from_arg(stream_index)
         channel_indexes = self._get_channel_indexes(stream_index, channel_indexes,
                                                     channel_names, channel_ids)
@@ -586,7 +591,7 @@ class BaseRawIO:
                                     channel_indexes=None, channel_names=None, channel_ids=None):
         """
         Rescale a chunk of raw signals which are provided as a Numpy array. These are normally
-        returned by a call to get_analog_signal_chunk. The channels are specified either by
+        returned by a call to get_analogsignal_chunk. The channels are specified either by
         channel_names, if provided, otherwise by channel_ids, if provided, otherwise by
         channel_indexes, if provided, otherwise all channels are selected.
 
@@ -703,6 +708,11 @@ class BaseRawIO:
         return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
     def setup_cache(self, cache_path, **init_kargs):
+        try:
+            import joblib
+        except ImportError:
+            raise ImportError("Using the RawIO cache needs joblib to be installed")
+
         if self.rawmode in ('one-file', 'multi-file'):
             resource_name = self.filename
         elif self.rawmode == 'one-dir':
@@ -733,7 +743,7 @@ class BaseRawIO:
         d = dict(ressource_name=resource_name, mtime=os.path.getmtime(resource_name))
         hash = joblib.hash(d, hash_name='md5')
 
-        # name is constructed from the real_n,ame and the hash
+        # name is constructed from the resource_name and the hash
         name = '{}_{}'.format(os.path.basename(resource_name), hash)
         self.cache_filename = os.path.join(dirname, name)
 
@@ -844,6 +854,6 @@ def pprint_vector(vector, lim=8):
         part2 = ' , '.join(e for e in vector[-lim // 2:])
         txt = f"[{part1} ... {part2}]"
     else:
-        part1 = ', '.join(e for e in vector[:lim // 2])
+        part1 = ', '.join(e for e in vector)
         txt = f"[{part1}]"
     return txt

@@ -1,6 +1,6 @@
 '''
 This module defines :class:`Block`, the main container gathering all the data,
-whether discrete or continous, for a given recording session. base class
+whether discrete or continuous, for a given recording session. base class
 used by all :module:`neo.core` classes.
 
 :class:`Block` derives from :class:`Container`,
@@ -10,11 +10,15 @@ from :module:`neo.core.container`.
 from datetime import datetime
 
 from neo.core.container import Container, unique_objs
+from neo.core.group import Group
+from neo.core.objectlist import ObjectList
+from neo.core.regionofinterest import RegionOfInterest
+from neo.core.segment import Segment
 
 
 class Block(Container):
     '''
-    Main container gathering all the data, whether discrete or continous, for a
+    Main container gathering all the data, whether discrete or continuous, for a
     given recording session.
 
     A block is not necessarily temporally homogeneous, in contrast to :class:`Segment`.
@@ -64,7 +68,6 @@ class Block(Container):
     '''
 
     _container_child_objects = ('Segment', 'Group')
-    _child_properties = ()
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
                            ('index', int)) +
@@ -78,7 +81,7 @@ class Block(Container):
                  file_datetime=None, rec_datetime=None, index=None,
                  **annotations):
         '''
-        Initalize a new :class:`Block` instance.
+        Initialize a new :class:`Block` instance.
         '''
         super().__init__(name=name, description=description,
                                     file_origin=file_origin, **annotations)
@@ -86,9 +89,27 @@ class Block(Container):
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
-        self.regionsofinterest = []   # temporary workaround.
-        # the goal is to store all sub-classes of RegionOfInterest in a single list
-        # but this will need substantial changes to container handling
+        self._segments = ObjectList(Segment, parent=self)
+        self._groups = ObjectList(Group, parent=self)
+        self._regionsofinterest = ObjectList(RegionOfInterest, parent=self)
+
+    segments = property(
+        fget=lambda self: self._get_object_list("_segments"),
+        fset=lambda self, value: self._set_object_list("_segments", value),
+        doc="list of Segments contained in this block"
+    )
+
+    groups = property(
+        fget=lambda self: self._get_object_list("_groups"),
+        fset=lambda self, value: self._set_object_list("_groups", value),
+        doc="list of Groups contained in this block"
+    )
+
+    regionsofinterest = property(
+        fget=lambda self: self._get_object_list("_regionsofinterest"),
+        fset=lambda self, value: self._set_object_list("_regionsofinterest", value),
+        doc="list of RegionOfInterest objects contained in this block"
+    )
 
     @property
     def data_children_recur(self):

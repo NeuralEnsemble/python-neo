@@ -1,3 +1,9 @@
+"""
+ImageSequences
+==============
+
+"""
+
 from neo.core import ImageSequence
 from neo.core import RectangularRegionOfInterest, CircularRegionOfInterest, PolygonRegionOfInterest
 import matplotlib.pyplot as plt

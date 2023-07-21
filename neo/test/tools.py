@@ -13,6 +13,7 @@ from neo.core import objectlist
 from neo.core.baseneo import _reference_name, _container_name
 from neo.core.basesignal import BaseSignal
 from neo.core.container import Container
+from neo.core.objectlist import ObjectList
 from neo.core.spiketrainlist import SpikeTrainList
 from neo.io.basefromrawio import proxyobjectlist, EventProxy, EpochProxy
 
@@ -175,6 +176,17 @@ def assert_neo_object_is_compliant(ob, check_type=True):
             raise
 
 
+def types_match(ob1, ob2):
+    if type(ob1) == type(ob2):
+        return True
+    elif isinstance(ob1, ObjectList):
+        return isinstance(ob2, (list, ObjectList))
+    elif isinstance(ob2, ObjectList):
+        return isinstance(ob1, (list, ObjectList))
+    else:
+        return False
+
+
 def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude=None):
     '''
     Test if ob1 and ob2 has the same sub schema.
@@ -189,13 +201,18 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                  the comparison
 
     '''
-    assert type(ob1) == type(ob2), 'type({}) != type({})'.format(type(ob1), type(ob2))
+    if isinstance(ob1, SpikeTrainList) and isinstance(ob2, list):
+        # for debugging occasional test failure
+        raise Exception("items={}\nspike_time_array={}\nlist length: {}".format(
+            str(ob1._items), str(ob1._spike_time_array), len(ob2)))
+    errmsg = 'type({}) != type({})'.format(type(ob1), type(ob2))
+    assert types_match(ob1, ob2), errmsg
     classname = ob1.__class__.__name__
 
     if exclude is None:
         exclude = []
 
-    if isinstance(ob1, (list, SpikeTrainList)):
+    if isinstance(ob1, (list, ObjectList)):
         assert len(ob1) == len(ob2), 'lens %s and %s not equal for %s and %s' \
                                      '' % (len(ob1), len(ob2), ob1, ob2)
         for i, (sub1, sub2) in enumerate(zip(ob1, ob2)):

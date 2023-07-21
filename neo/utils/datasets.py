@@ -4,14 +4,6 @@ Utility functions to retrieve public datasets.
 import os
 from pathlib import Path
 
-try:
-    import datalad.api
-    from datalad.support.gitrepo import GitRepo
-
-    HAVE_DATALAD = True
-except:
-    HAVE_DATALAD = False
-
 default_testing_repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
 global local_testing_data_folder
@@ -54,12 +46,13 @@ def download_dataset(repo=default_testing_repo, remote_path=None,
         The local folder where to download the data.
         If None, a default project testing folder is used. Default: None
 
-    Returns:
-    --------
+    Returns
+    -------
     local_path:
         The local path of the downloaded file or folder
     """
-    assert HAVE_DATALAD, 'You need to install datalad'
+    import datalad.api
+    from datalad.support.gitrepo import GitRepo
 
     if local_folder is None:
         global local_testing_data_folder

@@ -13,32 +13,17 @@ Author: sgarcia, Robert Pröpper
 """
 
 from datetime import datetime
-from distutils import version
 import re
 
 import numpy as np
 import quantities as pq
 
-# check scipy
-try:
-    import scipy.io
-    import scipy.version
-except ImportError as err:
-    HAVE_SCIPY = False
-    SCIPY_ERR = err
-else:
-    if version.LooseVersion(scipy.version.version) < '0.12.0':
-        HAVE_SCIPY = False
-        SCIPY_ERR = ImportError("your scipy version is too old to support "
-                                + "MatlabIO, you need at least 0.12.0. "
-                                + "You have %s" % scipy.version.version)
-    else:
-        HAVE_SCIPY = True
-        SCIPY_ERR = None
+from packaging.version import Version
+
 
 from neo.io.baseio import BaseIO
-from neo.core import (Block, Segment, AnalogSignal, Event, Epoch, SpikeTrain,
-                      objectnames, class_by_name)
+from neo.core import (Block, Segment, AnalogSignal, IrregularlySampledSignal,
+                      Event, Epoch, SpikeTrain, objectnames, class_by_name)
 
 classname_lower_to_upper = {}
 for k in objectnames:
@@ -190,7 +175,8 @@ class NeoMatlabIO(BaseIO):
     is_readable = True
     is_writable = True
 
-    supported_objects = [Block, Segment, AnalogSignal, Epoch, Event, SpikeTrain]
+    supported_objects = [Block, Segment, AnalogSignal, IrregularlySampledSignal,
+                         Epoch, Event, SpikeTrain]
     readable_objects = [Block]
     writeable_objects = [Block]
 
@@ -211,8 +197,13 @@ class NeoMatlabIO(BaseIO):
         Arguments:
             filename : the filename to read
         """
-        if not HAVE_SCIPY:
-            raise SCIPY_ERR
+        import scipy
+
+        if Version(scipy.version.version) < Version('0.12.0'):
+            raise ImportError("your scipy version is too old to support "
+                                    + "MatlabIO, you need at least 0.12.0. "
+                                    + "You have %s" % scipy.version.version)
+
         BaseIO.__init__(self)
         self.filename = filename
 
@@ -221,6 +212,7 @@ class NeoMatlabIO(BaseIO):
         Arguments:
 
         """
+        import scipy.io
         assert not lazy, 'Do not support lazy'
 
         d = scipy.io.loadmat(self.filename, struct_as_record=False,
@@ -232,7 +224,7 @@ class NeoMatlabIO(BaseIO):
         bl_struct = d['block']
         bl = self.create_ob_from_struct(
             bl_struct, 'Block')
-        bl.create_many_to_one_relationship()
+        bl.check_relationships()
         return bl
 
     def write_block(self, bl, **kargs):
@@ -240,7 +232,7 @@ class NeoMatlabIO(BaseIO):
         Arguments:
             bl: the block to b saved
         """
-
+        import scipy.io
         bl_struct = self.create_struct_from_obj(bl)
 
         for seg in bl.segments:
@@ -250,6 +242,10 @@ class NeoMatlabIO(BaseIO):
             for anasig in seg.analogsignals:
                 anasig_struct = self.create_struct_from_obj(anasig)
                 seg_struct['analogsignals'].append(anasig_struct)
+
+            for irrsig in seg.irregularlysampledsignals:
+                irrsig_struct = self.create_struct_from_obj(irrsig)
+                seg_struct['irregularlysampledsignals'].append(irrsig_struct)
 
             for ea in seg.events:
                 ea_struct = self.create_struct_from_obj(ea)
@@ -269,7 +265,7 @@ class NeoMatlabIO(BaseIO):
         struct = {}
 
         # relationship
-        for childname in getattr(ob, '_single_child_containers', []):
+        for childname in getattr(ob, '_child_containers', []):
             supported_containers = [subob.__name__.lower() + 's' for subob in
                                     self.supported_objects]
             if childname in supported_containers:
@@ -348,13 +344,19 @@ class NeoMatlabIO(BaseIO):
                 else:
                     data_complement["t_start"] = 0.0
 
-            ob = cl(arr, **data_complement)
+            if "times" in (at[0] for at in cl._necessary_attrs) and quantity_attr != "times":
+                # handle IrregularlySampledSignal
+                times = getattr(struct, "times")
+                data_complement["time_units"] = getattr(struct, "times_units")
+                ob = cl(times, arr, **data_complement)
+            else:
+                ob = cl(arr, **data_complement)
         else:
             ob = cl()
 
         for attrname in struct._fieldnames:
             # check children
-            if attrname in getattr(ob, '_single_child_containers', []):
+            if attrname in getattr(ob, '_child_containers', []):
                 child_struct = getattr(struct, attrname)
                 try:
                     # try must only surround len() or other errors are captured

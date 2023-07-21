@@ -20,8 +20,14 @@ class TestOpenEphysRawIO(BaseTestRawIO, unittest.TestCase, ):
         # It must raise an error
         reader = OpenEphysRawIO(dirname=self.get_local_path(
             'openephys/OpenEphys_SampleData_2_(multiple_starts)'))
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             reader.parse_header()
+        # if ignore_timestamps_errors=True, no exception is raised
+        reader = OpenEphysRawIO(dirname=self.get_local_path(
+            'openephys/OpenEphys_SampleData_2_(multiple_starts)'),
+                                ignore_timestamps_errors=True)
+        reader.parse_header()
+
 
     def test_raise_error_if_strange_timestamps(self):
         # In this dataset CH32 have strange timestamps

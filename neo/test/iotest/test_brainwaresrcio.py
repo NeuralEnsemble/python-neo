@@ -84,7 +84,7 @@ def proc_src(filename):
     for rep in srcfile['sets'][0, 0].flatten():
         proc_src_condition(rep, filename, ADperiod, side, block)
 
-    block.create_many_to_one_relationship()
+    block.check_relationships()
 
     return block
 

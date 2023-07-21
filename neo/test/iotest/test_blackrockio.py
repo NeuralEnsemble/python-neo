@@ -18,14 +18,14 @@ from neo.test.rawiotest.test_blackrockrawio import TestBlackrockRawIO
 
 # check scipy
 try:
-    from distutils import version
+    from packaging.version import Version
     import scipy.io
     import scipy.version
 except ImportError as err:
     HAVE_SCIPY = False
     SCIPY_ERR = err
 else:
-    if version.LooseVersion(scipy.version.version) < '0.8':
+    if Version(scipy.version.version) < Version('0.8'):
         HAVE_SCIPY = False
         SCIPY_ERR = ImportError("your scipy version is too old to support " +
                                 "MatlabIO, you need at least 0.8. " +
@@ -42,7 +42,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
     ]
     entities_to_test = [
         'blackrock/FileSpec2.3001',
-        'blackrock/blackrock_2_1/l101210-001'
+        'blackrock/blackrock_2_1/l101210-001',
+        'blackrock/blackrock_3_0/file_spec_3_0'
     ]
 
     def test_load_waveforms(self):

@@ -31,12 +31,12 @@ A project with similar aims but for neuroimaging file formats is `NiBabel`_.
 Code status
 -----------
 
-.. image:: https://travis-ci.org/NeuralEnsemble/python-neo.png?branch=master
-   :target: https://travis-ci.org/NeuralEnsemble/python-neo
-   :alt: Core Unit Test Status (TravisCI)
-.. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/full-test.yml/badge.svg?event=push&branch=master
+.. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/core-test.yml/badge.svg?event=push&branch=master
    :target: https://github.com/NeuralEnsemble/python-neo/actions?query=event%3Apush+branch%3Amaster
-   :alt: IO Unit Test Status (Github Actions)
+   :alt: Core Test Status (Github Actions)
+.. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/io-test.yml/badge.svg?event=push&branch=master
+   :target: https://github.com/NeuralEnsemble/python-neo/actions?query=event%3Apush+branch%3Amaster
+   :alt: IO Test Status (Github Actions)
 .. image:: https://coveralls.io/repos/NeuralEnsemble/python-neo/badge.png
    :target: https://coveralls.io/r/NeuralEnsemble/python-neo
    :alt: Unit Test Coverage
@@ -45,7 +45,7 @@ More information
 ----------------
 
 - Home page: http://neuralensemble.org/neo
-- Mailing list: https://groups.google.com/forum/?fromgroups#!forum/neuralensemble
+- Mailing list: http://neuralensemble.org/community
 - Documentation: http://neo.readthedocs.io/
 - Bug reports: https://github.com/NeuralEnsemble/python-neo/issues
 
@@ -74,7 +74,7 @@ No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3).
 .. _NiBabel: http://nipy.sourceforge.net/nibabel/
 .. _PyNN: http://neuralensemble.org/PyNN
 .. _quantities: http://pypi.python.org/pypi/quantities
-.. _`NeuralEnsemble mailing list`: http://groups.google.com/group/neuralensemble
+.. _`NeuralEnsemble mailing list`: http://neuralensemble.org/community
 .. _`issue tracker`: https://github.c
 .. _tridesclous: https://github.com/tridesclous/tridesclous
 .. _ephyviewer: https://github.com/NeuralEnsemble/ephyviewer

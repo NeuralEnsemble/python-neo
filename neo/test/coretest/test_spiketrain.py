@@ -1177,8 +1177,6 @@ class TestMerge(unittest.TestCase):
 
         self.segment = Segment()
         self.segment.spiketrains.extend([self.train1, self.train2])
-        self.train1.segment = self.segment
-        self.train2.segment = self.segment
 
     def test_compliant(self):
         assert_neo_object_is_compliant(self.train1)
@@ -1954,7 +1952,7 @@ class TestPropertiesMethods(unittest.TestCase):
     def test__children(self):
         segment = Segment(name='seg1')
         segment.spiketrains = [self.train1]
-        segment.create_many_to_one_relationship()
+        segment.check_relationships()
 
         self.assertEqual(self.train1._parent_objects, ('Segment',))
 
@@ -1973,6 +1971,12 @@ class TestPropertiesMethods(unittest.TestCase):
         res = pretty(self.train1)
         targ = ("SpikeTrain\n" + "name: '%s'\ndescription: '%s'\nannotations: %s"
                                  "" % (self.name1, self.description1, pretty(self.ann1)))
+        targ = (f"SpikeTrain containing {len(self.train1)} spikes with waveforms; "
+                f"units {self.train1.units.dimensionality.string}; datatype float64 "
+                f"\nname: '{self.name1}'\ndescription: '{self.description1}'"
+                f"\nannotations: {pretty(self.ann1)}"
+                f"\ntime: {self.train1.t_start} to {self.train1.t_stop}")
+
         self.assertEqual(res, targ)
 
 

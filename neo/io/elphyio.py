@@ -3811,8 +3811,10 @@ class ElphyIO(BaseIO):
         """
         Return :class:`Block`.
 
-        Parameters:
-             lazy : postpone actual reading of the file.
+        Parameters
+        ----------
+        lazy : bool
+            Postpone actual reading of the file.
         """
         assert not lazy, 'Do not support lazy'
 
@@ -3833,7 +3835,6 @@ class ElphyIO(BaseIO):
             return block
         for episode in range(1, self.elphy_file.n_episodes + 1):
             segment = self.read_segment(episode)
-            segment.block = block
             block.segments.append(segment)
 
         # close file
@@ -4211,9 +4212,11 @@ class ElphyIO(BaseIO):
     def read_segment(self, episode):
         """
         Internal method used to return :class:`Segment` data to the main read method.
-        Parameters:
-            elphy_file : is the elphy object.
-            episode : number of elphy episode, roughly corresponding to a segment
+
+        Parameters
+        ----------
+        episode : int
+            Number of elphy episode, roughly corresponding to a segment
         """
         # print "name:",self.elphy_file.layout.get_episode_name(episode)
         episode_name = self.elphy_file.layout.get_episode_name(episode)
@@ -4233,7 +4236,6 @@ class ElphyIO(BaseIO):
                 sampling_period=signal.sampling_period * getattr(pq, x_unit),
                 channel_name="episode {}, channel {}".format(int(episode + 1), int(channel + 1))
             )
-            analog_signal.segment = segment
             segment.analogsignals.append(analog_signal)
         # create a spiketrain for each
         # spike channel in the episode
@@ -4244,7 +4246,6 @@ class ElphyIO(BaseIO):
         if n_spikes > 0:
             for spk in range(1, n_spikes + 1):
                 spiketrain = self.read_spiketrain(episode, spk)
-                spiketrain.segment = segment
                 segment.spiketrains.append(spiketrain)
         # segment
         return segment
@@ -4254,10 +4255,12 @@ class ElphyIO(BaseIO):
         Internal method used to return a list of elphy :class:`EventArray` acquired from event
         channels.
 
-        Parameters:
-            elphy_file : is the elphy object.
-            episode : number of elphy episode, roughly corresponding to a segment.
-            evt : index of the event.
+        Parameters
+        ----------
+        episode : int
+            Number of elphy episode, roughly corresponding to a segment.
+        evt : int
+            Index of the event.
         """
         event = self.elphy_file.get_event(episode, evt)
         neo_event = Event(
@@ -4270,10 +4273,12 @@ class ElphyIO(BaseIO):
         """
         Internal method used to return an elphy object :class:`SpikeTrain`.
 
-        Parameters:
-            elphy_file : is the elphy object.
-            episode : number of elphy episode, roughly corresponding to a segment.
-            spk : index of the spike array.
+        Parameters
+        ----------
+        episode : int
+            Number of elphy episode, roughly corresponding to a segment.
+        spk : int
+            Index of the spike array.
         """
         block = self.elphy_file.layout.episode_block(episode)
         spike = self.elphy_file.get_spiketrain(episode, spk)

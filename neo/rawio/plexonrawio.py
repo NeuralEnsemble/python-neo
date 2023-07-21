@@ -75,11 +75,7 @@ class PlexonRawIO(BaseRawIO):
 
         offset4 = offset3 + np.dtype(SlowChannelHeader).itemsize * nb_sig_chan
 
-        # loop over data blocks and put them by type and channel
-        block_headers = {1: {c: [] for c in dspChannelHeaders['Channel']},
-                         4: {c: [] for c in eventHeaders['Channel']},
-                         5: {c: [] for c in slowChannelHeaders['Channel']},
-                         }
+        # locate data blocks and group them by type and channel
         block_pos = {1: {c: [] for c in dspChannelHeaders['Channel']},
                      4: {c: [] for c in eventHeaders['Channel']},
                      5: {c: [] for c in slowChannelHeaders['Channel']},
@@ -91,7 +87,6 @@ class PlexonRawIO(BaseRawIO):
             length = bl_header['NumberOfWaveforms'] * bl_header['NumberOfWordsInWaveform'] * 2 + 16
             bl_type = int(bl_header['Type'])
             chan_id = int(bl_header['Channel'])
-            block_headers[bl_type][chan_id].append(bl_header)
             block_pos[bl_type][chan_id].append(pos)
             pos += length
 
@@ -99,7 +94,7 @@ class PlexonRawIO(BaseRawIO):
                                 2 ** 32 + bl_header['TimeStamp']
 
         # ... and finalize them in self._data_blocks
-        # for a faster acces depending on type (1, 4, 5)
+        # for a faster access depending on type (1, 4, 5)
         self._data_blocks = {}
         dt_base = [('pos', 'int64'), ('timestamp', 'int64'), ('size', 'int64')]
         dtype_by_bltype = {
@@ -110,34 +105,38 @@ class PlexonRawIO(BaseRawIO):
             # Signals
             5: np.dtype(dt_base + [('cumsum', 'int64'), ]),
         }
-        for bl_type in block_headers:
+        for bl_type in block_pos:
             self._data_blocks[bl_type] = {}
-            for chan_id in block_headers[bl_type]:
-                bl_header = np.array(block_headers[bl_type][chan_id], dtype=DataBlockHeader)
-                bl_pos = np.array(block_pos[bl_type][chan_id], dtype='int64')
-
-                timestamps = bl_header['UpperByteOf5ByteTimestamp'] * \
-                             2 ** 32 + bl_header['TimeStamp']
-
-                n1 = bl_header['NumberOfWaveforms']
-                n2 = bl_header['NumberOfWordsInWaveform']
+            for chan_id in block_pos[bl_type]:
+                positions = block_pos[bl_type][chan_id]
                 dt = dtype_by_bltype[bl_type]
-                data_block = np.empty(bl_pos.size, dtype=dt)
-                data_block['pos'] = bl_pos + 16
-                data_block['timestamp'] = timestamps
-                data_block['size'] = n1 * n2 * 2
+                data_block = np.empty((len(positions)), dtype=dt)
+                for index, pos in enumerate(positions):
+                    bl_header = data[pos:pos + 16].view(DataBlockHeader)[0]
 
-                if bl_type == 1:  # Spikes and waveforms
-                    data_block['unit_id'] = bl_header['Unit']
-                    data_block['n1'] = n1
-                    data_block['n2'] = n2
-                elif bl_type == 4:  # Events
-                    data_block['label'] = bl_header['Unit']
-                elif bl_type == 5:  # Signals
-                    if data_block.size > 0:
-                        # cumulative some of sample index for fast acces to chunks
-                        data_block['cumsum'][0] = 0
-                        data_block['cumsum'][1:] = np.cumsum(data_block['size'][:-1]) // 2
+                    timestamp = bl_header['UpperByteOf5ByteTimestamp'] * 2 ** 32 \
+                        + bl_header['TimeStamp']
+                    n1 = bl_header['NumberOfWaveforms']
+                    n2 = bl_header['NumberOfWordsInWaveform']
+                    sample_count = n1 * n2
+
+                    data_block['pos'][index] = pos + 16
+                    data_block['timestamp'][index] = timestamp
+                    data_block['size'][index] = sample_count * 2
+
+                    if bl_type == 1:  # Spikes and waveforms
+                        data_block['unit_id'][index] = bl_header['Unit']
+                        data_block['n1'][index] = n1
+                        data_block['n2'][index] = n2
+                    elif bl_type == 4:  # Events
+                        data_block['label'][index] = bl_header['Unit']
+                    elif bl_type == 5:  # Signals
+                        if data_block.size > 0:
+                            # cumulative some of sample index for fast access to chunks
+                            if index == 0:
+                                data_block['cumsum'][index] = 0
+                            else:
+                                data_block['cumsum'][index] = data_block['cumsum'][index - 1] + sample_count
 
                 self._data_blocks[bl_type][chan_id] = data_block
 
@@ -154,7 +153,7 @@ class PlexonRawIO(BaseRawIO):
             all_sig_length.append(length)
             sampling_rate = float(h['ADFreq'])
             sig_dtype = 'int16'
-            units = ''  # I dont't knwon units
+            units = ''  # I don't know units
             if global_header['Version'] in [100, 101]:
                 gain = 5000. / (2048 * h['Gain'] * 1000.)
             elif global_header['Version'] in [102]:
@@ -174,7 +173,7 @@ class PlexonRawIO(BaseRawIO):
             signal_streams = np.array([], dtype=_signal_stream_dtype)
 
         else:
-            # detect grousp (aka streams)
+            # detect groups (aka streams)
             all_sig_length = all_sig_length = np.array(all_sig_length)
             groups = set(zip(sig_channels['sampling_rate'], all_sig_length))
 
@@ -305,7 +304,7 @@ class PlexonRawIO(BaseRawIO):
                 data = self._memmap[ind0:ind1].view('int16')
                 if bl == bl1 - 1:
                     # right border
-                    # be carfull that bl could be both bl0 and bl1!!
+                    # be careful that bl could be both bl0 and bl1!!
                     border = data.size - (i_stop - data_blocks[bl]['cumsum'])
                     data = data[:-border]
                 if bl == bl0:
