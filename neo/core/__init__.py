@@ -37,6 +37,7 @@ from neo.core.segment import Segment
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
+# Import FilterClasses
 from neo.core.filters import Equal, IsIn, IsNot,\
     InRange, GreaterThan, LessThan,\
     GreaterThanEqual, LessThanEqual
