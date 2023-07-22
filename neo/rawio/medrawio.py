@@ -241,11 +241,7 @@ class MedRawIO(BaseRawIO):
         start_sample_offset = self._stream_info[stream_index]['contigua'][seg_index]['start_index']
         self.sess.read_by_index(i_start + start_sample_offset, i_stop + start_sample_offset)
         
-        # Create "sample_major" 2D numpy array from the result of read_by_index()
-        samps_returned = len(self.sess.data['channels'][0]['data'])
-        raw_signals = np.array([], dtype=np.int32)
-        
-        raw_signals = np.empty((i_stop - i_start, num_channels))
+        raw_signals = np.empty((i_stop - i_start, num_channels), dtype=np.int32)
         for i, chan in enumerate(self.sess.data['channels']):
             raw_signals[:,i] = chan['data']
         
