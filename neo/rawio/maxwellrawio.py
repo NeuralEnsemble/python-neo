@@ -185,7 +185,7 @@ class MaxwellRawIO(BaseRawIO):
                 # to be indexed out of order
                 sorted_channel_indexes = np.sort(channel_indexes)
                 resorted_indexes = np.array(
-                    [list(channel_indexes).index(ch) for ch in sorted_channel_indexes])
+                    [list(sorted_channel_indexes).index(ch) for ch in channel_indexes])
 
         try:
             if resorted_indexes is None:
