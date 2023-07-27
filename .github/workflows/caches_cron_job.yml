@@ -76,7 +76,7 @@ jobs:
           pip install --upgrade -e .[test]
 
   create-data-cache-if-missing:
-    name: Caching data env
+    name: Caching data
     runs-on: "ubuntu-latest"
     steps:
 
