@@ -16,6 +16,8 @@ from neo.core.segment import Segment
 from neo.core.view import ChannelView
 from neo.core.group import Group
 from neo.core.block import Block
+from neo.core.imagesequence import ImageSequence
+from neo.core.regionofinterest import CircularRegionOfInterest
 
 
 class TestGroup(unittest.TestCase):
@@ -23,6 +25,7 @@ class TestGroup(unittest.TestCase):
     def setUp(self):
         test_data = np.random.rand(100, 8) * pq.mV
         channel_names = np.array(["a", "b", "c", "d", "e", "f", "g", "h"])
+        test_image_data = np.random.rand(640).reshape(10, 8, 8)
         self.test_signal = AnalogSignal(test_data,
                                         sampling_period=0.1 * pq.ms,
                                         name="test signal",
@@ -34,14 +37,19 @@ class TestGroup(unittest.TestCase):
                               description="this is a view of a test signal",
                               array_annotations={"something": np.array(["A", "B", "C", "D"])},
                               sLaTfat="fish")
+        self.test_image_seq = ImageSequence(test_image_data,
+                                            frame_duration=20 * pq.ms,
+                                            spatial_scale=1 * pq.um)
+        self.roi = CircularRegionOfInterest(self.test_image_seq, 0, 0, 3)
         self.test_spiketrains = [SpikeTrain(np.arange(100.0), units="ms", t_stop=200),
                                  SpikeTrain(np.arange(0.5, 100.5), units="ms", t_stop=200)]
         self.test_segment = Segment()
         self.test_segment.analogsignals.append(self.test_signal)
         self.test_segment.spiketrains.extend(self.test_spiketrains)
+        self.test_segment.imagesequences.append(self.test_image_seq)
 
     def test_create_group(self):
-        objects = [self.test_view, self.test_signal, self.test_segment]
+        objects = [self.test_view, self.test_signal, self.test_segment, self.test_image_seq, self.roi]
         objects.extend(self.test_spiketrains)
         group = Group(objects)
 
@@ -49,6 +57,8 @@ class TestGroup(unittest.TestCase):
         assert group.spiketrains[0] is self.test_spiketrains[0]
         assert group.spiketrains[1] is self.test_spiketrains[1]
         assert group.channelviews[0] is self.test_view
+        assert group.imagesequences[0] is self.test_image_seq
+        assert group.regionsofinterest[0] is self.roi
         assert len(group.irregularlysampledsignals) == 0
         assert group.segments[0].analogsignals[0] is self.test_signal
 

@@ -97,7 +97,7 @@ class ImageSequence(BaseSignal):
     )
     _recommended_attrs = BaseNeo._recommended_attrs
 
-    def __new__(cls, image_data, units=None, dtype=None, copy=True, t_start=0 * pq.s,
+    def __new__(cls, image_data, units=pq.dimensionless, dtype=None, copy=True, t_start=0 * pq.s,
                 spatial_scale=None, frame_duration=None,
                 sampling_rate=None, name=None, description=None, file_origin=None,
                 **annotations):
@@ -127,7 +127,7 @@ class ImageSequence(BaseSignal):
 
         return obj
 
-    def __init__(self, image_data, units=None, dtype=None, copy=True, t_start=0 * pq.s,
+    def __init__(self, image_data, units=pq.dimensionless, dtype=None, copy=True, t_start=0 * pq.s,
                  spatial_scale=None, frame_duration=None,
                  sampling_rate=None, name=None, description=None, file_origin=None,
                  **annotations):
@@ -142,7 +142,7 @@ class ImageSequence(BaseSignal):
 
         self.sampling_rate = getattr(obj, "sampling_rate", None)
         self.spatial_scale = getattr(obj, "spatial_scale", None)
-        self.units = getattr(obj, "units", None)
+        self.units = getattr(obj, "units", pq.dimensionless)
         self._t_start = getattr(obj, "_t_start", 0 * pq.s)
 
         return obj

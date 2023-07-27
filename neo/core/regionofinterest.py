@@ -1,11 +1,32 @@
 from math import floor, ceil
 
 from neo.core.baseneo import BaseNeo
+from neo.core.imagesequence import ImageSequence
 
 
 class RegionOfInterest(BaseNeo):
     """Abstract base class"""
-    pass
+
+    _parent_objects = ('Group',)
+    _parent_attrs = ('group',)
+    _necessary_attrs = (
+        ('obj', ('ImageSequence', ), 1),
+    )
+
+    def __init__(self, image_sequence, name=None, description=None, file_origin=None, **annotations):
+        super().__init__(name=name, description=description,
+                        file_origin=file_origin, **annotations)
+
+        if not (isinstance(image_sequence, ImageSequence) or (
+                hasattr(image_sequence, "proxy_for") and issubclass(image_sequence.proxy_for, ImageSequence))):
+            raise ValueError("Can only take a RegionOfInterest of an ImageSequence")
+        self.image_sequence = image_sequence
+
+    def resolve(self):
+        """
+        Return a signal from within this region of the underlying ImageSequence.
+        """
+        return self.image_sequence.signal_from_region(self)
 
 
 class CircularRegionOfInterest(RegionOfInterest):
@@ -23,8 +44,9 @@ class CircularRegionOfInterest(RegionOfInterest):
             Radius of the ROI in pixels
     """
 
-    def __init__(self, x, y, radius):
-
+    def __init__(self, image_sequence, x, y, radius, name=None, description=None,
+                 file_origin=None, **annotations):
+        super().__init__(image_sequence, name, description, file_origin, **annotations)
         self.y = y
         self.x = x
         self.radius = radius
@@ -72,7 +94,9 @@ class RectangularRegionOfInterest(RegionOfInterest):
             Height (y-direction) of the ROI in pixels
     """
 
-    def __init__(self, x, y, width, height):
+    def __init__(self, image_sequence, x, y, width, height, name=None, description=None,
+                 file_origin=None, **annotations):
+        super().__init__(image_sequence, name, description, file_origin, **annotations)
         self.x = x
         self.y = y
         self.width = width
@@ -115,7 +139,9 @@ class PolygonRegionOfInterest(RegionOfInterest):
             of the vertices of the polygon
     """
 
-    def __init__(self, *vertices):
+    def __init__(self, image_sequence, *vertices, name=None, description=None,
+                 file_origin=None, **annotations):
+        super().__init__(image_sequence, name, description, file_origin, **annotations)
         self.vertices = vertices
 
     def polygon_ray_casting(self, bounding_points, bounding_box_positions):

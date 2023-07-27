@@ -18,6 +18,7 @@ from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.core.segment import Segment
 from neo.core.spiketrainlist import SpikeTrainList
 from neo.core.view import ChannelView
+from neo.core.regionofinterest import RegionOfInterest
 
 
 class Group(Container):
@@ -49,7 +50,8 @@ class Group(Container):
     """
     _data_child_objects = (
         'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain',
-        'Event', 'Epoch', 'ChannelView', 'ImageSequence'
+        'Event', 'Epoch', 'ChannelView', 'ImageSequence', 'CircularRegionOfInterest',
+        'RectangularRegionOfInterest', 'PolygonRegionOfInterest'
     )
     _container_child_objects = ('Segment', 'Group')
     _parent_objects = ('Block',)
@@ -69,6 +71,7 @@ class Group(Container):
         self._epochs = ObjectList(Epoch)
         self._channelviews = ObjectList(ChannelView)
         self._imagesequences = ObjectList(ImageSequence)
+        self._regionsofinterest = ObjectList(RegionOfInterest)
         self._segments = ObjectList(Segment)  # to remove?
         self._groups = ObjectList(Group)
 
@@ -117,6 +120,12 @@ class Group(Container):
         fget=lambda self: self._get_object_list("_imagesequences"),
         fset=lambda self, value: self._set_object_list("_imagesequences", value),
         doc="list of ImageSequences contained in this group"
+    )
+
+    regionsofinterest = property(
+        fget=lambda self: self._get_object_list("_regionsofinterest"),
+        fset=lambda self, value: self._set_object_list("_regionsofinterest", value),
+        doc="list of RegionOfInterest objects contained in this group"
     )
 
     spiketrains = property(
