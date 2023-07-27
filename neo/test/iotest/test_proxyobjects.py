@@ -51,12 +51,18 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig.shape == (30000, 8)
         assert_same_attributes(proxy_anasig.time_slice(2. * pq.s, 5 * pq.s), anasig)
 
-        # ceil next sample when slicing
+        # round up next sample when slicing
         anasig = proxy_anasig.load(time_slice=(1.99999 * pq.s, 5.000001 * pq.s))
         assert anasig.t_start == 2. * pq.s
         assert anasig.duration == 3. * pq.s
         assert anasig.shape == (30000, 8)
 
+        # round down sample test
+        anasig = proxy_anasig.load(time_slice=(2.00001 * pq.s, 4.99999 * pq.s))
+        assert anasig.t_start == 2. * pq.s
+        assert anasig.duration == 3. * pq.s
+        assert anasig.shape == (30000, 8)
+      
         # buggy time slice
         with self.assertRaises(AssertionError):
             anasig = proxy_anasig.load(time_slice=(2. * pq.s, 15 * pq.s))

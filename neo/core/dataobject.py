@@ -20,7 +20,7 @@ def _normalize_array_annotations(value, length):
 
     Parameters
     ----------
-    value : np.ndarray or list or dict
+    value : np.ndarray or list or tuple or dict
         Value to be checked for consistency.
     length : int
         Required length of the array annotation.
@@ -48,7 +48,7 @@ def _normalize_array_annotations(value, length):
         raise ValueError("Array annotations must not be None")
     # If not array annotation, pass on to regular check and make it a list, that is checked again
     # This covers array annotations with length 1
-    elif not isinstance(value, (list, np.ndarray)) or (
+    elif not isinstance(value, (list, np.ndarray, tuple)) or (
             isinstance(value, pq.Quantity) and value.shape == ()):
         _check_annotations(value)
         value = _normalize_array_annotations(np.array([value]), length)

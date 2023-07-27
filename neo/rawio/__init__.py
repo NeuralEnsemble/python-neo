@@ -35,6 +35,7 @@ Classes:
 * :attr:`OpenEphysBinaryRawIO`
 * :attr:`PhyRawIO`
 * :attr:`PlexonRawIO`
+* :attr:`Plexon2RawIO`
 * :attr:`RawBinarySignalRawIO`
 * :attr:`RawMCSRawIO`
 * :attr:`Spike2RawIO`
@@ -137,6 +138,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.Plexon2RawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.RawBinarySignalRawIO
 
     .. autoattribute:: extensions
@@ -196,6 +201,7 @@ from neo.rawio.openephysrawio import OpenEphysRawIO
 from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
 from neo.rawio.phyrawio import PhyRawIO
 from neo.rawio.plexonrawio import PlexonRawIO
+from neo.rawio.plexon2rawio import Plexon2RawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 from neo.rawio.rawmcsrawio import RawMCSRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
@@ -229,6 +235,7 @@ rawiolist = [
     OpenEphysBinaryRawIO,
     PhyRawIO,
     PlexonRawIO,
+    Plexon2RawIO,
     RawBinarySignalRawIO,
     RawMCSRawIO,
     Spike2RawIO,

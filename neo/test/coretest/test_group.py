@@ -15,6 +15,7 @@ from neo.core.spiketrain import SpikeTrain
 from neo.core.segment import Segment
 from neo.core.view import ChannelView
 from neo.core.group import Group
+from neo.core.block import Block
 
 
 class TestGroup(unittest.TestCase):
@@ -91,3 +92,9 @@ class TestGroup(unittest.TestCase):
         target.extend([children[1], children[2], *grandchildren[2]])
         self.assertEqual(flattened,
                          target)
+
+    def test_add_invalid_type_raises_Exception(self):
+        group = Group()
+        self.assertRaises(TypeError, group.add, Block())
+
+        self.assertRaises(TypeError, Group, allowed_types=[Block])
