@@ -466,6 +466,33 @@ class TestBlock(unittest.TestCase):
         blk.segments += [Segment(), Segment()]
         assert len(blk.segments) == 3
 
+    def test_add(self):
+        blk = self.blocks[0]
+        new_blk = simple_block()
+        n_groups_start = len(new_blk.groups)
+        for group in blk.groups:
+            assert group not in new_blk.groups
+            new_blk.add(group)
+            assert group in new_blk.groups
+        assert len(new_blk.groups) == n_groups_start + len(blk.groups)
+
+        n_segs_start = len(new_blk.segments)
+        for seg in blk.segments:
+            assert seg not in new_blk.segments
+            new_blk.add(seg)
+            assert seg in new_blk.segments
+        assert len(new_blk.segments) == n_segs_start + len(blk.segments)
+
+        # test adding multiple at once
+        blk = self.blocks[1]
+        n_groups_start = len(new_blk.groups)
+        new_blk.add(*blk.groups)
+        assert len(new_blk.groups) == n_groups_start + len(blk.groups)
+
+        n_segs_start = len(new_blk.segments)
+        new_blk.add(*blk.segments)
+        assert len(new_blk.segments) == n_segs_start + len(blk.segments)
+
 
 if __name__ == "__main__":
     unittest.main()
