@@ -23,7 +23,7 @@ from neo.core.container import filterdata
 from neo.core import SpikeTrain, AnalogSignal, Event
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_same_sub_schema)
-from neo.test.generate_datasets import random_block, simple_block
+from neo.test.generate_datasets import random_block, simple_block, random_signal
 
 
 N_EXAMPLES = 5
@@ -492,6 +492,10 @@ class TestBlock(unittest.TestCase):
         n_segs_start = len(new_blk.segments)
         new_blk.add(*blk.segments)
         assert len(new_blk.segments) == n_segs_start + len(blk.segments)
+
+    def test_add_invalid_type_raises_Exception(self):
+        new_blk = Block()
+        self.assertRaises(TypeError, new_blk.add, random_signal())
 
 
 if __name__ == "__main__":
