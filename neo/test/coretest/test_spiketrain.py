@@ -1169,10 +1169,10 @@ class TestMerge(unittest.TestCase):
         self.waveforms2 = np.array(
             [[[0., 1.], [0.1, 1.1]], [[2., 3.], [2.1, 3.1]], [[4., 5.], [4.1, 5.1]],
              [[6., 7.], [6.1, 7.1]], [[8., 9.], [8.1, 9.1]], [[10., 11.], [10.1, 11.1]]]) * pq.mV
-        self.data2 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
-        self.data2quant = self.data1 * pq.ms
+        self.data2 = np.array([0.11, 0.51, 1.21, 3.31, 6.41, 7.01])
+        self.data2quant = self.data2 * pq.ms
         self.arr_ann2 = {'index': np.arange(101, 107), 'label2': ['g', 'h', 'i', 'j', 'k', 'l']}
-        self.train2 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms, waveforms=self.waveforms1,
+        self.train2 = SpikeTrain(self.data2quant, t_stop=10.0 * pq.ms, waveforms=self.waveforms2,
                                  array_annotations=self.arr_ann2)
 
         self.segment = Segment()
