@@ -490,6 +490,7 @@ class TestBlock(unittest.TestCase):
         assert len(new_blk.groups) == n_groups_start + len(blk.groups)
 
         n_segs_start = len(new_blk.segments)
+        new_blk.add(*blk.segments)
         assert len(new_blk.segments) == n_segs_start + len(blk.segments)
 
 
