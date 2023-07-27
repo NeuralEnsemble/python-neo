@@ -342,8 +342,22 @@ class Container(BaseNeo):
     def add(self, *objects):
         """Add a new Neo object to the Container"""
         for obj in objects:
-            container = self._get_container(obj.__class__)
-            container.append(obj)
+            if (
+                obj.__class__.__name__ in self._child_objects
+                or (
+                    hasattr(obj, "proxy_for")
+                    and obj.proxy_for.__name__ in self._child_objects
+                )
+            ):
+                container = self._get_container(obj.__class__)
+                container.append(obj)
+            else:
+                raise TypeError(
+                    f"Cannot add object of type {obj.__class__.__name__} "
+                    f"to a {self.__class__.__name__}, can only add objects of the "
+                    f"following types: {self._child_objects}"
+                )
+
 
 
     def filter(self, targdict=None, data=True, container=False, recursive=True,

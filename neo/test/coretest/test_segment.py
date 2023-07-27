@@ -669,6 +669,10 @@ class TestSegment(unittest.TestCase):
         seg.add(proxy_epoch)
         assert len(seg.epochs) == 1
 
+    def test_add_invalid_type_raises_Exception(self):
+        seg = Segment()
+        self.assertRaises(TypeError, seg.add, Block())
+
 
 if __name__ == "__main__":
     unittest.main()

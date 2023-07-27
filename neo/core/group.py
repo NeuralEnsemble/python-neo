@@ -76,6 +76,9 @@ class Group(Container):
             self.allowed_types = None
         else:
             self.allowed_types = tuple(allowed_types)
+            for type_ in self.allowed_types:
+                if type_.__name__ not in self._child_objects:
+                    raise TypeError(f"Groups can not contain objects of type {type_.__name__}")
 
         if objects:
             self.add(*objects)
@@ -140,8 +143,7 @@ class Group(Container):
             if self.allowed_types and not isinstance(obj, self.allowed_types):
                 raise TypeError("This Group can only contain {}, but not {}"
                                 "".format(self.allowed_types, type(obj)))
-            container = self._get_container(obj.__class__)
-            container.append(obj)
+        super().add(*objects)
 
     def walk(self):
         """
