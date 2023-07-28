@@ -39,6 +39,7 @@ Classes:
 * :attr:`KlustaKwikIO`
 * :attr:`KwikIO`
 * :attr:`MaxwellIO`
+* :attr:`MedIO`
 * :attr:`MicromedIO`
 * :attr:`NeoMatlabIO`
 * :attr:`NestIO`
@@ -163,6 +164,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.MaxwellIO
+
+    .. autoattribute:: extensions
+    
+.. autoclass:: neo.io.MedIO
 
     .. autoattribute:: extensions
 
@@ -313,6 +318,7 @@ from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.mearecio import MEArecIO
 from neo.io.maxwellio import MaxwellIO
+from neo.io.medio import MedIO
 from neo.io.micromedio import MicromedIO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
@@ -366,6 +372,7 @@ iolist = [
     KwikIO,
     MEArecIO,
     MaxwellIO,
+    MedIO,
     MicromedIO,
     NixIO,
     NixIOFr,
