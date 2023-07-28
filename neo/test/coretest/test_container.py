@@ -111,7 +111,7 @@ class TestContainerNeo(unittest.TestCase):
         seg.spiketrains.append(st2)
 
         self.assertEqual(st1.annotations,
-                         seg.filter(test=filters.Equal(5))[0].annotations)
+                         seg.filter(test=filters.Equals(5))[0].annotations)
         self.assertEqual(st1.annotations,
                          seg.filter(test=filters.LessThan(6))[0].annotations)
         self.assertEqual(st1.annotations,
@@ -123,13 +123,13 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(st1.annotations,
                          seg.filter(test=filters.InRange(1, 5))[0].annotations)
         self.assertEqual(st1.annotations,
-                         seg.filter(test=filters.GreaterThanEqual(5))[0].annotations)
+                         seg.filter(test=filters.GreaterThanEquals(5))[0].annotations)
         self.assertEqual(st1.annotations,
-                         seg.filter(test=filters.LessThanEqual(5))[0].annotations)
+                         seg.filter(test=filters.LessThanEquals(5))[0].annotations)
 
     def test_filter_equal(self):
         '''
-            Tests FilterCondition object "Equal".
+            Tests FilterCondition object "Equals".
         '''
         seg = neo.core.Segment()
         st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
@@ -142,10 +142,10 @@ class TestContainerNeo(unittest.TestCase):
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
         seg.spiketrains.append(st3)
-        self.assertEqual(1, len(seg.filter(test=filters.Equal(5))))
-        self.assertEqual(0, len(seg.filter(test=filters.Equal(1))))
-        self.assertEqual(1, len(seg.filter({'list': filters.Equal([1, 2])})))
-        self.assertEqual(1, len(seg.filter(dict=filters.Equal({'key': 5}))))
+        self.assertEqual(1, len(seg.filter(test=filters.Equals(5))))
+        self.assertEqual(0, len(seg.filter(test=filters.Equals(1))))
+        self.assertEqual(1, len(seg.filter({'list': filters.Equals([1, 2])})))
+        self.assertEqual(1, len(seg.filter(dict=filters.Equals({'key': 5}))))
 
     def test_filter_is_not(self):
         '''
@@ -184,7 +184,7 @@ class TestContainerNeo(unittest.TestCase):
 
     def test_filter_less_than_equal(self):
         '''
-            Tests FilterCondition object "LessThanEqual".
+            Tests FilterCondition object "LessThanEquals".
         '''
 
         seg = neo.core.Segment()
@@ -195,9 +195,9 @@ class TestContainerNeo(unittest.TestCase):
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
 
-        self.assertEqual(0, len(seg.filter(test=filters.LessThanEqual(4))))
-        self.assertEqual(1, len(seg.filter(test=filters.LessThanEqual(5))))
-        self.assertEqual(2, len(seg.filter(test=filters.LessThanEqual(6))))
+        self.assertEqual(0, len(seg.filter(test=filters.LessThanEquals(4))))
+        self.assertEqual(1, len(seg.filter(test=filters.LessThanEquals(5))))
+        self.assertEqual(2, len(seg.filter(test=filters.LessThanEquals(6))))
 
     def test_filter_greater_than(self):
         '''
@@ -218,7 +218,7 @@ class TestContainerNeo(unittest.TestCase):
 
     def test_filter_greater_than_equal(self):
         '''
-            Tests FilterCondition object "GreaterThanEqual".
+            Tests FilterCondition object "GreaterThanEquals".
         '''
 
         seg = neo.core.Segment()
@@ -229,9 +229,9 @@ class TestContainerNeo(unittest.TestCase):
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
 
-        self.assertEqual(0, len(seg.filter(test=filters.GreaterThanEqual(7))))
-        self.assertEqual(1, len(seg.filter(test=filters.GreaterThanEqual(6))))
-        self.assertEqual(2, len(seg.filter(test=filters.GreaterThanEqual(5))))
+        self.assertEqual(0, len(seg.filter(test=filters.GreaterThanEquals(7))))
+        self.assertEqual(1, len(seg.filter(test=filters.GreaterThanEquals(6))))
+        self.assertEqual(2, len(seg.filter(test=filters.GreaterThanEquals(5))))
 
     def test_filter_is_in(self):
         '''
@@ -280,10 +280,10 @@ class TestContainerNeo(unittest.TestCase):
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
 
-        self.assertEqual(2, len(seg.filter({'test': filters.Equal(5),
-                                            'filt': filters.Equal(6)})))
-        self.assertEqual(0, len(seg.filter([{'test': filters.Equal(5)},
-                                            {'filt': filters.Equal(6)}])))
+        self.assertEqual(2, len(seg.filter({'test': filters.Equals(5),
+                                            'filt': filters.Equals(6)})))
+        self.assertEqual(0, len(seg.filter([{'test': filters.Equals(5)},
+                                            {'filt': filters.Equals(6)}])))
         self.assertEqual(1, len(seg.filter(name='st_num_1')))
 
 
