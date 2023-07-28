@@ -19,7 +19,7 @@ class FilterCondition:
         raise NotImplementedError()
 
 
-class Equal(FilterCondition):
+class Equals(FilterCondition):
 
     def __init__(self, z):
         self.control = z
@@ -37,7 +37,7 @@ class IsNot(FilterCondition):
         return x != self.control
 
 
-class LessThanEqual(FilterCondition):
+class LessThanEquals(FilterCondition):
 
     def __init__(self, z):
         self.control = z
@@ -46,7 +46,7 @@ class LessThanEqual(FilterCondition):
         return x <= self.control
 
 
-class GreaterThanEqual(FilterCondition):
+class GreaterThanEquals(FilterCondition):
 
     def __init__(self, z):
         self.control = z

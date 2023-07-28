@@ -450,7 +450,7 @@ class Container(BaseNeo):
         parent_name = _reference_name(self.__class__.__name__)
         for child in self._single_children:
             if (hasattr(child, parent_name) and
-                    getattr(child, parent_name) is None or force):
+                        getattr(child, parent_name) is None or force):
                 setattr(child, parent_name, self)
         if recursive:
             for child in self.container_children:
