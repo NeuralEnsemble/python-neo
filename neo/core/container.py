@@ -20,12 +20,12 @@ def unique_objs(objs):
     using the "is" test.
     """
     seen = set()
-    return [obj for obj in objs if id(obj) not in seen and not seen.add(id(obj))]
-
+    return [obj for obj in objs
+            if id(obj) not in seen and not seen.add(id(obj))]
 
 def filterdata(data, targdict=None, objects=None, **kwargs):
     """
-    Return a list of child objects matching *any* of the search terms
+    Return a list of the objects in data matching *any* of the search terms
     in either their attributes or annotations.  Search terms can be
     provided as keyword arguments or a dictionary, either as a positional
     argument after data or to the argument targdict.
