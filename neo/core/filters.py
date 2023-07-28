@@ -130,7 +130,7 @@ class InRange(FilterCondition):
     Parameters:
         lower_bound: int - The lower bound of the range.
         upper_bound: int - The upper bound of the range.
-        left_closed: bool - If True, the range includes the lower bound (a <= x).
+        left_closed: bool - If True, the range includes the lower bound (lower_bound <= x).
         right_closed: bool - If True, the range includes the upper bound (x <= upper_bound).
     """
     def __init__(self, lower_bound, upper_bound, left_closed=False, right_closed=False):
