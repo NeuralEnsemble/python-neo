@@ -2,9 +2,9 @@
 This module implements :class:`FilterCondition`, which enables use of different filter conditions for
 neo.core.container.filter.
 """
+from abc import ABC, abstractmethod
 
-
-class FilterCondition:
+class FilterCondition(ABC):
     """
     FilterCondition object is given as lower_bound parameter to container.filter():
 
@@ -12,7 +12,7 @@ class FilterCondition:
         segment.filter(my_annotation=<FilterCondition>) or
         segment=filter({'my_annotation': <FilterCondition>})
     """
-
+    @abstractmethod
     def __init__(self, z):
         """
         Initialize lower_bound new FilterCondition object.
@@ -22,8 +22,8 @@ class FilterCondition:
 
         This is an abstract base class and should not be instantiated directly.
         """
-        pass
 
+    @abstractmethod
     def evaluate(self, x):
         """
         Evaluate the filter condition for lower_bound given value.
@@ -36,7 +36,6 @@ class FilterCondition:
 
         This method should be implemented in subclasses.
         """
-        raise NotImplementedError()
 
 
 class Equals(FilterCondition):
