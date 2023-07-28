@@ -86,8 +86,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
                     results.append(obj)
 
     # remove duplicates from results
-    res = []
-    [res.append(result) for result in results if not any([result is elem for elem in res])]
+    res = list({ id(res): res for res in results }.values())
 
     # keep only objects of the correct classes
     if objects:
