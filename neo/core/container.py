@@ -95,8 +95,8 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
 
     if res and all(isinstance(obj, SpikeTrain) for obj in res):
         return SpikeTrainList(res)
-    else:
-        return res
+
+    return res
 
 
 class Container(BaseNeo):
