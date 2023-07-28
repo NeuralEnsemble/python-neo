@@ -1,6 +1,23 @@
 """
-This module implements :class:`FilterCondition`, which enables use of different filter conditions for
-neo.core.container.filter.
+This module implements :class:`FilterCondition`, which enables use of different filter conditions
+for neo.core.container.filter.
+
+Classes:
+    - :class:`FilterCondition`: Abstract base class for defining filter conditions.
+    - :class:`Equals`: Filter condition to check if a value is equal to the control value.
+    - :class:`IsNot`: Filter condition to check if a value is not equal to the control value.
+    - :class:`LessThanEquals`: Filter condition to check if a value is less than or equal to the
+    control value.
+    - :class:`GreaterThanEquals`: Filter condition to check if a value is greater than or equal to
+    the control value.
+    - :class:`LessThan`: Filter condition to check if a value is less than the control value.
+    - :class:`GreaterThan`: Filter condition to check if a value is greater than the control value.
+    - :class:`IsIn`: Filter condition to check if a value is in a list or equal to the control
+    value.
+    - :class:`InRange`: Filter condition to check if a value is in a specified range.
+
+The provided classes allow users to select filter conditions and use them with
+:func:`neo.core.container.filter()` to perform specific filtering operations on data.
 """
 from abc import ABC, abstractmethod
 
