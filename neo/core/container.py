@@ -240,16 +240,16 @@ class Container(BaseNeo):
         Containers for child objects that are a container and
         have a single parent.
         """
-        return tuple((_container_name(child) for child in
-                      self._container_child_objects))
+        return tuple([_container_name(child) for child in
+                      self._container_child_objects])
 
     @property
     def _data_child_containers(self):
         """
         Containers for child objects that have data and have a single parent.
         """
-        return tuple((_container_name(child) for child in
-                      self._data_child_objects))
+        return tuple([_container_name(child) for child in
+                      self._data_child_objects])
 
     @property
     def _child_containers(self):
