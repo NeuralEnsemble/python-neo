@@ -38,9 +38,7 @@ from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
 # Import FilterClasses
-from neo.core.filters import Equal, IsIn, IsNot,\
-    InRange, GreaterThan, LessThan,\
-    GreaterThanEqual, LessThanEqual
+from neo.core import filters
 
 from neo.core.event import Event
 from neo.core.epoch import Epoch
