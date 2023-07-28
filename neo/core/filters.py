@@ -79,31 +79,30 @@ class IsIn(FilterCondition):
         self.control = z
 
     def evaluate(self, x):
-        if type(self.control) == list:
+        if isinstance(self.control, list):
             return x in self.control
-        elif type(self.control) == int:
+        if isinstance(self.control, int):
             return x == self.control
-        else:
-            raise SyntaxError('parameter not of type list or int')
+
+        raise SyntaxError('parameter not of type list or int')
 
 
 class InRange(FilterCondition):
 
     def __init__(self, a, b, left_closed=False, right_closed=False):
-        if type(a) != int or type(b) != int:
+        if not isinstance(a, int) or not isinstance(b, int):
             raise SyntaxError("parameters not of type int")
-        else:
-            self.a = a
-            self.b = b
-            self.left_closed = left_closed
-            self.right_closed = right_closed
+
+        self.a = a
+        self.b = b
+        self.left_closed = left_closed
+        self.right_closed = right_closed
 
     def evaluate(self, x):
         if not self.left_closed and not self.right_closed:
             return self.a <= x <= self.b
-        elif not self.left_closed and self.right_closed:
+        if not self.left_closed and self.right_closed:
             return self.a <= x < self.b
-        elif self.left_closed and not self.right_closed:
+        if self.left_closed and not self.right_closed:
             return self.a < x <= self.b
-        else:
-            return self.a < x < self.b
+        return self.a < x < self.b
