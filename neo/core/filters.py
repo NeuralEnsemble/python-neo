@@ -21,6 +21,8 @@ The provided classes allow users to select filter conditions and use them with
 """
 from abc import ABC, abstractmethod
 from numbers import Number
+from typing import Union, Any
+
 
 class FilterCondition(ABC):
     """
@@ -31,7 +33,7 @@ class FilterCondition(ABC):
         segment=filter({'my_annotation': <FilterCondition>})
     """
     @abstractmethod
-    def __init__(self, z):
+    def __init__(self, z) -> None:
         """
         Initialize new FilterCondition object.
 
@@ -60,10 +62,10 @@ class Equals(FilterCondition):
     """
     Filter condition to check if target value is equal to the control value.
     """
-    def __init__(self, z):
+    def __init__(self, z: Any) -> None:
         self.control = z
 
-    def evaluate(self, x):
+    def evaluate(self, x: Any) -> bool:
         return x == self.control
 
 
@@ -71,10 +73,10 @@ class IsNot(FilterCondition):
     """
     Filter condition to check if target value is not equal to the control value.
     """
-    def __init__(self, z):
+    def __init__(self, z: Any) -> None:
         self.control = z
 
-    def evaluate(self, x):
+    def evaluate(self, x: Any) -> bool:
         return x != self.control
 
 
@@ -82,10 +84,10 @@ class LessThanOrEquals(FilterCondition):
     """
     Filter condition to check if target value is less than or equal to the control value.
     """
-    def __init__(self, z):
+    def __init__(self, z: Number) -> None:
         self.control = z
 
-    def evaluate(self, x):
+    def evaluate(self, x: Number) -> bool:
         return x <= self.control
 
 
@@ -93,10 +95,10 @@ class GreaterThanOrEquals(FilterCondition):
     """
     Filter condition to check if target value is greater than or equal to the control value.
     """
-    def __init__(self, z):
+    def __init__(self, z: Number) -> None:
         self.control = z
 
-    def evaluate(self, x):
+    def evaluate(self, x: Number) -> bool:
         return x >= self.control
 
 
@@ -104,10 +106,10 @@ class LessThan(FilterCondition):
     """
     Filter condition to check if target value is less than the control value.
     """
-    def __init__(self, z):
+    def __init__(self, z: Number) -> None:
         self.control = z
 
-    def evaluate(self, x):
+    def evaluate(self, x: Number) -> bool:
         return x < self.control
 
 
@@ -115,10 +117,10 @@ class GreaterThan(FilterCondition):
     """
     Filter condition to check if target value is greater than the control value.
     """
-    def __init__(self, z):
+    def __init__(self, z: Number) -> None:
         self.control = z
 
-    def evaluate(self, x):
+    def evaluate(self, x: Number) -> bool:
         return x > self.control
 
 
@@ -126,16 +128,16 @@ class IsIn(FilterCondition):
     """
     Filter condition to check if target is in control.
     """
-    def __init__(self, z):
+    def __init__(self, z: Union[list, tuple, set, int]) -> None:
         self.control = z
 
-    def evaluate(self, x):
+    def evaluate(self, x: Any) -> bool:
         if isinstance(self.control, (list, tuple, set)):
             return x in self.control
         if isinstance(self.control, int):
             return x == self.control
 
-        raise SyntaxError('parameter not of type list or int')
+        raise SyntaxError('parameter not of type list, tuple, set or int')
 
 
 class InRange(FilterCondition):
@@ -151,7 +153,8 @@ class InRange(FilterCondition):
         left_closed: bool - If True, the range includes the lower bound (lower_bound <= x).
         right_closed: bool - If True, the range includes the upper bound (x <= upper_bound).
     """
-    def __init__(self, lower_bound, upper_bound, left_closed=False, right_closed=False):
+    def __init__(self, lower_bound: Number, upper_bound: Number,
+                 left_closed: bool=False, right_closed: bool=False) -> None:
         if not isinstance(lower_bound, Number) or not isinstance(upper_bound, Number):
             raise ValueError("parameter is not a number")
 
@@ -160,7 +163,7 @@ class InRange(FilterCondition):
         self.left_closed = left_closed
         self.right_closed = right_closed
 
-    def evaluate(self, x):
+    def evaluate(self, x: Number) -> bool:
         if not self.left_closed and not self.right_closed:
             return self.lower_bound <= x <= self.upper_bound
         if not self.left_closed and self.right_closed:
