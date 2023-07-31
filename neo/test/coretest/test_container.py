@@ -50,8 +50,15 @@ class TestContainerNeo(unittest.TestCase):
         st1.annotate(test=5)
         st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
         st2.annotate(test=6)
+        st2.annotate(name='st_num_1')
+        st2.annotate(filt=6)
+        st3 = neo.core.SpikeTrain([5, 6] * pq.ms, t_stop=10)
+        st3.annotate(list=[1, 2])
+        st3.annotate(dict={'key': 5})
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
+        seg.spiketrains.append(st3)
+
         cls.seg = seg
         cls.st1 = st1
         cls.st2 = st2
@@ -135,21 +142,10 @@ class TestContainerNeo(unittest.TestCase):
         '''
             Tests FilterCondition object "Equals".
         '''
-        seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
-        st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
-        st2.annotate(test=6)
-        st3 = neo.core.SpikeTrain([5, 6] * pq.ms, t_stop=10)
-        st3.annotate(list=[1, 2])
-        st3.annotate(dict={'key': 5})
-        seg.spiketrains.append(st1)
-        seg.spiketrains.append(st2)
-        seg.spiketrains.append(st3)
-        self.assertEqual(1, len(seg.filter(test=filters.Equals(5))))
-        self.assertEqual(0, len(seg.filter(test=filters.Equals(1))))
-        self.assertEqual(1, len(seg.filter({'list': filters.Equals([1, 2])})))
-        self.assertEqual(1, len(seg.filter(dict=filters.Equals({'key': 5}))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.Equals(5))))
+        self.assertEqual(0, len(self.seg.filter(test=filters.Equals(1))))
+        self.assertEqual(1, len(self.seg.filter({'list': filters.Equals([1, 2])})))
+        self.assertEqual(1, len(self.seg.filter(dict=filters.Equals({'key': 5}))))
 
     def test_filter_is_not(self):
         '''
@@ -224,20 +220,11 @@ class TestContainerNeo(unittest.TestCase):
         '''
         Tests old functionality with new filter method.
         '''
-        seg = neo.core.Segment()
-        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
-        st1.annotate(test=5)
-        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
-        st2.annotate(filt=6)
-        st2.annotate(name='st_num_1')
-        seg.spiketrains.append(st1)
-        seg.spiketrains.append(st2)
-
-        self.assertEqual(2, len(seg.filter({'test': filters.Equals(5),
+        self.assertEqual(2, len(self.seg.filter({'test': filters.Equals(5),
                                             'filt': filters.Equals(6)})))
-        self.assertEqual(0, len(seg.filter([{'test': filters.Equals(5)},
+        self.assertEqual(0, len(self.seg.filter([{'test': filters.Equals(5)},
                                             {'filt': filters.Equals(6)}])))
-        self.assertEqual(1, len(seg.filter(name='st_num_1')))
+        self.assertEqual(1, len(self.seg.filter(name='st_num_1')))
 
 
 class Test_Container_merge(unittest.TestCase):
