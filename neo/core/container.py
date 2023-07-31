@@ -37,7 +37,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
     be a list of dictionaries, in which case the filters are applied
     sequentially.
 
-    A list of disctionaries is handled as follows: [ { or } and { or } ]
+    A list of dictionaries is handled as follows: [ { or } and { or } ]
     If targdict and kwargs are both supplied, the
     targdict filters are applied first, followed by the kwarg filters.
     A targdict of None or {} corresponds to no filters applied, therefore
@@ -75,28 +75,31 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
     else:
         # do the actual filtering
         results = []
-        for key, value in sorted(targdict.items()):
-            for obj in data:
-                if (hasattr(obj, key) and getattr(obj, key) == value):
+        for obj in data:
+            for key, value in sorted(targdict.items()):
+                if hasattr(obj, key) and getattr(obj, key) == value:
                     results.append(obj)
-                if (isinstance(value, filters.FilterCondition)) and (
-                        key in obj.annotations and value.evaluate(obj.annotations[key])):
-                    results.append(obj)
+                    break
+                if isinstance(value, filters.FilterCondition) and key in obj.annotations:
+                    if value.evaluate(obj.annotations[key]):
+                        results.append(obj)
+                        break
                 if key in obj.annotations and obj.annotations[key] == value:
                     results.append(obj)
+                    break
 
     # remove duplicates from results
-    res = list({ id(res): res for res in results }.values())
+    results = list({ id(res): res for res in results }.values())
 
     # keep only objects of the correct classes
     if objects:
-        res = [result for result in res if
+        results = [result for result in results if
                result.__class__ in objects or result.__class__.__name__ in objects]
 
-    if res and all(isinstance(obj, SpikeTrain) for obj in res):
-        return SpikeTrainList(res)
-
-    return res
+    if results and all(isinstance(obj, SpikeTrain) for obj in results):
+        return SpikeTrainList(results)
+    else:
+        return results
 
 
 class Container(BaseNeo):
