@@ -20,6 +20,7 @@ The provided classes allow users to select filter conditions and use them with
 :func:`neo.core.container.filter()` to perform specific filtering operations on data.
 """
 from abc import ABC, abstractmethod
+from numbers import Number
 
 class FilterCondition(ABC):
     """
@@ -131,6 +132,10 @@ class IsIn(FilterCondition):
     def evaluate(self, x):
         if isinstance(self.control, list):
             return x in self.control
+        if isinstance(self.control, tuple):
+            return x in self.control
+        if isinstance(self.control, set):
+            return x in self.control
         if isinstance(self.control, int):
             return x == self.control
 
@@ -151,8 +156,8 @@ class InRange(FilterCondition):
         right_closed: bool - If True, the range includes the upper bound (x <= upper_bound).
     """
     def __init__(self, lower_bound, upper_bound, left_closed=False, right_closed=False):
-        if not isinstance(lower_bound, int) or not isinstance(upper_bound, int):
-            raise SyntaxError("parameters not of type int")
+        if not isinstance(lower_bound, Number) or not isinstance(upper_bound, Number):
+            raise ValueError("parameter is not a number")
 
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
