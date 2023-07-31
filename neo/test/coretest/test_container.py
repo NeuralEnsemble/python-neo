@@ -121,6 +121,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertRaises(TypeError, container.filter, "foo")
 
     def test_filter_results(self):
+        '''
+            Tests FilterConditions correct results
+        '''
         self.assertEqual(self.st1.annotations,
                          self.seg.filter(test=filters.Equals(5))[0].annotations)
         self.assertEqual(self.st1.annotations,
