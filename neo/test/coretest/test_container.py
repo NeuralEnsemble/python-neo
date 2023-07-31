@@ -123,9 +123,9 @@ class TestContainerNeo(unittest.TestCase):
         self.assertEqual(st1.annotations,
                          seg.filter(test=filters.InRange(1, 5))[0].annotations)
         self.assertEqual(st1.annotations,
-                         seg.filter(test=filters.GreaterThanEquals(5))[0].annotations)
+                         seg.filter(test=filters.GreaterThanOrEquals(5))[0].annotations)
         self.assertEqual(st1.annotations,
-                         seg.filter(test=filters.LessThanEquals(5))[0].annotations)
+                         seg.filter(test=filters.LessThanOrEquals(5))[0].annotations)
 
     def test_filter_equal(self):
         '''
@@ -195,9 +195,9 @@ class TestContainerNeo(unittest.TestCase):
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
 
-        self.assertEqual(0, len(seg.filter(test=filters.LessThanEquals(4))))
-        self.assertEqual(1, len(seg.filter(test=filters.LessThanEquals(5))))
-        self.assertEqual(2, len(seg.filter(test=filters.LessThanEquals(6))))
+        self.assertEqual(0, len(seg.filter(test=filters.LessThanOrEquals(4))))
+        self.assertEqual(1, len(seg.filter(test=filters.LessThanOrEquals(5))))
+        self.assertEqual(2, len(seg.filter(test=filters.LessThanOrEquals(6))))
 
     def test_filter_greater_than(self):
         '''
@@ -229,9 +229,9 @@ class TestContainerNeo(unittest.TestCase):
         seg.spiketrains.append(st1)
         seg.spiketrains.append(st2)
 
-        self.assertEqual(0, len(seg.filter(test=filters.GreaterThanEquals(7))))
-        self.assertEqual(1, len(seg.filter(test=filters.GreaterThanEquals(6))))
-        self.assertEqual(2, len(seg.filter(test=filters.GreaterThanEquals(5))))
+        self.assertEqual(0, len(seg.filter(test=filters.GreaterThanOrEquals(7))))
+        self.assertEqual(1, len(seg.filter(test=filters.GreaterThanOrEquals(6))))
+        self.assertEqual(2, len(seg.filter(test=filters.GreaterThanOrEquals(5))))
 
     def test_filter_is_in(self):
         '''

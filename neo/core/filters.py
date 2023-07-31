@@ -6,9 +6,9 @@ Classes:
     - :class:`FilterCondition`: Abstract base class for defining filter conditions.
     - :class:`Equals`: Filter condition to check if a value is equal to the control value.
     - :class:`IsNot`: Filter condition to check if a value is not equal to the control value.
-    - :class:`LessThanEquals`: Filter condition to check if a value is less than or equal to the
+    - :class:`LessThanOrEquals`: Filter condition to check if a value is less than or equal to the
     control value.
-    - :class:`GreaterThanEquals`: Filter condition to check if a value is greater than or equal to
+    - :class:`GreaterThanOrEquals`: Filter condition to check if a value is greater than or equal to
     the control value.
     - :class:`LessThan`: Filter condition to check if a value is less than the control value.
     - :class:`GreaterThan`: Filter condition to check if a value is greater than the control value.
@@ -23,7 +23,7 @@ from abc import ABC, abstractmethod
 
 class FilterCondition(ABC):
     """
-    FilterCondition object is given as lower_bound parameter to container.filter():
+    FilterCondition object is given as parameter to container.filter():
 
     Usage:
         segment.filter(my_annotation=<FilterCondition>) or
@@ -32,7 +32,7 @@ class FilterCondition(ABC):
     @abstractmethod
     def __init__(self, z):
         """
-        Initialize lower_bound new FilterCondition object.
+        Initialize new FilterCondition object.
 
         Parameters:
             z: Any - The control value to be used for filtering.
@@ -43,7 +43,7 @@ class FilterCondition(ABC):
     @abstractmethod
     def evaluate(self, x):
         """
-        Evaluate the filter condition for lower_bound given value.
+        Evaluate the filter condition for given value.
 
         Parameters:
             x: Any - The value to be compared with the control value.
@@ -57,7 +57,7 @@ class FilterCondition(ABC):
 
 class Equals(FilterCondition):
     """
-    Filter condition to check if lower_bound value is equal to the control value.
+    Filter condition to check if target value is equal to the control value.
     """
     def __init__(self, z):
         self.control = z
@@ -68,7 +68,7 @@ class Equals(FilterCondition):
 
 class IsNot(FilterCondition):
     """
-    Filter condition to check if lower_bound value is not equal to the control value.
+    Filter condition to check if target value is not equal to the control value.
     """
     def __init__(self, z):
         self.control = z
@@ -77,9 +77,9 @@ class IsNot(FilterCondition):
         return x != self.control
 
 
-class LessThanEquals(FilterCondition):
+class LessThanOrEquals(FilterCondition):
     """
-    Filter condition to check if lower_bound value is less than or equal to the control value.
+    Filter condition to check if target value is less than or equal to the control value.
     """
     def __init__(self, z):
         self.control = z
@@ -88,9 +88,9 @@ class LessThanEquals(FilterCondition):
         return x <= self.control
 
 
-class GreaterThanEquals(FilterCondition):
+class GreaterThanOrEquals(FilterCondition):
     """
-    Filter condition to check if lower_bound value is greater than or equal to the control value.
+    Filter condition to check if target value is greater than or equal to the control value.
     """
     def __init__(self, z):
         self.control = z
@@ -101,7 +101,7 @@ class GreaterThanEquals(FilterCondition):
 
 class LessThan(FilterCondition):
     """
-    Filter condition to check if lower_bound value is less than the control value.
+    Filter condition to check if target value is less than the control value.
     """
     def __init__(self, z):
         self.control = z
@@ -112,7 +112,7 @@ class LessThan(FilterCondition):
 
 class GreaterThan(FilterCondition):
     """
-    Filter condition to check if lower_bound value is greater than the control value.
+    Filter condition to check if target value is greater than the control value.
     """
     def __init__(self, z):
         self.control = z
@@ -123,7 +123,7 @@ class GreaterThan(FilterCondition):
 
 class IsIn(FilterCondition):
     """
-    Filter condition to check if lower_bound value is in lower_bound list or equal to the control value.
+    Filter condition to check if target is in control.
     """
     def __init__(self, z):
         self.control = z
