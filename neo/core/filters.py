@@ -130,11 +130,7 @@ class IsIn(FilterCondition):
         self.control = z
 
     def evaluate(self, x):
-        if isinstance(self.control, list):
-            return x in self.control
-        if isinstance(self.control, tuple):
-            return x in self.control
-        if isinstance(self.control, set):
+        if isinstance(self.control, (list, tuple, set)):
             return x in self.control
         if isinstance(self.control, int):
             return x == self.control
