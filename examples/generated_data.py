@@ -1,5 +1,7 @@
 """
-This is an example for creating simple plots from various Neo structures.
+Creating simple plots from various Neo structures
+=================================================
+
 It includes a function that generates toy data.
 """
 
@@ -56,7 +58,6 @@ def generate_block(n_segments=3, n_channels=4, n_units=3,
                 seg.spiketrains.append(train)
                 u.spiketrains.append(train)
 
-    block.create_many_to_one_relationship()
     return block
 
 

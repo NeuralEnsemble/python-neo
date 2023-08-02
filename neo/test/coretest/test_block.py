@@ -18,11 +18,12 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.block import Block
+from neo.core.segment import Segment
 from neo.core.container import filterdata
 from neo.core import SpikeTrain, AnalogSignal, Event
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_same_sub_schema)
-from neo.test.generate_datasets import random_block, simple_block
+from neo.test.generate_datasets import random_block, simple_block, random_signal
 
 
 N_EXAMPLES = 5
@@ -450,6 +451,51 @@ class TestBlock(unittest.TestCase):
                 self.assertEqual(id(sig.segment), id(segment))
             for sptr in segment.spiketrains:
                 self.assertEqual(id(sptr.segment), id(segment))
+
+    def test_segment_list(self):
+        blk = Block()
+        assert len(blk.segments) == 0
+        blk.segments.append(Segment())
+        assert len(blk.segments) == 1
+        blk.segments.extend([Segment(), Segment()])
+        assert len(blk.segments) == 3
+        blk.segments = []
+        assert len(blk.segments) == 0
+        blk.segments = [Segment()]
+        assert len(blk.segments) == 1
+        blk.segments += [Segment(), Segment()]
+        assert len(blk.segments) == 3
+
+    def test_add(self):
+        blk = self.blocks[0]
+        new_blk = simple_block()
+        n_groups_start = len(new_blk.groups)
+        for group in blk.groups:
+            assert group not in new_blk.groups
+            new_blk.add(group)
+            assert group in new_blk.groups
+        assert len(new_blk.groups) == n_groups_start + len(blk.groups)
+
+        n_segs_start = len(new_blk.segments)
+        for seg in blk.segments:
+            assert seg not in new_blk.segments
+            new_blk.add(seg)
+            assert seg in new_blk.segments
+        assert len(new_blk.segments) == n_segs_start + len(blk.segments)
+
+        # test adding multiple at once
+        blk = self.blocks[1]
+        n_groups_start = len(new_blk.groups)
+        new_blk.add(*blk.groups)
+        assert len(new_blk.groups) == n_groups_start + len(blk.groups)
+
+        n_segs_start = len(new_blk.segments)
+        new_blk.add(*blk.segments)
+        assert len(new_blk.segments) == n_segs_start + len(blk.segments)
+
+    def test_add_invalid_type_raises_Exception(self):
+        new_blk = Block()
+        self.assertRaises(TypeError, new_blk.add, random_signal())
 
 
 if __name__ == "__main__":

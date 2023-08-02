@@ -66,3 +66,11 @@ neo/test/io/neurosharemergeio.py
 files_for_testing_neo
 /venv
 /neo/test/resources
+doc/examples
+doc/*.abf
+doc/*.png
+doc/*.plx
+doc/*.nev
+doc/*.ns5
+doc/*.nix
+doc/*.nwb

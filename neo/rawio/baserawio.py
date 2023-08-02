@@ -156,7 +156,6 @@ class BaseRawIO:
 
         self.use_cache = use_cache
         if use_cache:
-            import joblib
             self.setup_cache(cache_path)
         else:
             self._cache = None
@@ -551,6 +550,18 @@ class BaseRawIO:
                               np.ndarray and are contiguous
         :return: array with raw signal samples
         """
+        
+        signal_streams = self.header['signal_streams']
+        signal_channels = self.header['signal_channels']
+        no_signal_streams = signal_streams.size == 0
+        no_channels = signal_channels.size == 0
+        if no_signal_streams or no_channels:
+            error_message = (
+                "get_analogsignal_chunk can't be called on a file with no signal streams or channels."
+                "Double check that your file contains signal streams and channels."
+            )
+            raise AttributeError(error_message)
+                
         stream_index = self._get_stream_index_from_arg(stream_index)
         channel_indexes = self._get_channel_indexes(stream_index, channel_indexes,
                                                     channel_names, channel_ids)
@@ -580,7 +591,7 @@ class BaseRawIO:
                                     channel_indexes=None, channel_names=None, channel_ids=None):
         """
         Rescale a chunk of raw signals which are provided as a Numpy array. These are normally
-        returned by a call to get_analog_signal_chunk. The channels are specified either by
+        returned by a call to get_analogsignal_chunk. The channels are specified either by
         channel_names, if provided, otherwise by channel_ids, if provided, otherwise by
         channel_indexes, if provided, otherwise all channels are selected.
 
@@ -697,7 +708,10 @@ class BaseRawIO:
         return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
     def setup_cache(self, cache_path, **init_kargs):
-        import joblib
+        try:
+            import joblib
+        except ImportError:
+            raise ImportError("Using the RawIO cache needs joblib to be installed")
 
         if self.rawmode in ('one-file', 'multi-file'):
             resource_name = self.filename

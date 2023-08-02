@@ -1,0 +1,9 @@
+docutils<0.18
+numpy>=1.16.1
+quantities>=0.12.1
+sphinx-inline-tabs
+sphinx-gallery
+ipython
+matplotlib
+nixio
+pynwb

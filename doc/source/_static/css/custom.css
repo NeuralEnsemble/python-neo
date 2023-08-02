@@ -1,0 +1,12 @@
+
+.navbar-header-items li.nav-item {
+    text-align: center;
+}
+
+html[data-theme="light"] {
+    --pst-color-inline-code: rgb(11, 96, 38);
+}
+
+html[data-theme="dark"] {
+    --pst-color-inline-code: rgb(15, 127, 51);
+}

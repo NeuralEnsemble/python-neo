@@ -34,7 +34,6 @@ Using :class:`ChannelIndex`::
 
     block = Block()
     segment = Segment()
-    segment.block = block
     block.segments.append(segment)
 
     for i in (0, 1):
@@ -55,7 +54,6 @@ Using array annotations, we annotate the channels of the :class:`AnalogSignal` d
 
     block = Block()
     segment = Segment()
-    segment.block = block
     block.segments.append(segment)
 
     for i in (0, 1):
@@ -77,7 +75,6 @@ Each :class:`ChannelIndex` also contains the list of channels on which that neur
 
     block = Block(name="probe data")
     segment = Segment()
-    segment.block = block
     block.segments.append(segment)
 
     # create 4-channel AnalogSignal with dummy data
@@ -119,7 +116,6 @@ Using :class:`ChannelView` and :class:`Group`::
 
     block = Block(name="probe data")
     segment = Segment()
-    segment.block = block
     block.segments.append(segment)
 
     # create 4-channel AnalogSignal with dummy data

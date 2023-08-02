@@ -38,7 +38,6 @@ Miscellaneous
 =============
 
     * If your IO supports several versions of a format (like ABF1, ABF2), upload to the gin.g-node.org test file repository all file versions possible. (for test coverage).
-    * :py:func:`neo.core.Block.create_many_to_one_relationship` offers a utility to complete the hierarchy when all one-to-many relationships have been created.
     * In the docstring, explain where you obtained the file format specification if it is a closed one.
     * If your IO is based on a database mapper, keep in mind that the returned object MUST be detached,
       because this object can be written to another url for copying.

@@ -129,7 +129,7 @@ class BrainwareDamIO(BaseIO):
 
         # create the objects to store other objects
         gr = Group(file_origin=self._filename)
-        
+
         # load objects into their containers
         block.groups.append(gr)
 
@@ -149,7 +149,7 @@ class BrainwareDamIO(BaseIO):
         # remove the file object
         self._fsrc = None
 
-        block.create_many_to_one_relationship()
+        block.check_relationships()
         return block
 
     # -------------------------------------------------------------------------
