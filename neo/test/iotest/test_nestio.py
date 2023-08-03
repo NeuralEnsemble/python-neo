@@ -1,14 +1,10 @@
 """
 Tests of neo.io.exampleio
 """
-
 import warnings
-
 import unittest
-
 import quantities as pq
 import numpy as np
-
 from neo.io.nestio import ColumnIO
 from neo.io.nestio import NestIO
 from neo.test.iotest.common_io_test import BaseTestIO
@@ -28,7 +24,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         - with GIDs, with time as integer
         """
         filename = self.get_local_path('nest/0gid-1time-2gex-3Vm-1261-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
         r.read_analogsignal(gid=1, t_stop=1000. * pq.ms,
                             sampling_period=pq.ms, lazy=False,
                             id_column=0, time_column=1,
@@ -39,7 +35,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
                        value_types='V_m')
 
         filename = self.get_local_path('nest/0gid-1time_in_steps-2Vm-1263-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
         r.read_analogsignal(gid=1, t_stop=1000. * pq.ms,
                             time_unit=pq.CompoundUnit('0.1*ms'),
                             sampling_period=pq.ms, lazy=False,
@@ -52,7 +48,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
                        value_types='V_m')
 
         filename = self.get_local_path('nest/0gid-1time-2Vm-1259-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
         r.read_analogsignal(gid=1, t_stop=1000. * pq.ms,
                             time_unit=pq.CompoundUnit('0.1*ms'),
                             sampling_period=pq.ms, lazy=False,
@@ -71,7 +67,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         units.
         """
         filename = self.get_local_path('nest/0time-1255-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         with self.assertRaises(ValueError):
             r.read_spiketrain(t_stop=1000. * pq.ms, lazy=False,
                                 sampling_period=pq.ms,
@@ -87,7 +83,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         """
         filename = self.get_local_path('nest/0gid-1time-2gex-3Vm-1261-0.dat')
         id_to_test = 1
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
         seg = r.read_segment(gid_list=[id_to_test],
                              t_stop=1000. * pq.ms,
                              sampling_period=pq.ms, lazy=False,
@@ -105,7 +101,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         Tests if signals are correctly stored in a segment.
         """
         filename = self.get_local_path('nest/0gid-1time-2gex-1262-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
 
         id_list_to_test = range(1, 10)
         seg = r.read_segment(gid_list=id_list_to_test,
@@ -130,7 +126,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         Tests if signals are correctly stored in a block.
         """
         filename = self.get_local_path('nest/0gid-1time-2gex-1262-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
 
         id_list_to_test = range(1, 10)
         blk = r.read_block(gid_list=id_list_to_test,
@@ -152,7 +148,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         - User specifies t_start < 1.*sampling_period
         """
         filename = self.get_local_path('nest/0gid-1time-2gex-1262-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
         with self.assertRaises(ValueError):
             r.read_segment(t_stop=1000. * pq.ms, lazy=False,
                            id_column_dat=0, time_column_dat=1)
@@ -175,7 +171,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         Test for correct t_start and t_stop values of AnalogSignalArrays.
         """
         filename = self.get_local_path('nest/0gid-1time-2gex-1262-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
 
         t_start_targ = 450. * pq.ms
         t_stop_targ = 480. * pq.ms
@@ -194,7 +190,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         Test for warning, when no time column id was provided.
         """
         filename = self.get_local_path('nest/0gid-1time-2gex-1262-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
 
         t_start_targ = 450. * pq.ms
         t_stop_targ = 460. * pq.ms
@@ -222,7 +218,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
         Test for simultaneous loading of multiple columns from dat file.
         """
         filename = self.get_local_path('nest/0gid-1time-2Vm-3Iex-4Iin-1264-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
 
         sampling_period = pq.CompoundUnit('5*ms')
         seg = r.read_segment(gid_list=[1001],
@@ -233,7 +229,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
 
     def test_single_gid(self):
         filename = self.get_local_path('nest/N1-0gid-1time-2Vm-1265-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
         anasig = r.read_analogsignal(gid=1, t_stop=1000. * pq.ms,
                                      time_unit=pq.CompoundUnit('0.1*ms'),
                                      sampling_period=pq.ms, lazy=False,
@@ -243,7 +239,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
 
     def test_no_gid(self):
         filename = self.get_local_path('nest/N1-0time-1Vm-1266-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
         anasig = r.read_analogsignal(gid=None, t_stop=1000. * pq.ms,
                                      time_unit=pq.CompoundUnit('0.1*ms'),
                                      sampling_period=pq.ms, lazy=False,
@@ -254,7 +250,7 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
 
     def test_no_gid_no_time(self):
         filename = self.get_local_path('nest/N1-0Vm-1267-0.dat')
-        r = NestIO(filename=filename, target_object='AnalogSignal')
+        r = NestIO(filenames=filename, target_object='AnalogSignal')
         anasig = r.read_analogsignal(gid=None,
                                      sampling_period=pq.ms, lazy=False,
                                      id_column=None, time_column=None,
@@ -276,14 +272,14 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         - with GIDs, with times as integers in time steps
         """
         filename = self.get_local_path('nest/0time-1255-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         r.read_spiketrain(t_start=400. * pq.ms, t_stop=500. * pq.ms, lazy=False,
                           id_column=None, time_column=0)
         r.read_segment(t_start=400. * pq.ms, t_stop=500. * pq.ms, lazy=False,
                        id_column_gdf=None, time_column_gdf=0)
 
         filename = self.get_local_path('nest/0time_in_steps-1257-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         r.read_spiketrain(t_start=400. * pq.ms, t_stop=500. * pq.ms,
                           time_unit=pq.CompoundUnit('0.1*ms'), lazy=False,
                           id_column=None, time_column=0)
@@ -292,14 +288,14 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
                        id_column_gdf=None, time_column_gdf=0)
 
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         r.read_spiketrain(gdf_id=1, t_start=400. * pq.ms, t_stop=500. * pq.ms,
                           lazy=False, id_column_gdf=0, time_column_gdf=1)
         r.read_segment(gid_list=[1], t_start=400. * pq.ms, t_stop=500. * pq.ms,
                        lazy=False, id_column_gdf=0, time_column_gdf=1)
 
         filename = self.get_local_path('nest/0gid-1time_in_steps-1258-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         r.read_spiketrain(gdf_id=1, t_start=400. * pq.ms, t_stop=500. * pq.ms,
                           time_unit=pq.CompoundUnit('0.1*ms'), lazy=False,
                           id_column=0, time_column=1)
@@ -313,7 +309,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         in time steps in the file.
         """
         filename = self.get_local_path('nest/0time_in_steps-1257-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         st = r.read_spiketrain(gdf_id=None, t_start=400. * pq.ms,
                                t_stop=500. * pq.ms,
                                time_unit=pq.CompoundUnit('0.1*ms'),
@@ -328,7 +324,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
 
         filename = self.get_local_path('nest/0gid-1time_in_steps-1258-0.gdf')
         r = NestIO(
-            filename=filename)
+            filenames=filename)
         st = r.read_spiketrain(gdf_id=1, t_start=400. * pq.ms,
                                t_stop=500. * pq.ms,
                                time_unit=pq.CompoundUnit('0.1*ms'),
@@ -347,7 +343,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         are stored as floats in the file.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         st = r.read_spiketrain(gdf_id=1, t_start=400. * pq.ms,
                                t_stop=500. * pq.ms,
                                lazy=False, id_column=0, time_column=1)
@@ -364,7 +360,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         """
         id_to_test = 1
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         seg = r.read_segment(gid_list=[id_to_test],
                              t_start=400. * pq.ms,
                              t_stop=500. * pq.ms, lazy=False,
@@ -381,7 +377,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         Tests if spiketrains are correctly stored in a segment.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
 
         id_list_to_test = range(1, 10)
         seg = r.read_segment(gid_list=id_list_to_test, t_start=400. * pq.ms,
@@ -400,7 +396,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         Tests if spiketrains can be retrieved by specifying a range of GDF IDs.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
 
         seg = r.read_segment(gid_list=(10, 39), t_start=400. * pq.ms,
                              t_stop=500. * pq.ms, lazy=False,
@@ -413,7 +409,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         the first one of the range.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
 
         seg = r.read_segment(gid_list=(10, 10), t_start=400. * pq.ms,
                              t_stop=500. * pq.ms, lazy=False,
@@ -429,7 +425,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         Tests if correct annotation is added when reading a spike train.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         ID = 7
         st = r.read_spiketrain(gdf_id=ID, t_start=400. * pq.ms,
                                t_stop=500. * pq.ms)
@@ -440,7 +436,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         Tests if correct annotation is added when reading a segment.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         IDs = (5, 11)
         sts = r.read_segment(gid_list=(5, 11), t_start=400. * pq.ms,
                              t_stop=500. * pq.ms)
@@ -452,7 +448,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         Tests if custom annotation is correctly added.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         st = r.read_spiketrain(gdf_id=0, t_start=400. * pq.ms,
                                t_stop=500. * pq.ms,
                                layer='L23', population='I')
@@ -468,7 +464,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         - User does not make any specifications.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         with self.assertRaises(ValueError):
             r.read_segment(t_start=400. * pq.ms, t_stop=500. * pq.ms,
                            lazy=False,
@@ -481,7 +477,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         Tests if the t_start and t_stop arguments are correctly processed.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
 
         t_stop_targ = 490. * pq.ms
         t_start_targ = 410. * pq.ms
@@ -502,7 +498,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         Tests if undefined t_start, i.e., t_start=None raises error.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         with self.assertRaises(ValueError):
             r.read_spiketrain(gdf_id=1, t_stop=500. * pq.ms, lazy=False,
                               id_column=0, time_column=1)
@@ -515,7 +511,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         Tests if undefined t_stop, i.e., t_stop=None raises error.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         with self.assertRaises(ValueError):
             r.read_spiketrain(gdf_id=1, t_start=400. * pq.ms, lazy=False,
                               id_column=0, time_column=1)
@@ -529,7 +525,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         empty list) raises error.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         with self.assertRaises(ValueError):
             r.read_spiketrain(gdf_id=[], t_start=400. * pq.ms,
                               t_stop=500. * pq.ms)
@@ -545,7 +541,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         returned.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         seg = r.read_segment(gid_list=[], t_start=400.4 * pq.ms,
                              t_stop=400.5 * pq.ms)
         for st in seg.spiketrains:
@@ -557,7 +553,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
         time range.
         """
         filename = self.get_local_path('nest/0gid-1time-1256-0.gdf')
-        r = NestIO(filename=filename)
+        r = NestIO(filenames=filename)
         st = r.read_spiketrain(gdf_id=0, t_start=400. * pq.ms,
                                t_stop=410. * pq.ms)
         self.assertEqual(st.size, 0)
@@ -600,7 +596,7 @@ class TestColumnIO(BaseTestIO, unittest.TestCase):
     def setUp(self):
         BaseTestIO.setUp(self)
         filename = self.get_local_path('nest/0gid-1time-2Vm-3gex-4gin-1260-0.dat')
-        self.testIO = ColumnIO(filename=filename)
+        self.testIO = ColumnIO(filenames=filename)
 
     def test_no_arguments(self):
         """
