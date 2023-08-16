@@ -35,6 +35,7 @@ Classes:
 * :attr:`ElanIO`
 * :attr:`IgorIO`
 * :attr:`IntanIO`
+* :attr:`IntanBinaryIO`
 * :attr:`MEArecIO`
 * :attr:`KlustaKwikIO`
 * :attr:`KwikIO`
@@ -148,6 +149,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.IntanIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.IntanBinaryIO
 
     .. autoattribute:: extensions
 
@@ -314,6 +319,7 @@ from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
 from neo.io.intanio import IntanIO
+from neo.io.intanrawio import IntanRawIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.mearecio import MEArecIO
@@ -368,6 +374,7 @@ iolist = [
     ExampleIO,
     IgorIO,
     IntanIO,
+    IntanRawIO,
     KlustaKwikIO,
     KwikIO,
     MEArecIO,
