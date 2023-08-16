@@ -90,6 +90,9 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.IntanBinaryRawIO
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.MaxwellRawIO
 
     .. autoattribute:: extensions
@@ -189,6 +192,7 @@ from neo.rawio.edfrawio import EDFRawIO
 from neo.rawio.elanrawio import ElanRawIO
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
+from neo.rawio.intanbinaryrawio import IntanBinaryRawIO
 from neo.rawio.maxwellrawio import MaxwellRawIO
 from neo.rawio.mearecrawio import MEArecRawIO
 from neo.rawio.medrawio import MedRawIO
@@ -223,6 +227,7 @@ rawiolist = [
     EDFRawIO,
     ElanRawIO,
     IntanRawIO,
+    IntanBinaryRawIO,
     MicromedRawIO,
     MaxwellRawIO,
     MEArecRawIO,
