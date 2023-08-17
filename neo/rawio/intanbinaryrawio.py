@@ -71,13 +71,13 @@ class IntanBinaryRawIO(BaseRawIO):
         self._global_info, self._ordered_channels, data_dtype, self._block_size = read_rhd(header_file)
 
         self._raw_data ={}
-        for key, value in data_dtype.items():
+        for stream_index, sub_datatype in data_dtype.items():
             if stream_mode:
-                self._raw_data[key] = np.memmap(raw_file_dict[key], dtype=value, mode='r')
+                self._raw_data[stream_index] = np.memmap(raw_file_dict[stream_index], dtype=sub_datatype, mode='r')
             else:
-                self._raw_data[key] = []
-                for channel_index, datatype in enumerate(value):
-                    self._raw_data[key].append(np.memmap(raw_file_dict[key][channel_index], dtype=[datatype], mode='r'))
+                self._raw_data[stream_index] = []
+                for channel_index, datatype in enumerate(sub_datatype):
+                    self._raw_data[stream_index].append(np.memmap(raw_file_dict[stream_index][channel_index], dtype=[datatype], mode='r'))
 
         # check timestamp continuity
         if stream_mode:
@@ -203,6 +203,8 @@ class IntanBinaryRawIO(BaseRawIO):
 
 ############
 # RHD Zone for Binary Files
+
+# For One File Per Signal
 possible_raw_files = ['amplifier.dat', 
                       'auxiliary.dat', 
                       'supply.dat',
@@ -210,7 +212,7 @@ possible_raw_files = ['amplifier.dat',
                       'digitalin.dat', 
                       'digitalout.dat',]
 
-
+# For One File Per Channel
 possible_raw_file_prefixes = ['amp', 'aux', 'vdd', 'board-ANALOG', 'board-DIGITAL-IN', 'board-DIGITAL-OUT']
 
 def create_raw_file_stream(dirname):
@@ -266,7 +268,7 @@ def read_rhd(filename):
 
         # read channel group and channel header
         channels_by_type = {k: [] for k in [0, 1, 2, 3, 4, 5]}
-        data_dtype = {k: [] for k in range(7)}
+        data_dtype = {k: [] for k in range(7)} # 5 channels + 6 is for time stamps
         for g in range(global_info['nb_signal_group']):
             group_info = read_variable_header(f, rhd_signal_group_header)
 
@@ -293,7 +295,7 @@ def read_rhd(filename):
     else:
         data_dtype[6] = [('timestamp','uint32', BLOCK_SIZE)]
 
-    # 0: RHD2000 amplifier channel stored in amplifier.dat
+    # 0: RHD2000 amplifier channel stored in amplifier.dat/amp-*
     for chan_info in channels_by_type[0]:
         name = chan_info['native_channel_name']
         chan_info['sampling_rate'] = sr
@@ -303,7 +305,7 @@ def read_rhd(filename):
         ordered_channels.append(chan_info)
         data_dtype[0] += [(name, 'uint16', BLOCK_SIZE)]
 
-    # 1: RHD2000 auxiliary input channel stored in auxiliary.dat
+    # 1: RHD2000 auxiliary input channel stored in auxiliary.dat/aux-*
     for chan_info in channels_by_type[1]:
         name = chan_info['native_channel_name']
         chan_info['sampling_rate'] = sr / 4.
@@ -313,7 +315,7 @@ def read_rhd(filename):
         ordered_channels.append(chan_info)
         data_dtype[1] += [(name,'uint16', BLOCK_SIZE // 4)]
 
-    # 2: RHD2000 supply voltage channel stored in supply.dat
+    # 2: RHD2000 supply voltage channel stored in supply.dat/vdd-*
     for chan_info in channels_by_type[2]:
         name = chan_info['native_channel_name']
         chan_info['sampling_rate'] = sr / BLOCK_SIZE
@@ -334,7 +336,7 @@ def read_rhd(filename):
     #    ordered_channels.append(chan_info)
     #    data_dtype += [(name,'int16',)]
 
-    # 3: USB board ADC input channel stored in analogin.dat
+    # 3: USB board ADC input channel stored in analogin.dat/board-ANALOG-*
     for chan_info in channels_by_type[3]:
         name = chan_info['native_channel_name']
         chan_info['sampling_rate'] = sr
@@ -351,8 +353,8 @@ def read_rhd(filename):
         ordered_channels.append(chan_info)
         data_dtype[3]+= [(name,'uint16', BLOCK_SIZE)]
 
-    # 4: USB board digital input channel stored in digitalin.dat
-    # 5: USB board digital output channel stored in digitalout.dat
+    # 4: USB board digital input channel stored in digitalin.dat/board-DIGITAL-IN-*
+    # 5: USB board digital output channel stored in digitalout.dat/board-DIGITAL-OUT-*
     for sig_type in [4, 5]:
         # at the moment theses channel are not in sig channel list
         # but they are in the raw memamp
