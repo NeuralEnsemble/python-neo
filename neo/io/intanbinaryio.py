@@ -2,7 +2,7 @@ from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.intanbinaryrawio import IntanBinaryRawIO
 
 
-class IntanIO(IntanBinaryRawIO, BaseFromRaw):
+class IntanBinaryIO(IntanBinaryRawIO, BaseFromRaw):
     __doc__ = IntanBinaryRawIO.__doc__
     _prefered_signal_group_mode = 'group-by-same-units'
 

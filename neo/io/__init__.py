@@ -319,7 +319,7 @@ from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
 from neo.io.intanio import IntanIO
-from neo.io.intanrawio import IntanRawIO
+from neo.io.intanbinaryio import IntanBinaryIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.mearecio import MEArecIO
@@ -374,7 +374,7 @@ iolist = [
     ExampleIO,
     IgorIO,
     IntanIO,
-    IntanRawIO,
+    IntanBinaryIO,
     KlustaKwikIO,
     KwikIO,
     MEArecIO,
