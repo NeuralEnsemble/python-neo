@@ -1,8 +1,8 @@
 """
 Support for Intan's binary file mode which is turned on by setting the save
-option in Intan to 'One File Per Signal Type'. The reader for this format
-is for rhd only since it uses the rhd header. Need to confirm if rhs can 
-also use this save format.
+option in Intan to 'One File Per Signal Type' or 'One File Per Channel'. 
+The reader for this format is for rhd only since it uses the rhd header. 
+Need to confirm if rhs can also use this save format.
 
 RHD supported 1.x, 2.x, and 3.0, 3.1, 3.2
 See:
@@ -28,7 +28,14 @@ from packaging.version import Version as V
 
 class IntanBinaryRawIO(BaseRawIO):
     """
-    
+    Class for processing Intan Data when saved in binary format. Requires an
+    `info.rhd` as well one file per signal stream or one file per channel
+
+    Parameters
+    ----------
+    dirname: str, Path
+        The root directory containing the info.rhd file
+
     """
     extensions = ['rhd', 'dat']
     rawmode = 'one-dir'
@@ -43,17 +50,40 @@ class IntanBinaryRawIO(BaseRawIO):
     def _parse_header(self):
 
         dir_path = Path(self.dirname)
+        assert dir_path.is_dir(), 'IntanBinaryRawIO requires the root directory containing info.rhd'
+        
         header_file = dir_path / 'info.rhd'
-        raw_file_dict = create_raw_file_dict(dir_path)
+
+        for file in possible_raw_files:
+            if (dir_path / file).is_file():
+                stream_mode = True
+                break
+            else:
+                stream_mode = False
+
+        self.stream_mode = stream_mode
+
+        if stream_mode:
+            raw_file_dict = create_raw_file_stream(dir_path)
+        else:
+            raw_file_dict = create_raw_file_channel(dir_path)
 
         self._global_info, self._ordered_channels, data_dtype, self._block_size = read_rhd(header_file)
 
         self._raw_data ={}
         for key, value in data_dtype.items():
-            self._raw_data[key] = np.memmap(raw_file_dict[key], dtype=value, mode='r')
-        # check timestamp continuity
+            if stream_mode:
+                self._raw_data[key] = np.memmap(raw_file_dict[key], dtype=value, mode='r')
+            else:
+                self._raw_data[key] = []
+                for channel_index, datatype in enumerate(value):
+                    self._raw_data[key].append(np.memmap(raw_file_dict[key][channel_index], dtype=[datatype], mode='r'))
 
-        timestamp = self._raw_data[6]['timestamp'].flatten() 
+        # check timestamp continuity
+        if stream_mode:
+            timestamp = self._raw_data[6]['timestamp'].flatten()
+        else:
+            timestamp = self._raw_data[6][0]['timestamp'].flatten()
         assert np.all(np.diff(timestamp) == 1), 'timestamp have gaps'
 
         # signals
@@ -79,7 +109,11 @@ class IntanBinaryRawIO(BaseRawIO):
             signal_streams['name'][stream_index] = stream_type_to_name.get(int(stream_id), '')
 
         self._max_sampling_rate = np.max(signal_channels['sampling_rate'])
-        self._max_sigs_length = max([raw_data.size * self._block_size for raw_data in self._raw_data.values()])
+
+        if stream_mode:
+            self._max_sigs_length = max([raw_data.size * self._block_size for raw_data in self._raw_data.values()])
+        else:
+            self._max_sigs_length = max([len(raw_data)* raw_data[0].size * self._block_size for raw_data in self._raw_data.values()])
 
         # No events
         event_channels = []
@@ -114,7 +148,10 @@ class IntanBinaryRawIO(BaseRawIO):
         signal_channels = self.header['signal_channels'][mask]
         channel_names = signal_channels['name']
         chan_name0 = channel_names[0]
-        size = self._raw_data[stream_index][chan_name0].size
+        if self.stream_mode:
+            size = self._raw_data[stream_index][chan_name0].size
+        else:
+            size = self._raw_data[stream_index][0][chan_name0].size
         return size
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
@@ -134,8 +171,11 @@ class IntanBinaryRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(None)
         channel_names = signal_channels['name'][channel_indexes]
-
-        shape = self._raw_data[stream_index][channel_names[0]].shape
+        
+        if self.stream_mode:
+            shape = self._raw_data[stream_index][channel_names[0]].shape
+        else:
+            shape = self._raw_data[stream_index][0][channel_names[0]].shape
 
         # some channel (temperature) have 1D field so shape 1D
         # because 1 sample per block
@@ -150,7 +190,10 @@ class IntanBinaryRawIO(BaseRawIO):
 
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_names)), dtype='uint16')
         for i, chan_name in enumerate(channel_names):
-            data_chan = self._raw_data[stream_index][chan_name]
+            if self.stream_mode:
+                data_chan = self._raw_data[stream_index][chan_name]
+            else:
+                data_chan = self._raw_data[stream_index][i][chan_name]
             if len(shape) == 1:
                 sigs_chunk[:, i] = data_chan[i_start:i_stop]
             else:
@@ -167,8 +210,11 @@ possible_raw_files = ['amplifier.dat',
                       'digitalin.dat', 
                       'digitalout.dat',]
 
-def create_raw_file_dict(dirname):
 
+possible_raw_file_prefixes = ['amp', 'aux', 'vdd', 'board-ANALOG', 'board-DIGITAL-IN', 'board-DIGITAL-OUT']
+
+def create_raw_file_stream(dirname):
+    """Function for One File Per Signal Type"""
     raw_file_dict = {}
     for raw_index, raw_file in enumerate(possible_raw_files):
         if Path(dirname / raw_file).is_file():
@@ -177,12 +223,23 @@ def create_raw_file_dict(dirname):
 
     return raw_file_dict
 
+
+def create_raw_file_channel(dirname):
+    """Utility function for One File Per Channel"""
+    file_names = dirname.glob('**/*.dat')
+    files = [file for file in file_names if file.is_file()]
+    raw_file_dict = {}
+    for raw_index, prefix in enumerate(possible_raw_file_prefixes):
+        raw_file_dict[raw_index]= [file for file in files if prefix in file.name]
+    raw_file_dict[6] = [Path(dirname / 'time.dat')]
+
+    return raw_file_dict
+
     
 def read_rhd(filename):
     with open(filename, mode='rb') as f:
 
         global_info = read_variable_header(f, rhd_global_header_base)
-
         version = V('{major_version}.{minor_version}'.format(**global_info))
 
         # the header size depends on the version :-(
