@@ -326,15 +326,15 @@ def read_rhd(filename):
         data_dtype[2] += [(name, 'uint16',)]
 
     # temperature is not an official channel in the header
-    #for i in range(global_info['num_temp_sensor_channels']):
-    #    name = 'temperature_{}'.format(i)
-    #    chan_info = {'native_channel_name': name, 'signal_type': 20}
-    #    chan_info['sampling_rate'] = sr / BLOCK_SIZE
-    #    chan_info['units'] = 'Celsius'
-    #    chan_info['gain'] = 0.001
-    #    chan_info['offset'] = 0.
-    #    ordered_channels.append(chan_info)
-    #    data_dtype += [(name,'int16',)]
+    for i in range(global_info['num_temp_sensor_channels']):
+        name = 'temperature_{}'.format(i)
+        chan_info = {'native_channel_name': name, 'signal_type': 20}
+        chan_info['sampling_rate'] = sr / BLOCK_SIZE
+        chan_info['units'] = 'Celsius'
+        chan_info['gain'] = 0.001
+        chan_info['offset'] = 0.
+        ordered_channels.append(chan_info)
+        data_dtype += [(name,'int16',)]
 
     # 3: USB board ADC input channel stored in analogin.dat/board-ANALOG-*
     for chan_info in channels_by_type[3]:
