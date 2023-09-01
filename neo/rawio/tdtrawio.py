@@ -21,6 +21,8 @@ Units in this IO are not guaranteed.
 
 Author: Samuel Garcia, SummitKwan, Chadwick Boulay
 
+Alternative package for loading the tdt format:
+https://pypi.org/project/tdt
 """
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                 _spike_channel_dtype, _event_channel_dtype)
@@ -87,6 +89,9 @@ class TdtRawIO(BaseRawIO):
         elif is_tdtblock(self.dirname.parent):
             segment_names.append(str(self.dirname.stem))
             tankname = None
+        else:
+            raise ValueError(f'{self.dirname} is not a valid tdt structure. Make sure all files '
+                             f'required for a tdt block are present.')
 
         nb_segment = len(segment_names)
         if nb_segment == 0:
@@ -179,7 +184,7 @@ class TdtRawIO(BaseRawIO):
         self._sigs_t_start = {seg_index: {}
                               for seg_index in range(nb_segment)}  # key = seg_index then group_id
 
-        keep = info_channel_groups['TankEvType'] == EVTYPE_STREAM
+        keep = info_channel_groups['TankEvType'] & EVTYPE_MASK == EVTYPE_STREAM
         missing_sev_channels = []
         for stream_index, info in enumerate(info_channel_groups[keep]):
             self._sig_sample_per_chunk[stream_index] = info['NumPoints']
@@ -198,8 +203,7 @@ class TdtRawIO(BaseRawIO):
                 for seg_index, segment_name in enumerate(segment_names):
                     # get data index
                     tsq = self._tsq[seg_index]
-                    mask = ((tsq['evtype'] == EVTYPE_STREAM) | \
-                           (tsq['evtype'] == EVTYPE_STREAM_VARIANT)) & \
+                    mask = (tsq['evtype'] & EVTYPE_MASK == EVTYPE_STREAM) & \
                            (tsq['evname'] == info['StoreName']) & \
                            (tsq['channel'] == chan_id)
                     data_index = tsq[mask].copy()
@@ -570,7 +574,6 @@ EVTYPE_STRON = int('00000101', 16)  # 257
 EVTYPE_STROFF = int('00000102', 16)  # 258
 EVTYPE_SCALAR = int('00000201', 16)  # 513
 EVTYPE_STREAM = int('00008101', 16)  # 33025
-EVTYPE_STREAM_VARIANT = int('00008111', 16)  # 33041
 EVTYPE_SNIP = int('00008201', 16)  # 33281
 EVTYPE_MARK = int('00008801', 16)  # 34817
 EVTYPE_HASDATA = int('00008000', 16)  # 32768

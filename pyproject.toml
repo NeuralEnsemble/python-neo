@@ -45,6 +45,7 @@ iocache = [
 ]
 
 test = [
+    "dhn_med_py>=1.0.0",
     "pytest",
     "pytest-cov",
     # datalad   # this dependency is covered by conda (environment_testing.yml)
@@ -57,13 +58,15 @@ test = [
     "nixio",
     "matplotlib",
     "ipython",
+    "joblib>=1.0.0",
     "coverage",
     "coveralls",
     "pillow",
     "sonpy",
     "pynwb",
     "probeinterface",
-    "joblib>=1.0.0"
+    "zugbruecke>=0.2",
+    "wenv"
 ]
 
 docs = [
@@ -94,13 +97,17 @@ ced = ["sonpy"]
 nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
+med = ["dhn_med_py>=1.0.0"]
+plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32'"]
 
 all = [
     "coverage",
     "coveralls",
+    "dhn_med_py>=1.0.0",
     "h5py",
     "igor2",
     "ipython",
+    "joblib>=1.0.0",
     "klusta",
     "matplotlib",
     "nixio>=1.5.0",
@@ -113,6 +120,7 @@ all = [
     "scipy>=1.0.0",
     "sonpy",
     "tqdm",
-    "joblib>=1.0.0"
+    "wenv; sys_platform!='win32'",
+    "zugbruecke>=0.2; sys_platform!='win32'",
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable
