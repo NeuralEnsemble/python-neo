@@ -138,7 +138,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     channel_names = [ch["channel_name"] for ch in d["channels"]]
                     # if there is a sync channel and it should not be loaded,
                     # find the right channel index and slice the memmap
-                    if any(["SYNC" in ch for ch in channel_names]) and \
+                    has_sync_channel = any(["SYNC" in ch for ch in channel_names])
+                    if has_sync_channel and \
                         not self.load_sync_channel:
                         sync_channel_name = [ch for ch in channel_names if "SYNC" in ch][0]
                         sync_channel_index = channel_names.index(sync_channel_name)
@@ -150,6 +151,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                             raise NotImplementedError("SYNC channel removal is only supported "
                                                       "when the sync channel is in the last "
                                                       "position")
+                    if not has_sync_channel and self.load_sync_channel:
+                        raise ValueError("SYNC channel is not present in the recording. "
+                                         "Set load_sync_channel to False")
                     d['memmap'] = memmap_sigs
 
 

@@ -124,8 +124,16 @@ class SpikeGLXRawIO(BaseRawIO):
                 signal_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16',
                                     info['units'], info['channel_gains'][local_chan],
                                     info['channel_offsets'][local_chan], stream_id))
-            if not self.load_sync_channel:
+            if not self.load_sync_channel and info['has_sync_trace']:
                 signal_channels = signal_channels[:-1]
+                # make memmap view
+                for segment_index in range(nb_segment):
+                    if (segment_index, stream_name) in self._memmaps:
+                        memmap = self._memmaps[(segment_index, stream_name)]
+                        self._memmaps[(segment_index, stream_name)] = memmap[:, :-1]
+            elif self.load_sync_channel and not info['has_sync_trace']:
+                raise ValueError("SYNC channel is not present in the recording. "
+                                 "Set load_sync_channel to False")
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -201,25 +209,29 @@ class SpikeGLXRawIO(BaseRawIO):
                                 stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
         memmap = self._memmaps[seg_index, stream_id]
+
+        # since we cut the memmap, we can simplify the channel selection
         if channel_indexes is None:
-            if self.load_sync_channel:
-                channel_selection = slice(None)
-            else:
-                channel_selection = slice(-1)
+            channel_selection = slice(None)
+            # if self.load_sync_channel:
+            #     channel_selection = slice(None)
+            # else:
+            #     channel_selection = slice(-1)
         elif isinstance(channel_indexes, slice):
-            if self.load_sync_channel:
-                # simple
-                channel_selection = channel_indexes
-            else:
-                # more tricky because negative
-                sl_start = channel_indexes.start
-                sl_stop = channel_indexes.stop
-                sl_step = channel_indexes.step
-                if sl_stop is not None and sl_stop < 0:
-                    sl_stop = sl_stop - 1
-                elif sl_stop is None:
-                    sl_stop = -1
-                channel_selection = slice(sl_start, sl_stop, sl_step)
+            channel_selection = channel_indexes
+            # if self.load_sync_channel:
+            #     # simple
+            #     channel_selection = channel_indexes
+            # else:
+            #     # more tricky because negative
+            #     sl_start = channel_indexes.start
+            #     sl_stop = channel_indexes.stop
+            #     sl_step = channel_indexes.step
+            #     if sl_stop is not None and sl_stop < 0:
+            #         sl_stop = sl_stop - 1
+            #     elif sl_stop is None:
+            #         sl_stop = -1
+            #     channel_selection = slice(sl_start, sl_stop, sl_step)
         elif not isinstance(channel_indexes, slice):
             if np.all(np.diff(channel_indexes) == 1):
                 # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
@@ -372,6 +384,7 @@ def extract_stream_info(meta_file, meta):
     """Extract info from the meta dict"""
 
     num_chan = int(meta['nSavedChans'])
+    ap, lf, sy = [int(s) for s in meta["snsApLfSy"].split(",")]
     fname = Path(meta_file).stem
     run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
     
@@ -447,5 +460,6 @@ def extract_stream_info(meta_file, meta):
     info['channel_names'] = [txt.split(';')[0] for txt in meta['snsChanMap']]
     info['channel_gains'] = channel_gains
     info['channel_offsets'] = np.zeros(info['num_chan'])
+    info['has_sync_trace'] = sy == 1
 
     return info
