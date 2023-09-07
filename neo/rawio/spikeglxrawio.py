@@ -88,7 +88,6 @@ class SpikeGLXRawIO(BaseRawIO):
         # sort stream_name by higher sampling rate first
         srates = {info['stream_name']: info['sampling_rate'] for info in self.signals_info_list}
         stream_names = sorted(list(srates.keys()), key=lambda e: srates[e])[::-1]
-
         nb_segment = np.unique([info['seg_index'] for info in self.signals_info_list]).size
 
         self._memmaps = {}
@@ -124,14 +123,8 @@ class SpikeGLXRawIO(BaseRawIO):
                 signal_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16',
                                     info['units'], info['channel_gains'][local_chan],
                                     info['channel_offsets'][local_chan], stream_id))
-            if not self.load_sync_channel and info['has_sync_trace']:
-                signal_channels = signal_channels[:-1]
-                # make memmap view
-                for segment_index in range(nb_segment):
-                    if (segment_index, stream_name) in self._memmaps:
-                        memmap = self._memmaps[(segment_index, stream_name)]
-                        self._memmaps[(segment_index, stream_name)] = memmap[:, :-1]
-            elif self.load_sync_channel and not info['has_sync_trace']:
+            # check sync channel validity
+            if self.load_sync_channel and not info['has_sync_trace']:
                 raise ValueError("SYNC channel is not present in the recording. "
                                  "Set load_sync_channel to False")
 
@@ -209,6 +202,12 @@ class SpikeGLXRawIO(BaseRawIO):
                                 stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
         memmap = self._memmaps[seg_index, stream_id]
+        stream_name = self.header['signal_streams']['name'][stream_index]
+
+        # take care of sync channel
+        info = self.signals_info_dict[0, stream_name]
+        if not self.load_sync_channel and info['has_sync_trace']:
+            memmap = memmap[:, :-1]
 
         # since we cut the memmap, we can simplify the channel selection
         if channel_indexes is None:
