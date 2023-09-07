@@ -137,9 +137,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                                             order='C', mode='r').reshape(-1, num_channels)
                     channel_names = [ch["channel_name"] for ch in info["channels"]]
 
-                    # check sync channel vlaidity
+                    # check sync channel validity (only for AP and LF)
                     has_sync_channel = any(["SYNC" in ch for ch in channel_names])
-                    if not has_sync_channel and self.load_sync_channel:
+                    if not has_sync_channel and self.load_sync_channel and "NI-DAQ" not in info["stream_name"]:
                         raise ValueError("SYNC channel is not present in the recording. "
                                          "Set load_sync_channel to False")
                     info['memmap'] = memmap_sigs
@@ -509,7 +509,7 @@ def explore_folder(dirname, experiment_names=None):
 
             if (recording_folder / 'continuous').exists() and len(rec_structure['continuous']) > 0:
                 recording['streams']['continuous'] = {}
-                for d in rec_structure['continuous']:
+                for info in rec_structure['continuous']:
                     # when multi Record Node the stream name also contains
                     # the node name to make it unique
                     oe_stream_name = Path(info["folder_name"]).name # remove trailing slash
@@ -534,7 +534,7 @@ def explore_folder(dirname, experiment_names=None):
                     t_start = timestamp0 / info['sample_rate']
 
                     # TODO for later : gap checking
-                    signal_stream = d.copy()
+                    signal_stream = info.copy()
                     signal_stream['raw_filename'] = str(raw_filename)
                     signal_stream['dtype'] = 'int16'
                     signal_stream['timestamp0'] = timestamp0
@@ -544,11 +544,11 @@ def explore_folder(dirname, experiment_names=None):
 
             if (root / 'events').exists() and len(rec_structure['events']) > 0:
                 recording['streams']['events'] = {}
-                for d in rec_structure['events']:
+                for info in rec_structure['events']:
                     oe_stream_name = Path(info["folder_name"]).name # remove trailing slash
                     stream_name = node_name + '#' + oe_stream_name
 
-                    event_stream = d.copy()
+                    event_stream = info.copy()
                     for name in _possible_event_stream_names:
                         npy_filename = root / 'events' / info['folder_name'] / f'{name}.npy'
                         if npy_filename.is_file():
