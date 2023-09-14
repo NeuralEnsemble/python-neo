@@ -853,7 +853,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_float(self):
         '''test to make sure float type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.float_)
+        value = np.array([1, 2, 3, 4, 5], dtype=np.float64)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1041,7 +1041,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_float(self):
         '''test to make sure float type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.float_)
+        value = np.array(99, dtype=np.float64)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)

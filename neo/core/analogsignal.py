@@ -718,7 +718,7 @@ class AnalogSignal(BaseSignal):
         if padding is not False:
             logger.warning('Signals will be padded using {}.'.format(padding))
             if padding is True:
-                padding = np.NaN * units
+                padding = np.nan * units
             if isinstance(padding, pq.Quantity):
                 padding = padding.rescale(units).magnitude
             else:

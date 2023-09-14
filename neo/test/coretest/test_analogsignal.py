@@ -1537,7 +1537,7 @@ class TestAnalogSignalCombination(unittest.TestCase):
 
         result = signal1.concatenate(signal2, overwrite=False, padding=True)
         assert_array_equal(
-            np.array([0, 1, 2, 3, np.NaN, np.NaN, np.NaN, 4, 5, 6]).reshape((-1, 1)),
+            np.array([0, 1, 2, 3, np.nan, np.nan, np.nan, 4, 5, 6]).reshape((-1, 1)),
             result.magnitude)
 
     def test_concatenate_padding_quantity(self):
