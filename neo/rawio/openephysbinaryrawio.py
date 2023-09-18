@@ -294,10 +294,16 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 for stream_index, stream_name in enumerate(sig_stream_names):
                     sig_ann = seg_ann['signals'][stream_index]
                     info = self._sig_streams[0][0][stream_index]
+                    channel_names = [ch["channel_name"] for ch in info["channels"]]
+
+                    # check sync channel validity (only for AP and LF)
+                    has_sync_channel = any(["SYNC" in ch for ch in channel_names])
                     for k in ('identifier', 'history', 'source_processor_index',
                               'recorded_processor_index'):
                         if k in info['channels'][0]:
                             values = np.array([chan_info[k] for chan_info in info['channels']])
+                            if has_sync_channel:
+                                values = values[:-1]
                             sig_ann['__array_annotations__'][k] = values
 
                 # array annotations for event channels
