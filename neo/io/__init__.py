@@ -39,6 +39,7 @@ Classes:
 * :attr:`KlustaKwikIO`
 * :attr:`KwikIO`
 * :attr:`MaxwellIO`
+* :attr:`MedIO`
 * :attr:`MicromedIO`
 * :attr:`NeoMatlabIO`
 * :attr:`NestIO`
@@ -53,6 +54,7 @@ Classes:
 * :attr:`PhyIO`
 * :attr:`PickleIO`
 * :attr:`PlexonIO`
+* :attr:`Plexon2IO`
 * :attr:`RawBinarySignalIO`
 * :attr:`RawMCSIO`
 * :attr:`Spike2IO`
@@ -164,6 +166,10 @@ Classes:
 .. autoclass:: neo.io.MaxwellIO
 
     .. autoattribute:: extensions
+    
+.. autoclass:: neo.io.MedIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.MicromedIO
 
@@ -218,6 +224,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.PlexonIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.Plexon2IO
 
     .. autoattribute:: extensions
 
@@ -308,6 +318,7 @@ from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.mearecio import MEArecIO
 from neo.io.maxwellio import MaxwellIO
+from neo.io.medio import MedIO
 from neo.io.micromedio import MicromedIO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
@@ -322,6 +333,7 @@ from neo.io.openephysbinaryio import OpenEphysBinaryIO
 from neo.io.phyio import PhyIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
+from neo.io.plexon2io import Plexon2IO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
@@ -360,6 +372,7 @@ iolist = [
     KwikIO,
     MEArecIO,
     MaxwellIO,
+    MedIO,
     MicromedIO,
     NixIO,
     NixIOFr,
@@ -375,6 +388,7 @@ iolist = [
     PhyIO,
     PickleIO,
     PlexonIO,
+    Plexon2IO,
     RawBinarySignalIO,
     RawMCSIO,
     Spike2IO,
@@ -451,8 +465,23 @@ def list_candidate_ios(file_or_folder, ignore_patterns=['*.ini', 'README.txt', '
     # if only file prefix was provided, e.g /mydatafolder/session1-
     # to select all files sharing the `session1-` prefix
     elif file_or_folder.parent.exists():
-        filenames = file_or_folder.parent.glob(file_or_folder.name + '*')
+        filenames = list(file_or_folder.parent.glob(file_or_folder.name + '*'))
+        # if filenames empty and suffix is provided then non-existent file
+        # may be written in current dir. So run check for io
+        if len(filenames)==0 and file_or_folder.suffix:
+            suffix = file_or_folder.suffix[1:].lower()
+            if suffix not in io_by_extension:
+                raise ValueError(f'{suffix} is not a supported format of any IO.')
+            return io_by_extension[suffix]
 
+    # If non-existent file in non-existent dir is given check if this 
+    # structure could be created with an io writing the file
+    elif file_or_folder.suffix:
+        suffix = file_or_folder.suffix[1:].lower()
+        if suffix not in io_by_extension:
+            raise ValueError(f'{suffix} is not a supported format of any IO.')
+        return io_by_extension[suffix]
+    
     else:
         raise ValueError(f'{file_or_folder} does not contain data files of a supported format')
 

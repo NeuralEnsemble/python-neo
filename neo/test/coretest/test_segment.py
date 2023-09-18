@@ -642,6 +642,37 @@ class TestSegment(unittest.TestCase):
                 for child in getattr(seg1_copy, childtype, []):
                     self.assertEqual(id(child.segment), id(seg1_copy))
 
+    def test_add(self):
+        seg = Segment()
+
+        reader = ExampleRawIO(filename='my_filename.fake')
+        reader.parse_header()
+
+        proxy_anasig = AnalogSignalProxy(rawio=reader,
+                                        stream_index=0, inner_stream_channels=None,
+                                        block_index=0, seg_index=0)
+        seg.add(proxy_anasig)
+        assert len(seg.analogsignals) == 1
+
+        proxy_st = SpikeTrainProxy(rawio=reader, spike_channel_index=0,
+                                   block_index=0, seg_index=0)
+        seg.add(proxy_st)
+        assert len(seg.spiketrains) == 1
+
+        proxy_event = EventProxy(rawio=reader, event_channel_index=0,
+                                 block_index=0, seg_index=0)
+        seg.add(proxy_event)
+        assert len(seg.events) == 1
+
+        proxy_epoch = EpochProxy(rawio=reader, event_channel_index=1,
+                                 block_index=0, seg_index=0)
+        seg.add(proxy_epoch)
+        assert len(seg.epochs) == 1
+
+    def test_add_invalid_type_raises_Exception(self):
+        seg = Segment()
+        self.assertRaises(TypeError, seg.add, Block())
+
 
 if __name__ == "__main__":
     unittest.main()
