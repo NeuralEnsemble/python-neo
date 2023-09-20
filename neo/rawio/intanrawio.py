@@ -42,14 +42,13 @@ class IntanRawIO(BaseRawIO):
     4: 'USB board digital input channel',
     5: 'USB board digital output channel'
     
-    Due to the structure of the digital input and output 
-    channels these can be accessed as one long vector where the `digital-in` channel
-    is given by the magnitude of the nonzero values (e.g. channel 1: array of 0s, 1s, 
-    channel 2: array of 0s, 2s, etc).
+    Due to the structure of the digital input and output channels these can be accessed 
+    as one long vector, which must be post-processed.
     
     Parameters
-    ===============
-    filename: str of filename or full filepath
+    ----------
+    filename: str
+       name of the 'rhd' or 'rhs' data file
     
     
     """
