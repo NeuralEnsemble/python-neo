@@ -31,7 +31,6 @@ class IntanRawIO(BaseRawIO):
     check for the file extension and will gather the header information based on the
     extension. Additionally it functions with RHS v 1.0 and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
     3.0, and 3.1 files.
-    
     Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
     depending on the port in which they were recorded along with the following
     additional channels.
@@ -40,10 +39,8 @@ class IntanRawIO(BaseRawIO):
     3: 'USB board ADC input channel',
     4: 'USB board digital input channel',
     5: 'USB board digital output channel'
-    
     Due to the structure of the digital input and output channels these can be accessed
     as one long vector, which must be post-processed.
-    
     Parameters
     ----------
     filename: str
