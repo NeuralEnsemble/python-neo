@@ -1163,7 +1163,7 @@ class BlackrockRawIO(BaseRawIO):
                 raw_event_data['timestamp'][mask_handled][1:] < raw_event_data['timestamp'][mask_handled][:-1]
             )[0] + 1
             jump_ids = np.where(mask_handled)[0][jump_ids_handled]  # jump ids in full set of events (incl. unhandled)
-            overlap = np.in1d(jump_ids, reset_ev_ids)
+            overlap = np.isin(jump_ids, reset_ev_ids)
             if not all(overlap):
                 # additional resets occurred without a reset event being stored
                 additional_ids = jump_ids[np.invert(overlap)]
@@ -2002,7 +2002,7 @@ class BlackrockRawIO(BaseRawIO):
         a 2.3 nev file.
         """
         # digital events
-        if not np.all(np.in1d(data['packet_insertion_reason'], [1, 129])):
+        if not np.all(np.isin(data['packet_insertion_reason'], [1, 129])):
             # Blackrock spec gives reason==64 means PERIODIC, but never seen this live
             warnings.warn("Unknown event codes found", RuntimeWarning)
         event_types = {
