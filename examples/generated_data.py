@@ -27,11 +27,11 @@ def generate_block(n_segments=3, n_channels=4, n_units=3,
     # Create multiple Segments
     block.segments = [neo.Segment(index=i) for i in range(n_segments)]
     # Create multiple ChannelIndexes
-    block.channel_indexes = [neo.ChannelIndex(name='C%d' % i, index=i) for i in range(n_channels)]
+    #block.channel_indexes = [neo.ChannelIndex(name='C%d' % i, index=i) for i in range(n_channels)]
 
     # Attach multiple Units to each ChannelIndex
-    for channel_idx in block.channel_indexes:
-        channel_idx.units = [neo.Unit('U%d' % i) for i in range(n_units)]
+    #for channel_idx in block.channel_indexes:
+    #    channel_idx.units = [neo.Unit('U%d' % i) for i in range(n_units)]
 
     # Create synthetic data
     for seg in block.segments:
@@ -39,24 +39,22 @@ def generate_block(n_segments=3, n_channels=4, n_units=3,
 
         # Analog signals: Noise with a single sinewave feature
         wave = 3 * np.sin(np.linspace(0, 2 * np.pi, feature_samples))
-        for channel_idx in block.channel_indexes:
-            sig = np.random.randn(data_samples)
-            sig[feature_pos:feature_pos + feature_samples] += wave
+        sig = np.random.rand(data_samples, n_channels)
+        for channel_idx in range(n_channels):
+            sig[feature_pos:feature_pos + feature_samples, channel_idx] += wave
 
-            signal = neo.AnalogSignal(sig * pq.mV, sampling_rate=1 * pq.kHz)
-            seg.analogsignals.append(signal)
-            channel_idx.analogsignals.append(signal)
+        signal = neo.AnalogSignal(sig * pq.mV, sampling_rate=1 * pq.kHz)
+        seg.analogsignals.append(signal)
 
-            # Spike trains: Random spike times with elevated rate in short period
-            feature_time = feature_pos / data_samples
-            for u in channel_idx.units:
-                random_spikes = np.random.rand(20)
-                feature_spikes = np.random.rand(5) * feature_len + feature_time
-                spikes = np.hstack([random_spikes, feature_spikes])
 
-                train = neo.SpikeTrain(spikes * pq.s, 1 * pq.s)
-                seg.spiketrains.append(train)
-                u.spiketrains.append(train)
+        feature_time = feature_pos / data_samples
+        random_spikes = np.random.rand(20)
+        feature_spikes = np.random.rand(5) * feature_len + feature_time
+        spikes = np.hstack([random_spikes, feature_spikes])
+
+        train = neo.SpikeTrain(spikes * pq.s, 1 * pq.s)
+        seg.spiketrains.append(train)
+
 
     return block
 
