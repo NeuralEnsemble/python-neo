@@ -7,7 +7,7 @@ classes.
 
 Functions:
 
-.. autofunction:: neo.rawio.get_rawio_class
+.. autofunction:: neo.rawio.get_rawio
 
 
 Classes:
