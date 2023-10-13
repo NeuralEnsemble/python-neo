@@ -33,8 +33,8 @@ def _check_annotations(value):
     """
     if isinstance(value, np.ndarray):
         if not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES):
-            raise ValueError("Invalid annotation. NumPy arrays with dtype %s"
-                             "are not allowed" % value.dtype.type)
+            raise ValueError(f"Invalid annotation. NumPy arrays with dtype {value.dtype.type}"
+                             "are not allowed")
     elif isinstance(value, dict):
         for element in value.values():
             _check_annotations(element)
@@ -42,8 +42,8 @@ def _check_annotations(value):
         for element in value:
             _check_annotations(element)
     elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
-        raise ValueError("Invalid annotation. Annotations of type %s are not"
-                         "allowed" % type(value))
+        raise ValueError(f"Invalid annotation. Annotations of type {type(value)} are not"
+                         "allowed")
 
 
 def merge_annotation(a, b):
