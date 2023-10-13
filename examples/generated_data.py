@@ -26,35 +26,41 @@ def generate_block(n_segments=3, n_channels=4, n_units=3,
 
     # Create multiple Segments
     block.segments = [neo.Segment(index=i) for i in range(n_segments)]
-    # Create multiple ChannelIndexes
-    #block.channel_indexes = [neo.ChannelIndex(name='C%d' % i, index=i) for i in range(n_channels)]
-
-    # Attach multiple Units to each ChannelIndex
-    #for channel_idx in block.channel_indexes:
-    #    channel_idx.units = [neo.Unit('U%d' % i) for i in range(n_units)]
 
     # Create synthetic data
     for seg in block.segments:
         feature_pos = np.random.randint(0, data_samples - feature_samples)
 
         # Analog signals: Noise with a single sinewave feature
-        wave = 3 * np.sin(np.linspace(0, 2 * np.pi, feature_samples))
+        
         sig = np.random.rand(data_samples, n_channels)
         for channel_idx in range(n_channels):
+            wave = np.random.randint(-5,6) * np.sin(np.linspace(0, 2 * np.pi, feature_samples))
             sig[feature_pos:feature_pos + feature_samples, channel_idx] += wave
 
         signal = neo.AnalogSignal(sig * pq.mV, sampling_rate=1 * pq.kHz)
         seg.analogsignals.append(signal)
 
-
         feature_time = feature_pos / data_samples
-        random_spikes = np.random.rand(20)
-        feature_spikes = np.random.rand(5) * feature_len + feature_time
-        spikes = np.hstack([random_spikes, feature_spikes])
+        spiketrains = []
+        for unit in range(n_units):
+            random_spikes = np.random.rand(20)
+            feature_spikes = np.random.rand(5) * feature_len + feature_time
+            spikes = np.hstack([random_spikes, feature_spikes])
+            train = neo.SpikeTrain(spikes * pq.s, 1 * pq.s)
+            spiketrains.append(train)
 
-        train = neo.SpikeTrain(spikes * pq.s, 1 * pq.s)
-        seg.spiketrains.append(train)
+        seg.spiketrains.extend(spiketrains)
 
+        units = []
+        for i, spiketrain in enumerate(spiketrains):
+            unit = neo.Group([spiketrain], name=f"Neuron #{i + 1}")
+            units.append(unit)
+
+        for unit in units:
+            unit.add(neo.ChannelView(signal, index=list(range(n_channels)), name='Channel Group'))
+        
+        block.groups.extend(units)
 
     return block
 
@@ -68,31 +74,30 @@ for seg in block.segments:
 
     siglist = seg.analogsignals
     time_points = siglist[0].times
-    avg = np.mean(siglist, axis=0)  # Average over signals of Segment
+    avg = np.mean(siglist[0], axis=1)  # Average over signals of Segment
 
     plt.figure()
     plt.plot(time_points, avg)
     plt.title("Peak response in segment %d: %f" % (seg.index, avg.max()))
 
 # The second alternative is spatial traversal of the data (by channel), with
-# averaging over trials. For example, perhaps you wish to see which physical
-# location produces the strongest response, and each stimulus was the same:
+n_channels = np.shape(block.segments[0].analogsignals[0])[1]
+siglist=[]
+for seg in block.segments:
+    siglist.append(seg.analogsignals[0])
+    time_points = seg.analogsignals[0].times
 
-# There are multiple ChannelIndex objects connected to the block, each
-# corresponding to a a physical electrode
-for channel_idx in block.channel_indexes:
-    print("Analysing channel %d: %s" % (channel_idx.index, channel_idx.name))
+final_siglist = np.concatenate((siglist), axis=1)
 
-    siglist = channel_idx.analogsignals
-    time_points = siglist[0].times
-    avg = np.mean(siglist, axis=0)  # Average over signals of RecordingChannel
-
+for channel in range(n_channels):
+    print(f'Analyzing channel {channel}')
+    avg = np.mean(final_siglist[:,channel::n_channels],axis=1)
     plt.figure()
     plt.plot(time_points, avg)
-    plt.title("Average response on channel %d" % channel_idx.index)
+    plt.title(f"Average response on channel {channel}")
 
-# There are three ways to access the spike train data: by Segment,
-# by ChannelIndex or by Unit.
+
+# There are three ways to access the spike train data: by Segment
 
 # By Segment. In this example, each Segment represents data from one trial,
 # and we want a peristimulus time histogram (PSTH) for each trial from all
@@ -105,23 +110,4 @@ for seg in block.segments:
     plt.bar(bins[:-1], count, width=bins[1] - bins[0])
     plt.title("PSTH in segment %d" % seg.index)
 
-# By Unit. Now we can calculate the PSTH averaged over trials for each Unit:
-for unit in block.list_units:
-    stlist = [st - st.t_start for st in unit.spiketrains]
-    count, bins = np.histogram(np.hstack(stlist))
-    plt.figure()
-    plt.bar(bins[:-1], count, width=bins[1] - bins[0])
-    plt.title("PSTH of unit %s" % unit.name)
 
-# By ChannelIndex. Here we calculate a PSTH averaged over trials by
-# channel location, blending all Units:
-for chx in block.channel_indexes:
-    stlist = []
-    for unit in chx.units:
-        stlist.extend([st - st.t_start for st in unit.spiketrains])
-    count, bins = np.histogram(np.hstack(stlist))
-    plt.figure()
-    plt.bar(bins[:-1], count, width=bins[1] - bins[0])
-    plt.title("PSTH blend of recording channel group %s" % chx.name)
-
-plt.show()
