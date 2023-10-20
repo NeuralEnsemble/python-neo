@@ -57,7 +57,7 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
     '''
 
     if t_start > t_stop:
-        raise ValueError(f"t_stop ({t_stop}) is before t_start ({s_start})")
+        raise ValueError(f"t_stop ({t_stop}) is before t_start ({t_start})")
 
     if not value.size:
         return

@@ -122,7 +122,7 @@ class SpikeTrainList(ObjectList):
                 return str([])
             else:
                 return (f"SpikeTrainList containing {self._spike_time_array.size} "
-                        f"spikes from {len(self._all_channels_ids)} neurons")
+                        f"spikes from {len(self._all_channel_ids)} neurons")
         else:
             return str(self._items)
 
