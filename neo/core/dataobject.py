@@ -73,7 +73,7 @@ def _normalize_array_annotations(value, length):
 
         if not own_length == val_length:
             raise ValueError(
-                "Incorrect length of array annotation: {} != {}".format(val_length, own_length))
+                f"Incorrect length of array annotation: {val_length} != {own_length}")
 
         # Local function used to check single elements of a list or an array
         # They must not be lists or arrays and fit the usual annotation data types
@@ -264,10 +264,10 @@ class DataObject(BaseNeo, pq.Quantity):
 
         # Warn if keys were omitted
         if omitted_keys_other or omitted_keys_self:
-            warnings.warn("The following array annotations were omitted, because they were only "
-                          "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the one that was merged into the other"
-                          "".format(omitted_keys_self, omitted_keys_other), UserWarning)
+            warnings.warn(f"The following array annotations were omitted, because they were only "
+                          f"present in one of the merged objects: {omitted_keys_self} from the "
+                          f"one that was merged into and {omitted_keys_other} from the one that "
+                          f"was merged into the other", UserWarning)
 
         # Return the merged array_annotations
         return merged_array_annotations

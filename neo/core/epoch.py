@@ -263,7 +263,7 @@ class Epoch(DataObject):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
+                kwargs[name] = f"merge({attr_self}, {attr_other})"
 
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
@@ -354,8 +354,8 @@ class Epoch(DataObject):
 
     def set_labels(self, labels):
         if self.labels is not None and self.labels.size > 0 and len(labels) != self.size:
-            raise ValueError("Labels array has different length to times ({} != {})"
-                             .format(len(labels), self.size))
+            raise ValueError(f"Labels array has different length to times "
+                             f"({len(labels)} != {self.size})")
         self._labels = np.array(labels)
 
     def get_labels(self):
@@ -365,8 +365,8 @@ class Epoch(DataObject):
 
     def set_durations(self, durations):
         if self.durations is not None and self.durations.size > 0 and len(durations) != self.size:
-            raise ValueError("Durations array has different length to times ({} != {})"
-                             .format(len(durations), self.size))
+            raise ValueError("Durations array has different length to times "
+                             f"({len(durations)} != {self.size})")
         self._durations = durations
 
     def get_durations(self):

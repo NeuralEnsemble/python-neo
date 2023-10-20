@@ -41,8 +41,7 @@ def check_has_dimensions_time(*values):
                 list(dim.values())[0] != 1 or not
                 isinstance(list(dim.keys())[0], pq.UnitTime)):
             errmsgs.append(
-                "value {} has dimensions {}, not [time]".format(
-                    value, dim))
+                f"value {value} has dimensions {dim}, not [time]")
     if errmsgs:
         raise ValueError("\n".join(errmsgs))
 
@@ -58,7 +57,7 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
     '''
 
     if t_start > t_stop:
-        raise ValueError("t_stop ({}) is before t_start ({})".format(t_stop, t_start))
+        raise ValueError(f"t_stop ({t_stop}) is before t_start ({s_start})")
 
     if not value.size:
         return
@@ -69,9 +68,9 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
         t_stop = t_stop.view(np.ndarray)
 
     if value.min() < t_start:
-        raise ValueError("The first spike ({}) is before t_start ({})".format(value, t_start))
+        raise ValueError(f"The first spike ({value}) is before t_start ({t_start})")
     if value.max() > t_stop:
-        raise ValueError("The last spike ({}) is after t_stop ({})".format(value, t_stop))
+        raise ValueError(f"The last spike ({value}) is after t_stop ({t_stop})")
 
 
 def _check_waveform_dimensions(spiketrain):
@@ -824,10 +823,10 @@ class SpikeTrain(DataObject):
                               if key not in self.array_annotations]
 
         if omitted_keys_self or omitted_keys_other:
-            warnings.warn("The following array annotations were omitted, because they were only "
-                          "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the ones that were merged into it."
-                          "".format(omitted_keys_self, omitted_keys_other), UserWarning)
+            warnings.warn(f"The following array annotations were omitted, because they were only "
+                          f"present in one of the merged objects: {omitted_keys_self} from the "
+                          f"one that was merged into and {omitted_keys_other} from the ones that "
+                          f"were merged into it.", UserWarning)
 
         return merged_array_annotations
 
