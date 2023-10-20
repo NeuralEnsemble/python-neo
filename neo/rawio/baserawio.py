@@ -183,7 +183,7 @@ class BaseRawIO:
         return self._source_name()
 
     def __repr__(self):
-        txt = f'{self.__class.__.__name__}: {self.source_name()}\n'
+        txt = f'{self.__class__.__name__}: {self.source_name()}\n'
         if self.header is not None:
             nb_block = self.block_count()
             txt += f'nb_block: {nb_block}\n'
