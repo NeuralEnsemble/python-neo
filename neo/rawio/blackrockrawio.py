@@ -321,9 +321,9 @@ class BlackrockRawIO(BaseRawIO):
             # read nsx headers
             self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = \
                 self.__nsx_header_reader[spec](nsx_nb)
-            
-            if 'timestamp_resolution' in self.__nsx_basic_header[nsx_nb].dtype.names \
-                and self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] == 1_000_000_000:
+
+            if 'timestamp_resolution' in self.__nsx_basic_header[nsx_nb].dtype.names and \
+                    self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] == 1_000_000_000:
                 nsx_dataheader_reader = self.__nsx_dataheader_reader["3.0-ptp"]
             else:
                 nsx_dataheader_reader = self.__nsx_dataheader_reader[spec]
@@ -377,8 +377,8 @@ class BlackrockRawIO(BaseRawIO):
         if len(self.nsx_to_load) > 0:
             for nsx_nb in self.nsx_to_load:
                 spec = self.__nsx_spec[nsx_nb]
-                if 'timestamp_resolution' in self.__nsx_basic_header[nsx_nb].dtype.names \
-                    and self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] == 1_000_000_000:
+                if 'timestamp_resolution' in self.__nsx_basic_header[nsx_nb].dtype.names and \
+                        self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] == 1_000_000_000:
                     _data_reader_fun = self.__nsx_data_reader['3.0-ptp']
                 else:
                     _data_reader_fun = self.__nsx_data_reader[spec]
@@ -455,7 +455,8 @@ class BlackrockRawIO(BaseRawIO):
                             t_stop = max(t_stop, timestamps[-1] / ts_res + sec_per_samp)
                         else:
                             t_start = timestamps / ts_res
-                            t_stop = max(t_stop, t_start + n_samples / self.sig_sampling_rates[nsx_nb])
+                            t_stop = max(
+                                t_stop, t_start + n_samples / self.sig_sampling_rates[nsx_nb])
                     self._sigs_t_starts[nsx_nb].append(t_start)
 
                 if self._avail_files['nev']:
@@ -963,7 +964,7 @@ class BlackrockRawIO(BaseRawIO):
             index += 1
 
         return data_header
-    
+
     def __read_nsx_dataheader_variant_c(
             self, nsx_nb, filesize=None, offset=None, ):
         """
@@ -980,11 +981,11 @@ class BlackrockRawIO(BaseRawIO):
             offset = self.__nsx_basic_header[nsx_nb]['bytes_in_headers']
 
         ptp_dt = [
-                ("reserved", "uint8"),
-                ("timestamps", "uint64"),
-                ("num_data_points", "uint32"),
-                ("samples", "int16", self.__nsx_basic_header[nsx_nb]['channel_count'])
-            ]
+            ("reserved", "uint8"),
+            ("timestamps", "uint64"),
+            ("num_data_points", "uint32"),
+            ("samples", "int16", self.__nsx_basic_header[nsx_nb]['channel_count'])
+        ]
         npackets = int((filesize - offset) / np.dtype(ptp_dt).itemsize)
         struct_arr = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=offset, mode="r")
 
@@ -999,19 +1000,23 @@ class BlackrockRawIO(BaseRawIO):
         _clock_rate = self.__nsx_basic_header[nsx_nb]["timestamp_resolution"]
         clk_per_samp = _period * _clock_rate / 30_000
         seg_thresh_clk = 2 * clk_per_samp
-        seg_starts = np.hstack((0, 1 + np.argwhere(np.diff(struct_arr["timestamps"]) > seg_thresh_clk).flatten()))
+        seg_starts = np.hstack(
+            (0, 1 + np.argwhere(np.diff(struct_arr["timestamps"]) > seg_thresh_clk).flatten()))
         for seg_ix, seg_start_idx in enumerate(seg_starts):
-            seg_stop_idx = seg_starts[seg_ix + 1] if seg_ix < (len(seg_starts) - 1) else (len(struct_arr) - 1)
+            if seg_ix < (len(seg_starts) - 1):
+                seg_stop_idx = seg_starts[seg_ix + 1]
+            else:
+                seg_stop_idx = (len(struct_arr) - 1)
             seg_offset = offset + seg_start_idx * struct_arr.dtype.itemsize
             num_data_pts = seg_stop_idx - seg_start_idx
-            seg_struct_arr = np.memmap(filename, dtype=ptp_dt, shape=num_data_pts, offset=seg_offset, mode="r")
+            seg_struct_arr = np.memmap(filename, dtype=ptp_dt,
+                                       shape=num_data_pts, offset=seg_offset, mode="r")
             data_header[seg_ix] = {
                 'header': None,
                 'timestamp': seg_struct_arr["timestamps"],  # Note, this is an array, not a scalar
                 'nb_data_points': num_data_pts,
                 'offset_to_data_block': seg_offset
             }
-            # We could get pointers to data for free with seg_struct_arr["samples"]. Revisit if data reading is slow.
         return data_header
 
     def __read_nsx_data_variant_a(self, nsx_nb):
@@ -1054,7 +1059,7 @@ class BlackrockRawIO(BaseRawIO):
                 filename, dtype='int16', shape=shape, offset=offset, mode='r')
 
         return data
-    
+
     def __read_nsx_data_variant_c(self, nsx_nb):
         """
         Extract nsx data (blocks) from a 3.0 .nsx file with PTP timestamps
@@ -1064,11 +1069,11 @@ class BlackrockRawIO(BaseRawIO):
         filename = '.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb])
 
         ptp_dt = [
-                ("reserved", "uint8"),
-                ("timestamps", "uint64"),
-                ("num_data_points", "uint32"),
-                ("samples", "int16", self.__nsx_basic_header[nsx_nb]['channel_count'])
-            ]
+            ("reserved", "uint8"),
+            ("timestamps", "uint64"),
+            ("num_data_points", "uint32"),
+            ("samples", "int16", self.__nsx_basic_header[nsx_nb]['channel_count'])
+        ]
 
         data = {}
         for bl_id, bl_header in self.__nsx_data_header[nsx_nb].items():
@@ -1079,7 +1084,8 @@ class BlackrockRawIO(BaseRawIO):
                 offset=bl_header["offset_to_data_block"], mode="r"
             )
             # Does this concretize the data?
-            # If yes then investigate np.ndarray with buffer=file, offset=offset+13, and strides that skips 13-bytes per row.
+            # If yes then investigate np.ndarray with buffer=file,
+            # offset=offset+13, and strides that skips 13-bytes per row.
             data[bl_id] = struct_arr["samples"]
 
         return data
