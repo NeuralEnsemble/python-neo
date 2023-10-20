@@ -646,7 +646,7 @@ class BlackrockRawIO(BaseRawIO):
         if t_start is None:
             ind_start = None
         else:
-            ts = np.math.ceil(t_start * self.__nev_basic_header['timestamp_resolution'])
+            ts = int(np.ceil(t_start * self.__nev_basic_header['timestamp_resolution']))
             ind_start = np.searchsorted(timestamp, ts)
 
         if t_stop is None:
