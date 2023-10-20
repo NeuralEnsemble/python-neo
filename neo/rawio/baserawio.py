@@ -748,10 +748,10 @@ class BaseRawIO:
         self.cache_filename = os.path.join(dirname, name)
 
         if os.path.exists(self.cache_filename):
-            self.logger.warning(f'Use existing cache file {self.cache_filename}'
+            self.logger.warning(f'Use existing cache file {self.cache_filename}')
             self._cache = joblib.load(self.cache_filename)
         else:
-            self.logger.warning(f'Create cache file {self.cache_filename}'
+            self.logger.warning(f'Create cache file {self.cache_filename}')
             self._cache = {}
             self.dump_cache()
 
