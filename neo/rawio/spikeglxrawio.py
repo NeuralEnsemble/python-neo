@@ -52,6 +52,7 @@ Some functions are copied from Graham Findlay
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                 _spike_channel_dtype, _event_channel_dtype)
+from .utils import create_memmap_buffer, get_memmap_shape
 
 from pathlib import Path
 import os
@@ -91,7 +92,8 @@ class SpikeGLXRawIO(BaseRawIO):
 
         nb_segment = np.unique([info['seg_index'] for info in self.signals_info_list]).size
 
-        self._memmaps = {}
+        # self._memmaps = {}
+        self._memmap_args = {}
         self.signals_info_dict = {}
         for info in self.signals_info_list:
             # key is (seg_index, stream_name)
@@ -100,11 +102,14 @@ class SpikeGLXRawIO(BaseRawIO):
             self.signals_info_dict[key] = info
 
             # create memmap
-            data = np.memmap(info['bin_file'], dtype='int16', mode='r', offset=0, order='C')
-            # this should be (info['sample_length'], info['num_chan'])
-            # be some file are shorten
-            data = data.reshape(-1, info['num_chan'])
-            self._memmaps[key] = data
+            #~ data = np.memmap(info['bin_file'], dtype='int16', mode='r', offset=0, order='C')
+            #~ # this should be (info['sample_length'], info['num_chan'])
+            #~ # be some file are shorten
+            #~ data = data.reshape(-1, info['num_chan'])
+            #~ self._memmaps[key] = data
+            shape = get_memmap_shape(info['bin_file'], 'int16', num_channels= info['num_chan'])
+            fid = open(info['bin_file'], "rb")
+            self._memmap_args[key] = (fid, shape, np.dtype('int16'), 0)
 
         # create channel header
         signal_streams = []
@@ -182,7 +187,13 @@ class SpikeGLXRawIO(BaseRawIO):
                             loc = np.concatenate((loc, [[0., 0.]]), axis=0)
                         for ndim in range(loc.shape[1]):
                             sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = loc[:, ndim]
-
+    
+    def __del__(self):
+        # need an explicit close
+        for k, args in self._memmap_args.items():
+            fid, *_ = args
+            fid.close()
+    
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
@@ -191,7 +202,9 @@ class SpikeGLXRawIO(BaseRawIO):
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
         stream_id = self.header['signal_streams'][stream_index]['id']
-        memmap = self._memmaps[seg_index, stream_id]
+        #~ memmap = self._memmaps[seg_index, stream_id]
+        key = (seg_index, stream_id)
+        memmap = create_memmap_buffer(*self._memmap_args[key])
         return int(memmap.shape[0])
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
@@ -200,7 +213,10 @@ class SpikeGLXRawIO(BaseRawIO):
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
-        memmap = self._memmaps[seg_index, stream_id]
+        #~ memmap = self._memmaps[seg_index, stream_id]
+        key = (seg_index, stream_id)
+        memmap = create_memmap_buffer(*self._memmap_args[key])
+        
         if channel_indexes is None:
             if self.load_sync_channel:
                 channel_selection = slice(None)
