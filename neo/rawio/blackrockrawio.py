@@ -440,7 +440,12 @@ class BlackrockRawIO(BaseRawIO):
             for data_bl in range(self._nb_segment):
                 t_stop = 0.
                 for nsx_nb in self.nsx_to_load:
-                    ts_res = self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
+                    if 'timestamp_resolution' in self.__nsx_basic_header[nsx_nb].dtype.names:
+                        ts_res = self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
+                    elif spec == '2.1':
+                        ts_res = self.__nsx_params[spec](nsx_nb)['timestamp_resolution']
+                    else:
+                        ts_res = 30_000
                     period = self.__nsx_basic_header[nsx_nb]['period']
                     sec_per_samp = period / 30_000
                     n_samples = self.nsx_datas[nsx_nb][data_bl].shape[0]
@@ -827,6 +832,8 @@ class BlackrockRawIO(BaseRawIO):
             ('channel_count', 'uint32')]
 
         nsx_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
+        # Note: it is not possible to use recfunctions to append_fields of 'timestamp_resolution',
+        #  because the size of this object is used as the header size in later read operations.
 
         # "extended" header (last field of file_id: NEURALCD)
         # (to facilitate compatibility with higher file specs)
