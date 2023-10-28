@@ -1011,10 +1011,11 @@ class BlackrockRawIO(BaseRawIO):
         # It is still possible there was a data break and the file has multiple segments.
         # We can no longer rely on the presence of a header indicating a new segment,
         # so we look for timestamp differences greater than double the expected interval.
-        _period = self.__nsx_basic_header[nsx_nb]['period']
-        _clock_rate = self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
-        clk_per_samp = _period * _clock_rate / 30_000  # maybe 30_000 should be ['sample_resolution']
-        seg_thresh_clk = 2 * clk_per_samp
+        _period = self.__nsx_basic_header[nsx_nb]['period']  # 30_000 ^-1 s per sample
+        _nominal_rate = 30_000 / _period  # samples per sec;  maybe 30_000 should be ['sample_resolution']
+        _clock_rate = self.__nsx_basic_header[nsx_nb]['timestamp_resolution']  # clocks per sec
+        clk_per_samp = _clock_rate / _nominal_rate  # clk/sec / smp/sec = clk/smp
+        seg_thresh_clk = int(2 * clk_per_samp)
         seg_starts = np.hstack(
             (0, 1 + np.argwhere(np.diff(struct_arr['timestamps']) > seg_thresh_clk).flatten()))
         for seg_ix, seg_start_idx in enumerate(seg_starts):
