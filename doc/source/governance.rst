@@ -37,6 +37,7 @@ The current maintainers are:
 - Samuel Garcia (`@samuelgarcia`_)
 - Julia Sprenger (`@JuliaSprenger`_)
 - Michael Denker (`@mdenker`_)
+- Alessio Buccino (`@alejoe91`_)
 
 
 .. _`Neo maintainers team`: https://github.com/orgs/NeuralEnsemble/teams/neo-maintainers
@@ -45,3 +46,4 @@ The current maintainers are:
 .. _`@samuelgarcia`: https://github.com/samuelgarcia
 .. _`@JuliaSprenger`: https://github.com/JuliaSprenger
 .. _`@mdenker`: https://github.com/mdenker
+.. _`@alejoe91`: https://github.com/alejoe91
