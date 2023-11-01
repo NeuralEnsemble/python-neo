@@ -28,7 +28,11 @@ import numpy as np
 from tqdm import tqdm, trange
 
 from .baserawio import (
-    BaseRawIO, _signal_channel_dtype, _signal_stream_dtype, _spike_channel_dtype, _event_channel_dtype
+    BaseRawIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
 )
 
 
@@ -69,7 +73,11 @@ class PlexonRawIO(BaseRawIO):
         nb_event_chan = global_header['NumEventChannels']
         offset2 = offset1 + np.dtype(DspChannelHeader).itemsize * nb_unit_chan
         eventHeaders = np.memmap(
-            self.filename, dtype=EventChannelHeader, mode='r', offset=offset2, shape=(nb_event_chan,)
+            self.filename,
+            dtype=EventChannelHeader,
+            mode='r',
+            offset=offset2,
+            shape=(nb_event_chan,),
         )
 
         # slow channel header = signal
@@ -123,7 +131,11 @@ class PlexonRawIO(BaseRawIO):
         }
         for bl_type in tqdm(block_pos, desc="Finalizing data blocks", leave=True):
             self._data_blocks[bl_type] = {}
-            for chan_id in tqdm(block_pos[bl_type], desc="Finalizing data blocks for type %d" % bl_type, leave=True):
+            for chan_id in tqdm(
+                block_pos[bl_type],
+                desc="Finalizing data blocks for type %d" % bl_type,
+                leave=True,
+            ):
                 positions = block_pos[bl_type][chan_id]
                 dt = dtype_by_bltype[bl_type]
                 data_block = np.empty((len(positions)), dtype=dt)
@@ -220,7 +232,11 @@ class PlexonRawIO(BaseRawIO):
 
         # Spikes channels
         spike_channels = []
-        for unit_index, (chan_id, unit_id) in tqdm(enumerate(self.internal_unit_ids), desc="Parsing spike channels", leave=True):
+        for unit_index, (chan_id, unit_id) in tqdm(
+            enumerate(self.internal_unit_ids),
+            desc="Parsing spike channels",
+            leave=True,
+        ):
             c = np.nonzero(dspChannelHeaders['Channel'] == chan_id)[0][0]
             h = dspChannelHeaders[c]
 
