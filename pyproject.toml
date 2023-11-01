@@ -98,6 +98,7 @@ nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
 med = ["dhn_med_py>=1.0.0"]
+plexon = ["tqdm"]
 plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32'"]
 
 all = [
