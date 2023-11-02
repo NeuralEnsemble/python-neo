@@ -120,7 +120,7 @@ def open_biocam_file_header(filename):
 
     rf = h5py.File(filename, 'r')
 
-    if '3BRecInfo' in rf.keys(): # brw v3.x
+    if '3BRecInfo' in rf.keys():  # brw v3.x
         # Read recording variables
         rec_vars = rf.require_group('3BRecInfo/3BRecVars/')
         bit_depth = rec_vars['BitDepth'][0]
@@ -163,10 +163,10 @@ def open_biocam_file_header(filename):
         gain = (max_uv - min_uv) / (2 ** bit_depth)
         offset = min_uv
 
-        return dict(file_handle=rf, num_frames=num_frames, sampling_rate=sampling_rate, num_channels=num_channels,
-                    channels=channels, file_format=file_format, signal_inv=signal_inv,
-                    read_function=read_function, gain=gain, offset=offset)
-    else: # brw v4.x
+        return dict(file_handle=rf, num_frames=num_frames, sampling_rate=sampling_rate,
+                    num_channels=num_channels, channels=channels, file_format=file_format,
+                    signal_inv=signal_inv, read_function=read_function, gain=gain, offset=offset)
+    else:  # brw v4.x
         # Read recording variables
         experiment_settings = json.JSONDecoder().decode(rf['ExperimentSettings'][0].decode())
         max_uv = experiment_settings['ValueConverter']['MaxAnalogValue']
@@ -181,17 +181,16 @@ def open_biocam_file_header(filename):
                 num_channels = len(rf[key]['StoredChIdxs'])
                 if len(rf[key]['Raw']) % num_channels:
                     raise RuntimeError(
-                            f"Length of raw data array is not multiple of channel number in {key}")
+                        f"Length of raw data array is not multiple of channel number in {key}")
                 num_frames = len(rf[key]['Raw']) // num_channels
                 break
         try:
             num_channels_x = num_channels_y = int(np.sqrt(num_channels))
         except NameError:
-            raise RuntimeError(
-                    "No Well found in the file")
+            raise RuntimeError("No Well found in the file")
         if num_channels_x * num_channels_y != num_channels:
             raise RuntimeError(
-                    f'Cannot determine structure of the MEA plate with {num_channels} channels')
+                f'Cannot determine structure of the MEA plate with {num_channels} channels')
         channels = 1 + np.concatenate(np.transpose(np.meshgrid(
             range(num_channels_x), range(num_channels_y))))
 
