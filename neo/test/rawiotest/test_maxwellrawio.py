@@ -17,7 +17,7 @@ class TestMaxwellRawIO(BaseTestRawIO, unittest.TestCase, ):
     ]
 
     def setUp(self):
-        auto_install_maxwell_hdf5_compression_plugin(force_download=False)
+        auto_install_maxwell_hdf5_compression_plugin(force_download=True)
         BaseTestRawIO.setUp(self)
 
 
