@@ -101,6 +101,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     info_cnt = all_streams[block_index][seg_index]['continuous'][stream_name]
                     info_cnt['stream_name'] = stream_name
                     self._sig_streams[block_index][seg_index][stream_index] = info_cnt
+
+                    # check for SYNC channel for Neuropixels streams
+                    has_sync_trace = any(["SYNC" in ch["channel_name"] for ch in info_cnt["channels"]])
+                    self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace'] = has_sync_trace
                 for i, stream_name in enumerate(event_stream_names):
                     info_evt = all_streams[block_index][seg_index]['events'][stream_name]
                     info_evt['stream_name'] = stream_name
@@ -142,11 +146,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     num_channels = len(info['channels'])
                     memmap_sigs = np.memmap(info['raw_filename'], info['dtype'],
                                             order='C', mode='r').reshape(-1, num_channels)
-                    channel_names = [ch["channel_name"] for ch in info["channels"]]
+                    has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace']
 
                     # check sync channel validity (only for AP and LF)
-                    has_sync_channel = any(["SYNC" in ch for ch in channel_names])
-                    if not has_sync_channel and self.load_sync_channel and "NI-DAQ" not in info["stream_name"]:
+                    if not has_sync_trace and self.load_sync_channel and "NI-DAQ" not in info["stream_name"]:
                         raise ValueError("SYNC channel is not present in the recording. "
                                          "Set load_sync_channel to False")
                     info['memmap'] = memmap_sigs
@@ -293,16 +296,14 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 # array annotations for signal channels
                 for stream_index, stream_name in enumerate(sig_stream_names):
                     sig_ann = seg_ann['signals'][stream_index]
-                    info = self._sig_streams[0][0][stream_index]
-                    channel_names = [ch["channel_name"] for ch in info["channels"]]
+                    info = self._sig_streams[block_index][seg_index][stream_index]
+                    has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace']
 
-                    # check sync channel validity (only for AP and LF)
-                    has_sync_channel = any(["SYNC" in ch for ch in channel_names])
                     for k in ('identifier', 'history', 'source_processor_index',
                               'recorded_processor_index'):
                         if k in info['channels'][0]:
                             values = np.array([chan_info[k] for chan_info in info['channels']])
-                            if has_sync_channel:
+                            if has_sync_trace:
                                 values = values[:-1]
                             sig_ann['__array_annotations__'][k] = values
 
@@ -357,13 +358,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
                                 stream_index, channel_indexes):
-        info = self._sig_streams[block_index][seg_index][stream_index]
         sigs = self._sig_streams[block_index][seg_index][stream_index]['memmap']
+        has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace']
 
-        # take care of SYNC channel
-        channel_names = [ch["channel_name"] for ch in info["channels"]]
-        has_sync_channel = any(["SYNC" in ch for ch in channel_names])
-        if not self.load_sync_channel and has_sync_channel:
+        if not self.load_sync_channel and has_sync_trace:
             sigs = sigs[:, :-1]
 
         sigs = sigs[i_start:i_stop, :]
