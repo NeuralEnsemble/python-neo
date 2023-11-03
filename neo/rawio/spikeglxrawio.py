@@ -185,7 +185,8 @@ class SpikeGLXRawIO(BaseRawIO):
                             # one fake channel  for "sys0"
                             loc = np.concatenate((loc, [[0., 0.]]), axis=0)
                         for ndim in range(loc.shape[1]):
-                            sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = loc[:, ndim]
+                            sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = \
+                                loc[:, ndim]
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
@@ -389,7 +390,8 @@ def extract_stream_info(meta_file, meta):
         # metad['imroTbl'] contain two gain per channel  AP and LF
         # except for the last fake channel
         per_channel_gain = np.ones(num_chan, dtype='float64')
-        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0' or meta['imDatPrb_type'] in ('1015', '1022', '1030', '1031', '1032'):
+        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0' or meta['imDatPrb_type'] \
+            in ('1015', '1022', '1030', '1031', '1032'):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
             if stream_kind == 'ap':

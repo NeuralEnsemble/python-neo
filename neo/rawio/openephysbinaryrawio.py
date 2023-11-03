@@ -103,8 +103,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     self._sig_streams[block_index][seg_index][stream_index] = info_cnt
 
                     # check for SYNC channel for Neuropixels streams
-                    has_sync_trace = any(["SYNC" in ch["channel_name"] for ch in info_cnt["channels"]])
-                    self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace'] = has_sync_trace
+                    has_sync_trace = any(["SYNC" in ch["channel_name"]
+                                          for ch in info_cnt["channels"]])
+                    self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace'] \
+                        = has_sync_trace
                 for i, stream_name in enumerate(event_stream_names):
                     info_evt = all_streams[block_index][seg_index]['events'][stream_name]
                     info_evt['stream_name'] = stream_name
@@ -146,10 +148,12 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     num_channels = len(info['channels'])
                     memmap_sigs = np.memmap(info['raw_filename'], info['dtype'],
                                             order='C', mode='r').reshape(-1, num_channels)
-                    has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace']
+                    has_sync_trace = \
+                        self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace']
 
                     # check sync channel validity (only for AP and LF)
-                    if not has_sync_trace and self.load_sync_channel and "NI-DAQ" not in info["stream_name"]:
+                    if not has_sync_trace and self.load_sync_channel \
+                        and "NI-DAQ" not in info["stream_name"]:
                         raise ValueError("SYNC channel is not present in the recording. "
                                          "Set load_sync_channel to False")
                     info['memmap'] = memmap_sigs
@@ -204,7 +208,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         # ttl case use states
                         info['labels'] = info['states'].astype('U')
                     else:
-                        raise ValueError(f'There is no possible labels for this event: {stream_name}')
+                        raise ValueError(
+                            f'There is no possible labels for this event!'
+                        )
 
                     # # If available, use 'states' to compute event duration
                     if 'states' in info and info["states"].size:
@@ -297,7 +303,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 for stream_index, stream_name in enumerate(sig_stream_names):
                     sig_ann = seg_ann['signals'][stream_index]
                     info = self._sig_streams[block_index][seg_index][stream_index]
-                    has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace']
+                    has_sync_trace = \
+                        self._sig_streams[block_index][seg_index][stream_index]['has_sync_trace']
 
                     for k in ('identifier', 'history', 'source_processor_index',
                               'recorded_processor_index'):
