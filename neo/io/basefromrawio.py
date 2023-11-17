@@ -145,7 +145,7 @@ class BaseFromRaw(BaseIO):
             spike_channels = self.header['spike_channels']
             st_groups = []
             for c in range(spike_channels.size):
-                group = Group(name='SpikeTrain group {}'.format(c))
+                group = Group(name=f'SpikeTrain group {c}')
                 group.annotate(unit_name=spike_channels[c]['name'])
                 group.annotate(unit_id=spike_channels[c]['id'])
                 bl.groups.append(group)

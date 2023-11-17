@@ -141,8 +141,8 @@ class Group(Container):
         """Add a new Neo object to the Group"""
         for obj in objects:
             if self.allowed_types and not isinstance(obj, self.allowed_types):
-                raise TypeError("This Group can only contain {}, but not {}"
-                                "".format(self.allowed_types, type(obj)))
+                raise TypeError(f"This Group can only contain {self.allowed_types}, "
+                                f"but not {type(obj)}")
         super().add(*objects)
 
     def walk(self):

@@ -101,7 +101,7 @@ class Event(DataObject):
         # reference dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
                                                                           pq.UnitTime)):
-            ValueError("Unit {} has dimensions {}, not [time]".format(units, dim.simplified))
+            ValueError(f"Unit {units} has dimensions {dim.simplified}, not [time].")
 
         obj = pq.Quantity(times, units=dim).view(cls)
         obj._labels = labels
@@ -204,7 +204,7 @@ class Event(DataObject):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
+                kwargs[name] = f"merge({attr_self}, {attr_other})"
 
         print('Event: merge annotations')
         merged_annotations = merge_annotations(self.annotations, other.annotations)
@@ -244,8 +244,8 @@ class Event(DataObject):
 
     def set_labels(self, labels):
         if self.labels is not None and self.labels.size > 0 and len(labels) != self.size:
-            raise ValueError("Labels array has different length to times ({} != {})"
-                            .format(len(labels), self.size))
+            raise ValueError(f"Labels array has different length to times "
+                             f"({len(labels)} != {self.size})")
         self._labels = np.array(labels)
 
     def get_labels(self):
@@ -353,13 +353,13 @@ class Event(DataObject):
             times = self.times[::2]
             durations = self.times[1::2] - times
             labels = np.array(
-                ["{}-{}".format(a, b) for a, b in zip(self.labels[::2], self.labels[1::2])])
+                [f"{a}-{b}" for a, b in zip(self.labels[::2], self.labels[1::2])])
         elif durations is None:
             # Mode 1
             times = self.times[:-1]
             durations = np.diff(self.times)
             labels = np.array(
-                ["{}-{}".format(a, b) for a, b in zip(self.labels[:-1], self.labels[1:])])
+                [f"{a}-{b}" for a, b in zip(self.labels[:-1], self.labels[1:])])
         else:
             # Mode 3
             times = self.times
