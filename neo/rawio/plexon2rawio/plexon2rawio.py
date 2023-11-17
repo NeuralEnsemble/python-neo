@@ -86,7 +86,7 @@ class Plexon2RawIO(BaseRawIO):
             pl2_dll_folder.mkdir(exist_ok=True)
             pl2_dll_file_path = pl2_dll_folder / file_name
 
-            if not pl2_dll_file_path.exists():
+            if pl2_dll_file_path.exists():
                 # I think this warning should be removed
                 # Warnings should provide a solution but this is just a reminder to the user of normal behavior
                 # Nothing to do
