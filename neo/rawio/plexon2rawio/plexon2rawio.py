@@ -23,6 +23,8 @@ Author: Julia Sprenger
 """
 import pathlib
 import warnings
+import platform
+
 from collections import namedtuple
 from urllib.request import urlopen
 from datetime import datetime
@@ -74,14 +76,24 @@ class Plexon2RawIO(BaseRawIO):
 
         # download default PL2 dll once if not yet available
         if pl2_dll_file_path is None:
-            pl2_dll_folder = pathlib.Path .home() / '.plexon_dlls_for_neo'
-            pl2_dll_folder.mkdir(exist_ok=True)
-            pl2_dll_file_path = pl2_dll_folder / 'PL2FileReader.dll'
-
-            if pl2_dll_file_path.exists():
-                warnings.warn(f'Using cached plexon dll at {pl2_dll_file_path}')
+            architecture = platform.architecture()[0]
+            if architecture == '64bit':
+                file_name = "PL2FileReader64.dll"
             else:
-                dist = urlopen('https://raw.githubusercontent.com/Neuralensemble/pypl2/master/bin/PL2FileReader.dll')
+                file_name = "PL2FileReader.dll"
+            
+            pl2_dll_folder = pathlib.Path.home() / '.plexon_dlls_for_neo'
+            pl2_dll_folder.mkdir(exist_ok=True)
+            pl2_dll_file_path = pl2_dll_folder / file_name
+
+            if not pl2_dll_file_path.exists():
+                # I think this warning should be removed
+                # Warnings should provide a solution but this is just a reminder to the user of normal behavior
+                # Nothing to do
+                warnings.warn(f'Using cached plexon dll at {pl2_dll_file_path}')  
+            else:
+                dist = urlopen(f'https://raw.githubusercontent.com/Neuralensemble/pypl2/master/bin/{file_name}')
+
                 with open(pl2_dll_file_path, 'wb') as f:
                     print(f'Downloading plexon dll to {pl2_dll_file_path}')
                     f.write(dist.read())
