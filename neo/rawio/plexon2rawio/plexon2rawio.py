@@ -301,7 +301,7 @@ class Plexon2RawIO(BaseRawIO):
         stream_id = self.header['signal_streams'][stream_index]['id']
         stream_characteristic = list(self.signal_stream_characteristics.values())[stream_index]
         assert stream_id == stream_characteristic.id
-        return stream_characteristic.n_samples
+        return int(stream_characteristic.n_samples)  # Avoids returning a numpy.int64 scalar
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         # This returns the t_start of signals as a float value in seconds
