@@ -77,9 +77,9 @@ class Plexon2RawIO(BaseRawIO):
         # download default PL2 dll once if not yet available
         if pl2_dll_file_path is None:
             architecture = platform.architecture()[0]
-            if architecture == '64bit':
+            if architecture == '64bit' and platform.system() == 'Windows':
                 file_name = "PL2FileReader64.dll"
-            else:
+            else:  # Apparently wine uses the 32 bit version in linux
                 file_name = "PL2FileReader.dll"
             
             pl2_dll_folder = pathlib.Path.home() / '.plexon_dlls_for_neo'
@@ -88,11 +88,12 @@ class Plexon2RawIO(BaseRawIO):
 
             if pl2_dll_file_path.exists():
                 # I think this warning should be removed
-                # Warnings should provide a solution but this is just a reminder to the user of normal behavior
-                # Nothing to do
+                # Warnings should provide a solution but this is 
+                # just a reminder to the user of normal behavior
                 warnings.warn(f'Using cached plexon dll at {pl2_dll_file_path}')  
             else:
-                dist = urlopen(f'https://raw.githubusercontent.com/Neuralensemble/pypl2/master/bin/{file_name}')
+                url = f'https://raw.githubusercontent.com/Neuralensemble/pypl2/master/bin/{file_name}'
+                dist = urlopen(url=url)
 
                 with open(pl2_dll_file_path, 'wb') as f:
                     print(f'Downloading plexon dll to {pl2_dll_file_path}')
