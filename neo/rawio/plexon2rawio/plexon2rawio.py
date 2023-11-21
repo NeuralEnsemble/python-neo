@@ -88,7 +88,7 @@ class Plexon2RawIO(BaseRawIO):
 
             if pl2_dll_file_path.exists():
                 # I think this warning should be removed
-                # Warnings should provide a solution but this is 
+                # Warnings should provide a solution but this is
                 # just a reminder to the user of normal behavior
                 warnings.warn(f'Using cached plexon dll at {pl2_dll_file_path}')
             else:
