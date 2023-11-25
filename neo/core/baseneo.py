@@ -33,7 +33,7 @@ def _check_annotations(value):
     """
     if isinstance(value, np.ndarray):
         if not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES):
-            raise ValueError(f"Invalid annotation. NumPy arrays with dtype {value.dtype.type} "
+            raise ValueError(f"Invalid annotation. NumPy arrays with dtype {value.dtype.type}"
                              f"are not allowed")
     elif isinstance(value, dict):
         for element in value.values():
@@ -42,7 +42,7 @@ def _check_annotations(value):
         for element in value:
             _check_annotations(element)
     elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
-        raise ValueError(f"Invalid annotation. Annotations of type {type(value)} are not "
+        raise ValueError(f"Invalid annotation. Annotations of type {type(value)} are not"
                          f"allowed")
 
 
