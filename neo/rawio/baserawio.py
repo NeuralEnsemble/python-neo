@@ -651,7 +651,7 @@ class BaseRawIO:
         return self._spike_count(block_index, seg_index, spike_channel_index)
 
     def get_spike_timestamps(self,
-                             block_index: int  = 0,
+                             block_index: int = 0,
                              seg_index: int = 0,
                              spike_channel_index: int = 0,
                              t_start: float | None = None,
@@ -725,8 +725,10 @@ class BaseRawIO:
             block_index, seg_index, event_channel_index, t_start, t_stop)
         return timestamp, durations, labels
 
-    def rescale_event_timestamp(self, event_timestamps: np.ndarray, dtype: np.dtype= 'float64',
-                    event_channel_index:int = 0):
+    def rescale_event_timestamp(self,
+                                event_timestamps: np.ndarray,
+                                dtype: np.dtype = 'float64',
+                                event_channel_index: int = 0):
         """
         Rescale event timestamps to seconds.
         """
