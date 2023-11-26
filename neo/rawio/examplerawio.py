@@ -85,7 +85,7 @@ class ExampleRawIO(BaseRawIO):
     extensions = ['fake']
     rawmode = 'one-file'
 
-    def __init__(self, filename: str|Path =''):
+    def __init__(self, filename: str | Path = ''):
         BaseRawIO.__init__(self)
         # note that this filename is ued in self._source_name
         self.filename = filename
@@ -267,8 +267,13 @@ class ExampleRawIO(BaseRawIO):
         # this is not always the case
         return self._segment_t_start(block_index, seg_index)
 
-    def _get_analogsignal_chunk(self, block_index:int, seg_index:int, i_start: int | None, i_stop: int | None,
-                                stream_index: int, channel_indexes: np.ndarray|list|slice|None):
+    def _get_analogsignal_chunk(self,
+                                block_index: int,
+                                seg_index: int,
+                                i_start: int | None,
+                                i_stop: int | None,
+                                stream_index: int,
+                                channel_indexes: np.ndarray | list | slice | None):
         # this must return a signal chunk in a signal stream
         # limited with i_start/i_stop (can be None)
         # channel_indexes can be None (=all channel in the stream) or a list or numpy.array
@@ -308,14 +313,19 @@ class ExampleRawIO(BaseRawIO):
         raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
         return raw_signals
 
-    def _spike_count(self, block_index:int, seg_index:int, spike_channel_index:int):
+    def _spike_count(self, block_index: int, seg_index: int, spike_channel_index: int):
         # Must return the nb of spikes for given (block_index, seg_index, spike_channel_index)
         # we are lucky:  our units have all the same nb of spikes!!
         # it is not always the case
         nb_spikes = 20
         return nb_spikes
 
-    def _get_spike_timestamps(self, block_index: int, seg_index: int, spike_channel_index: int, t_start: float|None, t_stop: float|None):
+    def _get_spike_timestamps(self,
+                              block_index: int,
+                              seg_index: int,
+                              spike_channel_index: int,
+                              t_start: float | None,
+                              t_stop: float | None):
         # In our IO, timestamp are internally coded 'int64' and they
         # represent the index of the signals 10kHz
         # we are lucky: spikes have the same discharge in all segments!!
@@ -343,8 +353,12 @@ class ExampleRawIO(BaseRawIO):
         spike_times /= 10000.  # because 10kHz
         return spike_times
 
-    def _get_spike_raw_waveforms(self, block_index: int, seg_index: int, spike_channel_index: int,
-                                 t_start: float|None, t_stop: float|None):
+    def _get_spike_raw_waveforms(self,
+                                 block_index: int,
+                                 seg_index: int,
+                                 spike_channel_index: int,
+                                 t_start: float | None,
+                                 t_stop: float | None):
         # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
         # in the original dtype
         # this must be as fast as possible.
@@ -380,7 +394,12 @@ class ExampleRawIO(BaseRawIO):
             # epoch channel
             return 10
 
-    def _get_event_timestamps(self, block_index: int, seg_index: int, event_channel_index: int, t_start: float|None, t_stop: float|None):
+    def _get_event_timestamps(self,
+                              block_index: int,
+                              seg_index: int,
+                              event_channel_index: int,
+                              t_start: float | None,
+                              t_stop: float | None):
         # the main difference between spike channel and event channel
         # is that for event channels we have 3D numpy array (timestamp, durations, labels) where
         # durations must be None for 'event'
