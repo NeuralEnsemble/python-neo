@@ -88,7 +88,6 @@ class SpikeGLXRawIO(BaseRawIO):
         # sort stream_name by higher sampling rate first
         srates = {info['stream_name']: info['sampling_rate'] for info in self.signals_info_list}
         stream_names = sorted(list(srates.keys()), key=lambda e: srates[e])[::-1]
-
         nb_segment = np.unique([info['seg_index'] for info in self.signals_info_list]).size
 
         self._memmaps = {}
@@ -122,10 +121,15 @@ class SpikeGLXRawIO(BaseRawIO):
                 chan_name = info['channel_names'][local_chan]
                 chan_id = f'{stream_name}#{chan_name}'
                 signal_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16',
-                                    info['units'], info['channel_gains'][local_chan],
-                                    info['channel_offsets'][local_chan], stream_id))
-            if not self.load_sync_channel:
-                signal_channels = signal_channels[:-1]
+                                        info['units'], info['channel_gains'][local_chan],
+                                        info['channel_offsets'][local_chan], stream_id))
+            # check sync channel validity
+            if "nidq" not in stream_name:
+                if not self.load_sync_channel and info['has_sync_trace']:
+                    signal_channels = signal_channels[:-1]
+                if self.load_sync_channel and not info['has_sync_trace']:
+                    raise ValueError("SYNC channel is not present in the recording. "
+                                     "Set load_sync_channel to False")
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -181,7 +185,8 @@ class SpikeGLXRawIO(BaseRawIO):
                             # one fake channel  for "sys0"
                             loc = np.concatenate((loc, [[0., 0.]]), axis=0)
                         for ndim in range(loc.shape[1]):
-                            sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = loc[:, ndim]
+                            sig_ann['__array_annotations__'][f'channel_location_{ndim}'] = \
+                                loc[:, ndim]
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
@@ -201,25 +206,18 @@ class SpikeGLXRawIO(BaseRawIO):
                                 stream_index, channel_indexes):
         stream_id = self.header['signal_streams'][stream_index]['id']
         memmap = self._memmaps[seg_index, stream_id]
+        stream_name = self.header['signal_streams']['name'][stream_index]
+
+        # take care of sync channel
+        info = self.signals_info_dict[0, stream_name]
+        if not self.load_sync_channel and info['has_sync_trace']:
+            memmap = memmap[:, :-1]
+
+        # since we cut the memmap, we can simplify the channel selection
         if channel_indexes is None:
-            if self.load_sync_channel:
-                channel_selection = slice(None)
-            else:
-                channel_selection = slice(-1)
+            channel_selection = slice(None)
         elif isinstance(channel_indexes, slice):
-            if self.load_sync_channel:
-                # simple
-                channel_selection = channel_indexes
-            else:
-                # more tricky because negative
-                sl_start = channel_indexes.start
-                sl_stop = channel_indexes.stop
-                sl_step = channel_indexes.step
-                if sl_stop is not None and sl_stop < 0:
-                    sl_stop = sl_stop - 1
-                elif sl_stop is None:
-                    sl_stop = -1
-                channel_selection = slice(sl_start, sl_stop, sl_step)
+            channel_selection = channel_indexes
         elif not isinstance(channel_indexes, slice):
             if np.all(np.diff(channel_indexes) == 1):
                 # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
@@ -286,7 +284,7 @@ def parse_spikeglx_fname(fname):
     Parse recording identifiers from a SpikeGLX style filename.
 
     spikeglx naming follow this rules:
-    https://github.com/billkarsh/SpikeGLX/blob/master/Markdown/UserManual.md#gates-and-triggers
+    https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/UserManual.md#gates-and-triggers
 
     Example file name structure:
     Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
@@ -372,6 +370,13 @@ def extract_stream_info(meta_file, meta):
     """Extract info from the meta dict"""
 
     num_chan = int(meta['nSavedChans'])
+    if "snsApLfSy" in meta:
+        # AP and LF meta have this field
+        ap, lf, sy = [int(s) for s in meta["snsApLfSy"].split(",")]
+        has_sync_trace = sy == 1
+    else:
+        # NIDQ case
+        has_sync_trace = False
     fname = Path(meta_file).stem
     run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
     
@@ -385,11 +390,10 @@ def extract_stream_info(meta_file, meta):
         # metad['imroTbl'] contain two gain per channel  AP and LF
         # except for the last fake channel
         per_channel_gain = np.ones(num_chan, dtype='float64')
-        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0' or meta['imDatPrb_type'] in ('1015', '1022', '1030', '1031', '1032'):
+        if 'imDatPrb_type' not in meta or meta['imDatPrb_type'] == '0' or meta['imDatPrb_type'] \
+            in ('1015', '1022', '1030', '1031', '1032'):
             # This work with NP 1.0 case with different metadata versions
-            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3A.md#imec
-            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B1.md#imec
-            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_3B2.md#imec
+            # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
             if stream_kind == 'ap':
                 index_imroTbl = 3
             elif stream_kind == 'lf':
@@ -399,11 +403,11 @@ def extract_stream_info(meta_file, meta):
                 per_channel_gain[c] = 1. / float(v)
             gain_factor = float(meta['imAiRangeMax']) / 512
             channel_gains = gain_factor * per_channel_gain * 1e6
-        elif meta['imDatPrb_type'] in ('21', '24') and stream_kind == 'ap':
+        elif meta['imDatPrb_type'] in ('21', '24', '2003', '2004', '2013', '2014'):
             # This work with NP 2.0 case with different metadata versions
-            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#channel-entries-by-type
-            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_20.md#imec
-            # https://github.com/billkarsh/SpikeGLX/blob/gh-pages/Support/Metadata_30.md#imec
+            # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md#imec
+            # We allow also LF streams for NP2.0 because CatGT can produce them
+            # See: https://github.com/SpikeInterface/spikeinterface/issues/1949
             per_channel_gain[:-1] = 1 / 80.
             gain_factor = float(meta['imAiRangeMax']) / 8192
             channel_gains = gain_factor * per_channel_gain * 1e6
@@ -447,5 +451,6 @@ def extract_stream_info(meta_file, meta):
     info['channel_names'] = [txt.split(';')[0] for txt in meta['snsChanMap']]
     info['channel_gains'] = channel_gains
     info['channel_offsets'] = np.zeros(info['num_chan'])
+    info['has_sync_trace'] = has_sync_trace
 
     return info

@@ -563,7 +563,7 @@ class Container(BaseNeo):
         for container in self._child_containers:
             objs = getattr(self, container)
             if objs:
-                vals.append('{} {}'.format(len(objs), container))
+                vals.append(f'{objs} {container}')
         pp.text(', '.join(vals))
 
         if self._has_repr_pretty_attrs_():
@@ -573,7 +573,7 @@ class Container(BaseNeo):
         for container in self._repr_pretty_containers:
             pp.breakable()
             objs = getattr(self, container)
-            pp.text("# {} (N={})".format(container, len(objs)))
+            pp.text(f"# {container} (N={objs})")
             for (i, obj) in enumerate(objs):
                 pp.breakable()
                 pp.text("%s: " % i)

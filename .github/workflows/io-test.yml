@@ -103,6 +103,8 @@ jobs:
           sudo apt-get install -yqq --allow-downgrades libc6:i386 libgcc-s1:i386 libstdc++6:i386 wine
 
       - name: Test with pytest
+        env:
+          HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_local_plugin_path
         run: |
           # only neo.rawio and neo.io
           pytest --cov=neo neo/test/rawiotest

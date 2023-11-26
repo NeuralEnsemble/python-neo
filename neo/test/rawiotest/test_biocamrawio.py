@@ -12,11 +12,11 @@ class TestBiocamRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = BiocamRawIO
 
     entities_to_download = [
-        'biocam/biocam_hw3.0_fw1.6.brw'
-        ]
-
-    entities_to_download = [
         'biocam',
+    ]
+    entities_to_test = [
+        'biocam/biocam_hw3.0_fw1.6.brw',
+        'biocam/biocam_hw3.0_fw1.7.0.12_raw.brw',
     ]
 
 
