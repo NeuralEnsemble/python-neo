@@ -81,6 +81,7 @@ class HekaIO(BaseIO):
 
         if (true_sweep_num := self.series_data[primary_channel_unit]["time"].shape[0]) != self.num_sweeps:
             self.num_sweeps = true_sweep_num
+            self.header['nb_segment'] = [self.num_sweeps]
 
         # iterate over sections first:
         for seg_index in range(self.num_sweeps):
