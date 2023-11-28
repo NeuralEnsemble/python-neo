@@ -77,6 +77,11 @@ class HekaIO(BaseIO):
         if force_order_to_recording_mode:
             self.make_header_order_match_recording_mode()
 
+        primary_channel_unit = self.header["signal_channels"]["units"][0]
+
+        if (true_sweep_num := self.series_data[primary_channel_unit]["time"].shape[0]) != self.num_sweeps:
+            self.num_sweeps = true_sweep_num
+
         # iterate over sections first:
         for seg_index in range(self.num_sweeps):
 
@@ -90,7 +95,6 @@ class HekaIO(BaseIO):
                 sampling_rate = self.header["signal_channels"]["sampling_rate"][chan_idx] * 1 / pq.s
 
                 if name == "stimulation":
-                    primary_channel_unit = self.header["signal_channels"]["units"][0]
                     t_start =  self.series_data[primary_channel_unit]["time"][seg_index, 0] * pq.s
                     recdata =  self.series_data[primary_channel_unit]["stim"]["data"][seg_index, :]
                 else:
