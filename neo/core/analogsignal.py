@@ -417,7 +417,7 @@ class AnalogSignal(BaseSignal):
         Handle pretty-printing the :class:`AnalogSignal`.
         '''
         pp.text(f"{self.__class__.__name__} with {self.shape[1]} channels of length "
-                f"{self.shape[0]}; units {self.units.dimesionality.string}; datatype "
+                f"{self.shape[0]}; units {self.units.dimensionality.string}; datatype "
                 f"{self.dtype}")
         if self._has_repr_pretty_attrs_():
             pp.breakable()
