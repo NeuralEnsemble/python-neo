@@ -69,7 +69,7 @@ class IntanBinaryRawIO(BaseRawIO):
         else:
             raw_file_dict = create_raw_file_channel(dir_path)
 
-        (self._global_info, 
+        (self._global_info,
          self._ordered_channels,
          data_dtype,
          self._block_size) = read_rhd(header_file)
@@ -121,11 +121,11 @@ class IntanBinaryRawIO(BaseRawIO):
         if stream_mode:
             self._max_sigs_length = max(
                 [raw_data.size * self._block_size for raw_data in self._raw_data.values()]
-                )
+            )
         else:
             self._max_sigs_length = max(
                 [len(raw_data) * raw_data[0].size * self._block_size for raw_data in self._raw_data.values()]
-                )
+            )
 
         # No events
         event_channels = []
