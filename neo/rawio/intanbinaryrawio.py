@@ -22,7 +22,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
 
 from .intanrawio import (read_variable_header, rhd_global_header_base, rhd_global_header_part1,
                          rhd_global_header_v11, rhd_global_header_v13, rhd_global_header_v20,
-                         rhd_global_header_final, rhd_signal_group_header, 
+                         rhd_global_header_final, rhd_signal_group_header,
                          rhd_signal_channel_header, stream_type_to_name)
 
 
@@ -52,7 +52,7 @@ class IntanBinaryRawIO(BaseRawIO):
         dir_path = Path(self.dirname)
         assert dir_path.is_dir(), ('IntanBinaryRawIO requires the root '
                                    'directory containing info.rhd')
-        
+
         header_file = dir_path / 'info.rhd'
 
         for file in possible_raw_files:
@@ -74,7 +74,7 @@ class IntanBinaryRawIO(BaseRawIO):
          data_dtype,
          self._block_size) = read_rhd(header_file)
 
-        self._raw_data ={}
+        self._raw_data = {}
         for stream_index, sub_datatype in data_dtype.items():
             if stream_mode:
                 self._raw_data[stream_index] = np.memmap(raw_file_dict[stream_index],
@@ -83,11 +83,9 @@ class IntanBinaryRawIO(BaseRawIO):
             else:
                 self._raw_data[stream_index] = []
                 for channel_index, datatype in enumerate(sub_datatype):
-                    self._raw_data[stream_index].append(
-                        np.memmap(raw_file_dict[stream_index][channel_index],
-                                                                dtype=[datatype], 
-                                                                mode='r')
-                                                                )
+                    self._raw_data[stream_index].append(np.memmap(raw_file_dict[stream_index][channel_index],
+                                                                dtype=[datatype],
+                                                                mode='r'))
 
         # check timestamp continuity
         if stream_mode:
@@ -121,9 +119,13 @@ class IntanBinaryRawIO(BaseRawIO):
         self._max_sampling_rate = np.max(signal_channels['sampling_rate'])
 
         if stream_mode:
-            self._max_sigs_length = max([raw_data.size * self._block_size for raw_data in self._raw_data.values()])
+            self._max_sigs_length = max(
+                [raw_data.size * self._block_size for raw_data in self._raw_data.values()]
+                )
         else:
-            self._max_sigs_length = max([len(raw_data)* raw_data[0].size * self._block_size for raw_data in self._raw_data.values()])
+            self._max_sigs_length = max(
+                [len(raw_data) * raw_data[0].size * self._block_size for raw_data in self._raw_data.values()]
+                )
 
         # No events
         event_channels = []
@@ -143,7 +145,6 @@ class IntanBinaryRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
-
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.
@@ -181,7 +182,7 @@ class IntanBinaryRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(None)
         channel_names = signal_channels['name'][channel_indexes]
-        
+
         if self.stream_mode:
             shape = self._raw_data[stream_index][channel_names[0]].shape
         else:
@@ -216,15 +217,20 @@ class IntanBinaryRawIO(BaseRawIO):
 # RHD Zone for Binary Files
 
 # For One File Per Signal
-possible_raw_files = ['amplifier.dat', 
-                      'auxiliary.dat', 
+possible_raw_files = ['amplifier.dat',
+                      'auxiliary.dat',
                       'supply.dat',
-                      'analogin.dat', 
-                      'digitalin.dat', 
-                      'digitalout.dat',]
+                      'analogin.dat',
+                      'digitalin.dat',
+                      'digitalout.dat']
 
 # For One File Per Channel
-possible_raw_file_prefixes = ['amp', 'aux', 'vdd', 'board-ANALOG', 'board-DIGITAL-IN', 'board-DIGITAL-OUT']
+possible_raw_file_prefixes = ['amp',
+                              'aux',
+                              'vdd',
+                              'board-ANALOG',
+                              'board-DIGITAL-IN',
+                              'board-DIGITAL-OUT']
 
 
 def create_raw_file_stream(dirname):
@@ -232,7 +238,7 @@ def create_raw_file_stream(dirname):
     raw_file_dict = {}
     for raw_index, raw_file in enumerate(possible_raw_files):
         if Path(dirname / raw_file).is_file():
-            raw_file_dict[raw_index] = Path(dirname /raw_file)
+            raw_file_dict[raw_index] = Path(dirname / raw_file)
     raw_file_dict[6] = Path(dirname / 'time.dat')
 
     return raw_file_dict
@@ -244,12 +250,12 @@ def create_raw_file_channel(dirname):
     files = [file for file in file_names if file.is_file()]
     raw_file_dict = {}
     for raw_index, prefix in enumerate(possible_raw_file_prefixes):
-        raw_file_dict[raw_index]= [file for file in files if prefix in file.name]
+        raw_file_dict[raw_index] = [file for file in files if prefix in file.name]
     raw_file_dict[6] = [Path(dirname / 'time.dat')]
 
     return raw_file_dict
 
-    
+
 def read_rhd(filename):
     with open(filename, mode='rb') as f:
 
@@ -280,7 +286,7 @@ def read_rhd(filename):
 
         # read channel group and channel header
         channels_by_type = {k: [] for k in [0, 1, 2, 3, 4, 5]}
-        data_dtype = {k: [] for k in range(7)} # 5 channels + 6 is for time stamps
+        data_dtype = {k: [] for k in range(7)}  # 5 channels + 6 is for time stamps
         for g in range(global_info['nb_signal_group']):
             group_info = read_variable_header(f, rhd_signal_group_header)
 
@@ -289,7 +295,6 @@ def read_rhd(filename):
                     chan_info = read_variable_header(f, rhd_signal_channel_header)
                     if bool(chan_info['channel_enabled']):
                         channels_by_type[chan_info['signal_type']].append(chan_info)
-
 
     sr = global_info['sampling_rate']
 
@@ -300,12 +305,12 @@ def read_rhd(filename):
         BLOCK_SIZE = 60  # 256 channels
 
     ordered_channels = []
-    
+
     # 6: Timestamp stored in time.dat
     if version >= V('1.2'):
         data_dtype[6] = [('timestamp', 'int32', BLOCK_SIZE)]
     else:
-        data_dtype[6] = [('timestamp','uint32', BLOCK_SIZE)]
+        data_dtype[6] = [('timestamp', 'uint32', BLOCK_SIZE)]
 
     # 0: RHD2000 amplifier channel stored in amplifier.dat/amp-*
     for chan_info in channels_by_type[0]:
