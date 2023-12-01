@@ -351,16 +351,23 @@ def read_rhd(filename):
             chan_info['gain'] = 0.0003125
             chan_info['offset'] = -32768 * 0.0003125
         ordered_channels.append(chan_info)
-        data_dtype[3]+= [(name,'uint16', BLOCK_SIZE)]
+        data_dtype[3] += [(name,'uint16', BLOCK_SIZE)]
 
     # 4: USB board digital input channel stored in digitalin.dat/board-DIGITAL-IN-*
     # 5: USB board digital output channel stored in digitalout.dat/board-DIGITAL-OUT-*
     for sig_type in [4, 5]:
-        # at the moment theses channel are not in sig channel list
-        # but they are in the raw memamp
+        # User can obtain digital channels from analog_signal_chunk and then process
+        # them themself
         if len(channels_by_type[sig_type]) > 0:
             name = {4: 'DIGITAL-IN', 5: 'DIGITAL-OUT'}[sig_type]
-            data_dtype[sig_type] += [(name,'uint16', BLOCK_SIZE)]
+            chan_info = channels_by_type[sig_type][0]
+            chan_info['native_channel_name'] = name  # overwite to allow memmap to work
+            chan_info['sampling_rate'] = sr
+            chan_info['units'] = 'TTL'  # arbitrary units so I did TTL for the logic
+            chan_info['gain'] = 1.0
+            chan_info['offset'] = 0.0
+            ordered_channels.append(chan_info)
+            data_dtype[sig_type] += [(name, 'uint16', BLOCK_SIZE)]
     
     if bool(global_info['notch_filter_mode']) and version >= V('3.0'):
         global_info['notch_filter_applied'] = True
