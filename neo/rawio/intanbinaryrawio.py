@@ -1,7 +1,7 @@
 """
 Support for Intan's binary file mode which is turned on by setting the save
-option in Intan to 'One File Per Signal Type' or 'One File Per Channel'. 
-The reader for this format is for rhd only since it uses the rhd header. 
+option in Intan to 'One File Per Signal Type' or 'One File Per Channel'.
+The reader for this format is for rhd only since it uses the rhd header.
 Need to confirm if rhs can also use this save format.
 
 RHD supported 1.x, 2.x, and 3.0, 3.1, 3.2
@@ -11,19 +11,19 @@ See:
 
 Author: Zach McKenzie, based on Samuel Garcia's IntanRawIO
 """
-
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype, _common_sig_characteristics)
-
-from .intanrawio import (read_variable_header, rhd_global_header_base, rhd_global_header_part1, 
-                         rhd_global_header_v11, rhd_global_header_v13, rhd_global_header_v20, rhd_global_header_final,
-                         rhd_signal_group_header,  rhd_signal_channel_header, stream_type_to_name)
 from pathlib import Path
 
 import numpy as np
 from collections import OrderedDict
 from packaging.version import Version as V
 
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
+                _spike_channel_dtype, _event_channel_dtype, _common_sig_characteristics)
+
+from .intanrawio import (read_variable_header, rhd_global_header_base, rhd_global_header_part1,
+                         rhd_global_header_v11, rhd_global_header_v13, rhd_global_header_v20,
+                         rhd_global_header_final, rhd_signal_group_header, 
+                         rhd_signal_channel_header, stream_type_to_name)
 
 
 class IntanBinaryRawIO(BaseRawIO):
@@ -50,7 +50,8 @@ class IntanBinaryRawIO(BaseRawIO):
     def _parse_header(self):
 
         dir_path = Path(self.dirname)
-        assert dir_path.is_dir(), 'IntanBinaryRawIO requires the root directory containing info.rhd'
+        assert dir_path.is_dir(), ('IntanBinaryRawIO requires the root '
+                                   'directory containing info.rhd')
         
         header_file = dir_path / 'info.rhd'
 
@@ -68,16 +69,25 @@ class IntanBinaryRawIO(BaseRawIO):
         else:
             raw_file_dict = create_raw_file_channel(dir_path)
 
-        self._global_info, self._ordered_channels, data_dtype, self._block_size = read_rhd(header_file)
+        (self._global_info, 
+         self._ordered_channels,
+         data_dtype,
+         self._block_size) = read_rhd(header_file)
 
         self._raw_data ={}
         for stream_index, sub_datatype in data_dtype.items():
             if stream_mode:
-                self._raw_data[stream_index] = np.memmap(raw_file_dict[stream_index], dtype=sub_datatype, mode='r')
+                self._raw_data[stream_index] = np.memmap(raw_file_dict[stream_index],
+                                                         dtype=sub_datatype,
+                                                         mode='r')
             else:
                 self._raw_data[stream_index] = []
                 for channel_index, datatype in enumerate(sub_datatype):
-                    self._raw_data[stream_index].append(np.memmap(raw_file_dict[stream_index][channel_index], dtype=[datatype], mode='r'))
+                    self._raw_data[stream_index].append(
+                        np.memmap(raw_file_dict[stream_index][channel_index],
+                                                                dtype=[datatype], 
+                                                                mode='r')
+                                                                )
 
         # check timestamp continuity
         if stream_mode:
@@ -123,7 +133,7 @@ class IntanBinaryRawIO(BaseRawIO):
         spike_channels = []
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
-        # fille into header dict
+        # fill into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
@@ -201,6 +211,7 @@ class IntanBinaryRawIO(BaseRawIO):
 
         return sigs_chunk
 
+
 ############
 # RHD Zone for Binary Files
 
@@ -214,6 +225,7 @@ possible_raw_files = ['amplifier.dat',
 
 # For One File Per Channel
 possible_raw_file_prefixes = ['amp', 'aux', 'vdd', 'board-ANALOG', 'board-DIGITAL-IN', 'board-DIGITAL-OUT']
+
 
 def create_raw_file_stream(dirname):
     """Function for One File Per Signal Type"""
@@ -313,7 +325,7 @@ def read_rhd(filename):
         chan_info['gain'] = 0.0000374
         chan_info['offset'] = 0.
         ordered_channels.append(chan_info)
-        data_dtype[1] += [(name,'uint16', BLOCK_SIZE // 4)]
+        data_dtype[1] += [(name, 'uint16', BLOCK_SIZE // 4)]
 
     # 2: RHD2000 supply voltage channel stored in supply.dat/vdd-*
     for chan_info in channels_by_type[2]:
@@ -334,7 +346,7 @@ def read_rhd(filename):
         chan_info['gain'] = 0.001
         chan_info['offset'] = 0.
         ordered_channels.append(chan_info)
-        data_dtype += [(name,'int16',)]
+        data_dtype += [(name, 'int16',)]
 
     # 3: USB board ADC input channel stored in analogin.dat/board-ANALOG-*
     for chan_info in channels_by_type[3]:
@@ -351,7 +363,7 @@ def read_rhd(filename):
             chan_info['gain'] = 0.0003125
             chan_info['offset'] = -32768 * 0.0003125
         ordered_channels.append(chan_info)
-        data_dtype[3] += [(name,'uint16', BLOCK_SIZE)]
+        data_dtype[3] += [(name, 'uint16', BLOCK_SIZE)]
 
     # 4: USB board digital input channel stored in digitalin.dat/board-DIGITAL-IN-*
     # 5: USB board digital output channel stored in digitalout.dat/board-DIGITAL-OUT-*
@@ -368,10 +380,10 @@ def read_rhd(filename):
             chan_info['offset'] = 0.0
             ordered_channels.append(chan_info)
             data_dtype[sig_type] += [(name, 'uint16', BLOCK_SIZE)]
-    
+
     if bool(global_info['notch_filter_mode']) and version >= V('3.0'):
         global_info['notch_filter_applied'] = True
     else:
         global_info['notch_filter_applied'] = False
-    
+
     return global_info, ordered_channels, data_dtype, BLOCK_SIZE

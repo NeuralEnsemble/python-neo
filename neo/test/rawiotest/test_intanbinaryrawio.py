@@ -11,8 +11,8 @@ class TestIntanBinaryRawIO(BaseTestRawIO, unittest.TestCase, ):
         'intan'
     ]
     entities_to_test = [
-        'intan/simulated_intan_230816_095232/',
-        'intan/simulated_intan_230816_182040/',
+        'intan/intan_fpc_test_231117_052630/',
+        'intan/intan_fps_test_231117_052500/',
     ]
 
 
