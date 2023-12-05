@@ -70,7 +70,8 @@ test = [
 ]
 
 docs = [
-    "docutils<0.18",
+    "docutils",
+    "sphinx",
     "sphinx-inline-tabs",
     "sphinx-gallery",
     "pydata-sphinx-theme",
