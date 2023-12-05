@@ -63,7 +63,7 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
                            block2.segments[0].irregularlysampledsignals[0].magnitude)
         assert_array_equal(block1.segments[0].irregularlysampledsignals[0].times,
                            block2.segments[0].irregularlysampledsignals[0].times)
-        
+
         assert_array_equal(block1.segments[0].imagesequences[0],
                            block2.segments[0].imagesequences[0])
 

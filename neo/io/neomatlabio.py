@@ -267,8 +267,8 @@ class NeoMatlabIO(BaseIO):
                 seg_struct['imagesequences'].append(image_sq_structure)
 
         for group in bl.groups:
-                group_structure = self.create_struct_from_obj(group)
-                bl_struct['groups'].append(group_structure)
+            group_structure = self.create_struct_from_obj(group)
+            bl_struct['groups'].append(group_structure)
 
         scipy.io.savemat(self.filename, {'block': bl_struct}, oned_as='row')
 
@@ -358,7 +358,7 @@ class NeoMatlabIO(BaseIO):
                 if len(arr) > 0:
                     data_complement["spatial_scale"] = arr
                 else:
-                    pass #
+                    pass  #
 
             if "times" in (at[0] for at in cl._necessary_attrs) and quantity_attr != "times":
                 # handle IrregularlySampledSignal
