@@ -8,7 +8,7 @@ import quantities as pq
 
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
-from neo import Block, Segment, SpikeTrain
+from neo import Block, Segment, SpikeTrain, ImageSequence
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io.neomatlabio import NeoMatlabIO
 
@@ -32,10 +32,17 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
         spiketrain1.annotate(yep='yop')
         sig1 = AnalogSignal([4, 5, 6] * pq.A, sampling_period=1 * pq.ms)
         irrsig1 = IrregularlySampledSignal([0, 1, 2] * pq.ms, [4, 5, 6] * pq.A)
+        img_sequence_array = [[[column for column in range(2)] for _ in range(2)]
+                      for _ in range(2)]
+        image_sequence = ImageSequence(img_sequence_array, units='dimensionless',
+                               sampling_rate=1 * pq.Hz,
+                               spatial_scale=1 * pq.micrometer)
         block1.segments.append(seg)
         seg.spiketrains.append(spiketrain1)
         seg.analogsignals.append(sig1)
         seg.irregularlysampledsignals.append(irrsig1)
+        seg.imagesequences.append(image_sequence)
+
 
         # write block
         filename = self.get_local_path('matlabiotestfile.mat')
@@ -56,6 +63,9 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
                            block2.segments[0].irregularlysampledsignals[0].magnitude)
         assert_array_equal(block1.segments[0].irregularlysampledsignals[0].times,
                            block2.segments[0].irregularlysampledsignals[0].times)
+        
+        assert_array_equal(block1.segments[0].imagesequences[0],
+                           block2.segments[0].imagesequences[0])
 
         # test annotations
         spiketrain2 = block2.segments[0].spiketrains[0]
