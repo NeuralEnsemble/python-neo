@@ -22,8 +22,11 @@ from packaging.version import Version
 
 
 from neo.io.baseio import BaseIO
-from neo.core import (Block, Segment, AnalogSignal, IrregularlySampledSignal,
-                      Event, Epoch, SpikeTrain, objectnames, class_by_name)
+from neo.core import (Block, Segment, AnalogSignal,
+                      IrregularlySampledSignal, Event,
+                      Epoch, SpikeTrain,
+                      Group, ImageSequence,
+                      objectnames, class_by_name)
 
 classname_lower_to_upper = {}
 for k in objectnames:
@@ -176,7 +179,7 @@ class NeoMatlabIO(BaseIO):
     is_writable = True
 
     supported_objects = [Block, Segment, AnalogSignal, IrregularlySampledSignal,
-                         Epoch, Event, SpikeTrain]
+                         Epoch, Event, SpikeTrain, Group, ImageSequence]
     readable_objects = [Block]
     writeable_objects = [Block]
 
@@ -213,7 +216,7 @@ class NeoMatlabIO(BaseIO):
 
         """
         import scipy.io
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, 'Does not support lazy'
 
         d = scipy.io.loadmat(self.filename, struct_as_record=False,
                              squeeze_me=True, mat_dtype=True)
@@ -258,6 +261,14 @@ class NeoMatlabIO(BaseIO):
             for sptr in seg.spiketrains:
                 sptr_struct = self.create_struct_from_obj(sptr)
                 seg_struct['spiketrains'].append(sptr_struct)
+
+            for image_sq in seg.imagesequences:
+                image_sq_structure = self.create_struct_from_obj(image_sq)
+                seg_struct['imagesequences'].append(image_sq_structure)
+
+        for group in bl.groups:
+                group_structure = self.create_struct_from_obj(group)
+                bl_struct['groups'].append(group_structure)
 
         scipy.io.savemat(self.filename, {'block': bl_struct}, oned_as='row')
 
@@ -343,6 +354,11 @@ class NeoMatlabIO(BaseIO):
                     data_complement["t_start"] = arr.min()
                 else:
                     data_complement["t_start"] = 0.0
+            if "spatial_scale" in (at[0] for at in cl._necessary_attrs):
+                if len(arr) > 0:
+                    data_complement["spatial_scale"] = arr
+                else:
+                    pass #
 
             if "times" in (at[0] for at in cl._necessary_attrs) and quantity_attr != "times":
                 # handle IrregularlySampledSignal
