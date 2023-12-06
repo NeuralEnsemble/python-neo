@@ -81,7 +81,6 @@ class Plexon2RawIO(BaseRawIO):
                 file_name = "PL2FileReader64.dll"
             else:  # Apparently wine uses the 32 bit version in linux
                 file_name = "PL2FileReader.dll"
-            
             pl2_dll_folder = pathlib.Path.home() / '.plexon_dlls_for_neo'
             pl2_dll_folder.mkdir(exist_ok=True)
             pl2_dll_file_path = pl2_dll_folder / file_name
