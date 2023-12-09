@@ -4,13 +4,14 @@ Class for reading data from a 3-brain Biocam system.
 See:
 https://www.3brain.com/products/single-well/biocam-x
 
-Author : Alessio Buccino
+Authors: Alessio Buccino, Robert Wolff
 """
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
                         _spike_channel_dtype, _event_channel_dtype)
 
 import numpy as np
+import json
 
 
 
@@ -118,51 +119,88 @@ def open_biocam_file_header(filename):
     import h5py
 
     rf = h5py.File(filename, 'r')
-    # Read recording variables
-    rec_vars = rf.require_group('3BRecInfo/3BRecVars/')
-    bit_depth = rec_vars['BitDepth'][0]
-    max_uv = rec_vars['MaxVolt'][0]
-    min_uv = rec_vars['MinVolt'][0]
-    n_frames = rec_vars['NRecFrames'][0]
-    sampling_rate = rec_vars['SamplingRate'][0]
-    signal_inv = rec_vars['SignalInversion'][0]
 
-    # Get the actual number of channels used in the recording
-    file_format = rf['3BData'].attrs.get('Version', None)
-    format_100 = False
-    if file_format == 100:
-        n_channels = len(rf['3BData/Raw'][0])
-        format_100 = True
-    elif file_format in (101, 102) or file_format is None:
-        n_channels = int(rf['3BData/Raw'].shape[0] / n_frames)
-    else:
-        raise Exception('Unknown data file format.')
+    if '3BRecInfo' in rf.keys():  # brw v3.x
+        # Read recording variables
+        rec_vars = rf.require_group('3BRecInfo/3BRecVars/')
+        bit_depth = rec_vars['BitDepth'][0]
+        max_uv = rec_vars['MaxVolt'][0]
+        min_uv = rec_vars['MinVolt'][0]
+        num_frames = rec_vars['NRecFrames'][0]
+        sampling_rate = rec_vars['SamplingRate'][0]
+        signal_inv = rec_vars['SignalInversion'][0]
 
-    # # get channels
-    channels = rf['3BRecInfo/3BMeaStreams/Raw/Chs'][:]
-
-    # determine correct function to read data
-    if format_100:
-        if signal_inv == 1:
-            read_function = readHDF5t_100
-        elif signal_inv == 1:
-            read_function = readHDF5t_100_i
+        # Get the actual number of channels used in the recording
+        file_format = rf['3BData'].attrs.get('Version', None)
+        format_100 = False
+        if file_format == 100:
+            num_channels = len(rf['3BData/Raw'][0])
+            format_100 = True
+        elif file_format in (101, 102) or file_format is None:
+            num_channels = int(rf['3BData/Raw'].shape[0] / num_frames)
         else:
-            raise Exception("Unknown signal inversion")
-    else:
-        if signal_inv == 1:
-            read_function = readHDF5t_101
-        elif signal_inv == 1:
-            read_function = readHDF5t_101_i
+            raise Exception('Unknown data file format.')
+
+        # # get channels
+        channels = rf['3BRecInfo/3BMeaStreams/Raw/Chs'][:]
+
+        # determine correct function to read data
+        if format_100:
+            if signal_inv == 1:
+                read_function = readHDF5t_100
+            elif signal_inv == 1:
+                read_function = readHDF5t_100_i
+            else:
+                raise Exception("Unknown signal inversion")
         else:
-            raise Exception("Unknown signal inversion")
+            if signal_inv == 1:
+                read_function = readHDF5t_101
+            elif signal_inv == 1:
+                read_function = readHDF5t_101_i
+            else:
+                raise Exception("Unknown signal inversion")
 
-    gain = (max_uv - min_uv) / (2 ** bit_depth)
-    offset = min_uv
+        gain = (max_uv - min_uv) / (2 ** bit_depth)
+        offset = min_uv
 
-    return dict(file_handle=rf, num_frames=n_frames, sampling_rate=sampling_rate, num_channels=n_channels,
-                channels=channels, file_format=file_format, signal_inv=signal_inv,
-                read_function=read_function, gain=gain, offset=offset)
+        return dict(file_handle=rf, num_frames=num_frames, sampling_rate=sampling_rate,
+                    num_channels=num_channels, channels=channels, file_format=file_format,
+                    signal_inv=signal_inv, read_function=read_function, gain=gain, offset=offset)
+    else:  # brw v4.x
+        # Read recording variables
+        experiment_settings = json.JSONDecoder().decode(rf['ExperimentSettings'][0].decode())
+        max_uv = experiment_settings['ValueConverter']['MaxAnalogValue']
+        min_uv = experiment_settings['ValueConverter']['MinAnalogValue']
+        max_digital = experiment_settings['ValueConverter']['MaxDigitalValue']
+        min_digital = experiment_settings['ValueConverter']['MinDigitalValue']
+        scale_factor = experiment_settings['ValueConverter']['ScaleFactor']
+        sampling_rate = experiment_settings['TimeConverter']['FrameRate']
+
+        for key in rf:
+            if key[:5] == 'Well_':
+                num_channels = len(rf[key]['StoredChIdxs'])
+                if len(rf[key]['Raw']) % num_channels:
+                    raise RuntimeError(
+                        f"Length of raw data array is not multiple of channel number in {key}")
+                num_frames = len(rf[key]['Raw']) // num_channels
+                break
+        try:
+            num_channels_x = num_channels_y = int(np.sqrt(num_channels))
+        except NameError:
+            raise RuntimeError("No Well found in the file")
+        if num_channels_x * num_channels_y != num_channels:
+            raise RuntimeError(
+                f'Cannot determine structure of the MEA plate with {num_channels} channels')
+        channels = 1 + np.concatenate(np.transpose(np.meshgrid(
+            range(num_channels_x), range(num_channels_y))))
+
+        gain = scale_factor * (max_uv - min_uv) / (max_digital - min_digital)
+        offset = min_uv
+        read_function = readHDF5t_brw4
+
+        return dict(file_handle=rf, num_frames=num_frames, sampling_rate=sampling_rate,
+                num_channels=num_channels, channels=channels, read_function=read_function,
+                gain=gain, offset=offset)
 
 
 def readHDF5t_100(rf, t0, t1, nch):
@@ -179,3 +217,9 @@ def readHDF5t_101(rf, t0, t1, nch):
 
 def readHDF5t_101_i(rf, t0, t1, nch):
     return 4096 - rf['3BData/Raw'][nch * t0:nch * t1].reshape((t1 - t0, nch), order='C')
+
+
+def readHDF5t_brw4(rf, t0, t1, nch):
+    for key in rf:
+        if key[:5] == 'Well_':
+            return rf[key]['Raw'][nch * t0:nch * t1].reshape((t1 - t0, nch), order='C')
