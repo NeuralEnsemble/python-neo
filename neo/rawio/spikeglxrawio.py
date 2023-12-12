@@ -409,7 +409,8 @@ def extract_stream_info(meta_file, meta):
             # We allow also LF streams for NP2.0 because CatGT can produce them
             # See: https://github.com/SpikeInterface/spikeinterface/issues/1949
             per_channel_gain[:-1] = 1 / 80.
-            gain_factor = float(meta['imAiRangeMax']) / 8192
+            max_int = int(meta['imMaxInt']) if 'imMaxInt' in meta else 8192
+            gain_factor = float(meta['imAiRangeMax']) / max_int
             channel_gains = gain_factor * per_channel_gain * 1e6
         else:
             raise NotImplementedError('This meta file version of spikeglx'
