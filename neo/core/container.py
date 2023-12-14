@@ -327,6 +327,39 @@ class Container(BaseNeo):
         return {name: len(getattr(self, name))
                     for name in self._child_containers}
 
+    @property
+    def _container_lookup(self):
+        return {
+            cls_name: getattr(self, container_name)
+            for cls_name, container_name in zip(self._child_objects, self._child_containers)
+        }
+
+    def _get_container(self, cls):
+        if hasattr(cls, "proxy_for"):
+            cls = cls.proxy_for
+        return self._container_lookup[cls.__name__]
+
+    def add(self, *objects):
+        """Add a new Neo object to the Container"""
+        for obj in objects:
+            if (
+                obj.__class__.__name__ in self._child_objects
+                or (
+                    hasattr(obj, "proxy_for")
+                    and obj.proxy_for.__name__ in self._child_objects
+                )
+            ):
+                container = self._get_container(obj.__class__)
+                container.append(obj)
+            else:
+                raise TypeError(
+                    f"Cannot add object of type {obj.__class__.__name__} "
+                    f"to a {self.__class__.__name__}, can only add objects of the "
+                    f"following types: {self._child_objects}"
+                )
+
+
+
     def filter(self, targdict=None, data=True, container=False, recursive=True,
                objects=None, **kwargs):
         """
@@ -530,7 +563,7 @@ class Container(BaseNeo):
         for container in self._child_containers:
             objs = getattr(self, container)
             if objs:
-                vals.append('{} {}'.format(len(objs), container))
+                vals.append(f'{objs} {container}')
         pp.text(', '.join(vals))
 
         if self._has_repr_pretty_attrs_():
@@ -540,7 +573,7 @@ class Container(BaseNeo):
         for container in self._repr_pretty_containers:
             pp.breakable()
             objs = getattr(self, container)
-            pp.text("# {} (N={})".format(container, len(objs)))
+            pp.text(f"# {container} (N={objs})")
             for (i, obj) in enumerate(objs):
                 pp.breakable()
                 pp.text("%s: " % i)

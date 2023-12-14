@@ -121,9 +121,8 @@ class SpikeTrainList(ObjectList):
             if self._spike_time_array is None:
                 return str([])
             else:
-                return "SpikeTrainList containing {} spikes from {} neurons".format(
-                    self._spike_time_array.size,
-                    len(self._all_channel_ids))
+                return (f"SpikeTrainList containing {self._spike_time_array.size} "
+                        f"spikes from {len(self._all_channel_ids)} neurons")
         else:
             return str(self._items)
 

@@ -89,6 +89,9 @@ class TdtRawIO(BaseRawIO):
         elif is_tdtblock(self.dirname.parent):
             segment_names.append(str(self.dirname.stem))
             tankname = None
+        else:
+            raise ValueError(f'{self.dirname} is not a valid tdt structure. Make sure all files '
+                             f'required for a tdt block are present.')
 
         nb_segment = len(segment_names)
         if nb_segment == 0:

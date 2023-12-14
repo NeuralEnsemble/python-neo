@@ -24,6 +24,7 @@ Classes:
 * :attr:`ElanRawIO`
 * :attr:`IntanRawIO`
 * :attr:`MaxwellRawIO`
+* :attr:`MedRawIO`
 * :attr:`MEArecRawIO`
 * :attr:`MicromedRawIO`
 * :attr:`NeuralynxRawIO`
@@ -90,6 +91,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.MaxwellRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.MedRawIO
 
     .. autoattribute:: extensions
 
@@ -186,6 +191,7 @@ from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.intanrawio import IntanRawIO
 from neo.rawio.maxwellrawio import MaxwellRawIO
 from neo.rawio.mearecrawio import MEArecRawIO
+from neo.rawio.medrawio import MedRawIO
 from neo.rawio.micromedrawio import MicromedRawIO
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
@@ -220,6 +226,7 @@ rawiolist = [
     MicromedRawIO,
     MaxwellRawIO,
     MEArecRawIO,
+    MedRawIO,
     NeuralynxRawIO,
     NeuroExplorerRawIO,
     NeuroScopeRawIO,
@@ -239,8 +246,18 @@ rawiolist = [
     WinWcpRawIO,
 ]
 
-
 def get_rawio_class(filename_or_dirname):
+    """Legacy function for returning class guess from file extension
+    DEPRECATED
+    """
+    
+    import warnings
+    warnings.warn('get_rawio_class is deprecated. In the future please use get_rawio')
+
+    return get_rawio(filename_or_dirname)
+
+
+def get_rawio(filename_or_dirname):
     """
     Return a neo.rawio class guess from file extension.
     """

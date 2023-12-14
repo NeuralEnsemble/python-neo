@@ -51,7 +51,7 @@ class Group(Container):
         'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain',
         'Event', 'Epoch', 'ChannelView', 'ImageSequence'
     )
-    _container_child_objects = ('Segment', 'Group')
+    _container_child_objects = ('Group',)
     _parent_objects = ('Block',)
 
     def __init__(self, objects=None, name=None, description=None, file_origin=None,
@@ -76,6 +76,9 @@ class Group(Container):
             self.allowed_types = None
         else:
             self.allowed_types = tuple(allowed_types)
+            for type_ in self.allowed_types:
+                if type_.__name__ not in self._child_objects:
+                    raise TypeError(f"Groups can not contain objects of type {type_.__name__}")
 
         if objects:
             self.add(*objects)
@@ -134,26 +137,13 @@ class Group(Container):
         doc="list of Groups contained in this group"
     )
 
-    @property
-    def _container_lookup(self):
-        return {
-            cls_name: getattr(self, container_name)
-            for cls_name, container_name in zip(self._child_objects, self._child_containers)
-        }
-
-    def _get_container(self, cls):
-        if hasattr(cls, "proxy_for"):
-            cls = cls.proxy_for
-        return self._container_lookup[cls.__name__]
-
     def add(self, *objects):
         """Add a new Neo object to the Group"""
         for obj in objects:
             if self.allowed_types and not isinstance(obj, self.allowed_types):
-                raise TypeError("This Group can only contain {}, but not {}"
-                                "".format(self.allowed_types, type(obj)))
-            container = self._get_container(obj.__class__)
-            container.append(obj)
+                raise TypeError(f"This Group can only contain {self.allowed_types}, "
+                                f"but not {type(obj)}")
+        super().add(*objects)
 
     def walk(self):
         """
