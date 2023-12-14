@@ -13,6 +13,7 @@ weren't set. Consider removing those annotations if they are redundant.
 * Load features in addition to spiketimes.
 """
 
+import re
 import glob
 import logging
 from pathlib import Path
@@ -439,7 +440,7 @@ class FilenameParser:
         for v in all_filenames:
             # Test whether matches format, ie ends with digits
             split_fn = v.name
-            m = glob.re.search((r'^(\w+)\.%s\.(\d+)$' % typestring), split_fn)
+            m = re.search(rf'^(.*)\.{typestring}\.(\d+)$', split_fn)
             if m is not None:
                 # get basename from first hit if not specified
                 if self.basename is None:

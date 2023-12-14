@@ -49,7 +49,7 @@ class TestGroup(unittest.TestCase):
         self.test_segment.imagesequences.append(self.test_image_seq)
 
     def test_create_group(self):
-        objects = [self.test_view, self.test_signal, self.test_segment, self.test_image_seq, self.roi]
+        objects = [self.test_view, self.test_signal, self.test_image_seq, self.roi]
         objects.extend(self.test_spiketrains)
         group = Group(objects)
 
@@ -60,21 +60,19 @@ class TestGroup(unittest.TestCase):
         assert group.imagesequences[0] is self.test_image_seq
         assert group.regionsofinterest[0] is self.roi
         assert len(group.irregularlysampledsignals) == 0
-        assert group.segments[0].analogsignals[0] is self.test_signal
 
     def test_create_empty_group(self):
         group = Group()
 
     def test_children(self):
         group = Group(self.test_spiketrains + [self.test_view]
-                      + [self.test_signal] + [self.test_segment])
+                      + [self.test_signal])
 
         # note: ordering is by class name for data children (AnalogSignal, SpikeTrain),
         #       then container children (Segment)
         assert group.children == (self.test_signal,
                                   *self.test_spiketrains,
-                                  self.test_view,
-                                  self.test_segment)
+                                  self.test_view)
 
     def test_with_allowed_types(self):
         objects = [self.test_signal] + self.test_spiketrains

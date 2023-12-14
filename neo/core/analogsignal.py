@@ -416,12 +416,9 @@ class AnalogSignal(BaseSignal):
         '''
         Handle pretty-printing the :class:`AnalogSignal`.
         '''
-        pp.text("{cls} with {channels} channels of length {length}; "
-                "units {units}; datatype {dtype} ".format(cls=self.__class__.__name__,
-                                                          channels=self.shape[1],
-                                                          length=self.shape[0],
-                                                          units=self.units.dimensionality.string,
-                                                          dtype=self.dtype))
+        pp.text(f"{self.__class__.__name__} with {self.shape[1]} channels of length "
+                f"{self.shape[0]}; units {self.units.dimensionality.string}; datatype "
+                f"{self.dtype}")
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
@@ -431,8 +428,8 @@ class AnalogSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        _pp("sampling rate: {}".format(self.sampling_rate))
-        _pp("time: {} to {}".format(self.t_start, self.t_stop))
+        _pp(f"sampling rate: {self.sampling_rate}")
+        _pp(f"time: {self.t_start} to {self.t_stop}")
 
     def time_index(self, t):
         """Return the array index (or indices) corresponding to the time (or times) `t`"""
@@ -716,9 +713,9 @@ class AnalogSignal(BaseSignal):
             raise MergeError(f'Signals are not continuous. Can not concatenate signals with gaps. '
                              f'Please provide a padding value.')
         if padding is not False:
-            logger.warning('Signals will be padded using {}.'.format(padding))
+            logger.warning(f'Signals will be padded using {padding}.')
             if padding is True:
-                padding = np.NaN * units
+                padding = np.nan * units
             if isinstance(padding, pq.Quantity):
                 padding = padding.rescale(units).magnitude
             else:

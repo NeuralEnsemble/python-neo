@@ -188,16 +188,10 @@ class ImageSequence(BaseSignal):
         Handle pretty-printing the :class:`ImageSequence`.
         """
         pp.text(
-            "{cls} {nframe} frames with width {width} px and height {height} px; "
-            "units {units}; datatype {dtype} ".format(
-                cls=self.__class__.__name__,
-                nframe=self.shape[0],
-                height=self.shape[1],
-                width=self.shape[2],
-                units=self.units.dimensionality.string,
-                dtype=self.dtype,
+            f"{self.__class__.__name__} {self.shape[0]} frames with "
+            f"width {self.shape[2]} px and height {self.shape[1]} px; "
+            f"units {self.units.dimensionality.string}; datatype {self.dtype} "
             )
-        )
 
         def _pp(line):
             pp.breakable()
@@ -205,8 +199,8 @@ class ImageSequence(BaseSignal):
                 pp.text(line)
 
         for line in [
-            "sampling rate: {!s}".format(self.sampling_rate),
-            "spatial_scale: {!s}".format(self.spatial_scale),
+            f"sampling rate: {self.sampling_rate}",
+            f"spatial_scale: {self.spatial_scale}"
         ]:
             _pp(line)
 

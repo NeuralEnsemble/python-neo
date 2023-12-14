@@ -192,8 +192,8 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         Returns a string representing the :class:`IrregularlySampledSignal`.
         '''
-        return '<{}({} at times {})>'.format(
-            self.__class__.__name__, super().__repr__(), self.times)
+        return (f"<{self.__class__.__name__}({super().__repr__()} "
+        f"at times {self.times})>")
 
     def __getitem__(self, i):
         '''
@@ -286,8 +286,7 @@ class IrregularlySampledSignal(BaseSignal):
             return
         # dimensionality should match
         if self.ndim != other.ndim:
-            raise ValueError('Dimensionality does not match: {} vs {}'.format(
-                self.ndim, other.ndim))
+            raise ValueError(f'Dimensionality does not match: {self.ndim} vs {other.ndim}')
         # if if the other array does not have a times property,
         # then it should be okay to add it directly
         if not hasattr(other, 'times'):
@@ -295,7 +294,7 @@ class IrregularlySampledSignal(BaseSignal):
 
         # if there is a times property, the times need to be the same
         if not (self.times == other.times).all():
-            raise ValueError('Times do not match: {} vs {}'.format(self.times, other.times))
+            raise ValueError(f'Times do not match: {self.times} vs {other.times}')
 
     def __rsub__(self, other, *args):
         '''
@@ -307,12 +306,9 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         Handle pretty-printing the :class:`IrregularlySampledSignal`.
         '''
-        pp.text("{cls} with {channels} channels of length {length}; "
-                "units {units}; datatype {dtype} ".format(cls=self.__class__.__name__,
-                                                          channels=self.shape[1],
-                                                          length=self.shape[0],
-                                                          units=self.units.dimensionality.string,
-                                                          dtype=self.dtype))
+        pp.text(f"{self.__class__.__name__} with {self.shape[1]} channels of length "
+                f"{self.shape[0]}; units {self.units.dimensionality.string}; datatype "
+                f"{self.dtype}")
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
@@ -322,7 +318,7 @@ class IrregularlySampledSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sample times: {}".format(self.times)]:
+        for line in [f"sample times: {self.times}"]:
             _pp(line)
 
     @property
@@ -485,7 +481,7 @@ class IrregularlySampledSignal(BaseSignal):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
+                kwargs[name] = f"merge({attr_self}, {attr_other})"
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
@@ -564,7 +560,7 @@ class IrregularlySampledSignal(BaseSignal):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
+                kwargs[name] = f"merge({attr_self}, {attr_other})"
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
