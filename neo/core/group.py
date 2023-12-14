@@ -51,7 +51,7 @@ class Group(Container):
         'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain',
         'Event', 'Epoch', 'ChannelView', 'ImageSequence'
     )
-    _container_child_objects = ('Segment', 'Group')
+    _container_child_objects = ('Group',)
     _parent_objects = ('Block',)
 
     def __init__(self, objects=None, name=None, description=None, file_origin=None,
@@ -141,8 +141,8 @@ class Group(Container):
         """Add a new Neo object to the Group"""
         for obj in objects:
             if self.allowed_types and not isinstance(obj, self.allowed_types):
-                raise TypeError("This Group can only contain {}, but not {}"
-                                "".format(self.allowed_types, type(obj)))
+                raise TypeError(f"This Group can only contain {self.allowed_types}, "
+                                f"but not {type(obj)}")
         super().add(*objects)
 
     def walk(self):
