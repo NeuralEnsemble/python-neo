@@ -235,6 +235,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                                 if len(rising) == len(falling):
                                     durations = timestamps[falling] - timestamps[rising]
                                     if not self._use_direct_evt_timestamps:
+                                        timestamps = timestamps / info['sample_rate']
                                         durations = durations / info['sample_rate']
 
                             info["rising"] = rising
@@ -398,9 +399,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         info = self._evt_streams[block_index][seg_index][event_channel_index]
-        timestamps = info['timestamps']
+        timestamps = info["timestamps"]
         durations = info["durations"]
-        labels = info['labels']
+        labels = info["labels"]
 
         # slice it if needed
         if t_start is not None:
