@@ -214,7 +214,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
                     # # If available, use 'states' to compute event duration
                     info["durations"] = None
-                    # 'states' was introduced in OpenEphys v0.6. For previous versions, events used 'channels_states'
+                    # 'states' was introduced in OpenEphys v0.6. For previous versions, events used 'channel_states'
                     if 'states' in info or "channel_states" in info:
                         states = info["channel_states"] if "channel_states" in info else info["states"]
                         if states.size > 0:
