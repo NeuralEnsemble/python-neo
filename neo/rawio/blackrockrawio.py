@@ -61,6 +61,7 @@ import datetime
 import os
 import re
 import warnings
+import math
 
 import numpy as np
 import quantities as pq
@@ -646,7 +647,7 @@ class BlackrockRawIO(BaseRawIO):
         if t_start is None:
             ind_start = None
         else:
-            ts = np.math.ceil(t_start * self.__nev_basic_header['timestamp_resolution'])
+            ts = math.ceil(t_start * self.__nev_basic_header['timestamp_resolution'])
             ind_start = np.searchsorted(timestamp, ts)
 
         if t_stop is None:

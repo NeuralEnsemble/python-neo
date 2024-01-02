@@ -51,7 +51,7 @@ class Group(Container):
         'AnalogSignal', 'IrregularlySampledSignal', 'SpikeTrain',
         'Event', 'Epoch', 'ChannelView', 'ImageSequence'
     )
-    _container_child_objects = ('Segment', 'Group')
+    _container_child_objects = ('Group',)
     _parent_objects = ('Block',)
 
     def __init__(self, objects=None, name=None, description=None, file_origin=None,

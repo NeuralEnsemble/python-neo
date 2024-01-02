@@ -23,6 +23,8 @@ Author: Julia Sprenger
 """
 import pathlib
 import warnings
+import platform
+
 from collections import namedtuple
 from urllib.request import urlopen
 from datetime import datetime
@@ -74,14 +76,19 @@ class Plexon2RawIO(BaseRawIO):
 
         # download default PL2 dll once if not yet available
         if pl2_dll_file_path is None:
-            pl2_dll_folder = pathlib.Path .home() / '.plexon_dlls_for_neo'
+            architecture = platform.architecture()[0]
+            if architecture == '64bit' and platform.system() == 'Windows':
+                file_name = "PL2FileReader64.dll"
+            else:  # Apparently wine uses the 32 bit version in linux
+                file_name = "PL2FileReader.dll"
+            pl2_dll_folder = pathlib.Path.home() / '.plexon_dlls_for_neo'
             pl2_dll_folder.mkdir(exist_ok=True)
-            pl2_dll_file_path = pl2_dll_folder / 'PL2FileReader.dll'
+            pl2_dll_file_path = pl2_dll_folder / file_name
 
-            if pl2_dll_file_path.exists():
-                warnings.warn(f'Using cached plexon dll at {pl2_dll_file_path}')
-            else:
-                dist = urlopen('https://raw.githubusercontent.com/Neuralensemble/pypl2/master/bin/PL2FileReader.dll')
+            if not pl2_dll_file_path.exists():
+                url = f'https://raw.githubusercontent.com/Neuralensemble/pypl2/master/bin/{file_name}'
+                dist = urlopen(url=url)
+
                 with open(pl2_dll_file_path, 'wb') as f:
                     print(f'Downloading plexon dll to {pl2_dll_file_path}')
                     f.write(dist.read())
@@ -288,7 +295,7 @@ class Plexon2RawIO(BaseRawIO):
         stream_id = self.header['signal_streams'][stream_index]['id']
         stream_characteristic = list(self.signal_stream_characteristics.values())[stream_index]
         assert stream_id == stream_characteristic.id
-        return stream_characteristic.n_samples
+        return int(stream_characteristic.n_samples)  # Avoids returning a numpy.int64 scalar
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         # This returns the t_start of signals as a float value in seconds
