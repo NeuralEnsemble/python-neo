@@ -115,6 +115,11 @@ class SpikeTrainList(ObjectList):
         else:
             return SpikeTrainList(items=items)
 
+    def __setitem__(self, i, value):
+        if self._items is None:
+            self._spiketrains_from_array()
+        self._items[i] = value
+
     def __str__(self):
         """Return str(self)"""
         if self._items is None:

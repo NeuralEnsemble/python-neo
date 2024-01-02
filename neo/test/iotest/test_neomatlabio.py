@@ -8,7 +8,7 @@ import quantities as pq
 
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
-from neo import Block, Segment, SpikeTrain, ImageSequence
+from neo import Block, Segment, SpikeTrain, ImageSequence, Group
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io.neomatlabio import NeoMatlabIO
 
@@ -26,7 +26,7 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
     files_to_download = []
 
     def test_write_read_single_spike(self):
-        block1 = Block()
+        block1 = Block(name="test_neomatlabio")
         seg = Segment('segment1')
         spiketrain1 = SpikeTrain([1] * pq.s, t_stop=10 * pq.s, sampling_rate=1 * pq.Hz)
         spiketrain1.annotate(yep='yop')
@@ -43,6 +43,8 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
         seg.irregularlysampledsignals.append(irrsig1)
         seg.imagesequences.append(image_sequence)
 
+        group1 = Group([spiketrain1, sig1])
+        block1.groups.append(group1)
 
         # write block
         filename = self.get_local_path('matlabiotestfile.mat')
@@ -71,6 +73,10 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
         spiketrain2 = block2.segments[0].spiketrains[0]
         assert 'yep' in spiketrain2.annotations
         assert spiketrain2.annotations['yep'] == 'yop'
+
+        # test group retrieval
+        group2 = block2.groups[0]
+        assert_array_equal(group1.analogsignals[0], group2.analogsignals[0])
 
 
 if __name__ == "__main__":
