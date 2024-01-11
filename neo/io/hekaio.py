@@ -102,7 +102,10 @@ class HekaIO(BaseIO):
                     t_start = self.series_data[unit]["time"][seg_index, 0] * pq.s
                     recdata = self.series_data[unit]["data"][seg_index, :]
 
-                signal = pq.Quantity(recdata, unit).T
+                if unit in ["pV", "fA"]:  # Quantity does not support
+                    signal = pq.Quantity(recdata).T
+                else:
+                    signal = pq.Quantity(recdata, unit).T
 
                 anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
                                       t_start=t_start, name=name,
