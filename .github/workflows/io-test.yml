@@ -69,9 +69,6 @@ jobs:
             ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-
             ${{ runner.os }}-conda-env-
 
-      - name: Python version
-        run: python --version
-
       - name: Install testing dependencies
         # testing environment is only created from yml if no cache was found
         # restore-key hits should result in `cache-hit` == 'false'
@@ -83,6 +80,9 @@ jobs:
         run: |
           git config --global user.email "neo_ci@fake_mail.com"
           git config --global user.name "neo CI"
+
+      - name: Python version
+        run: python --version
 
       - name: Install neo including dependencies
         # installation with dependencies is only required if no cache was found
