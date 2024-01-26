@@ -97,6 +97,12 @@ class NlxHeader(OrderedDict):
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
             datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
+        # Cheetah version 5.6.0, some range of versions in between
+        'v5.6.0': dict(
+            datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)'
+                            r' At Time: (?P<time>\S+)',
+            filename_regex=r'## File Name: (?P<filename>\S+)',
+            datetimeformat='%m/%d/%Y %H:%M:%S.%f'),
         # Cheetah version 5 before and including v 5.6.4 as well as version 1
         'bv5.6.4': dict(
             datetime1_regex=r'## Time Opened \(m/d/y\): (?P<date>\S+)'
@@ -223,6 +229,8 @@ class NlxHeader(OrderedDict):
                 hpd = NlxHeader.header_pattern_dicts['bv5']
             elif av <= Version('5.4.0'):
                 hpd = NlxHeader.header_pattern_dicts['v5.4.0']
+            elif av == Version('5.6.0'):
+                hpd = NlxHeader.header_pattern_dicts['v5.6.0']
             elif av <= Version('5.6.4'):
                 hpd = NlxHeader.header_pattern_dicts['bv5.6.4']
             else:
@@ -303,11 +311,11 @@ class NlxHeader(OrderedDict):
 
         elif 'FileType' in self:
 
-            if self['FileVersion'] in ['3.3', '3.4']:
+            if 'FileVersion' in self and self['FileVersion'] in ['3.3', '3.4']:
                 return self['AcquisitionSystem'].split()[1].upper()
 
             else:
-                return 'UNKNOWN'
+                return 'CHEETAH560' # only known case of FileType without FileVersion
 
         else:
             return 'UNKNOWN'
