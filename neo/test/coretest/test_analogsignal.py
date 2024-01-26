@@ -286,7 +286,7 @@ class TestAnalogSignalProperties(unittest.TestCase):
     def test__pretty(self):
         for i, signal in enumerate(self.signals):
             prepr = pretty(signal)
-            targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n'
+            targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s\n'
                      '' % (signal.shape[1], signal.shape[0],
                            signal.units.dimensionality.unicode, signal.dtype))
                     + ('annotations: %s\n' % signal.annotations)
