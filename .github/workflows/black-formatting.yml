@@ -21,6 +21,7 @@ jobs:
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v5
+        if : ${{ steps.black-check.outcome == 'failure' }}
         with:
             commit-message: black formatting
             title: Black formatting
