@@ -20,11 +20,19 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools wheel twine build
         pip install .
+    - name: Get the tag version
+      id: get-version
+      run: |
+        echo ${GITHUB_REF#refs/tags/}
+        echo "TAG::${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
     - name: Test version/tag correspondence
       id: version-check
       run: |
         neo_version=$(python -c "import neo; print(neo.__version__)")
-        if [[ ${{ github.event.release.tag_name }} == $neo_version ]]; then
+        tag_version=${{ steps.get-version.outputs.TAG }}
+        echo $neo_version
+        echo $tag_version
+        if [[ $tag_version == $neo_version ]]; then
             echo "VERSION_TAG_MATCH=true" >> $GITHUB_OUTPUT
             echo "Version matches tag, proceeding with release to Test PyPI"
         else
