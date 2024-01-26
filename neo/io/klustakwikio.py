@@ -13,22 +13,15 @@ weren't set. Consider removing those annotations if they are redundant.
 * Load features in addition to spiketimes.
 """
 
+import re
 import glob
 import logging
-import os.path
+from pathlib import Path
 import shutil
 
-# note neo.core need only numpy and quantitie
+# note neo.core need only numpy and quantities
 import numpy as np
 
-try:
-    import matplotlib.mlab as mlab
-except ImportError as err:
-    HAVE_MLAB = False
-    MLAB_ERR = err
-else:
-    HAVE_MLAB = True
-    MLAB_ERR = None
 
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -95,29 +88,31 @@ class KlustaKwikIO(BaseIO):
     extensions = ['fet', 'clu', 'res', 'spk']
 
     # Operates on directories
-    mode = 'file'
+    mode = 'dir'
 
-    def __init__(self, filename, sampling_rate=30000.):
+    def __init__(self, dirname, sampling_rate=30000.):
         """Create a new IO to operate on a directory
 
-        filename : the directory to contain the files
-        basename : string, basename of KlustaKwik format, or None
+        dirname : the directory to contain the files
         sampling_rate : in Hz, necessary because the KlustaKwik files
             stores data in samples.
         """
-        if not HAVE_MLAB:
-            raise MLAB_ERR
         BaseIO.__init__(self)
-        # self.filename = os.path.normpath(filename)
-        self.filename, self.basename = os.path.split(os.path.abspath(filename))
+        self.dirname = Path(dirname)
+        # in case no basename is provided
+        if self.dirname.is_dir():
+            self.session_dir = self.dirname
+        else:
+            self.session_dir = self.dirname.parent
+            self.basename = self.dirname.name
         self.sampling_rate = float(sampling_rate)
 
         # error check
-        if not os.path.isdir(self.filename):
-            raise ValueError("filename must be a directory")
+        if not self.session_dir.is_dir():
+            raise ValueError("dirname must be in an existing directory")
 
         # initialize a helper object to parse filenames
-        self._fp = FilenameParser(dirname=self.filename, basename=self.basename)
+        self._fp = FilenameParser(dirname=self.session_dir, basename=self.basename)
 
     def read_block(self, lazy=False):
         """Returns a Block containing spike information.
@@ -140,7 +135,7 @@ class KlustaKwikIO(BaseIO):
             return block
 
         # Create a single segment to hold all of the data
-        seg = Segment(name='seg0', index=0, file_origin=self.filename)
+        seg = Segment(name='seg0', index=0, file_origin=str(self.session_dir / self.basename))
         block.segments.append(seg)
 
         # Load spike times from each group and store in a dict, keyed
@@ -187,7 +182,7 @@ class KlustaKwikIO(BaseIO):
                 u.add(st)
                 seg.spiketrains.append(st)
 
-        block.create_many_to_one_relationship()
+        block.check_relationships()
         return block
 
     # Helper hidden functions for reading
@@ -377,15 +372,13 @@ class KlustaKwikIO(BaseIO):
 
     def _new_group(self, id_group, nbClusters):
         # generate filenames
-        fetfilename = os.path.join(self.filename,
-                                   self.basename + ('.fet.%d' % id_group))
-        clufilename = os.path.join(self.filename,
-                                   self.basename + ('.clu.%d' % id_group))
+        fetfilename = self.session_dir / (self.basename + ('.fet.%d' % id_group))
+        clufilename = self.session_dir / (self.basename + ('.clu.%d' % id_group))
 
         # back up before overwriting
-        if os.path.exists(fetfilename):
+        if fetfilename.exists():
             shutil.copyfile(fetfilename, fetfilename + '~')
-        if os.path.exists(clufilename):
+        if clufilename.exists():
             shutil.copyfile(clufilename, clufilename + '~')
 
         # create file handles
@@ -416,12 +409,12 @@ class FilenameParser:
         will be used. An error is raised if files with multiple basenames
         exist in the directory.
         """
-        self.dirname = os.path.normpath(dirname)
+        self.dirname = Path(dirname).absolute()
         self.basename = basename
 
         # error check
-        if not os.path.isdir(self.dirname):
-            raise ValueError("filename must be a directory")
+        if not self.dirname.is_dir():
+            raise ValueError("dirname must be a directory")
 
     def read_filenames(self, typestring='fet'):
         """Returns filenames in the data directory matching the type.
@@ -440,14 +433,14 @@ class FilenameParser:
         a sequence of digits are valid. The digits are converted to an integer
         and used as the group number.
         """
-        all_filenames = glob.glob(os.path.join(self.dirname, '*'))
+        all_filenames = self.dirname.glob('*')
 
         # Fill the dict with valid filenames
         d = {}
         for v in all_filenames:
             # Test whether matches format, ie ends with digits
-            split_fn = os.path.split(v)[1]
-            m = glob.re.search((r'^(\w+)\.%s\.(\d+)$' % typestring), split_fn)
+            split_fn = v.name
+            m = re.search(rf'^(.*)\.{typestring}\.(\d+)$', split_fn)
             if m is not None:
                 # get basename from first hit if not specified
                 if self.basename is None:

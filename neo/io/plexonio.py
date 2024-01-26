@@ -16,5 +16,5 @@ class PlexonIO(PlexonRawIO, BaseFromRaw):
     _prefered_signal_group_mode = 'group-by-same-units'
 
     def __init__(self, filename):
-        PlexonRawIO.__init__(self, filename=filename)
+        PlexonRawIO.__init__(self, filename)
         BaseFromRaw.__init__(self, filename)

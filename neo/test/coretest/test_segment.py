@@ -156,7 +156,7 @@ class TestSegment(unittest.TestCase):
             # and then we have to convert to a SpikeTrainList
             # to match the output of segment.filter
             if all(isinstance(obj, SpikeTrain) for obj in targ):
-                targ = SpikeTrainList(items=targ, segment=segment)
+                targ = SpikeTrainList(items=targ, parent=segment)
 
             res0 = segment.filter()
             res1 = segment.filter({})
@@ -461,7 +461,7 @@ class TestSegment(unittest.TestCase):
 
         block = Block()
         block.segments = [seg]
-        block.create_many_to_one_relationship()
+        block.check_relationships()
 
         # test without resetting the time
         sliced = seg.time_slice(time_slice[0], time_slice[1])
@@ -499,7 +499,7 @@ class TestSegment(unittest.TestCase):
 
         block = Block()
         block.segments = [seg]
-        block.create_many_to_one_relationship()
+        block.check_relationships()
 
         # test with resetting the time
         sliced = seg.time_slice(time_slice[0], time_slice[1], reset_time=True)
@@ -561,7 +561,7 @@ class TestSegment(unittest.TestCase):
 
         block = Block()
         block.segments = [seg]
-        block.create_many_to_one_relationship()
+        block.check_relationships()
 
         # test with proxy objects
         sliced = seg.time_slice(time_slice[0], time_slice[1])
@@ -607,7 +607,7 @@ class TestSegment(unittest.TestCase):
 
         block = Block()
         block.segments = [seg]
-        block.create_many_to_one_relationship()
+        block.check_relationships()
 
         # test without resetting the time
         for t_start, t_stop in time_slices:
@@ -641,6 +641,37 @@ class TestSegment(unittest.TestCase):
             for childtype in childconts:
                 for child in getattr(seg1_copy, childtype, []):
                     self.assertEqual(id(child.segment), id(seg1_copy))
+
+    def test_add(self):
+        seg = Segment()
+
+        reader = ExampleRawIO(filename='my_filename.fake')
+        reader.parse_header()
+
+        proxy_anasig = AnalogSignalProxy(rawio=reader,
+                                        stream_index=0, inner_stream_channels=None,
+                                        block_index=0, seg_index=0)
+        seg.add(proxy_anasig)
+        assert len(seg.analogsignals) == 1
+
+        proxy_st = SpikeTrainProxy(rawio=reader, spike_channel_index=0,
+                                   block_index=0, seg_index=0)
+        seg.add(proxy_st)
+        assert len(seg.spiketrains) == 1
+
+        proxy_event = EventProxy(rawio=reader, event_channel_index=0,
+                                 block_index=0, seg_index=0)
+        seg.add(proxy_event)
+        assert len(seg.events) == 1
+
+        proxy_epoch = EpochProxy(rawio=reader, event_channel_index=1,
+                                 block_index=0, seg_index=0)
+        seg.add(proxy_epoch)
+        assert len(seg.epochs) == 1
+
+    def test_add_invalid_type_raises_Exception(self):
+        seg = Segment()
+        self.assertRaises(TypeError, seg.add, Block())
 
 
 if __name__ == "__main__":

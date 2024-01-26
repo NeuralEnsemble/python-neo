@@ -75,12 +75,6 @@ import sys
 
 from neo import logging_handler
 
-try:
-    import joblib
-
-    HAVE_JOBLIB = True
-except ImportError:
-    HAVE_JOBLIB = False
 
 possible_raw_modes = ['one-file', 'multi-file', 'one-dir', ]  # 'multi-dir', 'url', 'other'
 
@@ -162,7 +156,6 @@ class BaseRawIO:
 
         self.use_cache = use_cache
         if use_cache:
-            assert HAVE_JOBLIB, 'You need to install joblib for cache'
             self.setup_cache(cache_path)
         else:
             self._cache = None
@@ -190,12 +183,12 @@ class BaseRawIO:
         return self._source_name()
 
     def __repr__(self):
-        txt = '{}: {}\n'.format(self.__class__.__name__, self.source_name())
+        txt = f'{self.__class__.__name__}: {self.source_name()}\n'
         if self.header is not None:
             nb_block = self.block_count()
-            txt += 'nb_block: {}\n'.format(nb_block)
+            txt += f'nb_block: {nb_block}\n'
             nb_seg = [self.segment_count(i) for i in range(nb_block)]
-            txt += 'nb_segment:  {}\n'.format(nb_seg)
+            txt += f'nb_segment:  {nb_seg}\n'
 
             # signal streams
             v = [s['name'] + f' (chans: {self.signal_channels_count(i)})'
@@ -332,18 +325,18 @@ class BaseRawIO:
         txt = 'Raw annotations\n'
         for block_index in range(self.block_count()):
             bl_a = self.raw_annotations['blocks'][block_index]
-            txt += '*Block {}\n'.format(block_index)
+            txt += f'*Block {block_index}\n'
             for k, v in bl_a.items():
                 if k in ('segments',):
                     continue
-                txt += '  -{}: {}\n'.format(k, v)
+                txt += f'  -{k}: {v}\n'
             for seg_index in range(self.segment_count(block_index)):
                 seg_a = bl_a['segments'][seg_index]
-                txt += '  *Segment {}\n'.format(seg_index)
+                txt += f'  *Segment {seg_index}\n'
                 for k, v in seg_a.items():
                     if k in ('signals', 'spikes', 'events',):
                         continue
-                    txt += '    -{}: {}\n'.format(k, v)
+                    txt += f'    -{k}: {v}\n'
 
                 # annotations by channels for spikes/events/epochs
                 for child in ('signals', 'events', 'spikes', ):
@@ -557,6 +550,18 @@ class BaseRawIO:
                               np.ndarray and are contiguous
         :return: array with raw signal samples
         """
+        
+        signal_streams = self.header['signal_streams']
+        signal_channels = self.header['signal_channels']
+        no_signal_streams = signal_streams.size == 0
+        no_channels = signal_channels.size == 0
+        if no_signal_streams or no_channels:
+            error_message = (
+                "get_analogsignal_chunk can't be called on a file with no signal streams or channels."
+                "Double check that your file contains signal streams and channels."
+            )
+            raise AttributeError(error_message)
+                
         stream_index = self._get_stream_index_from_arg(stream_index)
         channel_indexes = self._get_channel_indexes(stream_index, channel_indexes,
                                                     channel_names, channel_ids)
@@ -586,7 +591,7 @@ class BaseRawIO:
                                     channel_indexes=None, channel_names=None, channel_ids=None):
         """
         Rescale a chunk of raw signals which are provided as a Numpy array. These are normally
-        returned by a call to get_analog_signal_chunk. The channels are specified either by
+        returned by a call to get_analogsignal_chunk. The channels are specified either by
         channel_names, if provided, otherwise by channel_ids, if provided, otherwise by
         channel_indexes, if provided, otherwise all channels are selected.
 
@@ -703,6 +708,11 @@ class BaseRawIO:
         return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
     def setup_cache(self, cache_path, **init_kargs):
+        try:
+            import joblib
+        except ImportError:
+            raise ImportError("Using the RawIO cache needs joblib to be installed")
+
         if self.rawmode in ('one-file', 'multi-file'):
             resource_name = self.filename
         elif self.rawmode == 'one-dir':
@@ -734,14 +744,14 @@ class BaseRawIO:
         hash = joblib.hash(d, hash_name='md5')
 
         # name is constructed from the resource_name and the hash
-        name = '{}_{}'.format(os.path.basename(resource_name), hash)
+        name = f'{os.path.basename(resource_name)}_{hash}'
         self.cache_filename = os.path.join(dirname, name)
 
         if os.path.exists(self.cache_filename):
-            self.logger.warning('Use existing cache file {}'.format(self.cache_filename))
+            self.logger.warning(f'Use existing cache file {self.cache_filename}')
             self._cache = joblib.load(self.cache_filename)
         else:
-            self.logger.warning('Create cache file {}'.format(self.cache_filename))
+            self.logger.warning(f'Create cache file {self.cache_filename}')
             self._cache = {}
             self.dump_cache()
 

@@ -10,7 +10,13 @@ from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo import Block, Segment, SpikeTrain
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io.neomatlabio import NeoMatlabIO, HAVE_SCIPY
+from neo.io.neomatlabio import NeoMatlabIO
+
+try:
+    import scipy.io
+    HAVE_SCIPY = True
+except ImportError:
+    HAVE_SCIPY = False
 
 
 @unittest.skipUnless(HAVE_SCIPY, "requires scipy")

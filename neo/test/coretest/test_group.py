@@ -15,6 +15,7 @@ from neo.core.spiketrain import SpikeTrain
 from neo.core.segment import Segment
 from neo.core.view import ChannelView
 from neo.core.group import Group
+from neo.core.block import Block
 
 
 class TestGroup(unittest.TestCase):
@@ -40,7 +41,7 @@ class TestGroup(unittest.TestCase):
         self.test_segment.spiketrains.extend(self.test_spiketrains)
 
     def test_create_group(self):
-        objects = [self.test_view, self.test_signal, self.test_segment]
+        objects = [self.test_view, self.test_signal]
         objects.extend(self.test_spiketrains)
         group = Group(objects)
 
@@ -49,21 +50,19 @@ class TestGroup(unittest.TestCase):
         assert group.spiketrains[1] is self.test_spiketrains[1]
         assert group.channelviews[0] is self.test_view
         assert len(group.irregularlysampledsignals) == 0
-        assert group.segments[0].analogsignals[0] is self.test_signal
 
     def test_create_empty_group(self):
         group = Group()
 
     def test_children(self):
         group = Group(self.test_spiketrains + [self.test_view]
-                      + [self.test_signal] + [self.test_segment])
+                      + [self.test_signal])
 
         # note: ordering is by class name for data children (AnalogSignal, SpikeTrain),
         #       then container children (Segment)
         assert group.children == (self.test_signal,
                                   *self.test_spiketrains,
-                                  self.test_view,
-                                  self.test_segment)
+                                  self.test_view)
 
     def test_with_allowed_types(self):
         objects = [self.test_signal] + self.test_spiketrains
@@ -91,3 +90,9 @@ class TestGroup(unittest.TestCase):
         target.extend([children[1], children[2], *grandchildren[2]])
         self.assertEqual(flattened,
                          target)
+
+    def test_add_invalid_type_raises_Exception(self):
+        group = Group()
+        self.assertRaises(TypeError, group.add, Block())
+
+        self.assertRaises(TypeError, Group, allowed_types=[Block])

@@ -1,13 +1,13 @@
 """
 
-Support for intan tech rhd  and rhs files.
+Support for intan tech rhd and rhs files.
 
-This 2 formats are more or less the same but:
+These 2 formats are more or less the same but:
   * some variance in headers.
   * rhs amplifier is more complex because the optional DC channel
 
 RHS supported version 1.0
-RHD supported version  1.0 1.1 1.2 1.3 2.0
+RHD supported version  1.0 1.1 1.2 1.3 2.0 3.0, 3.1
 
 See:
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
@@ -27,7 +27,24 @@ from packaging.version import Version as V
 
 class IntanRawIO(BaseRawIO):
     """
-
+    Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
+    check for the file extension and will gather the header information based on the
+    extension. Additionally it functions with RHS v 1.0 and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
+    3.0, and 3.1 files.
+    Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
+    depending on the port in which they were recorded along with the following
+    additional channels.
+    1: 'RHD2000 auxiliary input channel',
+    2: 'RHD2000 supply voltage channel',
+    3: 'USB board ADC input channel',
+    4: 'USB board digital input channel',
+    5: 'USB board digital output channel'
+    Due to the structure of the digital input and output channels these can be accessed
+    as one long vector, which must be post-processed.
+    Parameters
+    ----------
+    filename: str
+       name of the 'rhd' or 'rhs' data file
     """
     extensions = ['rhd', 'rhs']
     rawmode = 'one-file'
@@ -333,6 +350,11 @@ def read_rhs(filename):
         if len(channels_by_type[sig_type]) > 0:
             name = {5: 'DIGITAL-IN', 6: 'DIGITAL-OUT'}[sig_type]
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
+           
+    if bool(global_info['notch_filter_mode']) and global_info['major_version'] >= 3:
+        global_info['notch_filter_applied'] = True
+    else:
+        global_info['notch_filter_applied'] = False
 
     return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
 
@@ -345,7 +367,6 @@ rhd_global_header_base = [
     ('major_version', 'int16'),
     ('minor_version', 'int16'),
 ]
-
 
 rhd_global_header_part1 = [
     ('sampling_rate', 'float32'),
@@ -360,7 +381,7 @@ rhd_global_header_part1 = [
     ('desired_upper_bandwidth', 'float32'),
 
     ('notch_filter_mode', 'int16'),
-
+    
     ('desired_impedance_test_frequency', 'float32'),
     ('actual_impedance_test_frequency', 'float32'),
 
@@ -539,10 +560,22 @@ def read_rhd(filename):
     # 4: USB board digital input channel
     # 5: USB board digital output channel
     for sig_type in [4, 5]:
-        # at the moment theses channel are not in sig channel list
-        # but they are in the raw memamp
+        # Now these are included so that user can obtain the
+        # dig signals and process them at the same time
         if len(channels_by_type[sig_type]) > 0:
             name = {4: 'DIGITAL-IN', 5: 'DIGITAL-OUT'}[sig_type]
+            chan_info = channels_by_type[sig_type][0]
+            chan_info['native_channel_name'] = name  # overwite to allow memmap to work
+            chan_info['sampling_rate'] = sr
+            chan_info['units'] = 'TTL'  # arbitrary units so I did TTL for the logic
+            chan_info['gain'] = 1.0
+            chan_info['offset'] = 0.0
+            ordered_channels.append(chan_info)
             data_dtype += [(name, 'uint16', BLOCK_SIZE)]
-
+    
+    if bool(global_info['notch_filter_mode']) and version >= V('3.0'):
+        global_info['notch_filter_applied'] = True
+    else:
+        global_info['notch_filter_applied'] = False
+    
     return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE

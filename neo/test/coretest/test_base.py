@@ -781,16 +781,16 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
-    def test_numpy_array_int0(self):
-        '''test to make sure int0 type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.int0)
+    def test_numpy_array_intp(self):
+        '''test to make sure intp type numpy arrays are accepted'''
+        value = np.array([1, 2, 3, 4, 5], dtype=np.intp)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
-    def test_numpy_array_uint0(self):
-        '''test to make sure uint0 type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.uint0)
+    def test_numpy_array_uintp(self):
+        '''test to make sure uintp type numpy arrays are accepted'''
+        value = np.array([1, 2, 3, 4, 5], dtype=np.uintp)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -853,7 +853,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_float(self):
         '''test to make sure float type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.float_)
+        value = np.array([1, 2, 3, 4, 5], dtype=np.float64)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -940,7 +940,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_string0(self):
         '''test to make sure string0 type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.str0)
+        value = np.array([1, 2, 3, 4, 5], dtype=np.str_)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -969,16 +969,16 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
-    def test_numpy_scalar_int0(self):
-        '''test to make sure int0 type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.int0)
+    def test_numpy_scalar_intp(self):
+        '''test to make sure intp type numpy scalars are accepted'''
+        value = np.array(99, dtype=np.intp)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
-    def test_numpy_scalar_uint0(self):
-        '''test to make sure uint0 type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.uint0)
+    def test_numpy_scalar_uintp(self):
+        '''test to make sure uintp type numpy scalars are accepted'''
+        value = np.array(99, dtype=np.uintp)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1041,7 +1041,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_float(self):
         '''test to make sure float type numpy scalars are accepted'''
-        value = np.array(99, dtype=np.float_)
+        value = np.array(99, dtype=np.float64)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1127,7 +1127,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_string0(self):
         '''test to make sure string0 type numpy scalars are rejected'''
-        value = np.array(99, dtype=np.str0)
+        value = np.array(99, dtype=np.str_)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)

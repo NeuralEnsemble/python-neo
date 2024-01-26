@@ -30,22 +30,23 @@ class AxonaRawIO(BaseRawIO):
     Class for reading raw, continuous data from the Axona dacqUSB system:
     http://space-memory-navigation.org/DacqUSBFileFormats.pdf
 
-    The raw data is saved in .bin binary files with an accompanying
-    .set file about the recording setup (see the above manual for details).
+    The raw data is saved in .bin binary files with an accompanying .set
+    file about the recording setup (see the above manual for details).
 
-    Usage:
+    Usage::
+
         import neo.rawio
-        r = neo.rawio.AxonaRawIO(
-            filename=os.path.join(dir_name, base_filename)
-        )
+        r = neo.rawio.AxonaRawIO(filename=os.path.join(dir_name, base_filename))
         r.parse_header()
         print(r)
         raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                      i_start=0, i_stop=1024,  channel_names=channel_names)
+                                             i_start=0, i_stop=1024,
+                                             channel_names=channel_names)
         float_chunk = reader.rescale_signal_raw_to_float(
             raw_chunk, dtype='float64',
             channel_indexes=[0, 3, 6]
         )
+
     """
 
     extensions = ['bin', 'set'] + [str(i) for i in range(1, 33)]  # Never used?

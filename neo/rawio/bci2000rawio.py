@@ -44,7 +44,7 @@ class BCI2000RawIO(BaseRawIO):
 
         sig_channels = []
         for chan_ix in range(file_info['SourceCh']):
-            if 'ChannelNames' in param_defs and not np.isnan(param_defs['ChannelNames']['value']):
+            if 'ChannelNames' in param_defs and isinstance(param_defs['ChannelNames']['value'], (list, tuple)):
                 ch_name = param_defs['ChannelNames']['value'][chan_ix]
             else:
                 ch_name = 'ch' + str(chan_ix)

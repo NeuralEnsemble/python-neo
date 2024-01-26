@@ -27,7 +27,7 @@ import sys
 
 
 class RawBinarySignalRawIO(BaseRawIO):
-    extensions = ['raw', '*']
+    extensions = ['raw', 'bin']
     rawmode = 'one-file'
 
     def __init__(self, filename='', dtype='int16', sampling_rate=10000.,

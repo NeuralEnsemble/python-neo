@@ -247,13 +247,13 @@ def _get_valid_ids(obj, annotation_key, annotation_value):
         # wrap annotation value to be list
         if not type(annotation_value) in [list, np.ndarray]:
             annotation_value = [annotation_value]
-        valid_mask = np.in1d(obj.labels, annotation_value)
+        valid_mask = np.isin(obj.labels, annotation_value)
 
     elif annotation_key in obj.array_annotations:
         # wrap annotation value to be list
         if not type(annotation_value) in [list, np.ndarray]:
             annotation_value = [annotation_value]
-        valid_mask = np.in1d(obj.array_annotations[annotation_key], annotation_value)
+        valid_mask = np.isin(obj.array_annotations[annotation_key], annotation_value)
 
     elif hasattr(obj, annotation_key) and getattr(obj, annotation_key) == annotation_value:
         valid_mask = np.ones(obj.shape)
@@ -351,7 +351,7 @@ def add_epoch(
 
     if attach_result:
         segment.epochs.append(ep)
-        segment.create_relationship()
+        segment.check_relationships()
 
     return ep
 
@@ -495,7 +495,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
                 seg, epoch=epoch, reset_time=reset_time)
             new_block.segments.extend(new_segments)
 
-    new_block.create_many_to_one_relationship(force=True)
+    new_block.check_relationships()
 
     return new_block
 

@@ -20,7 +20,7 @@ def _normalize_array_annotations(value, length):
 
     Parameters
     ----------
-    value : np.ndarray or list or dict
+    value : np.ndarray or list or tuple or dict
         Value to be checked for consistency.
     length : int
         Required length of the array annotation.
@@ -48,7 +48,7 @@ def _normalize_array_annotations(value, length):
         raise ValueError("Array annotations must not be None")
     # If not array annotation, pass on to regular check and make it a list, that is checked again
     # This covers array annotations with length 1
-    elif not isinstance(value, (list, np.ndarray)) or (
+    elif not isinstance(value, (list, np.ndarray, tuple)) or (
             isinstance(value, pq.Quantity) and value.shape == ()):
         _check_annotations(value)
         value = _normalize_array_annotations(np.array([value]), length)
@@ -73,7 +73,7 @@ def _normalize_array_annotations(value, length):
 
         if not own_length == val_length:
             raise ValueError(
-                "Incorrect length of array annotation: {} != {}".format(val_length, own_length))
+                f"Incorrect length of array annotation: {val_length} != {own_length}")
 
         # Local function used to check single elements of a list or an array
         # They must not be lists or arrays and fit the usual annotation data types
@@ -264,20 +264,22 @@ class DataObject(BaseNeo, pq.Quantity):
 
         # Warn if keys were omitted
         if omitted_keys_other or omitted_keys_self:
-            warnings.warn("The following array annotations were omitted, because they were only "
-                          "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the one that was merged into the other"
-                          "".format(omitted_keys_self, omitted_keys_other), UserWarning)
+            warnings.warn(f"The following array annotations were omitted, because they were only "
+                          f"present in one of the merged objects: {omitted_keys_self} from the "
+                          f"one that was merged into and {omitted_keys_other} from the one that "
+                          f"was merged into the other", UserWarning)
 
         # Return the merged array_annotations
         return merged_array_annotations
 
-    def rescale(self, units):
+    def rescale(self, units, dtype=None):
         '''
-        Return a copy of the object converted to the specified
-        units
+        Return a copy of the object converted to the specified units.
+        The `dtype` argument exists only for backward compatibility within quantities, see
+        https://github.com/python-quantities/python-quantities/pull/204
         :return: Copy of self with specified units
         '''
+
         # Use simpler functionality, if nothing will be changed
         dim = pq.quantity.validate_dimensionality(units)
         if self.dimensionality == dim:

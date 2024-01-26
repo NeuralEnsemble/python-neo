@@ -3,11 +3,6 @@ Neo IO module for optical imaging data stored as a folder of TIFF images.
 """
 
 import os
-try:
-    from PIL import Image
-    have_pil = True
-except ImportError:
-    have_pil = False
 
 import numpy as np
 from neo.core import ImageSequence, Segment, Block
@@ -72,9 +67,7 @@ class TiffIO(BaseIO):
 
     def __init__(self, directory_path=None, units=None, sampling_rate=None,
                  spatial_scale=None, **kwargs):
-
-        if not have_pil:
-            raise Exception("Please install the pillow package to use TiffIO")
+        import PIL
 
         BaseIO.__init__(self, directory_path, **kwargs)
         self.units = units
@@ -82,6 +75,8 @@ class TiffIO(BaseIO):
         self.spatial_scale = spatial_scale
 
     def read_block(self, lazy=False, **kwargs):
+        import PIL
+
         # to sort file
         def natural_sort(l):
             convert = lambda text: int(text) if text.isdigit() else text.lower()
@@ -102,13 +97,13 @@ class TiffIO(BaseIO):
         file_name_list = natural_sort(file_name_list)
         list_data_image = []
         for file_name in file_name_list:
-            data = np.array(Image.open(self.filename + "/" + file_name)).astype(np.float32)
+            data = np.array(PIL.Image.open(self.filename + "/" + file_name)).astype(np.float32)
             list_data_image.append(data)
         list_data_image = np.array(list_data_image)
         if len(list_data_image.shape) == 4:
             list_data_image = []
             for file_name in file_name_list:
-                image = Image.open(self.filename + "/" + file_name).convert('L')
+                image = PIL.Image.open(self.filename + "/" + file_name).convert('L')
                 data = np.array(image).astype(np.float32)
                 list_data_image.append(data)
 
@@ -123,7 +118,6 @@ class TiffIO(BaseIO):
         segment.imagesequences = [image_sequence]
 
         block = Block(file_origin=self.filename)
-        segment.block = block
         block.segments.append(segment)
         print("returning block")
         return block

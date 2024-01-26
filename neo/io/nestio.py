@@ -82,7 +82,7 @@ class NestIO(BaseIO):
             if ext in self.extensions:
                 if ext in self.avail_IOs:
                     raise ValueError('Received multiple files with "%s" '
-                                     'extention. Can only load single file of '
+                                     'extension. Can only load single file of '
                                      'this type.' % ext)
                 self.avail_IOs[ext] = ColumnIO(filename)
             self.avail_formats[ext] = path
@@ -466,7 +466,6 @@ class NestIO(BaseIO):
                                 value_units)
         blk = Block(file_origin=seg.file_origin, file_datetime=seg.file_datetime)
         blk.segments.append(seg)
-        seg.block = blk
         return blk
 
     def read_segment(self, gid_list=None, time_unit=pq.ms, t_start=None,

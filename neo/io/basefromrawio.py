@@ -63,7 +63,7 @@ class BaseFromRaw(BaseIO):
 
     name = 'BaseIO'
     description = ''
-    extentions = []
+    extensions = []
 
     mode = 'file'
 
@@ -145,7 +145,7 @@ class BaseFromRaw(BaseIO):
             spike_channels = self.header['spike_channels']
             st_groups = []
             for c in range(spike_channels.size):
-                group = Group(name='SpikeTrain group {}'.format(c))
+                group = Group(name=f'SpikeTrain group {c}')
                 group.annotate(unit_name=spike_channels[c]['name'])
                 group.annotate(unit_id=spike_channels[c]['id'])
                 bl.groups.append(group)
@@ -178,7 +178,7 @@ class BaseFromRaw(BaseIO):
                 for c, sptr in enumerate(seg.spiketrains):
                     st_groups[c].add(sptr)
 
-        bl.create_many_to_one_relationship()
+        bl.check_relationships()
 
         return bl
 
@@ -241,7 +241,6 @@ class BaseFromRaw(BaseIO):
                 # ... and get the real AnalogSignal if not lazy
                 anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
 
-            anasig.segment = seg
             seg.analogsignals.append(anasig)
 
         # SpikeTrain and waveforms (optional)
@@ -257,7 +256,6 @@ class BaseFromRaw(BaseIO):
                                         load_waveforms=load_waveforms)
                 # TODO magnitude_mode='rescaled'/'raw'
 
-            sptr.segment = seg
             seg.spiketrains.append(sptr)
 
         # Events/Epoch
@@ -268,17 +266,15 @@ class BaseFromRaw(BaseIO):
                                         block_index=block_index, seg_index=seg_index)
                 if not lazy:
                     e = e.load(time_slice=time_slice, strict_slicing=strict_slicing)
-                e.segment = seg
                 seg.events.append(e)
             elif event_channels['type'][chan_ind] == b'epoch':
                 e = EpochProxy(rawio=self, event_channel_index=chan_ind,
                                block_index=block_index, seg_index=seg_index)
                 if not lazy:
                     e = e.load(time_slice=time_slice, strict_slicing=strict_slicing)
-                e.segment = seg
                 seg.epochs.append(e)
 
-        seg.create_many_to_one_relationship()
+        seg.check_relationships()
         return seg
 
     def get_sub_signal_streams(self, signal_group_mode='group-by-same-units'):
@@ -286,7 +282,7 @@ class BaseFromRaw(BaseIO):
         When signal streams don't have homogeneous SI units across channels,
         they have to be split in sub streams to construct AnalogSignal objects with unique units.
 
-        For backward compatibility (neo version <= 0.5) sub-streams can also be 
+        For backward compatibility (neo version <= 0.5) sub-streams can also be
         used to generate one AnalogSignal per channel.
         """
         signal_streams = self.header['signal_streams']

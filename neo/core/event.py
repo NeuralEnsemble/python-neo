@@ -101,7 +101,7 @@ class Event(DataObject):
         # reference dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
                                                                           pq.UnitTime)):
-            ValueError("Unit {} has dimensions {}, not [time]".format(units, dim.simplified))
+            ValueError(f"Unit {units} has dimensions {dim.simplified}, not [time].")
 
         obj = pq.Quantity(times, units=dim).view(cls)
         obj._labels = labels
@@ -148,12 +148,20 @@ class Event(DataObject):
         return '<Event: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
-        super()._repr_pretty_(pp, cycle)
+        labels = ""
+        if self._labels is not None:
+            labels = " with labels"
+        pp.text(f"{self.__class__.__name__} containing {self.size} events{labels}; "
+        f"time units {self.units.dimensionality.string}; datatype {self.dtype} ")
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
 
-    def rescale(self, units):
+    def rescale(self, units, dtype=None):
         '''
-        Return a copy of the :class:`Event` converted to the specified
-        units
+        Return a copy of the :class:`Event` converted to the specified units
+        The `dtype` argument exists only for backward compatibility within quantities, see
+        https://github.com/python-quantities/python-quantities/pull/204
         :return: Copy of self with specified units
         '''
         # Use simpler functionality, if nothing will be changed
@@ -196,7 +204,7 @@ class Event(DataObject):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
+                kwargs[name] = f"merge({attr_self}, {attr_other})"
 
         print('Event: merge annotations')
         merged_annotations = merge_annotations(self.annotations, other.annotations)
@@ -236,8 +244,8 @@ class Event(DataObject):
 
     def set_labels(self, labels):
         if self.labels is not None and self.labels.size > 0 and len(labels) != self.size:
-            raise ValueError("Labels array has different length to times ({} != {})"
-                            .format(len(labels), self.size))
+            raise ValueError(f"Labels array has different length to times "
+                             f"({len(labels)} != {self.size})")
         self._labels = np.array(labels)
 
     def get_labels(self):
@@ -345,13 +353,13 @@ class Event(DataObject):
             times = self.times[::2]
             durations = self.times[1::2] - times
             labels = np.array(
-                ["{}-{}".format(a, b) for a, b in zip(self.labels[::2], self.labels[1::2])])
+                [f"{a}-{b}" for a, b in zip(self.labels[::2], self.labels[1::2])])
         elif durations is None:
             # Mode 1
             times = self.times[:-1]
             durations = np.diff(self.times)
             labels = np.array(
-                ["{}-{}".format(a, b) for a, b in zip(self.labels[:-1], self.labels[1:])])
+                [f"{a}-{b}" for a, b in zip(self.labels[:-1], self.labels[1:])])
         else:
             # Mode 3
             times = self.times

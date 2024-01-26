@@ -7,13 +7,20 @@ from :module:`neo.core.container`.
 '''
 
 from datetime import datetime
+from copy import deepcopy
 
 import numpy as np
 
-from copy import deepcopy
 
+from neo.core.analogsignal import AnalogSignal
 from neo.core.container import Container
+from neo.core.objectlist import ObjectList
+from neo.core.epoch import Epoch
+from neo.core.event import Event
+from neo.core.imagesequence import ImageSequence
+from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.core.spiketrainlist import SpikeTrainList
+from neo.core.view import ChannelView
 
 
 class Segment(Container):
@@ -61,9 +68,6 @@ class Segment(Container):
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
 
-    *Properties available on this object*:
-        :all_data: (list) A list of all child objects in the :class:`Segment`.
-
     *Container of*:
         :class:`Epoch`
         :class:`Event`
@@ -91,10 +95,61 @@ class Segment(Container):
         '''
         super().__init__(name=name, description=description,
                          file_origin=file_origin, **annotations)
-        self.spiketrains = SpikeTrainList(segment=self)
+
+        self._analogsignals = ObjectList(AnalogSignal, parent=self)
+        self._irregularlysampledsignals = ObjectList(IrregularlySampledSignal, parent=self)
+        self._spiketrains = SpikeTrainList(parent=self)
+        self._events = ObjectList(Event, parent=self)
+        self._epochs = ObjectList(Epoch, parent=self)
+        self._channelviews = ObjectList(ChannelView, parent=self)
+        self._imagesequences = ObjectList(ImageSequence, parent=self)
+        self.block = None
+
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
+
+    analogsignals = property(
+        fget=lambda self: self._get_object_list("_analogsignals"),
+        fset=lambda self, value: self._set_object_list("_analogsignals", value),
+        doc="list of AnalogSignals contained in this segment"
+    )
+
+    irregularlysampledsignals = property(
+        fget=lambda self: self._get_object_list("_irregularlysampledsignals"),
+        fset=lambda self, value: self._set_object_list("_irregularlysampledsignals", value),
+        doc="list of IrregularlySignals contained in this segment"
+    )
+
+    events = property(
+        fget=lambda self: self._get_object_list("_events"),
+        fset=lambda self, value: self._set_object_list("_events", value),
+        doc="list of Events contained in this segment"
+    )
+
+    epochs = property(
+        fget=lambda self: self._get_object_list("_epochs"),
+        fset=lambda self, value: self._set_object_list("_epochs", value),
+        doc="list of Epochs contained in this segment"
+    )
+
+    channelviews = property(
+        fget=lambda self: self._get_object_list("_channelviews"),
+        fset=lambda self, value: self._set_object_list("_channelviews", value),
+        doc="list of ChannelViews contained in this segment"
+    )
+
+    imagesequences = property(
+        fget=lambda self: self._get_object_list("_imagesequences"),
+        fset=lambda self, value: self._set_object_list("_imagesequences", value),
+        doc="list of ImageSequences contained in this segment"
+    )
+
+    spiketrains = property(
+        fget=lambda self: self._get_object_list("_spiketrains"),
+        fset=lambda self, value: self._set_object_list("_spiketrains", value),
+        doc="list of SpikeTrains contained in this segment"
+    )
 
     # t_start attribute is handled as a property so type checking can be done
     @property
@@ -234,6 +289,6 @@ class Segment(Container):
             if len(ep_time_slice):
                 subseg.epochs.append(ep_time_slice)
 
-        subseg.create_relationship()
+        subseg.check_relationships()
 
         return subseg

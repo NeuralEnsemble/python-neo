@@ -1,0 +1,13 @@
+{
+    "filename": "example_data.txt",
+    "delimiter": " ",
+    "timecolumn": null,
+    "units": "mV",
+    "time_units": "ms",
+    "sampling_rate": {
+        "value": 1.0,
+        "units": "kHz"
+    },
+    "method": "genfromtxt",
+    "signal_group_mode": "all-in-one"
+}

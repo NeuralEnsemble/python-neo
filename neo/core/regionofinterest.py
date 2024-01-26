@@ -1,7 +1,9 @@
 from math import floor, ceil
 
+from neo.core.baseneo import BaseNeo
 
-class RegionOfInterest:
+
+class RegionOfInterest(BaseNeo):
     """Abstract base class"""
     pass
 

@@ -580,8 +580,8 @@ class TestConstructor(unittest.TestCase):
         train2 = _new_spiketrain(SpikeTrain, [3, 4, 5], units='sec', t_stop=10.0)
         assert_neo_object_is_compliant(train1)
         assert_neo_object_is_compliant(train2)
-        self.assertEqual(train1.dtype, np.float_)
-        self.assertEqual(train2.dtype, np.float_)
+        self.assertEqual(train1.dtype, np.float64)
+        self.assertEqual(train2.dtype, np.float64)
         self.assertEqual(train1.sampling_rate, 1.0 * pq.Hz)
         self.assertEqual(train2.sampling_rate, 1.0 * pq.Hz)
         self.assertEqual(train1.waveforms, None)
@@ -1169,16 +1169,14 @@ class TestMerge(unittest.TestCase):
         self.waveforms2 = np.array(
             [[[0., 1.], [0.1, 1.1]], [[2., 3.], [2.1, 3.1]], [[4., 5.], [4.1, 5.1]],
              [[6., 7.], [6.1, 7.1]], [[8., 9.], [8.1, 9.1]], [[10., 11.], [10.1, 11.1]]]) * pq.mV
-        self.data2 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
-        self.data2quant = self.data1 * pq.ms
+        self.data2 = np.array([0.11, 0.51, 1.21, 3.31, 6.41, 7.01])
+        self.data2quant = self.data2 * pq.ms
         self.arr_ann2 = {'index': np.arange(101, 107), 'label2': ['g', 'h', 'i', 'j', 'k', 'l']}
-        self.train2 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms, waveforms=self.waveforms1,
+        self.train2 = SpikeTrain(self.data2quant, t_stop=10.0 * pq.ms, waveforms=self.waveforms2,
                                  array_annotations=self.arr_ann2)
 
         self.segment = Segment()
         self.segment.spiketrains.extend([self.train1, self.train2])
-        self.train1.segment = self.segment
-        self.train2.segment = self.segment
 
     def test_compliant(self):
         assert_neo_object_is_compliant(self.train1)
@@ -1954,7 +1952,7 @@ class TestPropertiesMethods(unittest.TestCase):
     def test__children(self):
         segment = Segment(name='seg1')
         segment.spiketrains = [self.train1]
-        segment.create_many_to_one_relationship()
+        segment.check_relationships()
 
         self.assertEqual(self.train1._parent_objects, ('Segment',))
 
@@ -1973,6 +1971,12 @@ class TestPropertiesMethods(unittest.TestCase):
         res = pretty(self.train1)
         targ = ("SpikeTrain\n" + "name: '%s'\ndescription: '%s'\nannotations: %s"
                                  "" % (self.name1, self.description1, pretty(self.ann1)))
+        targ = (f"SpikeTrain containing {len(self.train1)} spikes with waveforms; "
+                f"units {self.train1.units.dimensionality.string}; datatype float64 "
+                f"\nname: '{self.name1}'\ndescription: '{self.description1}'"
+                f"\nannotations: {pretty(self.ann1)}"
+                f"\ntime: {self.train1.t_start} to {self.train1.t_stop}")
+
         self.assertEqual(res, targ)
 
 

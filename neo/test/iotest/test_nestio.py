@@ -356,7 +356,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
                              t_stop=500. * pq.ms,
                              lazy=False, id_column_gdf=0, time_column_gdf=1)
         sts = seg.spiketrains
-        self.assertTrue(all([s.magnitude.dtype == np.float_ for s in sts]))
+        self.assertTrue(all([s.magnitude.dtype == np.float64 for s in sts]))
 
     def test_values(self):
         """

@@ -41,8 +41,7 @@ def check_has_dimensions_time(*values):
                 list(dim.values())[0] != 1 or not
                 isinstance(list(dim.keys())[0], pq.UnitTime)):
             errmsgs.append(
-                "value {} has dimensions {}, not [time]".format(
-                    value, dim))
+                f"value {value} has dimensions {dim}, not [time]")
     if errmsgs:
         raise ValueError("\n".join(errmsgs))
 
@@ -58,7 +57,7 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
     '''
 
     if t_start > t_stop:
-        raise ValueError("t_stop ({}) is before t_start ({})".format(t_stop, t_start))
+        raise ValueError(f"t_stop ({t_stop}) is before t_start ({t_start})")
 
     if not value.size:
         return
@@ -69,9 +68,9 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
         t_stop = t_stop.view(np.ndarray)
 
     if value.min() < t_start:
-        raise ValueError("The first spike ({}) is before t_start ({})".format(value, t_start))
+        raise ValueError(f"The first spike ({value}) is before t_start ({t_start})")
     if value.max() > t_stop:
-        raise ValueError("The last spike ({}) is after t_stop ({})".format(value, t_stop))
+        raise ValueError(f"The last spike ({value}) is after t_stop ({t_stop})")
 
 
 def _check_waveform_dimensions(spiketrain):
@@ -346,12 +345,27 @@ class SpikeTrain(DataObject):
                             array_annotations=array_annotations, **annotations)
 
     def _repr_pretty_(self, pp, cycle):
-        super()._repr_pretty_(pp, cycle)
+        waveforms = ""
+        if self.waveforms is not None:
+            waveforms = " with waveforms"
+        pp.text(f"{self.__class__.__name__} containing {self.size} spikes{waveforms}; "
+                f"units {self.units.dimensionality.string}; datatype {self.dtype} ")
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
 
-    def rescale(self, units):
+        def _pp(line):
+            pp.breakable()
+            with pp.group(indent=1):
+                pp.text(line)
+
+        _pp(f"time: {self.t_start} to {self.t_stop}")
+
+    def rescale(self, units, dtype=None):
         '''
-        Return a copy of the :class:`SpikeTrain` converted to the specified
-        units
+        Return a copy of the :class:`SpikeTrain` converted to the specified units
+        The `dtype` argument exists only for backward compatibility within quantities, see
+        https://github.com/python-quantities/python-quantities/pull/204
         '''
         obj = super().rescale(units)
         obj.t_start = self.t_start.rescale(units)
@@ -809,10 +823,10 @@ class SpikeTrain(DataObject):
                               if key not in self.array_annotations]
 
         if omitted_keys_self or omitted_keys_other:
-            warnings.warn("The following array annotations were omitted, because they were only "
-                          "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the ones that were merged into it."
-                          "".format(omitted_keys_self, omitted_keys_other), UserWarning)
+            warnings.warn(f"The following array annotations were omitted, because they were only "
+                          f"present in one of the merged objects: {omitted_keys_self} from the "
+                          f"one that was merged into and {omitted_keys_other} from the ones that "
+                          f"were merged into it.", UserWarning)
 
         return merged_array_annotations
 

@@ -33,8 +33,8 @@ def _check_annotations(value):
     """
     if isinstance(value, np.ndarray):
         if not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES):
-            raise ValueError("Invalid annotation. NumPy arrays with dtype %s"
-                             "are not allowed" % value.dtype.type)
+            raise ValueError(f"Invalid annotation. NumPy arrays with dtype {value.dtype.type}"
+                             f"are not allowed")
     elif isinstance(value, dict):
         for element in value.values():
             _check_annotations(element)
@@ -42,8 +42,8 @@ def _check_annotations(value):
         for element in value:
             _check_annotations(element)
     elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
-        raise ValueError("Invalid annotation. Annotations of type %s are not"
-                         "allowed" % type(value))
+        raise ValueError(f"Invalid annotation. Annotations of type {type(value)} are not"
+                         f"allowed")
 
 
 def merge_annotation(a, b):
@@ -58,8 +58,7 @@ def merge_annotation(a, b):
         For strings: concatenate with ';'
         Otherwise: fail if the annotations are not equal
     """
-    assert type(a) == type(b), 'type({}) {} != type({}) {}'.format(a, type(a),
-                                                               b, type(b))
+    assert type(a) == type(b), f'type({a})) {type(a)} != type({b}) {type(b)}'
     if isinstance(a, dict):
         return merge_annotations(a, b)
     elif isinstance(a, np.ndarray):  # concatenate b to a
@@ -72,7 +71,7 @@ def merge_annotation(a, b):
         else:
             return a + ";" + b
     else:
-        assert a == b, '{} != {}'.format(a, b)
+        assert a == b, f'{a} != {b}'
         return a
 
 
@@ -100,7 +99,7 @@ def merge_annotations(A, *Bs):
                     # exc.args += ('key %s' % name,)
                     # raise
                     merged[name] = "MERGE CONFLICT"  # temporary hack
-    logger.debug("Merging annotations: A=%s Bs=%s merged=%s", A, Bs, merged)
+    logger.debug(f"Merging annotations: A={A} Bs={Bs} merged={merged}")
     return merged
 
 
@@ -122,8 +121,7 @@ def intersect_annotations(A, B):
 
     for key in set(A.keys()) & set(B.keys()):
         v1, v2 = A[key], B[key]
-        assert type(v1) == type(v2), 'type({}) {} != type({}) {}'.format(v1, type(v1),
-                                                                         v2, type(v2))
+        assert type(v1) == type(v2), f'type({v1}) {type(v1)} != type({v2}) {type(v2)}'
         if isinstance(v1, dict) and v1 == v2:
             result[key] = deepcopy(v1)
         elif isinstance(v1, str) and v1 == v2:
@@ -299,7 +297,7 @@ class BaseNeo:
                 else:
                     pp.breakable()
                 with pp.group(indent=1):
-                    pp.text("{}: ".format(key))
+                    pp.text(f"{key}: ")
                     pp.pretty(value)
 
     def _repr_pretty_(self, pp, cycle):
@@ -366,8 +364,8 @@ class BaseNeo:
         according to the type of "obj"
         """
         if obj.__class__.__name__ not in self._parent_objects:
-            raise TypeError("{} can only have parents of type {}, not {}".format(
-                self.__class__.__name__, self._parent_objects, obj.__class__.__name__))
+            raise TypeError((f"{self.__class__.__name__} can only have parents of "
+                             f"type {self._parwents_objects}, not {obj.__class__.__name__}"))
         loc = self._parent_objects.index(obj.__class__.__name__)
         parent_attr = self._parent_attrs[loc]
         setattr(self, parent_attr, obj)
