@@ -24,7 +24,7 @@ jobs:
       id: get-version
       run: |
         echo ${GITHUB_REF#refs/tags/}
-        echo "TAG::${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
     - name: Test version/tag correspondence
       id: version-check
       run: |
