@@ -84,7 +84,8 @@ docs = [
 
 dev = [
     "build",
-    "twine"
+    "twine",
+    "black"
 ]
 
 igorproio = ["igor2"]
@@ -125,3 +126,7 @@ all = [
     "zugbruecke>=0.2; sys_platform!='win32'",
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable
+
+
+[tool.black]
+line-length = 120
