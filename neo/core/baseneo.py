@@ -154,7 +154,11 @@ def _container_name(class_name):
     referenced by `block.segments`. The attribute name `segments` is
     obtained by calling `_container_name_plural("Segment")`.
     """
-    return _reference_name(class_name) + 's'
+    if "RegionOfInterest" in class_name:
+        # this is a hack, pending a more principled way to handle this
+        return "regionsofinterest"
+    else:
+        return _reference_name(class_name) + 's'
 
 
 class BaseNeo:

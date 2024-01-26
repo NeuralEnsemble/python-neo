@@ -39,7 +39,7 @@ class TestImageSequence(unittest.TestCase):
 
     def test_units(self):
         with self.assertRaises(TypeError):
-            ImageSequence(self.data, sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um)
+            ImageSequence(self.data, units=None, sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um)
 
     def test_wrong_dimensions(self):
         seq = ImageSequence(self.data, sampling_rate=500 * pq.Hz,
@@ -71,8 +71,7 @@ class TestImageSequence(unittest.TestCase):
 
 
 class TestMethodImageSequence(unittest.TestCase):
-    def fake_region_of_interest(self):
-        self.rect_ROI = RectangularRegionOfInterest(2, 2, 2, 2)
+    def _create_test_objects(self):
         self.data = []
         for frame in range(25):
             self.data.append([])
@@ -80,27 +79,29 @@ class TestMethodImageSequence(unittest.TestCase):
                 self.data[frame].append([])
                 for x in range(5):
                     self.data[frame][y].append(x)
-
-    def test_signal_from_region(self):
-        self.fake_region_of_interest()
-        seq = ImageSequence(
+        self.seq = ImageSequence(
             self.data,
             units="V",
             sampling_rate=500 * pq.Hz,
             t_start=250 * pq.ms,
             spatial_scale=1 * pq.um,
         )
-        signals = seq.signal_from_region(self.rect_ROI)
+        self.rect_ROI = RectangularRegionOfInterest(self.seq, 2, 2, 2, 2)
+
+    def test_signal_from_region(self):
+        self._create_test_objects()
+        signals = self.seq.signal_from_region(self.rect_ROI)
         self.assertIsInstance(signals, list)
         self.assertEqual(len(signals), 1)
         for signal in signals:
             self.assertIsInstance(signal, AnalogSignal)
-            self.assertEqual(signal.t_start, seq.t_start)
-            self.assertEqual(signal.sampling_period, seq.frame_duration)
+            self.assertEqual(signal.t_start, self.seq.t_start)
+            self.assertEqual(signal.sampling_period, self.seq.frame_duration)
         with self.assertRaises(ValueError):  # no pixels in region
+            zero_size_roi = RectangularRegionOfInterest(self.seq, 1, 1, 0, 0)
             ImageSequence(
                 self.data, units="V", sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um
-            ).signal_from_region(RectangularRegionOfInterest(1, 1, 0, 0))
+            ).signal_from_region(zero_size_roi)
         with self.assertRaises(ValueError):
             ImageSequence(
                 self.data, units="V", sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um
