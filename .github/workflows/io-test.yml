@@ -83,7 +83,9 @@ jobs:
           git config --global user.name "neo CI"
 
       - name: Python version
-        run: python --version
+        run: |
+          which python
+          python --version
 
       - name: Install neo including dependencies
         # installation with dependencies is only required if no cache was found
