@@ -806,7 +806,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
     def test__pretty(self):
         res = pretty(self.signal1)
         signal = self.signal1
-        targ = (("IrregularlySampledSignal with %d channels of length %d; units %s; datatype %s \n"
+        targ = (("IrregularlySampledSignal with %d channels of length %d; units %s; datatype %s\n"
                  "" % (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode,
                        signal.dtype))
                 + ("name: '{}'\ndescription: '{}'\n".format(signal.name, signal.description))

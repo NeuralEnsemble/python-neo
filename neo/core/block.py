@@ -12,7 +12,6 @@ from datetime import datetime
 from neo.core.container import Container, unique_objs
 from neo.core.group import Group
 from neo.core.objectlist import ObjectList
-from neo.core.regionofinterest import RegionOfInterest
 from neo.core.segment import Segment
 
 
@@ -91,7 +90,6 @@ class Block(Container):
         self.index = index
         self._segments = ObjectList(Segment, parent=self)
         self._groups = ObjectList(Group, parent=self)
-        self._regionsofinterest = ObjectList(RegionOfInterest, parent=self)
 
     segments = property(
         fget=lambda self: self._get_object_list("_segments"),
@@ -103,12 +101,6 @@ class Block(Container):
         fget=lambda self: self._get_object_list("_groups"),
         fset=lambda self, value: self._set_object_list("_groups", value),
         doc="list of Groups contained in this block"
-    )
-
-    regionsofinterest = property(
-        fget=lambda self: self._get_object_list("_regionsofinterest"),
-        fset=lambda self, value: self._set_object_list("_regionsofinterest", value),
-        doc="list of RegionOfInterest objects contained in this block"
     )
 
     @property

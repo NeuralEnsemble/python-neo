@@ -438,7 +438,7 @@ class NcsSectionsFactory:
 
         # digital lynx style with fractional frequency and micros per samp determined from
         # block times
-        elif acqType == "DIGITALLYNX" or acqType == "DIGITALLYNXSX" or acqType == 'CHEETAH64' or acqType == 'RAWDATAFILE':
+        elif acqType in ["DIGITALLYNX", "DIGITALLYNXSX", 'CHEETAH64', 'CHEETAH560', 'RAWDATAFILE']:
             nomFreq = nlxHdr['sampling_rate']
             nb = NcsSectionsFactory._buildForMaxGap(ncsMemMap, nomFreq)
 
