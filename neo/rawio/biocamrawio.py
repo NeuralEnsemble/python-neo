@@ -148,14 +148,14 @@ def open_biocam_file_header(filename):
         if format_100:
             if signal_inv == 1:
                 read_function = readHDF5t_100
-            elif signal_inv == 1:
+            elif signal_inv == -1:
                 read_function = readHDF5t_100_i
             else:
                 raise Exception("Unknown signal inversion")
         else:
             if signal_inv == 1:
                 read_function = readHDF5t_101
-            elif signal_inv == 1:
+            elif signal_inv == -1:
                 read_function = readHDF5t_101_i
             else:
                 raise Exception("Unknown signal inversion")
