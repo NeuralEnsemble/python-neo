@@ -46,7 +46,7 @@ jobs:
           key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data.outputs.dataset_hash }}
           restore-keys: ${{ runner.os }}-datasets-
 
-      - uses: conda-incubator/setup-miniconda@v2.2.0
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: neo-test-env
           python-version: ${{ matrix.python-version }}
