@@ -10,6 +10,8 @@ BaseIO        - abstract class which should be overridden, managing how a
 
 If you want a model for developing a new IO start from exampleIO.
 """
+from __future__ import annotations
+from pathlib import Path
 
 try:
     from collections.abc import Sequence
@@ -96,7 +98,7 @@ class BaseIO:
 
     mode = 'file'  # or 'fake' or 'dir' or 'database'
 
-    def __init__(self, filename=None, **kargs):
+    def __init__(self, filename: str | Path = None, **kargs):
         self.filename = str(filename)
         # create a logger for the IO class
         fullname = self.__class__.__module__ + '.' + self.__class__.__name__
@@ -111,7 +113,7 @@ class BaseIO:
             corelogger.addHandler(logging_handler)
 
     ######## General read/write methods #######################
-    def read(self, lazy=False, **kargs):
+    def read(self, lazy: bool = False, **kargs):
         """
         Return all data from the file as a list of Blocks
         """
