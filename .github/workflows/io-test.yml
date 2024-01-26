@@ -46,10 +46,10 @@ jobs:
           key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data.outputs.dataset_hash }}
           restore-keys: ${{ runner.os }}-datasets-
 
-      - uses: conda-incubator/setup-miniconda@v2.2.0
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: neo-test-env
-          python-version: ${{ matrix.python-version }}
+          python-version: "${{ matrix.python-version }}"
 
       - name: Get current dependencies hash
         id: dependencies
@@ -80,6 +80,11 @@ jobs:
         run: |
           git config --global user.email "neo_ci@fake_mail.com"
           git config --global user.name "neo CI"
+
+      - name: Python version
+        run: |
+          which python
+          python --version
 
       - name: Install neo including dependencies
         # installation with dependencies is only required if no cache was found
