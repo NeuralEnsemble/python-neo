@@ -18,8 +18,7 @@ def unique_objs(objs):
     using the "is" test.
     """
     seen = set()
-    return [obj for obj in objs
-            if id(obj) not in seen and not seen.add(id(obj))]
+    return [obj for obj in objs if id(obj) not in seen and not seen.add(id(obj))]
 
 
 def filterdata(data, targdict=None, objects=None, **kwargs):
@@ -43,7 +42,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
 
     # if objects are specified, get the classes
     if objects:
-        if hasattr(objects, 'lower') or isinstance(objects, type):
+        if hasattr(objects, "lower") or isinstance(objects, type):
             objects = [objects]
     elif objects is not None:
         return []
@@ -53,7 +52,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         targdict = kwargs
     elif not kwargs:
         pass
-    elif hasattr(targdict, 'keys'):
+    elif hasattr(targdict, "keys"):
         targdict = [targdict, kwargs]
     else:
         targdict += [kwargs]
@@ -62,7 +61,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         results = data
 
     # if multiple dicts are provided, apply each filter sequentially
-    elif not hasattr(targdict, 'keys'):
+    elif not hasattr(targdict, "keys"):
         # for performance reasons, only do the object filtering on the first
         # iteration
         results = filterdata(data, targdict=targdict[0], objects=objects)
@@ -74,18 +73,18 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         results = []
         for key, value in sorted(targdict.items()):
             for obj in data:
-                if (hasattr(obj, key) and getattr(obj, key) == value and
-                        all([obj is not res for res in results])):
+                if hasattr(obj, key) and getattr(obj, key) == value and all([obj is not res for res in results]):
                     results.append(obj)
-                elif (key in obj.annotations and obj.annotations[key] == value and
-                          all([obj is not res for res in results])):
+                elif (
+                    key in obj.annotations
+                    and obj.annotations[key] == value
+                    and all([obj is not res for res in results])
+                ):
                     results.append(obj)
 
     # keep only objects of the correct classes
     if objects:
-        results = [result for result in results if
-                   result.__class__ in objects or
-                   result.__class__.__name__ in objects]
+        results = [result for result in results if result.__class__ in objects or result.__class__.__name__ in objects]
 
     if results and all(isinstance(obj, SpikeTrain) for obj in results):
         return SpikeTrainList(results)
@@ -181,6 +180,7 @@ class Container(BaseNeo):
         2) process its non-universal recommended arguments (in its __new__ or
            __init__ method
     """
+
     # Child objects that are a container
     _container_child_objects = ()
     # Child objects that have data
@@ -188,13 +188,11 @@ class Container(BaseNeo):
     # Containers that are listed when pretty-printing
     _repr_pretty_containers = ()
 
-    def __init__(self, name=None, description=None, file_origin=None,
-                 **annotations):
+    def __init__(self, name=None, description=None, file_origin=None, **annotations):
         """
         Initialize a new :class:`Container` instance.
         """
-        super().__init__(name=name, description=description,
-                         file_origin=file_origin, **annotations)
+        super().__init__(name=name, description=description, file_origin=file_origin, **annotations)
 
     def _get_object_list(self, name):
         """
@@ -234,32 +232,28 @@ class Container(BaseNeo):
         Containers for child objects that are a container and
         have a single parent.
         """
-        return tuple([_container_name(child) for child in
-                      self._container_child_objects])
+        return tuple([_container_name(child) for child in self._container_child_objects])
 
     @property
     def _data_child_containers(self):
         """
         Containers for child objects that have data and have a single parent.
         """
-        return tuple([_container_name(child) for child in
-                      self._data_child_objects])
+        return tuple([_container_name(child) for child in self._data_child_objects])
 
     @property
     def _child_containers(self):
         """
         Containers for child objects with a single parent.
         """
-        return tuple([_container_name(child) for child in
-                      self._child_objects])
+        return tuple([_container_name(child) for child in self._child_objects])
 
     @property
     def _single_children(self):
         """
         All child objects that can only have single parents.
         """
-        childs = [list(getattr(self, attr)) for attr in
-                  self._child_containers]
+        childs = [list(getattr(self, attr)) for attr in self._child_containers]
         return tuple(sum(childs, []))
 
     @property
@@ -268,8 +262,7 @@ class Container(BaseNeo):
         All data child objects stored in the current object.
         Not recursive.
         """
-        childs = [list(getattr(self, attr)) for attr in
-                  self._data_child_containers]
+        childs = [list(getattr(self, attr)) for attr in self._data_child_containers]
         return tuple(sum(childs, []))
 
     @property
@@ -278,8 +271,7 @@ class Container(BaseNeo):
         All container child objects stored in the current object.
         Not recursive.
         """
-        childs = [list(getattr(self, attr)) for attr in
-                  self._container_child_containers]
+        childs = [list(getattr(self, attr)) for attr in self._container_child_containers]
         return tuple(sum(childs, []))
 
     @property
@@ -296,8 +288,7 @@ class Container(BaseNeo):
         All data child objects stored in the current object,
         obtained recursively.
         """
-        childs = [list(child.data_children_recur) for child in
-                  self.container_children]
+        childs = [list(child.data_children_recur) for child in self.container_children]
         return self.data_children + tuple(sum(childs, []))
 
     @property
@@ -306,8 +297,7 @@ class Container(BaseNeo):
         All container child objects stored in the current object,
         obtained recursively.
         """
-        childs = [list(child.container_children_recur) for child in
-                  self.container_children]
+        childs = [list(child.container_children_recur) for child in self.container_children]
         return self.container_children + tuple(sum(childs, []))
 
     @property
@@ -324,8 +314,7 @@ class Container(BaseNeo):
         Get dictionary containing the names of child containers in the current
         object as keys and the number of children of that type as values.
         """
-        return {name: len(getattr(self, name))
-                    for name in self._child_containers}
+        return {name: len(getattr(self, name)) for name in self._child_containers}
 
     @property
     def _container_lookup(self):
@@ -342,12 +331,8 @@ class Container(BaseNeo):
     def add(self, *objects):
         """Add a new Neo object to the Container"""
         for obj in objects:
-            if (
-                obj.__class__.__name__ in self._child_objects
-                or (
-                    hasattr(obj, "proxy_for")
-                    and obj.proxy_for.__name__ in self._child_objects
-                )
+            if obj.__class__.__name__ in self._child_objects or (
+                hasattr(obj, "proxy_for") and obj.proxy_for.__name__ in self._child_objects
             ):
                 container = self._get_container(obj.__class__)
                 container.append(obj)
@@ -358,10 +343,7 @@ class Container(BaseNeo):
                     f"following types: {self._child_objects}"
                 )
 
-
-
-    def filter(self, targdict=None, data=True, container=False, recursive=True,
-               objects=None, **kwargs):
+    def filter(self, targdict=None, data=True, container=False, recursive=True, objects=None, **kwargs):
         """
         Return a list of child objects matching *any* of the search terms
         in either their attributes or annotations.  Search terms can be
@@ -394,8 +376,7 @@ class Container(BaseNeo):
         """
 
         if isinstance(targdict, str):
-            raise TypeError("filtering is based on key-value pairs."
-                            " Only a single string was provided.")
+            raise TypeError("filtering is based on key-value pairs." " Only a single string was provided.")
 
         # if objects are specified, get the classes
         if objects:
@@ -415,8 +396,7 @@ class Container(BaseNeo):
             else:
                 children.extend(self.container_children)
 
-        filtered = filterdata(children, objects=objects,
-                              targdict=targdict, **kwargs)
+        filtered = filterdata(children, objects=objects, targdict=targdict, **kwargs)
         if objects == SpikeTrain:
             return SpikeTrainList(items=filtered)
         else:
@@ -429,7 +409,7 @@ class Container(BaseNeo):
         You can either provide a class object, a class name,
         or the name of the container storing the class.
         """
-        if not hasattr(cls, 'lower'):
+        if not hasattr(cls, "lower"):
             cls = cls.__name__
         container_name = _container_name(cls)
         objs = list(getattr(self, container_name, []))
@@ -465,8 +445,7 @@ class Container(BaseNeo):
         """
         parent_name = _reference_name(self.__class__.__name__)
         for child in self._single_children:
-            if (hasattr(child, parent_name) and
-                        getattr(child, parent_name) is None or force):
+            if hasattr(child, parent_name) and getattr(child, parent_name) is None or force:
                 setattr(child, parent_name, self)
         if recursive:
             for child in self.container_children:
@@ -535,7 +514,7 @@ class Container(BaseNeo):
             for obj in getattr(other, container):
                 if id(obj) in ids:
                     pass
-                elif hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
+                elif hasattr(obj, "merge") and obj.name is not None and obj.name in lookup:
                     ind = lookup[obj.name]
                     try:
                         newobj = getattr(self, container)[ind].merge(obj)
@@ -563,8 +542,8 @@ class Container(BaseNeo):
         for container in self._child_containers:
             objs = getattr(self, container)
             if objs:
-                vals.append(f'{objs} {container}')
-        pp.text(', '.join(vals))
+                vals.append(f"{objs} {container}")
+        pp.text(", ".join(vals))
 
         if self._has_repr_pretty_attrs_():
             pp.breakable()
@@ -574,7 +553,7 @@ class Container(BaseNeo):
             pp.breakable()
             objs = getattr(self, container)
             pp.text(f"# {container} (N={objs})")
-            for (i, obj) in enumerate(objs):
+            for i, obj in enumerate(objs):
                 pp.breakable()
                 pp.text("%s: " % i)
                 with pp.indent(3):

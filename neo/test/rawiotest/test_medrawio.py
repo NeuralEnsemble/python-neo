@@ -7,6 +7,7 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 try:
     import dhn_med_py
+
     HAVE_DHN_MED = True
 except ImportError:
     HAVE_DHN_MED = False
@@ -14,31 +15,31 @@ except ImportError:
 
 # This runs standard tests, this is mandatory for all IOs
 @unittest.skipUnless(HAVE_DHN_MED, "requires dhn_med_py package and all its dependencies")
-class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
+class TestMedRawIO(
+    BaseTestRawIO,
+    unittest.TestCase,
+):
     rawioclass = MedRawIO
-    entities_to_download = [
-        'med'
-    ]
-    entities_to_test = ['med/sine_waves.medd', 'med/test.medd']
+    entities_to_download = ["med"]
+    entities_to_test = ["med/sine_waves.medd", "med/test.medd"]
 
     def test_close(self):
 
-        filename = self.get_local_path('med/sine_waves.medd')
+        filename = self.get_local_path("med/sine_waves.medd")
 
-        raw_io1 = MedRawIO(filename, password='L2_password')
+        raw_io1 = MedRawIO(filename, password="L2_password")
         raw_io1.parse_header()
         raw_io1.close()
 
-        raw_io2 = MedRawIO(filename, password='L2_password')
+        raw_io2 = MedRawIO(filename, password="L2_password")
         raw_io2.parse_header()
         raw_io2.close()
 
-
     def test_scan_med_directory(self):
 
-        filename = self.get_local_path('med/sine_waves.medd')
+        filename = self.get_local_path("med/sine_waves.medd")
 
-        rawio = MedRawIO(filename, password='L2_password')
+        rawio = MedRawIO(filename, password="L2_password")
         rawio.parse_header()
 
         # Test that correct metadata and boundaries are extracted
@@ -50,32 +51,26 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
 
         # Verify it found all 3 channels
         self.assertEqual(rawio.num_channels_in_session, 3)
-        self.assertEqual(rawio.header['signal_channels'].size, 3)
+        self.assertEqual(rawio.header["signal_channels"].size, 3)
 
         # Verify if found the names of the 3 channels
-        self.assertEqual(rawio.header['signal_channels'][0][0], 'CSC_0001')
-        self.assertEqual(rawio.header['signal_channels'][1][0], 'CSC_0002')
-        self.assertEqual(rawio.header['signal_channels'][2][0], 'CSC_0003')
+        self.assertEqual(rawio.header["signal_channels"][0][0], "CSC_0001")
+        self.assertEqual(rawio.header["signal_channels"][1][0], "CSC_0002")
+        self.assertEqual(rawio.header["signal_channels"][2][0], "CSC_0003")
 
         # Read first 3 seconds of data from all channels
-        raw_chunk = rawio.get_analogsignal_chunk(block_index=0,
-                                seg_index=0,
-                                i_start=0,
-                                i_stop=96000,
-                                stream_index=0,
-                                channel_indexes=None)
+        raw_chunk = rawio.get_analogsignal_chunk(
+            block_index=0, seg_index=0, i_start=0, i_stop=96000, stream_index=0, channel_indexes=None
+        )
 
         # Test the first sample value of all 3 channels, which are
         # known to be [-1, -4, -4]
         np.testing.assert_array_equal(raw_chunk[0][:3], [-1, -4, -4])
 
         # Read 1 second of data from the second channel
-        raw_chunk = rawio.get_analogsignal_chunk(block_index=0,
-                                seg_index=0,
-                                i_start=0,
-                                i_stop=32000,
-                                stream_index=0,
-                                channel_indexes=[1])
+        raw_chunk = rawio.get_analogsignal_chunk(
+            block_index=0, seg_index=0, i_start=0, i_stop=32000, stream_index=0, channel_indexes=[1]
+        )
 
         # Test known first sample of second channel: [-4]
         self.assertEqual(raw_chunk[0][0], -4)
@@ -83,9 +78,9 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         rawio.close()
 
         # Test on second test dataset, test.medd.
-        filename = self.get_local_path('med/test.medd')
+        filename = self.get_local_path("med/test.medd")
 
-        rawio = MedRawIO(filename, password='L2_password')
+        rawio = MedRawIO(filename, password="L2_password")
         rawio.parse_header()
 
         # Test that correct metadata and boundaries are extracted
@@ -110,20 +105,17 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
 
         # Verify it found all 3 channels.
         self.assertEqual(rawio.num_channels_in_session, 3)
-        self.assertEqual(rawio.header['signal_channels'].size, 3)
+        self.assertEqual(rawio.header["signal_channels"].size, 3)
 
         # Verity if found the names of the 3 channels
-        self.assertEqual(rawio.header['signal_channels'][0][0], '5k_ch1')
-        self.assertEqual(rawio.header['signal_channels'][1][0], '1k_ch1')
-        self.assertEqual(rawio.header['signal_channels'][2][0], '1k_ch2')
+        self.assertEqual(rawio.header["signal_channels"][0][0], "5k_ch1")
+        self.assertEqual(rawio.header["signal_channels"][1][0], "1k_ch1")
+        self.assertEqual(rawio.header["signal_channels"][2][0], "1k_ch2")
 
         # Read first 3 seconds of data from the first channel (5k_ch1)
-        raw_chunk = rawio.get_analogsignal_chunk(block_index=0,
-                                seg_index=0,
-                                i_start=0,
-                                i_stop=15000,
-                                stream_index=0,
-                                channel_indexes=None)
+        raw_chunk = rawio.get_analogsignal_chunk(
+            block_index=0, seg_index=0, i_start=0, i_stop=15000, stream_index=0, channel_indexes=None
+        )
 
         # Test the first three sample values returned, which are
         # known to be [-80, -79, -78]
@@ -131,27 +123,20 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(raw_chunk[1][0], -79)
         self.assertEqual(raw_chunk[2][0], -78)
 
-
         # Read first 3 seconds of data from the second channel and third
         # channels (1k_ch1 and 1k_ch2)
-        raw_chunk = rawio.get_analogsignal_chunk(block_index=0,
-                                seg_index=0,
-                                i_start=0,
-                                i_stop=3000,
-                                stream_index=1,
-                                channel_indexes=None)
+        raw_chunk = rawio.get_analogsignal_chunk(
+            block_index=0, seg_index=0, i_start=0, i_stop=3000, stream_index=1, channel_indexes=None
+        )
 
         # Test first sample returned of both channels, which are known
         # to be [-79, -80]
         np.testing.assert_array_equal(raw_chunk[0][:2], [-79, -80])
 
         # Read first 3 seconds of data from the second segment of the first channel (5k_ch1)
-        raw_chunk = rawio.get_analogsignal_chunk(block_index=0,
-                                seg_index=1,
-                                i_start=0,
-                                i_stop=15000,
-                                stream_index=0,
-                                channel_indexes=None)
+        raw_chunk = rawio.get_analogsignal_chunk(
+            block_index=0, seg_index=1, i_start=0, i_stop=15000, stream_index=0, channel_indexes=None
+        )
 
         # Test the first three sample values returned, which are
         # known to be [22, 23, 24]
@@ -159,7 +144,7 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(raw_chunk[1][0], 23)
         self.assertEqual(raw_chunk[2][0], 24)
 
-        self.assertEqual(len(rawio.header['event_channels']), 2)
+        self.assertEqual(len(rawio.header["event_channels"]), 2)
 
         # Verify that there are 5 events in the dataset.
         # They are 3 "Note" type events, and 2 "NlxP", or neuralynx, type events.
@@ -180,7 +165,7 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(len(events[0]), 2)
 
         # Verify the first event of the second segment is a Neuralynx type event, with correct time
-        self.assertEqual(events[2][0][:4], 'NlxP')
+        self.assertEqual(events[2][0][:4], "NlxP")
         self.assertEqual(events[0][0], 51.703509)
 
         # Get array of all events in third segment of data
@@ -189,16 +174,16 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(len(events[0]), 2)
 
         # Verify the second event of the second segment is a Neuralynx type event, with correct time
-        self.assertEqual(events[2][1][:4], 'NlxP')
+        self.assertEqual(events[2][1][:4], "NlxP")
         self.assertEqual(events[0][1], 161.607036)
 
         rawio.close()
 
         # Test on second test dataset, test.medd, with preserving original timestamps.
         # Timestamps here are in UTC (seconds since midnight, 1 Jan 1970)
-        filename = self.get_local_path('med/test.medd')
+        filename = self.get_local_path("med/test.medd")
 
-        rawio = MedRawIO(filename, password='L2_password', keep_original_times=True)
+        rawio = MedRawIO(filename, password="L2_password", keep_original_times=True)
         rawio.parse_header()
 
         # Segment 0
@@ -230,7 +215,7 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(len(events[0]), 2)
 
         # Verify the first event of the second segment is a Neuralynx type event, with correct time
-        self.assertEqual(events[2][0][:4], 'NlxP')
+        self.assertEqual(events[2][0][:4], "NlxP")
         self.assertEqual(events[0][0], 1678111825.715745)
 
         # Get array of all events in third segment of data
@@ -239,7 +224,7 @@ class TestMedRawIO(BaseTestRawIO, unittest.TestCase, ):
         self.assertEqual(len(events[0]), 2)
 
         # Verify the second event of the second segment is a Neuralynx type event, with correct time
-        self.assertEqual(events[2][1][:4], 'NlxP')
+        self.assertEqual(events[2][1][:4], "NlxP")
         self.assertEqual(events[0][1], 1678111935.619272)
 
         rawio.close()

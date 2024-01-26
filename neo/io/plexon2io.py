@@ -14,4 +14,3 @@ class Plexon2IO(Plexon2RawIO, BaseFromRaw):
     def __init__(self, filename):
         Plexon2RawIO.__init__(self, filename=filename)
         BaseFromRaw.__init__(self, filename)
-

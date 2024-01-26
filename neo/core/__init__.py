@@ -47,11 +47,21 @@ from neo.core.view import ChannelView
 from neo.core.group import Group
 
 # Block should always be first in this list
-objectlist = [Block, Segment,
-              AnalogSignal, IrregularlySampledSignal,
-              Event, Epoch, SpikeTrain, ImageSequence,
-              RectangularRegionOfInterest, CircularRegionOfInterest,
-              PolygonRegionOfInterest, ChannelView, Group]
+objectlist = [
+    Block,
+    Segment,
+    AnalogSignal,
+    IrregularlySampledSignal,
+    Event,
+    Epoch,
+    SpikeTrain,
+    ImageSequence,
+    RectangularRegionOfInterest,
+    CircularRegionOfInterest,
+    PolygonRegionOfInterest,
+    ChannelView,
+    Group,
+]
 
 objectnames = [ob.__name__ for ob in objectlist]
 class_by_name = dict(zip(objectnames, objectlist))

@@ -3,8 +3,8 @@ from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
 
 
 class OpenEphysBinaryIO(OpenEphysBinaryRawIO, BaseFromRaw):
-    _prefered_signal_group_mode = 'group-by-same-units'
-    mode = 'dir'
+    _prefered_signal_group_mode = "group-by-same-units"
+    mode = "dir"
 
     def __init__(self, dirname):
         OpenEphysBinaryRawIO.__init__(self, dirname=dirname)

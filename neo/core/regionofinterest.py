@@ -7,18 +7,17 @@ from neo.core.imagesequence import ImageSequence
 class RegionOfInterest(BaseNeo):
     """Abstract base class"""
 
-    _parent_objects = ('Group',)
-    _parent_attrs = ('group',)
-    _necessary_attrs = (
-        ('obj', ('ImageSequence', ), 1),
-    )
+    _parent_objects = ("Group",)
+    _parent_attrs = ("group",)
+    _necessary_attrs = (("obj", ("ImageSequence",), 1),)
 
     def __init__(self, image_sequence, name=None, description=None, file_origin=None, **annotations):
-        super().__init__(name=name, description=description,
-                        file_origin=file_origin, **annotations)
+        super().__init__(name=name, description=description, file_origin=file_origin, **annotations)
 
-        if not (isinstance(image_sequence, ImageSequence) or (
-                hasattr(image_sequence, "proxy_for") and issubclass(image_sequence.proxy_for, ImageSequence))):
+        if not (
+            isinstance(image_sequence, ImageSequence)
+            or (hasattr(image_sequence, "proxy_for") and issubclass(image_sequence.proxy_for, ImageSequence))
+        ):
             raise ValueError("Can only take a RegionOfInterest of an ImageSequence")
         self.image_sequence = image_sequence
 
@@ -44,8 +43,7 @@ class CircularRegionOfInterest(RegionOfInterest):
             Radius of the ROI in pixels
     """
 
-    def __init__(self, image_sequence, x, y, radius, name=None, description=None,
-                 file_origin=None, **annotations):
+    def __init__(self, image_sequence, x, y, radius, name=None, description=None, file_origin=None, **annotations):
         super().__init__(image_sequence, name, description, file_origin, **annotations)
         self.y = y
         self.x = x
@@ -60,8 +58,7 @@ class CircularRegionOfInterest(RegionOfInterest):
         return self.centre
 
     def is_inside(self, x, y):
-        if ((x - self.x) * (x - self.x) +
-                (y - self.y) * (y - self.y) <= self.radius * self.radius):
+        if (x - self.x) * (x - self.x) + (y - self.y) * (y - self.y) <= self.radius * self.radius:
             return True
         else:
             return False
@@ -94,8 +91,9 @@ class RectangularRegionOfInterest(RegionOfInterest):
             Height (y-direction) of the ROI in pixels
     """
 
-    def __init__(self, image_sequence, x, y, width, height, name=None, description=None,
-                 file_origin=None, **annotations):
+    def __init__(
+        self, image_sequence, x, y, width, height, name=None, description=None, file_origin=None, **annotations
+    ):
         super().__init__(image_sequence, name, description, file_origin, **annotations)
         self.x = x
         self.y = y
@@ -103,8 +101,10 @@ class RectangularRegionOfInterest(RegionOfInterest):
         self.height = height
 
     def is_inside(self, x, y):
-        if (self.x - self.width/2.0 <= x < self.x + self.width/2.0
-                and self.y - self.height/2.0 <= y < self.y + self.height/2.0):
+        if (
+            self.x - self.width / 2.0 <= x < self.x + self.width / 2.0
+            and self.y - self.height / 2.0 <= y < self.y + self.height / 2.0
+        ):
             return True
         else:
             return False
@@ -139,8 +139,7 @@ class PolygonRegionOfInterest(RegionOfInterest):
             of the vertices of the polygon
     """
 
-    def __init__(self, image_sequence, *vertices, name=None, description=None,
-                 file_origin=None, **annotations):
+    def __init__(self, image_sequence, *vertices, name=None, description=None, file_origin=None, **annotations):
         super().__init__(image_sequence, name, description, file_origin, **annotations)
         self.vertices = vertices
 
@@ -163,9 +162,13 @@ class PolygonRegionOfInterest(RegionOfInterest):
             c = 0
             for i in range(0, nvert):
                 j = i - 1 if i != 0 else nvert - 1
-                if (((verty[i]*1.0 > testy*1.0) != (verty[j]*1.0 > testy*1.0)) and
-                        (testx*1.0 < (vertx[j]*1.0 - vertx[i]*1.0) * (testy*1.0 - verty[i]*1.0) /
-                         (verty[j]*1.0 - verty[i]*1.0) + vertx[i]*1.0)):
+                if ((verty[i] * 1.0 > testy * 1.0) != (verty[j] * 1.0 > testy * 1.0)) and (
+                    testx * 1.0
+                    < (vertx[j] * 1.0 - vertx[i] * 1.0)
+                    * (testy * 1.0 - verty[i] * 1.0)
+                    / (verty[j] * 1.0 - verty[i] * 1.0)
+                    + vertx[i] * 1.0
+                ):
                     c += 1
             # If odd, that means that we are inside the polygon
             if c % 2 == 1:
@@ -175,8 +178,12 @@ class PolygonRegionOfInterest(RegionOfInterest):
 
     def pixels_in_region(self):
 
-        min_x, max_x, min_y, max_y = (self.vertices[0][0], self.vertices[0][0],
-                                      self.vertices[0][1], self.vertices[0][1])
+        min_x, max_x, min_y, max_y = (
+            self.vertices[0][0],
+            self.vertices[0][0],
+            self.vertices[0][1],
+            self.vertices[0][1],
+        )
 
         for i in self.vertices:
             if i[0] < min_x:

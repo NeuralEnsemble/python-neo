@@ -80,10 +80,10 @@ class StimfitIO(BaseIO):
     read_params = {Block: []}
     write_params = None
 
-    name = 'Stimfit'
-    extensions = ['abf', 'dat', 'axgx', 'axgd', 'cfs']
+    name = "Stimfit"
+    extensions = ["abf", "dat", "axgx", "axgd", "cfs"]
 
-    mode = 'file'
+    mode = "file"
 
     def __init__(self, filename=None):
         """
@@ -96,7 +96,7 @@ class StimfitIO(BaseIO):
 
         BaseIO.__init__(self)
 
-        if hasattr(filename, 'lower'):
+        if hasattr(filename, "lower"):
             self.filename = filename
             self.stfio_rec = None
         else:
@@ -105,7 +105,8 @@ class StimfitIO(BaseIO):
 
     def read_block(self, lazy=False):
         import stfio
-        assert not lazy, 'Do not support lazy'
+
+        assert not lazy, "Do not support lazy"
 
         if self.filename is not None:
             self.stfio_rec = stfio.read(self.filename)
@@ -134,12 +135,12 @@ class StimfitIO(BaseIO):
                 try:
                     pq.Quantity(1, unit)
                 except:
-                    unit = ''
+                    unit = ""
 
                 signal = pq.Quantity(recsig[j], unit)
-                anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
-                                      t_start=t_start, name=str(name),
-                                      channel_index=i)
+                anaSig = AnalogSignal(
+                    signal, sampling_rate=sampling_rate, t_start=t_start, name=str(name), channel_index=i
+                )
                 seg.analogsignals.append(anaSig)
 
             bl.segments.append(seg)

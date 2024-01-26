@@ -42,8 +42,7 @@ class TestImageSequence(unittest.TestCase):
             ImageSequence(self.data, units=None, sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um)
 
     def test_wrong_dimensions(self):
-        seq = ImageSequence(self.data, sampling_rate=500 * pq.Hz,
-                            units="V", spatial_scale=1 * pq.um)
+        seq = ImageSequence(self.data, sampling_rate=500 * pq.Hz, units="V", spatial_scale=1 * pq.um)
 
         self.assertEqual(seq.sampling_rate, 500 * pq.Hz)
         self.assertEqual(seq.spatial_scale, 1 * pq.um)
@@ -99,13 +98,11 @@ class TestMethodImageSequence(unittest.TestCase):
             self.assertEqual(signal.sampling_period, self.seq.frame_duration)
         with self.assertRaises(ValueError):  # no pixels in region
             zero_size_roi = RectangularRegionOfInterest(self.seq, 1, 1, 0, 0)
-            ImageSequence(
-                self.data, units="V", sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um
-            ).signal_from_region(zero_size_roi)
+            ImageSequence(self.data, units="V", sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um).signal_from_region(
+                zero_size_roi
+            )
         with self.assertRaises(ValueError):
-            ImageSequence(
-                self.data, units="V", sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um
-            ).signal_from_region()
+            ImageSequence(self.data, units="V", sampling_rate=500 * pq.Hz, spatial_scale=1 * pq.um).signal_from_region()
 
 
 if __name__ == "__main__":
