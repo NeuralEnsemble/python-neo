@@ -164,7 +164,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         event_channels = []
         for stream_ind, stream_name in enumerate(event_stream_names):
             info = self._evt_streams[0][0][stream_ind]
-            if 'states' in info:
+            if 'states' in info or 'channel_states' in info:
                 evt_channel_type = "epoch"
             else:
                 evt_channel_type = "event"
@@ -213,31 +213,35 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         )
 
                     # # If available, use 'states' to compute event duration
-                    if 'states' in info and info["states"].size:
-                        states = info["states"]
-                        timestamps = info["timestamps"]
-                        labels = info["labels"]
-                        rising = np.where(states > 0)[0]
-                        falling = np.where(states < 0)[0]
+                    info["durations"] = None
+                    # 'states' was introduced in OpenEphys v0.6. For previous versions, events used 'channel_states'
+                    if 'states' in info or "channel_states" in info:
+                        states = info["channel_states"] if "channel_states" in info else info["states"]
+                        if states.size > 0:
+                            timestamps = info["timestamps"]
+                            labels = info["labels"]
+                            rising = np.where(states > 0)[0]
+                            falling = np.where(states < 0)[0]
 
-                        # infer durations
-                        durations = None
-                        if len(states) > 0:
-                            # make sure first event is rising and last is falling
-                            if states[0] < 0:
-                                falling = falling[1:]
-                            if states[-1] > 0:
-                                rising = rising[:-1]
+                            # infer durations
+                            durations = None
+                            if len(states) > 0:
+                                # make sure first event is rising and last is falling
+                                if states[0] < 0:
+                                    falling = falling[1:]
+                                if states[-1] > 0:
+                                    rising = rising[:-1]
 
-                            if len(rising) == len(falling):
-                                durations = timestamps[falling] - timestamps[rising]
+                                if len(rising) == len(falling):
+                                    durations = timestamps[falling] - timestamps[rising]
+                                    if not self._use_direct_evt_timestamps:
+                                        timestamps = timestamps / info['sample_rate']
+                                        durations = durations / info['sample_rate']
 
-                        info["rising"] = rising
-                        info["timestamps"] = timestamps[rising]
-                        info["labels"] = labels[rising]
-                        info["durations"] = durations
-                    else:
-                        info["durations"] = None
+                            info["rising"] = rising
+                            info["timestamps"] = timestamps[rising]
+                            info["labels"] = labels[rising]
+                            info["durations"] = durations
 
         # no spike read yet
         # can be implemented on user demand
@@ -395,9 +399,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         info = self._evt_streams[block_index][seg_index][event_channel_index]
-        timestamps = info['timestamps']
+        timestamps = info["timestamps"]
         durations = info["durations"]
-        labels = info['labels']
+        labels = info["labels"]
 
         # slice it if needed
         if t_start is not None:
