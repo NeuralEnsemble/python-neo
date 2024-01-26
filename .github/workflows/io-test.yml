@@ -69,6 +69,9 @@ jobs:
             ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-
             ${{ runner.os }}-conda-env-
 
+      - name: Python version
+        run: python --version
+
       - name: Install testing dependencies
         # testing environment is only created from yml if no cache was found
         # restore-key hits should result in `cache-hit` == 'false'
