@@ -78,6 +78,7 @@ class SpikeGLXRawIO(BaseRawIO):
         self.dirname = dirname
         self.load_sync_channel = load_sync_channel
         self.load_channel_location = load_channel_location
+        self._use_direct_evt_timestamps = None
 
     def _source_name(self):
         return self.dirname
@@ -136,6 +137,22 @@ class SpikeGLXRawIO(BaseRawIO):
 
         # No events
         event_channels = []
+        # This is true only in case of 'nidq' stream
+        for stream_name in stream_names:
+            if 'nidq' in stream_name:
+                info = self.signals_info_dict[0, stream_name]          
+                if len(info['digital_channels']) > 0:  
+                    # add event channels
+                    for local_chan in info['digital_channels']:
+                        chan_name = local_chan
+                        chan_id = f'{stream_name}#{chan_name}'
+                        event_channels.append((chan_name, chan_id, 'event'))
+                    # add events_memmap 
+                    data = np.memmap(info['bin_file'], dtype='int16', mode='r', offset=0, order='C')
+                    data = data.reshape(-1, info['num_chan'])
+                    # The digital word is usually the last channel, after all the individual analog channels
+                    extracted_word = data[:,len(info['analog_channels'])]
+                    self._events_memmap = np.unpackbits(extracted_word.astype(np.uint8)[:,None], axis=1)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
@@ -233,6 +250,38 @@ class SpikeGLXRawIO(BaseRawIO):
         raw_signals = memmap[slice(i_start, i_stop), channel_selection]
 
         return raw_signals
+    
+    def _event_count(self, event_channel_idx, block_index=None, seg_index=None):
+        timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_index,
+                                                      None, None)
+        return timestamps.size
+    
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start=None, t_stop=None):
+        timestamps, durations, labels = [], None, []
+        info = self.signals_info_dict[0, 'nidq'] # There are no events that are not in the nidq stream
+        dig_ch = info['digital_channels']
+        if len(dig_ch) > 0:
+            event_data = self._events_memmap
+            channel = dig_ch[event_channel_index]
+            ch_idx = 7 - int(channel[2:]) # They are in the reverse order
+            this_stream = event_data[:,ch_idx]
+            this_rising = np.where(np.diff(this_stream)==1)[0] + 1
+            this_falling = np.where(np.diff(this_stream)==-1)[0] + 1
+            if len(this_rising) > 0:
+                timestamps.extend(this_rising)
+                labels.extend([channel + ' ON']*len(this_rising))
+            if len(this_falling) > 0:
+                timestamps.extend(this_falling)
+                labels.extend([channel + ' OFF']*len(this_falling))                         
+        return np.asarray(timestamps), np.asarray(durations), np.asarray(labels) 
+
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
+        info = self.signals_info_dict[0, 'nidq'] # There are no events that are not in the nidq stream
+        if not self._use_direct_evt_timestamps:
+            event_times = event_timestamps.astype(dtype) / float(info['sampling_rate'])
+        else: # Does this ever happen?
+            event_times = event_timestamps.astype(dtype)
+        return event_times
 
 
 def scan_files(dirname):
@@ -452,5 +501,16 @@ def extract_stream_info(meta_file, meta):
     info['channel_gains'] = channel_gains
     info['channel_offsets'] = np.zeros(info['num_chan'])
     info['has_sync_trace'] = has_sync_trace
+    
+    if 'nidq' in device:
+        info['digital_channels'] = []
+        info['analog_channels'] = [channel for channel in info['channel_names'] if not channel.startswith('XD')] 
+        # Digital/event channels are encoded within the digital word, so that will need more handling
+        for item in meta['niXDChans1'].split(','):
+            if ':' in item:
+                start, end = map(int, item.split(':'))
+                info['digital_channels'].extend([f"XD{i}" for i in range(start, end+1)])
+            else:
+                info['digital_channels'].append(f"XD{int(item)}")
 
     return info
