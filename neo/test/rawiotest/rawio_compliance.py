@@ -223,18 +223,18 @@ def read_analogsignals(reader):
 
         # read 500ms with several chunksize
         sr = reader.get_signal_sampling_rate(stream_index=stream_index)
-        lenght_to_read = int(.5 * sr)
-        if lenght_to_read < sig_size:
+        length_to_read = int(.5 * sr)
+        if length_to_read and length_to_read < sig_size:
             ref_raw_sigs = reader.get_analogsignal_chunk(block_index=block_index,
                                                     seg_index=seg_index, i_start=0,
-                                                    i_stop=lenght_to_read,
+                                                    i_stop=length_to_read,
                                                     stream_index=stream_index,
                                                     channel_indexes=channel_indexes)
             for chunksize in (511, 512, 513, 1023, 1024, 1025):
                 i_start = 0
                 chunks = []
-                while i_start < lenght_to_read:
-                    i_stop = min(i_start + chunksize, lenght_to_read)
+                while i_start < length_to_read:
+                    i_stop = min(i_start + chunksize, length_to_read)
                     raw_chunk = reader.get_analogsignal_chunk(block_index=block_index,
                                                             seg_index=seg_index, i_start=i_start,
                                                             i_stop=i_stop,
