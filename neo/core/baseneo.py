@@ -180,7 +180,7 @@ class BaseNeo:
                            class must have. The tuple can have 2-4 elements.
                            The first element is the attribute name.
                            The second element is the attribute type.
-                           The third element is the number of  dimensions
+                           The third element is the number of dimensions
                            (only for numpy arrays and quantities).
                            The fourth element is the dtype of array
                            (only for numpy arrays and quantities).
@@ -252,6 +252,8 @@ class BaseNeo:
                           ('file_origin', str))
     # Attributes that are used for pretty-printing
     _repr_pretty_attrs_keys_ = ("name", "description", "annotations")
+
+    is_view = False
 
     def __init__(self, name=None, description=None, file_origin=None,
                  **annotations):

@@ -10,8 +10,9 @@ class RegionOfInterest(BaseNeo):
     _parent_objects = ('Group',)
     _parent_attrs = ('group',)
     _necessary_attrs = (
-        ('obj', ('ImageSequence', ), 1),
+        ('image_sequence', ('ImageSequence', ), 1),
     )
+    is_view = True
 
     def __init__(self, image_sequence, name=None, description=None, file_origin=None, **annotations):
         super().__init__(name=name, description=description,
@@ -21,6 +22,16 @@ class RegionOfInterest(BaseNeo):
                 hasattr(image_sequence, "proxy_for") and issubclass(image_sequence.proxy_for, ImageSequence))):
             raise ValueError("Can only take a RegionOfInterest of an ImageSequence")
         self.image_sequence = image_sequence
+
+    def _get_obj(self):
+        # for consistency with ChannelView
+        return self.image_sequence
+
+    def _set_obj(self, value):
+        assert isinstance(value, ImageSequence)
+        self.image_sequence = value
+
+    obj = property(fget=_get_obj, fset=_set_obj)
 
     def resolve(self):
         """
@@ -43,6 +54,13 @@ class CircularRegionOfInterest(RegionOfInterest):
         :radius: (integer or float)
             Radius of the ROI in pixels
     """
+
+    _necessary_attrs = (
+        ('image_sequence', ('ImageSequence', ), 1),
+        ('x', int),
+        ('y', int),
+        ('radius', int)
+    )
 
     def __init__(self, image_sequence, x, y, radius, name=None, description=None,
                  file_origin=None, **annotations):
@@ -94,6 +112,14 @@ class RectangularRegionOfInterest(RegionOfInterest):
             Height (y-direction) of the ROI in pixels
     """
 
+    _necessary_attrs = (
+        ('image_sequence', ('ImageSequence', ), 1),
+        ('x', int),
+        ('y', int),
+        ('width', int),
+        ('height', int)
+    )
+
     def __init__(self, image_sequence, x, y, width, height, name=None, description=None,
                  file_origin=None, **annotations):
         super().__init__(image_sequence, name, description, file_origin, **annotations)
@@ -138,6 +164,11 @@ class PolygonRegionOfInterest(RegionOfInterest):
             tuples containing the (x, y) coordinates, as integers or floats,
             of the vertices of the polygon
     """
+
+    _necessary_attrs = (
+        ('image_sequence', ('ImageSequence', ), 1),
+        ('vertices', list),
+    )
 
     def __init__(self, image_sequence, *vertices, name=None, description=None,
                  file_origin=None, **annotations):
