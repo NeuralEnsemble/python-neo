@@ -512,5 +512,4 @@ def extract_stream_info(meta_file, meta):
                 info['digital_channels'].extend([f"XD{i}" for i in range(start, end+1)])
             else:
                 info['digital_channels'].append(f"XD{int(item)}")
-
     return info
