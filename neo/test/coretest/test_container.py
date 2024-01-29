@@ -4,7 +4,12 @@ Tests of the neo.core.container.Container class
 
 import unittest
 
+import quantities as pq
+
 import numpy as np
+
+import neo.core
+from neo.core import filters
 
 try:
     from IPython.lib.pretty import pretty
@@ -37,6 +42,26 @@ class TestContainerNeo(unittest.TestCase):
     '''
     TestCase to make sure basic initialization and methods work
     '''
+
+    @classmethod
+    def setUpClass(cls):
+        seg = neo.core.Segment()
+        st1 = neo.core.SpikeTrain([1, 2] * pq.ms, t_stop=10)
+        st1.annotate(test=5)
+        st2 = neo.core.SpikeTrain([3, 4] * pq.ms, t_stop=10)
+        st2.annotate(test=6)
+        st2.annotate(name='st_num_1')
+        st2.annotate(filt=6)
+        st3 = neo.core.SpikeTrain([5, 6] * pq.ms, t_stop=10)
+        st3.annotate(list=[1, 2])
+        st3.annotate(dict={'key': 5})
+        seg.spiketrains.append(st1)
+        seg.spiketrains.append(st2)
+        seg.spiketrains.append(st3)
+
+        cls.seg = seg
+        cls.st1 = st1
+        cls.st2 = st2
 
     def test_init(self):
         '''test to make sure initialization works properly'''
@@ -94,6 +119,115 @@ class TestContainerNeo(unittest.TestCase):
     def test_filter(self):
         container = Container()
         self.assertRaises(TypeError, container.filter, "foo")
+
+    def test_filter_results(self):
+        '''
+            Tests FilterConditions correct results
+        '''
+        self.assertEqual(self.st1.annotations,
+                         self.seg.filter(test=filters.Equals(5))[0].annotations)
+        self.assertEqual(self.st1.annotations,
+                         self.seg.filter(test=filters.LessThan(6))[0].annotations)
+        self.assertEqual(self.st1.annotations,
+                         self.seg.filter(test=filters.GreaterThan(4))[0].annotations)
+        self.assertEqual(self.st1.annotations,
+                         self.seg.filter(test=filters.IsNot(1))[0].annotations)
+        self.assertEqual(self.st1.annotations,
+                         self.seg.filter(test=filters.IsIn([1, 2, 5]))[0].annotations)
+        self.assertEqual(self.st1.annotations,
+                         self.seg.filter(test=filters.InRange(1, 5))[0].annotations)
+        self.assertEqual(self.st1.annotations,
+                         self.seg.filter(test=filters.GreaterThanOrEquals(5))[0].annotations)
+        self.assertEqual(self.st1.annotations,
+                         self.seg.filter(test=filters.LessThanOrEquals(5))[0].annotations)
+
+    def test_filter_equal(self):
+        '''
+            Tests FilterCondition object "Equals".
+        '''
+        self.assertEqual(1, len(self.seg.filter(test=filters.Equals(5))))
+        self.assertEqual(0, len(self.seg.filter(test=filters.Equals(1))))
+        self.assertEqual(1, len(self.seg.filter({'list': filters.Equals([1, 2])})))
+        self.assertEqual(1, len(self.seg.filter(dict=filters.Equals({'key': 5}))))
+
+    def test_filter_is_not(self):
+        '''
+            Tests FilterCondition object "IsNot".
+        '''
+        self.assertEqual(2, len(self.seg.filter(test=filters.IsNot(1))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.IsNot(5))))
+        self.assertEqual(0, len(self.seg.filter([{"test": filters.IsNot(5)},
+                                            {"test": filters.IsNot(6)}])))
+
+    def test_filter_less_than(self):
+        '''
+            Tests FilterCondition object "LessThan".
+        '''
+        self.assertEqual(0, len(self.seg.filter(test=filters.LessThan(5))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.LessThan(6))))
+        self.assertEqual(2, len(self.seg.filter(test=filters.LessThan(7))))
+
+    def test_filter_less_than_equal(self):
+        '''
+            Tests FilterCondition object "LessThanEquals".
+        '''
+        self.assertEqual(0, len(self.seg.filter(test=filters.LessThanOrEquals(4))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.LessThanOrEquals(5))))
+        self.assertEqual(2, len(self.seg.filter(test=filters.LessThanOrEquals(6))))
+
+    def test_filter_greater_than(self):
+        '''
+            Tests FilterCondition object "GreaterThan".
+        '''
+        self.assertEqual(0, len(self.seg.filter(test=filters.GreaterThan(6))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.GreaterThan(5))))
+        self.assertEqual(2, len(self.seg.filter(test=filters.GreaterThan(4))))
+
+    def test_filter_greater_than_equal(self):
+        '''
+            Tests FilterCondition object "GreaterThanEquals".
+        '''
+        self.assertEqual(0, len(self.seg.filter(test=filters.GreaterThanOrEquals(7))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.GreaterThanOrEquals(6))))
+        self.assertEqual(2, len(self.seg.filter(test=filters.GreaterThanOrEquals(5))))
+
+    def test_filter_is_in(self):
+        '''
+        Tests FilterCondition object "IsIn".
+        '''
+        # list
+        self.assertEqual(0, len(self.seg.filter(test=filters.IsIn([4, 7, 10]))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.IsIn([5, 7, 10]))))
+        self.assertEqual(2, len(self.seg.filter(test=filters.IsIn([5, 6, 10]))))
+        # tuple
+        self.assertEqual(0, len(self.seg.filter(test=filters.IsIn((4, 7, 10)))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.IsIn((5, 7, 10)))))
+        self.assertEqual(2, len(self.seg.filter(test=filters.IsIn((5, 6, 10)))))
+        # set
+        self.assertEqual(0, len(self.seg.filter(test=filters.IsIn({4, 7, 10}))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.IsIn({5, 7, 10}))))
+        self.assertEqual(2, len(self.seg.filter(test=filters.IsIn({5, 6, 10}))))
+
+    def test_filter_in_range(self):
+        '''
+        Tests FilterCondition object "InRange".
+        '''
+        with self.assertRaises(ValueError):
+            self.seg.filter(test=filters.InRange("wrong", 6, False, False))
+        self.assertEqual(2, len(self.seg.filter(test=filters.InRange(5, 6, False, False))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.InRange(5, 6, True, False))))
+        self.assertEqual(1, len(self.seg.filter(test=filters.InRange(5, 6, False, True))))
+        self.assertEqual(0, len(self.seg.filter(test=filters.InRange(5, 6, True, True))))
+
+    def test_filter_filter_consistency(self):
+        '''
+        Tests old functionality with new filter method.
+        '''
+        self.assertEqual(2, len(self.seg.filter({'test': filters.Equals(5),
+                                            'filt': filters.Equals(6)})))
+        self.assertEqual(0, len(self.seg.filter([{'test': filters.Equals(5)},
+                                            {'filt': filters.Equals(6)}])))
+        self.assertEqual(1, len(self.seg.filter(name='st_num_1')))
 
 
 class Test_Container_merge(unittest.TestCase):

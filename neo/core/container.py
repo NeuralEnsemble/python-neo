@@ -6,6 +6,8 @@ object inherit from.  It provides shared methods for all container types.
 """
 
 from copy import deepcopy
+
+from neo.core import filters
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
 from neo.core.objectlist import ObjectList
 from neo.core.spiketrain import SpikeTrain
@@ -21,24 +23,25 @@ def unique_objs(objs):
     return [obj for obj in objs
             if id(obj) not in seen and not seen.add(id(obj))]
 
-
 def filterdata(data, targdict=None, objects=None, **kwargs):
     """
     Return a list of the objects in data matching *any* of the search terms
     in either their attributes or annotations.  Search terms can be
     provided as keyword arguments or a dictionary, either as a positional
-    argument after data or to the argument targdict.  targdict can also
+    argument after data or to the argument targdict.
+    A key of a provided dictionary is the name of the requested annotation
+    and the value is a FilterCondition object.
+    E.g.: Equal(x), LessThan(x), InRange(x, y).
+
+    targdict can also
     be a list of dictionaries, in which case the filters are applied
-    sequentially.  If targdict and kwargs are both supplied, the
+    sequentially.
+
+    A list of dictionaries is handled as follows: [ { or } and { or } ]
+    If targdict and kwargs are both supplied, the
     targdict filters are applied first, followed by the kwarg filters.
-    A targdict of None or {} and objects = None corresponds to no filters
-    applied, therefore returning all child objects.
-    Default targdict and objects is None.
-
-
-    objects (optional) should be the name of a Neo object type,
-    a neo object class, or a list of one or both of these.  If specified,
-    only these objects will be returned.
+    A targdict of None or {} corresponds to no filters applied, therefore
+    returning all child objects. Default targdict is None.
     """
 
     # if objects are specified, get the classes
@@ -72,20 +75,26 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
     else:
         # do the actual filtering
         results = []
-        for key, value in sorted(targdict.items()):
-            for obj in data:
-                if (hasattr(obj, key) and getattr(obj, key) == value and
-                        all([obj is not res for res in results])):
+        for obj in data:
+            for key, value in sorted(targdict.items()):
+                if hasattr(obj, key) and getattr(obj, key) == value:
                     results.append(obj)
-                elif (key in obj.annotations and obj.annotations[key] == value and
-                          all([obj is not res for res in results])):
+                    break
+                if isinstance(value, filters.FilterCondition) and key in obj.annotations:
+                    if value.evaluate(obj.annotations[key]):
+                        results.append(obj)
+                        break
+                if key in obj.annotations and obj.annotations[key] == value:
                     results.append(obj)
+                    break
+
+    # remove duplicates from results
+    results = list({ id(res): res for res in results }.values())
 
     # keep only objects of the correct classes
     if objects:
         results = [result for result in results if
-                   result.__class__ in objects or
-                   result.__class__.__name__ in objects]
+               result.__class__ in objects or result.__class__.__name__ in objects]
 
     if results and all(isinstance(obj, SpikeTrain) for obj in results):
         return SpikeTrainList(results)
@@ -366,9 +375,17 @@ class Container(BaseNeo):
         Return a list of child objects matching *any* of the search terms
         in either their attributes or annotations.  Search terms can be
         provided as keyword arguments or a dictionary, either as a positional
-        argument after data or to the argument targdict.  targdict can also
+        argument after data or to the argument targdict.
+        A key of a provided dictionary is the name of the requested annotation
+        and the value is a FilterCondition object.
+        E.g.: equal(x), less_than(x), InRange(x, y).
+
+        targdict can also
         be a list of dictionaries, in which case the filters are applied
-        sequentially.  If targdict and kwargs are both supplied, the
+        sequentially.
+
+        A list of dictionaries is handled as follows: [ { or } and { or } ]
+        If targdict and kwargs are both supplied, the
         targdict filters are applied first, followed by the kwarg filters.
         A targdict of None or {} corresponds to no filters applied, therefore
         returning all child objects. Default targdict is None.
@@ -391,6 +408,8 @@ class Container(BaseNeo):
             >>> obj.filter(name="Vm")
             >>> obj.filter(objects=neo.SpikeTrain)
             >>> obj.filter(targdict={'myannotation':3})
+            >>> obj.filter(name=neo.core.filters.Equal(5))
+            >>> obj.filter({'name': neo.core.filters.LessThan(5)})
         """
 
         if isinstance(targdict, str):
