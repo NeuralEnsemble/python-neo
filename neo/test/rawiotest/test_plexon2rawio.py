@@ -13,7 +13,7 @@ from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 try:
     from neo.rawio.plexon2rawio.pypl2 import pypl2lib
     HAVE_PYPL2 = True
-except ImportError:
+except (ImportError, TimeoutError):
     HAVE_PYPL2 = False
 
 

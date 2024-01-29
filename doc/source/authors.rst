@@ -60,6 +60,7 @@ and may not be the current affiliation of a contributor.
 * Etienne Combrisson [6]
 * Ben Dichter [24]
 * Elodie Legouée [21]
+* Oliver Kloss [13]
 * Heberto Mayorquin [24]
 * Thomas Perret [25]
 * Kyle Johnsen [26, 27]

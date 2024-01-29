@@ -67,6 +67,7 @@ or vector can be stored somewhere (near the file, /tmp, any path) for use across
 constructions of a RawIO for a given set of data.
 
 """
+from __future__ import annotations
 
 import logging
 import numpy as np
@@ -133,7 +134,7 @@ class BaseRawIO:
 
     rawmode = None  # one key from possible_raw_modes
 
-    def __init__(self, use_cache=False, cache_path='same_as_resource', **kargs):
+    def __init__(self, use_cache: bool = False, cache_path: str = 'same_as_resource', **kargs):
         """
         :TODO: Why multi-file would have a single filename is confusing here - shouldn't
         the name of this argument be filenames_list or filenames_base or similar?
@@ -369,7 +370,7 @@ class BaseRawIO:
         """return number of blocks"""
         return self.header['nb_block']
 
-    def segment_count(self, block_index):
+    def segment_count(self, block_index: int):
         """return number of segments for a given block"""
         return self.header['nb_segment'][block_index]
 
@@ -379,7 +380,7 @@ class BaseRawIO:
         """
         return len(self.header['signal_streams'])
 
-    def signal_channels_count(self, stream_index):
+    def signal_channels_count(self, stream_index: int):
         """Return the number of signal channels for a given stream.
         This number is the same for all Blocks and Segments.
         """
@@ -400,7 +401,7 @@ class BaseRawIO:
         """
         return len(self.header['event_channels'])
 
-    def segment_t_start(self, block_index, seg_index):
+    def segment_t_start(self, block_index: int, seg_index: int):
         """Global t_start of a Segment in s. Shared by all objects except
         for AnalogSignal.
         """
@@ -445,7 +446,7 @@ class BaseRawIO:
 
         self._several_channel_groups = signal_streams.size > 1
 
-    def channel_name_to_index(self, stream_index, channel_names):
+    def channel_name_to_index(self, stream_index: int, channel_names: list[str]):
         """
         Inside a stream, transform channel_names to channel_indexes.
         Based on self.header['signal_channels']
@@ -459,7 +460,7 @@ class BaseRawIO:
         channel_indexes = np.array([chan_names.index(name) for name in channel_names])
         return channel_indexes
 
-    def channel_id_to_index(self, stream_index, channel_ids):
+    def channel_id_to_index(self, stream_index: int, channel_ids: list[str]):
         """
         Inside a stream, transform channel_ids to channel_indexes.
         Based on self.header['signal_channels']
@@ -473,7 +474,11 @@ class BaseRawIO:
         channel_indexes = np.array([chan_ids.index(chan_id) for chan_id in channel_ids])
         return channel_indexes
 
-    def _get_channel_indexes(self, stream_index, channel_indexes, channel_names, channel_ids):
+    def _get_channel_indexes(self,
+                             stream_index: int,
+                             channel_indexes: list[int] | None,
+                             channel_names: list[str] | None,
+                             channel_ids: list[str] | None):
         """
         Select channel_indexes for a stream based on channel_indexes/channel_names/channel_ids
         depending which is not None.
@@ -484,7 +489,7 @@ class BaseRawIO:
             channel_indexes = self.channel_id_to_index(stream_index, channel_ids)
         return channel_indexes
 
-    def _get_stream_index_from_arg(self, stream_index_arg):
+    def _get_stream_index_from_arg(self, stream_index_arg: int | None):
         if stream_index_arg is None:
             assert self.header['signal_streams'].size == 1
             stream_index = 0
@@ -493,7 +498,7 @@ class BaseRawIO:
             stream_index = stream_index_arg
         return stream_index
 
-    def get_signal_size(self, block_index, seg_index, stream_index=None):
+    def get_signal_size(self, block_index: int, seg_index: int, stream_index: int | None = None):
         """
         Retrieve the length of a single section of the channels in a stream.
         :param block_index:
@@ -504,7 +509,10 @@ class BaseRawIO:
         stream_index = self._get_stream_index_from_arg(stream_index)
         return self._get_signal_size(block_index, seg_index, stream_index)
 
-    def get_signal_t_start(self, block_index, seg_index, stream_index=None):
+    def get_signal_t_start(self,
+                           block_index: int,
+                           seg_index: int,
+                           stream_index: int | None = None):
         """
         Retrieve the t_start of a single section of the channels in a stream.
         :param block_index:
@@ -515,7 +523,7 @@ class BaseRawIO:
         stream_index = self._get_stream_index_from_arg(stream_index)
         return self._get_signal_t_start(block_index, seg_index, stream_index)
 
-    def get_signal_sampling_rate(self, stream_index=None):
+    def get_signal_sampling_rate(self, stream_index: int | None = None):
         """
         Retrieve sampling rate for a stream and all channels in that stream.
         :param stream_index:
@@ -528,9 +536,16 @@ class BaseRawIO:
         sr = signal_channels[0]['sampling_rate']
         return float(sr)
 
-    def get_analogsignal_chunk(self, block_index=0, seg_index=0, i_start=None, i_stop=None,
-                               stream_index=None, channel_indexes=None, channel_names=None,
-                               channel_ids=None, prefer_slice=False):
+    def get_analogsignal_chunk(self,
+                               block_index: int = 0,
+                               seg_index: int = 0,
+                               i_start: int | None = None,
+                               i_stop: int | None = None,
+                               stream_index: int | None = None,
+                               channel_indexes: list[int] | None = None,
+                               channel_names: list[str] | None = None,
+                               channel_ids: list[str] | None = None,
+                               prefer_slice: bool = False):
         """
         Return a chunk of raw signal as a Numpy array. columns correspond to samples from a
         section of a single channel of recording. The channels are chosen either by channel_names,
@@ -587,8 +602,13 @@ class BaseRawIO:
 
         return raw_chunk
 
-    def rescale_signal_raw_to_float(self, raw_signal, dtype='float32', stream_index=None,
-                                    channel_indexes=None, channel_names=None, channel_ids=None):
+    def rescale_signal_raw_to_float(self,
+                                    raw_signal: np.ndarray,
+                                    dtype: np.dtype = 'float32',
+                                    stream_index: int | None = None,
+                                    channel_indexes: list[int] | None = None,
+                                    channel_names: list[str] | None = None,
+                                    channel_ids: list[str] | None = None):
         """
         Rescale a chunk of raw signals which are provided as a Numpy array. These are normally
         returned by a call to get_analogsignal_chunk. The channels are specified either by
@@ -627,11 +647,15 @@ class BaseRawIO:
         return float_signal
 
     # spiketrain and unit zone
-    def spike_count(self, block_index=0, seg_index=0, spike_channel_index=0):
+    def spike_count(self, block_index: int = 0, seg_index: int = 0, spike_channel_index: int = 0):
         return self._spike_count(block_index, seg_index, spike_channel_index)
 
-    def get_spike_timestamps(self, block_index=0, seg_index=0, spike_channel_index=0,
-                             t_start=None, t_stop=None):
+    def get_spike_timestamps(self,
+                             block_index: int = 0,
+                             seg_index: int = 0,
+                             spike_channel_index: int = 0,
+                             t_start: float | None = None,
+                             t_stop: float | None = None):
         """
         The timestamp datatype is as close to the format itself. Sometimes float/int32/int64.
         Sometimes it is the index on the signal but not always.
@@ -643,21 +667,25 @@ class BaseRawIO:
                                                spike_channel_index, t_start, t_stop)
         return timestamp
 
-    def rescale_spike_timestamp(self, spike_timestamps, dtype='float64'):
+    def rescale_spike_timestamp(self, spike_timestamps: np.ndarray, dtype: np.dtype = 'float64'):
         """
         Rescale spike timestamps to seconds.
         """
         return self._rescale_spike_timestamp(spike_timestamps, dtype)
 
     # spiketrain waveform zone
-    def get_spike_raw_waveforms(self, block_index=0, seg_index=0, spike_channel_index=0,
-                                t_start=None, t_stop=None):
+    def get_spike_raw_waveforms(self,
+                                block_index: int = 0,
+                                seg_index: int = 0,
+                                spike_channel_index: int = 0,
+                                t_start: float | None = None,
+                                t_stop: float | None = None):
         wf = self._get_spike_raw_waveforms(block_index, seg_index,
                                            spike_channel_index, t_start, t_stop)
         return wf
 
-    def rescale_waveforms_to_float(self, raw_waveforms, dtype='float32',
-                                   spike_channel_index=0):
+    def rescale_waveforms_to_float(self, raw_waveforms: np.ndarray, dtype: np.dtype = 'float32',
+                                   spike_channel_index: int = 0):
         wf_gain = self.header['spike_channels']['wf_gain'][spike_channel_index]
         wf_offset = self.header['spike_channels']['wf_offset'][spike_channel_index]
 
@@ -671,11 +699,15 @@ class BaseRawIO:
         return float_waveforms
 
     # event and epoch zone
-    def event_count(self, block_index=0, seg_index=0, event_channel_index=0):
+    def event_count(self, block_index: int = 0, seg_index: int = 0, event_channel_index: int = 0):
         return self._event_count(block_index, seg_index, event_channel_index)
 
-    def get_event_timestamps(self, block_index=0, seg_index=0, event_channel_index=0,
-                             t_start=None, t_stop=None):
+    def get_event_timestamps(self,
+                             block_index: int = 0,
+                             seg_index: int = 0,
+                             event_channel_index: int = 0,
+                             t_start: float | None = None,
+                             t_stop: float | None = None):
         """
         The timestamp datatype is as close to the format itself. Sometimes float/int32/int64.
         Sometimes it is the index on the signal but not always.
@@ -693,21 +725,23 @@ class BaseRawIO:
             block_index, seg_index, event_channel_index, t_start, t_stop)
         return timestamp, durations, labels
 
-    def rescale_event_timestamp(self, event_timestamps, dtype='float64',
-                    event_channel_index=0):
+    def rescale_event_timestamp(self,
+                                event_timestamps: np.ndarray,
+                                dtype: np.dtype = 'float64',
+                                event_channel_index: int = 0):
         """
         Rescale event timestamps to seconds.
         """
         return self._rescale_event_timestamp(event_timestamps, dtype, event_channel_index)
 
-    def rescale_epoch_duration(self, raw_duration, dtype='float64',
-                    event_channel_index=0):
+    def rescale_epoch_duration(self, raw_duration: np.ndarray, dtype: np.dtype = 'float64',
+                    event_channel_index: int = 0):
         """
         Rescale epoch raw duration to seconds.
         """
         return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
-    def setup_cache(self, cache_path, **init_kargs):
+    def setup_cache(self, cache_path: 'home' | 'same_as_resource', **init_kargs):
         try:
             import joblib
         except ImportError:
@@ -735,7 +769,7 @@ class BaseRawIO:
             dirname = os.path.dirname(resource_name)
         else:
             assert os.path.exists(cache_path), \
-                'cache_path do not exists use "home" or "same_as_resource" to make this auto'
+                'cache_path does not exists use "home" or "same_as_resource" to make this auto'
 
         # the hash of the resource (dir of file) is done with filename+datetime
         # TODO make something more sophisticated when rawmode='one-dir' that use all
@@ -776,15 +810,15 @@ class BaseRawIO:
     def _source_name(self):
         raise (NotImplementedError)
 
-    def _segment_t_start(self, block_index, seg_index):
+    def _segment_t_start(self, block_index: int, seg_index: int):
         raise (NotImplementedError)
 
-    def _segment_t_stop(self, block_index, seg_index):
+    def _segment_t_stop(self, block_index: int, seg_index: int):
         raise (NotImplementedError)
 
     ###
     # signal and channel zone
-    def _get_signal_size(self, block_index, seg_index, stream_index):
+    def _get_signal_size(self, block_index: int, seg_index: int, stream_index: int):
         """
         Return the size of a set of AnalogSignals indexed by channel_indexes.
 
@@ -792,7 +826,7 @@ class BaseRawIO:
         """
         raise (NotImplementedError)
 
-    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+    def _get_signal_t_start(self, block_index: int, seg_index: int, stream_index: int):
         """
         Return the t_start of a set of AnalogSignals indexed by channel_indexes.
 
@@ -800,8 +834,13 @@ class BaseRawIO:
         """
         raise (NotImplementedError)
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
-                                stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self,
+                                block_index: int,
+                                seg_index: int,
+                                i_start: int | None,
+                                i_stop: int | None,
+                                stream_index: int,
+                                channel_indexes: list[int] | None):
         """
         Return the samples from a set of AnalogSignals indexed
         by stream_index and channel_indexes (local index inner stream).
@@ -815,38 +854,51 @@ class BaseRawIO:
 
     ###
     # spiketrain and unit zone
-    def _spike_count(self, block_index, seg_index, spike_channel_index):
+    def _spike_count(self, block_index: int, seg_index: int, spike_channel_index: int):
         raise (NotImplementedError)
 
-    def _get_spike_timestamps(self, block_index, seg_index,
-                              spike_channel_index, t_start, t_stop):
+    def _get_spike_timestamps(self,
+                              block_index: int,
+                              seg_index: int,
+                              spike_channel_index: int,
+                              t_start: float | None,
+                              t_stop: float | None):
         raise (NotImplementedError)
 
-    def _rescale_spike_timestamp(self, spike_timestamps, dtype):
+    def _rescale_spike_timestamp(self, spike_timestamps: np.ndarray, dtype: np.dtype):
         raise (NotImplementedError)
 
     ###
     # spike waveforms zone
-    def _get_spike_raw_waveforms(self, block_index, seg_index,
-                                 spike_channel_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self,
+                                 block_index: int,
+                                 seg_index: int,
+                                 spike_channel_index: int,
+                                 t_start: float | None,
+                                 t_stop: float | None):
         raise (NotImplementedError)
 
     ###
     # event and epoch zone
-    def _event_count(self, block_index, seg_index, event_channel_index):
+    def _event_count(self, block_index: int, seg_index: int, event_channel_index: int):
         raise (NotImplementedError)
 
-    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,
+                              block_index: int,
+                              seg_index: int,
+                              event_channel_index: int,
+                              t_start: float | None,
+                              t_stop: float | None):
         raise (NotImplementedError)
 
-    def _rescale_event_timestamp(self, event_timestamps, dtype):
+    def _rescale_event_timestamp(self, event_timestamps: np.ndarray, dtype: np.dtype):
         raise (NotImplementedError)
 
-    def _rescale_epoch_duration(self, raw_duration, dtype):
+    def _rescale_epoch_duration(self, raw_duration: np.ndarray, dtype: np.dtype):
         raise (NotImplementedError)
 
 
-def pprint_vector(vector, lim=8):
+def pprint_vector(vector, lim: int = 8):
     vector = np.asarray(vector)
     assert vector.ndim == 1
     if len(vector) > lim:

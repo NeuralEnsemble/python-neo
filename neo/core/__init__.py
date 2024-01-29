@@ -10,7 +10,9 @@ or more classes from this module.
 Classes:
 
 .. autoclass:: Block
+.. automethod:: Block.filter
 .. autoclass:: Segment
+.. automethod:: Segment.filter
 .. autoclass:: Group
 
 .. autoclass:: AnalogSignal
@@ -34,6 +36,9 @@ from neo.core.block import Block
 from neo.core.segment import Segment
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
+
+# Import FilterClasses
+from neo.core import filters
 
 from neo.core.event import Event
 from neo.core.epoch import Epoch
