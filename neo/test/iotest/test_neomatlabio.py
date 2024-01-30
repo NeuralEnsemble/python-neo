@@ -52,7 +52,7 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
         # write block
         filename = self.get_local_path('matlabiotestfile.mat')
         io1 = self.ioclass(filename)
-        io1.write_block(block1, debug=False)
+        io1.write_block(block1)
 
         # read block
         io2 = self.ioclass(filename)
@@ -89,7 +89,7 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
             # write block to file
             filename_orig = self.get_local_path(f"matlabio_randomtest_orig_{i}.mat")
             io1 = self.ioclass(filename_orig)
-            io1.write_block(block1, debug=False)
+            io1.write_block(block1)
 
             # read block
             io2 = self.ioclass(filename_orig)

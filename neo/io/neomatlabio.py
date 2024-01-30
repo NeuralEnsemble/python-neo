@@ -304,8 +304,6 @@ class NeoMatlabIO(BaseIO):
                     else:
                         group_structure[container_name].append(id(child_obj))
 
-        if kargs.get("debug", False):
-            breakpoint()
         scipy.io.savemat(self.filename, {"block": bl_struct}, oned_as="row")
 
     def _get_matlab_value(self, ob, attrname):
