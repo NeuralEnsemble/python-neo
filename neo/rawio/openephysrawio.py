@@ -53,25 +53,20 @@ class OpenEphysRawIO(BaseRawIO):
     Limitation :
       * Works only if all continuous channels have the same sampling rate, which is a reasonable
         hypothesis.
-      * When the recording is stopped and restarted all continuous files will contain gaps.
-        Ideally this would lead to a new Segment but this use case is not implemented due to its
-        complexity.
-        Instead it will raise an error.
+      * A recording can contain gaps due to USB stream loss when high CPU load when recording.
+        Theses gaps are checked channel per channel which make the parse_header() slow.
+        I gaps are detected then they are filled with zeros but the the reading will be much slower for getting signals.
 
-    Special cases:
-      * Normally all continuous files have the same first timestamp and length. In situations
-        where it is not the case all files are clipped to the smallest one so that they are all
-        aligned,
-        and a warning is emitted.
     """
     # file formats used by openephys
     extensions = ['continuous', 'openephys', 'spikes', 'events', 'xml']
     rawmode = 'one-dir'
 
-    def __init__(self, dirname='', ignore_timestamps_errors=False):
+    def __init__(self, dirname='', ignore_timestamps_errors=None):
         BaseRawIO.__init__(self)
         self.dirname = dirname
-        self._ignore_timestamps_errors = ignore_timestamps_errors
+        if ignore_timestamps_errors is not None:
+            self.logger.warning("OpenEphysRawIO ignore_timestamps_errors=True/False is not used anymore")
 
     def _source_name(self):
         return self.dirname
@@ -84,10 +79,13 @@ class OpenEphysRawIO(BaseRawIO):
         self._sigs_memmap = {}
         self._sig_length = {}
         self._sig_timestamp0 = {}
+        self._sig_has_gap = {}
+        self._gap_mode = False
         signal_channels = []
         oe_indices = sorted(list(info['continuous'].keys()))
         for seg_index, oe_index in enumerate(oe_indices):
             self._sigs_memmap[seg_index] = {}
+            self._sig_has_gap[seg_index] = {}
 
             all_sigs_length = []
             all_first_timestamps = []
@@ -109,18 +107,26 @@ class OpenEphysRawIO(BaseRawIO):
                                       dtype=continuous_dtype, shape=(size, ))
                 self._sigs_memmap[seg_index][chan_index] = data_chan
 
-                all_sigs_length.append(data_chan.size * RECORD_SIZE)
+                # print(data_chan)
+                
+                # import matplotlib.pyplot as plt
+                # fig, ax = plt.subplots()
+                # ax.plot(data_chan['timestamp'])
+                # plt.show()
+
+                # all_sigs_length.append(data_chan.size * RECORD_SIZE)
                 all_first_timestamps.append(data_chan[0]['timestamp'])
-                all_last_timestamps.append(data_chan[-1]['timestamp'])
+                all_last_timestamps.append(data_chan[-1]['timestamp'] + RECORD_SIZE)
                 all_samplerate.append(chan_info['sampleRate'])
 
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
-                if not np.all(diff == RECORD_SIZE) and not self._ignore_timestamps_errors:
-                    raise ValueError(
-                        'Not continuous timestamps for {}. ' \
-                        'Maybe because recording was paused/stopped.'.format(continuous_filename)
-                    )
+                self._sig_has_gap[seg_index][chan_index] = not np.all(diff == RECORD_SIZE)
+                # if not np.all(diff == RECORD_SIZE) and not self._ignore_timestamps_errors:
+                #     raise ValueError(
+                #         'Not continuous timestamps for {}. ' \
+                #         'Maybe because recording was paused/stopped.'.format(continuous_filename)
+                #     )
 
                 if seg_index == 0:
                     # add in channel list
@@ -130,46 +136,39 @@ class OpenEphysRawIO(BaseRawIO):
                         units = 'V'
                     signal_channels.append((ch_name, chan_id, chan_info['sampleRate'],
                                 'int16', units, chan_info['bitVolts'], 0., processor_id))
+                
+            if any(self._sig_has_gap[seg_index].values()):
+                channel_with_gapes = list(self._sig_has_gap[seg_index].keys())
+                self.logger.warning(f"This OpenEphys dataset contains gaps for some channels {channel_with_gapes} in segment {seg_index} the read will be slow")
+                self._gap_mode = True
 
-            # In some cases, continuous do not have the same length because
-            # one record block is missing when the "OE GUI is freezing"
-            # So we need to clip to the smallest files
-            if not all(all_sigs_length[0] == e for e in all_sigs_length) or\
-                    not all(all_first_timestamps[0] == e for e in all_first_timestamps):
-
+            
+            if not all(all_first_timestamps[0] == e for e in all_first_timestamps) or \
+                 not all(all_last_timestamps[0] == e for e in all_last_timestamps):
+                # In some cases, continuous do not have the same length because
+                # we need to clip
                 self.logger.warning('Continuous files do not have aligned timestamps; '
                                     'clipping to make them aligned.')
 
-                first, last = -np.inf, np.inf
+                first = max(all_first_timestamps)
+                last = max(all_last_timestamps)
                 for chan_index in self._sigs_memmap[seg_index]:
                     data_chan = self._sigs_memmap[seg_index][chan_index]
-                    if data_chan[0]['timestamp'] > first:
-                        first = data_chan[0]['timestamp']
-                    if data_chan[-1]['timestamp'] < last:
-                        last = data_chan[-1]['timestamp']
-
-                all_sigs_length = []
-                all_first_timestamps = []
-                all_last_timestamps = []
-                for chan_index in self._sigs_memmap[seg_index]:
-                    data_chan = self._sigs_memmap[seg_index][chan_index]
-                    keep = (data_chan['timestamp'] >= first) & (data_chan['timestamp'] <= last)
+                    keep = (data_chan['timestamp'] >= first) & (data_chan['timestamp'] < last)
                     data_chan = data_chan[keep]
                     self._sigs_memmap[seg_index][chan_index] = data_chan
-                    all_sigs_length.append(data_chan.size * RECORD_SIZE)
-                    all_first_timestamps.append(data_chan[0]['timestamp'])
-                    all_last_timestamps.append(data_chan[-1]['timestamp'])
+            else:
+                # no clip
+                first = all_first_timestamps[0]
+                last = all_last_timestamps[0]
 
-            # check that all signals have the same length and timestamp0 for this segment
-            assert all(all_sigs_length[0] == e for e in all_sigs_length),\
-                       'Not all signals have the same length'
-            assert all(all_first_timestamps[0] == e for e in all_first_timestamps),\
-                       'Not all signals have the same first timestamp'
+
+            # check unique sampling rate
             assert all(all_samplerate[0] == e for e in all_samplerate),\
                        'Not all signals have the same sample rate'
 
-            self._sig_length[seg_index] = all_sigs_length[0]
-            self._sig_timestamp0[seg_index] = all_first_timestamps[0]
+            self._sig_length[seg_index] = last - first
+            self._sig_timestamp0[seg_index] = first
 
         if len(signal_channels) > 0:
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -316,11 +315,6 @@ class OpenEphysRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self._sig_length[seg_index]
 
-        block_start = i_start // RECORD_SIZE
-        block_stop = i_stop // RECORD_SIZE + 1
-        sl0 = i_start % RECORD_SIZE
-        sl1 = sl0 + (i_stop - i_start)
-
         stream_id = self.header['signal_streams'][stream_index]['id']
         mask = self.header['signal_channels']['stream_id']
         global_channel_indexes, = np.nonzero(mask == stream_id)
@@ -329,10 +323,45 @@ class OpenEphysRawIO(BaseRawIO):
         global_channel_indexes = global_channel_indexes[channel_indexes]
 
         sigs_chunk = np.zeros((i_stop - i_start, len(global_channel_indexes)), dtype='int16')
-        for i, global_chan_index in enumerate(global_channel_indexes):
-            data = self._sigs_memmap[seg_index][global_chan_index]
-            sub = data[block_start:block_stop]
-            sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
+
+        if not self._gap_mode:
+            # previous behavior block index are linear
+            block_start = i_start // RECORD_SIZE
+            block_stop = i_stop // RECORD_SIZE + 1
+            sl0 = i_start % RECORD_SIZE
+            sl1 = sl0 + (i_stop - i_start)
+            
+            for i, global_chan_index in enumerate(global_channel_indexes):
+                data = self._sigs_memmap[seg_index][global_chan_index]
+                sub = data[block_start:block_stop]
+                sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
+        else:
+            # slow mode 
+            for i, global_chan_index in enumerate(global_channel_indexes):
+                data = self._sigs_memmap[seg_index][global_chan_index]
+                t0 = data[0]['timestamp']
+                
+                # find first block
+                block0 = np.searchsorted(data['timestamp'], t0 + i_start, side='right') - 1
+                shift0 = i_start + t0 - data[block0]['timestamp']
+                pos = RECORD_SIZE - shift0
+                sigs_chunk[:, i][:pos] = data[block0]['samples'][shift0:]
+                
+                # full block
+                block_index = block0 + 1
+                while data[block_index]['timestamp'] - t0 < i_stop - RECORD_SIZE:
+                    diff = data[block_index]['timestamp'] - data[block_index - 1]['timestamp']
+                    if diff > RECORD_SIZE:
+                        # gap detected need jump
+                        pos += diff - RECORD_SIZE
+                        
+                    sigs_chunk[:, i][pos:pos + RECORD_SIZE] = data[block_index]['samples'][:]
+                    pos += RECORD_SIZE
+                    block_index += 1
+                
+                # last block
+                if pos < i_stop - i_start:
+                    sigs_chunk[:, i][pos:] = data[block_index]['samples'][:i_stop - i_start - pos]
 
         return sigs_chunk
 
@@ -524,9 +553,12 @@ def explore_folder(dirname):
                 chan_ids_by_type[chan_type] = [chan_id]
                 filenames_by_type[chan_type] = [continuous_filename]
         chan_types = list(chan_ids_by_type.keys())
-        if chan_types[0] == 'ADC':
-            # put ADC at last position
-            chan_types = chan_types[1:] + chan_types[0:1]
+        
+        if 'CH' in chan_types:
+            # force CH at beginning
+            chan_types.remove('CH')
+            chan_types = ['CH'] + chan_types
+
         ordered_continuous_filenames = []
         for chan_type in chan_types:
             local_order = np.argsort(chan_ids_by_type[chan_type])
