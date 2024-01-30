@@ -406,7 +406,7 @@ class NeoMatlabIO(BaseIO):
                 if len(arr) > 0:
                     data_complement["spatial_scale"] = arr
                 else:
-                    pass  #
+                    data_complement["spatial_scale"] = 1.0
 
             if "times" in (at[0] for at in cl._necessary_attrs) and quantity_attr != "times":
                 # handle IrregularlySampledSignal
