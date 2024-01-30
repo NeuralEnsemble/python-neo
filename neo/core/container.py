@@ -253,7 +253,7 @@ class Container(BaseNeo):
         """
         # the following construction removes the duplicate 'regionsofinterest'
         # while preserving the child order (which `set()` would not do)
-        # I don't know if preserving the author is important, but I'm playing it safe
+        # I don't know if preserving the order is important, but I'm playing it safe
         return tuple({_container_name(child): None for child in
                       self._data_child_objects}.keys())
 
