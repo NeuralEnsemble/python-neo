@@ -241,7 +241,7 @@ class NeoMatlabIO(BaseIO):
         Arguments:
             filename : the filename to read
         """
-        import scipy
+        import scipy.version
 
         if Version(scipy.version.version) < Version("0.12.0"):
             raise ImportError(
