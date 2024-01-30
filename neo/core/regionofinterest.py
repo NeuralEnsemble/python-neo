@@ -28,7 +28,8 @@ class RegionOfInterest(BaseNeo):
         return self.image_sequence
 
     def _set_obj(self, value):
-        assert isinstance(value, ImageSequence)
+        if not isinstance(value, ImageSequence):
+            raise TypeError(f"Value must be ImageSequence, not of type: {type(value)}")
         self.image_sequence = value
 
     obj = property(fget=_get_obj, fset=_set_obj)
