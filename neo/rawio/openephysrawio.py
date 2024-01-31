@@ -142,7 +142,7 @@ class OpenEphysRawIO(BaseRawIO):
                                     'clipping to make them aligned.')
 
                 first = max(all_first_timestamps)
-                last = max(all_last_timestamps)
+                last = min(all_last_timestamps)
                 for chan_index in self._sigs_memmap[seg_index]:
                     data_chan = self._sigs_memmap[seg_index][chan_index]
                     keep = (data_chan['timestamp'] >= first) & (data_chan['timestamp'] < last)
@@ -514,7 +514,6 @@ def explore_folder(dirname):
     "100_CH0_2.continuous" ---> seg_index 1
     "100_CH0_N.continuous" ---> seg_index N-1
     """
-    print(dirname, type(dirname))
     filenames = os.listdir(dirname)
     filenames.sort()
 
