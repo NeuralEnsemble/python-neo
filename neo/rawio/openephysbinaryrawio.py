@@ -481,105 +481,108 @@ def explore_folder(dirname, experiment_names=None):
     folder_structure = {}
     possible_experiment_names = []
 
-    for root, dirs, files in os.walk(dirname):
-        for file in files:
-            if not file == 'structure.oebin':
-                continue
-            root = Path(root)
+    try:
+        for root, dirs, files in os.walk(dirname):
+            for file in files:
+                if not file == 'structure.oebin':
+                    continue
+                root = Path(root)
 
-            node_folder = root.parents[1]
-            node_name = node_folder.stem
-            if not node_name.startswith('Record'):
-                # before version 5.x.x there was not multi Node recording
-                # so no node_name
-                node_name = ''
+                node_folder = root.parents[1]
+                node_name = node_folder.stem
+                if not node_name.startswith('Record'):
+                    # before version 5.x.x there was not multi Node recording
+                    # so no node_name
+                    node_name = ''
 
-            if node_name not in folder_structure:
-                folder_structure[node_name] = {}
-                folder_structure[node_name]['experiments'] = {}
+                if node_name not in folder_structure:
+                    folder_structure[node_name] = {}
+                    folder_structure[node_name]['experiments'] = {}
 
-            # here we skip if experiment_names is not None
-            experiment_folder = root.parents[0]
-            experiment_name = experiment_folder.stem
-            experiment_id = int(experiment_name.replace('experiment', ''))
-            if experiment_name not in possible_experiment_names:
-                possible_experiment_names.append(experiment_name)
-            if experiment_names is not None and experiment_name not in experiment_names:
-                continue
-            if experiment_id not in folder_structure[node_name]['experiments']:
-                experiment = {}
-                experiment['name'] = experiment_name
-                if experiment_name == 'experiment1':
-                    settings_file = node_folder / "settings.xml"
-                else:
-                    settings_file = node_folder / f"settings_{experiment_id}.xml"
-                experiment['settings_file'] = settings_file
-                experiment['recordings'] = {}
-                folder_structure[node_name]['experiments'][experiment_id] = experiment
+                # here we skip if experiment_names is not None
+                experiment_folder = root.parents[0]
+                experiment_name = experiment_folder.stem
+                experiment_id = int(experiment_name.replace('experiment', ''))
+                if experiment_name not in possible_experiment_names:
+                    possible_experiment_names.append(experiment_name)
+                if experiment_names is not None and experiment_name not in experiment_names:
+                    continue
+                if experiment_id not in folder_structure[node_name]['experiments']:
+                    experiment = {}
+                    experiment['name'] = experiment_name
+                    if experiment_name == 'experiment1':
+                        settings_file = node_folder / "settings.xml"
+                    else:
+                        settings_file = node_folder / f"settings_{experiment_id}.xml"
+                    experiment['settings_file'] = settings_file
+                    experiment['recordings'] = {}
+                    folder_structure[node_name]['experiments'][experiment_id] = experiment
 
-            recording_folder = root
-            recording_name = root.stem
-            recording_id = int(recording_name.replace('recording', ''))
-            # add recording
-            recording = {}
-            recording['name'] = recording_name
-            recording['streams'] = {}
+                recording_folder = root
+                recording_name = root.stem
+                recording_id = int(recording_name.replace('recording', ''))
+                # add recording
+                recording = {}
+                recording['name'] = recording_name
+                recording['streams'] = {}
 
-            # metadata
-            with open(recording_folder / 'structure.oebin', encoding='utf8', mode='r') as f:
-                rec_structure = json.load(f)
+                # metadata
+                with open(recording_folder / 'structure.oebin', encoding='utf8', mode='r') as f:
+                    rec_structure = json.load(f)
 
-            if (recording_folder / 'continuous').exists() and len(rec_structure['continuous']) > 0:
-                recording['streams']['continuous'] = {}
-                for info in rec_structure['continuous']:
-                    # when multi Record Node the stream name also contains
-                    # the node name to make it unique
-                    oe_stream_name = Path(info["folder_name"]).name # remove trailing slash
-                    if len(node_name) > 0:
+                if (recording_folder / 'continuous').exists() and len(rec_structure['continuous']) > 0:
+                    recording['streams']['continuous'] = {}
+                    for info in rec_structure['continuous']:
+                        # when multi Record Node the stream name also contains
+                        # the node name to make it unique
+                        oe_stream_name = Path(info["folder_name"]).name # remove trailing slash
+                        if len(node_name) > 0:
+                            stream_name = node_name + '#' + oe_stream_name
+                        else:
+                            stream_name = oe_stream_name
+                        raw_filename = recording_folder / 'continuous' / info['folder_name'] / 'continuous.dat'
+
+                        # Updates for OpenEphys v0.6:
+                        # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
+                        # see https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#continuous
+                        sample_numbers = recording_folder / 'continuous' / info['folder_name'] / \
+                            'sample_numbers.npy'
+                        if sample_numbers.is_file():
+                            timestamp_file = sample_numbers
+                        else:
+                            timestamp_file = recording_folder / 'continuous' / info['folder_name'] / \
+                                'timestamps.npy'
+                        timestamps = np.load(str(timestamp_file), mmap_mode='r')
+                        timestamp0 = timestamps[0]
+                        t_start = timestamp0 / info['sample_rate']
+
+                        # TODO for later : gap checking
+                        signal_stream = info.copy()
+                        signal_stream['raw_filename'] = str(raw_filename)
+                        signal_stream['dtype'] = 'int16'
+                        signal_stream['timestamp0'] = timestamp0
+                        signal_stream['t_start'] = t_start
+
+                        recording['streams']['continuous'][stream_name] = signal_stream
+
+                if (root / 'events').exists() and len(rec_structure['events']) > 0:
+                    recording['streams']['events'] = {}
+                    for info in rec_structure['events']:
+                        oe_stream_name = Path(info["folder_name"]).name # remove trailing slash
                         stream_name = node_name + '#' + oe_stream_name
-                    else:
-                        stream_name = oe_stream_name
-                    raw_filename = recording_folder / 'continuous' / info['folder_name'] / 'continuous.dat'
 
-                    # Updates for OpenEphys v0.6:
-                    # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
-                    # see https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#continuous
-                    sample_numbers = recording_folder / 'continuous' / info['folder_name'] / \
-                        'sample_numbers.npy'
-                    if sample_numbers.is_file():
-                        timestamp_file = sample_numbers
-                    else:
-                        timestamp_file = recording_folder / 'continuous' / info['folder_name'] / \
-                            'timestamps.npy'
-                    timestamps = np.load(str(timestamp_file), mmap_mode='r')
-                    timestamp0 = timestamps[0]
-                    t_start = timestamp0 / info['sample_rate']
+                        event_stream = info.copy()
+                        for name in _possible_event_stream_names:
+                            npy_filename = root / 'events' / info['folder_name'] / f'{name}.npy'
+                            if npy_filename.is_file():
+                                event_stream[f'{name}_npy'] = str(npy_filename)
 
-                    # TODO for later : gap checking
-                    signal_stream = info.copy()
-                    signal_stream['raw_filename'] = str(raw_filename)
-                    signal_stream['dtype'] = 'int16'
-                    signal_stream['timestamp0'] = timestamp0
-                    signal_stream['t_start'] = t_start
+                        recording['streams']['events'][stream_name] = event_stream
 
-                    recording['streams']['continuous'][stream_name] = signal_stream
-
-            if (root / 'events').exists() and len(rec_structure['events']) > 0:
-                recording['streams']['events'] = {}
-                for info in rec_structure['events']:
-                    oe_stream_name = Path(info["folder_name"]).name # remove trailing slash
-                    stream_name = node_name + '#' + oe_stream_name
-
-                    event_stream = info.copy()
-                    for name in _possible_event_stream_names:
-                        npy_filename = root / 'events' / info['folder_name'] / f'{name}.npy'
-                        if npy_filename.is_file():
-                            event_stream[f'{name}_npy'] = str(npy_filename)
-
-                    recording['streams']['events'][stream_name] = event_stream
-
-            folder_structure[node_name]['experiments'][experiment_id]['recordings'][recording_id] \
-                = recording
+                folder_structure[node_name]['experiments'][experiment_id]['recordings'][recording_id] \
+                    = recording
+    except Exception as e:
+        raise Exception(f"Error while exploring Open Ephys folder {dirname}. Invalid folder structure?")
 
     # now create all_streams, nb_block, nb_segment_per_block
     # nested dictionary: block_index > seg_index > data_type > stream_name
