@@ -162,6 +162,7 @@ class BaseRawIO:
             self._cache = None
 
         self.header = None
+        self.is_header_parsed = False
 
     def parse_header(self):
         """
@@ -178,6 +179,7 @@ class BaseRawIO:
         """
         self._parse_header()
         self._check_stream_signal_channel_characteristics()
+        self.is_header_parsed = True
 
     def source_name(self):
         """Return fancy name of file source"""
