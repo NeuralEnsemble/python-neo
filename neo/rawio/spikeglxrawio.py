@@ -331,10 +331,16 @@ def parse_spikeglx_fname(fname):
             stream_kind = None
         else:
             # the naming do not correspond lets try something more easy
+            # example: sglx_xxx.imec0.ap
             r = re.findall(r'(\S*)\.(\S*).(ap|lf)', fname)
             if len(r) == 1:
                 run_name, device, stream_kind = r[0]
                 gate_num, trigger_num = None, None
+            else:
+                # easy case for nidaq, example: sglx_xxx.nidq
+                r = re.findall(r'(\S*)\.(\S*)', fname)
+                run_name, device = r[0]
+                gate_num, trigger_num, stream_kind = None, None, None
 
     if gate_num is not None:
         gate_num = int(gate_num)
