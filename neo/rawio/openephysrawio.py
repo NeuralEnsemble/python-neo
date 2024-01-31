@@ -87,7 +87,6 @@ class OpenEphysRawIO(BaseRawIO):
             self._sigs_memmap[seg_index] = {}
             self._sig_has_gap[seg_index] = {}
 
-            all_sigs_length = []
             all_first_timestamps = []
             all_last_timestamps = []
             all_samplerate = []
@@ -107,26 +106,18 @@ class OpenEphysRawIO(BaseRawIO):
                                       dtype=continuous_dtype, shape=(size, ))
                 self._sigs_memmap[seg_index][chan_index] = data_chan
 
-                # print(data_chan)
-                
-                # import matplotlib.pyplot as plt
-                # fig, ax = plt.subplots()
-                # ax.plot(data_chan['timestamp'])
-                # plt.show()
-
-                # all_sigs_length.append(data_chan.size * RECORD_SIZE)
                 all_first_timestamps.append(data_chan[0]['timestamp'])
                 all_last_timestamps.append(data_chan[-1]['timestamp'] + RECORD_SIZE)
                 all_samplerate.append(chan_info['sampleRate'])
 
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
-                self._sig_has_gap[seg_index][chan_index] = not np.all(diff == RECORD_SIZE)
-                # if not np.all(diff == RECORD_SIZE) and not self._ignore_timestamps_errors:
-                #     raise ValueError(
-                #         'Not continuous timestamps for {}. ' \
-                #         'Maybe because recording was paused/stopped.'.format(continuous_filename)
-                #     )
+                channel_has_gaps = not np.all(diff == RECORD_SIZE)
+                self._sig_has_gap[seg_index][chan_index] = channel_has_gaps
+                
+                if channel_has_gaps:
+                    # protect against strange timestamp block like in file 'OpenEphys_SampleData_3' CH32
+                    assert np.median(diff) == RECORD_SIZE, f"This file has strange block timestamp for channel {chan_id}"
 
                 if seg_index == 0:
                     # add in channel list
@@ -339,17 +330,32 @@ class OpenEphysRawIO(BaseRawIO):
             # slow mode 
             for i, global_chan_index in enumerate(global_channel_indexes):
                 data = self._sigs_memmap[seg_index][global_chan_index]
-                t0 = data[0]['timestamp']
+                timestamp0 = data[0]['timestamp']
                 
                 # find first block
-                block0 = np.searchsorted(data['timestamp'], t0 + i_start, side='right') - 1
-                shift0 = i_start + t0 - data[block0]['timestamp']
-                pos = RECORD_SIZE - shift0
-                sigs_chunk[:, i][:pos] = data[block0]['samples'][shift0:]
+                block0 = np.searchsorted(data['timestamp'], timestamp0 + i_start, side='right') - 1
+                block0_pos = data[block0]['timestamp'] - timestamp0
                 
+                if i_start - block0_pos >  RECORD_SIZE:
+                    # the block has gap!!
+                    pos = - ((i_start - block0_pos) % RECORD_SIZE)
+                    block_index = block0 + 1
+                else:
+                    # the first block do not have gaps
+                    shift0 = i_start - block0_pos
+                    
+                    if shift0 + (i_stop - i_start) < RECORD_SIZE:
+                        # protect when only one small block
+                        pos = (i_stop - i_start)
+                        sigs_chunk[:, i][:pos] = data[block0]['samples'][shift0:shift0 + pos]
+                    else:
+                        
+                        pos = RECORD_SIZE - shift0
+                        sigs_chunk[:, i][:pos] = data[block0]['samples'][shift0:]
+                    block_index = block0 + 1
+
                 # full block
-                block_index = block0 + 1
-                while data[block_index]['timestamp'] - t0 < i_stop - RECORD_SIZE:
+                while block_index < data.size and data[block_index]['timestamp'] - timestamp0 < i_stop - RECORD_SIZE:
                     diff = data[block_index]['timestamp'] - data[block_index - 1]['timestamp']
                     if diff > RECORD_SIZE:
                         # gap detected need jump
@@ -361,7 +367,10 @@ class OpenEphysRawIO(BaseRawIO):
                 
                 # last block
                 if pos < i_stop - i_start:
-                    sigs_chunk[:, i][pos:] = data[block_index]['samples'][:i_stop - i_start - pos]
+                    diff = data[block_index]['timestamp'] - data[block_index - 1]['timestamp']
+                    if diff == RECORD_SIZE:
+                        # ensure no gaps for last block
+                        sigs_chunk[:, i][pos:] = data[block_index]['samples'][:i_stop - i_start - pos]
 
         return sigs_chunk
 
@@ -505,6 +514,7 @@ def explore_folder(dirname):
     "100_CH0_2.continuous" ---> seg_index 1
     "100_CH0_N.continuous" ---> seg_index N-1
     """
+    print(dirname, type(dirname))
     filenames = os.listdir(dirname)
     filenames.sort()
 

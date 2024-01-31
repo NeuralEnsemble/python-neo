@@ -243,6 +243,7 @@ def read_analogsignals(reader):
                     chunks.append(raw_chunk)
                     i_start += chunksize
                 chunk_raw_sigs = np.concatenate(chunks, axis=0)
+
                 np.testing.assert_array_equal(ref_raw_sigs, chunk_raw_sigs)
 
 
