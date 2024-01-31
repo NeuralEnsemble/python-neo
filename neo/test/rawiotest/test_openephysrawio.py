@@ -10,7 +10,7 @@ class TestOpenEphysRawIO(BaseTestRawIO, unittest.TestCase, ):
         'openephys'
     ]
     entities_to_test = [
-        # 'openephys/OpenEphys_SampleData_1',
+        'openephys/OpenEphys_SampleData_1',
         # this file has gaps and this is now handle corretly
         'openephys/OpenEphys_SampleData_2_(multiple_starts)',
         # 'openephys/OpenEphys_SampleData_3',
