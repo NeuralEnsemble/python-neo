@@ -27,7 +27,8 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'neuralynx/Cheetah_v5.5.1/original_data',
         'neuralynx/Cheetah_v5.6.3/original_data',
         'neuralynx/Cheetah_v5.7.4/original_data',
-        'neuralynx/Cheetah_v6.3.2/incomplete_blocks']
+        'neuralynx/Cheetah_v6.3.2/incomplete_blocks'
+    ]
 
     def test_scan_ncs_files(self):
 
@@ -187,7 +188,9 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
         ('neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs', 'DIGITALLYNXSX'),
         ('neuralynx/Cheetah_v5.6.3/original_data/TT1.ntt', 'DIGITALLYNXSX'),
         ('neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs', 'DIGITALLYNXSX'),
-        ('neuralynx/Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs', 'DIGITALLYNXSX')]
+        ('neuralynx/Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs', 'DIGITALLYNXSX'),
+        ('neuralynx/Pegasus_v2.1.1/Events_0008.nev','ATLAS') ]
+
 
     def test_recording_types(self):
 

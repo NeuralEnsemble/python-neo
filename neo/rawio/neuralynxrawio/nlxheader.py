@@ -311,7 +311,7 @@ class NlxHeader(OrderedDict):
 
         elif 'FileType' in self:
 
-            if 'FileVersion' in self and self['FileVersion'] in ['3.3', '3.4']:
+            if 'FileVersion' in self and self['FileVersion'] in ['3.2', '3.3', '3.4']:
                 return self['AcquisitionSystem'].split()[1].upper()
 
             else:
