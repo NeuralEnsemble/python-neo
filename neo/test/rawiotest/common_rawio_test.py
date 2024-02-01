@@ -17,15 +17,19 @@ data repo.
 
 __test__ = False
 
+import os
 import logging
 import unittest
 
 from neo.utils.datasets import (download_dataset,
     get_local_testing_data_folder, default_testing_repo)
 
-from neo.test.rawiotest.tools import can_use_network
-
 from neo.test.rawiotest import rawio_compliance as compliance
+
+if os.getenv('NEO_TESTS_NONETWORK'):
+    USE_NETWORK = False
+else:
+    USE_NETWORK = True
 
 try:
     import datalad
@@ -53,9 +57,6 @@ class BaseTestRawIO:
     entities_to_test = []  # list of files to test compliances
     entities_to_download = []  # when files are at gin
 
-    # allow environment to tell avoid using network
-    use_network = can_use_network()
-
     local_test_dir = get_local_testing_data_folder()
 
     def setUp(self):
@@ -63,6 +64,9 @@ class BaseTestRawIO:
         Set up the test fixture.  This is run for every test
         '''
         self.shortname = self.rawioclass.__name__.lower().replace('rawio', '')
+
+        if not USE_NETWORK:
+            raise unittest.SkipTest('Running tests without network access')
 
         if HAVE_DATALAD:
             for remote_path in self.entities_to_download:
