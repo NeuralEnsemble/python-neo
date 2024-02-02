@@ -117,7 +117,7 @@ class OpenEphysRawIO(BaseRawIO):
                 
                 if channel_has_gaps:
                     # protect against strange timestamp block like in file 'OpenEphys_SampleData_3' CH32
-                    assert np.median(diff) == RECORD_SIZE, f"This file has strange block timestamp for channel {chan_id}"
+                    assert np.median(diff) == RECORD_SIZE, f"This file has non valid data block size for channel {chan_id}, this case cannot be handle"
 
                 if seg_index == 0:
                     # add in channel list
