@@ -123,9 +123,9 @@ Acknowledgements
 ----------------
 
 Thanks to Julia Sprenger, Andrew Davison, Zach McKenzie, Alessio Buccino, Moritz Alexander Kern,
-Samuel Garcia, Heberto Mayorquin, Joscha Schmiedt, Daniel Crepeau, Divyansh Gupta, Nate Dolensek,
-Peter N. Steinmetz, Philipp Hornauer, Robert Wolff, Jules Lebert, Kyle Johnsen, Benjamin Heasly,
-Baptiste Grimaud, Cody Baker, Daniel P. Crepeau, Fernando J. Chaure, @Filipe, and Matthias Klumpp
+Samuel Garcia, Heberto Mayorquin, Joscha Schmiedt, Daniel P. Crepeau, Divyansh Gupta, Nate Dolensek,
+Peter N. Steinmetz, Philipp Hornauer, Robert Wolff, Jules Lebert, Kyle Johnsen, Ben Dichter, Benjamin Heasly,
+Baptiste Grimaud, Cody Baker, Fernando J. Chaure, @Filipe, and Matthias Klumpp
 for their contributions to this release.
 
 .. generated with git shortlog --since=2023-02-17 -sne then checking Github for PRs merged since the last release but with commits before then
