@@ -8,13 +8,14 @@ from neo.io import AsciiSpikeTrainIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-class TestAsciiSpikeTrainIO(BaseTestIO, unittest.TestCase, ):
+class TestAsciiSpikeTrainIO(
+    BaseTestIO,
+    unittest.TestCase,
+):
     ioclass = AsciiSpikeTrainIO
-    entities_to_download = [
-        'asciispiketrain'
-    ]
+    entities_to_download = ["asciispiketrain"]
     entities_to_test = [
-        'asciispiketrain/File_ascii_spiketrain_1.txt',
+        "asciispiketrain/File_ascii_spiketrain_1.txt",
     ]
 
 

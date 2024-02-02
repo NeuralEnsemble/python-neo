@@ -8,69 +8,72 @@ compare with read_files_neo_io.py
 import urllib
 from neo.rawio import PlexonRawIO
 
-url_repo = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/'
+url_repo = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 # Get Plexon files
-distantfile = url_repo + 'plexon/File_plexon_3.plx'
-localfile = 'File_plexon_3.plx'
+distantfile = url_repo + "plexon/File_plexon_3.plx"
+localfile = "File_plexon_3.plx"
 urllib.request.urlretrieve(distantfile, localfile)
 
 # create a reader
-reader = PlexonRawIO(filename='File_plexon_3.plx')
+reader = PlexonRawIO(filename="File_plexon_3.plx")
 reader.parse_header()
 print(reader)
 print(reader.header)
 
 # Read signal chunks
 channel_indexes = None  # could be channel_indexes = [0]
-raw_sigs = reader.get_analogsignal_chunk(block_index=0, seg_index=0, i_start=1024, i_stop=2048,
-                                         channel_indexes=channel_indexes)
-float_sigs = reader.rescale_signal_raw_to_float(raw_sigs, dtype='float64')
+raw_sigs = reader.get_analogsignal_chunk(
+    block_index=0, seg_index=0, i_start=1024, i_stop=2048, channel_indexes=channel_indexes
+)
+float_sigs = reader.rescale_signal_raw_to_float(raw_sigs, dtype="float64")
 sampling_rate = reader.get_signal_sampling_rate()
 t_start = reader.get_signal_t_start(block_index=0, seg_index=0)
-units = reader.header['signal_channels'][0]['units']
+units = reader.header["signal_channels"][0]["units"]
 print(raw_sigs.shape, raw_sigs.dtype)
 print(float_sigs.shape, float_sigs.dtype)
 print(sampling_rate, t_start, units)
 
 # Count units and spikes per unit
 nb_unit = reader.spike_channels_count()
-print('nb_unit', nb_unit)
+print("nb_unit", nb_unit)
 for spike_channel_index in range(nb_unit):
     nb_spike = reader.spike_count(block_index=0, seg_index=0, spike_channel_index=spike_channel_index)
-    print('spike_channel_index', spike_channel_index, 'nb_spike', nb_spike)
+    print("spike_channel_index", spike_channel_index, "nb_spike", nb_spike)
 
 # Read spike times
-spike_timestamps = reader.get_spike_timestamps(block_index=0, seg_index=0, spike_channel_index=0,
-                                               t_start=0., t_stop=10.)
+spike_timestamps = reader.get_spike_timestamps(
+    block_index=0, seg_index=0, spike_channel_index=0, t_start=0.0, t_stop=10.0
+)
 print(spike_timestamps.shape, spike_timestamps.dtype, spike_timestamps[:5])
-spike_times = reader.rescale_spike_timestamp(spike_timestamps, dtype='float64')
+spike_times = reader.rescale_spike_timestamp(spike_timestamps, dtype="float64")
 print(spike_times.shape, spike_times.dtype, spike_times[:5])
 
 # Read spike waveforms
-raw_waveforms = reader.get_spike_raw_waveforms(block_index=0, seg_index=0, spike_channel_index=0,
-                                               t_start=0., t_stop=10.)
+raw_waveforms = reader.get_spike_raw_waveforms(
+    block_index=0, seg_index=0, spike_channel_index=0, t_start=0.0, t_stop=10.0
+)
 print(raw_waveforms.shape, raw_waveforms.dtype, raw_waveforms[0, 0, :4])
-float_waveforms = reader.rescale_waveforms_to_float(raw_waveforms, dtype='float32', spike_channel_index=0)
+float_waveforms = reader.rescale_waveforms_to_float(raw_waveforms, dtype="float32", spike_channel_index=0)
 print(float_waveforms.shape, float_waveforms.dtype, float_waveforms[0, 0, :4])
 
 # Read event timestamps and times (take another file)
-distantfile = url_repo + 'plexon/File_plexon_2.plx'
-localfile = 'File_plexon_2.plx'
+distantfile = url_repo + "plexon/File_plexon_2.plx"
+localfile = "File_plexon_2.plx"
 urllib.request.urlretrieve(distantfile, localfile)
 
 # Count events per channel
-reader = PlexonRawIO(filename='File_plexon_2.plx')
+reader = PlexonRawIO(filename="File_plexon_2.plx")
 reader.parse_header()
 nb_event_channel = reader.event_channels_count()
-print('nb_event_channel', nb_event_channel)
+print("nb_event_channel", nb_event_channel)
 for chan_index in range(nb_event_channel):
     nb_event = reader.event_count(block_index=0, seg_index=0, event_channel_index=chan_index)
-    print('chan_index', chan_index, 'nb_event', nb_event)
+    print("chan_index", chan_index, "nb_event", nb_event)
 
-ev_timestamps, ev_durations, ev_labels = reader.get_event_timestamps(block_index=0, seg_index=0,
-                                                                     event_channel_index=0,
-                                                                     t_start=None, t_stop=None)
+ev_timestamps, ev_durations, ev_labels = reader.get_event_timestamps(
+    block_index=0, seg_index=0, event_channel_index=0, t_start=None, t_stop=None
+)
 print(ev_timestamps, ev_durations, ev_labels)
-ev_times = reader.rescale_event_timestamp(ev_timestamps, dtype='float64')
+ev_times = reader.rescale_event_timestamp(ev_timestamps, dtype="float64")
 print(ev_times)

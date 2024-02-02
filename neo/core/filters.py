@@ -19,6 +19,7 @@ Classes:
 The provided classes allow users to select filter conditions and use them with
 :func:`neo.core.container.filter()` to perform specific filtering operations on data.
 """
+
 from abc import ABC, abstractmethod
 from numbers import Number
 from typing import Union, Any
@@ -32,6 +33,7 @@ class FilterCondition(ABC):
         segment.filter(my_annotation=<FilterCondition>) or
         segment=filter({'my_annotation': <FilterCondition>})
     """
+
     @abstractmethod
     def __init__(self, control: Any) -> None:
         """
@@ -62,6 +64,7 @@ class Equals(FilterCondition):
     """
     Filter condition to check if target value is equal to the control value.
     """
+
     def __init__(self, control: Any) -> None:
         self.control = control
 
@@ -73,6 +76,7 @@ class IsNot(FilterCondition):
     """
     Filter condition to check if target value is not equal to the control value.
     """
+
     def __init__(self, control: Any) -> None:
         self.control = control
 
@@ -84,6 +88,7 @@ class LessThanOrEquals(FilterCondition):
     """
     Filter condition to check if target value is less than or equal to the control value.
     """
+
     def __init__(self, control: Number) -> None:
         self.control = control
 
@@ -95,6 +100,7 @@ class GreaterThanOrEquals(FilterCondition):
     """
     Filter condition to check if target value is greater than or equal to the control value.
     """
+
     def __init__(self, control: Number) -> None:
         self.control = control
 
@@ -106,6 +112,7 @@ class LessThan(FilterCondition):
     """
     Filter condition to check if target value is less than the control value.
     """
+
     def __init__(self, control: Number) -> None:
         self.control = control
 
@@ -117,6 +124,7 @@ class GreaterThan(FilterCondition):
     """
     Filter condition to check if target value is greater than the control value.
     """
+
     def __init__(self, control: Number) -> None:
         self.control = control
 
@@ -128,6 +136,7 @@ class IsIn(FilterCondition):
     """
     Filter condition to check if target is in control.
     """
+
     def __init__(self, control: Union[list, tuple, set, int]) -> None:
         self.control = control
 
@@ -137,7 +146,7 @@ class IsIn(FilterCondition):
         if isinstance(self.control, int):
             return compare == self.control
 
-        raise SyntaxError('parameter not of type list, tuple, set or int')
+        raise SyntaxError("parameter not of type list, tuple, set or int")
 
 
 class InRange(FilterCondition):
@@ -153,8 +162,10 @@ class InRange(FilterCondition):
         left_closed: bool - If True, the range includes the lower bound (lower_bound <= compare).
         right_closed: bool - If True, the range includes the upper bound (compare <= upper_bound).
     """
-    def __init__(self, lower_bound: Number, upper_bound: Number,
-                 left_closed: bool=False, right_closed: bool=False) -> None:
+
+    def __init__(
+        self, lower_bound: Number, upper_bound: Number, left_closed: bool = False, right_closed: bool = False
+    ) -> None:
         if not isinstance(lower_bound, Number) or not isinstance(upper_bound, Number):
             raise ValueError("parameter is not a number")
 

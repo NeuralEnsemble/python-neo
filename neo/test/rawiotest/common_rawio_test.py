@@ -1,4 +1,4 @@
-'''
+"""
 Common tests for RawIOs:
 
 It is copy/paste from neo/test/iotests/common_io_test.py
@@ -13,15 +13,14 @@ gin.g-node.org and upload files at NeuralEnsemble/ephy_testing_data
 data repo.
 
 
-'''
+"""
 
 __test__ = False
 
 import logging
 import unittest
 
-from neo.utils.datasets import (download_dataset,
-    get_local_testing_data_folder, default_testing_repo)
+from neo.utils.datasets import download_dataset, get_local_testing_data_folder, default_testing_repo
 
 from neo.test.rawiotest.tools import can_use_network
 
@@ -29,6 +28,7 @@ from neo.test.rawiotest import rawio_compliance as compliance
 
 try:
     import datalad
+
     HAVE_DATALAD = True
 except:
     HAVE_DATALAD = False
@@ -38,13 +38,14 @@ repo_for_test = default_testing_repo
 
 
 class BaseTestRawIO:
-    '''
+    """
     This class make common tests for all IOs.
 
     Basically download files from G-node portal.
     And test the IO is working.
 
-    '''
+    """
+
     # ~ __test__ = False
 
     # all IO test need to modify this:
@@ -59,10 +60,10 @@ class BaseTestRawIO:
     local_test_dir = get_local_testing_data_folder()
 
     def setUp(self):
-        '''
+        """
         Set up the test fixture.  This is run for every test
-        '''
-        self.shortname = self.rawioclass.__name__.lower().replace('rawio', '')
+        """
+        self.shortname = self.rawioclass.__name__.lower().replace("rawio", "")
 
         if HAVE_DATALAD:
             for remote_path in self.entities_to_download:
@@ -90,18 +91,18 @@ class BaseTestRawIO:
             # local path is a folder or a file
             local_path = self.get_local_path(entity_name)
 
-            if self.rawioclass.rawmode.endswith('-file'):
+            if self.rawioclass.rawmode.endswith("-file"):
                 reader = self.rawioclass(filename=local_path)
-            elif self.rawioclass.rawmode.endswith('-dir'):
+            elif self.rawioclass.rawmode.endswith("-dir"):
                 reader = self.rawioclass(dirname=local_path)
 
             txt = reader.__repr__()
-            assert 'nb_block' not in txt, 'Before parser_header() nb_block should be NOT known'
+            assert "nb_block" not in txt, "Before parser_header() nb_block should be NOT known"
 
             reader.parse_header()
 
             txt = reader.__repr__()
-            assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
+            assert "nb_block" in txt, "After parser_header() nb_block should be known"
             # print(txt)
 
             #

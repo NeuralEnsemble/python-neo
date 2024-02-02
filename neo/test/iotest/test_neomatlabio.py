@@ -17,6 +17,7 @@ from neo.io.neomatlabio import NeoMatlabIO
 
 try:
     import scipy.io
+
     HAVE_SCIPY = True
 except ImportError:
     HAVE_SCIPY = False
@@ -30,16 +31,15 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
 
     def test_write_read_single_spike(self):
         block1 = Block(name="test_neomatlabio")
-        seg = Segment('segment1')
+        seg = Segment("segment1")
         spiketrain1 = SpikeTrain([1] * pq.s, t_stop=10 * pq.s, sampling_rate=1 * pq.Hz)
-        spiketrain1.annotate(yep='yop', yip=None)
+        spiketrain1.annotate(yep="yop", yip=None)
         sig1 = AnalogSignal([4, 5, 6] * pq.A, sampling_period=1 * pq.ms)
         irrsig1 = IrregularlySampledSignal([0, 1, 2] * pq.ms, [4, 5, 6] * pq.A)
-        img_sequence_array = [[[column for column in range(2)] for _ in range(2)]
-                      for _ in range(2)]
-        image_sequence = ImageSequence(img_sequence_array, units='dimensionless',
-                               sampling_rate=1 * pq.Hz,
-                               spatial_scale=1 * pq.micrometer)
+        img_sequence_array = [[[column for column in range(2)] for _ in range(2)] for _ in range(2)]
+        image_sequence = ImageSequence(
+            img_sequence_array, units="dimensionless", sampling_rate=1 * pq.Hz, spatial_scale=1 * pq.micrometer
+        )
         block1.segments.append(seg)
         seg.spiketrains.append(spiketrain1)
         seg.analogsignals.append(sig1)
@@ -50,7 +50,7 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
         block1.groups.append(group1)
 
         # write block
-        filename = self.get_local_path('matlabiotestfile.mat')
+        filename = self.get_local_path("matlabiotestfile.mat")
         io1 = self.ioclass(filename)
         io1.write_block(block1)
 
@@ -58,24 +58,24 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
         io2 = self.ioclass(filename)
         block2 = io2.read_block()
 
-        self.assertEqual(block1.segments[0].spiketrains[0],
-                         block2.segments[0].spiketrains[0])
+        self.assertEqual(block1.segments[0].spiketrains[0], block2.segments[0].spiketrains[0])
 
-        assert_array_equal(block1.segments[0].analogsignals[0],
-                            block2.segments[0].analogsignals[0])
+        assert_array_equal(block1.segments[0].analogsignals[0], block2.segments[0].analogsignals[0])
 
-        assert_array_equal(block1.segments[0].irregularlysampledsignals[0].magnitude,
-                           block2.segments[0].irregularlysampledsignals[0].magnitude)
-        assert_array_equal(block1.segments[0].irregularlysampledsignals[0].times,
-                           block2.segments[0].irregularlysampledsignals[0].times)
+        assert_array_equal(
+            block1.segments[0].irregularlysampledsignals[0].magnitude,
+            block2.segments[0].irregularlysampledsignals[0].magnitude,
+        )
+        assert_array_equal(
+            block1.segments[0].irregularlysampledsignals[0].times, block2.segments[0].irregularlysampledsignals[0].times
+        )
 
-        assert_array_equal(block1.segments[0].imagesequences[0],
-                           block2.segments[0].imagesequences[0])
+        assert_array_equal(block1.segments[0].imagesequences[0], block2.segments[0].imagesequences[0])
 
         # test annotations
         spiketrain2 = block2.segments[0].spiketrains[0]
-        assert spiketrain2.annotations['yep'] == 'yop'
-        assert spiketrain2.annotations['yip'] is None
+        assert spiketrain2.annotations["yep"] == "yop"
+        assert spiketrain2.annotations["yip"] is None
 
         # test group retrieval
         group2 = block2.groups[0]

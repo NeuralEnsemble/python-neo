@@ -10,18 +10,19 @@ from neo.io import Spike2IO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
+class TestSpike2IO(
+    BaseTestIO,
+    unittest.TestCase,
+):
     ioclass = Spike2IO
-    entities_to_download = [
-        'spike2'
-    ]
+    entities_to_download = ["spike2"]
     entities_to_test = [
-        'spike2/File_spike2_1.smr',
-        'spike2/File_spike2_2.smr',
-        'spike2/File_spike2_3.smr',
-        'spike2/130322-1LY.smr',  # this is for bug 182
-        'spike2/multi_sampling.smr',  # this is for bug 466
-        'spike2/Two-mice-bigfile-test000.smr',  # SONv9 file
+        "spike2/File_spike2_1.smr",
+        "spike2/File_spike2_2.smr",
+        "spike2/File_spike2_3.smr",
+        "spike2/130322-1LY.smr",  # this is for bug 182
+        "spike2/multi_sampling.smr",  # this is for bug 466
+        "spike2/Two-mice-bigfile-test000.smr",  # SONv9 file
     ]
 
     def test_multi_sampling_no_grouping(self):
@@ -29,9 +30,9 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         Some file can have several sampling_rate.
         This one contain 3 differents signals sampling rate
         """
-        filename = self.get_local_path('spike2/multi_sampling.smr')
+        filename = self.get_local_path("spike2/multi_sampling.smr")
         reader = Spike2IO(filename=filename, try_signal_grouping=False)
-        bl = reader.read_block(signal_group_mode='group-by-same-units')
+        bl = reader.read_block(signal_group_mode="group-by-same-units")
         assert len(bl.segments) == 10
         seg = bl.segments[0]
 
@@ -57,9 +58,9 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         Some files can contain multiple sampling rates.
         This file contains three signals with different sampling rates.
         """
-        filename = self.get_local_path('spike2/multi_sampling.smr')
+        filename = self.get_local_path("spike2/multi_sampling.smr")
         reader = Spike2IO(filename=filename, try_signal_grouping=True)
-        bl = reader.read_block(signal_group_mode='group-by-same-units')
+        bl = reader.read_block(signal_group_mode="group-by-same-units")
         assert len(bl.segments) == 10
         seg = bl.segments[0]
 

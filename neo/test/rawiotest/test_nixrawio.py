@@ -8,12 +8,8 @@ testfname = ""
 
 class TestNixRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = NIXRawIO
-    entities_to_download = [
-        'nix/nixrawio-1.5.nix'
-    ]
-    entities_to_test = [
-        'nix/nixrawio-1.5.nix'
-    ]
+    entities_to_download = ["nix/nixrawio-1.5.nix"]
+    entities_to_test = ["nix/nixrawio-1.5.nix"]
 
 
 if __name__ == "__main__":

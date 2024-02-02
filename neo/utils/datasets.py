@@ -1,17 +1,18 @@
 """
 Utility functions to retrieve public datasets.
 """
+
 import os
 from pathlib import Path
 
-default_testing_repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+default_testing_repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
 
 global local_testing_data_folder
-if os.getenv('EPHY_TESTING_DATA_FOLDER', default=None) is not None:
-    local_testing_data_folder = Path(os.getenv('EPHY_TESTING_DATA_FOLDER'))
+if os.getenv("EPHY_TESTING_DATA_FOLDER", default=None) is not None:
+    local_testing_data_folder = Path(os.getenv("EPHY_TESTING_DATA_FOLDER"))
 else:
     # set in home
-    local_testing_data_folder = Path.home() / 'ephy_testing_data'
+    local_testing_data_folder = Path.home() / "ephy_testing_data"
 
 
 def get_local_testing_data_folder():
@@ -19,8 +20,7 @@ def get_local_testing_data_folder():
     return local_testing_data_folder
 
 
-def download_dataset(repo=default_testing_repo, remote_path=None,
-                     local_folder=None):
+def download_dataset(repo=default_testing_repo, remote_path=None, local_folder=None):
     """
     Download a dataset with datalad client.
 
@@ -63,11 +63,10 @@ def download_dataset(repo=default_testing_repo, remote_path=None,
         dataset = datalad.api.Dataset(path=local_folder)
         # make sure git repo is in clean state
         repo = dataset.repo
-        repo.call_git(['checkout', '--force', 'master'])
+        repo.call_git(["checkout", "--force", "master"])
         dataset.update(merge=True)
     else:
-        dataset = datalad.api.install(path=local_folder,
-                                      source=repo)
+        dataset = datalad.api.install(path=local_folder, source=repo)
 
     if remote_path is None:
         print('Bad boy: you have to provide "remote_path"')

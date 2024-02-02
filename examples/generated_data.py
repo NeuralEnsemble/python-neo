@@ -12,8 +12,7 @@ from matplotlib import pyplot as plt
 import neo
 
 
-def generate_block(n_segments=3, n_channels=4, n_units=3,
-                   data_samples=1000, feature_samples=100):
+def generate_block(n_segments=3, n_channels=4, n_units=3, data_samples=1000, feature_samples=100):
     """
     Generate a block with a single recording channel group and a number of
     segments, recording channels and units with associated analog signals
@@ -27,11 +26,11 @@ def generate_block(n_segments=3, n_channels=4, n_units=3,
     # Create multiple Segments
     block.segments = [neo.Segment(index=i) for i in range(n_segments)]
     # Create multiple ChannelIndexes
-    block.channel_indexes = [neo.ChannelIndex(name='C%d' % i, index=i) for i in range(n_channels)]
+    block.channel_indexes = [neo.ChannelIndex(name="C%d" % i, index=i) for i in range(n_channels)]
 
     # Attach multiple Units to each ChannelIndex
     for channel_idx in block.channel_indexes:
-        channel_idx.units = [neo.Unit('U%d' % i) for i in range(n_units)]
+        channel_idx.units = [neo.Unit("U%d" % i) for i in range(n_units)]
 
     # Create synthetic data
     for seg in block.segments:
@@ -41,7 +40,7 @@ def generate_block(n_segments=3, n_channels=4, n_units=3,
         wave = 3 * np.sin(np.linspace(0, 2 * np.pi, feature_samples))
         for channel_idx in block.channel_indexes:
             sig = np.random.randn(data_samples)
-            sig[feature_pos:feature_pos + feature_samples] += wave
+            sig[feature_pos : feature_pos + feature_samples] += wave
 
             signal = neo.AnalogSignal(sig * pq.mV, sampling_rate=1 * pq.kHz)
             seg.analogsignals.append(signal)

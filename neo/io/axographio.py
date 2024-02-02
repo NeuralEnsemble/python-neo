@@ -45,11 +45,11 @@ class AxographIO(AxographRawIO, BaseFromRaw):
         >>> print(blk.annotations['notes'])
     """
 
-    name = 'AxographIO'
-    description = 'This IO reads .axgd/.axgx files created with AxoGraph'
+    name = "AxographIO"
+    description = "This IO reads .axgd/.axgx files created with AxoGraph"
 
-    _prefered_signal_group_mode = 'group-by-same-units'
+    _prefered_signal_group_mode = "group-by-same-units"
 
-    def __init__(self, filename='', force_single_segment=False):
+    def __init__(self, filename="", force_single_segment=False):
         AxographRawIO.__init__(self, filename, force_single_segment)
         BaseFromRaw.__init__(self, filename)

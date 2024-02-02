@@ -36,7 +36,8 @@ class AxonIO(AxonRawIO, BaseFromRaw):
     set of data. The `AxonIO._axon_info['EpochInfo']` section doesn't currently exist.
 
     """
-    _prefered_signal_group_mode = 'group-by-same-units'
+
+    _prefered_signal_group_mode = "group-by-same-units"
 
     def __init__(self, filename):
         AxonRawIO.__init__(self, filename=filename)
@@ -59,8 +60,13 @@ class AxonIO(AxonRawIO, BaseFromRaw):
             seg = Segment(index=seg_index)
             t_start = self._t_starts[seg_index] * pq.s
             for c, sig in enumerate(sigs):
-                ana_sig = AnalogSignal(sig, sampling_rate=self._sampling_rate * pq.Hz,
-                                       t_start=t_start, name=sig_names[c], units=sig_units[c])
+                ana_sig = AnalogSignal(
+                    sig,
+                    sampling_rate=self._sampling_rate * pq.Hz,
+                    t_start=t_start,
+                    name=sig_names[c],
+                    units=sig_units[c],
+                )
                 seg.analogsignals.append(ana_sig)
             segments.append(seg)
 

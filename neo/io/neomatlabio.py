@@ -57,6 +57,7 @@ def get_classname_from_container_name(container_name, struct):
             if _container_name(classname) == container_name:
                 return classname
 
+
 PY_NONE = "Py_None"
 
 
@@ -461,7 +462,17 @@ class NeoMatlabIO(BaseIO):
             if hasattr(cl, "_quantity_attr") and cl._quantity_attr == attrname:
                 continue
 
-            if cl.is_view and attrname in ("obj", "index", "image_sequence", "x", "y", "radius", "width", "height", "vertices"):
+            if cl.is_view and attrname in (
+                "obj",
+                "index",
+                "image_sequence",
+                "x",
+                "y",
+                "radius",
+                "width",
+                "height",
+                "vertices",
+            ):
                 continue
 
             item = getattr(struct, attrname)
