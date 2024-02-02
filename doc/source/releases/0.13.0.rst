@@ -2,7 +2,7 @@
 Neo 0.13.0 release notes
 ========================
 
-??? February 2024
+2nd February 2024
 
 
 This release of Neo sees a lot of changes and improvements, with a documentation rewrite,
