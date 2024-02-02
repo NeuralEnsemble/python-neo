@@ -30,12 +30,14 @@ class ChannelView(BaseNeo):
     Note: Any other additional arguments are assumed to be user-specific
             metadata and stored in :attr:`annotations`.
     """
-    _parent_objects = ('Segment',)
-    _parent_attrs = ('segment',)
+    _parent_objects = ('Group',)
+    _parent_attrs = ('group',)
     _necessary_attrs = (
+        ('obj', ('AnalogSignal', 'IrregularlySampledSignal'), 1),
         ('index', np.ndarray, 1, np.dtype('i')),
-        ('obj', ('AnalogSignal', 'IrregularlySampledSignal'), 1)
     )
+    is_view = True
+
     # "mask" would be an alternative name, proposing "index" for
     # backwards-compatibility with ChannelIndex
 
@@ -73,7 +75,7 @@ class ChannelView(BaseNeo):
         return (self.obj.shape[0], self.index.size)
 
     def _get_arr_ann_length(self):
-        return self.shape[-1]
+        return self.index.size
 
     def array_annotate(self, **array_annotations):
         self.array_annotations.update(array_annotations)

@@ -251,16 +251,19 @@ class Container(BaseNeo):
         """
         Containers for child objects that have data and have a single parent.
         """
-        return tuple([_container_name(child) for child in
-                      self._data_child_objects])
+        # the following construction removes the duplicate 'regionsofinterest'
+        # while preserving the child order (which `set()` would not do)
+        # I don't know if preserving the order is important, but I'm playing it safe
+        return tuple({_container_name(child): None for child in
+                      self._data_child_objects}.keys())
 
     @property
     def _child_containers(self):
         """
         Containers for child objects with a single parent.
         """
-        return tuple([_container_name(child) for child in
-                      self._child_objects])
+        return tuple({_container_name(child): None for child in
+                      self._child_objects}.keys())
 
     @property
     def _single_children(self):

@@ -70,12 +70,17 @@ class TestBlock(unittest.TestCase):
                 targ.extend(seg.spiketrains)
                 targ.extend(seg.imagesequences)
             chv_names = set([])
+            roi_names = set([])
             for grp in block.groups:
                 for grp1 in grp.walk():
                     for chv in grp1.channelviews:
                         if chv.name not in chv_names:
                             targ.append(chv)
                             chv_names.add(chv.name)
+                    for roi in grp1.regionsofinterest:
+                        if roi.name not in roi_names:
+                            targ.append(roi)
+                            roi_names.add(roi.name)
 
             res1 = block.filter()
             res2 = block.filter({})
