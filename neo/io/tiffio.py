@@ -45,10 +45,11 @@ class TiffIO(BaseIO):
                 'file_tif_14.tiff']}
             # analogsignals (N=0)
     """
-    name = 'TIFF IO'
+
+    name = "TIFF IO"
     description = "Neo IO module for optical imaging data stored as a folder of TIFF images."
 
-    _prefered_signal_group_mode = 'group-by-same-units'
+    _prefered_signal_group_mode = "group-by-same-units"
     is_readable = True
     is_writable = False
 
@@ -63,10 +64,9 @@ class TiffIO(BaseIO):
 
     extensions = []
 
-    mode = 'dir'
+    mode = "dir"
 
-    def __init__(self, directory_path=None, units=None, sampling_rate=None,
-                 spatial_scale=None, **kwargs):
+    def __init__(self, directory_path=None, units=None, sampling_rate=None, spatial_scale=None, **kwargs):
         import PIL
 
         BaseIO.__init__(self, directory_path, **kwargs)
@@ -80,7 +80,7 @@ class TiffIO(BaseIO):
         # to sort file
         def natural_sort(l):
             convert = lambda text: int(text) if text.isdigit() else text.lower()
-            alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+            alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
             return sorted(l, key=alphanum_key)
 
         # find all the images in the given directory
@@ -88,11 +88,11 @@ class TiffIO(BaseIO):
         # name of extensions to track
         types = ["*.tif", "*.tiff"]
         for file in types:
-            file_name_list.append(glob.glob(self.filename+"/"+file))
+            file_name_list.append(glob.glob(self.filename + "/" + file))
         # flatten list
         file_name_list = [item for sublist in file_name_list for item in sublist]
         # delete path in the name of file
-        file_name_list = [file_name[len(self.filename)+1::] for file_name in file_name_list]
+        file_name_list = [file_name[len(self.filename) + 1 : :] for file_name in file_name_list]
         # sorting file
         file_name_list = natural_sort(file_name_list)
         list_data_image = []
@@ -103,15 +103,17 @@ class TiffIO(BaseIO):
         if len(list_data_image.shape) == 4:
             list_data_image = []
             for file_name in file_name_list:
-                image = PIL.Image.open(self.filename + "/" + file_name).convert('L')
+                image = PIL.Image.open(self.filename + "/" + file_name).convert("L")
                 data = np.array(image).astype(np.float32)
                 list_data_image.append(data)
 
         print("read block")
-        image_sequence = ImageSequence(np.stack(list_data_image),
-                                       units=self.units,
-                                       sampling_rate=self.sampling_rate,
-                                       spatial_scale=self.spatial_scale)
+        image_sequence = ImageSequence(
+            np.stack(list_data_image),
+            units=self.units,
+            sampling_rate=self.sampling_rate,
+            spatial_scale=self.spatial_scale,
+        )
         print("creating segment")
         segment = Segment(file_origin=self.filename)
         segment.annotate(tiff_file_names=file_name_list)

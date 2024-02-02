@@ -11,23 +11,19 @@ from neo import Block, Segment, ChannelView, Group, SpikeTrain, AnalogSignal
 store_signals = False
 
 block = Block(name="probe data", tetrode_ids=["Tetrode #1", "Tetrode #2"])
-block.segments = [Segment(name="trial #1", index=0),
-                  Segment(name="trial #2", index=1),
-                  Segment(name="trial #3", index=2)]
+block.segments = [
+    Segment(name="trial #1", index=0),
+    Segment(name="trial #2", index=1),
+    Segment(name="trial #3", index=2),
+]
 
-n_units = {
-    "Tetrode #1": 2,
-    "Tetrode #2": 5
-}
+n_units = {"Tetrode #1": 2, "Tetrode #2": 5}
 
 # Create a group for each neuron, annotate each group with the tetrode from which it was recorded
 groups = []
 counter = 0
 for tetrode_id, n in n_units.items():
-    groups.extend(
-        [Group(name=f"neuron #{counter + i + 1}", tetrode_id=tetrode_id)
-         for i in range(n)]
-    )
+    groups.extend([Group(name=f"neuron #{counter + i + 1}", tetrode_id=tetrode_id) for i in range(n)])
     counter += n
 block.groups.extend(groups)
 
@@ -38,10 +34,8 @@ for segment in block.segments:
 
     # create two 4-channel AnalogSignals with dummy data
     signals = {
-        "Tetrode #1": AnalogSignal(np.random.rand(1000, 4) * mV,
-                                   sampling_rate=10 * kHz, tetrode_id="Tetrode #1"),
-        "Tetrode #2": AnalogSignal(np.random.rand(1000, 4) * mV,
-                                   sampling_rate=10 * kHz, tetrode_id="Tetrode #2")
+        "Tetrode #1": AnalogSignal(np.random.rand(1000, 4) * mV, sampling_rate=10 * kHz, tetrode_id="Tetrode #1"),
+        "Tetrode #2": AnalogSignal(np.random.rand(1000, 4) * mV, sampling_rate=10 * kHz, tetrode_id="Tetrode #2"),
     }
     if store_signals:
         segment.analogsignals.extend(signals.values())

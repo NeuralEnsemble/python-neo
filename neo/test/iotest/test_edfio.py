@@ -12,16 +12,19 @@ from neo.io.proxyobjects import AnalogSignalProxy
 from neo import AnalogSignal
 
 
-class TestEDFIO(BaseTestIO, unittest.TestCase, ):
+class TestEDFIO(
+    BaseTestIO,
+    unittest.TestCase,
+):
     ioclass = EDFIO
-    entities_to_download = ['edf']
+    entities_to_download = ["edf"]
     entities_to_test = [
-        'edf/edf+C.edf',
+        "edf/edf+C.edf",
     ]
 
     def setUp(self):
         super().setUp()
-        self.filename = self.get_local_path('edf/edf+C.edf')
+        self.filename = self.get_local_path("edf/edf+C.edf")
 
     def test_read_block(self):
         """
@@ -32,7 +35,7 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
             self.assertTrue(bl.annotations)
 
             seg = bl.segments[0]
-            assert seg.name == 'Seg #0 Block #0'
+            assert seg.name == "Seg #0 Block #0"
             for anasig in seg.analogsignals:
                 assert anasig.name is not None
 
@@ -57,33 +60,33 @@ class TestEDFIO(BaseTestIO, unittest.TestCase, ):
             t_start, t_stop = 500 * pq.ms, 800 * pq.ms
             seg = io.read_segment(time_slice=(t_start, t_stop))
 
-            self.assertAlmostEqual(seg.t_start.rescale(t_start.units), t_start, delta=5.)
-            self.assertAlmostEqual(seg.t_stop.rescale(t_stop.units), t_stop, delta=5.)
+            self.assertAlmostEqual(seg.t_start.rescale(t_start.units), t_start, delta=5.0)
+            self.assertAlmostEqual(seg.t_stop.rescale(t_stop.units), t_stop, delta=5.0)
 
     def test_compare_data(self):
         """
         Compare data from AnalogSignal with plain data stored in text file
         """
         with EDFIO(self.filename) as io:
-            plain_data = np.loadtxt(io.filename.replace('.edf', '.txt'), dtype=np.int16)
+            plain_data = np.loadtxt(io.filename.replace(".edf", ".txt"), dtype=np.int16)
             seg = io.read_segment(lazy=True)
 
             anasigs = seg.analogsignals
             self.assertEqual(len(anasigs), 5)  # all channels have different units, so expecting 5
             for aidx, anasig in enumerate(anasigs):
                 # comparing raw data to original values
-                ana_data = anasig.load(magnitude_mode='raw')
-                np.testing.assert_array_equal(ana_data.magnitude, plain_data[:, aidx:aidx + 1])
+                ana_data = anasig.load(magnitude_mode="raw")
+                np.testing.assert_array_equal(ana_data.magnitude, plain_data[:, aidx : aidx + 1])
 
                 # comparing floating data to original values * gain factor
                 ch_head = io.edf_reader.getSignalHeader(aidx)
-                physical_range = ch_head['physical_max'] - ch_head['physical_min']
+                physical_range = ch_head["physical_max"] - ch_head["physical_min"]
                 # number of digital values used (+1 to account for '0' value)
-                digital_range = ch_head['digital_max'] - ch_head['digital_min'] + 1
+                digital_range = ch_head["digital_max"] - ch_head["digital_min"] + 1
 
                 gain = physical_range / digital_range
-                ana_data = anasig.load(magnitude_mode='rescaled')
-                rescaled_data = plain_data[:, aidx:aidx + 1] * gain
+                ana_data = anasig.load(magnitude_mode="rescaled")
+                rescaled_data = plain_data[:, aidx : aidx + 1] * gain
                 np.testing.assert_array_equal(ana_data.magnitude, rescaled_data)
 
 

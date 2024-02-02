@@ -20,7 +20,7 @@ from neo.core import (
     SpikeTrain,
     ImageSequence,
     ChannelView,
-    CircularRegionOfInterest
+    CircularRegionOfInterest,
 )
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.fromtimestamp(424242424), None]

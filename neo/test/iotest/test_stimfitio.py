@@ -22,16 +22,14 @@ else:
 @unittest.skipUnless(HAS_STFIO, "requires stfio")
 class TestStimfitIO(BaseTestIO, unittest.TestCase):
     ioclass = StimfitIO
-    entities_to_download = [
-        'stimfit'
-    ]
+    entities_to_download = ["stimfit"]
     entities_to_test = [
-        'stimfit/File_stimfit_1.h5',
-        'stimfit/File_stimfit_2.h5',
-        'stimfit/File_stimfit_3.h5',
-        'stimfit/File_stimfit_4.h5',
-        'stimfit/File_stimfit_5.h5',
-        'stimfit/File_stimfit_6.h5',
+        "stimfit/File_stimfit_1.h5",
+        "stimfit/File_stimfit_2.h5",
+        "stimfit/File_stimfit_3.h5",
+        "stimfit/File_stimfit_4.h5",
+        "stimfit/File_stimfit_5.h5",
+        "stimfit/File_stimfit_6.h5",
     ]
 
 

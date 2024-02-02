@@ -1,4 +1,4 @@
-'''
+"""
 Class for reading from Brainware DAM files
 
 DAM files are binary files for holding raw data.  They are broken up into
@@ -23,7 +23,7 @@ development of this code
 The code is implemented with the permission of Dr. Jan Schnupp
 
 Author: Todd Jennings
-'''
+"""
 
 # import needed core python modules
 import os
@@ -34,8 +34,7 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import (AnalogSignal, Block,
-                      Group, Segment)
+from neo.core import AnalogSignal, Block, Group, Segment
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -75,8 +74,7 @@ class BrainwareDamIO(BaseIO):
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects = [Block, Group,
-                         Segment, AnalogSignal]
+    supported_objects = [Block, Group, Segment, AnalogSignal]
 
     readable_objects = [Block]
     writeable_objects = []
@@ -95,34 +93,33 @@ class BrainwareDamIO(BaseIO):
 
     # do not support write so no GUI stuff
     write_params = None
-    name = 'Brainware DAM File'
-    extensions = ['dam']
+    name = "Brainware DAM File"
+    extensions = ["dam"]
 
-    mode = 'file'
+    mode = "file"
 
     def __init__(self, filename=None):
-        '''
+        """
         Arguments:
             filename: the filename
-        '''
+        """
         BaseIO.__init__(self)
         self._path = filename
         self._filename = os.path.basename(filename)
         self._fsrc = None
 
     def read_block(self, lazy=False, **kargs):
-        '''
+        """
         Reads a block from the raw data file "fname" generated
         with BrainWare
-        '''
-        assert not lazy, 'Do not support lazy'
+        """
+        assert not lazy, "Do not support lazy"
 
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
         if kargs:
-            raise NotImplementedError('This method does not have any '
-                                      'arguments implemented yet')
+            raise NotImplementedError("This method does not have any " "arguments implemented yet")
         self._fsrc = None
 
         block = Block(file_origin=self._filename)
@@ -134,7 +131,7 @@ class BrainwareDamIO(BaseIO):
         block.groups.append(gr)
 
         # open the file
-        with open(self._path, 'rb') as fobject:
+        with open(self._path, "rb") as fobject:
             # while the file is not done keep reading segments
             while True:
                 seg = self._read_segment(fobject)
@@ -164,11 +161,11 @@ class BrainwareDamIO(BaseIO):
     # -------------------------------------------------------------------------
 
     def _read_segment(self, fobject):
-        '''
+        """
         Read a single segment with a single analogsignal
 
         Returns the segment or None if there are no more segments
-        '''
+        """
 
         try:
             # float64 -- start time of the AnalogSignal
@@ -193,7 +190,7 @@ class BrainwareDamIO(BaseIO):
             name = np.fromfile(fobject, dtype=np.uint8, count=numchars)
 
             # exclude invalid characters
-            name = str(name[name >= 32].view('c').tobytes())
+            name = str(name[name >= 32].view("c").tobytes())
 
             # add the name to the list of names
             paramnames.append(name)
@@ -210,17 +207,17 @@ class BrainwareDamIO(BaseIO):
         # int16 * numpts -- the AnalogSignal itself
         signal = np.fromfile(fobject, dtype=np.int16, count=numpts)
 
-        sig = AnalogSignal(signal.astype(np.float32) * pq.mV,
-                           t_start=t_start * pq.d,
-                           file_origin=self._filename,
-                           sampling_period=1. * pq.s,
-                           copy=False)
+        sig = AnalogSignal(
+            signal.astype(np.float32) * pq.mV,
+            t_start=t_start * pq.d,
+            file_origin=self._filename,
+            sampling_period=1.0 * pq.s,
+            copy=False,
+        )
         # Note: setting the sampling_period to 1 s is arbitrary
 
         # load the AnalogSignal and parameters into a new Segment
-        seg = Segment(file_origin=self._filename,
-                      index=seg_index,
-                      **params)
+        seg = Segment(file_origin=self._filename, index=seg_index, **params)
         seg.analogsignals = [sig]
 
         return seg
