@@ -86,7 +86,7 @@ without for loops or complex list comprehensions, as follows:
 New IO modules
 --------------
 
-Neo now supports MED_ format, with the new :class`MedIO` and :class:`MedRawIO` classes.
+Neo now supports MED_ format, with the new :class:`MedIO` and :class:`MedRawIO` classes.
 
 
 Bug fixes and improvements in IO modules
@@ -101,7 +101,7 @@ Other changes
 -------------
 
 - RawIO classes have a method :meth:`parse_header` that extracts all the information from the formats
-  and therefore is usually a computational heavy process.
+  and therefore is usually a computationally heavy process.
   A flag ``is_header_parsed`` has now been added, to avoid re-extracting the header information
   if it is already available. This can produce significant speed ups.
 
@@ -110,7 +110,7 @@ Other changes
 
 - All of the code is now formatted with black_.
 
-- The continuous integration (CI) pipeline has been speeded up.
+- The continuous integration (CI) pipeline has been sped up.
 
 
 Updated dependencies
@@ -124,7 +124,7 @@ Acknowledgements
 
 Thanks to Julia Sprenger, Andrew Davison, Zach McKenzie, Alessio Buccino, Moritz Alexander Kern,
 Samuel Garcia, Heberto Mayorquin, Joscha Schmiedt, Daniel Crepeau, Divyansh Gupta, Nate Dolensek,
-Peter N. Steinmetz, @hornauerp, Robert Wolff, Jules Lebert, Kyle Johnsen, Benjamin Heasly,
+Peter N. Steinmetz, Philipp Hornauer, Robert Wolff, Jules Lebert, Kyle Johnsen, Benjamin Heasly,
 Baptiste Grimaud, Cody Baker, Daniel P. Crepeau, Fernando J. Chaure, @Filipe, and Matthias Klumpp
 for their contributions to this release.
 
