@@ -55,7 +55,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Neo'
-copyright = '2010-2023, ' + AUTHORS
+copyright = '2010-2024, ' + AUTHORS
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
