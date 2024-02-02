@@ -621,7 +621,7 @@ def ensure_signal_units(units):
     try:
         units = pq.Quantity(1, units)
     except:
-        logger.warning('Units "{}" can not be converted to a quantity. Using dimensionless ' "instead".format(units))
+        logger.warning(f'Units "{units}" can not be converted to a quantity. Using dimensionless ' "instead")
         units = ""
         units = pq.Quantity(1, units)
     return units
