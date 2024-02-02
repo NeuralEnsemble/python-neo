@@ -301,7 +301,7 @@ class PlexonRawIO(BaseRawIO):
         if self.progress_bar:
             chan_loop = trange(nb_event_chan, desc="Parsing event channels", leave=True)
         else:
-            chan_loop = range(nb_event)
+            chan_loop = range(nb_event_chan)
         for chan_index in chan_loop:
             h = eventHeaders[chan_index]
             chan_id = h['Channel']
