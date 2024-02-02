@@ -25,7 +25,11 @@ import datetime
 from collections import OrderedDict
 
 import numpy as np
-from tqdm import tqdm, trange
+try:
+    from tqdm import tqdm, trange
+    HAVE_TQDM = True
+except:
+    HAVE_TQDM = False
 
 from .baserawio import (
     BaseRawIO,
@@ -40,9 +44,10 @@ class PlexonRawIO(BaseRawIO):
     extensions = ['plx']
     rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename='', progress_bar=True):
         BaseRawIO.__init__(self)
         self.filename = filename
+        self.progress_bar = HAVE_TQDM and progress_bar
 
     def _source_name(self):
         return self.filename
@@ -99,7 +104,8 @@ class PlexonRawIO(BaseRawIO):
         pos = offset4
 
         # Create a tqdm object with a total of len(data) and an initial value of 0 for offset
-        progress_bar = tqdm(total=len(data), initial=0, desc="Parsing data blocks", leave=True)
+        if self.progress_bar :
+            progress_bar = tqdm(total=len(data), initial=0, desc="Parsing data blocks", leave=True)
 
         while pos < data.size:
             bl_header = data[pos:pos + 16].view(DataBlockHeader)[0]
@@ -110,9 +116,11 @@ class PlexonRawIO(BaseRawIO):
             pos += length
 
             # Update tqdm with the number of bytes processed in this iteration
-            progress_bar.update(length)
+            if self.progress_bar :
+                progress_bar.update(length)
 
-        progress_bar.close()
+        if self.progress_bar :
+            progress_bar.close()
 
         self._last_timestamps = bl_header['UpperByteOf5ByteTimestamp'] * \
                                 2 ** 32 + bl_header['TimeStamp']
@@ -129,13 +137,21 @@ class PlexonRawIO(BaseRawIO):
             # Signals
             5: np.dtype(dt_base + [('cumsum', 'int64'), ]),
         }
-        for bl_type in tqdm(block_pos, desc="Finalizing data blocks", leave=True):
+        if self.progress_bar :
+            bl_loop = tqdm(block_pos, desc="Finalizing data blocks", leave=True)
+        else:
+            bl_loop = block_pos
+        for bl_type in bl_loop:
             self._data_blocks[bl_type] = {}
-            for chan_id in tqdm(
-                block_pos[bl_type],
-                desc="Finalizing data blocks for type %d" % bl_type,
-                leave=True,
-            ):
+            if self.progress_bar :
+                chan_loop = tqdm(
+                    block_pos[bl_type],
+                    desc="Finalizing data blocks for type %d" % bl_type,
+                    leave=True,
+                )
+            else:
+                chan_loop = block_pos[bl_type]
+            for chan_id in chan_loop:
                 positions = block_pos[bl_type][chan_id]
                 dt = dtype_by_bltype[bl_type]
                 data_block = np.empty((len(positions)), dtype=dt)
@@ -171,7 +187,11 @@ class PlexonRawIO(BaseRawIO):
         # signals channels
         sig_channels = []
         all_sig_length = []
-        for chan_index in trange(nb_sig_chan, desc="Parsing signal channels", leave=True):
+        if self.progress_bar:
+            chan_loop = trange(nb_sig_chan, desc="Parsing signal channels", leave=True)
+        else:
+            chan_loop = range(nb_sig_chan)
+        for chan_index in chan_loop:
             h = slowChannelHeaders[chan_index]
             name = h['Name'].decode('utf8')
             chan_id = h['Channel']
@@ -232,11 +252,16 @@ class PlexonRawIO(BaseRawIO):
 
         # Spikes channels
         spike_channels = []
-        for unit_index, (chan_id, unit_id) in tqdm(
-            enumerate(self.internal_unit_ids),
-            desc="Parsing spike channels",
-            leave=True,
-        ):
+        if self.progress_bar:
+                unit_loop = tqdm(
+                    enumerate(self.internal_unit_ids),
+                    desc="Parsing spike channels",
+                    leave=True,
+                )
+        else:
+            unit_loop = enumerate(self.internal_unit_ids)
+
+        for unit_index, (chan_id, unit_id) in unit_loop:
             c = np.nonzero(dspChannelHeaders['Channel'] == chan_id)[0][0]
             h = dspChannelHeaders[c]
 
@@ -433,13 +458,13 @@ class PlexonRawIO(BaseRawIO):
         return event_times
 
 
-def read_as_dict(fid, dtype, offset: int = 0):
+def read_as_dict(fid, dtype, offset=None):
     """
     Given a file descriptor
     and a numpy.dtype of the binary struct return a dict.
     Make conversion for strings.
     """
-    if offset:
+    if offset is not None:
         fid.seek(offset)
     dt = np.dtype(dtype)
     h = np.frombuffer(fid.read(dt.itemsize), dt)[0]
