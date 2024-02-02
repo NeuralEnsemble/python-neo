@@ -55,7 +55,7 @@ class OpenEphysRawIO(BaseRawIO):
         hypothesis.
       * A recording can contain gaps due to USB stream loss when high CPU load when recording.
         Theses gaps are checked channel per channel which make the parse_header() slow.
-        I gaps are detected then they are filled with zeros but the the reading will be much slower for getting signals.
+        If gaps are detected then they are filled with zeros but the the reading will be much slower for getting signals.
 
     """
     # file formats used by openephys
@@ -129,8 +129,8 @@ class OpenEphysRawIO(BaseRawIO):
                                 'int16', units, chan_info['bitVolts'], 0., processor_id))
                 
             if any(self._sig_has_gap[seg_index].values()):
-                channel_with_gapes = list(self._sig_has_gap[seg_index].keys())
-                self.logger.warning(f"This OpenEphys dataset contains gaps for some channels {channel_with_gapes} in segment {seg_index} the read will be slow")
+                channel_with_gaps = list(self._sig_has_gap[seg_index].keys())
+                self.logger.warning(f"This OpenEphys dataset contains gaps for some channels {channel_with_gaps} in segment {seg_index} the read will be slow")
                 self._gap_mode = True
 
             
