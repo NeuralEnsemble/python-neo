@@ -45,6 +45,16 @@ class PlexonRawIO(BaseRawIO):
     rawmode = 'one-file'
 
     def __init__(self, filename='', progress_bar=True):
+        """
+
+        Parameters
+        ----------
+        filename: str
+            The filename.
+        progress_bar: bool, default True
+            Display progress bar using tqdm (if installed) when parsing the file.
+        
+        """
         BaseRawIO.__init__(self)
         self.filename = filename
         self.progress_bar = HAVE_TQDM and progress_bar
@@ -288,7 +298,11 @@ class PlexonRawIO(BaseRawIO):
 
         # Event channels
         event_channels = []
-        for chan_index in trange(nb_event_chan, desc="Parsing event channels", leave=True):
+        if self.progress_bar:
+            chan_loop = trange(nb_event_chan, desc="Parsing event channels", leave=True)
+        else:
+            chan_loop = range(nb_event)
+        for chan_index in chan_loop:
             h = eventHeaders[chan_index]
             chan_id = h['Channel']
             name = h['Name'].decode('utf8')
