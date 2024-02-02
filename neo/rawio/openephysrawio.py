@@ -57,6 +57,16 @@ class OpenEphysRawIO(BaseRawIO):
         Theses gaps are checked channel per channel which make the parse_header() slow.
         If gaps are detected then they are filled with zeros but the the reading will be much slower for getting signals.
 
+    Parameters
+    ----------
+    dirname: str
+        The directory where the files are stored.
+    ignore_timestamps_errors: bool
+        (deprecated) This parameter is not used anymore.
+    fill_gap_value: int
+        When gaps are detected in continuous files, the gap is filled with this value.
+        Default is 0.
+
     """
     # file formats used by openephys
     extensions = ['continuous', 'openephys', 'spikes', 'events', 'xml']
@@ -314,9 +324,8 @@ class OpenEphysRawIO(BaseRawIO):
             channel_indexes = slice(None)
         global_channel_indexes = global_channel_indexes[channel_indexes]
 
-        sigs_chunk = np.ones((i_stop - i_start, len(global_channel_indexes)), dtype='int16') * self.fill_gap_value
-
         if not self._gap_mode:
+            sigs_chunk = np.zeros((i_stop - i_start, len(global_channel_indexes)), dtype='int16')
             # previous behavior block index are linear
             block_start = i_start // RECORD_SIZE
             block_stop = i_stop // RECORD_SIZE + 1
@@ -328,6 +337,9 @@ class OpenEphysRawIO(BaseRawIO):
                 sub = data[block_start:block_stop]
                 sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
         else:
+            sigs_chunk = np.full(shape=(i_stop - i_start, len(global_channel_indexes)),
+                                 fill_value=self.fill_gap_value,
+                                 dtype='int16')
             # slow mode 
             for i, global_chan_index in enumerate(global_channel_indexes):
                 data = self._sigs_memmap[seg_index][global_chan_index]
