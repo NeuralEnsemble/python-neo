@@ -2,7 +2,7 @@
 Neo 0.12.0 release notes
 ========================
 
-17th February 2022
+17th February 2023
 
 .. currentmodule:: neo.io
 
