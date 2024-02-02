@@ -62,9 +62,10 @@ class OpenEphysRawIO(BaseRawIO):
     extensions = ['continuous', 'openephys', 'spikes', 'events', 'xml']
     rawmode = 'one-dir'
 
-    def __init__(self, dirname='', ignore_timestamps_errors=None):
+    def __init__(self, dirname='', ignore_timestamps_errors=None, fill_gap_value=0):
         BaseRawIO.__init__(self)
         self.dirname = dirname
+        self.fill_gap_value = int(fill_gap_value)
         if ignore_timestamps_errors is not None:
             self.logger.warning("OpenEphysRawIO ignore_timestamps_errors=True/False is not used anymore")
 
@@ -313,7 +314,7 @@ class OpenEphysRawIO(BaseRawIO):
             channel_indexes = slice(None)
         global_channel_indexes = global_channel_indexes[channel_indexes]
 
-        sigs_chunk = np.zeros((i_stop - i_start, len(global_channel_indexes)), dtype='int16')
+        sigs_chunk = np.ones((i_stop - i_start, len(global_channel_indexes)), dtype='int16') * self.fill_gap_value
 
         if not self._gap_mode:
             # previous behavior block index are linear
