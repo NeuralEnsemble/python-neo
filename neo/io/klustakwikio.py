@@ -329,7 +329,7 @@ class KlustaKwikIO(BaseIO):
                     fetfilehandle.write(f"{stt}\n")
 
                     # and cluster id
-                    clufilehandle.write("{cluster}\n")
+                    clufilehandle.write(f"{cluster}\n")
 
         # We're done, so close the files
         self._close_all_files()
