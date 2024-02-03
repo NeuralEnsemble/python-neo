@@ -891,7 +891,7 @@ class AxographRawIO(BaseRawIO):
                         TraceHeaderDescription = TraceHeaderDescriptionV2
                     else:
                         raise NotImplementedError(
-                            f'unimplemented trace header version "{trace_header_info['trace_header_version']}"!'
+                            f'unimplemented trace header version `{trace_header_info["trace_header_version"]}`!'
                         )
 
                     for key, fmt in TraceHeaderDescription:
@@ -939,7 +939,7 @@ class AxographRawIO(BaseRawIO):
                         GroupHeaderDescription = GroupHeaderDescriptionV1
                     else:
                         raise NotImplementedError(
-                            f'unimplemented group header version "{group_header_info['group_header_version']}"!'
+                            f'unimplemented group header version `{group_header_info["group_header_version"]}`!'
                         )
 
                     for key, fmt in GroupHeaderDescription:
