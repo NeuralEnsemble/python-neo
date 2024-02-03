@@ -175,7 +175,7 @@ class PlexonRawIO(BaseRawIO):
             if self.progress_bar:
                 chan_loop = tqdm(
                     block_pos[bl_type],
-                    desc="Finalizing data blocks for type %d" % bl_type,
+                    desc=f"Finalizing data blocks for type {bl_type}",
                     leave=True,
                 )
             else:
@@ -292,7 +292,7 @@ class PlexonRawIO(BaseRawIO):
             h = dspChannelHeaders[c]
 
             name = h["Name"].decode("utf8")
-            _id = "ch{}#{}".format(chan_id, unit_id)
+            _id = f"ch{chan_id}#{unit_id}"
             wf_units = ""
             if global_header["Version"] < 103:
                 wf_gain = 3000.0 / (2048 * h["Gain"] * 1000.0)

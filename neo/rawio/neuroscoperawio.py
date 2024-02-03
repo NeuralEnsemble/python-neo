@@ -109,7 +109,7 @@ class NeuroScopeRawIO(BaseRawIO):
         # signals
         sig_channels = []
         for c in range(nb_channel):
-            name = "ch{}grp{}".format(c, channel_group.get(c, "none"))
+            name = f"ch{c}grp{channel_group.get(c, 'none')}"
             chan_id = str(c)
             units = "mV"
             offset = 0.0

@@ -126,7 +126,7 @@ class ExampleRawIO(BaseRawIO):
         # The real signal will be evaluated as `(raw_signal * gain + offset) * pq.Quantity(units)`
         signal_channels = []
         for c in range(16):
-            ch_name = "ch{}".format(c)
+            ch_name = f"ch{c}"
             # our channel id is c+1 just for fun
             # Note that chan_id should be related to
             # original channel id in the file format
@@ -159,8 +159,8 @@ class ExampleRawIO(BaseRawIO):
         # will return None
         spike_channels = []
         for c in range(3):
-            unit_name = "unit{}".format(c)
-            unit_id = "#{}".format(c)
+            unit_name = f"unit{c}"
+            unit_id = f"#{c}"
             wf_units = "uV"
             wf_gain = 1000.0 / 2**16
             wf_offset = 0.0
@@ -204,12 +204,12 @@ class ExampleRawIO(BaseRawIO):
         # final neo objects.
         for block_index in range(2):
             bl_ann = self.raw_annotations["blocks"][block_index]
-            bl_ann["name"] = "Block #{}".format(block_index)
-            bl_ann["block_extra_info"] = "This is the block {}".format(block_index)
+            bl_ann["name"] = f"Block #{block_index}"
+            bl_ann["block_extra_info"] = f"This is the block {block_index}"
             for seg_index in range([2, 3][block_index]):
                 seg_ann = bl_ann["segments"][seg_index]
-                seg_ann["name"] = "Seg #{} Block #{}".format(seg_index, block_index)
-                seg_ann["seg_extra_info"] = "This is the seg {} of block {}".format(seg_index, block_index)
+                seg_ann["name"] = f"Seg #{seg_index} Block #{block_index}"
+                seg_ann["seg_extra_info"] = f"This is the seg {seg_index} of block {block_index}"
                 for c in range(2):
                     sig_an = seg_ann["signals"][c]["nickname"] = f"This stream {c} is from a subdevice"
                     # add some array annotations (8 channels)

@@ -336,7 +336,7 @@ def add_epoch(segment, event1, event2=None, pre=0 * pq.s, post=0 * pq.s, attach_
     if "name" not in kwargs:
         kwargs["name"] = "epoch"
     if "labels" not in kwargs:
-        kwargs["labels"] = ["{}_{}".format(kwargs["name"], i) for i in range(len(times))]
+        kwargs["labels"] = [f"{kwargs['name']}_{i}" for i in range(len(times))]
 
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
 

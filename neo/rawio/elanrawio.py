@@ -55,7 +55,7 @@ class ElanRawIO(BaseRawIO):
 
             # version
             version = f.readline()[:-1]
-            assert version in ["V2", "V3"], "Read only V2 or V3 .eeg.ent files. %s given" % version
+            assert version in ["V2", "V3"], f"Read only V2 or V3 .eeg.ent files. {version} given"
 
             # info
             info1 = f.readline()[:-1]

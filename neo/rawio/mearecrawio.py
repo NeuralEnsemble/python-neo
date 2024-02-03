@@ -95,7 +95,7 @@ class MEArecRawIO(BaseRawIO):
         sig_channels = []
         if self.load_analogsignal:
             for c in range(self._num_channels):
-                ch_name = "ch{}".format(c)
+                ch_name = f"ch{c}"
                 chan_id = str(c + 1)
                 sr = self._sampling_rate  # Hz
                 dtype = self._dtype
@@ -111,8 +111,8 @@ class MEArecRawIO(BaseRawIO):
         spike_channels = []
         if self.load_spiketrains:
             for c in range(len(self._spiketrains)):
-                unit_name = "unit{}".format(c)
-                unit_id = "#{}".format(c)
+                unit_name = f"unit{c}"
+                unit_id = f"#{c}"
                 # if spiketrains[c].waveforms is not None:
                 wf_units = ""
                 wf_gain = 1.0

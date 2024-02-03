@@ -282,7 +282,7 @@ class TdtRawIO(BaseRawIO):
                     assert data is not None, "no TEV nor SEV"
                     self._sigs_data_buf[seg_index][global_chan_index] = data
 
-                chan_name = "{} {}".format(info["StoreName"], c + 1)
+                chan_name = f"{info['StoreName']} {c + 1}"
                 sampling_rate = sampling_rate
                 units = "V"  # WARNING this is not sur at all
                 gain = 1.0
@@ -315,14 +315,14 @@ class TdtRawIO(BaseRawIO):
                     unit_index = len(spike_channels)
                     self.internal_unit_ids[unit_index] = (info["StoreName"], chan_id, unit_id)
 
-                    unit_name = "ch{}#{}".format(chan_id, unit_id)
+                    unit_name = f"ch{chan_id}#{unit_id}"
                     wf_units = "V"
                     wf_gain = 1.0
                     wf_offset = 0.0
                     wf_left_sweep = info["NumPoints"] // 2
                     wf_sampling_rate = info["SampleFreq"]
                     spike_channels.append(
-                        (unit_name, "{}".format(unit_id), wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate)
+                        (unit_name, f"{unit_id}", wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate)
                     )
 
                     self._waveforms_size.append(info["NumPoints"])

@@ -162,7 +162,7 @@ class TestEvent(unittest.TestCase):
     def test__time_slice_deepcopy_array_annotations(self):
         length = self.evt.shape[-1]
         params1 = {
-            "test0": ["y{}".format(i) for i in range(length)],
+            "test0": [f"y{i}" for i in range(length)],
             "test1": ["deeptest" for i in range(length)],
             "test2": [(-1) ** i > 0 for i in range(length)],
         }
@@ -174,7 +174,7 @@ class TestEvent(unittest.TestCase):
 
         # Change annotations of original
         params2 = {
-            "test0": ["x{}".format(i) for i in range(length)],
+            "test0": [f"x{i}" for i in range(length)],
             "test2": [(-1) ** (i + 1) > 0 for i in range(length)],
         }
         self.evt.array_annotate(**params2)
@@ -185,7 +185,7 @@ class TestEvent(unittest.TestCase):
         self.assertFalse(all(self.evt.array_annotations["test2"][5:8] == result.array_annotations["test2"]))
 
         # Change annotations of result
-        params3 = {"test0": ["z{}".format(i) for i in range(5, 8)]}
+        params3 = {"test0": [f"z{i}" for i in range(5, 8)]}
         result.array_annotate(**params3)
         result.array_annotations["test1"][1] = "shallow2"
 
