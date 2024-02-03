@@ -682,7 +682,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         self._generate_minimal_annotations()
 
         bl_ann = self.raw_annotations["blocks"][0]
-        bl_ann["name"] = f"Block #{0}' from lsx files(s){self._lsx_files if self._lsx_files else ""}"
+        bl_ann["name"] = "Block #{}{}".format(0, " from lsx file(s) {self._lsx_files}" if self._lsx_files else "")
         bl_ann["file_origin"] = (
             "\n".join(str(self.dirname / f) for f in self._lsx_files) if self._lsx_files else bl_ann["file_origin"]
         )
