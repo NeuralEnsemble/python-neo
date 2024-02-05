@@ -229,7 +229,7 @@ class Epoch(DataObject):
         objs = [
             f"{label}@{str(time)} for {str(dur)}" for label, time, dur in zip(self.labels, self.times, self.durations)
         ]
-        return f"<Epoch: %s>" % ", ".join(objs)
+        return "<Epoch: %s>" % ", ".join(objs)
 
     def _repr_pretty_(self, pp, cycle):
         labels = ""
