@@ -125,6 +125,18 @@ class BaseIO:
     def read(self, lazy: bool = False, **kargs):
         """
         Return all data from the file as a list of Blocks
+
+        Parameters
+        ----------
+        lazy: bool, default: False
+            Whether to lazily load the data (True) or to load into memory (False)
+        kargs: dict
+            IO specific additional arguments
+        
+        Returns
+        ------
+        block_list: list[neo.Block]
+            Returns all the data from the file as Blocks
         """
         if lazy and not self.support_lazy:
             raise ValueError("This IO module does not support lazy loading")
