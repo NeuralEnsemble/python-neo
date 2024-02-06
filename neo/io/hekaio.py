@@ -113,7 +113,7 @@ class HekaIO(BaseIO):
                 seg.analogsignals.append(anaSig)
             bl.segments.append(seg)
 
-        bl.create_many_to_one_relationship()
+        # bl.create_many_to_one_relationship() removed in version 0.13.0
 
         return bl
 
