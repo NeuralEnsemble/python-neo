@@ -87,7 +87,7 @@ class BaseFromRaw(BaseIO):
         block_index: int, default: 0
             In the case of multiple blocks, the block_index specifies which block to read
         lazy: bool, default: False
-            Whether to read the block lazily (True) or load into memory (false)
+            Whether to read the block lazily (True) or load into memory (False)
         create_group_across_segment: bool | dict | None, default: None
             If True :
                 * Create a neo.Group to group AnalogSignal segments
@@ -98,9 +98,8 @@ class BaseFromRaw(BaseIO):
                 * for example: create_group_across_segment = { 'AnalogSignal': True, 'SpikeTrain': False, ...}
         signal_group_mode: 'split-all' | 'group-by-same-units' | None, default: None
             This control behavior for grouping channels in AnalogSignal.
-                * 'split-all': each channel will give an AnalogSignal
-                * 'group-by-same-units' all channel sharing the same quantity units ar grouped in
-                a 2D AnalogSignal
+                * 'split-all': each channel will be give an AnalogSignal
+                * 'group-by-same-units' all channel sharing the same quantity units are grouped in a 2D AnalogSignal
             By default None since the default is dependant on the IO
         load_waveforms: bool, default: False
             Determines whether SpikeTrains.waveforms is created
@@ -221,20 +220,19 @@ class BaseFromRaw(BaseIO):
             Whether to lazily load the segment (True) or to load the segment into memory (False)
         signal_group_mode: 'split-all' | 'group-by-same-units' | None, default: None
            This control behavior for grouping channels in AnalogSignal.
-            * 'split-all': each channel will give an AnalogSignal
-            * 'group-by-same-units' all channel sharing the same quantity units ar grouped in
-            a 2D AnalogSignal
+            * 'split-all': each channel will be give an AnalogSignal
+            * 'group-by-same-units' all channel sharing the same quantity units are grouped in a 2D AnalogSignal
         load_waveforms: bool, default: False
             Determines whether SpikeTrains.waveforms is created
-        time_slice: tuple[float | None] | None, default: None
+        time_slice: tuple[quantity.Quantities | None] | None, default: None
             Whether to take a time slice of the data
-                * None: indicates from beginning of segment to the end of the segment
+                * None: indicates from beginning of the segment to the end of the segment
                 * tuple: (t_start, t_stop) with t_start and t_stop being quantities in seconds
                 * tuple: (None, t_stop) indicates the beginning of the segment to t_stop
                 * tuple: (t_start, None) indicates from t_start to the end of the segment
         strict_slicing: bool, default: True
             Control if an error is raised or not when t_start or t_stop
-             is outside the real time range of the segment.
+            is outside of the real time range of the segment.
 
         Returns
         -------
@@ -243,7 +241,7 @@ class BaseFromRaw(BaseIO):
         """
 
         if lazy:
-            assert time_slice is None, "For lazy=True you must specify time_slice when LazyObject.load(time_slice=...)"
+            assert time_slice is None, "For lazy=True you must specify a time_slice when LazyObject.load(time_slice=...)"
 
             assert (
                 not load_waveforms

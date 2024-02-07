@@ -174,52 +174,50 @@ class AxographRawIO(BaseRawIO):
     """
     RawIO class for reading AxoGraph files (.axgd, .axgx)
 
-    Args:
-        filename (string):
-            File name of the AxoGraph file to read.
-        force_single_segment (bool):
-            Episodic files are normally read as multi-Segment Neo objects. This
-            parameter can force AxographRawIO to put all signals into a single
-            Segment. Default: False.
+    Parameters
+    ----------
+    filename: str
+        File name of the AxoGraph file to read.
+    force_single_segment: bool, default: False
+        Episodic files are normally read as multi-Segment Neo objects. This
+        parameter can force AxographRawIO to put all signals into a single
+        Segment.
 
-    Example:
+    Examples
+    --------
         >>> import neo
-        >>> r = neo.rawio.AxographRawIO(filename=filename)
-        >>> r.parse_header()
-        >>> print(r)
+        >>> reader = neo.rawio.AxographRawIO(filename=filename)
+        >>> reader.parse_header()
+        >>> print(reader)
 
         >>> # get signals
-        >>> raw_chunk = r.get_analogsignal_chunk(
-        ...     block_index=0, seg_index=0,
-        ...     i_start=0, i_stop=1024,
-        ...     channel_names=channel_names)
-        >>> float_chunk = r.rescale_signal_raw_to_float(
-        ...     raw_chunk,
-        ...     dtype='float64',
-        ...     channel_names=channel_names)
+        >>> raw_chunk = reader.get_analogsignal_chunk(block_index=0,
+        ...                                           seg_index=0,
+        ...                                           i_start=0,
+        ...                                           i_stop=1024,
+        ...                                           channel_names=channel_names)
+        
+        >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk,
+        ...                                             dtype='float64',
+        ...                                             channel_names=channel_names)  
         >>> print(float_chunk)
 
         >>> # get event markers
-        >>> ev_raw_times, _, ev_labels = r.get_event_timestamps(
-        ...     event_channel_index=0)
-        >>> ev_times = r.rescale_event_timestamp(
-        ...     ev_raw_times, dtype='float64')
+        >>> ev_raw_times, _, ev_labels = reader.get_event_timestamps(event_channel_index=0)
+        >>> ev_times = reader.rescale_event_timestamp(ev_raw_times, dtype='float64')
         >>> print([ev for ev in zip(ev_times, ev_labels)])
 
         >>> # get interval bars
-        >>> ep_raw_times, ep_raw_durations, ep_labels = r.get_event_timestamps(
-        ...     event_channel_index=1)
-        >>> ep_times = r.rescale_event_timestamp(
-        ...     ep_raw_times, dtype='float64')
-        >>> ep_durations = r.rescale_epoch_duration(
-        ...     ep_raw_durations, dtype='float64')
+        >>> ep_raw_times, ep_raw_durations, ep_labels = reader.get_event_timestamps(event_channel_index=1)
+        >>> ep_times = reader.rescale_event_timestamp(ep_raw_times, dtype='float64')
+        >>> ep_durations = reader.rescale_epoch_duration(ep_raw_durations, dtype='float64') 
         >>> print([ep for ep in zip(ep_times, ep_durations, ep_labels)])
 
         >>> # get notes
-        >>> print(r.info['notes'])
+        >>> print(reader.info['notes'])
 
         >>> # get other miscellaneous info
-        >>> print(r.info)
+        >>> print(reader.info)
     """
 
     name = "AxographRawIO"

@@ -32,8 +32,20 @@ from collections import OrderedDict
 
 class Spike2RawIO(BaseRawIO):
     """
-    This implementation in neo read only old smr files.
+    This implementation in neo reads only old smr files.
     For smrx files you need to use CedRawIO which is based on sonpy.
+
+    Parameters
+    ----------
+    filename: str, default: ''
+        The *.smr file to be loaded
+    take_ideal_sampling_rate: bool, default: False
+        If True takes the `ideal_rate` from info
+    ced_units: bool, default: True
+        If True uses the ced unit ids
+    try_signal_grouping: bool, default: True
+        If True will attempt to group signals together
+
     """
 
     extensions = ["smr"]

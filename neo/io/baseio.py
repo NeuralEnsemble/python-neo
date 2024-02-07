@@ -135,7 +135,7 @@ class BaseIO:
         
         Returns
         ------
-        block_list: list[neo.Block]
+        block_list: list[neo.core.Block]
             Returns all the data from the file as Blocks
         """
         if lazy and not self.support_lazy:
@@ -154,6 +154,17 @@ class BaseIO:
             raise NotImplementedError
 
     def write(self, bl, **kargs):
+        """
+        Writes a given block if IO supports writing
+
+        Parameters
+        ----------
+        bl: neo.core.Block
+            The neo Block to be written
+        kargs: dict
+            IO specific additional arguments
+            
+        """
         if Block in self.writeable_objects:
             if isinstance(bl, Sequence):
                 assert hasattr(self, "write_all_blocks"), (
