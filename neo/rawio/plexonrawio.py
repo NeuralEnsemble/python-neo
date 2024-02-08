@@ -50,12 +50,26 @@ class PlexonRawIO(BaseRawIO):
     def __init__(self, filename="", progress_bar=True):
         """
 
+        Class for reading non-pl2 plexon files
+
         Parameters
         ----------
-        filename: str
-            The filename.
+        filename: str, default: ''
+            The *.plx file to be loaded
         progress_bar: bool, default True
             Display progress bar using tqdm (if installed) when parsing the file.
+
+        Notes
+        -----
+        * Compatible with versions 100 to 106. Other versions have not been tested.
+        * Note that Plexon now use a new format PL2 which is NOT supported by this IO.
+
+        Examples
+        --------
+        >>> import neo.rawio
+        >>> r = neo.rawio.PlexonRawIO(filename='data.plx')
+        >>> r.parse_header()
+        >>> print(r)
 
         """
         BaseRawIO.__init__(self)

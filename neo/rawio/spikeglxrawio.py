@@ -69,10 +69,37 @@ class SpikeGLXRawIO(BaseRawIO):
     """
     Class for reading data from a SpikeGLX system
 
-    dirname:
+    Parameters
+    ----------
+    dirname: str, default: ''
         The spikeglx folder containing meta/bin files
-    load_sync_channel=False/True
-        The last channel (SY0) of each stream is a fake channel used for synchronisation.
+    load_sync_channel: bool, default: False
+        The last channel (SY0) of each stream is a fake channel used for synchronisation
+    load_channel_location: bool, default: False
+        If True probeinterface is used to load the channel locations from the directory
+
+    Notes
+    -----
+    * Contrary to other implementations this IO reads the entire folder and subfolders and:
+      deals with several segments based on the `_gt0`, `_gt1`, `_gt2`, etc postfixes
+      deals with all signals "imec0", "imec1" for neuropixel probes and also
+      external signal like"nidq". This is the "device"
+    * For imec device both "ap" and "lf" are extracted so one device have several "streams"
+    * There are several versions depending the neuropixel probe generation (`1.x`/`2.x`/`3.x`)
+    * Here, we assume that the `meta` file has the same structure across all generations.
+    * This IO is developed based on neuropixel generation 2.0, single shank recordings.
+
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> reader = neo.rawio.SpikeGLXRawIO(dirname='path/to/data/')
+    >>> reader.parse_header()
+    >>> print(reader)
+    >>> raw_chunk = reader.get_analogsignal_chunk(block_index=0,
+                                                  seg_index=0,
+                                                  i_start=None,
+                                                  i_stop=None,
+                                                  stream_index=0)
     """
 
     # file formats used by spikeglxio
