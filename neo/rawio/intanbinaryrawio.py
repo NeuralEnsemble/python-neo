@@ -65,8 +65,8 @@ class IntanBinaryRawIO(BaseRawIO):
     def _parse_header(self):
 
         dir_path = Path(self.dirname)
-        assert dir_path.is_dir(), (
-            "IntanBinaryRawIO requires the root " "directory containing info.rhd"
+        assert (dir_path / "info.rhd").exists()
+            "IntanBinaryRawIO requires the root directory containing the `info.rhd`"
         )
 
         header_file = dir_path / "info.rhd"
