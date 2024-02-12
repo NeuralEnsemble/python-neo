@@ -65,25 +65,20 @@ class IntanBinaryRawIO(BaseRawIO):
     def _parse_header(self):
 
         dir_path = Path(self.dirname)
-        assert (dir_path / "info.rhd").exists()
+        assert (dir_path / "info.rhd").exists(), (
             "IntanBinaryRawIO requires the root directory containing the `info.rhd`"
         )
 
         header_file = dir_path / "info.rhd"
 
-        for file in possible_raw_files:
-            if (dir_path / file).is_file():
-                one_file_per_signal = True
-                break
-            else:
-                one_file_per_signal = False
+        one_file_per_signal = any((dir_path / file).exists() for file in one_file_per_signal_filenames)
 
         self.one_file_per_signal = one_file_per_signal
 
         if one_file_per_signal:
-            raw_file_dict = create_one_file_per_signal_dict(dir_path)
+            raw_file_paths_dict = create_one_file_per_signal_dict(dir_path)
         else:
-            raw_file_dict = create_one_file_per_channel_dict(dir_path)
+            raw_file_paths_dict = create_one_file_per_channel_dict(dir_path)
 
         (
             self._global_info,
@@ -96,14 +91,14 @@ class IntanBinaryRawIO(BaseRawIO):
         for stream_index, sub_datatype in data_dtype.items():
             if one_file_per_signal:
                 self._raw_data[stream_index] = np.memmap(
-                    raw_file_dict[stream_index], dtype=sub_datatype, mode="r"
+                    raw_file_paths_dict[stream_index], dtype=sub_datatype, mode="r"
                 )
             else:
                 self._raw_data[stream_index] = []
                 for channel_index, datatype in enumerate(sub_datatype):
                     self._raw_data[stream_index].append(
                         np.memmap(
-                            raw_file_dict[stream_index][channel_index],
+                            raw_file_paths_dict[stream_index][channel_index],
                             dtype=[datatype],
                             mode="r",
                         )
@@ -257,7 +252,7 @@ class IntanBinaryRawIO(BaseRawIO):
 # RHD Zone for Binary Files
 
 # For One File Per Signal
-possible_raw_files = [
+one_file_per_signal_filenames = [
     "amplifier.dat",
     "auxiliary.dat",
     "supply.dat",
@@ -280,7 +275,7 @@ possible_raw_file_prefixes = [
 def create_one_file_per_signal_dict(dirname):
     """Function for One File Per Signal Type"""
     raw_file_dict = {}
-    for raw_index, raw_file in enumerate(possible_raw_files):
+    for raw_index, raw_file in enumerate(one_file_per_signal_filenames):
         if Path(dirname / raw_file).is_file():
             raw_file_dict[raw_index] = Path(dirname / raw_file)
     raw_file_dict[6] = Path(dirname / "time.dat")
@@ -435,4 +430,13 @@ def read_rhd(filename):
     else:
         global_info["notch_filter_applied"] = False
 
+    # because data_dtype has all possible dtypes we need to delete the dtypes which aren't contained in this dataset
+    # so if the data_dtype value is still an empty list we delete to ignore.
+    dtype_cleanup = []
+    for key, value in data_dtype.items():
+        if len(value)==0:
+            dtype_cleanup.append(key)
+    for key in dtype_cleanup:
+        _ = data_dtype.pop(key)
+            
     return global_info, ordered_channels, data_dtype, BLOCK_SIZE
