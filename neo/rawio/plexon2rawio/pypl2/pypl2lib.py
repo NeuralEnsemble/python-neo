@@ -9,14 +9,20 @@
 # copyright notice is kept intact.
 
 from sys import platform
-import os
+import subprocess
 import pathlib
 import warnings
 
 if any(platform.startswith(name) for name in ("linux", "darwin", "freebsd")):
+    try:
+        result_wine = subprocess.run(["dpkg", "-l", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError:
+        raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
+
     from zugbruecke import CtypesSession
 
     ctypes = CtypesSession(log_level=100)
+
 
 elif platform.startswith("win"):
     import ctypes
