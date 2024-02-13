@@ -403,7 +403,7 @@ def read_rhs(filename):
 
     if bool(global_info["dc_amplifier_data_saved"]):
         for chan_info in channels_by_type[0]:
-            name = chan_info["native_channel_name"]
+            name = chan_info["custom_channel_name"]
             chan_info_dc = dict(chan_info)
             chan_info_dc["custom_channel_name"] = name + "_DC"
             chan_info_dc["sampling_rate"] = sr
