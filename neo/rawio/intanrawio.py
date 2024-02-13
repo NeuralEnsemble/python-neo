@@ -231,8 +231,10 @@ class IntanRawIO(BaseRawIO):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         mask = self.header["signal_channels"]["stream_id"] == stream_id
         signal_channels = self.header["signal_channels"][mask]
+        channel_indexes_are_none = False
         if channel_indexes is None:
             channel_indexes = slice(None)
+            channel_indexes_are_none = True
         channel_names = signal_channels["name"][channel_indexes]
 
         if self.file_type == 'header-attached':
@@ -260,7 +262,10 @@ class IntanRawIO(BaseRawIO):
             elif self.file_type == 'one-file-per-signal':
                 data_chan = self._raw_data[stream_index][chan_name]
             else:
-                data_chan = self._raw_data[stream_index][i][chan_name]
+                if channel_indexes_are_none:
+                    data_chan = self._raw_data[stream_index][i][chan_name]
+                else:
+                    data_chan = self._raw_data[stream_index][channel_indexes[i]][chan_name]
 
             if len(shape) == 1:
                 sigs_chunk[:, i] = data_chan[i_start:i_stop]
