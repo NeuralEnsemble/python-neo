@@ -12,24 +12,24 @@ from sys import platform
 import subprocess
 import pathlib
 import warnings
+import numpy as np
 
-if any(platform.startswith(name) for name in ("linux", "darwin", "freebsd")):
+plataform_is_windows = platform.system() == "Windows"
+
+if plataform_is_windows:
+    import ctypes
+else:
+
     try:
-        result_wine = subprocess.run(["dpkg", "-l", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        is_wine_available = subprocess.run(
+            ["wine", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
+        )
     except subprocess.CalledProcessError:
         raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
 
     from zugbruecke import CtypesSession
 
     ctypes = CtypesSession(log_level=100)
-
-
-elif platform.startswith("win"):
-    import ctypes
-else:
-    raise SystemError("unsupported platform")
-
-import numpy as np
 
 
 class tm(ctypes.Structure):
