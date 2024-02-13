@@ -55,7 +55,7 @@ class IntanRawIO(BaseRawIO):
        name of the 'rhd' or 'rhs' data file
     """
 
-    extensions = ["rhd", "rhs"]
+    extensions = ["rhd", "rhs", "dat"]
     rawmode = "one-file"
 
     def __init__(self, filename=""):
@@ -70,7 +70,7 @@ class IntanRawIO(BaseRawIO):
 
         filename = Path(self.filename)
         
-        if not filename.exists():
+        if not filename.exists() or not filename.is_file():
             raise FileNotFoundError(f"{filename} does not exist")
 
         if self.filename.endswith(".rhs"):
@@ -78,14 +78,19 @@ class IntanRawIO(BaseRawIO):
             self._global_info, self._ordered_channels, data_dtype, header_size, self._block_size = read_rhs(
                 self.filename
             )
+        # 3 possibilities for rhd files two use a plain header called 'info.rhd' and one format has the header
+        # attached to the actual binary file with data
         elif self.filename.endswith(".rhd"):
             if filename.name == "info.rhd":
+                # first we have one-file-per-signal which is where one neo stream/file is saved as .dat files
                 if any((filename.parent / file).exists() for file in one_file_per_signal_filenames):
                     self.file_type = 'one-file-per-signal'
                     raw_file_paths_dict = create_one_file_per_signal_dict(filename.parent)
+                # then there is one-file-per-channel where each channel in a neo stream is in its own .dat file
                 else:
                     self.file_type = 'one-file-per-channel'
                     raw_file_paths_dict = create_one_file_per_channel_dict(filename.parent)
+            # finally the format with the header-attached to the binary file as one giant file
             else:
                 self.file_type = 'header-attached'
             self._global_info, self._ordered_channels, data_dtype, header_size, self._block_size = read_rhd(
@@ -97,7 +102,7 @@ class IntanRawIO(BaseRawIO):
             self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode="r", offset=header_size)
         else:
             self._raw_data = {}
-            for stream_index, sub_datatype in data_dtype.items():
+            for stream_index, sub_datatype in enumerate(data_dtype.values()):
                 if self.file_type == "one-file-per-signal":
                     self._raw_data[stream_index] = np.memmap(
                         raw_file_paths_dict[stream_index], dtype=sub_datatype, mode="r"
@@ -660,7 +665,7 @@ def read_rhd(filename, file_type):
             chan_info = channels_by_type[sig_type][0]
             chan_info["native_channel_name"] = name  # overwite to allow memmap to work
             chan_info["sampling_rate"] = sr
-            chan_info["units"] = "TTL"  # arbitrary units so I did TTL for the logic
+            chan_info["units"] = "TTL"  # arbitrary units TTL for logic
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             ordered_channels.append(chan_info)
