@@ -78,7 +78,7 @@ class NlxHeader(OrderedDict):
     # stored in main dictionary keyed by an abbreviation for the style.
     header_pattern_dicts = {
         # BML
-    "bml": dict(
+        "bml": dict(
             datetime1_regex=r"## Time Opened: \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
             filename_regex=r"## File Name: (?P<filename>\S+)",
             datetimeformat="%m/%d/%y %H:%M:%S.%f",
@@ -127,7 +127,7 @@ class NlxHeader(OrderedDict):
             datetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
             filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
             datetimeformat="%Y/%m/%d %H:%M:%S",
-        )
+        ),
     }
 
     def __init__(self, filename):
