@@ -18,6 +18,10 @@ Author: Samuel Garcia (Initial), Zach McKenzie & Heberto Mayorquin (Updates)
 
 """
 from pathlib import Path
+from collections import OrderedDict
+from packaging.version import Version as V
+
+import numpy as np
 
 from .baserawio import (
     BaseRawIO,
@@ -28,9 +32,6 @@ from .baserawio import (
     _common_sig_characteristics,
 )
 
-import numpy as np
-from collections import OrderedDict
-from packaging.version import Version as V
 
 
 class IntanRawIO(BaseRawIO):
@@ -59,8 +60,8 @@ class IntanRawIO(BaseRawIO):
     rawmode = "one-file"
 
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
 
+        BaseRawIO.__init__(self)
         self.filename = filename
 
     def _source_name(self):
@@ -93,20 +94,24 @@ class IntanRawIO(BaseRawIO):
             # finally the format with the header-attached to the binary file as one giant file
             else:
                 self.file_type = 'header-attached'
+
             self._global_info, self._ordered_channels, data_dtype, header_size, self._block_size = read_rhd(
                 self.filename, self.file_type
             )
 
         # memmap raw data with the complicated structured dtype
+        # if header-attached there is one giant memory-map
         if self.file_type == "header-attached":
             self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode="r", offset=header_size)
         else:
             self._raw_data = {}
             for stream_index, (stream_index_key, sub_datatype) in enumerate(data_dtype.items()):
+                # for 'one-file-per-signal' we have one memory map / neo stream
                 if self.file_type == "one-file-per-signal":
                     self._raw_data[stream_index] = np.memmap(
                         raw_file_paths_dict[stream_index_key], dtype=sub_datatype, mode="r"
                     )
+                # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
                 else:
                     self._raw_data[stream_index] = []
                     for channel_index, datatype in enumerate(sub_datatype):
@@ -127,13 +132,14 @@ class IntanRawIO(BaseRawIO):
         else:
             timestamp = self._raw_data[max(self._raw_data.keys())][0]["timestamp"].flatten()
 
-        assert np.all(np.diff(timestamp) == 1), "timestamp have gaps"
+        assert np.all(np.diff(timestamp) == 1), ("Timestamp have gaps, this could be due "
+                                                 "to a corrupted file or an inappropriate file merge")
 
         # signals
         signal_channels = []
         for c, chan_info in enumerate(self._ordered_channels):
-            name = chan_info["native_channel_name"]
-            chan_id = str(c)  # the chan_id have no meaning in intan
+            name = chan_info["custom_channel_name"] # custom are names that can be given by user
+            chan_id = str(chan_info["native_channel_name"])  # native channel is intan internal channel, unchanging
             if chan_info["signal_type"] == 20:
                 # exception for temperature
                 sig_dtype = "int16"
@@ -186,7 +192,7 @@ class IntanRawIO(BaseRawIO):
         spike_channels = []
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
-        # fille into header dict
+        # fill into header dict
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
@@ -231,6 +237,8 @@ class IntanRawIO(BaseRawIO):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         mask = self.header["signal_channels"]["stream_id"] == stream_id
         signal_channels = self.header["signal_channels"][mask]
+
+        # for channel slicing need to keep track of if None or an actual array that can be indexed
         channel_indexes_are_none = False
         if channel_indexes is None:
             channel_indexes = slice(None)
@@ -529,7 +537,17 @@ stream_type_to_name = {
 }
 
 
-def read_rhd(filename, file_type):
+def read_rhd(filename, file_type: str):
+    """Function for reading the rhd file header
+    
+    Parameters
+    ----------
+    filename: str | Path
+        The filename of the *.rhd file
+    file_type: 'header-attached' | 'one-file-per-signal' | 'one-file-per-channel'
+        Whether the header is included with the rest of the data ('header-attached')
+        Or as a standalone file ('one-file-per-signal' or 'one-file-per-channel')
+    """
     with open(filename, mode="rb") as f:
 
         global_info = read_variable_header(f, rhd_global_header_base)
