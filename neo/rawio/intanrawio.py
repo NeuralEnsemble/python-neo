@@ -242,7 +242,10 @@ class IntanRawIO(BaseRawIO):
         elif self.file_type == 'one-file-per-signal':
             shape = self._raw_data[stream_index][channel_names[0]].shape
         else:
-            shape = self._raw_data[stream_index][0][channel_names[0]].shape
+            if channel_indexes_are_none:
+                shape = self._raw_data[stream_index][0][channel_names[0]].shape
+            else:
+                shape = self._raw_data[stream_index][channel_indexes[0]][channel_names[0]].shape
 
         # some channel (temperature) have 1D field so shape 1D
         # because 1 sample per block
