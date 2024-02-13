@@ -82,14 +82,14 @@ class NlxHeader(OrderedDict):
             datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)'
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
-            datetimeformat='%m/%d/%y %H:%M:%S.%f'
+            datetimeformat='%m/%d/%y %H:%M:%S.%f',
         ),
         # Cheetah after version 1 and before version 5
         'bv5': dict(
             datetime1_regex=r'## Time Opened: \(m/d/y\): (?P<date>\S+)'
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
-            datetimeformat='%m/%d/%Y %H:%M:%S.%f'
+            datetimeformat='%m/%d/%Y %H:%M:%S.%f',
         ),
         # Cheetah version 5.4.0
         'v5.4.0': dict(
@@ -98,7 +98,7 @@ class NlxHeader(OrderedDict):
             datetime2_regex=r'## Time Closed \(m/d/y\): (?P<date>\S+)'
                             r'  At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
-            datetimeformat='%m/%d/%Y %H:%M:%S.%f'
+            datetimeformat='%m/%d/%Y %H:%M:%S.%f',
         ),
         # Cheetah version 5 before and including v 5.6.4 as well as version 1
         'bv5.6.4': dict(
@@ -107,7 +107,7 @@ class NlxHeader(OrderedDict):
             datetime2_regex=r'## Time Closed \(m/d/y\): (?P<date>\S+)'
                             r'  \(h:m:s\.ms\) (?P<time>\S+)',
             filename_regex=r'## File Name (?P<filename>\S+)',
-            datetimeformat='%m/%d/%Y %H:%M:%S.%f'
+            datetimeformat='%m/%d/%Y %H:%M:%S.%f',
         ),
         'neuraview2': dict(
             datetime1_regex=r'## Date Opened: \(mm/dd/yyy\): (?P<date>\S+)'
@@ -115,20 +115,20 @@ class NlxHeader(OrderedDict):
             datetime2_regex=r'## Date Closed: \(mm/dd/yyy\): (?P<date>\S+)'
                             r' At Time: (?P<time>\S+)',
             filename_regex=r'## File Name: (?P<filename>\S+)',
-            datetimeformat='%m/%d/%Y %H:%M:%S'
+            datetimeformat='%m/%d/%Y %H:%M:%S',
         ),
         'peg': dict(
             datetime1_regex=r'-TimeCreated (?P<date>\S+) (?P<time>\S+)',
             datetime2_regex=r'-TimeClosed (?P<date>\S+) (?P<time>\S+)',
             filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
-            datetimeformat='%Y/%m/%d %H:%M:%S.%f'
+            datetimeformat='%Y/%m/%d %H:%M:%S.%f',
         ),
         # Cheetah after v 5.6.4 and default for others such as Pegasus
         'def': dict(
             datetime1_regex=r'-TimeCreated (?P<date>\S+) (?P<time>\S+)',
             datetime2_regex=r'-TimeClosed (?P<date>\S+) (?P<time>\S+)',
             filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
-            datetimeformat='%Y/%m/%d %H:%M:%S'
+            datetimeformat='%Y/%m/%d %H:%M:%S',
         )
     }
 
