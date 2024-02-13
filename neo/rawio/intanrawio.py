@@ -102,17 +102,17 @@ class IntanRawIO(BaseRawIO):
             self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode="r", offset=header_size)
         else:
             self._raw_data = {}
-            for stream_index, sub_datatype in enumerate(data_dtype.values()):
+            for stream_index, (stream_index_key, sub_datatype) in enumerate(data_dtype.items()):
                 if self.file_type == "one-file-per-signal":
                     self._raw_data[stream_index] = np.memmap(
-                        raw_file_paths_dict[stream_index], dtype=sub_datatype, mode="r"
+                        raw_file_paths_dict[stream_index_key], dtype=sub_datatype, mode="r"
                     )
                 else:
                     self._raw_data[stream_index] = []
                     for channel_index, datatype in enumerate(sub_datatype):
                         self._raw_data[stream_index].append(
                             np.memmap(
-                                raw_file_paths_dict[stream_index][channel_index],
+                                raw_file_paths_dict[stream_index_key][channel_index],
                                 dtype=[datatype],
                                 mode="r",
                             )
