@@ -393,7 +393,7 @@ def read_rhs(filename):
 
     # 0: RHS2000 amplifier channel.
     for chan_info in channels_by_type[0]:
-        name = chan_info["native_channel_name"]
+        name = chan_info["custom_channel_name"]
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
@@ -405,7 +405,7 @@ def read_rhs(filename):
         for chan_info in channels_by_type[0]:
             name = chan_info["native_channel_name"]
             chan_info_dc = dict(chan_info)
-            chan_info_dc["native_channel_name"] = name + "_DC"
+            chan_info_dc["custom_channel_name"] = name + "_DC"
             chan_info_dc["sampling_rate"] = sr
             chan_info_dc["units"] = "mV"
             chan_info_dc["gain"] = 19.23
@@ -415,7 +415,7 @@ def read_rhs(filename):
             data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
 
     for chan_info in channels_by_type[0]:
-        name = chan_info["native_channel_name"]
+        name = chan_info["custom_channel_name"]
         chan_info_stim = dict(chan_info)
         chan_info_stim["native_channel_name"] = name + "_STIM"
         chan_info_stim["sampling_rate"] = sr
@@ -435,7 +435,7 @@ def read_rhs(filename):
         4,
     ]:
         for chan_info in channels_by_type[sig_type]:
-            name = chan_info["native_channel_name"]
+            name = chan_info["custom_channel_name"]
             chan_info["sampling_rate"] = sr
             chan_info["units"] = "V"
             chan_info["gain"] = 0.0003125
@@ -614,7 +614,7 @@ def read_rhd(filename, file_type: str):
 
     # 0: RHD2000 amplifier channel
     for chan_info in channels_by_type[0]:
-        name = chan_info["native_channel_name"]
+        name = chan_info["custom_channel_name"]
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
@@ -627,7 +627,7 @@ def read_rhd(filename, file_type: str):
 
     # 1: RHD2000 auxiliary input channel
     for chan_info in channels_by_type[1]:
-        name = chan_info["native_channel_name"]
+        name = chan_info["custom_channel_name"]
         chan_info["sampling_rate"] = sr / 4.0
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000374
@@ -640,7 +640,7 @@ def read_rhd(filename, file_type: str):
 
     # 2: RHD2000 supply voltage channel
     for chan_info in channels_by_type[2]:
-        name = chan_info["native_channel_name"]
+        name = chan_info["custom_channel_name"]
         chan_info["sampling_rate"] = sr / BLOCK_SIZE
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000748
@@ -664,7 +664,7 @@ def read_rhd(filename, file_type: str):
 
     # 3: USB board ADC input channel
     for chan_info in channels_by_type[3]:
-        name = chan_info["native_channel_name"]
+        name = chan_info["custom_channel_name"]
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "V"
         if global_info["eval_board_mode"] == 0:
@@ -690,7 +690,7 @@ def read_rhd(filename, file_type: str):
         if len(channels_by_type[sig_type]) > 0:
             name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
             chan_info = channels_by_type[sig_type][0]
-            chan_info["native_channel_name"] = name  # overwite to allow memmap to work
+            chan_info["custom_channel_name"] = name  # overwite to allow memmap to work
             chan_info["sampling_rate"] = sr
             chan_info["units"] = "TTL"  # arbitrary units TTL for logic
             chan_info["gain"] = 1.0
