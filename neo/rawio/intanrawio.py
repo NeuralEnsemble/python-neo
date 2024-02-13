@@ -121,10 +121,11 @@ class IntanRawIO(BaseRawIO):
         # check timestamp continuity
         if self.file_type == "header-attached":
             timestamp = self._raw_data["timestamp"].flatten()
+        # timestamps are always the last stream
         elif self.file_type == "one-file-per-signal":
-            timestamp = self._raw_data[6]["timestamp"].flatten()
+            timestamp = self._raw_data[max(self._raw_data.keys())]["timestamp"].flatten()
         else:
-            timestamp = self._raw_data[6][0]["timestamp"].flatten()
+            timestamp = self._raw_data[max(self._raw_data.keys())][0]["timestamp"].flatten()
 
         assert np.all(np.diff(timestamp) == 1), "timestamp have gaps"
 
