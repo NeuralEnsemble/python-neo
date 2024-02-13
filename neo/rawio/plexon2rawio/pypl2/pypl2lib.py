@@ -19,13 +19,14 @@ plataform_is_windows = platform.system() == "Windows"
 if plataform_is_windows:
     import ctypes
 else:
-
-    try:
-        is_wine_available = subprocess.run(
-            ["wine", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
-        )
-    except subprocess.CalledProcessError:
-        raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
+    pltaform_is_linux = platform.system() == "Linux"
+    if pltaform_is_linux:
+        try:
+            is_wine_available = subprocess.run(
+                ["wine", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
+            )
+        except subprocess.CalledProcessError:
+            raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
 
     from zugbruecke import CtypesSession
 
