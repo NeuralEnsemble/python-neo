@@ -8,25 +8,22 @@
 # You are free to modify or share this file, provided that the above
 # copyright notice is kept intact.
 
-from sys import platform
+import platform
 import subprocess
 import pathlib
 import warnings
 import numpy as np
 
-plataform_is_windows = platform.system() == "Windows"
+platform_is_windows = platform.system() == "Windows"
 
-if plataform_is_windows:
+if platform_is_windows:
     import ctypes
 else:
-    pltaform_is_linux = platform.system() == "Linux"
-    if pltaform_is_linux:
-        try:
-            is_wine_available = subprocess.run(
-                ["wine", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
+    is_wine_available = subprocess.run(
+                ["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
             )
-        except subprocess.CalledProcessError:
-            raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
+    if is_wine_available.returncode != 0:
+        raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
 
     from zugbruecke import CtypesSession
 
