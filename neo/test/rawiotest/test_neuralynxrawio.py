@@ -27,7 +27,7 @@ class TestNeuralynxRawIO(
         "neuralynx/Cheetah_v5.5.1/original_data",
         "neuralynx/Cheetah_v5.6.3/original_data",
         "neuralynx/Cheetah_v5.7.4/original_data",
-        "neuralynx/Cheetah_v6.3.2/incomplete_blocks",
+        "neuralynx/Cheetah_v6.3.2/incomplete_blocks"
     ]
 
     def test_scan_ncs_files(self):
@@ -355,6 +355,19 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
         ns0.sampFreqUsed = 400
         self.assertNotEqual(ns0, ns1)
 
+class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
+
+    def test_no_date_time(self):
+        filename = self.get_local_path("neuralynx/NoDateHeader/NoDateHeader.nev")
+
+        with self.assertRaises(IOError):
+            hdr = NlxHeader(filename)
+
+        hdr = NlxHeader(filename, props_only=True)
+
+        self.assertEqual(len(hdr), 11)
+        self.assertEqual(hdr['ApplicationName'], 'Pegasus')
+        self.assertEqual(hdr['FileType'], 'Event')
 
 if __name__ == "__main__":
     unittest.main()
