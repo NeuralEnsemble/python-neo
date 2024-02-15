@@ -1,0 +1,36 @@
+name: Black formatting
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 0"  # Weekly at noon UTC on Sundays
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check black formatting
+        id: black-check
+        uses: psf/black@stable
+        with:
+            options: "--check --verbose"
+        continue-on-error: true
+
+      - name: Apply black formatting
+        id: black-apply
+        uses: psf/black@stable
+        if : ${{ steps.black-check.outcome == 'failure' }}
+        with:
+            options: "--verbose"
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v5
+        if : ${{ steps.black-check.outcome == 'failure' }}
+        with:
+            commit-message: black formatting
+            title: Black formatting
+            body: Reformatting code with black style
+            branch: black-formatting

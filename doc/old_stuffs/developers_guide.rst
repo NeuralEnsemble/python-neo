@@ -248,7 +248,6 @@ The :doc:`governance` document describes how decisions about the project are tak
 
 
 .. _Python: https://www.python.org
-.. _nose: https://nose.readthedocs.io/
 .. _Setuptools: https://pypi.python.org/pypi/setuptools/
 .. _tox: http://codespeak.net/tox/
 .. _coverage: https://coverage.readthedocs.io/

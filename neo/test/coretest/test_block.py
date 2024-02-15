@@ -21,8 +21,7 @@ from neo.core.block import Block
 from neo.core.segment import Segment
 from neo.core.container import filterdata
 from neo.core import SpikeTrain, AnalogSignal, Event
-from neo.test.tools import (assert_neo_object_is_compliant,
-                            assert_same_sub_schema)
+from neo.test.tools import assert_neo_object_is_compliant, assert_same_sub_schema
 from neo.test.generate_datasets import random_block, simple_block, random_signal
 
 
@@ -35,9 +34,9 @@ class TestBlock(unittest.TestCase):
         self.blocks = [random_block() for i in range(N_EXAMPLES)]
 
     def test_block_init(self):
-        blk = Block(name='a block')
+        blk = Block(name="a block")
         assert_neo_object_is_compliant(blk)
-        self.assertEqual(blk.name, 'a block')
+        self.assertEqual(blk.name, "a block")
         self.assertEqual(blk.file_origin, None)
 
     def test__merge(self):
@@ -47,14 +46,13 @@ class TestBlock(unittest.TestCase):
         orig_blk1 = deepcopy(blk1)
         blk1.merge(blk2)
 
-        assert_same_sub_schema(orig_blk1.segments + blk2.segments,
-                               blk1.segments)
+        assert_same_sub_schema(orig_blk1.segments + blk2.segments, blk1.segments)
 
     def test__size(self):
         for block in self.blocks:
             targ = {
-                'segments': len(block.segments),
-                'groups': len(block.groups),  # only counts the top-level groups?
+                "segments": len(block.segments),
+                "groups": len(block.groups),  # only counts the top-level groups?
             }
             self.assertEqual(block.size, targ)
 
@@ -70,12 +68,17 @@ class TestBlock(unittest.TestCase):
                 targ.extend(seg.spiketrains)
                 targ.extend(seg.imagesequences)
             chv_names = set([])
+            roi_names = set([])
             for grp in block.groups:
                 for grp1 in grp.walk():
                     for chv in grp1.channelviews:
                         if chv.name not in chv_names:
                             targ.append(chv)
                             chv_names.add(chv.name)
+                    for roi in grp1.regionsofinterest:
+                        if roi.name not in roi_names:
+                            targ.append(roi)
+                            roi_names.add(roi.name)
 
             res1 = block.filter()
             res2 = block.filter({})
@@ -102,17 +105,13 @@ class TestBlock(unittest.TestCase):
     def test__filter_annotation_single(self):
         block = simple_block()
 
-        targ = [
-            block.segments[0].analogsignals[0],
-            block.segments[0].spiketrains[1],
-            block.segments[1].events[0]
-        ]
+        targ = [block.segments[0].analogsignals[0], block.segments[0].spiketrains[1], block.segments[1].events[0]]
 
         res0 = block.filter(thing="wotsit")
-        res1 = block.filter({'thing': "wotsit"})
-        res2 = block.filter(targdict={'thing': "wotsit"})
-        res3 = block.filter([{'thing': "wotsit"}])
-        res4 = block.filter(targdict=[{'thing': "wotsit"}])
+        res1 = block.filter({"thing": "wotsit"})
+        res2 = block.filter(targdict={"thing": "wotsit"})
+        res3 = block.filter([{"thing": "wotsit"}])
+        res4 = block.filter(targdict=[{"thing": "wotsit"}])
 
         self.assertEqual(res0, targ)
         assert_same_sub_schema(res0, targ)
@@ -125,10 +124,10 @@ class TestBlock(unittest.TestCase):
         block = simple_block()
 
         res0 = block.filter(j=5)
-        res1 = block.filter({'j': 5})
-        res2 = block.filter(targdict={'j': 5})
-        res3 = block.filter([{'j': 5}])
-        res4 = block.filter(targdict=[{'j': 5}])
+        res1 = block.filter({"j": 5})
+        res2 = block.filter(targdict={"j": 5})
+        res3 = block.filter([{"j": 5}])
+        res4 = block.filter(targdict=[{"j": 5}])
 
         self.assertEqual(len(res0), 0)
         self.assertEqual(len(res1), 0)
@@ -143,8 +142,8 @@ class TestBlock(unittest.TestCase):
 
         name = targ[0].name
         res0 = block.filter(name=name)
-        res1 = block.filter({'name': name})
-        res2 = block.filter(targdict={'name': name})
+        res1 = block.filter({"name": name})
+        res2 = block.filter(targdict={"name": name})
 
         assert_same_sub_schema(res0, targ)
         assert_same_sub_schema(res1, targ)
@@ -155,8 +154,8 @@ class TestBlock(unittest.TestCase):
 
         name = "potato"
         res0 = block.filter(name=name)
-        res1 = block.filter({'name': name})
-        res2 = block.filter(targdict={'name': name})
+        res1 = block.filter({"name": name})
+        res2 = block.filter(targdict={"name": name})
 
         self.assertEqual(len(res0), 0)
         self.assertEqual(len(res1), 0)
@@ -165,13 +164,9 @@ class TestBlock(unittest.TestCase):
     def test__filter_multi(self):
 
         block = simple_block()
-        targ = [block.segments[1].analogsignals[0],
-                block.segments[1].irregularlysampledsignals[0]]
+        targ = [block.segments[1].analogsignals[0], block.segments[1].irregularlysampledsignals[0]]
 
-        filter = {
-            "name": targ[0].name,
-            "thing": targ[0].annotations["thing"]
-        }
+        filter = {"name": targ[0].name, "thing": targ[0].annotations["thing"]}
 
         res0 = block.filter(**filter)
         res1 = block.filter(filter)
@@ -185,10 +180,7 @@ class TestBlock(unittest.TestCase):
         block = simple_block()
         targ = []
 
-        filter = {
-            "name": "carrot",
-            "thing": "another thing"
-        }
+        filter = {"name": "carrot", "thing": "another thing"}
 
         res0 = block.filter(**filter)
         res1 = block.filter(filter)
@@ -223,9 +215,9 @@ class TestBlock(unittest.TestCase):
         block = simple_block()
         targ = [block.segments[0].analogsignals[1]]
 
-        res0 = block.filter(thing="frooble", objects='AnalogSignal')
+        res0 = block.filter(thing="frooble", objects="AnalogSignal")
         res1 = block.filter(thing="frooble", objects=AnalogSignal)
-        res2 = block.filter(thing="frooble", objects=['AnalogSignal'])
+        res2 = block.filter(thing="frooble", objects=["AnalogSignal"])
         res3 = block.filter(thing="frooble", objects=[AnalogSignal])
 
         assert_same_sub_schema(res0, targ)
@@ -242,8 +234,7 @@ class TestBlock(unittest.TestCase):
     def test__filter_single_attribute_norecur(self):
         block = simple_block()
         targ = []
-        res0 = block.filter(name=block.segments[1].analogsignals[0].name,
-                            recursive=False)
+        res0 = block.filter(name=block.segments[1].analogsignals[0].name, recursive=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_nodata(self):
@@ -261,25 +252,19 @@ class TestBlock(unittest.TestCase):
     def test__filter_single_annotation_nodata_norecur(self):
         block = simple_block()
         targ = []
-        res0 = block.filter(thing="frooble",
-                            data=False, recursive=False)
+        res0 = block.filter(thing="frooble", data=False, recursive=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_attribute_nodata_norecur(self):
         block = simple_block()
         targ = []
-        res0 = block.filter(name=block.segments[0].analogsignals[0],
-                            data=False, recursive=False)
+        res0 = block.filter(name=block.segments[0].analogsignals[0], data=False, recursive=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_container(self):
         block = simple_block()
 
-        targ = [
-            block.segments[1].analogsignals[0],
-            block.segments[1].irregularlysampledsignals[0],
-            block.segments[1]
-        ]
+        targ = [block.segments[1].analogsignals[0], block.segments[1].irregularlysampledsignals[0], block.segments[1]]
 
         res0 = block.filter(thing="amajig", container=True)
 
@@ -294,9 +279,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_single_annotation_container_norecur(self):
         block = simple_block()
-        targ = [
-            block.segments[1]
-        ]
+        targ = [block.segments[1]]
         res0 = block.filter(thing="amajig", container=True, recursive=False)
 
         self.assertEqual(res0, targ)
@@ -304,9 +287,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_single_attribute_container_norecur(self):
         block = simple_block()
-        targ = [
-            block.segments[1]
-        ]
+        targ = [block.segments[1]]
         res0 = block.filter(name=targ[0].name, container=True, recursive=False)
 
         self.assertEqual(res0, targ)
@@ -315,16 +296,13 @@ class TestBlock(unittest.TestCase):
     def test__filter_single_attribute_container_norecur_nores(self):
         block = simple_block()
         targ = []
-        res0 = block.filter(name="penguin",
-                            container=True, recursive=False)
+        res0 = block.filter(name="penguin", container=True, recursive=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_nodata_container(self):
         block = simple_block()
 
-        targ = [
-            block.segments[1]
-        ]
+        targ = [block.segments[1]]
 
         res0 = block.filter(thing="amajig", container=True, data=False)
 
@@ -334,8 +312,7 @@ class TestBlock(unittest.TestCase):
     def test__filter_single_attribute_nodata_container_nores(self):
         block = simple_block()
         targ = []
-        res0 = block.filter(name="narwhal",
-                            data=False, container=True)
+        res0 = block.filter(name="narwhal", data=False, container=True)
         assert_same_sub_schema(res0, targ)
 
     # def test__filter_single_annotation_nodata_container_norecur(self):
@@ -355,22 +332,15 @@ class TestBlock(unittest.TestCase):
     def test__filter_single_attribute_nodata_container_norecur_nores(self):
         block = simple_block()
         targ = []
-        res0 = block.filter(name="puffin",
-                            data=False, container=True,
-                            recursive=False)
+        res0 = block.filter(name="puffin", data=False, container=True, recursive=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filterdata_multi(self):
         block = simple_block()
-        targ = [block.segments[1].analogsignals[0],
-                block.segments[1].irregularlysampledsignals[0],
-                block.segments[1]]
+        targ = [block.segments[1].analogsignals[0], block.segments[1].irregularlysampledsignals[0], block.segments[1]]
         data = block.children_recur
 
-        filter = {
-            "name": targ[0].name,
-            "thing": targ[0].annotations["thing"]
-        }
+        filter = {"name": targ[0].name, "thing": targ[0].annotations["thing"]}
 
         res0 = filterdata(data, **filter)
         res1 = filterdata(data, filter)
@@ -385,16 +355,16 @@ class TestBlock(unittest.TestCase):
         targ = []
         data = block.children_recur
 
-        name1 = block.segments[0].analogsignals[0].name,
+        name1 = (block.segments[0].analogsignals[0].name,)
 
         res0 = filterdata(data, [{"thing": "a good thing"}, {}])
         res1 = filterdata(data, {}, thing="a good thing")
         res2 = filterdata(data, [{}], thing="a good thing")
         res3 = filterdata(data, name=name1, targdict={"thing": "a good thing"})
-        res4 = filterdata(data, {'name': name1}, thing="a good thing")
-        res5 = filterdata(data, targdict={'name': name1}, thing="a good thing")
-        res12 = filterdata(data, {'name': name1}, thing="a good thing")
-        res13 = filterdata(data, targdict={'name': name1}, thing="a good thing")
+        res4 = filterdata(data, {"name": name1}, thing="a good thing")
+        res5 = filterdata(data, targdict={"name": name1}, thing="a good thing")
+        res12 = filterdata(data, {"name": name1}, thing="a good thing")
+        res13 = filterdata(data, targdict={"name": name1}, thing="a good thing")
         res14 = filterdata(data, name=name1, targdict={"thing": "a good thing"})
 
         assert_same_sub_schema(res0, targ)

@@ -1,6 +1,7 @@
 """
 Tests of neo.io.nixio_fr
 """
+
 import numpy as np
 import unittest
 from quantities import s
@@ -20,21 +21,20 @@ import os
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
-class TestNixfr(BaseTestIO, unittest.TestCase, ):
+class TestNixfr(
+    BaseTestIO,
+    unittest.TestCase,
+):
     ioclass = NixIOfr
 
-    entities_to_download = [
-        'nix/nixio_fr.nix'
-    ]
-    entities_to_test = [
-        'nix/nixio_fr.nix'
-    ]
+    entities_to_download = ["nix/nixio_fr.nix"]
+    entities_to_test = ["nix/nixio_fr.nix"]
 
     def setUp(self):
         super().setUp()
-        self.testfilename = self.get_local_path('nix/nixio_fr.nix')
+        self.testfilename = self.get_local_path("nix/nixio_fr.nix")
         self.reader_fr = NixIOfr(filename=self.testfilename)
-        self.reader_norm = NixIO(filename=self.testfilename, mode='ro')
+        self.reader_norm = NixIO(filename=self.testfilename, mode="ro")
         self.blk = self.reader_fr.read_block(block_index=1, load_waveforms=True)
         # read block with NixIOfr
         self.blk1 = self.reader_norm.read_block(index=1)  # read same block with NixIO
@@ -86,7 +86,7 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
         event1 = seg1.events[0]
         raw_time = 10 + np.cumsum(np.array([0, 1, 2, 3, 4]))
         assert np.all(event1.times == np.array(raw_time * pq.s / 1000))
-        assert np.all(event1.labels == np.array(['A', 'B', 'C', 'D', 'E'], dtype='U'))
+        assert np.all(event1.labels == np.array(["A", "B", "C", "D", "E"], dtype="U"))
         assert len(seg1.events) == 1
 
     def test_epoch(self):
@@ -99,24 +99,21 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
         assert np.all(epoch1.labels == epoch2.labels)
 
     def test_annotations(self):
-        self.testfilename = self.get_local_path('nix/nixio_fr_ann.nix')
-        with NixIO(filename=self.testfilename, mode='ow') as io:
-            annotations = {'my_custom_annotation': 'hello block'}
+        self.testfilename = self.get_local_path("nix/nixio_fr_ann.nix")
+        with NixIO(filename=self.testfilename, mode="ow") as io:
+            annotations = {"my_custom_annotation": "hello block"}
             bl = Block(**annotations)
-            annotations = {'something': 'hello hello000'}
+            annotations = {"something": "hello hello000"}
             seg = Segment(**annotations)
-            an =AnalogSignal([[1, 2, 3], [4, 5, 6]], units='V',
-                             sampling_rate=1 * pq.Hz)
-            an.annotate(ansigrandom='hello chars')
+            an = AnalogSignal([[1, 2, 3], [4, 5, 6]], units="V", sampling_rate=1 * pq.Hz)
+            an.annotate(ansigrandom="hello chars")
             an.array_annotate(custom_id=[1, 2, 3])
-            sp = SpikeTrain([3, 4, 5]* s, t_stop=10.0)
-            sp.annotations['railway'] = 'hello train'
-            ev = Event(np.arange(0, 30, 10)*pq.Hz,
-                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
-            ev.annotations['venue'] = 'hello event'
-            ev2 = Event(np.arange(0, 30, 10) * pq.Hz,
-                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='U'))
-            ev2.annotations['evven'] = 'hello ev'
+            sp = SpikeTrain([3, 4, 5] * s, t_stop=10.0)
+            sp.annotations["railway"] = "hello train"
+            ev = Event(np.arange(0, 30, 10) * pq.Hz, labels=np.array(["trig0", "trig1", "trig2"], dtype="U"))
+            ev.annotations["venue"] = "hello event"
+            ev2 = Event(np.arange(0, 30, 10) * pq.Hz, labels=np.array(["trig0", "trig1", "trig2"], dtype="U"))
+            ev2.annotations["evven"] = "hello ev"
             seg.spiketrains.append(sp)
             seg.events.append(ev)
             seg.events.append(ev2)
@@ -127,19 +124,18 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
 
         with NixIOfr(filename=self.testfilename) as frio:
             frbl = frio.read_block()
-            assert 'my_custom_annotation' in frbl.annotations
-            assert 'something' in frbl.segments[0].annotations
-            assert 'ansigrandom' in frbl.segments[0].analogsignals[0].annotations
-            assert 'railway' in frbl.segments[0].spiketrains[0].annotations
-            assert 'venue' in frbl.segments[0].events[0].annotations
-            assert 'evven' in frbl.segments[0].events[1].annotations
-            assert 'custom_id' in frbl.segments[0].analogsignals[0].array_annotations
+            assert "my_custom_annotation" in frbl.annotations
+            assert "something" in frbl.segments[0].annotations
+            assert "ansigrandom" in frbl.segments[0].analogsignals[0].annotations
+            assert "railway" in frbl.segments[0].spiketrains[0].annotations
+            assert "venue" in frbl.segments[0].events[0].annotations
+            assert "evven" in frbl.segments[0].events[1].annotations
+            assert "custom_id" in frbl.segments[0].analogsignals[0].array_annotations
             for anasig in frbl.segments[0].analogsignals:
                 for value in anasig.array_annotations.values():
                     assert anasig.shape[-1] == len(value)
         os.remove(self.testfilename)
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

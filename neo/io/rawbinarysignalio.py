@@ -40,7 +40,7 @@ class RawBinarySignalIO(RawBinarySignalRawIO, BaseFromRaw):
 
     """
 
-    _prefered_signal_group_mode = 'group-by-same-units'
+    _prefered_signal_group_mode = "group-by-same-units"
 
     is_readable = True
     is_writable = True
@@ -49,12 +49,26 @@ class RawBinarySignalIO(RawBinarySignalRawIO, BaseFromRaw):
     readable_objects = [Segment]
     writeable_objects = [Segment]
 
-    def __init__(self, filename, dtype='int16', sampling_rate=10000.,
-                 nb_channel=2, signal_gain=1., signal_offset=0., bytesoffset=0):
-        RawBinarySignalRawIO.__init__(self, filename=filename, dtype=dtype,
-                                      sampling_rate=sampling_rate, nb_channel=nb_channel,
-                                      signal_gain=signal_gain,
-                                      signal_offset=signal_offset, bytesoffset=bytesoffset)
+    def __init__(
+        self,
+        filename,
+        dtype="int16",
+        sampling_rate=10000.0,
+        nb_channel=2,
+        signal_gain=1.0,
+        signal_offset=0.0,
+        bytesoffset=0,
+    ):
+        RawBinarySignalRawIO.__init__(
+            self,
+            filename=filename,
+            dtype=dtype,
+            sampling_rate=sampling_rate,
+            nb_channel=nb_channel,
+            signal_gain=signal_gain,
+            signal_offset=signal_offset,
+            bytesoffset=bytesoffset,
+        )
         BaseFromRaw.__init__(self, filename)
 
     def write_segment(self, segment):
@@ -71,11 +85,10 @@ class RawBinarySignalIO(RawBinarySignalRawIO, BaseFromRaw):
         """
 
         if self.bytesoffset:
-            raise NotImplementedError('bytesoffset values other than 0 ' +
-                                      'not supported')
+            raise NotImplementedError("bytesoffset values other than 0 " + "not supported")
 
         anasigs = segment.analogsignals
-        assert len(anasigs) > 0, 'No AnalogSignal'
+        assert len(anasigs) > 0, "No AnalogSignal"
 
         anasig0 = anasigs[0]
         if len(anasigs) == 1 and anasig0.ndim == 2:
@@ -97,5 +110,5 @@ class RawBinarySignalIO(RawBinarySignalRawIO, BaseFromRaw):
         numpy_sigs /= self.signal_gain
         numpy_sigs = numpy_sigs.astype(self.dtype)
 
-        with open(self.filename, 'wb') as f:
+        with open(self.filename, "wb") as f:
             f.write(numpy_sigs.tobytes())

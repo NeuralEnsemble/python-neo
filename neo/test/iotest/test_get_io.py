@@ -5,7 +5,7 @@ from neo.io import get_io, list_candidate_ios, NixIO
 
 def test_list_candidate_ios_non_existant_file():
     # use plexon io suffix for testing here
-    non_existant_file = Path('non_existant_folder/non_existant_file.plx')
+    non_existant_file = Path("non_existant_folder/non_existant_file.plx")
     non_existant_file.unlink(missing_ok=True)
     ios = list_candidate_ios(non_existant_file)
 
@@ -17,11 +17,11 @@ def test_list_candidate_ios_non_existant_file():
 
 def test_list_candidate_ios_filename_stub():
     # create dummy folder with dummy files
-    with TemporaryDirectory(prefix='filename_stub_test_') as test_folder:
+    with TemporaryDirectory(prefix="filename_stub_test_") as test_folder:
         test_folder = Path(test_folder)
-        test_filename = (test_folder / 'dummy_file.nix')
+        test_filename = test_folder / "dummy_file.nix"
         test_filename.touch()
-        filename_stub = test_filename.with_suffix('')
+        filename_stub = test_filename.with_suffix("")
 
         # check that io is found even though file suffix was not provided
         ios = list_candidate_ios(filename_stub)
@@ -31,7 +31,7 @@ def test_list_candidate_ios_filename_stub():
 
 def test_get_io_non_existant_file_writable_io():
     # use nixio for testing with writable io
-    non_existant_file = Path('non_existant_file.nix')
+    non_existant_file = Path("non_existant_file.nix")
     non_existant_file.unlink(missing_ok=True)
     io = get_io(non_existant_file)
 

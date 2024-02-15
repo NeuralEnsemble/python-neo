@@ -9,15 +9,15 @@ import neo
 import quantities as pq
 import numpy as np
 
-url_repo = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/'
+url_repo = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 # Get Plexon files
-distantfile = url_repo + 'micromed/File_micromed_1.TRC'
-localfile = './File_micromed_1.TRC'
+distantfile = url_repo + "micromed/File_micromed_1.TRC"
+localfile = "./File_micromed_1.TRC"
 urllib.request.urlretrieve(distantfile, localfile)
 
 # create a reader
-reader = neo.MicromedIO(filename='File_micromed_1.TRC')
+reader = neo.MicromedIO(filename="File_micromed_1.TRC")
 reader.parse_header()
 
 

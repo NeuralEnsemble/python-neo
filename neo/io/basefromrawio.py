@@ -13,22 +13,25 @@ of the lazy load with proxy objects.
 
 
 """
+
 import collections
 import warnings
 import numpy as np
 
 from neo import logging_handler
-from neo.core import (AnalogSignal, Block,
-                      Epoch, Event,
-                      IrregularlySampledSignal,
-                      Group,
-                      Segment, SpikeTrain)
+from neo.core import AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, Group, Segment, SpikeTrain
 from neo.io.baseio import BaseIO
 
-from neo.io.proxyobjects import (AnalogSignalProxy,
-                SpikeTrainProxy, EventProxy, EpochProxy,
-                ensure_signal_units, check_annotations,
-                ensure_second, proxyobjectlist)
+from neo.io.proxyobjects import (
+    AnalogSignalProxy,
+    SpikeTrainProxy,
+    EventProxy,
+    EpochProxy,
+    ensure_signal_units,
+    check_annotations,
+    ensure_second,
+    proxyobjectlist,
+)
 
 
 import quantities as pq
@@ -51,31 +54,31 @@ class BaseFromRaw(BaseIO):
     Other arguments are IO specific.
 
     """
+
     is_readable = True
     is_writable = False
 
-    supported_objects = [Block, Segment, AnalogSignal,
-                         SpikeTrain, Group, Event, Epoch]
+    supported_objects = [Block, Segment, AnalogSignal, SpikeTrain, Group, Event, Epoch]
     readable_objects = [Block, Segment]
     writeable_objects = []
 
     support_lazy = True
 
-    name = 'BaseIO'
-    description = ''
+    name = "BaseIO"
+    description = ""
     extensions = []
 
-    mode = 'file'
+    mode = "file"
 
-    _prefered_signal_group_mode = 'group-by-same-units'  # 'split-all'
+    _prefered_signal_group_mode = "group-by-same-units"  # 'split-all'
 
     def __init__(self, *args, **kargs):
         BaseIO.__init__(self, *args, **kargs)
         self.parse_header()
 
-    def read_block(self, block_index=0, lazy=False,
-                    create_group_across_segment=None,
-                    signal_group_mode=None, load_waveforms=False):
+    def read_block(
+        self, block_index=0, lazy=False, create_group_across_segment=None, signal_group_mode=None, load_waveforms=False
+    ):
         """
         :param block_index: int default 0. In case of several block block_index can be specified.
 
@@ -103,78 +106,82 @@ class BaseFromRaw(BaseIO):
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
 
-        l = ['AnalogSignal', 'SpikeTrain', 'Event', 'Epoch']
+        l = ["AnalogSignal", "SpikeTrain", "Event", "Epoch"]
         if create_group_across_segment is None:
             # @andrew @ julia @michael ?
             # I think here the default None could give this
             create_group_across_segment = {
-                'AnalogSignal': True,   #because mimic the old ChannelIndex for AnalogSignals
-                'SpikeTrain': False,  # False by default because can create too many object for simulation
-                'Event': False,  # not implemented yet
-                'Epoch': False,  # not implemented yet
+                "AnalogSignal": True,  # because mimic the old ChannelIndex for AnalogSignals
+                "SpikeTrain": False,  # False by default because can create too many object for simulation
+                "Event": False,  # not implemented yet
+                "Epoch": False,  # not implemented yet
             }
         elif isinstance(create_group_across_segment, bool):
             # bool to dict
             v = create_group_across_segment
-            create_group_across_segment = { k: v for k in l}
+            create_group_across_segment = {k: v for k in l}
         elif isinstance(create_group_across_segment, dict):
             # put False to missing keys
             create_group_across_segment = {k: create_group_across_segment.get(k, False) for k in l}
         else:
-            raise ValueError('create_group_across_segment must be bool or dict')
+            raise ValueError("create_group_across_segment must be bool or dict")
 
         # annotations
-        bl_annotations = dict(self.raw_annotations['blocks'][block_index])
-        bl_annotations.pop('segments')
+        bl_annotations = dict(self.raw_annotations["blocks"][block_index])
+        bl_annotations.pop("segments")
         bl_annotations = check_annotations(bl_annotations)
 
         bl = Block(**bl_annotations)
 
         # Group for AnalogSignals coming from signal_streams
-        if create_group_across_segment['AnalogSignal']:
-            signal_streams = self.header['signal_streams']
+        if create_group_across_segment["AnalogSignal"]:
+            signal_streams = self.header["signal_streams"]
             sub_streams = self.get_sub_signal_streams(signal_group_mode)
             sub_stream_groups = []
             for sub_stream in sub_streams:
                 stream_index, inner_stream_channels, name = sub_stream
-                group = Group(name=name, stream_id=signal_streams[stream_index]['id'])
+                group = Group(name=name, stream_id=signal_streams[stream_index]["id"])
                 bl.groups.append(group)
                 sub_stream_groups.append(group)
 
-        if create_group_across_segment['SpikeTrain']:
-            spike_channels = self.header['spike_channels']
+        if create_group_across_segment["SpikeTrain"]:
+            spike_channels = self.header["spike_channels"]
             st_groups = []
             for c in range(spike_channels.size):
-                group = Group(name=f'SpikeTrain group {c}')
-                group.annotate(unit_name=spike_channels[c]['name'])
-                group.annotate(unit_id=spike_channels[c]['id'])
+                group = Group(name=f"SpikeTrain group {c}")
+                group.annotate(unit_name=spike_channels[c]["name"])
+                group.annotate(unit_id=spike_channels[c]["id"])
                 bl.groups.append(group)
                 st_groups.append(group)
 
-        if create_group_across_segment['Event']:
+        if create_group_across_segment["Event"]:
             # @andrew @ julia @michael :
             # Do we need this ? I guess yes
             raise NotImplementedError()
 
-        if create_group_across_segment['Epoch']:
+        if create_group_across_segment["Epoch"]:
             # @andrew @ julia @michael :
             # Do we need this ? I guess yes
             raise NotImplementedError()
 
         # Read all segments
         for seg_index in range(self.segment_count(block_index)):
-            seg = self.read_segment(block_index=block_index, seg_index=seg_index,
-                                    lazy=lazy, signal_group_mode=signal_group_mode,
-                                    load_waveforms=load_waveforms)
+            seg = self.read_segment(
+                block_index=block_index,
+                seg_index=seg_index,
+                lazy=lazy,
+                signal_group_mode=signal_group_mode,
+                load_waveforms=load_waveforms,
+            )
             bl.segments.append(seg)
 
         # create link between group (across segment) and data objects
         for seg in bl.segments:
-            if create_group_across_segment['AnalogSignal']:
+            if create_group_across_segment["AnalogSignal"]:
                 for c, anasig in enumerate(seg.analogsignals):
                     sub_stream_groups[c].add(anasig)
 
-            if create_group_across_segment['SpikeTrain']:
+            if create_group_across_segment["SpikeTrain"]:
                 for c, sptr in enumerate(seg.spiketrains):
                     st_groups[c].add(sptr)
 
@@ -182,9 +189,16 @@ class BaseFromRaw(BaseIO):
 
         return bl
 
-    def read_segment(self, block_index=0, seg_index=0, lazy=False,
-                     signal_group_mode=None, load_waveforms=False, time_slice=None,
-                     strict_slicing=True):
+    def read_segment(
+        self,
+        block_index=0,
+        seg_index=0,
+        lazy=False,
+        signal_group_mode=None,
+        load_waveforms=False,
+        time_slice=None,
+        strict_slicing=True,
+    ):
         """
         :param block_index: int default 0. In case of several blocks block_index can be specified.
 
@@ -210,31 +224,35 @@ class BaseFromRaw(BaseIO):
         """
 
         if lazy:
-            assert time_slice is None,\
-                'For lazy=True you must specify time_slice when LazyObject.load(time_slice=...)'
+            assert time_slice is None, "For lazy=True you must specify time_slice when LazyObject.load(time_slice=...)"
 
-            assert not load_waveforms,\
-                'For lazy=True you must specify load_waveforms when SpikeTrain.load(load_waveforms=...)'
+            assert (
+                not load_waveforms
+            ), "For lazy=True you must specify load_waveforms when SpikeTrain.load(load_waveforms=...)"
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
 
         # annotations
-        seg_annotations = self.raw_annotations['blocks'][block_index]['segments'][seg_index].copy()
-        for k in ('signals', 'spikes', 'events'):
+        seg_annotations = self.raw_annotations["blocks"][block_index]["segments"][seg_index].copy()
+        for k in ("signals", "spikes", "events"):
             seg_annotations.pop(k)
         seg_annotations = check_annotations(seg_annotations)
 
         seg = Segment(index=seg_index, **seg_annotations)
 
         # AnalogSignal
-        signal_streams = self.header['signal_streams']
+        signal_streams = self.header["signal_streams"]
         sub_streams = self.get_sub_signal_streams(signal_group_mode)
         for sub_stream in sub_streams:
             stream_index, inner_stream_channels, name = sub_stream
-            anasig = AnalogSignalProxy(rawio=self, stream_index=stream_index,
-                            inner_stream_channels=inner_stream_channels,
-                            block_index=block_index, seg_index=seg_index)
+            anasig = AnalogSignalProxy(
+                rawio=self,
+                stream_index=stream_index,
+                inner_stream_channels=inner_stream_channels,
+                block_index=block_index,
+                seg_index=seg_index,
+            )
             anasig.name = name
 
             if not lazy:
@@ -244,32 +262,30 @@ class BaseFromRaw(BaseIO):
             seg.analogsignals.append(anasig)
 
         # SpikeTrain and waveforms (optional)
-        spike_channels = self.header['spike_channels']
+        spike_channels = self.header["spike_channels"]
         for spike_channel_index in range(len(spike_channels)):
             # make a proxy...
-            sptr = SpikeTrainProxy(rawio=self, spike_channel_index=spike_channel_index,
-                                                block_index=block_index, seg_index=seg_index)
+            sptr = SpikeTrainProxy(
+                rawio=self, spike_channel_index=spike_channel_index, block_index=block_index, seg_index=seg_index
+            )
 
             if not lazy:
                 # ... and get the real SpikeTrain if not lazy
-                sptr = sptr.load(time_slice=time_slice, strict_slicing=strict_slicing,
-                                        load_waveforms=load_waveforms)
+                sptr = sptr.load(time_slice=time_slice, strict_slicing=strict_slicing, load_waveforms=load_waveforms)
                 # TODO magnitude_mode='rescaled'/'raw'
 
             seg.spiketrains.append(sptr)
 
         # Events/Epoch
-        event_channels = self.header['event_channels']
+        event_channels = self.header["event_channels"]
         for chan_ind in range(len(event_channels)):
-            if event_channels['type'][chan_ind] == b'event':
-                e = EventProxy(rawio=self, event_channel_index=chan_ind,
-                                        block_index=block_index, seg_index=seg_index)
+            if event_channels["type"][chan_ind] == b"event":
+                e = EventProxy(rawio=self, event_channel_index=chan_ind, block_index=block_index, seg_index=seg_index)
                 if not lazy:
                     e = e.load(time_slice=time_slice, strict_slicing=strict_slicing)
                 seg.events.append(e)
-            elif event_channels['type'][chan_ind] == b'epoch':
-                e = EpochProxy(rawio=self, event_channel_index=chan_ind,
-                               block_index=block_index, seg_index=seg_index)
+            elif event_channels["type"][chan_ind] == b"epoch":
+                e = EpochProxy(rawio=self, event_channel_index=chan_ind, block_index=block_index, seg_index=seg_index)
                 if not lazy:
                     e = e.load(time_slice=time_slice, strict_slicing=strict_slicing)
                 seg.epochs.append(e)
@@ -277,7 +293,7 @@ class BaseFromRaw(BaseIO):
         seg.check_relationships()
         return seg
 
-    def get_sub_signal_streams(self, signal_group_mode='group-by-same-units'):
+    def get_sub_signal_streams(self, signal_group_mode="group-by-same-units"):
         """
         When signal streams don't have homogeneous SI units across channels,
         they have to be split in sub streams to construct AnalogSignal objects with unique units.
@@ -285,19 +301,19 @@ class BaseFromRaw(BaseIO):
         For backward compatibility (neo version <= 0.5) sub-streams can also be
         used to generate one AnalogSignal per channel.
         """
-        signal_streams = self.header['signal_streams']
-        signal_channels = self.header['signal_channels']
+        signal_streams = self.header["signal_streams"]
+        signal_channels = self.header["signal_channels"]
 
         sub_streams = []
         for stream_index in range(len(signal_streams)):
-            stream_id = signal_streams[stream_index]['id']
-            stream_name = signal_streams[stream_index]['name']
-            mask = signal_channels['stream_id'] == stream_id
+            stream_id = signal_streams[stream_index]["id"]
+            stream_name = signal_streams[stream_index]["name"]
+            mask = signal_channels["stream_id"] == stream_id
             channels = signal_channels[mask]
-            if signal_group_mode == 'group-by-same-units':
+            if signal_group_mode == "group-by-same-units":
                 # this does not keep the original order
-                _, idx = np.unique(channels['units'], return_index=True)
-                all_units = channels['units'][np.sort(idx)]
+                _, idx = np.unique(channels["units"], return_index=True)
+                all_units = channels["units"][np.sort(idx)]
 
                 if len(all_units) == 1:
                     # no substream
@@ -308,16 +324,16 @@ class BaseFromRaw(BaseIO):
                     sub_streams.append(sub_stream)
                 else:
                     for units in all_units:
-                        inner_stream_channels, = np.nonzero(channels['units'] == units)
-                        chan_names = channels[inner_stream_channels]['name']
-                        name = 'Channels: (' + ' '.join(chan_names) + ')'
+                        (inner_stream_channels,) = np.nonzero(channels["units"] == units)
+                        chan_names = channels[inner_stream_channels]["name"]
+                        name = "Channels: (" + " ".join(chan_names) + ")"
                         sub_stream = (stream_index, inner_stream_channels, name)
                         sub_streams.append(sub_stream)
-            elif signal_group_mode == 'split-all':
+            elif signal_group_mode == "split-all":
                 # mimic all neo <= 0.5 behavior
                 for i, channel in enumerate(channels):
                     inner_stream_channels = [i]
-                    name = channels[i]['name']
+                    name = channels[i]["name"]
                     sub_stream = (stream_index, inner_stream_channels, name)
                     sub_streams.append(sub_stream)
             else:

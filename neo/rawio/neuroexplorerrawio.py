@@ -23,8 +23,13 @@ Author: Samuel Garcia, luc estebanez, mark hollenbeck
 
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+from .baserawio import (
+    BaseRawIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
+)
 
 import numpy as np
 from collections import OrderedDict
@@ -32,10 +37,10 @@ import datetime
 
 
 class NeuroExplorerRawIO(BaseRawIO):
-    extensions = ['nex']
-    rawmode = 'one-file'
+    extensions = ["nex"]
+    rawmode = "one-file"
 
-    def __init__(self, filename=''):
+    def __init__(self, filename=""):
         BaseRawIO.__init__(self)
         self.filename = filename
 
@@ -43,65 +48,62 @@ class NeuroExplorerRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        with open(self.filename, 'rb') as fid:
+        with open(self.filename, "rb") as fid:
             self.global_header = read_as_dict(fid, GlobalHeader, offset=0)
             offset = 544
             self._entity_headers = []
-            for i in range(self.global_header['nvar']):
-                self._entity_headers.append(read_as_dict(
-                    fid, EntityHeader, offset=offset + i * 208))
+            for i in range(self.global_header["nvar"]):
+                self._entity_headers.append(read_as_dict(fid, EntityHeader, offset=offset + i * 208))
 
-        self._memmap = np.memmap(self.filename, dtype='u1', mode='r')
+        self._memmap = np.memmap(self.filename, dtype="u1", mode="r")
 
         self._sig_lengths = []
         self._sig_t_starts = []
         sig_channels = []
         spike_channels = []
         event_channels = []
-        for i in range(self.global_header['nvar']):
+        for i in range(self.global_header["nvar"]):
             entity_header = self._entity_headers[i]
-            name = entity_header['name']
+            name = entity_header["name"]
             _id = str(i)
-            if entity_header['type'] == 0:  # Unit
-                spike_channels.append((name, _id, '', 0, 0, 0, 0))
+            if entity_header["type"] == 0:  # Unit
+                spike_channels.append((name, _id, "", 0, 0, 0, 0))
 
-            elif entity_header['type'] == 1:  # Event
-                event_channels.append((name, _id, 'event'))
+            elif entity_header["type"] == 1:  # Event
+                event_channels.append((name, _id, "event"))
 
-            elif entity_header['type'] == 2:  # interval = Epoch
-                event_channels.append((name, _id, 'epoch'))
+            elif entity_header["type"] == 2:  # interval = Epoch
+                event_channels.append((name, _id, "epoch"))
 
-            elif entity_header['type'] == 3:  # spiketrain and waveforms
-                wf_units = 'mV'
-                wf_gain = entity_header['ADtoMV']
-                wf_offset = entity_header['MVOffset']
+            elif entity_header["type"] == 3:  # spiketrain and waveforms
+                wf_units = "mV"
+                wf_gain = entity_header["ADtoMV"]
+                wf_offset = entity_header["MVOffset"]
                 wf_left_sweep = 0
-                wf_sampling_rate = entity_header['WFrequency']
-                spike_channels.append((name, _id, wf_units, wf_gain, wf_offset,
-                                      wf_left_sweep, wf_sampling_rate))
+                wf_sampling_rate = entity_header["WFrequency"]
+                spike_channels.append((name, _id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
 
-            elif entity_header['type'] == 4:
+            elif entity_header["type"] == 4:
                 # popvectors
                 pass
 
-            if entity_header['type'] == 5:  # Signals
-                units = 'mV'
-                sampling_rate = entity_header['WFrequency']
-                dtype = 'int16'
-                gain = entity_header['ADtoMV']
-                offset = entity_header['MVOffset']
+            if entity_header["type"] == 5:  # Signals
+                units = "mV"
+                sampling_rate = entity_header["WFrequency"]
+                dtype = "int16"
+                gain = entity_header["ADtoMV"]
+                offset = entity_header["MVOffset"]
                 stream_id = str(_id)
-                sig_channels.append((name, _id, sampling_rate, dtype, units,
-                                     gain, offset, stream_id))
-                self._sig_lengths.append(entity_header['NPointsWave'])
+                sig_channels.append((name, _id, sampling_rate, dtype, units, gain, offset, stream_id))
+                self._sig_lengths.append(entity_header["NPointsWave"])
                 # sig t_start is the first timestamp if datablock
-                offset = entity_header['offset']
-                timestamps0 = self._memmap[offset:offset + 4].view('int32')
-                t_start = timestamps0[0] / self.global_header['freq']
+                offset = entity_header["offset"]
+                timestamps0 = self._memmap[offset : offset + 4].view("int32")
+                t_start = timestamps0[0] / self.global_header["freq"]
                 self._sig_t_starts.append(t_start)
 
-            elif entity_header['type'] == 6:  # Markers
-                event_channels.append((name, _id, 'event'))
+            elif entity_header["type"] == 6:  # Markers
+                event_channels.append((name, _id, "event"))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
@@ -109,34 +111,34 @@ class NeuroExplorerRawIO(BaseRawIO):
 
         # each signal channel has different groups that force reading
         # them one by one
-        sig_channels['stream_id'] = np.arange(sig_channels.size).astype('U')
+        sig_channels["stream_id"] = np.arange(sig_channels.size).astype("U")
         signal_streams = np.zeros(sig_channels.size, dtype=_signal_stream_dtype)
-        signal_streams['name'] = sig_channels['name']
-        signal_streams['id'] = sig_channels['stream_id']
+        signal_streams["name"] = sig_channels["name"]
+        signal_streams["id"] = sig_channels["stream_id"]
 
         # fill into header dict
         self.header = {}
-        self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
-        self.header['signal_streams'] = signal_streams
-        self.header['signal_channels'] = sig_channels
-        self.header['spike_channels'] = spike_channels
-        self.header['event_channels'] = event_channels
+        self.header["nb_block"] = 1
+        self.header["nb_segment"] = [1]
+        self.header["signal_streams"] = signal_streams
+        self.header["signal_channels"] = sig_channels
+        self.header["spike_channels"] = spike_channels
+        self.header["event_channels"] = event_channels
 
         # Annotations
         self._generate_minimal_annotations()
-        bl_annotations = self.raw_annotations['blocks'][0]
-        seg_annotations = bl_annotations['segments'][0]
+        bl_annotations = self.raw_annotations["blocks"][0]
+        seg_annotations = bl_annotations["segments"][0]
         for d in (bl_annotations, seg_annotations):
-            d['neuroexplorer_version'] = self.global_header['version']
-            d['comment'] = self.global_header['comment']
+            d["neuroexplorer_version"] = self.global_header["version"]
+            d["comment"] = self.global_header["comment"]
 
     def _segment_t_start(self, block_index, seg_index):
-        t_start = self.global_header['tbeg'] / self.global_header['freq']
+        t_start = self.global_header["tbeg"] / self.global_header["freq"]
         return t_start
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self.global_header['tend'] / self.global_header['freq']
+        t_stop = self.global_header["tend"] / self.global_header["freq"]
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
@@ -145,115 +147,114 @@ class NeuroExplorerRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._sig_t_starts[stream_index]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
-                                stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         channel_index = stream_index
-        entity_index = int(self.header['signal_channels'][channel_index]['id'])
+        entity_index = int(self.header["signal_channels"][channel_index]["id"])
         entity_header = self._entity_headers[entity_index]
-        n = entity_header['n']
-        nb_sample = entity_header['NPointsWave']
+        n = entity_header["n"]
+        nb_sample = entity_header["NPointsWave"]
         # offset = entity_header['offset']
         # timestamps = self._memmap[offset:offset+n*4].view('int32')
         # offset2 = entity_header['offset'] + n*4
         # fragment_starts = self._memmap[offset2:offset2+n*4].view('int32')
-        offset3 = entity_header['offset'] + n * 4 + n * 4
-        raw_signal = self._memmap[offset3:offset3 + nb_sample * 2].view('int16')
+        offset3 = entity_header["offset"] + n * 4 + n * 4
+        raw_signal = self._memmap[offset3 : offset3 + nb_sample * 2].view("int16")
         raw_signal = raw_signal[slice(i_start, i_stop), None]  # 2D for compliance
         return raw_signal
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        entity_index = int(self.header['spike_channels'][unit_index]['id'])
+        entity_index = int(self.header["spike_channels"][unit_index]["id"])
         entity_header = self._entity_headers[entity_index]
-        nb_spike = entity_header['n']
+        nb_spike = entity_header["n"]
         return nb_spike
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        entity_index = int(self.header['spike_channels'][unit_index]['id'])
+        entity_index = int(self.header["spike_channels"][unit_index]["id"])
         entity_header = self._entity_headers[entity_index]
-        n = entity_header['n']
-        offset = entity_header['offset']
-        timestamps = self._memmap[offset:offset + n * 4].view('int32')
+        n = entity_header["n"]
+        offset = entity_header["offset"]
+        timestamps = self._memmap[offset : offset + n * 4].view("int32")
 
         if t_start is not None:
-            keep = timestamps >= int(t_start * self.global_header['freq'])
+            keep = timestamps >= int(t_start * self.global_header["freq"])
             timestamps = timestamps[keep]
         if t_stop is not None:
-            keep = timestamps <= int(t_stop * self.global_header['freq'])
+            keep = timestamps <= int(t_stop * self.global_header["freq"])
             timestamps = timestamps[keep]
 
         return timestamps
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
-        spike_times /= self.global_header['freq']
+        spike_times /= self.global_header["freq"]
         return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        entity_index = int(self.header['spike_channels'][unit_index]['id'])
+        entity_index = int(self.header["spike_channels"][unit_index]["id"])
         entity_header = self._entity_headers[entity_index]
-        if entity_header['type'] == 0:
+        if entity_header["type"] == 0:
             return None
-        assert entity_header['type'] == 3
+        assert entity_header["type"] == 3
 
-        n = entity_header['n']
-        width = entity_header['NPointsWave']
-        offset = entity_header['offset'] + n * 2
-        waveforms = self._memmap[offset:offset + n * 2 * width].view('int16')
+        n = entity_header["n"]
+        width = entity_header["NPointsWave"]
+        offset = entity_header["offset"] + n * 2
+        waveforms = self._memmap[offset : offset + n * 2 * width].view("int16")
         waveforms = waveforms.reshape(n, 1, width)
 
         return waveforms
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        entity_index = int(self.header['event_channels'][event_channel_index]['id'])
+        entity_index = int(self.header["event_channels"][event_channel_index]["id"])
         entity_header = self._entity_headers[entity_index]
-        nb_event = entity_header['n']
+        nb_event = entity_header["n"]
         return nb_event
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        entity_index = int(self.header['event_channels'][event_channel_index]['id'])
+        entity_index = int(self.header["event_channels"][event_channel_index]["id"])
         entity_header = self._entity_headers[entity_index]
 
-        n = entity_header['n']
-        offset = entity_header['offset']
-        timestamps = self._memmap[offset:offset + n * 4].view('int32')
+        n = entity_header["n"]
+        offset = entity_header["offset"]
+        timestamps = self._memmap[offset : offset + n * 4].view("int32")
 
         if t_start is None:
             i_start = None
         else:
-            i_start = np.searchsorted(timestamps, int(t_start * self.global_header['freq']))
+            i_start = np.searchsorted(timestamps, int(t_start * self.global_header["freq"]))
         if t_stop is None:
             i_stop = None
         else:
-            i_stop = np.searchsorted(timestamps, int(t_stop * self.global_header['freq']))
+            i_stop = np.searchsorted(timestamps, int(t_stop * self.global_header["freq"]))
         keep = slice(i_start, i_stop)
 
         timestamps = timestamps[keep]
 
-        if entity_header['type'] == 1:  # Event
+        if entity_header["type"] == 1:  # Event
             durations = None
-            labels = np.array([''] * timestamps.size, dtype='U')
-        elif entity_header['type'] == 2:  # Epoch
+            labels = np.array([""] * timestamps.size, dtype="U")
+        elif entity_header["type"] == 2:  # Epoch
             offset2 = offset + n * 4
-            stop_timestamps = self._memmap[offset2:offset2 + n * 4].view('int32')
+            stop_timestamps = self._memmap[offset2 : offset2 + n * 4].view("int32")
             durations = stop_timestamps[keep] - timestamps
-            labels = np.array([''] * timestamps.size, dtype='U')
-        elif entity_header['type'] == 6:  # Marker
+            labels = np.array([""] * timestamps.size, dtype="U")
+        elif entity_header["type"] == 6:  # Marker
             durations = None
             offset2 = offset + n * 4 + 64
-            s = entity_header['MarkerLength']
-            labels = self._memmap[offset2:offset2 + s * n].view('S' + str(s))
-            labels = labels[keep].astype('U')
+            s = entity_header["MarkerLength"]
+            labels = self._memmap[offset2 : offset2 + s * n].view("S" + str(s))
+            labels = labels[keep].astype("U")
 
         return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype)
-        event_times /= self.global_header['freq']
+        event_times /= self.global_header["freq"]
         return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         durations = raw_duration.astype(dtype)
-        durations /= self.global_header['freq']
+        durations /= self.global_header["freq"]
         return durations
 
 
@@ -271,53 +272,53 @@ def read_as_dict(fid, dtype, offset=None):
     for k in dt.names:
         v = h[k]
 
-        if dt[k].kind == 'S':
-            v = v.replace(b'\x00', b'')
-            v = v.decode('utf8')
+        if dt[k].kind == "S":
+            v = v.replace(b"\x00", b"")
+            v = v.decode("utf8")
 
         info[k] = v
     return info
 
 
 GlobalHeader = [
-    ('signature', 'S4'),
-    ('version', 'int32'),
-    ('comment', 'S256'),
-    ('freq', 'float64'),
-    ('tbeg', 'int32'),
-    ('tend', 'int32'),
-    ('nvar', 'int32'),
+    ("signature", "S4"),
+    ("version", "int32"),
+    ("comment", "S256"),
+    ("freq", "float64"),
+    ("tbeg", "int32"),
+    ("tend", "int32"),
+    ("nvar", "int32"),
 ]
 
 EntityHeader = [
-    ('type', 'int32'),
-    ('varVersion', 'int32'),
-    ('name', 'S64'),
-    ('offset', 'int32'),
-    ('n', 'int32'),
-    ('WireNumber', 'int32'),
-    ('UnitNumber', 'int32'),
-    ('Gain', 'int32'),
-    ('Filter', 'int32'),
-    ('XPos', 'float64'),
-    ('YPos', 'float64'),
-    ('WFrequency', 'float64'),
-    ('ADtoMV', 'float64'),
-    ('NPointsWave', 'int32'),
-    ('NMarkers', 'int32'),
-    ('MarkerLength', 'int32'),
-    ('MVOffset', 'float64'),
-    ('dummy', 'S60'),
+    ("type", "int32"),
+    ("varVersion", "int32"),
+    ("name", "S64"),
+    ("offset", "int32"),
+    ("n", "int32"),
+    ("WireNumber", "int32"),
+    ("UnitNumber", "int32"),
+    ("Gain", "int32"),
+    ("Filter", "int32"),
+    ("XPos", "float64"),
+    ("YPos", "float64"),
+    ("WFrequency", "float64"),
+    ("ADtoMV", "float64"),
+    ("NPointsWave", "int32"),
+    ("NMarkers", "int32"),
+    ("MarkerLength", "int32"),
+    ("MVOffset", "float64"),
+    ("dummy", "S60"),
 ]
 
 MarkerHeader = [
-    ('type', 'int32'),
-    ('varVersion', 'int32'),
-    ('name', 'S64'),
-    ('offset', 'int32'),
-    ('n', 'int32'),
-    ('WireNumber', 'int32'),
-    ('UnitNumber', 'int32'),
-    ('Gain', 'int32'),
-    ('Filter', 'int32'),
+    ("type", "int32"),
+    ("varVersion", "int32"),
+    ("name", "S64"),
+    ("offset", "int32"),
+    ("n", "int32"),
+    ("WireNumber", "int32"),
+    ("UnitNumber", "int32"),
+    ("Gain", "int32"),
+    ("Filter", "int32"),
 ]
