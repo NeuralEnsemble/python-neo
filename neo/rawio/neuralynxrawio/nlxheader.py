@@ -115,6 +115,11 @@ class NlxHeader(OrderedDict):
             filename_regex=r"## File Name: (?P<filename>\S+)",
             datetimeformat="%m/%d/%Y %H:%M:%S",
         ),
+        'peg': dict(
+            datetime1_regex=r'-TimeCreated (?P<date>\S+) (?P<time>\S+)',
+            datetime2_regex=r'-TimeClosed (?P<date>\S+) (?P<time>\S+)',
+            filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
+            datetimeformat='%Y/%m/%d %H:%M:%S.%f'),
         # Cheetah after v 5.6.4 and default for others such as Pegasus
         "def": dict(
             datetime1_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
@@ -240,6 +245,9 @@ class NlxHeader(OrderedDict):
             av = Version("2")
         elif an == "Neuraview":
             hpd = NlxHeader.header_pattern_dicts["neuraview2"]
+            av = Version("2")
+        elif an == 'Pegasus':
+            hpd = NlxHeader.header_pattern_dicts['peg']
             av = Version("2")
         else:
             an = "Unknown"
