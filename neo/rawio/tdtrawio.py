@@ -284,7 +284,7 @@ class TdtRawIO(BaseRawIO):
 
                 chan_name = "{} {}".format(info["StoreName"], c + 1)
                 sampling_rate = sampling_rate
-                units = "V"  # WARNING this is not sur at all
+                units = "uV"  # see https://github.com/NeuralEnsemble/python-neo/issues/1369
                 gain = 1.0
                 offset = 0.0
                 signal_channels.append((chan_name, str(chan_id), sampling_rate, dtype, units, gain, offset, stream_id))
