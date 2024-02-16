@@ -75,59 +75,60 @@ class IntanRawIO(BaseRawIO):
             raise FileNotFoundError(f"{filename} does not exist")
 
         if self.filename.endswith(".rhs"):
-            self.file_type = 'header-attached'
+            self.file_format = 'header-attached'
             self._global_info, self._ordered_channels, data_dtype, header_size, self._block_size = read_rhs(
                 self.filename
             )
-        # 3 possibilities for rhd files, one combines the header and the data in the same file with suffix `rhd` while the other two separates the data from the header which is always called `info.rhd`
+        # 3 possibilities for rhd files, one combines the header and the data in the same file with suffix `rhd` while
+        # the other two separates the data from the header which is always called `info.rhd`
         # attached to the actual binary file with data
         elif self.filename.endswith(".rhd"):
             if filename.name == "info.rhd":
                 # first we have one-file-per-signal which is where one neo stream/file is saved as .dat files
                 if any((filename.parent / file).exists() for file in one_file_per_signal_filenames):
-                    self.file_type = 'one-file-per-signal'
+                    self.file_format = 'one-file-per-signal'
                     raw_file_paths_dict = create_one_file_per_signal_dict(filename.parent)
                 # then there is one-file-per-channel where each channel in a neo stream is in its own .dat file
                 else:
-                    self.file_type = 'one-file-per-channel'
+                    self.file_format = 'one-file-per-channel'
                     raw_file_paths_dict = create_one_file_per_channel_dict(filename.parent)
             # finally the format with the header-attached to the binary file as one giant file
             else:
-                self.file_type = 'header-attached'
+                self.file_format = 'header-attached'
 
             self._global_info, self._ordered_channels, data_dtype, header_size, self._block_size = read_rhd(
-                self.filename, self.file_type
+                self.filename, self.file_format
             )
 
         # memmap raw data with the complicated structured dtype
         # if header-attached there is one giant memory-map
-        if self.file_type == "header-attached":
+        if self.file_format == "header-attached":
             self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode="r", offset=header_size)
         else:
             self._raw_data = {}
-            for stream_index, (stream_index_key, sub_datatype) in enumerate(data_dtype.items()):
+            for stream_index, (stream_index_key, stream_datatype) in enumerate(data_dtype.items()):
                 # for 'one-file-per-signal' we have one memory map / neo stream
-                if self.file_type == "one-file-per-signal":
+                if self.file_format == "one-file-per-signal":
                     self._raw_data[stream_index] = np.memmap(
-                        raw_file_paths_dict[stream_index_key], dtype=sub_datatype, mode="r"
+                        raw_file_paths_dict[stream_index_key], dtype=stream_datatype, mode="r"
                     )
                 # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
                 else:
                     self._raw_data[stream_index] = []
-                    for channel_index, datatype in enumerate(sub_datatype):
+                    for channel_index, channel_datatype in enumerate(stream_datatype):
                         self._raw_data[stream_index].append(
                             np.memmap(
                                 raw_file_paths_dict[stream_index_key][channel_index],
-                                dtype=[datatype],
+                                dtype=[channel_datatype],
                                 mode="r",
                             )
                         )
 
         # check timestamp continuity
-        if self.file_type == "header-attached":
+        if self.file_format == "header-attached":
             timestamp = self._raw_data["timestamp"].flatten()
         # timestamps are always the last stream
-        elif self.file_type == "one-file-per-signal":
+        elif self.file_format == "one-file-per-signal":
             timestamp = self._raw_data[max(self._raw_data.keys())]["timestamp"].flatten()
         else:
             timestamp = self._raw_data[max(self._raw_data.keys())][0]["timestamp"].flatten()
@@ -168,9 +169,9 @@ class IntanRawIO(BaseRawIO):
 
         self._max_sampling_rate = np.max(signal_channels["sampling_rate"])
 
-        if self.file_type == 'header-attached':
+        if self.file_format == 'header-attached':
             self._max_sigs_length = self._raw_data.size * self._block_size
-        elif self.file_type == 'one-file-per-signal':
+        elif self.file_format == 'one-file-per-signal':
              self._max_sigs_length = max(
                 [
                     raw_data.size * self._block_size
@@ -216,9 +217,9 @@ class IntanRawIO(BaseRawIO):
         signal_channels = self.header["signal_channels"][mask]
         channel_names = signal_channels["name"]
         chan_name0 = channel_names[0]
-        if self.file_type == "header-attached":
+        if self.file_format == "header-attached":
             size = self._raw_data[chan_name0].size
-        elif self.file_type == 'one-file-per-signal':
+        elif self.file_format == 'one-file-per-signal':
             size = self._raw_data[stream_index][chan_name0].size
         else:
             size = self._raw_data[stream_index][0][chan_name0].size
@@ -245,9 +246,9 @@ class IntanRawIO(BaseRawIO):
             channel_indexes_are_none = True
         channel_names = signal_channels["name"][channel_indexes]
 
-        if self.file_type == 'header-attached':
+        if self.file_format == 'header-attached':
             shape = self._raw_data[channel_names[0]].shape
-        elif self.file_type == 'one-file-per-signal':
+        elif self.file_format == 'one-file-per-signal':
             shape = self._raw_data[stream_index][channel_names[0]].shape
         else:
             if channel_indexes_are_none:
@@ -268,9 +269,9 @@ class IntanRawIO(BaseRawIO):
 
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_names)), dtype="uint16")
         for i, chan_name in enumerate(channel_names):
-            if self.file_type == 'header-attached':
+            if self.file_format == 'header-attached':
                 data_chan = self._raw_data[chan_name]
-            elif self.file_type == 'one-file-per-signal':
+            elif self.file_format == 'one-file-per-signal':
                 data_chan = self._raw_data[stream_index][chan_name]
             else:
                 if channel_indexes_are_none:
@@ -537,14 +538,14 @@ stream_type_to_name = {
 }
 
 
-def read_rhd(filename, file_type: str):
+def read_rhd(filename, file_format: str):
     """Function for reading the rhd file header
     
     Parameters
     ----------
     filename: str | Path
         The filename of the *.rhd file
-    file_type: 'header-attached' | 'one-file-per-signal' | 'one-file-per-channel'
+    file_format: 'header-attached' | 'one-file-per-signal' | 'one-file-per-channel'
         Whether the header is included with the rest of the data ('header-attached')
         Or as a standalone file ('one-file-per-signal' or 'one-file-per-channel')
     """
@@ -578,7 +579,7 @@ def read_rhd(filename, file_type: str):
 
         # read channel group and channel header
         channels_by_type = {k: [] for k in [0, 1, 2, 3, 4, 5]}
-        if not file_type == "header-attached":
+        if not file_format == "header-attached":
             data_dtype = {k: [] for k in range(7)} # 5 streams + 6 for timestamps for not header attached
         for g in range(global_info["nb_signal_group"]):
             group_info = read_variable_header(f, rhd_signal_group_header)
@@ -602,12 +603,12 @@ def read_rhd(filename, file_type: str):
     ordered_channels = []
 
     if version >= V("1.2"):
-        if file_type == "header-attached":
+        if file_format == "header-attached":
             data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
         else:
             data_dtype[6] = [("timestamp", "int32", BLOCK_SIZE)]
     else:
-        if file_type == "header-attached":
+        if file_format == "header-attached":
             data_dtype = [("timestamp", "uint32", BLOCK_SIZE)]
         else:
             data_dtype[6] = [("timestamp", "uint32", BLOCK_SIZE)]
@@ -620,7 +621,7 @@ def read_rhd(filename, file_type: str):
         chan_info["gain"] = 0.195
         chan_info["offset"] = -32768 * 0.195
         ordered_channels.append(chan_info)
-        if file_type == "header-attached":
+        if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
             data_dtype[0] += [(name, "uint16", BLOCK_SIZE)]
@@ -633,7 +634,7 @@ def read_rhd(filename, file_type: str):
         chan_info["gain"] = 0.0000374
         chan_info["offset"] = 0.0
         ordered_channels.append(chan_info)
-        if file_type == "header-attached":
+        if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE // 4)]
         else:
             data_dtype[1] += [(name, "uint16", BLOCK_SIZE // 4)]
@@ -646,7 +647,7 @@ def read_rhd(filename, file_type: str):
         chan_info["gain"] = 0.0000748
         chan_info["offset"] = 0.0
         ordered_channels.append(chan_info)
-        if file_type == "header-attached":
+        if file_format == "header-attached":
             data_dtype += [(name, "uint16")]
         else:
             data_dtype[1] += [(name, "uint16", BLOCK_SIZE // 4)]
@@ -677,7 +678,7 @@ def read_rhd(filename, file_type: str):
             chan_info["gain"] = 0.0003125
             chan_info["offset"] = -32768 * 0.0003125
         ordered_channels.append(chan_info)
-        if file_type == "header-attached":
+        if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
             data_dtype[3] += [(name, "uint16", BLOCK_SIZE)]
@@ -696,7 +697,7 @@ def read_rhd(filename, file_type: str):
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             ordered_channels.append(chan_info)
-            if file_type == "header-attached":
+            if file_format == "header-attached":
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
             else:
                 data_dtype[sig_type] += [(name, "uint16", BLOCK_SIZE)]
@@ -706,7 +707,7 @@ def read_rhd(filename, file_type: str):
     else:
         global_info["notch_filter_applied"] = False
 
-    if not file_type == "header-attached":
+    if not file_format == "header-attached":
         # filter out dtypes without any values
         data_dtype = {k:v for (k,v) in data_dtype.items() if len(v) > 0}
 
