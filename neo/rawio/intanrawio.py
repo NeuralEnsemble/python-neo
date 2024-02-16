@@ -79,7 +79,7 @@ class IntanRawIO(BaseRawIO):
             self._global_info, self._ordered_channels, data_dtype, header_size, self._block_size = read_rhs(
                 self.filename
             )
-        # 3 possibilities for rhd files two use a plain header called 'info.rhd' and one format has the header
+        # 3 possibilities for rhd files, one combines the header and the data in the same file with suffix `rhd` while the other two separates the data from the header which is always called `info.rhd`
         # attached to the actual binary file with data
         elif self.filename.endswith(".rhd"):
             if filename.name == "info.rhd":
