@@ -83,8 +83,6 @@ class CSVIO(BaseIO):
                 seg.analogsignals.append(anaSig)
             bl.segments.append(seg)
 
-        bl.create_many_to_one_relationship()
-
         return bl
 
     def fill_header(self):
