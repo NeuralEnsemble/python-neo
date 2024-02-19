@@ -46,7 +46,8 @@ def _check_annotations(value):
             raise ValueError(f"Invalid annotation. NumPy arrays with dtype {value.dtype.type}" f"are not allowed")
     elif isinstance(value, dict):
         for key, element in value.items():
-            _check_annotations(key)
+            if not isinstance(key, str):
+                raise TypeError(f"Annotations keys must be strings not of type {type(key)}")
             _check_annotations(element)
     elif isinstance(value, (list, tuple)):
         for element in value:
