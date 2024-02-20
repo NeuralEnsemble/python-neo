@@ -224,6 +224,6 @@ def load_csv_file(
     channels = []
     for name, unit in zip(ordered_datatypes, ordered_units):
         if name != "time":
-            channels.append({"name": name, "unit": unit, "dtype": np.float64, "sampling_step": sampling_step})
+            channels.append({"name": name, "unit": unit, "dtype": np.dtype("f8"), "sampling_step": sampling_step})
 
     return results, channels, num_recs
