@@ -32,6 +32,10 @@ class ObjectList:
             )
         ):
             raise TypeError(f"Object is a {type(obj)}. It should be one of {self.allowed_contents}.")
+
+        if self._contains(obj):
+            raise ValueError("Cannot add the same object twice")
+
         # set the child-parent relationship
         if self.parent:
             relationship_name = self.parent.__class__.__name__.lower()
@@ -41,6 +45,13 @@ class ObjectList:
             if current_parent != self.parent:
                 # use weakref here? - see https://github.com/NeuralEnsemble/python-neo/issues/684
                 setattr(obj, relationship_name, self.parent)
+
+    def _contains(self, obj):
+        if self._items is None:
+            obj_ids = []
+        else:
+            obj_ids = [id(item) for item in self._items]
+        return id(obj) in obj_ids
 
     def __str__(self):
         return str(self._items)
