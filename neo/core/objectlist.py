@@ -34,7 +34,7 @@ class ObjectList:
             raise TypeError(f"Object is a {type(obj)}. It should be one of {self.allowed_contents}.")
 
         if self._contains(obj):
-            raise ValueError("Cannot add the same object twice")
+            raise ValueError("Cannot add this object because it is already contained within the list")
 
         # set the child-parent relationship
         if self.parent:
