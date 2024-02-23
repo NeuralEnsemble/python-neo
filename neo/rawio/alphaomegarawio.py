@@ -690,7 +690,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         bl_ann["rec_datetime"] = self._segments[0]["metadata"]["record_date"]
         for seg_index, segment in enumerate(self._segments):
             seg_ann = bl_ann["segments"][seg_index]
-            seg_ann["name"] = "Seg #{} Block #0".format(seg_index)
+            seg_ann["name"] = f"Seg #{seg_index} Block #0"
             seg_ann["file_origin"] = "\n".join(str(f) for f in self._segments[seg_index]["metadata"]["filenames"])
             seg_ann["rec_datetime"] = self._segments[seg_index]["metadata"]["record_date"]
             for c_index, c in enumerate(seg_ann["signals"]):

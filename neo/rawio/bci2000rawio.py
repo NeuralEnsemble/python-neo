@@ -309,7 +309,7 @@ def parse_bci2000_header(filename):
 
         # The next lines contain state vector definitions.
         temp = fid.readline().decode("utf8").strip()
-        assert temp == "[ State Vector Definition ]", "State definitions not found in header %s" % filename
+        assert temp == "[ State Vector Definition ]", f"State definitions not found in header {filename}"
         state_defs = []
         state_def_dtype = [("name", "a64"), ("length", int), ("startVal", int), ("bytePos", int), ("bitPos", int)]
         while True:
@@ -323,7 +323,7 @@ def parse_bci2000_header(filename):
 
         # The next lines contain parameter definitions.
         # There are many, and their formatting can be complicated.
-        assert temp == "[ Parameter Definition ]", "Parameter definitions not found in header %s" % filename
+        assert temp == "[ Parameter Definition ]", f"Parameter definitions not found in header {filename}"
         param_defs = {}
         while True:
             temp = fid.readline().decode("utf8")

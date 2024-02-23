@@ -241,7 +241,7 @@ class Plexon2RawIO(BaseRawIO):
         # Provide additional, recommended annotations for the final neo objects.
         block_index = 0
         bl_ann = self.raw_annotations["blocks"][block_index]
-        bl_ann["name"] = "Block containing PL2 data#{}".format(block_index)
+        bl_ann["name"] = f"Block containing PL2 data#{block_index}"
         bl_ann["file_origin"] = self.filename
         file_info = self.pl2reader.pl2_file_info
         block_info = {attr: getattr(file_info, attr) for attr, _ in file_info._fields_}

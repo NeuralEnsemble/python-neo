@@ -111,7 +111,7 @@ class AxonRawIO(BaseRawIO):
         elif version >= 2.0:
             mode = info["protocol"]["nOperationMode"]
 
-        assert mode in [1, 2, 3, 5], "Mode {} is not supported".format(mode)
+        assert mode in [1, 2, 3, 5], f"Mode {mode} is not supported"
         # event-driven variable-length mode (mode 1)
         # event-driven fixed-length mode (mode 2 or 5)
         # gap free mode (mode 3) can be in several episodes

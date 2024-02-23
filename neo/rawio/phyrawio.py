@@ -190,7 +190,7 @@ class PhyRawIO(BaseRawIO):
                 _, num_pcs, num_pc_channels = current_pc_features.shape
                 for pc_idx in range(num_pcs):
                     for channel_idx in range(num_pc_channels):
-                        key = "channel{channel_idx}_pc{pc_idx}".format(channel_idx=channel_idx, pc_idx=pc_idx)
+                        key = f"channel{channel_idx}_pc{pc_idx}"
                         spiketrain_an["__array_annotations__"][key] = current_pc_features[:, pc_idx, channel_idx]
 
             if self._pc_feature_ind is not None:

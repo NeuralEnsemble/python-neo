@@ -330,7 +330,7 @@ def generate_one_simple_segment(
                 t_start=t_start,
                 units=pq.mV,
                 channel_index=a,
-                name="sig %d for segment %s" % (a, seg.name),
+                name=f"sig {a} for segment {seg.name}",
             )
             seg.analogsignals.append(anasig)
 

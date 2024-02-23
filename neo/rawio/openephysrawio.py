@@ -264,8 +264,8 @@ class OpenEphysRawIO(BaseRawIO):
 
                 # each sorted_id is one channel
                 for sorted_id in all_sorted_ids:
-                    unit_name = "{}#{}".format(name, sorted_id)
-                    unit_id = "{}#{}".format(name, sorted_id)
+                    unit_name = f"{name}#{sorted_id}"
+                    unit_id = f"{name}#{sorted_id}"
                     spike_channels.append(
                         (unit_name, unit_id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate)
                     )
@@ -281,7 +281,7 @@ class OpenEphysRawIO(BaseRawIO):
             if oe_index == 0:
                 event_filename = "all_channels.events"
             else:
-                event_filename = "all_channels_{}.events".format(oe_index + 1)
+                event_filename = f"all_channels_{oe_index + 1}.events"
 
             fullname = os.path.join(self.dirname, event_filename)
             event_info = read_file_header(fullname)
@@ -461,7 +461,7 @@ class OpenEphysRawIO(BaseRawIO):
         # question what is the label????
         # here I put a combination
         labels = np.array(
-            ["{}#{}#{}".format(int(d["event_type"]), int(d["processor_id"]), int(d["chan_id"])) for d in subdata],
+            [f'{int(d["event_type"])}#{int(d["processor_id"])}#{int(d["chan_id"])}' for d in subdata],
             dtype="U",
         )
         durations = None

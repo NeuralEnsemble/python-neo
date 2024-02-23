@@ -467,7 +467,7 @@ def read_rhd(filename):
 
         global_info = read_variable_header(f, rhd_global_header_base)
 
-        version = V("{major_version}.{minor_version}".format(**global_info))
+        version = V(f"{global_info['major_version']}.{global_info['minor_version']}")
 
         # the header size depends on the version :-(
         header = list(rhd_global_header_part1)  # make a copy
@@ -551,7 +551,7 @@ def read_rhd(filename):
 
     # temperature is not an official channel in the header
     for i in range(global_info["num_temp_sensor_channels"]):
-        name = "temperature_{}".format(i)
+        name = f"temperature_{i}"
         chan_info = {"native_channel_name": name, "signal_type": 20}
         chan_info["sampling_rate"] = sr / BLOCK_SIZE
         chan_info["units"] = "Celsius"

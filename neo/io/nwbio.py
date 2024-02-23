@@ -407,7 +407,7 @@ class NWBIO(BaseIO):
                                 raise
                 if annotation_name in annotations:
                     if len(annotations[annotation_name]) > 1:
-                        raise NotImplementedError("We don't yet support multiple values for {}".format(annotation_name))
+                        raise NotImplementedError(f"We don't yet support multiple values for {annotation_name}")
                     # take single value from set
                     (annotations[annotation_name],) = annotations[annotation_name]
 
@@ -481,11 +481,11 @@ class NWBIO(BaseIO):
         """
         electrodes = self._write_electrodes(self._nwbfile, block)
         if not block.name:
-            block.name = "block%d" % self.blocks_written
+            block.name = f"block{self.blocks_written}" 
         for i, segment in enumerate(block.segments):
             assert segment.block is block
             if not segment.name:
-                segment.name = "%s : segment%d" % (block.name, i)
+                segment.name = f"{block.name} : segment{i}"
             self._write_segment(self._nwbfile, segment, electrodes)
         self.blocks_written += 1
 
@@ -515,30 +515,30 @@ class NWBIO(BaseIO):
         for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
             assert signal.segment is segment
             if hasattr(signal, "name"):
-                signal.name = "%s %s %i" % (segment.name, signal.name, i)
-                logging.warning("Warning signal name exists. New name: %s" % (signal.name))
+                signal.name = f"{segment.name} {signal.name} {i}"
+                logging.warning(f"Warning signal name exists. New name: {signal.name}")
             else:
-                signal.name = "%s : analogsignal%s %i" % (segment.name, signal.name, i)
+                signal.name = f"{segment.name} : analogsignal{signal.name} {i}"
             self._write_signal(self._nwbfile, signal, electrodes)
 
         for i, train in enumerate(segment.spiketrains):
             assert train.segment is segment
             if not train.name:
-                train.name = "%s : spiketrain%d" % (segment.name, i)
+                train.name = f"{segment.name} : spiketrain{i}"
             self._write_spiketrain(self._nwbfile, train)
 
         for i, event in enumerate(segment.events):
             assert event.segment is segment
             if hasattr(event, "name"):
-                event.name = "%s  %s %i" % (segment.name, event.name, i)
-                logging.warning("Warning event name exists. New name: %s" % (event.name))
+                event.name = f"{segment.name}  {event.name} {i}"
+                logging.warning(f"Warning event name exists. New name: {event.name}")
             else:
-                event.name = "%s : event%s %d" % (segment.name, event.name, i)
+                event.name = f"{segment.name} : event{event.name} {i}"
             self._write_event(self._nwbfile, event)
 
         for i, epoch in enumerate(segment.epochs):
             if not epoch.name:
-                epoch.name = "%s : epoch%d" % (segment.name, i)
+                epoch.name = f"{segment.name} : epoch{i}"
             self._write_epoch(self._nwbfile, epoch)
 
     def _write_signal(self, nwbfile, signal, electrodes):
@@ -593,16 +593,13 @@ class NWBIO(BaseIO):
             )
         else:
             raise TypeError(
-                "signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(
-                    signal.__class__.__name__
-                )
-            )
+                f"signal has type { signal.__class__.__name__}, should be AnalogSignal or IrregularlySampledSignal")
         nwb_group = signal.annotations.get("nwb_group", "acquisition")
         add_method_map = {"acquisition": self._nwbfile.add_acquisition, "stimulus": self._nwbfile.add_stimulus}
         if nwb_group in add_method_map:
             add_time_series = add_method_map[nwb_group]
         else:
-            raise NotImplementedError("NWB group '{}' not yet supported".format(nwb_group))
+            raise NotImplementedError(f"NWB group '{nwb_group}' not yet supported")
         add_time_series(tS)
         return tS
 

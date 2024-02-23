@@ -490,7 +490,7 @@ class AxographRawIO(BaseRawIO):
             new_sig_memmaps.append(sig_memmaps[first_index : first_index + n_channels])
         self._raw_signals = new_sig_memmaps
 
-        self.logger.debug("New number of segments: {}".format(self.info["n_episodes"]))
+        self.logger.debug(f"New number of segments: {self.info['n_episodes']}")
 
         return
 
@@ -544,7 +544,7 @@ class AxographRawIO(BaseRawIO):
         with open(self.filename, "rb") as fid:
             f = StructFile(fid)
 
-            self.logger.debug("filename: {}".format(self.filename))
+            self.logger.debug(f"filename: {self.filename}")
             self.logger.debug("")
 
             # the first 4 bytes are always a 4-character file type identifier
@@ -552,9 +552,9 @@ class AxographRawIO(BaseRawIO):
             # - starting with AxoGraph X, the identifier is 'axgx'
             header_id = f.read(4).decode("utf-8")
             self.info["header_id"] = header_id
-            assert header_id in ["AxGr", "axgx"], 'not an AxoGraph binary file! "{}"'.format(self.filename)
+            assert header_id in ["AxGr", "axgx"], f'not an AxoGraph binary file! "{self.filename}"'
 
-            self.logger.debug("header_id: {}".format(header_id))
+            self.logger.debug(f"{header_id=}")
 
             # the next two numbers store the format version number and the
             # number of data columns to follow
@@ -566,19 +566,17 @@ class AxographRawIO(BaseRawIO):
                 format_ver, n_cols = f.read_f("HH")
                 assert (
                     format_ver == 1 or format_ver == 2
-                ), 'mismatch between header identifier "{}" and format ' 'version "{}"!'.format(header_id, format_ver)
+                ), f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
             elif header_id == "axgx":
                 format_ver, n_cols = f.read_f("ll")
-                assert format_ver >= 3, 'mismatch between header identifier "{}" and format ' 'version "{}"!'.format(
-                    header_id, format_ver
-                )
+                assert format_ver >= 3, f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
             else:
-                raise NotImplementedError('unimplemented file header identifier "{}"!'.format(header_id))
+                raise NotImplementedError(f'unimplemented file header identifier "{header_id}"!')
             self.info["format_ver"] = format_ver
             self.info["n_cols"] = n_cols
 
-            self.logger.debug("format_ver: {}".format(format_ver))
-            self.logger.debug("n_cols: {}".format(n_cols))
+            self.logger.debug(f"format_ver: {format_ver}")
+            self.logger.debug(f"n_cols: {n_cols}")
             self.logger.debug("")
 
             ##############################################
@@ -588,14 +586,14 @@ class AxographRawIO(BaseRawIO):
             sig_channels = []
             for i in range(n_cols):
 
-                self.logger.debug("== COLUMN INDEX {} ==".format(i))
+                self.logger.debug(f"== COLUMN INDEX {i} ==")
 
                 ##############################################
                 # NUMBER OF DATA POINTS IN COLUMN
 
                 n_points = f.read_f("l")
 
-                self.logger.debug("n_points: {}".format(n_points))
+                self.logger.debug(f"n_points: {n_points}")
 
                 ##############################################
                 # COLUMN TYPE
@@ -610,9 +608,9 @@ class AxographRawIO(BaseRawIO):
                 elif format_ver >= 3:
                     col_type = f.read_f("l")
                 else:
-                    raise NotImplementedError('unimplemented file format version "{}"!'.format(format_ver))
+                    raise NotImplementedError(f'unimplemented file format version "{format_ver}"!')
 
-                self.logger.debug("col_type: {}".format(col_type))
+                self.logger.debug(f"col_type: {col_type}")
 
                 ##############################################
                 # COLUMN NAME AND UNITS
@@ -629,9 +627,9 @@ class AxographRawIO(BaseRawIO):
                 elif format_ver >= 3:
                     title = f.read_f("S")
                 else:
-                    raise NotImplementedError('unimplemented file format version "{}"!'.format(format_ver))
+                    raise NotImplementedError(f'unimplemented file format version "{format_ver}"!')
 
-                self.logger.debug("title: {}".format(title))
+                self.logger.debug(f"title: {title}")
 
                 # units are given in parentheses at the end of a column title,
                 # unless units are absent
@@ -642,8 +640,8 @@ class AxographRawIO(BaseRawIO):
                     name = title
                     units = ""
 
-                self.logger.debug("name: {}".format(name))
-                self.logger.debug("units: {}".format(units))
+                self.logger.debug(f"name: {name}")
+                self.logger.debug(f"units: {units}")
 
                 ##############################################
                 # COLUMN DTYPE, SCALE, OFFSET
@@ -667,10 +665,9 @@ class AxographRawIO(BaseRawIO):
                         # series
                         first_value, increment = f.read_f("ff")
 
-                        self.logger.debug("interval: {}, freq: {}".format(increment, 1 / increment))
+                        self.logger.debug(f"interval: {increment}, freq: {1 / increment}")
                         self.logger.debug(
-                            "start: {}, end: {}".format(first_value, first_value + increment * (n_points - 1))
-                        )
+                            f"start: {first_value}, end: {first_value + increment * (n_points - 1)}")
 
                         # assume this is the time column
                         t_start, sampling_period = first_value, increment
@@ -704,9 +701,9 @@ class AxographRawIO(BaseRawIO):
                         # series
                         first_value, increment = f.read_f("dd")
 
-                        self.logger.debug("interval: {}, freq: {}".format(increment, 1 / increment))
+                        self.logger.debug(f"interval: {increment}, freq: {1 / increment}")
                         self.logger.debug(
-                            "start: {}, end: {}".format(first_value, first_value + increment * (n_points - 1))
+                            "start: {first_value}, end: {first_value + increment * (n_points - 1)}"
                         )
 
                         if i == 0:
@@ -758,11 +755,11 @@ class AxographRawIO(BaseRawIO):
 
                     else:
 
-                        raise NotImplementedError('unimplemented column type "{}"!'.format(col_type))
+                        raise NotImplementedError(f'unimplemented column type "{col_type}"!')
 
                 else:
 
-                    raise NotImplementedError('unimplemented file format version "{}"!'.format(format_ver))
+                    raise NotImplementedError(f'unimplemented file format version "{format_ver}"!')
 
                 ##############################################
                 # COLUMN MEMMAP AND CHANNEL INFO
@@ -794,9 +791,9 @@ class AxographRawIO(BaseRawIO):
 
                     first_value = array[0]
 
-                    self.logger.debug("interval: {}, freq: {}".format(increment, 1 / increment))
+                    self.logger.debug(f"interval: {increment}, freq: {1 / increment}")
                     self.logger.debug(
-                        "start: {}, end: {}".format(first_value, first_value + increment * (n_points - 1))
+                        f"start: {first_value}, end: {first_value + increment * (n_points - 1)}"
                     )
 
                     t_start, sampling_period = first_value, increment
@@ -810,13 +807,13 @@ class AxographRawIO(BaseRawIO):
                 else:
                     # not a time column
 
-                    self.logger.debug("gain: {}, offset: {}".format(gain, offset))
-                    self.logger.debug("initial data: {}".format(array[:5] * gain + offset))
+                    self.logger.debug(f"gain: {gain}, offset: {offset}")
+                    self.logger.debug("initial data: {array[:5] * gain + offset}")
 
                     # channel_info will be cast to _signal_channel_dtype
                     channel_info = (name, str(i), 1 / sampling_period, f.byte_order + dtype, units, gain, offset, "0")
 
-                    self.logger.debug("channel_info: {}".format(channel_info))
+                    self.logger.debug("channel_info: {channel_info}")
                     self.logger.debug("")
 
                     sig_memmaps.append(array)
@@ -865,7 +862,7 @@ class AxographRawIO(BaseRawIO):
                 n_traces = f.read_f("l")
                 self.info["n_traces"] = n_traces
 
-                self.logger.debug("n_traces: {}".format(n_traces))
+                self.logger.debug(f"n_traces: {n_traces}")
                 self.logger.debug("")
 
                 trace_header_info_list = {}
@@ -873,7 +870,7 @@ class AxographRawIO(BaseRawIO):
                 for i in range(n_traces):
 
                     # AxoGraph traces are 1-indexed in GUI, so use i+1 below
-                    self.logger.debug("== TRACE #{} ==".format(i + 1))
+                    self.logger.debug(f"== TRACE #{i+1} ==")
 
                     trace_header_info = {}
 
@@ -892,7 +889,7 @@ class AxographRawIO(BaseRawIO):
                         TraceHeaderDescription = TraceHeaderDescriptionV2
                     else:
                         raise NotImplementedError(
-                            'unimplemented trace header version "{}"!'.format(trace_header_info["trace_header_version"])
+                            f'unimplemented trace header version `{trace_header_info["trace_header_version"]}`!'
                         )
 
                     for key, fmt in TraceHeaderDescription:
@@ -913,19 +910,17 @@ class AxographRawIO(BaseRawIO):
                 n_groups = f.read_f("l")
                 self.info["n_groups"] = n_groups
                 group_ids = np.sort(list(set(group_ids)))  # remove duplicates and sort
-                assert n_groups == len(group_ids), "expected group_ids to have length {}: {}".format(
-                    n_groups, group_ids
-                )
+                assert n_groups == len(group_ids), f"expected group_ids to have length {n_groups}: {group_ids}"
 
-                self.logger.debug("n_groups: {}".format(n_groups))
-                self.logger.debug("group_ids: {}".format(group_ids))
+                self.logger.debug(f"n_groups: {n_groups}")
+                self.logger.debug(f"group_ids: {group_ids}")
                 self.logger.debug("")
 
                 group_header_info_list = {}
                 for i in group_ids:
 
                     # AxoGraph groups are 0-indexed in GUI, so use i below
-                    self.logger.debug("== GROUP #{} ==".format(i))
+                    self.logger.debug(f"== GROUP #{i} ==")
 
                     group_header_info = {}
 
@@ -942,7 +937,7 @@ class AxographRawIO(BaseRawIO):
                         GroupHeaderDescription = GroupHeaderDescriptionV1
                     else:
                         raise NotImplementedError(
-                            'unimplemented group header version "{}"!'.format(group_header_info["group_header_version"])
+                            f'unimplemented group header version `{group_header_info["group_header_version"]}`!'
                         )
 
                     for key, fmt in GroupHeaderDescription:
@@ -982,8 +977,8 @@ class AxographRawIO(BaseRawIO):
                         episodes_in_review.append(i + 1)
                 self.info["episodes_in_review"] = episodes_in_review
 
-                self.logger.debug("n_episodes: {}".format(n_episodes))
-                self.logger.debug("episodes_in_review: {}".format(episodes_in_review))
+                self.logger.debug(f"n_episodes: {n_episodes}")
+                self.logger.debug(f"episodes_in_review: {episodes_in_review}")
 
                 if format_ver == 5:
 
@@ -996,11 +991,11 @@ class AxographRawIO(BaseRawIO):
                         if episode_bool:
                             old_unknown_episode_list.append(i + 1)
 
-                    self.logger.debug("old_unknown_episode_list: {}".format(old_unknown_episode_list))
+                    self.logger.debug(f"old_unknown_episode_list: {old_unknown_episode_list}")
                     if n_episodes2 != n_episodes:
                         self.logger.debug(
-                            "n_episodes2 ({}) and n_episodes ({}) " "differ!".format(n_episodes2, n_episodes)
-                        )
+                           f"n_episodes2 ({n_episodes2}) and n_episodes ({n_episodes}) " "differ!"
+                           )
 
                 # another list of episode indexes with unknown purpose
                 unknown_episode_list = []
@@ -1010,9 +1005,9 @@ class AxographRawIO(BaseRawIO):
                     if episode_bool:
                         unknown_episode_list.append(i + 1)
 
-                self.logger.debug("unknown_episode_list: {}".format(unknown_episode_list))
+                self.logger.debug(f"unknown_episode_list: {unknown_episode_list}")
                 if n_episodes3 != n_episodes:
-                    self.logger.debug("n_episodes3 ({}) and n_episodes ({}) " "differ!".format(n_episodes3, n_episodes))
+                    self.logger.debug(f"n_episodes3 ({n_episodes3,}) and n_episodes ({n_episodes}) " "differ!")
 
                 # episodes can be masked to be removed from the pool of
                 # reviewable episodes completely until unmasked, and the
@@ -1025,9 +1020,9 @@ class AxographRawIO(BaseRawIO):
                         masked_episodes.append(i + 1)
                 self.info["masked_episodes"] = masked_episodes
 
-                self.logger.debug("masked_episodes: {}".format(masked_episodes))
+                self.logger.debug(f"masked_episodes: {masked_episodes}")
                 if n_episodes4 != n_episodes:
-                    self.logger.debug("n_episodes4 ({}) and n_episodes ({}) " "differ!".format(n_episodes4, n_episodes))
+                    self.logger.debug(f"n_episodes4 ({n_episodes4}) and n_episodes ({n_episodes}) " "differ!")
                 self.logger.debug("")
 
                 ##############################################
@@ -1054,7 +1049,7 @@ class AxographRawIO(BaseRawIO):
                 font_settings_info_list = {}
                 for i in font_categories:
 
-                    self.logger.debug("== FONT SETTINGS FOR {} ==".format(i))
+                    self.logger.debug(f"== FONT SETTINGS FOR {i} ==")
 
                     font_settings_info = {}
                     for key, fmt in FontSettingsDescription:
@@ -1067,9 +1062,8 @@ class AxographRawIO(BaseRawIO):
                     assert font_settings_info["setting1"] in [
                         FONT_BOLD,
                         FONT_NOT_BOLD,
-                    ], "expected setting1 ({}) to have value FONT_BOLD " "({}) or FONT_NOT_BOLD ({})".format(
-                        font_settings_info["setting1"], FONT_BOLD, FONT_NOT_BOLD
-                    )
+                    ], f"expected setting1 ({ font_settings_info['setting1']}) to have value FONT_BOLD " f"({FONT_BOLD}) or FONT_NOT_BOLD ({FONT_NOT_BOLD})"
+
 
                     # size is stored 10 times bigger than real value
                     font_settings_info["size"] = font_settings_info["size"] / 10.0
@@ -1115,7 +1109,7 @@ class AxographRawIO(BaseRawIO):
                 n_events, n_events_again = f.read_f("ll")
                 self.info["n_events"] = n_events
 
-                self.logger.debug("n_events: {}".format(n_events))
+                self.logger.debug(f"n_events: {n_events}")
 
                 # event / tag timing is stored as an index into time
                 raw_event_timestamps = []
@@ -1157,7 +1151,7 @@ class AxographRawIO(BaseRawIO):
                 n_epochs = f.read_f("l")
                 self.info["n_epochs"] = n_epochs
 
-                self.logger.debug("n_epochs: {}".format(n_epochs))
+                self.logger.debug(f"n_epochs: {n_epochs}")
 
                 epoch_list = []
                 for i in range(n_epochs):

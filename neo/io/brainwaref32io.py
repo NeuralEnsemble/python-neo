@@ -221,7 +221,7 @@ class BrainwareF32IO(BaseIO):
         paramvals = np.fromfile(self._fsrc, dtype=np.float32, count=numelements).tolist()
 
         # organize the parameers into a dictionary with arbitrary names
-        paramnames = ["Param%s" % i for i in range(len(paramvals))]
+        paramnames = [f"Param{i}" for i in range(len(paramvals))]
         self.__params = dict(zip(paramnames, paramvals))
 
     def __read_segment(self):

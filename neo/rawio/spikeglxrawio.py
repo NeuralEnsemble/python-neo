@@ -208,7 +208,7 @@ class SpikeGLXRawIO(BaseRawIO):
 
         for seg_index in range(nb_segment):
             seg_ann = self.raw_annotations["blocks"][0]["segments"][seg_index]
-            seg_ann["name"] = "Segment {}".format(seg_index)
+            seg_ann["name"] = f"Segment {seg_index}"
 
             for c, signal_stream in enumerate(signal_streams):
                 stream_name = signal_stream["name"]

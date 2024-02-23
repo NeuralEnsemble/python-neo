@@ -80,9 +80,9 @@ class BrainVisionRawIO(BaseRawIO):
         channel_infos = vhdr_header["Channel Infos"]
         for c in range(nb_channel):
             try:
-                channel_desc = channel_infos["Ch%d" % (c + 1,)]
+                channel_desc = channel_infos[f"Ch{c+1}"]
             except KeyError:
-                channel_desc = channel_infos["ch%d" % (c + 1,)]
+                channel_desc = channel_infos[f"ch{c + 1}"]
             name, ref, res, units = channel_desc.split(",")
             units = units.replace("µ", "u")
             chan_id = str(c + 1)
@@ -106,7 +106,7 @@ class BrainVisionRawIO(BaseRawIO):
         ev_timestamps = []
         ev_labels = []
         for i in range(len(all_info)):
-            ev_type, ev_label, pos, size, channel = all_info["Mk%d" % (i + 1,)].split(",")[:5]
+            ev_type, ev_label, pos, size, channel = all_info[f"Mk{i+1}"].split(",")[:5]
             ev_types.append(ev_type)
             ev_timestamps.append(int(pos))
             ev_labels.append(ev_label)
@@ -139,7 +139,7 @@ class BrainVisionRawIO(BaseRawIO):
             sig_annotations = self.raw_annotations["blocks"][0]["segments"][0]["signals"][0]
             all_coords = []
             for c in range(sig_channels.size):
-                coords = vhdr_header["Coordinates"]["Ch{}".format(c + 1)]
+                coords = vhdr_header["Coordinates"][f"Ch{c+1}"]
                 all_coords.append([float(v) for v in coords.split(",")])
             all_coords = np.array(all_coords)
             for dim in range(all_coords.shape[1]):

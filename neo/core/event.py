@@ -194,7 +194,7 @@ class Event(DataObject):
         Returns a string representing the :class:`Event`.
         """
 
-        objs = ["%s@%s" % (label, str(time)) for label, time in zip(self.labels, self.times)]
+        objs = [f"{label}@{str(time)}" for label, time in zip(self.labels, self.times)]
         return "<Event: %s>" % ", ".join(objs)
 
     def _repr_pretty_(self, pp, cycle):
