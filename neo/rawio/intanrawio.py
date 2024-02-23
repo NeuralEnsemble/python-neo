@@ -220,7 +220,7 @@ class IntanRawIO(BaseRawIO):
         else:
              self._max_sigs_length = max(
                 [
-                    len(raw_data) * raw_data.size
+                    raw_data[0].size
                     for raw_data in self._raw_data.values()
                 ]
             )
