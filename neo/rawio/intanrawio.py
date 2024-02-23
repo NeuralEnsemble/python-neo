@@ -146,13 +146,22 @@ class IntanRawIO(BaseRawIO):
                 else:
                     self._raw_data[stream_index] = []
                     for channel_index, channel_datatype in enumerate(stream_datatype):
-                        self._raw_data[stream_index].append(
-                            np.memmap(
-                                raw_file_paths_dict[stream_index_key][channel_index],
-                                dtype=channel_datatype,
-                                mode="r",
+                        if stream_index_key != 6:
+                            self._raw_data[stream_index].append(
+                                np.memmap(
+                                    raw_file_paths_dict[stream_index_key][channel_index],
+                                    dtype=channel_datatype,
+                                    mode="r",
+                                )
                             )
-                        )
+                        else:
+                            self._raw_data[stream_index].append(
+                                np.memmap(
+                                    raw_file_paths_dict[stream_index_key][channel_index],
+                                    dtype=[channel_datatype],
+                                    mode="r",
+                                )
+                            )
 
         # check timestamp continuity
         if self.file_format == "header-attached":
