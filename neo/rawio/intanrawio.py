@@ -121,7 +121,7 @@ class IntanRawIO(BaseRawIO):
                         ).T
                     else:
                         self._raw_data[stream_index] = np.memmap(
-                            raw_file_paths_dict[stream_index_key], dtype=[stream_datatype],  mode="r"
+                            raw_file_paths_dict[stream_index_key], dtype=stream_datatype,  mode="r"
                         )
                 # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
                 else:
