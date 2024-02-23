@@ -117,11 +117,11 @@ class IntanRawIO(BaseRawIO):
                         n_samples = int(os.path.getsize(raw_file_paths_dict[stream_index_key]) / (n_chans * 2))# unit16 2 bytes
                     if stream_index_key != 6:
                         self._raw_data[stream_index] = np.memmap(
-                            raw_file_paths_dict[stream_index_key], dtype=[stream_datatype[0]], shape = (n_chans, n_samples),  mode="r"
+                            raw_file_paths_dict[stream_index_key], dtype=stream_datatype, shape = (n_chans, n_samples),  mode="r"
                         ).T
                     else:
                         self._raw_data[stream_index] = np.memmap(
-                            raw_file_paths_dict[stream_index_key], dtype=[stream_datatype[0]],  mode="r"
+                            raw_file_paths_dict[stream_index_key], dtype=[stream_datatype],  mode="r"
                         )
                 # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
                 else:
