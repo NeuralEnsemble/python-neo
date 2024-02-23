@@ -50,12 +50,26 @@ class PlexonRawIO(BaseRawIO):
     def __init__(self, filename="", progress_bar=True):
         """
 
+        Class for reading non-pl2 plexon files
+
         Parameters
         ----------
-        filename: str
-            The filename.
+        filename: str, default: ''
+            The *.plx file to be loaded
         progress_bar: bool, default True
             Display progress bar using tqdm (if installed) when parsing the file.
+
+        Notes
+        -----
+        * Compatible with versions 100 to 106. Other versions have not been tested.
+        * Note that Plexon now use a new format PL2 which is NOT supported by this IO.
+
+        Examples
+        --------
+        >>> import neo.rawio
+        >>> r = neo.rawio.PlexonRawIO(filename='data.plx')
+        >>> r.parse_header()
+        >>> print(r)
 
         """
         BaseRawIO.__init__(self)
@@ -175,7 +189,7 @@ class PlexonRawIO(BaseRawIO):
             if self.progress_bar:
                 chan_loop = tqdm(
                     block_pos[bl_type],
-                    desc="Finalizing data blocks for type %d" % bl_type,
+                    desc=f"Finalizing data blocks for type {bl_type}",
                     leave=True,
                 )
             else:
@@ -292,7 +306,7 @@ class PlexonRawIO(BaseRawIO):
             h = dspChannelHeaders[c]
 
             name = h["Name"].decode("utf8")
-            _id = "ch{}#{}".format(chan_id, unit_id)
+            _id = f"ch{chan_id}#{unit_id}"
             wf_units = ""
             if global_header["Version"] < 103:
                 wf_gain = 3000.0 / (2048 * h["Gain"] * 1000.0)

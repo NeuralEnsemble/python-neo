@@ -76,57 +76,48 @@ from .baserawio import (
 
 class BlackrockRawIO(BaseRawIO):
     """
-    Class for reading data in from a file set recorded by the Blackrock
-    (Cerebus) recording system.
+    Class for reading data in from a file set recorded by the Blackrock (Cerebus) recording system. 
+    Upon initialization, the class is linked to the available set of Blackrock files.
 
-    Upon initialization, the class is linked to the available set of Blackrock
-    files.
+    Parameters
+    ----------
+    filename: str, default: ''
+        File name (without extension) of the set of Blackrock files to associate with.
+        Any .nsX or .nev, .sif, or .ccf extensions are ignored when parsing this parameter.
+    nsx_override: str | None, default: None
+        File name of the .nsX files (without extension). If None, filename is used.
+    nev_override str | None, default: None
+        File name of the .nev file (without extension). If None, filename is used.
+    nsx_to_load int | list | 'max' | 'all' | None, default None:
+        IDs of nsX file from which to load data, e.g., if set to 5 only data from the ns5 file are loaded.
+        If 'all', then all nsX will be loaded. Contrary to previous version of the IO  (<0.7), nsx_to_load
+        must be set at the init before parse_header().
+    load_nev: bool, default: True
+        Load (or not) events/spikes by ignoring or not the nev file.
 
-    Note: This routine will handle files according to specification 2.1, 2.2,
+    Notes
+    -----
+    * Note: This routine will handle files according to specification 2.1, 2.2,
     and 2.3. Recording pauses that may occur in file specifications 2.2 and
     2.3 are automatically extracted and the data set is split into different
     segments.
 
-    The Blackrock data format consists not of a single file, but a set of
+    * The Blackrock data format consists not of a single file, but a set of
     different files. This constructor associates itself with a set of files
     that constitute a common data set. By default, all files belonging to
     the file set have the same base name, but different extensions.
     However, by using the override parameters, individual filenames can
     be set.
+        
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> # Inspect a set of file consisting of files FileSpec2.3001.ns5 and FileSpec2.3001.nev
+    >>> reader = neo.rawio.BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
+    >>> reader.parse_header()
+    >>> print(reader)
 
-    Args:
-        filename (string):
-            File name (without extension) of the set of Blackrock files to
-            associate with. Any .nsX or .nev, .sif, or .ccf extensions are
-            ignored when parsing this parameter.
-        nsx_override (string):
-            File name of the .nsX files (without extension). If None,
-            filename is used.
-            Default: None.
-        nev_override (string):
-            File name of the .nev file (without extension). If None,
-            filename is used.
-            Default: None.
-        nsx_to_load (int, list, 'max', 'all' (=None)) default None:
-            IDs of nsX file from which to load data, e.g., if set to
-            5 only data from the ns5 file are loaded.
-            If 'all', then all nsX will be loaded.
-            Contrary to previous version of the IO  (<0.7), nsx_to_load
-            must be set at the init before parse_header().
-        load_nev (bool):
-            Load (or not) events/spikes by ignoring or not the nev file.
-            Default: True
-
-    Examples:
-        >>> reader = BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
-        >>> reader.parse_header()
-
-            Inspect a set of file consisting of files FileSpec2.3001.ns5 and
-            FileSpec2.3001.nev
-
-        >>> print(reader)
-
-            Display all informations about signal channels, units, segment size....
+            
     """
 
     extensions = ["ns" + str(_) for _ in range(1, 7)]
@@ -283,8 +274,8 @@ class BlackrockRawIO(BaseRawIO):
                 all_unit_id = np.unique(chan_spikes["unit_class_nb"])
                 for u, unit_id in enumerate(all_unit_id):
                     self.internal_unit_ids.append((channel_id, unit_id))
-                    name = "ch{}#{}".format(channel_id, unit_id)
-                    _id = "Unit {}".format(1000 * channel_id + unit_id)
+                    name = f"ch{channel_id}#{unit_id}"
+                    _id = f"Unit {1000 * channel_id + unit_id}"
                     wf_gain = self.__nev_params("digitization_factor")[channel_id] / 1000.0
                     wf_offset = 0.0
                     wf_units = "uV"
@@ -513,7 +504,7 @@ class BlackrockRawIO(BaseRawIO):
         for seg_index in range(self._nb_segment):
             seg_ann = block_ann["segments"][seg_index]
             seg_ann["file_origin"] = self.filename
-            seg_ann["name"] = "Segment {}".format(seg_index)
+            seg_ann["name"] = f"Segment {seg_index}"
             seg_ann["description"] = "Segment containing data from t_start to t_stop"
             if seg_index == 0:
                 # if more than 1 segment means pause
@@ -751,7 +742,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract file specification from an .nsx file.
         """
-        filename = ".".join([self._filenames["nsx"], "ns%i" % nsx_nb])
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         # Header structure of files specification 2.2 and higher. For files 2.1
         # and lower, the entries ver_major and ver_minor are not supported.
@@ -761,7 +752,7 @@ class BlackrockRawIO(BaseRawIO):
         if nsx_file_id["file_id"].decode() == "NEURALSG":
             spec = "2.1"
         elif nsx_file_id["file_id"].decode() in ["NEURALCD", "BRSMPGRP"]:
-            spec = "{}.{}".format(nsx_file_id["ver_major"], nsx_file_id["ver_minor"])
+            spec = f"{nsx_file_id['ver_major']}.{nsx_file_id['ver_minor']}"
         else:
             raise IOError("Unsupported NSX file type.")
 
@@ -778,9 +769,9 @@ class BlackrockRawIO(BaseRawIO):
 
         nev_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
         if nev_file_id["file_id"].decode() in ["NEURALEV", "BREVENTS"]:
-            spec = "{}.{}".format(nev_file_id["ver_major"], nev_file_id["ver_minor"])
+            spec = f"{nev_file_id['ver_major']}.{nev_file_id['ver_minor']}"
         else:
-            raise IOError("NEV file type {} is not supported".format(nev_file_id["file_id"].decode()))
+            raise IOError(f"NEV file type {nev_file_id['file_id'].decode()} is not supported")
 
         return spec
 
@@ -788,7 +779,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract nsx header information from a 2.1 .nsx file
         """
-        filename = ".".join([self._filenames["nsx"], "ns%i" % nsx_nb])
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         # basic header (file_id: NEURALCD)
         dt0 = [
@@ -819,7 +810,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract nsx header information from a 2.2 or 2.3 .nsx file
         """
-        filename = ".".join([self._filenames["nsx"], "ns%i" % nsx_nb])
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         # basic header (file_id: NEURALCD)
         dt0 = [
@@ -884,7 +875,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Reads data header following the given offset of an nsx file.
         """
-        filename = ".".join([self._filenames["nsx"], "ns%i" % nsx_nb])
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         ts_size = "uint64" if self.__nsx_basic_header[nsx_nb]["ver_major"] >= 3 else "uint32"
 
@@ -911,7 +902,7 @@ class BlackrockRawIO(BaseRawIO):
         Reads the nsx data header for each data block following the offset of
         file spec 2.2 and 2.3.
         """
-        filename = ".".join([self._filenames["nsx"], "ns%i" % nsx_nb])
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         filesize = self.__get_file_size(filename)
 
@@ -944,7 +935,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract nsx data from a 2.1 .nsx file
         """
-        filename = ".".join([self._filenames["nsx"], "ns%i" % nsx_nb])
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         # get shape of data
         shape = (self.__nsx_params["2.1"](nsx_nb)["nb_data_points"], self.__nsx_basic_header[nsx_nb]["channel_count"])
@@ -961,7 +952,7 @@ class BlackrockRawIO(BaseRawIO):
         Extract nsx data (blocks) from a 2.2 or 2.3 .nsx file. Blocks can arise
         if the recording was paused by the user.
         """
-        filename = ".".join([self._filenames["nsx"], "ns%i" % nsx_nb])
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         data = {}
         for data_bl in self.__nsx_data_header[nsx_nb].keys():
@@ -1107,7 +1098,7 @@ class BlackrockRawIO(BaseRawIO):
             header_skip = 6
 
         # read all raw data packets and markers
-        dt0 = [("timestamp", ts_format), ("packet_id", "uint16"), ("value", "S{}".format(data_size - header_skip))]
+        dt0 = [("timestamp", ts_format), ("packet_id", "uint16"), ("value", f"S{data_size - header_skip}")]
 
         raw_data = np.memmap(filename, offset=header_size, dtype=dt0, mode="r")
 
@@ -1163,9 +1154,9 @@ class BlackrockRawIO(BaseRawIO):
                 # additional resets occurred without a reset event being stored
                 additional_ids = jump_ids[np.invert(overlap)]
                 warnings.warn(
-                    "Detected {} undocumented segments within "
-                    "nev data after timestamps {}."
-                    "".format(len(additional_ids), additional_ids)
+                    f"Detected {len(additional_ids)} undocumented segments within "
+                    f"nev data after timestamps {additional_ids}."
+                    ""
                 )
                 reset_ev_ids = sorted(np.unique(np.concatenate((reset_ev_ids, jump_ids))))
 
@@ -1177,7 +1168,7 @@ class BlackrockRawIO(BaseRawIO):
             return event_segment_ids
 
         else:
-            raise ValueError("Unknown File Spec {}".formate(self.__nev_spec))
+            raise ValueError(f"Unknown File Spec {self.__nev_spec}")
 
     def __match_nsx_and_nev_segment_ids(self, nsx_nb):
         """
@@ -1234,7 +1225,7 @@ class BlackrockRawIO(BaseRawIO):
                     mask_outside = (ev_ids == i) & (data["timestamp"] < int(seg["timestamp"]) - nsx_offset - nsx_period)
 
                     if len(data[mask_outside]) > 0:
-                        warnings.warn("Spikes outside any segment. Detected on segment #{}".format(i))
+                        warnings.warn(f"Spikes outside any segment. Detected on segment #{i}")
                         ev_ids[mask_outside] -= 1
 
                     # If some nev data are outside of this nsX segment, increase their segment ids
@@ -1252,7 +1243,7 @@ class BlackrockRawIO(BaseRawIO):
                             time_after_seg = (
                                 data[mask_after_seg]["timestamp"][-1] - end_of_current_nsx_seg
                             ) / timestamp_resolution
-                            warnings.warn("Spikes {}s after last segment.".format(time_after_seg))
+                            warnings.warn(f"Spikes {time_after_seg}s after last segment.")
                             # Break out of loop because it's the last iteration
                             # and the spikes should stay connected to last segment
                             break
@@ -1274,9 +1265,8 @@ class BlackrockRawIO(BaseRawIO):
             # consistency check: same number of segments for nsx and nev data
             assert nb_possible_nev_segments == len(
                 nonempty_nsx_segments
-            ), "Inconsistent ns{0} and nev file. {1} segments present in .nev file, but {2} in " "ns{0} file.".format(
-                nsx_nb, nb_possible_nev_segments, len(nonempty_nsx_segments)
-            )
+            ), (f"Inconsistent ns{nsx_nb} and nev file. {nb_possible_nev_segments} "
+            f"segments present in .nev file, but {len(nonempty_nsx_segments)} in " "ns{nsx_nb} file.")
 
             new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments), sorted(list(nonempty_nsx_segments))))
 
@@ -1509,7 +1499,7 @@ class BlackrockRawIO(BaseRawIO):
                     ("analog_input_channel_3", "int16"),
                     ("analog_input_channel_4", "int16"),
                     ("analog_input_channel_5", "int16"),
-                    ("unused", "S{}".format(data_size - 20)),
+                    ("unused", f"S{data_size - 20}"),
                 ],
                 # Version=2.3
                 "b": [
@@ -1518,7 +1508,7 @@ class BlackrockRawIO(BaseRawIO):
                     ("packet_insertion_reason", "uint8"),
                     ("reserved", "uint8"),
                     ("digital_input", "uint16"),
-                    ("unused", "S{}".format(data_size - 10)),
+                    ("unused", f"S{data_size - 10}"),
                 ],
                 # Version >= 3.0
                 "c": [
@@ -1527,7 +1517,7 @@ class BlackrockRawIO(BaseRawIO):
                     ("packet_insertion_reason", "uint8"),
                     ("dlen", "uint8"),
                     ("digital_input", "uint16"),
-                    ("unused", "S{}".format(data_size - 14)),
+                    ("unused", f"S{data_size - 14}"),
                 ],
             },
             "Spikes": {
@@ -1536,14 +1526,14 @@ class BlackrockRawIO(BaseRawIO):
                     ("packet_id", "uint16"),
                     ("unit_class_nb", "uint8"),
                     ("reserved", "uint8"),
-                    ("waveform", "S{}".format(data_size - 8)),
+                    ("waveform", f"S{data_size - 8}"),
                 ],
                 "b": [
                     ("timestamp", "uint64"),
                     ("packet_id", "uint16"),
                     ("unit_class_nb", "uint8"),
                     ("dlen", "uint8"),
-                    ("waveform", "S{}".format(data_size - 12)),
+                    ("waveform", f"S{data_size - 12}"),
                 ],
             },
             "Comments": {
@@ -1553,7 +1543,7 @@ class BlackrockRawIO(BaseRawIO):
                     ("char_set", "uint8"),
                     ("flag", "uint8"),
                     ("color", "uint32"),
-                    ("comment", "S{}".format(data_size - 12)),
+                    ("comment", f"S{data_size - 12}"),
                 ],
                 "b": [
                     ("timestamp", "uint64"),
@@ -1561,7 +1551,7 @@ class BlackrockRawIO(BaseRawIO):
                     ("char_set", "uint8"),
                     ("flag", "uint8"),
                     ("color", "uint32"),
-                    ("comment", "S{}".format(data_size - 16)),
+                    ("comment", f"S{data_size - 16}"),
                 ],
             },
             "VideoSync": {
@@ -1623,13 +1613,13 @@ class BlackrockRawIO(BaseRawIO):
                     ("timestamp", "uint32"),
                     ("packet_id", "uint16"),
                     ("config_change_type", "uint16"),
-                    ("config_changed", "S{}".format(data_size - 8)),
+                    ("config_changed", f"S{data_size - 8}"),
                 ],
                 "b": [
                     ("timestamp", "uint64"),
                     ("packet_id", "uint16"),
                     ("config_change_type", "uint16"),
-                    ("config_changed", "S{}".format(data_size - 12)),
+                    ("config_changed", f"S{data_size - 12}"),
                 ],
             },
         }
@@ -1654,7 +1644,7 @@ class BlackrockRawIO(BaseRawIO):
             "max_res": self.__nev_basic_header["timestamp_resolution"],
             "channel_ids": self.__nev_ext_header[b"NEUEVWAV"]["electrode_id"],
             "channel_labels": self.__channel_labels[self.__nev_spec](),
-            "event_unit": pq.CompoundUnit("1.0/{} * s".format(self.__nev_basic_header["timestamp_resolution"])),
+            "event_unit": pq.CompoundUnit(f"1.0/{self.__nev_basic_header['timestamp_resolution']} * s"),
             "nb_units": dict(
                 zip(
                     self.__nev_ext_header[b"NEUEVWAV"]["electrode_id"],
@@ -1671,7 +1661,7 @@ class BlackrockRawIO(BaseRawIO):
             "waveform_size": self.__waveform_size[self.__nev_spec](),
             "waveform_dtypes": self.__get_waveforms_dtype(),
             "waveform_sampling_rate": self.__nev_basic_header["sample_resolution"] * pq.Hz,
-            "waveform_time_unit": pq.CompoundUnit("1.0/{} * s".format(self.__nev_basic_header["sample_resolution"])),
+            "waveform_time_unit": pq.CompoundUnit(f"1.0/{self.__nev_basic_header['sample_resolution']} * s"),
             "waveform_unit": pq.uV,
         }
 
@@ -1759,9 +1749,9 @@ class BlackrockRawIO(BaseRawIO):
 
         for elid in elids:
             if elid < 129:
-                labels.append("chan%i" % elid)
+                labels.append(f"chan{elid}")
             else:
-                labels.append("ainp%i" % (elid - 129 + 1))
+                labels.append(f"ainp{(elid - 12 +1 )}")
 
         return dict(zip(elids, labels))
 
@@ -1843,11 +1833,11 @@ class BlackrockRawIO(BaseRawIO):
                 dig_factor.append(float("nan"))
 
             if elid < 129:
-                labels.append("chan%i" % elid)
+                labels.append(f"chan{elid}")
             else:
-                labels.append("ainp%i" % (elid - 129 + 1))
+                labels.append(f"ainp{(elid - 129 + 1)}")
 
-        filename = ".".join([self._filenames["nsx"], "ns%i" % nsx_nb])
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         bytes_in_headers = (
             self.__nsx_basic_header[nsx_nb].dtype.itemsize
@@ -1875,7 +1865,7 @@ class BlackrockRawIO(BaseRawIO):
             "timestamp_resolution": 30000,
             "bytes_in_headers": bytes_in_headers,
             "sampling_rate": 30000 / self.__nsx_basic_header[nsx_nb]["period"] * pq.Hz,
-            "time_unit": pq.CompoundUnit("1.0/{}*s".format(30000 / self.__nsx_basic_header[nsx_nb]["period"])),
+            "time_unit": pq.CompoundUnit(f"1.0/{30000 / self.__nsx_basic_header[nsx_nb]['period']}*s"),
         }
 
         # Returns complete dictionary because then it does not need to be called so often
@@ -1899,9 +1889,7 @@ class BlackrockRawIO(BaseRawIO):
             / self.__nsx_basic_header[nsx_nb]["period"]
             * pq.Hz,
             "time_unit": pq.CompoundUnit(
-                "1.0/{}*s".format(
-                    self.__nsx_basic_header[nsx_nb]["timestamp_resolution"] / self.__nsx_basic_header[nsx_nb]["period"]
-                )
+                f"1.0/{self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] / self.__nsx_basic_header[nsx_nb]['period']}*s"
             ),
         }
 
@@ -1934,11 +1922,11 @@ class BlackrockRawIO(BaseRawIO):
         for ch in range(5):
             event_types.update(
                 {
-                    "analog_input_channel_{}".format(ch + 1): {
-                        "name": "analog_input_channel_{}".format(ch + 1),
-                        "field": "analog_input_channel_{}".format(ch + 1),
+                    f"analog_input_channel_{ch + 1}": {
+                        "name": f"analog_input_channel_{ch + 1}",
+                        "field": f"analog_input_channel_{ch + 1}",
                         "mask": self.__is_set(data["packet_insertion_reason"], ch + 1),
-                        "desc": "Values of analog input channel {} in mV " "(+/- 5000)".format(ch + 1),
+                        "desc": f"Values of analog input channel {ch + 1} in mV " "(+/- 5000)",
                     }
                 }
             )

@@ -155,7 +155,7 @@ class Epoch(DataObject):
         # this approach is much faster than comparing the
         # reference dimensionality
         if len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0], pq.UnitTime):
-            ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
+            ValueError(f"Unit {units} has dimensions {dim.simplified}, not [time]")
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
         obj._labels = labels
@@ -227,8 +227,7 @@ class Epoch(DataObject):
         """
 
         objs = [
-            "%s@%s for %s" % (label, str(time), str(dur))
-            for label, time, dur in zip(self.labels, self.times, self.durations)
+            f"{label}@{str(time)} for {str(dur)}" for label, time, dur in zip(self.labels, self.times, self.durations)
         ]
         return "<Epoch: %s>" % ", ".join(objs)
 

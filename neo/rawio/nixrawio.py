@@ -33,6 +33,16 @@ neo_attributes = {
 
 
 class NIXRawIO(BaseRawIO):
+    """Class for reading NIX files
+    
+    Parameters
+    ----------
+    filename: str, default: ''
+        The nix file to be load
+        
+    Notes
+    -----
+    Requires the nixio package to be installed"""
 
     extensions = ["nix", "h5"]
     rawmode = "one-file"

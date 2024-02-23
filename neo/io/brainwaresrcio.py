@@ -487,7 +487,7 @@ class BrainwareSrcIO(BaseIO):
             else:
                 raise AssertionError(
                     "This single event has multiple labels in an array with "
-                    "shape {} instead of a single label.".format(event.labels.shape)
+                    f"shape {event.labels.shape} instead of a single label."
                 )
             senders.append(event.annotations["sender"])
 

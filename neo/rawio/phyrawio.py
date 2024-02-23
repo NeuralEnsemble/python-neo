@@ -28,14 +28,27 @@ class PhyRawIO(BaseRawIO):
     """
     Class for reading Phy data.
 
-    Usage:
-        >>> import neo.rawio
-        >>> r = neo.rawio.PhyRawIO(dirname='/dir/to/phy/folder')
-        >>> r.parse_header()
-        >>> print(r)
-        >>> spike_timestamp = r.get_spike_timestamps(block_index=0,
-        ... seg_index=0, spike_channel_index=0, t_start=None, t_stop=None)
-        >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, 'float64')
+    Parameters
+    ----------
+    dirname: str | Path, default: ''
+        The dirname containing the phy data (.npy, .mat, .tsv. & .dat files)
+    load_amplitudes: bool, default: False
+        Whether to load the amplitude data
+    load_pcs: bool, default: False
+        Whether to load the pcs feature files (these are relatively big files)
+
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> r = neo.rawio.PhyRawIO(dirname='/dir/to/phy/folder')
+    >>> r.parse_header()
+    >>> print(r)
+    >>> spike_timestamp = r.get_spike_timestamps(block_index=0,
+                                                 seg_index=0,
+                                                 spike_channel_index=0,
+                                                 t_start=None,
+                                                 t_stop=None)
+    >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, dtype='float64')
 
     """
 
@@ -177,7 +190,7 @@ class PhyRawIO(BaseRawIO):
                 _, num_pcs, num_pc_channels = current_pc_features.shape
                 for pc_idx in range(num_pcs):
                     for channel_idx in range(num_pc_channels):
-                        key = "channel{channel_idx}_pc{pc_idx}".format(channel_idx=channel_idx, pc_idx=pc_idx)
+                        key = f"channel{channel_idx}_pc{pc_idx}"
                         spiketrain_an["__array_annotations__"][key] = current_pc_features[:, pc_idx, channel_idx]
 
             if self._pc_feature_ind is not None:

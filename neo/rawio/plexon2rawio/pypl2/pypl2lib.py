@@ -8,22 +8,26 @@
 # You are free to modify or share this file, provided that the above
 # copyright notice is kept intact.
 
-from sys import platform
-import os
+import platform
+import subprocess
 import pathlib
 import warnings
+import numpy as np
 
-if any(platform.startswith(name) for name in ("linux", "darwin", "freebsd")):
+platform_is_windows = platform.system() == "Windows"
+
+if platform_is_windows:
+    import ctypes
+else:
+    is_wine_available = subprocess.run(
+                ["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
+            )
+    if is_wine_available.returncode != 0:
+        raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
+
     from zugbruecke import CtypesSession
 
     ctypes = CtypesSession(log_level=100)
-
-elif platform.startswith("win"):
-    import ctypes
-else:
-    raise SystemError("unsupported platform")
-
-import numpy as np
 
 
 class tm(ctypes.Structure):

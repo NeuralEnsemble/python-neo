@@ -29,6 +29,15 @@ class WinEdrRawIO(BaseRawIO):
     rawmode = "one-file"
 
     def __init__(self, filename=""):
+        """
+        Class for reading WinEdr data
+        
+        Parameters
+        ----------
+        filename: str, default: ''
+            The *.edr file to be loaded
+            
+        """
         BaseRawIO.__init__(self)
         self.filename = filename
 
@@ -74,15 +83,15 @@ class WinEdrRawIO(BaseRawIO):
 
         signal_channels = []
         for c in range(header["NC"]):
-            YCF = float(header["YCF%d" % c].replace(",", "."))
-            YAG = float(header["YAG%d" % c].replace(",", "."))
-            YZ = float(header["YZ%d" % c].replace(",", "."))
+            YCF = float(header[f"YCF{c}"].replace(",", "."))
+            YAG = float(header[f"YAG{c}"].replace(",", "."))
+            YZ = float(header[f"YZ{c}"].replace(",", "."))
             ADCMAX = header["ADCMAX"]
             AD = header["AD"]
 
-            name = header["YN%d" % c]
-            chan_id = header["YO%d" % c]
-            units = header["YU%d" % c]
+            name = header[f"YN{c}"]
+            chan_id = header[f"YO{c}"]
+            units = header[f"YU{c}"]
             gain = AD / (YCF * YAG * (ADCMAX + 1))
             offset = -YZ * gain
             stream_id = "0"

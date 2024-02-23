@@ -24,18 +24,27 @@ class MedRawIO(BaseRawIO):
     Uses the dhn-med-py MED python package (version >= 1.0.0), created by
     Dark Horse Neuro, Inc. and medformat.org.
 
+    Parameters
+    ----------
+    dirname: str | Path | None, default: None
+        The folder containing the data files to load
+    password: str | None, default: None
+        The password for the Med session
+    keep_original_times: bool, default: False
+        If True UTC timestamps are used and returned as seconds referenced
+        to midnight 1 Jan 1970
+        If False timestamps are referenced to the beginning of the session
+        with the beginning being 0
+
+    Notes
+    -----
     Currently reads the entire MED session.  Every discontinuity is considered
     to be a new segment.  Channels are grouped by sampling frequency, to
     create streams.  In MED all channels will line up time-wise, so streams
     will span the entire recording, and continuous sections of those streams
     are divided up into segments.
 
-    Timestamps generated are referenced to the beginning of the session,
-    with the beginning of the session being timestamp zero.  If UTC timestamps
-    are desired, then the keep_original_times flag in the constructor can be
-    set to True (it defaults to False) and the timestamps used in the object
-    will be seconds, reference to midnight 1 Jan 1970 (assuming that that
-    data is available in the MED data session).
+
     """
 
     extensions = ["medd", "rdat", "ridx"]

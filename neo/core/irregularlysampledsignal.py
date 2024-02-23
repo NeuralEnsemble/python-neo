@@ -272,7 +272,7 @@ class IrregularlySampledSignal(BaseSignal):
                 elif isinstance(j, np.ndarray):
                     raise NotImplementedError("Arrays not yet supported")
                 else:
-                    raise TypeError("%s not supported" % type(j))
+                    raise TypeError(f"{type(j)} not supported")
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
                 obj.array_annotations = deepcopy(self.array_annotations_at_index(k))
@@ -600,7 +600,7 @@ class IrregularlySampledSignal(BaseSignal):
         for attr in self._necessary_attrs:
             if not (attr[0] in ["signal", "times", "t_start", "t_stop", "times"]):
                 if getattr(self, attr[0], None) != getattr(other, attr[0], None):
-                    raise MergeError("Cannot concatenate these two signals as the %s differ." % attr[0])
+                    raise MergeError(f"Cannot concatenate these two signals as the {attr[0]} differ.")
 
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):

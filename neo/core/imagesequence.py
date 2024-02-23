@@ -227,7 +227,7 @@ class ImageSequence(BaseSignal):
         if isinstance(other, ImageSequence):
             for attr in ("sampling_rate", "spatial_scale", "t_start"):
                 if getattr(self, attr) != getattr(other, attr):
-                    raise ValueError("Inconsistent values of %s" % attr)
+                    raise ValueError(f"Inconsistent values of {attr}")
 
     # t_start attribute is handled as a property so type checking can be done
     @property

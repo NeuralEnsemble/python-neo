@@ -41,13 +41,15 @@ class NeuroScopeRawIO(BaseRawIO):
         ----------
         filename : str, Path
             Usually the path of an xml file
-        binary_file : str or Path optional
+        binary_file : str | Path | None, default: None
             The binary data file
             Supported formats: ['.dat', '.lfp', '.eeg']
 
         Neuroscope format is composed of two files: a xml file with metadata and a binary file
         in either .dat, .lfp or .eeg format.
 
+        Notes
+        -----
         For backwards compatibility, we offer three ways of initializing the reader.
 
         Cases:
@@ -109,7 +111,7 @@ class NeuroScopeRawIO(BaseRawIO):
         # signals
         sig_channels = []
         for c in range(nb_channel):
-            name = "ch{}grp{}".format(c, channel_group.get(c, "none"))
+            name = f"ch{c}grp{channel_group.get(c, 'none')}"
             chan_id = str(c)
             units = "mV"
             offset = 0.0
