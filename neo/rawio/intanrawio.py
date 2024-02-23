@@ -689,7 +689,6 @@ def read_rhd(filename, file_format: str):
             data_dtype[1] = "uint16"
 
 
-
     # 2: RHD2000 supply voltage channel
     for chan_info in channels_by_type[2]:
         name = chan_info["custom_channel_name"]
@@ -744,7 +743,11 @@ def read_rhd(filename, file_format: str):
         if len(channels_by_type[sig_type]) > 0:
             name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
             chan_info = channels_by_type[sig_type][0]
-            chan_info["custom_channel_name"] = name  # overwite to allow memmap to work
+            # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
+            # make this memory map work correctly. So since our digital data is not organized
+            # by channel like analog/ADC are we have to overwrite the native name to create
+            # a single permanent name that we can find with channel id 
+            chan_info["native_channel_name"] = name  # overwite to allow memmap to work
             chan_info["sampling_rate"] = sr
             chan_info["units"] = "TTL"  # arbitrary units TTL for logic
             chan_info["gain"] = 1.0
@@ -755,10 +758,12 @@ def read_rhd(filename, file_format: str):
             else:
                 data_dtype[sig_type] = "uint16"
 
-    if bool(global_info["notch_filter_mode"]) and version >= V("3.0"):
-        global_info["notch_filter_applied"] = True
+    if global_info["notch_filter_mode"] == 2 and version >= V("3.0"):
+        global_info["notch_filter"] = '60Hz'
+    elif global_info["notch_filter_mode"] == 1 and version >= V("3.0"):
+        global_info["notch_filter"] = '50Hz'
     else:
-        global_info["notch_filter_applied"] = False
+        global_info["notch_filter"] = False
 
     if not file_format == "header-attached":
         # filter out dtypes without any values
