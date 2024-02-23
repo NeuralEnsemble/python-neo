@@ -211,7 +211,7 @@ class IntanRawIO(BaseRawIO):
         else:
              self._max_sigs_length = max(
                 [
-                    len(raw_data) * raw_data[0].size
+                    len(raw_data) * raw_data.size
                     for raw_data in self._raw_data.values()
                 ]
             )
@@ -252,7 +252,7 @@ class IntanRawIO(BaseRawIO):
         elif self.file_format == 'one-file-per-signal':
             size = self._raw_data[stream_index][:,0].size
         else:
-            size = self._raw_data[stream_index][0][chan_id_0].size
+            size = self._raw_data[stream_index][0].size
 
         size = self._raw_data[channel_id_0].size
 
@@ -285,9 +285,9 @@ class IntanRawIO(BaseRawIO):
             shape = self._raw_data[stream_index][:, 0].shape
         else:
             if channel_indexes_are_none:
-                shape = self._raw_data[stream_index][0][channel_ids[0]].shape
+                shape = self._raw_data[stream_index][0].shape
             else:
-                shape = self._raw_data[stream_index][channel_indexes[0]][channel_ids[0]].shape
+                shape = self._raw_data[stream_index][channel_indexes[0]].shape
 
 
         # some channel (temperature) have 1D field so shape 1D
@@ -301,21 +301,24 @@ class IntanRawIO(BaseRawIO):
             sl0 = i_start % block_size
             sl1 = sl0 + (i_stop - i_start)
 
-        sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="uint16")
+        if self.file_format == 'header-attached' and stream_id == 'RHD2000 amplifier channel':
+            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="int16")
+        else:
+            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="uint16")
         for channel_index, channel_id in enumerate(channel_ids):
             if self.file_format == 'header-attached':
             # Memmap fields are the channel_ids for unique channels
                 data_chan = self._raw_data[channel_id]
             elif self.file_format == 'one-file-per-signal':
                 if channel_indexes_are_none:
-                    data_chan = self._raw_data[stream_index][:, i]
+                    data_chan = self._raw_data[stream_index][:, channel_index]
                 else:
-                    data_chan = self._raw_data[stream_index][:, channel_indexes[i]]
+                    data_chan = self._raw_data[stream_index][:, channel_indexes[channel_index]]
             else:
                 if channel_indexes_are_none:
-                    data_chan = self._raw_data[stream_index][i][channel_id]
+                    data_chan = self._raw_data[stream_index][channel_index]
                 else:
-                    data_chan = self._raw_data[stream_index][channel_indexes[i]][channel_id]
+                    data_chan = self._raw_data[stream_index][channel_indexes[channel_index]]
 
 
             if len(shape) == 1:
@@ -669,10 +672,8 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
-        elif file_format == 'one-file-per-signal':
-            data_dtype[0] = "int16"
         else:
-            data_dtype[0] += [(name, "int16")]
+            data_dtype[0] = "int16"
 
     # 1: RHD2000 auxiliary input channel
     for chan_info in channels_by_type[1]:
@@ -684,10 +685,9 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE // 4)]
-        elif file_format == "one-file-per-signal":
-            data_dtype[1] = "uint16"
         else:
-            data_dtype[1] += [(name, "uint16")]
+            data_dtype[1] = "uint16"
+
 
 
     # 2: RHD2000 supply voltage channel
@@ -700,10 +700,9 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16")]
-        elif file_format == "one-file-per-signal":
-            data_dtype[1] = "uint16"
         else:
-            data_dtype[1] += [(name, "uint16")]
+            data_dtype[1] = "uint16"
+
 
     # temperature is not an official channel in the header
     for i in range(global_info["num_temp_sensor_channels"]):
@@ -733,10 +732,9 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
-        elif file_format == 'one-file-per-signal':
-            data_dtype[3] = "uint16"
         else:
-            data_dtype[3] += [(name, "uint16")]
+            data_dtype[3] = "uint16"
+
 
     # 4: USB board digital input channel
     # 5: USB board digital output channel
@@ -754,10 +752,8 @@ def read_rhd(filename, file_format: str):
             ordered_channels.append(chan_info)
             if file_format == "header-attached":
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
-            elif file_format == "one-file-per-signal":
-                data_dtype[sig_type] = "uint16"
             else:
-                data_dtype[sig_type] += [(name, "uint16",)]
+                data_dtype[sig_type] = "uint16"
 
     if bool(global_info["notch_filter_mode"]) and version >= V("3.0"):
         global_info["notch_filter_applied"] = True
