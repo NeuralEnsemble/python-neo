@@ -149,7 +149,7 @@ class IntanRawIO(BaseRawIO):
                         self._raw_data[stream_index].append(
                             np.memmap(
                                 raw_file_paths_dict[stream_index_key][channel_index],
-                                dtype=[channel_datatype],
+                                dtype=channel_datatype,
                                 mode="r",
                             )
                         )
@@ -253,8 +253,6 @@ class IntanRawIO(BaseRawIO):
             size = self._raw_data[stream_index][:,0].size
         else:
             size = self._raw_data[stream_index][0].size
-
-        size = self._raw_data[channel_id_0].size
 
         return size
 
