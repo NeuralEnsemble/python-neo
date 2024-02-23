@@ -105,7 +105,7 @@ class IntanRawIO(BaseRawIO):
         signal_channels = []
         for c, chan_info in enumerate(self._ordered_channels):
             name = chan_info["custom_channel_name"]
-            chan_id = chan_info["native_channel_name"]
+            channel_id = chan_info["native_channel_name"]
             if chan_info["signal_type"] == 20:
                 # exception for temperature
                 sig_dtype = "int16"
@@ -115,7 +115,7 @@ class IntanRawIO(BaseRawIO):
             signal_channels.append(
                 (
                     name,
-                    chan_id,
+                    channel_id,
                     chan_info["sampling_rate"],
                     sig_dtype,
                     chan_info["units"],
