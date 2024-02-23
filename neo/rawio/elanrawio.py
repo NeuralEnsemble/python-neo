@@ -9,7 +9,7 @@ https://elan.lyon.inserm.fr
 
 An Elan dataset is separated into 3 files :
  - .eeg          raw data file
- - .eeg.ent      hearder file
+ - .eeg.ent      header file
  - .eeg.pos      event file
 
 Author: Samuel Garcia
@@ -32,6 +32,26 @@ import pathlib
 
 
 class ElanRawIO(BaseRawIO):
+    """
+    Class for reading time-frequency EEG data maps from the Elan software
+    
+    Parameters
+    ----------
+    filename: str | None, default: None
+        The raw data to load (*.eeg)
+    entfile: str | None, default: None
+        The header file to load (*.eeg.ent)
+    posfile: str | None, deafult: None
+        The event file to load (*.eeg.pos)
+         
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> reader = neo.rawio.ElanRawIO(filename='data.eeg', entfile='header.eeg.ent', posfile='events.eeg.pos')
+    >>> reader.parse_header()
+    >>> print(reader) 
+    """
+
     extensions = ["eeg"]
     rawmode = "one-file"
 

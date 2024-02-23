@@ -23,7 +23,18 @@ import re
 
 
 class BrainVisionRawIO(BaseRawIO):
-    """ """
+    """ Class for reading BrainVision files
+    
+    Parameters
+    ----------
+    filename: str, default: ''
+        The *.vhdr file to load
+
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> reader = neo.rawio.BrainVisionRawIO(filename=data_filename)
+    """
 
     extensions = ["vhdr"]
     rawmode = "one-file"

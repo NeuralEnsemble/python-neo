@@ -70,15 +70,48 @@ class NeuralynxRawIO(BaseRawIO):
     This version works with rawmode of one-dir for a single directory of files or one-file for
     a single file.
 
-    Examples:
-        >>> reader = NeuralynxRawIO(dirname='Cheetah_v5.5.1/original_data')
-        >>> reader.parse_header()
+    Parameters
+    ----------
+    dirname: str, default: ''
+        Name of directory containing all files for a dataset. If provided, filename is
+        ignored. But one of either dirname or filename is required.
+    filename: str, default: ''
+        Name of a single ncs, nse, nev, or ntt file to include in dataset. Will be ignored,
+        if dirname is provided. But one of either dirname or filename is required.
+    exclude_filename: str | list | None, default: None
+        Name of a single ncs, nse, nev or ntt file or list of such files. Expects plain
+        filenames (without directory path).
+        None will search for all file types
+    keep_original_times: bool, default: False
+        If True, keep original start time as in files,
+        Otherwise set 0 of time to first time in dataset
 
-            Inspect all files in the directory.
+    Notes
+    -----
+    * This IO supports NCS, NEV, NSE and NTT file formats (not NVT or NRD yet)
 
-        >>> print(reader)
+    * These variations of header format and possible differences between the stated sampling frequency
+      and actual sampling frequency can create apparent time discrepancies in .Ncs files. Additionally,
+      the Neuralynx recording software can start and stop recording while continuing to write samples
+      to a single .Ncs file, which creates larger gaps in the time sequences of the samples.
 
-            Display all information about signal channels, units, segment size....
+    * This RawIO attempts to correct for these deviations where possible and present a single section of
+      contiguous samples with one sampling frequency, t_start, and length for each .Ncs file. These
+      sections are determined by the NcsSectionsFactory class. In the
+      event the gaps are larger, this RawIO only provides the samples from the first section as belonging
+      to one Segment.
+
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> reader = neo.rawio.NeuralynxRawIO(dirname='Cheetah_v5.5.1/original_data')
+    >>> reader.parse_header()
+
+    Inspect all files in the directory.
+
+    >>> print(reader)
+
+     Display all information about signal channels, units, segment size....
     """
 
     extensions = ["nse", "ncs", "nev", "ntt", "nvt", "nrd"]  # nvt and nrd are not yet supported
@@ -93,24 +126,7 @@ class NeuralynxRawIO(BaseRawIO):
     ]
 
     def __init__(self, dirname="", filename="", exclude_filename=None, keep_original_times=False, **kargs):
-        """
-        Initialize io for either a directory of Ncs files or a single Ncs file.
-
-        Parameters
-        ----------
-        dirname: str
-            name of directory containing all files for dataset. If provided, filename is
-            ignored.
-        filename: str
-            name of a single ncs, nse, nev, or ntt file to include in dataset. Will be ignored,
-            if dirname is provided.
-        exclude_filename: str or list
-            name of a single ncs, nse, nev or ntt file or list of such files. Expects plain
-            filenames (without directory path).
-        keep_original_times:
-            if True, keep original start time as in files,
-            otherwise set 0 of time to first time in dataset
-        """
+        
         if dirname != "":
             self.dirname = dirname
             self.rawmode = "one-dir"

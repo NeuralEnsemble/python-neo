@@ -28,6 +28,20 @@ HEADER_SIZE = 1024
 
 class OpenEphysRawIO(BaseRawIO):
     """
+    Class for reading openephys data
+
+    Parameters
+    ----------
+    dirname: str
+        The directory where the files are stored.
+    ignore_timestamps_errors: bool
+        (deprecated) This parameter is not used anymore.
+    fill_gap_value: int
+        When gaps are detected in continuous files, the gap is filled with this value.
+        Default is 0.
+
+    Notes
+    -----
     OpenEphys GUI software offers several data formats, see
     https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/491632/Data+format
 
@@ -61,16 +75,6 @@ class OpenEphysRawIO(BaseRawIO):
       * A recording can contain gaps due to USB stream loss when high CPU load when recording.
         Theses gaps are checked channel per channel which make the parse_header() slow.
         If gaps are detected then they are filled with zeros but the the reading will be much slower for getting signals.
-
-    Parameters
-    ----------
-    dirname: str
-        The directory where the files are stored.
-    ignore_timestamps_errors: bool
-        (deprecated) This parameter is not used anymore.
-    fill_gap_value: int
-        When gaps are detected in continuous files, the gap is filled with this value.
-        Default is 0.
 
     """
 

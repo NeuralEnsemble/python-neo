@@ -4,12 +4,12 @@ BaseFromRaw
 
 BaseFromRaw implement a bridge between the new neo.rawio API
 and the neo.io legacy that give neo.core object.
-The neo.rawio API is more restricted and limited and do not cover tricky
+The neo.rawio API is more restricted and limited and does not cover tricky
 cases with asymetrical tree of neo object.
 But if a format is done in neo.rawio the neo.io is done for free
 by inheritance of this class.
-Furthermore, IOs that inherits this BaseFromRaw also have the ability
-of the lazy load with proxy objects.
+Furthermore, IOs that inherit this BaseFromRaw also have the ability
+to lazy load with proxy objects.
 
 
 """
@@ -80,26 +80,34 @@ class BaseFromRaw(BaseIO):
         self, block_index=0, lazy=False, create_group_across_segment=None, signal_group_mode=None, load_waveforms=False
     ):
         """
-        :param block_index: int default 0. In case of several block block_index can be specified.
+        Reads one block of data from a file
 
-        :param lazy: False by default.
-
-        :param create_group_across_segment: bool or dict
+        Parameters
+        ----------
+        block_index: int, default: 0
+            In the case of multiple blocks, the block_index specifies which block to read
+        lazy: bool, default: False
+            Whether to read the block lazily (True) or load into memory (False)
+        create_group_across_segment: bool | dict | None, default: None
             If True :
-              * Create a neo.Group to group AnalogSignal segments
-              * Create a neo.Group to group SpikeTrain across segments
-              * Create a neo.Group to group Event across segments
-              * Create a neo.Group to group Epoch across segments
+                * Create a neo.Group to group AnalogSignal segments
+                * Create a neo.Group to group SpikeTrain across segments
+                * Create a neo.Group to group Event across segments
+                * Create a neo.Group to group Epoch across segments
             With a dict the behavior can be controlled more finely
-            create_group_across_segment = { 'AnalogSignal': True, 'SpikeTrain': False, ...}
-
-        :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
-        This control behavior for grouping channels in AnalogSignal.
-            * 'split-all': each channel will give an AnalogSignal
-            * 'group-by-same-units' all channel sharing the same quantity units ar grouped in
-            a 2D AnalogSignal
-
-        :param load_waveforms: False by default. Control SpikeTrains.waveforms is None or not.
+                * for example: create_group_across_segment = { 'AnalogSignal': True, 'SpikeTrain': False, ...}
+        signal_group_mode: 'split-all' | 'group-by-same-units' | None, default: None
+            This control behavior for grouping channels in AnalogSignal.
+                * 'split-all': each channel will be give an AnalogSignal
+                * 'group-by-same-units' all channel sharing the same quantity units are grouped in a 2D AnalogSignal
+            By default None since the default is dependant on the IO
+        load_waveforms: bool, default: False
+            Determines whether SpikeTrains.waveforms is created
+        
+        Returns
+        -------
+        bl: neo.core.Block
+            The block of data
 
         """
 
@@ -200,31 +208,40 @@ class BaseFromRaw(BaseIO):
         strict_slicing=True,
     ):
         """
-        :param block_index: int default 0. In case of several blocks block_index can be specified.
+        Reads one segment of the data file
 
-        :param seg_index: int default 0. Index of segment.
+        Parameters
+        ----------
+        block_index: int, default: 0
+            In the case of a multiblock dataset, this specifies which block to read
+        seg_index: int, default: 0
+            In the case of a multisegment block, this specifies which segmeent to read
+        lazy: bool, default: False
+            Whether to lazily load the segment (True) or to load the segment into memory (False)
+        signal_group_mode: 'split-all' | 'group-by-same-units' | None, default: None
+           This control behavior for grouping channels in AnalogSignal.
+            * 'split-all': each channel will be give an AnalogSignal
+            * 'group-by-same-units' all channel sharing the same quantity units are grouped in a 2D AnalogSignal
+        load_waveforms: bool, default: False
+            Determines whether SpikeTrains.waveforms is created
+        time_slice: tuple[quantity.Quantities | None] | None, default: None
+            Whether to take a time slice of the data
+                * None: indicates from beginning of the segment to the end of the segment
+                * tuple: (t_start, t_stop) with t_start and t_stop being quantities in seconds
+                * tuple: (None, t_stop) indicates the beginning of the segment to t_stop
+                * tuple: (t_start, None) indicates from t_start to the end of the segment
+        strict_slicing: bool, default: True
+            Control if an error is raised or not when t_start or t_stop
+            is outside of the real time range of the segment.
 
-        :param lazy: False by default.
-
-        :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
-        This control behavior for grouping channels in AnalogSignal.
-            * 'split-all': each channel will give an AnalogSignal
-            * 'group-by-same-units' all channel sharing the same quantity units ar grouped in
-            a 2D AnalogSignal
-
-        :param load_waveforms: False by default. Control SpikeTrains.waveforms is None or not.
-
-        :param time_slice: None by default means no limit.
-            A time slice is (t_start, t_stop) both are quantities.
-            All object AnalogSignal, SpikeTrain, Event, Epoch will load only in the slice.
-
-        :param strict_slicing: True by default.
-             Control if an error is raised or not when t_start or t_stop
-             is outside the real time range of the segment.
+        Returns
+        -------
+        seg: neo.core.Segment
+            Returns the desired segment based on the parameters given
         """
 
         if lazy:
-            assert time_slice is None, "For lazy=True you must specify time_slice when LazyObject.load(time_slice=...)"
+            assert time_slice is None, "For lazy=True you must specify a time_slice when LazyObject.load(time_slice=...)"
 
             assert (
                 not load_waveforms
@@ -317,7 +334,7 @@ class BaseFromRaw(BaseIO):
 
                 if len(all_units) == 1:
                     # no substream
-                    #  None iwill be transform as slice later
+                    # None iwill be transform as slice later
                     inner_stream_channels = None
                     name = stream_name
                     sub_stream = (stream_index, inner_stream_channels, name)

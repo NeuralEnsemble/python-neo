@@ -125,6 +125,18 @@ class BaseIO:
     def read(self, lazy: bool = False, **kargs):
         """
         Return all data from the file as a list of Blocks
+
+        Parameters
+        ----------
+        lazy: bool, default: False
+            Whether to lazily load the data (True) or to load into memory (False)
+        kargs: dict
+            IO specific additional arguments
+        
+        Returns
+        ------
+        block_list: list[neo.core.Block]
+            Returns all the data from the file as Blocks
         """
         if lazy and not self.support_lazy:
             raise ValueError("This IO module does not support lazy loading")
@@ -142,6 +154,17 @@ class BaseIO:
             raise NotImplementedError
 
     def write(self, bl, **kargs):
+        """
+        Writes a given block if IO supports writing
+
+        Parameters
+        ----------
+        bl: neo.core.Block
+            The neo Block to be written
+        kargs: dict
+            IO specific additional arguments
+            
+        """
         if Block in self.writeable_objects:
             if isinstance(bl, Sequence):
                 assert hasattr(self, "write_all_blocks"), (

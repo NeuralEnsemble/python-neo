@@ -28,14 +28,27 @@ class PhyRawIO(BaseRawIO):
     """
     Class for reading Phy data.
 
-    Usage:
-        >>> import neo.rawio
-        >>> r = neo.rawio.PhyRawIO(dirname='/dir/to/phy/folder')
-        >>> r.parse_header()
-        >>> print(r)
-        >>> spike_timestamp = r.get_spike_timestamps(block_index=0,
-        ... seg_index=0, spike_channel_index=0, t_start=None, t_stop=None)
-        >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, 'float64')
+    Parameters
+    ----------
+    dirname: str | Path, default: ''
+        The dirname containing the phy data (.npy, .mat, .tsv. & .dat files)
+    load_amplitudes: bool, default: False
+        Whether to load the amplitude data
+    load_pcs: bool, default: False
+        Whether to load the pcs feature files (these are relatively big files)
+
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> r = neo.rawio.PhyRawIO(dirname='/dir/to/phy/folder')
+    >>> r.parse_header()
+    >>> print(r)
+    >>> spike_timestamp = r.get_spike_timestamps(block_index=0,
+                                                 seg_index=0,
+                                                 spike_channel_index=0,
+                                                 t_start=None,
+                                                 t_stop=None)
+    >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, dtype='float64')
 
     """
 

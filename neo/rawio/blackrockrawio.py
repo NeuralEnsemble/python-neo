@@ -76,57 +76,48 @@ from .baserawio import (
 
 class BlackrockRawIO(BaseRawIO):
     """
-    Class for reading data in from a file set recorded by the Blackrock
-    (Cerebus) recording system.
+    Class for reading data in from a file set recorded by the Blackrock (Cerebus) recording system. 
+    Upon initialization, the class is linked to the available set of Blackrock files.
 
-    Upon initialization, the class is linked to the available set of Blackrock
-    files.
+    Parameters
+    ----------
+    filename: str, default: ''
+        File name (without extension) of the set of Blackrock files to associate with.
+        Any .nsX or .nev, .sif, or .ccf extensions are ignored when parsing this parameter.
+    nsx_override: str | None, default: None
+        File name of the .nsX files (without extension). If None, filename is used.
+    nev_override str | None, default: None
+        File name of the .nev file (without extension). If None, filename is used.
+    nsx_to_load int | list | 'max' | 'all' | None, default None:
+        IDs of nsX file from which to load data, e.g., if set to 5 only data from the ns5 file are loaded.
+        If 'all', then all nsX will be loaded. Contrary to previous version of the IO  (<0.7), nsx_to_load
+        must be set at the init before parse_header().
+    load_nev: bool, default: True
+        Load (or not) events/spikes by ignoring or not the nev file.
 
-    Note: This routine will handle files according to specification 2.1, 2.2,
+    Notes
+    -----
+    * Note: This routine will handle files according to specification 2.1, 2.2,
     and 2.3. Recording pauses that may occur in file specifications 2.2 and
     2.3 are automatically extracted and the data set is split into different
     segments.
 
-    The Blackrock data format consists not of a single file, but a set of
+    * The Blackrock data format consists not of a single file, but a set of
     different files. This constructor associates itself with a set of files
     that constitute a common data set. By default, all files belonging to
     the file set have the same base name, but different extensions.
     However, by using the override parameters, individual filenames can
     be set.
+        
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> # Inspect a set of file consisting of files FileSpec2.3001.ns5 and FileSpec2.3001.nev
+    >>> reader = neo.rawio.BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
+    >>> reader.parse_header()
+    >>> print(reader)
 
-    Args:
-        filename (string):
-            File name (without extension) of the set of Blackrock files to
-            associate with. Any .nsX or .nev, .sif, or .ccf extensions are
-            ignored when parsing this parameter.
-        nsx_override (string):
-            File name of the .nsX files (without extension). If None,
-            filename is used.
-            Default: None.
-        nev_override (string):
-            File name of the .nev file (without extension). If None,
-            filename is used.
-            Default: None.
-        nsx_to_load (int, list, 'max', 'all' (=None)) default None:
-            IDs of nsX file from which to load data, e.g., if set to
-            5 only data from the ns5 file are loaded.
-            If 'all', then all nsX will be loaded.
-            Contrary to previous version of the IO  (<0.7), nsx_to_load
-            must be set at the init before parse_header().
-        load_nev (bool):
-            Load (or not) events/spikes by ignoring or not the nev file.
-            Default: True
-
-    Examples:
-        >>> reader = BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
-        >>> reader.parse_header()
-
-            Inspect a set of file consisting of files FileSpec2.3001.ns5 and
-            FileSpec2.3001.nev
-
-        >>> print(reader)
-
-            Display all informations about signal channels, units, segment size....
+            
     """
 
     extensions = ["ns" + str(_) for _ in range(1, 7)]

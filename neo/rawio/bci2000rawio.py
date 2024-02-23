@@ -24,6 +24,11 @@ except ImportError:
 class BCI2000RawIO(BaseRawIO):
     """
     Class for reading data from a BCI2000 .dat file, either version 1.0 or 1.1
+
+    Parameters
+    ----------
+    filename: str, default: ''
+        The *.dat recorded by BCI2000
     """
 
     extensions = ["dat"]

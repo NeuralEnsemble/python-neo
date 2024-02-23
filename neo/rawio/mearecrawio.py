@@ -23,31 +23,34 @@ from copy import deepcopy
 
 class MEArecRawIO(BaseRawIO):
     """
-    Class for "reading" fake data from a MEArec file.
-
-    This class provides a convenient way to read data from a MEArec file.
+    Class for "reading" simulated data from a MEArec file.
 
     Parameters
     ----------
-    filename : str
+    filename : str, default: ''
         The filename of the MEArec file to read.
-    load_spiketrains : bool, optional
-        Whether or not to load spike train data. Defaults to `True`.
-    load_analogsignal : bool, optional
-        Whether or not to load continuous recording data. Defaults to `True`.
+    load_spiketrains : bool, default: True
+        Whether or not to load spike train data.
+    load_analogsignal : bool, default: True
+        Whether or not to load continuous recording data.
 
 
-    Usage:
-        >>> import neo.rawio
-        >>> r = neo.rawio.MEArecRawIO(filename='mearec.h5')
-        >>> r.parse_header()
-        >>> print(r)
-        >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            i_start=0, i_stop=1024,  channel_names=channel_names)
-        >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
-                            channel_indexes=[0, 3, 6])
-        >>> spike_timestamp = reader.spike_timestamps(unit_index=0, t_start=None, t_stop=None)
-        >>> spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> r = neo.rawio.MEArecRawIO(filename='mearec.h5', load_spiketrains=True)
+    >>> r.parse_header()
+    >>> print(r)
+    >>> raw_chunk = r.get_analogsignal_chunk(block_index=0,
+                                             seg_index=0,
+                                             i_start=0,
+                                             i_stop=1024, 
+                                             channel_names=channel_names)
+    >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk,
+                                                        dtype='float64',
+                                                        channel_indexes=[0, 3, 6])
+    >>> spike_timestamp = reader.spike_timestamps(unit_index=0, t_start=None, t_stop=None)
+    >>> spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
 
     """
 
