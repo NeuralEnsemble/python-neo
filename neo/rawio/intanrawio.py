@@ -208,8 +208,11 @@ class IntanRawIO(BaseRawIO):
 
         self._max_sampling_rate = np.max(signal_channels["sampling_rate"])
 
+        # if header is attached we need to incorporate our block size to get signal length
         if self.file_format == 'header-attached':
             self._max_sigs_length = self._raw_data.size * self._block_size
+        # for one-file-per-signal we just take the size which will give n_samples for each
+        # signal stream and then we just take the longest one
         elif self.file_format == 'one-file-per-signal':
              self._max_sigs_length = max(
                 [
@@ -217,6 +220,8 @@ class IntanRawIO(BaseRawIO):
                     for raw_data in self._raw_data.values()
                 ]
             )
+        # for one-file-per-channel we do the same as for one-file-per-signal, but since they 
+        # are in a list we just take the first channel in each list of channels
         else:
              self._max_sigs_length = max(
                 [
@@ -258,8 +263,10 @@ class IntanRawIO(BaseRawIO):
         channel_id_0 = channel_ids[0]
         if self.file_format == "header-attached":
             size = self._raw_data[channel_id_0].size
+        # one-file-per-signal is (n_samples, n_channels)
         elif self.file_format == 'one-file-per-signal':
             size = self._raw_data[stream_index].shape[0]
+        # one-file-per-channel is (n_samples) so pull from list
         else:
             size = self._raw_data[stream_index][0].size
 
@@ -296,11 +303,10 @@ class IntanRawIO(BaseRawIO):
             else:
                 shape = self._raw_data[stream_index][channel_indexes[0]].shape
 
-
         # some channel (temperature) have 1D field so shape 1D
         # because 1 sample per block
         if len(shape) == 2:
-            # this is the general case with 2D
+            # this is the general case with 2D (ie in the header-attached format)
             block_size = shape[1]
             block_start = i_start // block_size
             block_stop = i_stop // block_size + 1
@@ -308,7 +314,7 @@ class IntanRawIO(BaseRawIO):
             sl0 = i_start % block_size
             sl1 = sl0 + (i_stop - i_start)
 
-        if self.file_format == 'header-attached' and stream_id == 'RHD2000 amplifier channel':
+        if self.file_format != 'header-attached' and stream_id == 'RHD2000 amplifier channel':
             sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="int16")
         else:
             sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="uint16")
@@ -327,8 +333,9 @@ class IntanRawIO(BaseRawIO):
                 else:
                     data_chan = self._raw_data[stream_index][channel_indexes[channel_index]]
 
-
-            if len(shape) == 1:
+            # if shape is 1 it is either temp a 1d or a 1d array from one-file-per-stream
+            # or one-file-per-channel. In which case we do not want to do the block math
+            if len(shape) == 1 or self.file_format != 'header-attached':
                 sigs_chunk[:, channel_index] = data_chan[i_start:i_stop]
             else:
                 sigs_chunk[:, channel_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
