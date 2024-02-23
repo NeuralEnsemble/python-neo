@@ -46,19 +46,42 @@ class Plexon2RawIO(BaseRawIO):
     """
     Class for "reading" data from a PL2 file
 
-    Usage:
-        >>> import neo.rawio
-        >>> r = neo.rawio.Plexon2RawIO(filename='my_data.pl2')
-        >>> r.parse_header()
-        >>> print(r)
-        >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            i_start=0, i_stop=1024,  stream_index=0, channel_indexes=range(10))
-        >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
-                            channel_indexes=[0, 3, 6])
-        >>> spike_timestamp = r.get_spike_timestamps(spike_channel_index=0, t_start=None,
-                            t_stop=None)
-        >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, 'float64')
-        >>> ev_timestamps, _, ev_labels = r.get_event_timestamps(event_channel_index=0)
+    Parameters
+    ----------
+    filename: str | Path
+        The *.pl2 file to be loaded
+    pl2_dll_file_path: str | Path | None, default: None
+        The path to the necessary dll for loading pl2 files
+        If None will find correct dll for architecture and if it does not exist will download it
+
+    Notes
+    -----
+    * This IO is only partially lazy
+    * The IO only considers enabled channels and will not list disabled channels in its header.
+    * There is no 1-1 correspondence of PL2 spike channels and neo spike channels as each unit of
+      a PL2 spike channel will be represented as an individual neo spike channel.
+
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> r = neo.rawio.Plexon2RawIO(filename='my_data.pl2')
+    >>> r.parse_header()
+    >>> print(r)
+    >>> raw_chunk = r.get_analogsignal_chunk(block_index=0,
+                                             seg_index=0,
+                                             i_start=0,
+                                             i_stop=1024, 
+                                             stream_index=0,
+                                             channel_indexes=range(10))
+    >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk,
+                                                    dtype='float64',
+                                                    stream_index=0,
+                                                    channel_indexes=[0, 3, 6])
+    >>> spike_timestamp = r.get_spike_timestamps(spike_channel_index=0,
+                                                 t_start=None,
+                                                 t_stop=None)
+    >>> spike_times = r.rescale_spike_timestamp(spike_timestamp, dtype='float64')
+    >>> ev_timestamps, _, ev_labels = r.get_event_timestamps(event_channel_index=0)
 
     """
 
@@ -218,7 +241,7 @@ class Plexon2RawIO(BaseRawIO):
         # Provide additional, recommended annotations for the final neo objects.
         block_index = 0
         bl_ann = self.raw_annotations["blocks"][block_index]
-        bl_ann["name"] = "Block containing PL2 data#{}".format(block_index)
+        bl_ann["name"] = f"Block containing PL2 data#{block_index}"
         bl_ann["file_origin"] = self.filename
         file_info = self.pl2reader.pl2_file_info
         block_info = {attr: getattr(file_info, attr) for attr, _ in file_info._fields_}

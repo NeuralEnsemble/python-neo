@@ -400,7 +400,7 @@ class ArrayDict(dict):
     def update(self, *args, **kwargs):
         if args:
             if len(args) > 1:
-                raise TypeError("update expected at most 1 arguments, " "got %d" % len(args))
+                raise TypeError("update expected at most 1 arguments, " f"got {len(args)}")
             other = dict(args[0])
             for key in other:
                 self[key] = other[key]

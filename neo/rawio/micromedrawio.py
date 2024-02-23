@@ -33,6 +33,11 @@ class StructFile(io.BufferedReader):
 class MicromedRawIO(BaseRawIO):
     """
     Class for reading  data from micromed (.trc).
+
+    Parameters
+    ----------
+    filename: str, default: None
+        The *.trc file to be loaded
     """
 
     extensions = ["trc", "TRC"]

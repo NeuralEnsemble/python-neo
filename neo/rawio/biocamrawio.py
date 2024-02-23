@@ -23,15 +23,24 @@ class BiocamRawIO(BaseRawIO):
     """
     Class for reading data from a Biocam h5 file.
 
-    Usage:
+    Parameters
+    ----------
+    filename: str, default: ''
+        The *.h5 file to be read
+
+    Examples
+    --------
         >>> import neo.rawio
         >>> r = neo.rawio.BiocamRawIO(filename='biocam.h5')
         >>> r.parse_header()
         >>> print(r)
-        >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                                                 i_start=0, i_stop=1024,
+        >>> raw_chunk = r.get_analogsignal_chunk(block_index=0,
+                                                 seg_index=0,
+                                                 i_start=0,
+                                                 i_stop=1024,
                                                  channel_names=channel_names)
-        >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
+        >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk,
+                                                        dtype='float64',
                                                         channel_indexes=[0, 3, 6])
     """
 

@@ -85,7 +85,7 @@ def count_element(reader):
     nb_event_channel = reader.event_channels_count()
 
     nb_block = reader.block_count()
-    assert nb_block > 0, "{} have {} block".format(print_class(reader), nb_block)
+    assert nb_block > 0, f"{print_class(reader)} have {nb_block} block"
 
     for block_index in range(nb_block):
         nb_seg = reader.segment_count(block_index)
@@ -146,7 +146,7 @@ def read_analogsignals(reader):
 
     for stream_index in range(nb_stream):
         sr = reader.get_signal_sampling_rate(stream_index=stream_index)
-        assert type(sr) == float, "Type of sampling is {} should float".format(type(sr))
+        assert type(sr) == float, f"Type of sampling is {type(sr)} should float"
 
         # make other test on the first chunk of first block first block
         block_index = 0
@@ -331,9 +331,7 @@ def read_spike_times(reader):
                     t_start=None,
                     t_stop=None,
                 )
-                assert spike_timestamp.shape[0] == nb_spike, "nb_spike {} != {}".format(
-                    spike_timestamp.shape[0], nb_spike
-                )
+                assert spike_timestamp.shape[0] == nb_spike, f"nb_spike {spike_timestamp.shape[0]} != {nb_spike}"
 
                 spike_times = reader.rescale_spike_timestamp(spike_timestamp, "float64")
                 assert spike_times.dtype == "float64"
@@ -411,7 +409,7 @@ def read_events(reader):
                 ev_timestamps, ev_durations, ev_labels = reader.get_event_timestamps(
                     block_index=block_index, seg_index=seg_index, event_channel_index=ev_chan
                 )
-                assert ev_timestamps.shape[0] == nb_event, "Wrong shape {}, {}".format(ev_timestamps.shape[0], nb_event)
+                assert ev_timestamps.shape[0] == nb_event, f"Wrong shape {ev_timestamps.shape[0]}, {nb_event}"
                 if ev_durations is not None:
                     assert ev_durations.shape[0] == nb_event
                 assert ev_labels.shape[0] == nb_event

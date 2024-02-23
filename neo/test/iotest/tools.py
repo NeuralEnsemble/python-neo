@@ -60,7 +60,7 @@ def get_test_file_full_path(ioclass, filename=None, directory=None, clean=False)
     """
     # create a filename if none is provided
     if filename is None:
-        filename = "Generated0_%s" % ioclass.__name__
+        filename = f"Generated0_{ioclass.__name__}"
         if ioclass.mode == "file" and len(ioclass.extensions) >= 1:
             filename += "." + ioclass.extensions[0]
     elif not hasattr(filename, "lower"):
@@ -178,8 +178,8 @@ def create_generic_reader(ioobj, target=None, readall=False):
         return ioobj.read
     elif hasattr(target, "lower"):
         if readall:
-            return getattr(ioobj, "read_all_%ss" % target.lower())
-        return getattr(ioobj, "read_%s" % target.lower())
+            return getattr(ioobj, f"read_all_{target.lower()}s")
+        return getattr(ioobj, f"read_{target.lower()}")
 
 
 def iter_generic_readers(

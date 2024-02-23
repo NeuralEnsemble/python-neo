@@ -275,7 +275,7 @@ class Test_pprint(unittest.TestCase):
         description = "this is a test"
         obj = Container(name=name, description=description)
         res = pretty(obj)
-        targ = "Container with  name: '{}' description: '{}'".format(name, description)
+        targ = f"Container with  name: '{name}' description: '{description}'"
         self.assertEqual(res, targ)
 
 

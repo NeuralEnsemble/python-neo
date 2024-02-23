@@ -99,7 +99,7 @@ class KwikIO(BaseIO):
             group_id = model.channel_group
             group_meta = {"group_id": group_id}
             group_meta.update(model.metadata)
-            chx = Group(name="channel group #{}".format(group_id), index=model.channels, **group_meta)
+            chx = Group(name=f"channel group #{group_id}", index=model.channels, **group_meta)
             blk.groups.append(chx)
             clusters = model.spike_clusters
             for cluster_id in model.cluster_ids:
@@ -112,7 +112,7 @@ class KwikIO(BaseIO):
                     cluster_id=cluster_id, model=model, get_waveforms=get_waveforms, raw_data_units=raw_data_units
                 )
                 sptr.annotations.update({"cluster_group": meta, "group_id": model.channel_group})
-                unit = Group(cluster_group=meta, group_id=model.channel_group, name="unit #{}".format(cluster_id))
+                unit = Group(cluster_group=meta, group_id=model.channel_group, name=f"unit #{cluster_id}")
                 unit.add(sptr)
                 chx.add(unit)
                 seg.spiketrains.append(sptr)
@@ -160,7 +160,7 @@ class KwikIO(BaseIO):
             if not (cluster_id in model.cluster_ids):
                 raise ValueError
         except ValueError:
-            print("Exception: cluster_id (%d) not found !! " % cluster_id)
+            print(f"Exception: cluster_id ({cluster_id}) not found !! ")
             return
         clusters = model.spike_clusters
         idx = np.nonzero(clusters == cluster_id)

@@ -47,20 +47,21 @@ from .baserawio import (
 class AlphaOmegaRawIO(BaseRawIO):
     """
     AlphaOmega MPX file format 4 reader. Handles several segments.
-
-    A segment is a continuous record (when record starts/stops).
-
+    A segment is a continuous recording (when recording starts/stops).
     Only files in current `dirname` are loaded, subfolders are not explored.
 
-    :param dirname: folder from where to load the data
-    :type dirname: str or Path-like
-    :param lsx_files: list of lsx files in `dirname` referencing mpx files to
-        load (optional). If None (default), read all mpx files in `dirname`
-    :type lsx_files: list of strings or None
-    :param prune_channels: if True removes the empty channels, defaults to True
-    :type prune_channels: bool
+    Parameters
+    ----------
+    dirname: str | Path
+        The folder from which the data will be loaded
+    lsx_files: list[str] | None, default: None
+        List of lsx files in `dirname` referencing mpx files to load (optional)
+        If None all mpx files will be read
+    prune_channels: bool, default: True
+        If True removes the empty channels
 
-    .. warning::
+    Notes
+    -----
         Because channels must be gathered into coherent streams, channels names
         **must** be the default channel names in AlphaRS or Alpha LAB SNR
         software.
@@ -689,7 +690,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         bl_ann["rec_datetime"] = self._segments[0]["metadata"]["record_date"]
         for seg_index, segment in enumerate(self._segments):
             seg_ann = bl_ann["segments"][seg_index]
-            seg_ann["name"] = "Seg #{} Block #0".format(seg_index)
+            seg_ann["name"] = f"Seg #{seg_index} Block #0"
             seg_ann["file_origin"] = "\n".join(str(f) for f in self._segments[seg_index]["metadata"]["filenames"])
             seg_ann["rec_datetime"] = self._segments[seg_index]["metadata"]["record_date"]
             for c_index, c in enumerate(seg_ann["signals"]):

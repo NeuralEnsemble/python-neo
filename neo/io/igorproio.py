@@ -60,7 +60,7 @@ class IgorIO(BaseIO):
         BaseIO.__init__(self)
         filename = pathlib.Path(filename)
         assert filename.suffix[1:] in self.extensions, (
-            "Only the following extensions are supported: %s" % self.extensions
+            f"Only the following extensions are supported: {self.extensions}" 
         )
         self.filename = filename
         self.extension = filename.suffix[1:]
@@ -105,7 +105,7 @@ class IgorIO(BaseIO):
             data = bw.load(str(self.filename))
             version = data["version"]
             if version > 5:
-                raise IOError("Igor binary wave file format version {} " "is not supported.".format(version))
+                raise IOError(f"Igor binary wave file format version {version} " "is not supported.")
         elif self.extension == "pxp":
             assert type(path) is str, "A colon-separated Igor-style path must be provided."
             if not self._filesystem:

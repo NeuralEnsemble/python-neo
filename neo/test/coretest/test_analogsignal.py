@@ -290,12 +290,7 @@ class TestAnalogSignalProperties(unittest.TestCase):
             d = self.data[i]
             if len(d.shape) == 1:
                 d = d.reshape(-1, 1)
-            targ = "<AnalogSignal(%s, [%s, %s], sampling rate: %s)>" "" % (
-                repr(d),
-                self.t_start[i],
-                self.t_start[i] + len(self.data[i]) / self.rates[i],
-                self.rates[i],
-            )
+            targ = f"<AnalogSignal({repr(d)}, [{self.t_start[i]}, {self.t_start[i] + len(self.data[i]) / self.rates[i]}], sampling rate: {self.rates[i]})>" "" 
             self.assertEqual(prepr, targ)
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
@@ -304,22 +299,15 @@ class TestAnalogSignalProperties(unittest.TestCase):
             prepr = pretty(signal)
             targ = (
                 (
-                    "AnalogSignal with %d channels of length %d; units %s; datatype %s\n"
-                    "" % (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode, signal.dtype)
+                    f"AnalogSignal with {signal.shape[1]} channels of length {signal.shape[0]}; units {signal.units.dimensionality.unicode}; datatype {signal.dtype}\n"
+                    ""
                 )
-                + ("annotations: %s\n" % signal.annotations)
+                + (f"annotations: {signal.annotations}\n")
                 + (
-                    "sampling rate: {} {}\n".format(
-                        float(signal.sampling_rate), signal.sampling_rate.dimensionality.unicode
-                    )
+                    f"sampling rate: {float(signal.sampling_rate)} {signal.sampling_rate.dimensionality.unicode}\n"
                 )
                 + (
-                    "time: {} {} to {} {}".format(
-                        float(signal.t_start),
-                        signal.t_start.dimensionality.unicode,
-                        float(signal.t_stop),
-                        signal.t_stop.dimensionality.unicode,
-                    )
+                    f"time: {float(signal.t_start)} {signal.t_start.dimensionality.unicode} to {float(signal.t_stop)} {signal.t_stop.dimensionality.unicode}"
                 )
             )
             self.assertEqual(prepr, targ)
@@ -429,7 +417,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
     def test__time_slice_deepcopy_array_annotations(self):
         length = self.signal1.shape[-1]
         params1 = {
-            "test0": ["y{}".format(i) for i in range(length)],
+            "test0": [f"y{i}" for i in range(length)],
             "test1": ["deeptest" for i in range(length)],
             "test2": [(-1) ** i > 0 for i in range(length)],
         }
@@ -438,7 +426,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
         # Change annotations of original
         params2 = {
-            "test0": ["x{}".format(i) for i in range(length)],
+            "test0": [f"x{i}" for i in range(length)],
             "test2": [(-1) ** (i + 1) > 0 for i in range(length)],
         }
         self.signal1.array_annotate(**params2)
@@ -449,7 +437,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertFalse(all(self.signal1.array_annotations["test2"] == result.array_annotations["test2"]))
 
         # Change annotations of result
-        params3 = {"test0": ["z{}".format(i) for i in range(1, result.shape[-1] + 1)]}
+        params3 = {"test0": [f"z{i}" for i in range(1, result.shape[-1] + 1)]}
         result.array_annotate(**params3)
         result.array_annotations["test1"][0] = "shallow2"
         self.assertFalse(all(self.signal1.array_annotations["test0"] == result.array_annotations["test0"]))

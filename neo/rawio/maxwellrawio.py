@@ -11,7 +11,7 @@ The implementation is a mix between:
  * the implementation in spyking-circus
     https://github.com/spyking-circus/spyking-circus/blob/master/circus/files/maxwell.py
 
-The implementation do not handle spike at the moment.
+This implementation does not handle spikes at the moment.
 
 For maxtwo device, each well will be a different signal stream.
 
@@ -37,6 +37,15 @@ import numpy as np
 class MaxwellRawIO(BaseRawIO):
     """
     Class for reading MaxOne or MaxTwo files.
+
+    Parameters
+    ----------
+
+    filename: str, default: ''
+        The *.h5 file to be loaded
+    rec_name: str | None, default: None
+        If multiple recordings the one to analyze
+
     """
 
     extensions = ["h5"]

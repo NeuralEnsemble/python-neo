@@ -674,13 +674,13 @@ class NixIO(BaseIO):
         if "nix_name" in chview.annotations:
             nix_name = chview.annotations["nix_name"]
         else:
-            nix_name = "neo.channelview.{}".format(self._generate_nix_name())
+            nix_name = f"neo.channelview.{self._generate_nix_name()}"
             chview.annotate(nix_name=nix_name)
 
         # create a new data array if this channelview was not saved yet
         if not nix_name in self._view_map:
             channels = nixblock.create_data_array(
-                "{}.index".format(nix_name), "neo.channelview.index", data=chview.index
+                f"{nix_name}.index", "neo.channelview.index", data=chview.index
             )
 
             nixmt = nixblock.create_multi_tag(nix_name, "neo.channelview", positions=channels)
@@ -773,7 +773,7 @@ class NixIO(BaseIO):
         if "nix_name" in neo_group.annotations:
             nix_name = neo_group.annotations["nix_name"]
         else:
-            nix_name = "{}.{}".format(label, self._generate_nix_name())
+            nix_name = f"{label}.{self._generate_nix_name()}"
             neo_group.annotate(nix_name=nix_name)
 
         nixgroup = nixblock.create_group(nix_name, label)
