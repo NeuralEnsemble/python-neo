@@ -250,7 +250,7 @@ class IntanRawIO(BaseRawIO):
         if self.file_format == "header-attached":
             size = self._raw_data[channel_id_0].size
         elif self.file_format == 'one-file-per-signal':
-            size = self._raw_data[stream_index][:,0].size
+            size = self._raw_data[stream_index].shape[0]
         else:
             size = self._raw_data[stream_index][0].size
 
@@ -280,7 +280,7 @@ class IntanRawIO(BaseRawIO):
         if self.file_format == 'header-attached':
             shape = self._raw_data[channel_ids[0]].shape
         elif self.file_format == 'one-file-per-signal':
-            shape = self._raw_data[stream_index][:, 0].shape
+            shape = self._raw_data[stream_index].shape
         else:
             if channel_indexes_are_none:
                 shape = self._raw_data[stream_index][0].shape
@@ -670,8 +670,10 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
-        else:
+        elif file_format == 'one-file-per-signal':
             data_dtype[0] = "int16"
+        else:
+            data_dtype[0] += ['int16']
 
     # 1: RHD2000 auxiliary input channel
     for chan_info in channels_by_type[1]:
@@ -683,8 +685,11 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE // 4)]
-        else:
+        elif file_format == 'one-file-per-signal':
             data_dtype[1] = "uint16"
+        else:
+            data_dtype[1] += ["uint16"]
+        
 
 
     # 2: RHD2000 supply voltage channel
@@ -697,8 +702,10 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16")]
+        elif file_format == 'one-file-per-signal':
+            data_dtype[2] = "uint16"
         else:
-            data_dtype[1] = "uint16"
+             data_dtype[2] += ["uint16"]
 
 
     # temperature is not an official channel in the header
@@ -729,8 +736,10 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
-        else:
+        elif file_format == 'one-file-per-signal':
             data_dtype[3] = "uint16"
+        else:
+            data_dtype[3] += ["uint16"]
 
 
     # 4: USB board digital input channel
@@ -753,8 +762,10 @@ def read_rhd(filename, file_format: str):
             ordered_channels.append(chan_info)
             if file_format == "header-attached":
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
-            else:
+            elif file_format == 'one-file-per-signal':
                 data_dtype[sig_type] = "uint16"
+            else:
+                data_dtype[sig_type] += ["uint16"]
 
     if global_info["notch_filter_mode"] == 2 and version >= V("3.0"):
         global_info["notch_filter"] = '60Hz'
