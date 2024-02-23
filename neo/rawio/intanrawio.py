@@ -448,7 +448,7 @@ def read_rhs(filename):
         for chan_info in channels_by_type[0]:
             name = chan_info["native_channel_name"]
             chan_info_dc = dict(chan_info)
-            chan_info_dc["custom_channel_name"] = name + "_DC"
+            chan_info_dc["native_channel_name"] = name + "_DC"
             chan_info_dc["sampling_rate"] = sr
             chan_info_dc["units"] = "mV"
             chan_info_dc["gain"] = 19.23
