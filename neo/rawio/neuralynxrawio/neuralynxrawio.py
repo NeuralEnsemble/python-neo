@@ -126,7 +126,7 @@ class NeuralynxRawIO(BaseRawIO):
     ]
 
     def __init__(self, dirname="", filename="", exclude_filename=None, keep_original_times=False, **kargs):
-        
+
         if dirname != "":
             self.dirname = dirname
             self.rawmode = "one-dir"

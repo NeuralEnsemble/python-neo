@@ -196,10 +196,10 @@ class AxographRawIO(BaseRawIO):
         ...                                           i_start=0,
         ...                                           i_stop=1024,
         ...                                           channel_names=channel_names)
-        
+
         >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk,
         ...                                             dtype='float64',
-        ...                                             channel_names=channel_names)  
+        ...                                             channel_names=channel_names)
         >>> print(float_chunk)
 
         >>> # get event markers
@@ -210,7 +210,7 @@ class AxographRawIO(BaseRawIO):
         >>> # get interval bars
         >>> ep_raw_times, ep_raw_durations, ep_labels = reader.get_event_timestamps(event_channel_index=1)
         >>> ep_times = reader.rescale_event_timestamp(ep_raw_times, dtype='float64')
-        >>> ep_durations = reader.rescale_epoch_duration(ep_raw_durations, dtype='float64') 
+        >>> ep_durations = reader.rescale_epoch_duration(ep_raw_durations, dtype='float64')
         >>> print([ep for ep in zip(ep_times, ep_durations, ep_labels)])
 
         >>> # get notes
@@ -564,12 +564,14 @@ class AxographRawIO(BaseRawIO):
             #   format version 3
             if header_id == "AxGr":
                 format_ver, n_cols = f.read_f("HH")
-                assert (
-                    format_ver == 1 or format_ver == 2
-                ), f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                assert format_ver == 1 or format_ver == 2, (
+                    f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                )
             elif header_id == "axgx":
                 format_ver, n_cols = f.read_f("ll")
-                assert format_ver >= 3, f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                assert format_ver >= 3, (
+                    f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                )
             else:
                 raise NotImplementedError(f'unimplemented file header identifier "{header_id}"!')
             self.info["format_ver"] = format_ver
@@ -666,8 +668,7 @@ class AxographRawIO(BaseRawIO):
                         first_value, increment = f.read_f("ff")
 
                         self.logger.debug(f"interval: {increment}, freq: {1 / increment}")
-                        self.logger.debug(
-                            f"start: {first_value}, end: {first_value + increment * (n_points - 1)}")
+                        self.logger.debug(f"start: {first_value}, end: {first_value + increment * (n_points - 1)}")
 
                         # assume this is the time column
                         t_start, sampling_period = first_value, increment
@@ -702,9 +703,7 @@ class AxographRawIO(BaseRawIO):
                         first_value, increment = f.read_f("dd")
 
                         self.logger.debug(f"interval: {increment}, freq: {1 / increment}")
-                        self.logger.debug(
-                            "start: {first_value}, end: {first_value + increment * (n_points - 1)}"
-                        )
+                        self.logger.debug("start: {first_value}, end: {first_value + increment * (n_points - 1)}")
 
                         if i == 0:
 
@@ -792,9 +791,7 @@ class AxographRawIO(BaseRawIO):
                     first_value = array[0]
 
                     self.logger.debug(f"interval: {increment}, freq: {1 / increment}")
-                    self.logger.debug(
-                        f"start: {first_value}, end: {first_value + increment * (n_points - 1)}"
-                    )
+                    self.logger.debug(f"start: {first_value}, end: {first_value + increment * (n_points - 1)}")
 
                     t_start, sampling_period = first_value, increment
                     self.info["t_start"] = t_start
@@ -993,9 +990,7 @@ class AxographRawIO(BaseRawIO):
 
                     self.logger.debug(f"old_unknown_episode_list: {old_unknown_episode_list}")
                     if n_episodes2 != n_episodes:
-                        self.logger.debug(
-                           f"n_episodes2 ({n_episodes2}) and n_episodes ({n_episodes}) " "differ!"
-                           )
+                        self.logger.debug(f"n_episodes2 ({n_episodes2}) and n_episodes ({n_episodes}) " "differ!")
 
                 # another list of episode indexes with unknown purpose
                 unknown_episode_list = []
@@ -1062,8 +1057,10 @@ class AxographRawIO(BaseRawIO):
                     assert font_settings_info["setting1"] in [
                         FONT_BOLD,
                         FONT_NOT_BOLD,
-                    ], f"expected setting1 ({ font_settings_info['setting1']}) to have value FONT_BOLD " f"({FONT_BOLD}) or FONT_NOT_BOLD ({FONT_NOT_BOLD})"
-
+                    ], (
+                        f"expected setting1 ({ font_settings_info['setting1']}) to have value FONT_BOLD "
+                        f"({FONT_BOLD}) or FONT_NOT_BOLD ({FONT_NOT_BOLD})"
+                    )
 
                     # size is stored 10 times bigger than real value
                     font_settings_info["size"] = font_settings_info["size"] / 10.0

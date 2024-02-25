@@ -79,9 +79,7 @@ class NestIO(BaseIO):
             if ext in self.extensions:
                 if ext in self.avail_IOs:
                     raise ValueError(
-                        f'Received multiple files with "{ext}" '
-                        "extension. Can only load single file of "
-                        "this type."
+                        f'Received multiple files with "{ext}" ' "extension. Can only load single file of " "this type."
                     )
                 self.avail_IOs[ext] = ColumnIO(filename)
             self.avail_formats[ext] = path
@@ -130,7 +128,7 @@ class NestIO(BaseIO):
             raise ValueError(
                 "One or more columns have been specified to contain "
                 "the same data. Columns were specified to {column_list_no_None}."
-                "" 
+                ""
             )
 
         # extracting condition and sorting parameters for raw data loading

@@ -148,7 +148,7 @@ class BaseRawIO:
 
     def __init__(self, use_cache: bool = False, cache_path: str = "same_as_resource", **kargs):
         """
-        init docstring should be filled out at the rawio level so the user knows whether to 
+        init docstring should be filled out at the rawio level so the user knows whether to
         input filename or dirname.
 
         """
@@ -556,7 +556,7 @@ class BaseRawIO:
             the stream index in which to convert the channel_ids to channel_indexes
         channel_ids: list[str]
             the list of channel_ids to convert to channel_indexes
-        
+
         Returns
         -------
         channel_indexes: np.array[int]
@@ -613,7 +613,7 @@ class BaseRawIO:
         stream_index_arg: int | None, default: None
             The stream_index to verify
             If None checks if only one stream exists and then returns 0 if it is single stream
-            
+
         Returns
         -------
         stream_index: int
@@ -624,9 +624,9 @@ class BaseRawIO:
             assert self.header["signal_streams"].size == 1, "stream_index must be given for multiple stream files"
             stream_index = 0
         else:
-            assert 0 <= stream_index_arg < self.header["signal_streams"].size, (
-                f"stream_index must be between 0 and {self.header['signal_streams'].size}"
-            )
+            assert (
+                0 <= stream_index_arg < self.header["signal_streams"].size
+            ), f"stream_index must be between 0 and {self.header['signal_streams'].size}"
             stream_index = stream_index_arg
         return stream_index
 
@@ -643,7 +643,7 @@ class BaseRawIO:
         stream_index: int | None, default: None
             The optional stream index in which to determine signal size
             This is required for data with multiple streams
-        
+
         Returns
         -------
         signal_size: int
@@ -666,7 +666,7 @@ class BaseRawIO:
         stream_index: int | None, default: None
             The optional stream index in which to determine t_start
             This is required for data with multiple streams
-        
+
         Returns
         -------
         signal_t_start: float
@@ -712,7 +712,7 @@ class BaseRawIO:
         prefer_slice: bool = False,
     ):
         """
-        Returns a chunk of raw signal as a Numpy array. 
+        Returns a chunk of raw signal as a Numpy array.
 
         Parameters
         ----------
@@ -811,7 +811,7 @@ class BaseRawIO:
     ):
         """
         Rescales a chunk of raw signals which are provided as a Numpy array. These are normally
-        returned by a call to get_analogsignal_chunk. 
+        returned by a call to get_analogsignal_chunk.
 
         Parameters
         ----------
@@ -835,7 +835,7 @@ class BaseRawIO:
 
         Notes
         -----
-        The channels are specified either by channel_names, if provided, otherwise by channel_ids, 
+        The channels are specified either by channel_names, if provided, otherwise by channel_ids,
         if provided, otherwise by channel_indexes, if provided, otherwise all channels are selected.
 
         These are rawio dependent because rescaling of the NumPy array requires the offset and gain
@@ -853,7 +853,7 @@ class BaseRawIO:
         (1000,4)
         >>> float_sigs.shape == raw_sigs.shape
         True
-        
+
 
         """
         stream_index = self._get_stream_index_from_arg(stream_index)
@@ -882,7 +882,7 @@ class BaseRawIO:
     def spike_count(self, block_index: int = 0, seg_index: int = 0, spike_channel_index: int = 0):
         """
         Returns the spike count for a given block, segment, and spike_channel_index
-        
+
         Parameters
         ----------
         block_index: int, default: 0
@@ -891,12 +891,12 @@ class BaseRawIO:
             The segment containing the desired section to assess
         spike_channel_index: int, default: 0
             The spike_channel_index for assessing spike_count
-        
+
         Returns
         -------
         spike_count: int
             The number of spikes in the block and segment
-        
+
         """
         return self._spike_count(block_index, seg_index, spike_channel_index)
 
@@ -942,10 +942,10 @@ class BaseRawIO:
         --------
         # to look at block 1, segment 0, and channel 3 on a tetrode from 10
         # seconds to 30 seconds we would do:
-        >>> timestamps = rawio_reader.get_spike_timestamps(block_index=1, 
-                                                           seg_index=0, 
-                                                           spike_channel_index=3, 
-                                                           t_start=10, 
+        >>> timestamps = rawio_reader.get_spike_timestamps(block_index=1,
+                                                           seg_index=0,
+                                                           spike_channel_index=3,
+                                                           t_start=10,
                                                            t_stop=30)
         """
         timestamp = self._get_spike_timestamps(block_index, seg_index, spike_channel_index, t_start, t_stop)
@@ -954,14 +954,14 @@ class BaseRawIO:
     def rescale_spike_timestamp(self, spike_timestamps: np.ndarray, dtype: np.dtype = "float64"):
         """
         Rescale spike timestamps from samples to seconds.
-        
+
         Parameters
         ----------
         spike_timestamps: np.ndarray
             The array containing the spike_timestamps to convert
         dtype: np.dtype, default: "float64"
             The dtype in which to convert the spike time in seconds. Must be accepted by the numpy.dtype constructor
-        
+
         Returns
         -------
         scaled_spike_timestamps: np.array
@@ -972,7 +972,7 @@ class BaseRawIO:
         # After running `get_spike_timestamps` and returning timestamps we can do the following:
         >>> scaled_spike_timestamps = rawio_reader.rescale_spike_timestamps(spike_timestamps=timestamps,
                                                                             dtype='float64')
-        
+
         """
         return self._rescale_spike_timestamp(spike_timestamps, dtype)
 
@@ -987,7 +987,7 @@ class BaseRawIO:
     ):
         """
         Gets the waveforms for one channel within one segment of one block
-        
+
         Parameters
         ----------
         block_index: int, default: 0
@@ -1016,7 +1016,7 @@ class BaseRawIO:
     ):
         """
         Rescale waveforms to based on the rawio's waveform gain and waveform offset
-        
+
         Parameters
         ----------
         raw_waveforms: np.ndarray
@@ -1025,7 +1025,7 @@ class BaseRawIO:
             The dtype in which to convert the spike time to. Must be accepted by the numpy.dtype constructor
         spike_channel_index: int, default: 0
             The channel index of the desired channel to  rescale
-        
+
         Returns
         -------
         float_waveforms: np.ndarray (nb_spikes, nb_channels, nb_samples)
@@ -1047,7 +1047,7 @@ class BaseRawIO:
     def event_count(self, block_index: int = 0, seg_index: int = 0, event_channel_index: int = 0):
         """
         Returns the count of events for a particular block, segment, and channel_index
-        
+
         Parameters
         ----------
         block_index: int, default: 0
@@ -1056,7 +1056,7 @@ class BaseRawIO:
             The segment within the block given by block_index in which to count events
         event_channel_index: int, default: 0
             The index of the channel in which to count events
-        
+
         Returns
         -------
         n_events: int
@@ -1136,7 +1136,7 @@ class BaseRawIO:
             The dtype in which to convert the event time in seconds. Must be accepted by the numpy.dtype constructor
         event_channel_index: int, default: 0
             The channel index for scaling the events
-        
+
         Returns
         -------
         scaled_event_timestamps: np.array
@@ -1150,7 +1150,7 @@ class BaseRawIO:
         >>> event_timestamps_seconds = rawio_reader.rescale_event_timestamp(event_timestamps=event_timestamps,
                                                                             dtype='float64',
                                                                             event_channel_index=1)
-        
+
         """
         return self._rescale_event_timestamp(event_timestamps, dtype, event_channel_index)
 
@@ -1168,7 +1168,7 @@ class BaseRawIO:
             The dtype in which to convert the spike time in seconds. Must be accepted by the numpy.dtype constructor
         event_channel_index: int, default: 0
             The channel on which to index for scaling epochs
-        
+
         Returns
         -------
         scaled_epoch_durations: np.array

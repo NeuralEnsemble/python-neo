@@ -481,7 +481,7 @@ class NWBIO(BaseIO):
         """
         electrodes = self._write_electrodes(self._nwbfile, block)
         if not block.name:
-            block.name = f"block{self.blocks_written}" 
+            block.name = f"block{self.blocks_written}"
         for i, segment in enumerate(block.segments):
             assert segment.block is block
             if not segment.name:
@@ -593,7 +593,8 @@ class NWBIO(BaseIO):
             )
         else:
             raise TypeError(
-                f"signal has type { signal.__class__.__name__}, should be AnalogSignal or IrregularlySampledSignal")
+                f"signal has type { signal.__class__.__name__}, should be AnalogSignal or IrregularlySampledSignal"
+            )
         nwb_group = signal.annotations.get("nwb_group", "acquisition")
         add_method_map = {"acquisition": self._nwbfile.add_acquisition, "stimulus": self._nwbfile.add_stimulus}
         if nwb_group in add_method_map:

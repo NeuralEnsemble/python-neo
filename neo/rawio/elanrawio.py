@@ -34,7 +34,7 @@ import pathlib
 class ElanRawIO(BaseRawIO):
     """
     Class for reading time-frequency EEG data maps from the Elan software
-    
+
     Parameters
     ----------
     filename: str | None, default: None
@@ -43,13 +43,13 @@ class ElanRawIO(BaseRawIO):
         The header file to load (*.eeg.ent)
     posfile: str | None, deafult: None
         The event file to load (*.eeg.pos)
-         
+
     Examples
     --------
     >>> import neo.rawio
     >>> reader = neo.rawio.ElanRawIO(filename='data.eeg', entfile='header.eeg.ent', posfile='events.eeg.pos')
     >>> reader.parse_header()
-    >>> print(reader) 
+    >>> print(reader)
     """
 
     extensions = ["eeg"]

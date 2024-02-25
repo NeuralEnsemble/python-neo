@@ -31,13 +31,14 @@ import sys
 class RawMCSRawIO(BaseRawIO):
     """
     Class for reading an mcs file converted by the MC_DataToo binary converter
-    
+
     Parameters
     ----------
     filename: str, default: ''
         The *.raw MCS file to be loaded
-        
+
     """
+
     extensions = ["raw"]
     rawmode = "one-file"
 

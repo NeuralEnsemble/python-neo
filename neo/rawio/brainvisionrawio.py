@@ -23,8 +23,8 @@ import re
 
 
 class BrainVisionRawIO(BaseRawIO):
-    """ Class for reading BrainVision files
-    
+    """Class for reading BrainVision files
+
     Parameters
     ----------
     filename: str, default: ''

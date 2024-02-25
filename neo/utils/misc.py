@@ -399,13 +399,11 @@ def match_events(event1, event2):
 
     if id1 < len(event1):
         warnings.warn(
-            "Could not match all events to generate epochs. Missed "
-            f"{len(event1) - id1} event entries in event1 list" 
+            "Could not match all events to generate epochs. Missed " f"{len(event1) - id1} event entries in event1 list"
         )
     if id2 < len(event2):
         warnings.warn(
-            "Could not match all events to generate epochs. Missed "
-            f"{len(event2) - id2} event entries in event2 list"
+            "Could not match all events to generate epochs. Missed " f"{len(event2) - id2} event entries in event2 list"
         )
 
     event1_matched = _event_epoch_slice_by_valid_ids(obj=event1, valid_ids=match_ev1)
