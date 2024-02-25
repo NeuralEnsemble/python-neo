@@ -34,7 +34,7 @@ from packaging.version import Version as V
 class IntanRawIO(BaseRawIO):
     """
     Class for reading rhd and rhs Intan data
-   
+
     Parameters
     ----------
     filename: str, default: ''
@@ -46,7 +46,7 @@ class IntanRawIO(BaseRawIO):
     check for the file extension and will gather the header information based on the
     extension. Additionally it functions with RHS v 1.0 and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
     3.0, and 3.1 files.
-    
+
     * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
     depending on the port in which they were recorded along with the following
     additional channels.
@@ -69,7 +69,7 @@ class IntanRawIO(BaseRawIO):
                                                   seg_index=0
                                                   stream_index=0)
     >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, stream_index=0)
-    
+
     """
 
     extensions = ["rhd", "rhs"]

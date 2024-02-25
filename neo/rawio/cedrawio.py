@@ -35,7 +35,7 @@ from copy import deepcopy
 class CedRawIO(BaseRawIO):
     """
     Class for reading data from CED (Cambridge Electronic Design) spike2.
-    
+
     Parameters
     ----------
     filename: str, default: ''
@@ -46,7 +46,7 @@ class CedRawIO(BaseRawIO):
     Notes
     -----
     * This internally uses the sonpy package which is closed source.
-    
+
     * This IO reads smr and smrx files
 
     """

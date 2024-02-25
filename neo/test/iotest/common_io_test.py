@@ -443,7 +443,7 @@ class BaseTestIO:
                 assert_neo_object_is_compliant(obj)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += (f"from {os.path.basename(path)}")
+                exc.args += f"from {os.path.basename(path)}"
                 raise
 
     def test_read_with_lazy_is_compliant(self):

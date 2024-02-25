@@ -31,12 +31,12 @@ class WinEdrRawIO(BaseRawIO):
     def __init__(self, filename=""):
         """
         Class for reading WinEdr data
-        
+
         Parameters
         ----------
         filename: str, default: ''
             The *.edr file to be loaded
-            
+
         """
         BaseRawIO.__init__(self)
         self.filename = filename

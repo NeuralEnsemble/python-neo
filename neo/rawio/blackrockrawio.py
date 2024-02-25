@@ -76,7 +76,7 @@ from .baserawio import (
 
 class BlackrockRawIO(BaseRawIO):
     """
-    Class for reading data in from a file set recorded by the Blackrock (Cerebus) recording system. 
+    Class for reading data in from a file set recorded by the Blackrock (Cerebus) recording system.
     Upon initialization, the class is linked to the available set of Blackrock files.
 
     Parameters
@@ -108,7 +108,7 @@ class BlackrockRawIO(BaseRawIO):
     the file set have the same base name, but different extensions.
     However, by using the override parameters, individual filenames can
     be set.
-        
+
     Examples
     --------
     >>> import neo.rawio
@@ -117,7 +117,7 @@ class BlackrockRawIO(BaseRawIO):
     >>> reader.parse_header()
     >>> print(reader)
 
-            
+
     """
 
     extensions = ["ns" + str(_) for _ in range(1, 7)]
@@ -1263,10 +1263,11 @@ class BlackrockRawIO(BaseRawIO):
                         ev_ids[mask_after_seg] += 1
 
             # consistency check: same number of segments for nsx and nev data
-            assert nb_possible_nev_segments == len(
-                nonempty_nsx_segments
-            ), (f"Inconsistent ns{nsx_nb} and nev file. {nb_possible_nev_segments} "
-            f"segments present in .nev file, but {len(nonempty_nsx_segments)} in " "ns{nsx_nb} file.")
+            assert nb_possible_nev_segments == len(nonempty_nsx_segments), (
+                f"Inconsistent ns{nsx_nb} and nev file. {nb_possible_nev_segments} "
+                f"segments present in .nev file, but {len(nonempty_nsx_segments)} in "
+                "ns{nsx_nb} file."
+            )
 
             new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments), sorted(list(nonempty_nsx_segments))))
 
