@@ -325,11 +325,11 @@ class IntanRawIO(BaseRawIO):
 
 
         # This is False for Temperature and timestamps
-        mulitple_samples_per_block = len(shape) == 2
+        multiple_samples_per_block = len(shape) == 2
 
         # In the header attached case the data for each channel comes interleaved in blocks
         # To avoid unecessary memory access we can calculate the blocks we need to access beforehand:    
-        if mulitple_samples_per_block:
+        if multiple_samples_per_block:
             block_size = shape[1]
             block_start = i_start // block_size
             block_stop = i_stop // block_size + 1
@@ -339,7 +339,7 @@ class IntanRawIO(BaseRawIO):
         # raw_data is a structured memmap with a field for each channel_id
         for chunk_index, channel_id in enumerate(channel_ids):
             data_chan = self._raw_data[channel_id]
-            if mulitple_samples_per_block:
+            if multiple_samples_per_block:
                 sigs_chunk[:, chunk_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
             else:
                 sigs_chunk[:, chunk_index] = data_chan[i_start:i_stop]
