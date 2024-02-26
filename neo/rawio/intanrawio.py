@@ -352,8 +352,11 @@ class IntanRawIO(BaseRawIO):
         channel_indexes_are_slice = isinstance(channel_indexes, slice)
         if channel_indexes_are_slice:
             num_channels = len(signal_data_memmap_list)
-            channel_indexes = range(num_channels)
-
+            start = channel_indexes.start or 0
+            stop = channel_indexes.stop or num_channels
+            step = channel_indexes.step or 1
+            channel_indexes = range(start, stop, step)
+            
         # We get the dtype from the first channel
         first_channel_index = channel_indexes[0]
         dtype = signal_data_memmap_list[first_channel_index].dtype
