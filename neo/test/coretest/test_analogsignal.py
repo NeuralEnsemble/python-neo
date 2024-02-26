@@ -290,7 +290,10 @@ class TestAnalogSignalProperties(unittest.TestCase):
             d = self.data[i]
             if len(d.shape) == 1:
                 d = d.reshape(-1, 1)
-            targ = f"<AnalogSignal({repr(d)}, [{self.t_start[i]}, {self.t_start[i] + len(self.data[i]) / self.rates[i]}], sampling rate: {self.rates[i]})>" "" 
+            targ = (
+                f"<AnalogSignal({repr(d)}, [{self.t_start[i]}, {self.t_start[i] + len(self.data[i]) / self.rates[i]}], sampling rate: {self.rates[i]})>"
+                ""
+            )
             self.assertEqual(prepr, targ)
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
@@ -303,9 +306,7 @@ class TestAnalogSignalProperties(unittest.TestCase):
                     ""
                 )
                 + (f"annotations: {signal.annotations}\n")
-                + (
-                    f"sampling rate: {float(signal.sampling_rate)} {signal.sampling_rate.dimensionality.unicode}\n"
-                )
+                + (f"sampling rate: {float(signal.sampling_rate)} {signal.sampling_rate.dimensionality.unicode}\n")
                 + (
                     f"time: {float(signal.t_start)} {signal.t_start.dimensionality.unicode} to {float(signal.t_stop)} {signal.t_stop.dimensionality.unicode}"
                 )

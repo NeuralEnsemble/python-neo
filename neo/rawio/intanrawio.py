@@ -38,7 +38,7 @@ from .baserawio import (
 class IntanRawIO(BaseRawIO):
     """
     Class for reading rhd and rhs Intan data
-   
+
     Parameters
     ----------
     filename: str, default: ''
@@ -50,7 +50,7 @@ class IntanRawIO(BaseRawIO):
     check for the file extension and will gather the header information based on the
     extension. Additionally it functions with RHS v 1.0 and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
     3.0, and 3.1 files.
-    
+
     * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
     depending on the port in which they were recorded along with the following
     additional channels.
@@ -73,7 +73,7 @@ class IntanRawIO(BaseRawIO):
                                                   seg_index=0
                                                   stream_index=0)
     >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, stream_index=0)
-    
+
     """
 
     extensions = ["rhd", "rhs", "dat"]
@@ -293,8 +293,9 @@ class IntanRawIO(BaseRawIO):
             channel_indexes_are_none = True
         channel_ids = signal_channels["id"][channel_indexes]
 
+        channel_id_0 = channel_ids[0]
         if self.file_format == 'header-attached':
-            shape = self._raw_data[channel_ids[0]].shape
+            shape = self._raw_data[channel_id_0].shape
         elif self.file_format == 'one-file-per-signal':
             shape = self._raw_data[stream_index].shape
         else:
@@ -314,10 +315,10 @@ class IntanRawIO(BaseRawIO):
             sl0 = i_start % block_size
             sl1 = sl0 + (i_stop - i_start)
 
-        if self.file_format != 'header-attached' and stream_id == 'RHD2000 amplifier channel':
-            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="int16")
-        else:
-            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="uint16")
+        # Create an array to store the requested chunk
+        dtype = self._raw_data[channel_id_0].dtype
+        sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
+        
         for channel_index, channel_id in enumerate(channel_ids):
             if self.file_format == 'header-attached':
             # Memmap fields are the channel_ids for unique channels

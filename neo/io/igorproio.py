@@ -59,9 +59,7 @@ class IgorIO(BaseIO):
         """
         BaseIO.__init__(self)
         filename = pathlib.Path(filename)
-        assert filename.suffix[1:] in self.extensions, (
-            f"Only the following extensions are supported: {self.extensions}" 
-        )
+        assert filename.suffix[1:] in self.extensions, f"Only the following extensions are supported: {self.extensions}"
         self.filename = filename
         self.extension = filename.suffix[1:]
         self.parse_notes = parse_notes

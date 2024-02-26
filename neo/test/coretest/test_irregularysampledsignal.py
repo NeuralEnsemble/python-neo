@@ -897,7 +897,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         targ = (
             (
                 f"IrregularlySampledSignal with {signal.shape[1]} channels of length {signal.shape[0]}; units {signal.units.dimensionality.unicode}; datatype {signal.dtype}\n"
-                "" 
+                ""
             )
             + (f"name: '{signal.name}'\ndescription: '{signal.description}'\n")
             + (f"annotations: {str(signal.annotations)}\n")

@@ -55,12 +55,12 @@ import numpy as np
 class AxonRawIO(BaseRawIO):
     """
     Class for Class for reading data from pCLAMP and AxoScope files (.abf version 1 and 2)
-    
+
     Parameters
     ----------
     filename: str, default: ''
         The *.abf file to be read
-    
+
     Notes
     -----
     This code is a port of abfload and abf2load written in Matlab (BSD-2-Clause licence) by
@@ -76,6 +76,7 @@ class AxonRawIO(BaseRawIO):
     >>> print(reader)
 
     """
+
     extensions = ["abf"]
     rawmode = "one-file"
 
