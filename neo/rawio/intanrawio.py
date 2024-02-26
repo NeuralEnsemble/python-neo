@@ -187,7 +187,8 @@ class IntanRawIO(BaseRawIO):
             channel_indexes = slice(None)
         channel_ids = signal_channels["id"][channel_indexes]
 
-        shape = self._raw_data[channel_ids[0]].shape
+        channel_id_0 = channel_ids[0]
+        shape = self._raw_data[channel_id_0].shape
 
         # some channel (temperature) have 1D field so shape 1D
         # because 1 sample per block
@@ -200,7 +201,9 @@ class IntanRawIO(BaseRawIO):
             sl0 = i_start % block_size
             sl1 = sl0 + (i_stop - i_start)
 
-        sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="uint16")
+        # Create an array to store the requested chunk
+        dtype = self._raw_data[channel_id_0].dtype
+        sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
         for channel_index, channel_id in enumerate(channel_ids):
             # Memmap fields are the channel_ids for unique channels
             data_chan = self._raw_data[channel_id]
