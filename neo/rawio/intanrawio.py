@@ -257,12 +257,13 @@ class IntanRawIO(BaseRawIO):
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        stream_id = self.header["signal_streams"][stream_index]["id"]
-        mask = self.header["signal_channels"]["stream_id"] == stream_id
-        signal_channels = self.header["signal_channels"][mask]
-        channel_ids = signal_channels["id"]
-        channel_id_0 = channel_ids[0]
+        
         if self.file_format == "header-attached":
+            stream_id = self.header["signal_streams"][stream_index]["id"]
+            mask = self.header["signal_channels"]["stream_id"] == stream_id
+            signal_channels = self.header["signal_channels"][mask]
+            channel_ids = signal_channels["id"]
+            channel_id_0 = channel_ids[0]
             size = self._raw_data[channel_id_0].size
         # one-file-per-signal is (n_samples, n_channels)
         elif self.file_format == "one-file-per-signal":
