@@ -44,7 +44,7 @@ class MEArecRawIO(BaseRawIO):
     >>> raw_chunk = r.get_analogsignal_chunk(block_index=0,
                                              seg_index=0,
                                              i_start=0,
-                                             i_stop=1024, 
+                                             i_stop=1024,
                                              channel_names=channel_names)
     >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk,
                                                         dtype='float64',

@@ -402,7 +402,8 @@ class AsciiSignalIO(BaseIO):
         if len(block.segments) > 1:
             raise ValueError(
                 "Can only write blocks containing a single segment."
-                f" This block contains {len(block.segments)} segments.")
+                f" This block contains {len(block.segments)} segments."
+            )
         self.write_segment(block.segments[0])
 
     def write_metadata(self, metadata_filename=None):

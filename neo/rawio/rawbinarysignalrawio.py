@@ -51,7 +51,7 @@ class RawBinarySignalRawIO(BaseRawIO):
     bytesoffset: int: 0
         The offset for the bytes
     """
-    
+
     extensions = ["raw", "bin"]
     rawmode = "one-file"
 

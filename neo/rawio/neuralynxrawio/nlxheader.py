@@ -250,8 +250,7 @@ class NlxHeader(OrderedDict):
         sr = re.search(hpd["datetime1_regex"], txt_header)
         if not sr:
             raise IOError(
-                f"No matching header open date/time for application {an} "
-                + f"version {av}. Please contact developers."
+                f"No matching header open date/time for application {an} " + f"version {av}. Please contact developers."
             )
         else:
             dt1 = sr.groupdict()

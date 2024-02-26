@@ -679,9 +679,7 @@ class NixIO(BaseIO):
 
         # create a new data array if this channelview was not saved yet
         if not nix_name in self._view_map:
-            channels = nixblock.create_data_array(
-                f"{nix_name}.index", "neo.channelview.index", data=chview.index
-            )
+            channels = nixblock.create_data_array(f"{nix_name}.index", "neo.channelview.index", data=chview.index)
 
             nixmt = nixblock.create_multi_tag(nix_name, "neo.channelview", positions=channels)
 

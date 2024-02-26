@@ -66,8 +66,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
         >>> reader = neo.rawio.SpikeGadgetRawIO(filename='data.rec') # all streams
         # just the electrode channels
         >>> reader_trodes = neo.rawio.SpikeGadgetRawIO(filename='data.rec', selected_streams='trodes')
-        
-        
+
+
         """
         BaseRawIO.__init__(self)
         self.filename = filename

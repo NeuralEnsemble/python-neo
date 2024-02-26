@@ -4166,7 +4166,7 @@ class ElphyIO(BaseIO):
                 t_stop=signal.t_stop * getattr(pq, signal.x_unit.strip().decode()),
                 # sampling_rate = signal.sampling_frequency * pq.kHz,
                 sampling_period=signal.sampling_period * getattr(pq, x_unit),
-                channel_name=f"episode {int(episode + 1)}, channel { int(channel + 1)}"
+                channel_name=f"episode {int(episode + 1)}, channel { int(channel + 1)}",
             )
             segment.analogsignals.append(analog_signal)
         # create a spiketrain for each
@@ -4195,9 +4195,7 @@ class ElphyIO(BaseIO):
             Index of the event.
         """
         event = self.elphy_file.get_event(episode, evt)
-        neo_event = Event(
-            times=event.times * pq.s, channel_name=f"episode {episode + 1}, event channel {evt + 1}"
-        )
+        neo_event = Event(times=event.times * pq.s, channel_name=f"episode {episode + 1}, event channel {evt + 1}")
         return neo_event
 
     def read_spiketrain(self, episode, spk):
