@@ -125,62 +125,45 @@ class IntanRawIO(BaseRawIO):
                 channel_number_dict,
             ) = read_rhd(self.filename, self.file_format)
 
-        # memmap raw data with the complicated structured dtype
+        # memmap the raw data for each format type
         # if header-attached there is one giant memory-map
         if self.file_format == "header-attached":
             self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode="r", offset=header_size)
-        else:
+        
+        # for 'one-file-per-signal' we have one memory map / neo stream
+        elif self.file_format == "one-file-per-signal":
             self._raw_data = {}
             for stream_index, (stream_index_key, stream_datatype) in enumerate(data_dtype.items()):
-                # for 'one-file-per-signal' we have one memory map / neo stream
-                if self.file_format == "one-file-per-signal":
-                    n_chans = channel_number_dict[stream_index_key]
-                    if stream_index_key == 4 or stream_index_key == 5:
-                        n_samples = int(os.path.getsize(raw_file_paths_dict[stream_index_key]) / 2)  # uint16 2 bytes
-                    else:
-                        n_samples = int(
-                            os.path.getsize(raw_file_paths_dict[stream_index_key]) / (n_chans * 2)
-                        )  # unit16 2 bytes
-                    if stream_index_key != 6:
-                        self._raw_data[stream_index] = np.memmap(
-                            raw_file_paths_dict[stream_index_key],
-                            dtype=stream_datatype,
-                            shape=(n_chans, n_samples),
-                            mode="r",
-                        ).T
-                    else:
-                        self._raw_data[stream_index] = np.memmap(
-                            raw_file_paths_dict[stream_index_key], dtype=stream_datatype, mode="r"
-                        )
-                # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
-                else:
-                    self._raw_data[stream_index] = []
-                    for channel_index, channel_datatype in enumerate(stream_datatype):
-                        if stream_index_key != 6:
-                            self._raw_data[stream_index].append(
-                                np.memmap(
-                                    raw_file_paths_dict[stream_index_key][channel_index],
-                                    dtype=channel_datatype,
-                                    mode="r",
-                                )
-                            )
-                        else:
-                            self._raw_data[stream_index].append(
-                                np.memmap(
-                                    raw_file_paths_dict[stream_index_key][channel_index],
-                                    dtype=[channel_datatype],
-                                    mode="r",
-                                )
-                            )
+                num_channels = channel_number_dict[stream_index_key]
+                file_path = raw_file_paths_dict[stream_index_key]
+                size_in_bytes = file_path.stat().st_size
+                dtype_size = np.dtype(stream_datatype).itemsize
+                n_samples = size_in_bytes // (dtype_size * num_channels)
+                signal_stream_memmap = np.memmap(file_path, dtype=stream_datatype, mode="r", shape=(num_channels, n_samples)).T
+                self._raw_data[stream_index] = signal_stream_memmap
+
+        # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
+        elif self.file_format == "one-file-per-channel":
+            self._raw_data = {}
+            for stream_index, (stream_index_key, stream_datatype) in enumerate(data_dtype.items()):
+                self._raw_data[stream_index] = []
+                num_channels = channel_number_dict[stream_index_key]
+                for channel_index in range(num_channels):
+                    file_path = raw_file_paths_dict[stream_index_key][channel_index]
+                    channel_memmap = np.memmap(file_path, dtype=stream_datatype, mode="r")
+                    self._raw_data[stream_index].append(channel_memmap)
+
 
         # check timestamp continuity
         if self.file_format == "header-attached":
             timestamp = self._raw_data["timestamp"].flatten()
         # timestamps are always the last stream
         elif self.file_format == "one-file-per-signal":
-            timestamp = self._raw_data[max(self._raw_data.keys())]["timestamp"].flatten()
-        else:
-            timestamp = self._raw_data[max(self._raw_data.keys())][0]["timestamp"].flatten()
+            time_stream_index = max(self._raw_data.keys())
+            timestamp = self._raw_data[time_stream_index]
+        elif self.file_format == "one-file-per-channel":
+            time_stream_index = max(self._raw_data.keys())
+            timestamp = self._raw_data[time_stream_index][0]
 
         assert np.all(np.diff(timestamp) == 1), (
             "Timestamp have gaps, this could be due " "to a corrupted file or an inappropriate file merge"
@@ -346,6 +329,7 @@ class IntanRawIO(BaseRawIO):
 
         return sigs_chunk
 
+
     def _get_analogsignal_chunk_one_file_per_channel(self, i_start, i_stop, stream_index, channel_indexes):
 
         signal_data_memmap_list = self._raw_data[stream_index]
@@ -367,6 +351,7 @@ class IntanRawIO(BaseRawIO):
             sigs_chunk[:, chunk_index] = channel_memmap[i_start:i_stop]
 
         return sigs_chunk
+
 
     def _get_analogsignal_chunk_one_file_per_signal(self, i_start, i_stop, stream_index, channel_indexes):
 
@@ -697,23 +682,13 @@ def read_rhd(filename, file_format: str):
         if file_format == "header-attached":
             data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
         else:
-            data_dtype[6] = [
-                (
-                    "timestamp",
-                    "int32",
-                )
-            ]
+            data_dtype[6] = "int32"
             channel_number_dict[6] = 1
     else:
         if file_format == "header-attached":
             data_dtype = [("timestamp", "uint32", BLOCK_SIZE)]
         else:
-            data_dtype[6] = [
-                (
-                    "timestamp",
-                    "uint32",
-                )
-            ]
+            data_dtype[6] = "uint32"
             channel_number_dict[6] = 1
 
     # 0: RHD2000 amplifier channel
@@ -727,12 +702,12 @@ def read_rhd(filename, file_format: str):
         else:
             chan_info["offset"] = 0.0
         ordered_channels.append(chan_info)
+        
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
-        elif file_format == "one-file-per-signal":
-            data_dtype[0] = "int16"
         else:
-            data_dtype[0] += ["int16"]
+            data_dtype[0] = "int16"
+            
 
     # 1: RHD2000 auxiliary input channel
     for chan_info in channels_by_type[1]:
@@ -744,10 +719,9 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE // 4)]
-        elif file_format == "one-file-per-signal":
-            data_dtype[1] = "uint16"
         else:
-            data_dtype[1] += ["uint16"]
+            data_dtype[1] = "uint16"
+
 
     # 2: RHD2000 supply voltage channel
     for chan_info in channels_by_type[2]:
@@ -759,10 +733,8 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16")]
-        elif file_format == "one-file-per-signal":
+        else: 
             data_dtype[2] = "uint16"
-        else:
-            data_dtype[2] += ["uint16"]
 
     # temperature is not an official channel in the header
     for i in range(global_info["num_temp_sensor_channels"]):
@@ -792,10 +764,8 @@ def read_rhd(filename, file_format: str):
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
-        elif file_format == "one-file-per-signal":
-            data_dtype[3] = "uint16"
         else:
-            data_dtype[3] += ["uint16"]
+            data_dtype[3] = "uint16"
 
     # 4: USB board digital input channel
     # 5: USB board digital output channel
@@ -817,10 +787,9 @@ def read_rhd(filename, file_format: str):
             ordered_channels.append(chan_info)
             if file_format == "header-attached":
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
-            elif file_format == "one-file-per-signal":
-                data_dtype[sig_type] = "uint16"
             else:
-                data_dtype[sig_type] += ["uint16"]
+                data_dtype[sig_type] = "uint16"
+
 
     if global_info["notch_filter_mode"] == 2 and version >= V("3.0"):
         global_info["notch_filter"] = "60Hz"
