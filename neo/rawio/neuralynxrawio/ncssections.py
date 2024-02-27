@@ -136,7 +136,7 @@ class NcsSectionsFactory:
         return round(startTime + NcsSectionsFactory.get_micros_per_samp_for_freq(sampFr) * posn)
 
     @staticmethod
-    def _parseGivenActualFrequency(ncsMemMap, ncsSects, chanNum, reqFreq, blkOnePredTime):
+    def _parseGivenActualFrequency(ncsMemMap, ncsSects, chanNum, reqFreq, blkOnePredTime, gap_detection_strict=False):
         """
         Parse sections in memory mapped file when microsPerSampUsed and sampFreqUsed are known,
         filling in an NcsSections object.
@@ -195,7 +195,13 @@ class NcsSectionsFactory:
         # New code numpy vector based (speedup X50)
         delta = (ncsMemMap["timestamp"][1:] - ncsMemMap["timestamp"][:-1]).astype(np.int64)
         delta_prediction = ((ncsMemMap["nb_valid"][:-1] / ncsSects.sampFreqUsed) * 1e6).astype(np.int64)
-        gap_inds = np.flatnonzero((delta - delta_prediction) != 0)
+        diff = delta - delta_prediction
+        if gap_detection_strict:
+            gap_inds = np.flatnonzero(diff != 0)
+        else:
+            # the timestamp diff tolerance is the inter block time divide by 10
+            tolerance = (NcsSection._RECORD_SIZE / ncsSects.sampFreqUsed * 1e6) / 10.
+            gap_inds = np.flatnonzero(np.abs(diff) > tolerance)
         gap_inds += 1
         sections_limits = [ 0 ] + gap_inds.tolist() + [len(ncsMemMap)]
 
@@ -215,7 +221,7 @@ class NcsSectionsFactory:
         return ncsSects
 
     @staticmethod
-    def _buildGivenActualFrequency(ncsMemMap, actualSampFreq, reqFreq):
+    def _buildGivenActualFrequency(ncsMemMap, actualSampFreq, reqFreq, gap_detection_strict=False):
         """
         Build NcsSections object for file given actual sampling frequency.
 
@@ -275,7 +281,7 @@ class NcsSectionsFactory:
             blkOnePredTime = NcsSectionsFactory.calc_sample_time(actualSampFreq, ts0, nb0)
             # curBlock = NcsSection(0, ts0, -1, -1, -1)
             # ncsSects.sects.append(curBlock)
-            ncsSects = NcsSectionsFactory._parseGivenActualFrequency(ncsMemMap, ncsSects, chanNum, reqFreq, blkOnePredTime)
+            ncsSects = NcsSectionsFactory._parseGivenActualFrequency(ncsMemMap, ncsSects, chanNum, reqFreq, blkOnePredTime, gap_detection_strict=gap_detection_strict)
             return ncsSects
 
     @staticmethod
@@ -423,7 +429,7 @@ class NcsSectionsFactory:
         return nb
 
     @staticmethod
-    def build_for_ncs_file(ncsMemMap, nlxHdr):
+    def build_for_ncs_file(ncsMemMap, nlxHdr, gap_detection_strict=False):
         """
         Build an NcsSections object for an NcsFile, given as a memmap and NlxHeader,
         handling gap detection appropriately given the file type as specified by the header.
@@ -460,7 +466,7 @@ class NcsSectionsFactory:
         # BML & ATLAS style with fractional frequency and micros per samp
         elif acqType == "BML" or acqType == "ATLAS":
             sampFreqUsed = nlxHdr["sampling_rate"]
-            nb = NcsSectionsFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(sampFreqUsed))
+            nb = NcsSectionsFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(sampFreqUsed), gap_detection_strict=gap_detection_strict)
 
         else:
             raise TypeError("Unknown Ncs file type from header.")

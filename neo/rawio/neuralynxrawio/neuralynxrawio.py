@@ -85,7 +85,10 @@ class NeuralynxRawIO(BaseRawIO):
     keep_original_times: bool, default: False
         If True, keep original start time as in files,
         Otherwise set 0 of time to first time in dataset
-
+    gap_detection_strict: bool, default: False
+        If False then the gap detection with timestamp of data block is relaxed.
+        It True (old behavior), gap depection need extact timestamp in data block otherwise gaps (and so segment)
+        are created.
     Notes
     -----
     * This IO supports NCS, NEV, NSE and NTT file formats (not NVT or NRD yet)
@@ -125,7 +128,7 @@ class NeuralynxRawIO(BaseRawIO):
         ("samples", "int16", (NcsSection._RECORD_SIZE)),
     ]
 
-    def __init__(self, dirname="", filename="", exclude_filename=None, keep_original_times=False, **kargs):
+    def __init__(self, dirname="", filename="", exclude_filename=None, keep_original_times=False, gap_detection_strict=False, **kargs):
 
         if dirname != "":
             self.dirname = dirname
@@ -137,6 +140,7 @@ class NeuralynxRawIO(BaseRawIO):
             raise ValueError("One of dirname or filename must be provided.")
 
         self.keep_original_times = keep_original_times
+        self.gap_detection_strict = gap_detection_strict
         self.exclude_filename = exclude_filename
         BaseRawIO.__init__(self, **kargs)
 
@@ -788,9 +792,8 @@ class NeuralynxRawIO(BaseRawIO):
             data = self._get_file_map(ncs_filename)
             nlxHeader = NlxHeader(ncs_filename)
 
-            verify_sec_struct = NcsSectionsFactory._verifySectionsStructure
-            if not chanSectMap or (not verify_sec_struct(data, chan_ncs_sections)):
-                chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
+            if not chanSectMap or (not NcsSectionsFactory._verifySectionsStructure(data, chan_ncs_sections)):
+                chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader, gap_detection_strict=self.gap_detection_strict)
 
             # register file section structure for all contained channels
             for chan_uid in zip(nlxHeader["channel_names"], np.asarray(nlxHeader["channel_ids"], dtype=str)):
