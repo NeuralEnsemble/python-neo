@@ -110,9 +110,6 @@ class NcsSectionsFactory:
     more complicated.
     """
 
-    _maxGapSampFrac = 0.2  # maximum fraction of a sampling interval between predicted
-    # and actual record timestamps still considered within one section
-
     @staticmethod
     def get_freq_for_micros_per_samp(micros):
         """
@@ -339,7 +336,7 @@ class NcsSectionsFactory:
         return ncsSects
 
     @staticmethod
-    def _buildForMaxGap(ncsMemMap, nomFreq):
+    def _buildForMaxGap(ncsMemMap, nomFreq, maxGapSampFrac):
         """
         Determine sections of records in memory mapped Ncs file given a nominal frequency of
         the file, using the default values of frequency tolerance and maximum gap between blocks.
@@ -385,13 +382,13 @@ class NcsSectionsFactory:
         else:
             nb.sampFreqUsed = nomFreq
             nb.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(nb.sampFreqUsed)
-            maxGapToAllow = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / nomFreq)
+            maxGapToAllow = round(maxGapSampFrac * 1e6 / nomFreq)
             nb = NcsSectionsFactory._parseForMaxGap(ncsMemMap, nb, maxGapToAllow)
 
         return nb
 
     @staticmethod
-    def build_for_ncs_file(ncsMemMap, nlxHdr):
+    def build_for_ncs_file(ncsMemMap, nlxHdr, maxGapSampFrac=0.2):
         """
         Build an NcsSections object for an NcsFile, given as a memmap and NlxHeader,
         handling gap detection appropriately given the file type as specified by the header.
@@ -401,8 +398,12 @@ class NcsSectionsFactory:
         ncsMemMap:
             memory map of file
         nlxHdr:
-            NlxHeader from corresponding file.
-
+            NlxHeader from corresponding file
+        maxGapSampFrac:
+            maximum fraction of a sampling interval between predicted and actual record timestamps
+            still considered within one section used for "DIGITALLYNX", "DIGITALLYNXSX",
+            "CHEETAH64", "CHEETAH560", "RAWDATAFILE" acqTypes and the "ATLAS" acqType if
+            not None.
         Returns
         -------
         An NcsSections corresponding to the provided ncsMemMap and nlxHdr
@@ -423,12 +424,18 @@ class NcsSectionsFactory:
         # block times
         elif acqType in ["DIGITALLYNX", "DIGITALLYNXSX", "CHEETAH64", "CHEETAH560", "RAWDATAFILE"]:
             nomFreq = nlxHdr["sampling_rate"]
-            nb = NcsSectionsFactory._buildForMaxGap(ncsMemMap, nomFreq)
+            nb = NcsSectionsFactory._buildForMaxGap(ncsMemMap, nomFreq, maxGapSampFrac)
 
         # BML & ATLAS style with fractional frequency and micros per samp
-        elif acqType == "BML" or acqType == "ATLAS":
+        elif acqType == "BML":
             sampFreqUsed = nlxHdr["sampling_rate"]
             nb = NcsSectionsFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(sampFreqUsed))
+        elif acqType == "ATLAS":
+            sampFreqUsed = nlxHdr["sampling_rate"]
+            if maxGapSampFrac is None:
+                nb = NcsSectionsFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(sampFreqUsed))
+            else:
+                nb = NcsSectionsFactory._buildForMaxGap(ncsMemMap, sampFreqUsed, maxGapSampFrac)
 
         else:
             raise TypeError("Unknown Ncs file type from header.")
