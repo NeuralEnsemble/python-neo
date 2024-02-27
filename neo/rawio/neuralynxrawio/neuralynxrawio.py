@@ -319,6 +319,8 @@ class NeuralynxRawIO(BaseRawIO):
                         internal_ids = []
                     else:
                         data = self._get_file_map(filename)
+                        if data.shape[0] == 0: # empty file
+                            self._empty_nse_ntt.append(filename)
                         internal_ids = np.unique(data[["event_id", "ttl_input"]]).tolist()
                     for internal_event_id in internal_ids:
                         if internal_event_id not in self.internal_event_ids:
@@ -519,7 +521,8 @@ class NeuralynxRawIO(BaseRawIO):
                 # ~ ev_ann['digital_marker'] =
                 # ~ ev_ann['analog_marker'] =
 
-    def _get_file_map(self, filename):
+    @staticmethod
+    def _get_file_map(filename):
         """
         Create memory maps when needed
         see also https://github.com/numpy/numpy/issues/19340
@@ -528,7 +531,7 @@ class NeuralynxRawIO(BaseRawIO):
         suffix = filename.suffix.lower()[1:]
 
         if suffix == "ncs":
-            return np.memmap(filename, dtype=self._ncs_dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
+            return np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
 
         elif suffix in ["nse", "ntt"]:
             info = NlxHeader(filename)
@@ -536,7 +539,6 @@ class NeuralynxRawIO(BaseRawIO):
 
             # return empty map if file does not contain data
             if os.path.getsize(filename) <= NlxHeader.HEADER_SIZE:
-                self._empty_nse_ntt.append(filename)
                 return np.zeros((0,), dtype=dtype)
 
             return np.memmap(filename, dtype=dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
