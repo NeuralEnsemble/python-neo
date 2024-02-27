@@ -160,38 +160,6 @@ class NcsSectionsFactory:
         NcsSections object with block locations marked
         """
 
-        # Old code with loops
-
-        # ts0 = ncsMemMap["timestamp"][0]
-        # curBlock = NcsSection(0, ts0, -1, -1, -1)
-        # ncsSects.sects.append(curBlock)
-        # startBlockPredTime = blkOnePredTime
-        # blk_len = 0
-        # for recn in range(1, ncsMemMap.shape[0]):
-        #     timestamp = ncsMemMap["timestamp"][recn]
-        #     channel_id = ncsMemMap["channel_id"][recn]
-        #     sample_rate = ncsMemMap["sample_rate"][recn]
-        #     nb_valid = ncsMemMap["nb_valid"][recn]
-
-        #     if channel_id != chanNum or sample_rate != reqFreq:
-        #         raise IOError("Channel number or sampling frequency changed in " + "records within file")
-        #     predTime = NcsSectionsFactory.calc_sample_time(ncsSects.sampFreqUsed, startBlockPredTime, blk_len)
-        #     nValidSamps = nb_valid
-        #     if timestamp != predTime:
-        #         curBlock.endRec = recn - 1
-        #         curBlock.endTime = predTime
-        #         curBlock.n_samples = blk_len
-        #         curBlock = NcsSection(recn, timestamp, -1, -1, -1)
-        #         ncsSects.sects.append(curBlock)
-        #         startBlockPredTime = NcsSectionsFactory.calc_sample_time(ncsSects.sampFreqUsed, timestamp, nValidSamps)
-        #         blk_len = 0
-        #     else:
-        #         blk_len += nValidSamps
-        # curBlock.endRec = ncsMemMap.shape[0] - 1
-        # endTime = NcsSectionsFactory.calc_sample_time(ncsSects.sampFreqUsed, startBlockPredTime, blk_len)
-        # curBlock.endTime = endTime
-
-
         # New code numpy vector based (speedup X50)
         delta = (ncsMemMap["timestamp"][1:] - ncsMemMap["timestamp"][:-1]).astype(np.int64)
         delta_prediction = ((ncsMemMap["nb_valid"][:-1] / ncsSects.sampFreqUsed) * 1e6).astype(np.int64)
