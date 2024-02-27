@@ -87,7 +87,7 @@ class NeuralynxRawIO(BaseRawIO):
         Otherwise set 0 of time to first time in dataset
     gap_detection_strict: bool, default: False
         If False then the gap detection with timestamp of data block is relaxed.
-        It True (old behavior), gap depection need extact timestamp in data block otherwise gaps (and so segment)
+        If True (old behavior), gap detection requires exact timestamps within the data block otherwise gaps (and so segments)
         are created.
     Notes
     -----
