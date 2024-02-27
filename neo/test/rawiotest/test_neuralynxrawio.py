@@ -355,19 +355,20 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
         ns0.sampFreqUsed = 400
         self.assertNotEqual(ns0, ns1)
 
-class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
 
-    def test_no_date_time(self):
-        filename = self.get_local_path("neuralynx/NoDateHeader/NoDateHeader.nev")
+# I comment this now and will put it back when files will be in gin.g-node
+# class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
+#     def test_no_date_time(self):
+#         filename = self.get_local_path("neuralynx/NoDateHeader/NoDateHeader.nev")
 
-        with self.assertRaises(IOError):
-            hdr = NlxHeader(filename)
+#         with self.assertRaises(IOError):
+#             hdr = NlxHeader(filename)
 
-        hdr = NlxHeader(filename, props_only=True)
+#         hdr = NlxHeader(filename, props_only=True)
 
-        self.assertEqual(len(hdr), 11)
-        self.assertEqual(hdr['ApplicationName'], 'Pegasus')
-        self.assertEqual(hdr['FileType'], 'Event')
+#         self.assertEqual(len(hdr), 11)
+#         self.assertEqual(hdr['ApplicationName'], 'Pegasus')
+#         self.assertEqual(hdr['FileType'], 'Event')
 
 if __name__ == "__main__":
     unittest.main()
