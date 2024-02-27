@@ -33,24 +33,43 @@ from packaging.version import Version as V
 
 class IntanRawIO(BaseRawIO):
     """
-    Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
+    Class for reading rhd and rhs Intan data
+
+    Parameters
+    ----------
+    filename: str, default: ''
+       name of the 'rhd' or 'rhs' data file
+
+    Notes
+    -----
+    * Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
     check for the file extension and will gather the header information based on the
     extension. Additionally it functions with RHS v 1.0 and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
     3.0, and 3.1 files.
-    Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
+
+    * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
     depending on the port in which they were recorded along with the following
     additional channels.
+    0: 'RHD2000' amplifier channel
     1: 'RHD2000 auxiliary input channel',
     2: 'RHD2000 supply voltage channel',
     3: 'USB board ADC input channel',
     4: 'USB board digital input channel',
     5: 'USB board digital output channel'
-    Due to the structure of the digital input and output channels these can be accessed
+
+    * Due to the structure of the digital input and output channels these can be accessed
     as one long vector, which must be post-processed.
-    Parameters
-    ----------
-    filename: str
-       name of the 'rhd' or 'rhs' data file
+
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> reader = neo.rawio.IntanRawIO(filename='data.rhd')
+    >>> reader.parse_header()
+    >>> raw_chunk = reader.get_analogsignal_chunk(block_index=0,
+                                                  seg_index=0
+                                                  stream_index=0)
+    >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, stream_index=0)
+
     """
 
     extensions = ["rhd", "rhs"]
@@ -85,8 +104,8 @@ class IntanRawIO(BaseRawIO):
         # signals
         signal_channels = []
         for c, chan_info in enumerate(self._ordered_channels):
-            name = chan_info["native_channel_name"]
-            chan_id = str(c)  # the chan_id have no meaning in intan
+            name = chan_info["custom_channel_name"]
+            channel_id = chan_info["native_channel_name"]
             if chan_info["signal_type"] == 20:
                 # exception for temperature
                 sig_dtype = "int16"
@@ -96,7 +115,7 @@ class IntanRawIO(BaseRawIO):
             signal_channels.append(
                 (
                     name,
-                    chan_id,
+                    channel_id,
                     chan_info["sampling_rate"],
                     sig_dtype,
                     chan_info["units"],
@@ -146,9 +165,9 @@ class IntanRawIO(BaseRawIO):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         mask = self.header["signal_channels"]["stream_id"] == stream_id
         signal_channels = self.header["signal_channels"][mask]
-        channel_names = signal_channels["name"]
-        chan_name0 = channel_names[0]
-        size = self._raw_data[chan_name0].size
+        channel_ids = signal_channels["id"]
+        channel_id_0 = channel_ids[0]
+        size = self._raw_data[channel_id_0].size
         return size
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
@@ -166,9 +185,10 @@ class IntanRawIO(BaseRawIO):
         signal_channels = self.header["signal_channels"][mask]
         if channel_indexes is None:
             channel_indexes = slice(None)
-        channel_names = signal_channels["name"][channel_indexes]
+        channel_ids = signal_channels["id"][channel_indexes]
 
-        shape = self._raw_data[channel_names[0]].shape
+        channel_id_0 = channel_ids[0]
+        shape = self._raw_data[channel_id_0].shape
 
         # some channel (temperature) have 1D field so shape 1D
         # because 1 sample per block
@@ -181,13 +201,16 @@ class IntanRawIO(BaseRawIO):
             sl0 = i_start % block_size
             sl1 = sl0 + (i_stop - i_start)
 
-        sigs_chunk = np.zeros((i_stop - i_start, len(channel_names)), dtype="uint16")
-        for i, chan_name in enumerate(channel_names):
-            data_chan = self._raw_data[chan_name]
+        # Create an array to store the requested chunk
+        dtype = self._raw_data[channel_id_0].dtype
+        sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
+        for channel_index, channel_id in enumerate(channel_ids):
+            # Memmap fields are the channel_ids for unique channels
+            data_chan = self._raw_data[channel_id]
             if len(shape) == 1:
-                sigs_chunk[:, i] = data_chan[i_start:i_stop]
+                sigs_chunk[:, channel_index] = data_chan[i_start:i_stop]
             else:
-                sigs_chunk[:, i] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
+                sigs_chunk[:, channel_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
 
         return sigs_chunk
 
@@ -448,7 +471,7 @@ def read_rhd(filename):
 
         global_info = read_variable_header(f, rhd_global_header_base)
 
-        version = V("{major_version}.{minor_version}".format(**global_info))
+        version = V(f"{global_info['major_version']}.{global_info['minor_version']}")
 
         # the header size depends on the version :-(
         header = list(rhd_global_header_part1)  # make a copy
@@ -532,7 +555,7 @@ def read_rhd(filename):
 
     # temperature is not an official channel in the header
     for i in range(global_info["num_temp_sensor_channels"]):
-        name = "temperature_{}".format(i)
+        name = f"temperature_{i}"
         chan_info = {"native_channel_name": name, "signal_type": 20}
         chan_info["sampling_rate"] = sr / BLOCK_SIZE
         chan_info["units"] = "Celsius"

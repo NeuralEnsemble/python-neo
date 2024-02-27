@@ -43,7 +43,7 @@ class NeuroshareError(Exception):
         self.errno = errno
         pszMsgBuffer = ctypes.create_string_buffer(256)
         self.lib.ns_GetLastErrorMsg(pszMsgBuffer, ctypes.c_uint32(256))
-        errstr = "{}: {}".format(errno, pszMsgBuffer.value)
+        errstr = f"{errno}: {pszMsgBuffer.value}"
         Exception.__init__(self, errstr)
 
 

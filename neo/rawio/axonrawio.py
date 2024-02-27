@@ -53,6 +53,30 @@ import numpy as np
 
 
 class AxonRawIO(BaseRawIO):
+    """
+    Class for Class for reading data from pCLAMP and AxoScope files (.abf version 1 and 2)
+
+    Parameters
+    ----------
+    filename: str, default: ''
+        The *.abf file to be read
+
+    Notes
+    -----
+    This code is a port of abfload and abf2load written in Matlab (BSD-2-Clause licence) by
+    Copyright (c) 2009, Forrest Collman, fcollman@princeton.edu
+    Copyright (c) 2004, Harald Hentschke
+
+    Examples
+    --------
+
+    >>> import neo.rawio
+    >>> reader = neo.rawio.AxonRawIO(filename='mydata.abf')
+    >>> reader.parse_header()
+    >>> print(reader)
+
+    """
+
     extensions = ["abf"]
     rawmode = "one-file"
 
@@ -88,7 +112,7 @@ class AxonRawIO(BaseRawIO):
         elif version >= 2.0:
             mode = info["protocol"]["nOperationMode"]
 
-        assert mode in [1, 2, 3, 5], "Mode {} is not supported".format(mode)
+        assert mode in [1, 2, 3, 5], f"Mode {mode} is not supported"
         # event-driven variable-length mode (mode 1)
         # event-driven fixed-length mode (mode 2 or 5)
         # gap free mode (mode 3) can be in several episodes

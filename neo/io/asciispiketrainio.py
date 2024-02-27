@@ -136,6 +136,6 @@ class AsciiSpikeTrainIO(BaseIO):
         f = open(self.filename, "w")
         for s, sptr in enumerate(segment.spiketrains):
             for ts in sptr:
-                f.write("{:f}{}".format(ts, delimiter))
+                f.write(f"{ts}{delimiter}")
             f.write("\n")
         f.close()

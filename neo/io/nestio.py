@@ -79,9 +79,7 @@ class NestIO(BaseIO):
             if ext in self.extensions:
                 if ext in self.avail_IOs:
                     raise ValueError(
-                        'Received multiple files with "%s" '
-                        "extension. Can only load single file of "
-                        "this type." % ext
+                        f'Received multiple files with "{ext}" ' "extension. Can only load single file of " "this type."
                     )
                 self.avail_IOs[ext] = ColumnIO(filename)
             self.avail_formats[ext] = path
@@ -129,8 +127,8 @@ class NestIO(BaseIO):
         if len(np.unique(column_list_no_None)) < len(column_list_no_None):
             raise ValueError(
                 "One or more columns have been specified to contain "
-                "the same data. Columns were specified to %s."
-                "" % column_list_no_None
+                "the same data. Columns were specified to {column_list_no_None}."
+                ""
             )
 
         # extracting condition and sorting parameters for raw data loading
@@ -267,7 +265,7 @@ class NestIO(BaseIO):
 
         for time in (t_start, t_stop):
             if not isinstance(time, pq.quantity.Quantity):
-                raise TypeError("Time value (%s) is not a quantity." % time)
+                raise TypeError(f"Time value ({time}) is not a quantity.")
         return t_start, t_stop
 
     def _check_input_values_parameters(self, value_columns, value_types, value_units):
@@ -294,14 +292,14 @@ class NestIO(BaseIO):
         if value_units is None:
             short_value_types = [vtype.split("_")[0] for vtype in value_types]
             if not all([svt in value_type_dict for svt in short_value_types]):
-                raise ValueError("Can not interpret value types " '"%s"' % value_types)
+                raise ValueError(f"Can not interpret value types " f'"{value_types}"')
             value_units = [value_type_dict[svt] for svt in short_value_types]
 
         # checking for same number of value types, units and columns
         if not (len(value_types) == len(value_units) == len(value_columns)):
             raise ValueError(
                 "Length of value types, units and columns does "
-                "not match (%i,%i,%i)" % (len(value_types), len(value_units), len(value_columns))
+                f"not match ({len(value_types)},{len(value_units)},{len(value_columns)})"
             )
         if not all([isinstance(vunit, pq.UnitQuantity) for vunit in value_units]):
             raise ValueError("No value unit or standard value type specified.")
@@ -324,13 +322,13 @@ class NestIO(BaseIO):
         if None in gid_list and id_column is not None:
             raise ValueError(
                 "No neuron IDs specified but file contains "
-                "neuron IDs in column %s. Specify empty list to "
+                f"neuron IDs in column {str(id_column)}. Specify empty list to "
                 "retrieve spiketrains of all neurons."
-                "" % str(id_column)
+                ""
             )
 
         if gid_list != [None] and id_column is None:
-            raise ValueError("Specified neuron IDs to be %s, but no ID column " "specified." % gid_list)
+            raise ValueError(f"Specified neuron IDs to be {gid_list}, but no ID column " "specified.")
         return gid_list, id_column
 
     def _check_input_sampling_period(self, sampling_period, time_column, time_unit, data):
@@ -349,7 +347,7 @@ class NestIO(BaseIO):
             if time_column is not None:
                 data_sampling = np.unique(np.diff(sorted(np.unique(data[:, 1]))))
                 if len(data_sampling) > 1:
-                    raise ValueError("Different sampling distances found in " "data set (%s)" % data_sampling)
+                    raise ValueError(f"Different sampling distances found in " "data set ({data_sampling})")
                 else:
                     dt = data_sampling[0]
             else:
@@ -723,7 +721,7 @@ class ColumnIO:
         if column_ids is not None:
             if max(column_ids) >= len(self.data) - 1:
                 raise ValueError(
-                    "Can not load column ID %i. File contains " "only %i columns" % (max(column_ids), len(self.data))
+                    f"Can not load column ID {max(column_ids)}. File contains " f"only {len(self.data)} columns"
                 )
 
         if sorting_columns is not None:
@@ -731,8 +729,8 @@ class ColumnIO:
                 sorting_columns = [sorting_columns]
             if max(sorting_columns) >= self.data.shape[1]:
                 raise ValueError(
-                    "Can not sort by column ID %i. File contains "
-                    "only %i columns" % (max(sorting_columns), self.data.shape[1])
+                    f"Can not sort by column ID {max(sorting_columns)}. File contains "
+                    f"only {self.data.shape[1]} columns"
                 )
 
         # Starting with whole dataset being selected for return

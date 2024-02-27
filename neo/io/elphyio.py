@@ -180,9 +180,7 @@ class ElphySignal(BaseSignal):
         self.units = [x_unit, y_unit]
 
     def __str__(self):
-        return "{} ep_{} ch_{} [{}, {}]".format(
-            self.layout.file.name, self.episode, self.channel, self.x_unit, self.y_unit
-        )
+        return f"{self.layout.file.name} ep_{self.episode} ch_{self.channel} [{self.x_unit}, {self.y_unit}]"
 
     def __repr__(self):
         return self.__str__()
@@ -221,7 +219,7 @@ class ElphyTag(BaseSignal):
         self.units = [x_unit, None]
 
     def __str__(self):
-        return "{} : ep_{} tag_ch_{} [{}]".format(self.layout.file.name, self.episode, self.number, self.x_unit)
+        return f"{self.layout.file.name} : ep_{self.episode} tag_ch_{ self.number} [{self.x_unit}]"
 
     def __repr__(self):
         return self.__str__()
@@ -273,7 +271,7 @@ class ElphyEvent:
         self.ch_number = ch_number
 
     def __str__(self):
-        return "{} : ep_{} evt_ch_{} [{}]".format(self.layout.file.name, self.episode, self.number, self.x_unit)
+        return f"{self.layout.file.name} : ep_{self.episode} evt_ch_{self.number} [{self.x_unit}]"
 
     def __repr__(self):
         return self.__str__()
@@ -439,7 +437,7 @@ class ElphyBlock(BaseBlock):
         self.sub_blocks = list()
 
     def __repr__(self):
-        return "{} : size = {}, start = {}, end = {}".format(self.identifier, self.size, self.start, self.end)
+        return f"{self.identifier} : size = {self.size}, start = {self.start}, end = {self.end}"
 
     def add_sub_block(self, block):
         """
@@ -671,7 +669,7 @@ class MultistimFileInfo(FileInfoBlock):
 
     def get_title(self):
         title_length = read_from_char(self.file, "B")
-        (title,) = struct.unpack("<%ss" % title_length, self.file.read(title_length))
+        (title,) = struct.unpack(f"<{title_length}s", self.file.read(title_length))
         if hasattr(title, "decode"):
             title = title.decode()
         self.file.seek(self.file.tell() + 255 - title_length)
@@ -1638,7 +1636,7 @@ def read_from_char(data, type_char):
     ascii = data.read(n_bytes) if hasattr(data, "read") else data
     if type_char != "ext":
         try:
-            value = struct.unpack("<%s" % type_char, ascii)[0]
+            value = struct.unpack(f"<{type_char}", ascii)[0]
         except:
             # the value could not been read
             # because the value is not compatible
@@ -1890,7 +1888,7 @@ class ElphyLayout:
         data = np.empty([len(reshape), n_samples], dtype=(int, int))
         for index, bit_mask in enumerate(bit_masks):
             tmp = self.filter_bytes(databytes, bit_mask)
-            tp = "{}{}{}".format(order, datatypes[index], reshape[index])
+            tp = f"{order}{datatypes[index]}{reshape[index]}"
             data[index] = np.frombuffer(tmp, dtype=tp)
 
         return data.T
@@ -2140,7 +2138,7 @@ class Acquis1Layout(ElphyLayout):
         Y0 = self.header.Y0_ar[ch - 1]
         # TODO: see why this kind of exception exists
         if dY is None or Y0 is None:
-            raise Exception("bad Y-scale factors for episode {} channel {}".format(ep, ch))
+            raise Exception(f"bad Y-scale factors for episode {ep} channel {ch}")
         return ElphyScaleFactor(dY, Y0)
 
     def x_unit(self, ep, ch):
@@ -2768,7 +2766,7 @@ class DAC2Layout(ElphyLayout):
         return res
 
     def get_episode_name(self, episode):
-        episode_name = "episode %s" % episode
+        episode_name = f"episode {episode}"
         names = [k for k in self.blocks if k.identifier == "COM"]
         if len(names) > 0:
             name = names[episode - 1]
@@ -2967,7 +2965,7 @@ class LayoutFactory:
         """
         self.file.seek(sub_offset)
         sub_ident_size = read_from_char(self.file, "B")
-        (sub_identifier,) = struct.unpack("<%ss" % sub_ident_size, self.file.read(sub_ident_size))
+        (sub_identifier,) = struct.unpack(f"<{sub_ident_size}s", self.file.read(sub_ident_size))
         if hasattr(sub_identifier, "decode"):
             sub_identifier = sub_identifier.decode()
         sub_data_size = read_from_char(self.file, "H")
@@ -2976,7 +2974,7 @@ class LayoutFactory:
         if sub_data_size == 0xFFFF:
             _ch = "l"
             sub_data_size = read_from_char(self.file, _ch)
-            size_format += "+%s" % (_ch)
+            size_format += f"+{_ch}"
             sub_data_offset += 4
         sub_size = len(sub_identifier) + 1 + type_dict[size_format] + sub_data_size
         if sub_identifier == "Ep":
@@ -3141,7 +3139,7 @@ class DAC2Factory(LayoutFactory):
         self.file.seek(offset)
         size = read_from_char(self.file, "l")
         ident_size = read_from_char(self.file, "B")
-        (identifier,) = struct.unpack("<%ss" % ident_size, self.file.read(ident_size))
+        (identifier,) = struct.unpack(f"<{ident_size}s", self.file.read(ident_size))
         if hasattr(identifier, "decode"):
             identifier = identifier.decode()
         block_type = self.select_block_subclass(identifier)
@@ -3320,7 +3318,7 @@ class ElphyFile:
         try:
             self.file = open(self.path, "rb")
         except Exception as e:
-            raise Exception("python couldn't open file {} : {}".format(self.path, e))
+            raise Exception(f"python couldn't open file {self.path} : {e}")
         self.file_size = path.getsize(self.file.name)
         self.creation_date = datetime.fromtimestamp(path.getctime(self.file.name))
         self.modification_date = datetime.fromtimestamp(path.getmtime(self.file.name))
@@ -3350,7 +3348,7 @@ class ElphyFile:
         self.file.seek(0)
         title = title[0:length]
         if title not in factories:
-            title = "format is not implemented ('{}' not in {})".format(title, str(factories.keys()))
+            title = f"format is not implemented ('{title}' not in { str(factories.keys())})"
         return title
 
     def set_nomenclature(self):
@@ -3398,7 +3396,7 @@ class ElphyFile:
         try:
             self.file = open(self.path, "wb")
         except Exception as e:
-            raise Exception("python couldn't open file {} : {}".format(self.path, e))
+            raise Exception(f"python couldn't open file {self.path} : {e}")
         self.file_size = 0
         self.creation_date = datetime.now()
         self.modification_date = datetime.now()
@@ -3760,12 +3758,12 @@ class ElphyIO(BaseIO):
             self.elphy_file.open()
         except Exception as e:
             self.elphy_file.close()
-            raise Exception("cannot open file {} : {}".format(self.filename, e))
+            raise Exception(f"cannot open file {self.filename} : { e}")
 
         # create a segment containing all analog,
         # tag and event channels for the episode
         if self.elphy_file.n_episodes in [None, 0]:
-            print("File '%s' appears to have no episodes" % (self.filename))
+            print("File '{self.filename}' appears to have no episodes")
             return block
         for episode in range(1, self.elphy_file.n_episodes + 1):
             segment = self.read_segment(episode)
@@ -3939,7 +3937,7 @@ class ElphyIO(BaseIO):
                     fmt = "<BI" + str(str_len) + "s"
                     data = [4, str_len, value]
                 else:
-                    print("ElphyIO.write_block() - unknown annotation type: %s" % type(value))
+                    print(f"ElphyIO.write_block() - unknown annotation type: {type(value)}")
                     continue
                 # last, serialization
                 # BUF values
@@ -3995,7 +3993,7 @@ class ElphyIO(BaseIO):
             for dc in aa_units:
                 # create
                 Adc_chr = []  # init
-                Dyu, UnitY = "{}".format(dc).split()
+                Dyu, UnitY = f"{dc}".split()
                 data_values = [
                     10,  # size
                     UnitY + "        ",  # uY string : vertical units
@@ -4154,7 +4152,7 @@ class ElphyIO(BaseIO):
         """
         # print "name:",self.elphy_file.layout.get_episode_name(episode)
         episode_name = self.elphy_file.layout.get_episode_name(episode)
-        name = episode_name if len(episode_name) > 0 else "episode %s" % str(episode + 1)
+        name = episode_name if len(episode_name) > 0 else f"episode {str(episode + 1)}"
         segment = Segment(name=name)
         # create an analog signal for
         # each channel in the episode
@@ -4168,7 +4166,7 @@ class ElphyIO(BaseIO):
                 t_stop=signal.t_stop * getattr(pq, signal.x_unit.strip().decode()),
                 # sampling_rate = signal.sampling_frequency * pq.kHz,
                 sampling_period=signal.sampling_period * getattr(pq, x_unit),
-                channel_name="episode {}, channel {}".format(int(episode + 1), int(channel + 1)),
+                channel_name=f"episode {int(episode + 1)}, channel { int(channel + 1)}",
             )
             segment.analogsignals.append(analog_signal)
         # create a spiketrain for each
@@ -4197,9 +4195,7 @@ class ElphyIO(BaseIO):
             Index of the event.
         """
         event = self.elphy_file.get_event(episode, evt)
-        neo_event = Event(
-            times=event.times * pq.s, channel_name="episode {}, event channel {}".format(episode + 1, evt + 1)
-        )
+        neo_event = Event(times=event.times * pq.s, channel_name=f"episode {episode + 1}, event channel {evt + 1}")
         return neo_event
 
     def read_spiketrain(self, episode, spk):
@@ -4228,7 +4224,7 @@ class ElphyIO(BaseIO):
             # electrode providing the spiketrain
             # event though it is redundant with
             # waveforms
-            "label": "episode {}, electrode {}".format(episode, spk),
+            "label": f"episode {episode}, electrode {spk}",
             "electrode_id": spk,
         }
         # new spiketrain

@@ -32,6 +32,26 @@ import sys
 
 
 class RawBinarySignalRawIO(BaseRawIO):
+    """
+    Class for reading raw binary files with user specified values
+    Parameters
+    ----------
+    filename: str, default: ''
+        The *.raw or *.bin binary file to load
+    dtype: np.dtype, default: 'int16'
+        The dtype that the data is stored with. Must be acceptable by the numpy.dtype constructor
+    sampling_rate: float, default: 10000.0
+        The sampling rate of the file
+    nb_channel: int, default: 2
+        The number of channels for the file
+    signal_gain: float, default: 1.0
+        The gain for the signal in the binary file
+    signal_offset: float, default: 0.0
+        The offset for the signal in the binary file
+    bytesoffset: int: 0
+        The offset for the bytes
+    """
+
     extensions = ["raw", "bin"]
     rawmode = "one-file"
 

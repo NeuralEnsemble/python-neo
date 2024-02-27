@@ -33,15 +33,26 @@ class EDFRawIO(BaseRawIO):
     Class for reading European Data Format files (EDF and EDF+).
     Currently only continuous EDF+ files (EDF+C) and original EDF files (EDF) are supported
 
-    Usage:
-        >>> import neo.rawio
-        >>> r = neo.rawio.EDFRawIO(filename='file.edf')
-        >>> r.parse_header()
-        >>> print(r)
-        >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            i_start=0, i_stop=1024, stream_index=0, channel_indexes=range(10))
-        >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
-                            channel_indexes=[0, 3, 6])
+    Parameters
+    ----------
+    filename: str, default: ''
+        The EDF+C file or EDF file to be loaded
+
+    Examples
+    --------
+    >>> import neo.rawio
+    >>> r = neo.rawio.EDFRawIO(filename='file.edf')
+    >>> r.parse_header()
+    >>> print(r)
+    >>> raw_chunk = r.get_analogsignal_chunk(block_index=0,
+                                             seg_index=0,
+                                             i_start=0,
+                                             i_stop=1024,
+                                             stream_index=0,
+                                             channel_indexes=range(10))
+    >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk,
+                                                         dtype='float64',
+                                                         channel_indexes=[0, 3, 6])
     """
 
     extensions = ["edf"]

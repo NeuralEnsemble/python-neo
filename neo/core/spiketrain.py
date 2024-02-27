@@ -86,8 +86,8 @@ def _check_waveform_dimensions(spiketrain):
 
     if waveforms.shape[0] != len(spiketrain):
         raise ValueError(
-            "Spiketrain length (%s) does not match to number of "
-            "waveforms present (%s)" % (len(spiketrain), waveforms.shape[0])
+            f"Spiketrain length ({len(spiketrain)}) does not match to number of "
+            f"waveforms present ({waveforms.shape[0]})"
         )
 
 
@@ -182,7 +182,7 @@ def normalize_times_array(times, units=None, dtype=None, copy=True):
     # this approach is orders of magnitude faster than comparing the
     # reference dimensionality
     if len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0], pq.UnitTime):
-        ValueError("Units have dimensions %s, not [time]" % dim.simplified)
+        ValueError(f"Units have dimensions {dim.simplified}, not [time]")
     return pq.Quantity(times, units=units, dtype=dtype, copy=copy), dim
 
 
@@ -527,7 +527,7 @@ class SpikeTrain(DataObject):
         """
         Returns a string representing the :class:`SpikeTrain`.
         """
-        return "<SpikeTrain(%s, [%s, %s])>" % (super().__repr__(), self.t_start, self.t_stop)
+        return f"<SpikeTrain({super().__repr__()}, [{self.t_start}, {self.t_stop}])>"
 
     def sort(self):
         """

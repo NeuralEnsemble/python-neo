@@ -294,13 +294,7 @@ class AnalogSignal(BaseSignal):
         """
         Returns a string representing the :class:`AnalogSignal`.
         """
-        return "<%s(%s, [%s, %s], sampling rate: %s)>" % (
-            self.__class__.__name__,
-            super().__repr__(),
-            self.t_start,
-            self.t_stop,
-            self.sampling_rate,
-        )
+        return f"<{self.__class__.__name__}({super().__repr__()}, [{self.t_start}, {self.t_stop}], sampling rate: {self.sampling_rate})>"
 
     def __getitem__(self, i):
         """
@@ -324,7 +318,7 @@ class AnalogSignal(BaseSignal):
                     raise NotImplementedError("Arrays not yet supported")  # in the general case, would need to return
                     #  IrregularlySampledSignal(Array)
                 else:
-                    raise TypeError("%s not supported" % type(j))
+                    raise TypeError(f"{type(j)} not supported")
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
                 elif k is None:
@@ -473,7 +467,7 @@ class AnalogSignal(BaseSignal):
         if isinstance(other, AnalogSignal):
             for attr in "t_start", "sampling_rate":
                 if getattr(self, attr) != getattr(other, attr):
-                    raise ValueError("Inconsistent values of %s" % attr)  # how to handle name and annotations?
+                    raise ValueError(f"Inconsistent values of {attr}")  # how to handle name and annotations?
 
     def _repr_pretty_(self, pp, cycle):
         """

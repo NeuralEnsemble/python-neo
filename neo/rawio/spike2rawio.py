@@ -32,8 +32,20 @@ from collections import OrderedDict
 
 class Spike2RawIO(BaseRawIO):
     """
-    This implementation in neo read only old smr files.
+    This implementation in neo reads only old smr files.
     For smrx files you need to use CedRawIO which is based on sonpy.
+
+    Parameters
+    ----------
+    filename: str, default: ''
+        The *.smr file to be loaded
+    take_ideal_sampling_rate: bool, default: False
+        If True takes the `ideal_rate` from info
+    ced_units: bool, default: True
+        If True uses the ced unit ids
+    try_signal_grouping: bool, default: True
+        If True will attempt to group signals together
+
     """
 
     extensions = ["smr"]
@@ -275,7 +287,7 @@ class Spike2RawIO(BaseRawIO):
                 for unit_id in unit_ids:
                     unit_index = len(spike_channels)
                     self.internal_unit_ids[unit_index] = (chan_id, unit_id)
-                    _id = "ch{}#{}".format(chan_id, unit_id)
+                    _id = f"ch{chan_id}#{unit_id}"
                     spike_channels.append((name, _id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -642,7 +654,7 @@ def get_channel_dtype(chan_info):
             ("waveform", "float32", chan_info["n_extra"] // 4),
         ]
     elif chan_info["kind"] in [8]:  # TextMark data
-        dt = [("tick", "i4"), ("marker", "i4"), ("label", "S%d" % chan_info["n_extra"])]
+        dt = [("tick", "i4"), ("marker", "i4"), ("label", f"S{chan_info['n_extra']}")]
     elif chan_info["kind"] == 9:  # Float signal
         dt = "float32"
     dt = np.dtype(dt)

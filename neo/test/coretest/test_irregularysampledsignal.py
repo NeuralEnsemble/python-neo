@@ -433,7 +433,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
     def test__time_slice_deepcopy_array_annotations(self):
         length = self.signal1.shape[-1]
         params1 = {
-            "test0": ["y{}".format(i) for i in range(length)],
+            "test0": [f"y{i}" for i in range(length)],
             "test1": ["deeptest" for i in range(length)],
             "test2": [(-1) ** i > 0 for i in range(length)],
         }
@@ -442,7 +442,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
 
         # Change annotations of original
         params2 = {
-            "test0": ["x{}".format(i) for i in range(length)],
+            "test0": [f"x{i}" for i in range(length)],
             "test2": [(-1) ** (i + 1) > 0 for i in range(length)],
         }
         self.signal1.array_annotate(**params2)
@@ -453,7 +453,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertFalse(all(self.signal1.array_annotations["test2"] == result.array_annotations["test2"]))
 
         # Change annotations of result
-        params3 = {"test0": ["z{}".format(i) for i in range(1, result.shape[-1] + 1)]}
+        params3 = {"test0": [f"z{i}" for i in range(1, result.shape[-1] + 1)]}
         result.array_annotate(**params3)
         result.array_annotations["test1"][0] = "shallow2"
         self.assertFalse(all(self.signal1.array_annotations["test0"] == result.array_annotations["test0"]))
@@ -896,12 +896,12 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         signal = self.signal1
         targ = (
             (
-                "IrregularlySampledSignal with %d channels of length %d; units %s; datatype %s\n"
-                "" % (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode, signal.dtype)
+                f"IrregularlySampledSignal with {signal.shape[1]} channels of length {signal.shape[0]}; units {signal.units.dimensionality.unicode}; datatype {signal.dtype}\n"
+                ""
             )
-            + ("name: '{}'\ndescription: '{}'\n".format(signal.name, signal.description))
-            + ("annotations: %s\n" % str(signal.annotations))
-            + ("sample times: {}".format(signal.times[:10]))
+            + (f"name: '{signal.name}'\ndescription: '{signal.description}'\n")
+            + (f"annotations: {str(signal.annotations)}\n")
+            + (f"sample times: {signal.times[:10]}")
         )
         self.assertEqual(res, targ)
 

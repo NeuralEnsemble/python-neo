@@ -23,6 +23,16 @@ import struct
 
 
 class WinWcpRawIO(BaseRawIO):
+    """
+    Class for reading WinWCP data
+
+    Parameters
+    ----------
+    filename: str, default: ''
+        The *.wcp file to load
+
+    """
+
     extensions = ["wcp"]
     rawmode = "one-file"
 
@@ -97,13 +107,13 @@ class WinWcpRawIO(BaseRawIO):
 
         signal_channels = []
         for c in range(header["NC"]):
-            YG = float(header["YG%d" % c].replace(",", "."))
+            YG = float(header[f"YG{c}"].replace(",", "."))
             ADCMAX = header["ADCMAX"]
             VMax = analysisHeader["VMax"][c]
 
-            name = header["YN%d" % c]
-            chan_id = header["YO%d" % c]
-            units = header["YU%d" % c]
+            name = header[f"YN{c}"]
+            chan_id = header[f"YO{c}"]
+            units = header[f"YU{c}"]
             gain = VMax / ADCMAX / YG
             offset = 0.0
             stream_id = "0"

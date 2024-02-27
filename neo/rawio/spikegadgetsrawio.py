@@ -9,12 +9,12 @@ https://bitbucket.org/mkarlsso/trodes/wiki/Configuration
 
 Note :
   * this file format have multiple version. news version include the gain for scaling.
-     The actual implementation do not contain this feature because we don't have
-     files to test this. So now the gain is "hardcoded" to 1. and so units
-     is not handled correctly.
+     The actual implementation does not contain this feature because we don't have
+     files to test this. So now the gain is "hardcoded" to 1. and so units are
+      not handled correctly.
 
 The ".rec" file format contains:
-  * a first  text part with information in an XML structure
+  * a first text part with information in an XML structure
   * a second part for the binary buffer
 
 Author: Samuel Garcia
@@ -44,14 +44,30 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
         Initialize a SpikeGadgetsRawIO for a single ".rec" file.
 
-        Args:
-            filename: str
-                The filename
-            selected_streams: None, list, str
-                sublist of streams to load/expose to API
-                useful for spikeextractor when one stream only is needed.
-                For instance streams = ['ECU', 'trodes']
-                'trodes' is name for ephy channel (ntrodes)
+        Parameters
+        ----------
+        filename: str, default: ''
+            The *.rec file to be loaded
+        selected_streams: str | list | None, default: None
+            sublist of streams to load/expose to API, e.g., ['ECU', 'trodes']
+            'trodes' is name for ephy channel (ntrodes)
+            None will keep all streams
+
+        Notes
+        -----
+        This file format has multiple version. New versions include the gain for scaling.
+        The current implementation does not contain this feature because we don't have
+        files to test this. So now the gain is "hardcoded" to 1, and so units are
+        not handled correctly.
+
+        Examples
+        --------
+        >>> import neo.rawio
+        >>> reader = neo.rawio.SpikeGadgetRawIO(filename='data.rec') # all streams
+        # just the electrode channels
+        >>> reader_trodes = neo.rawio.SpikeGadgetRawIO(filename='data.rec', selected_streams='trodes')
+
+
         """
         BaseRawIO.__init__(self)
         self.filename = filename

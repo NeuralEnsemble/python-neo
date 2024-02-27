@@ -577,6 +577,6 @@ class Container(BaseNeo):
             pp.text(f"# {container} (N={objs})")
             for i, obj in enumerate(objs):
                 pp.breakable()
-                pp.text("%s: " % i)
+                pp.text(f"{i}: ")
                 with pp.indent(3):
                     pp.pretty(obj)

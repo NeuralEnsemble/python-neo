@@ -237,7 +237,7 @@ class BaseSignal(DataObject):
         for attr in self._necessary_attrs:
             if "signal" != attr[0]:
                 if getattr(self, attr[0], None) != getattr(other, attr[0], None):
-                    raise MergeError("Cannot merge these two signals as the %s differ." % attr[0])
+                    raise MergeError(f"Cannot merge these two signals as the {attr[0]} differ.")
 
         if self.segment != other.segment:
             raise MergeError("Cannot merge these two signals as they belong to different segments.")

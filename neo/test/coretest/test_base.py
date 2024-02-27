@@ -68,7 +68,7 @@ class Test_check_annotations(unittest.TestCase):
         _check_annotations((self.values, self.values))
 
     def test__check_annotations__dict(self):
-        names = ["value%s" % i for i in range(len(self.values))]
+        names = [f"value{i}" for i in range(len(self.values))]
         values = dict(zip(names, self.values))
         _check_annotations(values)
 
@@ -1331,7 +1331,7 @@ class Test_pprint(unittest.TestCase):
         description = "this is a test"
         obj = BaseNeo(name=name, description=description)
         res = pretty(obj)
-        targ = "BaseNeo name: '{}' description: '{}'".format(name, description)
+        targ = f"BaseNeo name: '{name}' description: '{description}'"
         self.assertEqual(res, targ)
 
 

@@ -402,7 +402,7 @@ class AsciiSignalIO(BaseIO):
         if len(block.segments) > 1:
             raise ValueError(
                 "Can only write blocks containing a single segment."
-                " This block contains {} segments.".format(len(block.segments))
+                f" This block contains {len(block.segments)} segments."
             )
         self.write_segment(block.segments[0])
 

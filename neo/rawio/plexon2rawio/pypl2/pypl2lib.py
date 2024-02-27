@@ -19,9 +19,7 @@ platform_is_windows = platform.system() == "Windows"
 if platform_is_windows:
     import ctypes
 else:
-    is_wine_available = subprocess.run(
-                ["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
-            )
+    is_wine_available = subprocess.run(["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     if is_wine_available.returncode != 0:
         raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
 

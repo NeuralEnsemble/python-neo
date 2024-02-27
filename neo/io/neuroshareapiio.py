@@ -311,7 +311,7 @@ class NeuroshareapiIO(BaseIO):
         )
 
         # annotate from which electrode the signal comes from
-        anasig.annotate(info="signal from channel %s" % chanName)
+        anasig.annotate(info=f"signal from channel {chanName}")
 
         return anasig
 

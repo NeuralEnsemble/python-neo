@@ -51,19 +51,13 @@ class NcsSection:
 
     _RECORD_SIZE = 512  # nb sample per signal record
 
-    def __init__(self):
-        self.startRec = -1  # index of starting record
-        self.startTime = -1  # starttime of first record
-        self.endRec = -1  # index of last record (inclusive)
-        self.endTime = -1  # end time of last record, that is, the end time of the last
-        # sampling period contained in the last record of the section
-
     def __init__(self, sb, st, eb, et, ns):
-        self.startRec = sb
-        self.startTime = st
-        self.endRec = eb
-        self.endTime = et
-        self.n_samples = ns
+        self.startRec = sb # index of starting record
+        self.startTime = st # starttime of first record
+        self.endRec = eb # index of last record (inclusive)
+        self.endTime = et # end time of last record, that is, the end time of the last
+                          # sampling period contained in the last record of the section
+        self.n_samples = ns # number of samples in record which are valid
 
     def __eq__(self, other):
         return (

@@ -130,9 +130,12 @@ class NlxHeader(OrderedDict):
         ),
     }
 
-    def __init__(self, filename):
+    def __init__(self, filename, props_only=False):
         """
         Factory function to build NlxHeader for a given file.
+
+        :param filename: name of Neuralynx file
+        :param props_only: if true, will not try and read time and date or check start
         """
         super(OrderedDict, self).__init__()
         with open(filename, "rb") as f:
@@ -140,8 +143,33 @@ class NlxHeader(OrderedDict):
         txt_header = txt_header.strip(b"\x00").decode("latin-1")
 
         # must start with 8 # characters
-        assert txt_header.startswith("########"), "Neuralynx files must start with 8 # characters."
+        if not props_only and not txt_header.startswith("########"):
+           ValueError("Neuralynx files must start with 8 # characters.")
 
+        self.read_properties(filename, txt_header)
+
+        if not props_only:
+            self.readTimeDate(txt_header)
+
+    @staticmethod
+    def build_with_properties_only(filename):
+        """
+        Builds a version of the header without time and date or other validity checking.
+
+        Intended mostly for utilities but may also be useful for some recalcitrant header formats.
+
+        :param filename: name of Neuralynx file.
+        :return: NlxHeader with properties from header text
+        """
+        res = OrderedDict()
+
+
+    def read_properties(self, filename, txt_header):
+        """
+        Read properties from header and place in OrderedDictionary which this object is.
+        :param filename: name of ncs file, used for extracting channel number
+        :param txt_header: header text
+        """
         # find keys
         for k1, k2, type_ in NlxHeader.txt_header_keys:
             pattern = r"-(?P<name>" + k1 + r")\s+(?P<value>[\S ]*)"
@@ -155,17 +183,14 @@ class NlxHeader(OrderedDict):
                 if type_ is not None:
                     value = type_(value)
                 self[name] = value
-
         # if channel_ids or s not in self then the filename is used
         name = os.path.splitext(os.path.basename(filename))[0]
-
         # convert channel ids
         if "channel_ids" in self:
             chid_entries = re.findall(r"\S+", self["channel_ids"])
             self["channel_ids"] = [int(c) for c in chid_entries]
         else:
             self["channel_ids"] = ["unknown"]
-
         # convert channel names
         if "channel_names" in self:
             name_entries = re.findall(r"\S+", self["channel_names"])
@@ -176,7 +201,6 @@ class NlxHeader(OrderedDict):
             ), "Number of channel ids does not match channel names."
         else:
             self["channel_names"] = ["unknown"] * len(self["channel_ids"])
-
         # version and application name
         # older Cheetah versions with CheetahRev property
         if "CheetahRev" in self:
@@ -198,11 +222,9 @@ class NlxHeader(OrderedDict):
         else:
             self["ApplicationName"] = "Neuraview"
             app_version = "2"
-
         if " Development" in app_version:
             app_version = app_version.replace(" Development", ".dev0")
         self["ApplicationVersion"] = Version(app_version)
-
         # convert bit_to_microvolt
         if "bit_to_microVolt" in self:
             btm_entries = re.findall(r"\S+", self["bit_to_microVolt"])
@@ -212,7 +234,6 @@ class NlxHeader(OrderedDict):
             assert len(self["bit_to_microVolt"]) == len(
                 self["channel_ids"]
             ), "Number of channel ids does not match bit_to_microVolt conversion factors."
-
         if "InputRange" in self:
             ir_entries = re.findall(r"\w+", self["InputRange"])
             if len(ir_entries) == 1:
@@ -223,9 +244,13 @@ class NlxHeader(OrderedDict):
                 chid_entries
             ), "Number of channel ids does not match input range values."
 
-        # Format of datetime depends on app name, app version
-        # :TODO: this works for current examples but is not likely actually related
-        # to app version in this manner.
+    def readTimeDate(self, txt_header):
+        """
+        Read time and date from text of header appropriate for app name and version
+
+        :TODO: this works for current examples but is not likely actually related
+        to app version in this manner.
+        """
         an = self["ApplicationName"]
         if an == "Cheetah":
             av = self["ApplicationVersion"]
@@ -254,13 +279,11 @@ class NlxHeader(OrderedDict):
             an = "Unknown"
             av = "NA"
             hpd = NlxHeader.header_pattern_dicts["def"]
-
         # opening time
         sr = re.search(hpd["datetime1_regex"], txt_header)
         if not sr:
             raise IOError(
-                "No matching header open date/time for application {} "
-                + "version {}. Please contact developers.".format(an, av)
+                f"No matching header open date/time for application {an} " + f"version {av}. Please contact developers."
             )
         else:
             dt1 = sr.groupdict()
@@ -271,13 +294,14 @@ class NlxHeader(OrderedDict):
                 self["recording_opened"] = datetime.datetime.strptime(
                     dt1["date"] + " " + dt1["time"], hpd["datetime2format"])
 
+
         # close time, if available
         if "datetime2_regex" in hpd:
             sr = re.search(hpd["datetime2_regex"], txt_header)
             if not sr:
                 raise IOError(
-                    "No matching header close date/time for application {} "
-                    + "version {}. Please contact developers.".format(an, av)
+                    f"No matching header close date/time for application {an} "
+                    + f"version {av}. Please contact developers."
                 )
             else:
                 dt2 = sr.groupdict()

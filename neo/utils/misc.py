@@ -82,7 +82,7 @@ def get_events(container, **properties):
         return event_lst
     else:
         raise TypeError(
-            "Container needs to be of type Block or Segment, not %s " "in order to extract Events." % (type(container))
+            f"Container needs to be of type Block or Segment, not {type(container)} " "in order to extract Events."
         )
 
 
@@ -155,7 +155,7 @@ def get_epochs(container, **properties):
         return epoch_list
     else:
         raise TypeError(
-            "Container needs to be of type Block or Segment, not %s " "in order to extract Epochs." % (type(container))
+            f"Container needs to be of type Block or Segment, not {type(container)} " "in order to extract Epochs."
         )
 
 
@@ -305,7 +305,7 @@ def add_epoch(segment, event1, event2=None, pre=0 * pq.s, post=0 * pq.s, attach_
         event2 = event1
 
     if not isinstance(segment, neo.Segment):
-        raise TypeError("Segment has to be of type Segment, not %s" % type(segment))
+        raise TypeError(f"Segment has to be of type Segment, not {type(segment)}")
 
     # load the full event if a proxy object has been given as an argument
     if isinstance(event1, neo.io.proxyobjects.EventProxy):
@@ -315,28 +315,28 @@ def add_epoch(segment, event1, event2=None, pre=0 * pq.s, post=0 * pq.s, attach_
 
     for event in [event1, event2]:
         if not isinstance(event, neo.Event):
-            raise TypeError("Events have to be of type Event, not %s" % type(event))
+            raise TypeError(f"Events have to be of type Event, not {type(event)}")
 
     if len(event1) != len(event2):
         raise ValueError(
             "event1 and event2 have to have the same number of entries in "
             "order to create epochs between pairs of entries. Match your "
             "events before generating epochs. Current event lengths "
-            "are %i and %i" % (len(event1), len(event2))
+            f"are {len(event1)} and {len(event2)}"
         )
 
     times = event1.times + pre
     durations = event2.times + post - times
 
     if any(durations < 0):
-        raise ValueError("Can not create epoch with negative duration. " "Requested durations %s." % durations)
+        raise ValueError(f"Can not create epoch with negative duration. " "Requested durations {durations}.")
     elif any(durations == 0):
         raise ValueError("Can not create epoch with zero duration.")
 
     if "name" not in kwargs:
         kwargs["name"] = "epoch"
     if "labels" not in kwargs:
-        kwargs["labels"] = ["{}_{}".format(kwargs["name"], i) for i in range(len(times))]
+        kwargs["labels"] = [f"{kwargs['name']}_{i}" for i in range(len(times))]
 
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
 
@@ -399,13 +399,11 @@ def match_events(event1, event2):
 
     if id1 < len(event1):
         warnings.warn(
-            "Could not match all events to generate epochs. Missed "
-            "%s event entries in event1 list" % (len(event1) - id1)
+            "Could not match all events to generate epochs. Missed " f"{len(event1) - id1} event entries in event1 list"
         )
     if id2 < len(event2):
         warnings.warn(
-            "Could not match all events to generate epochs. Missed "
-            "%s event entries in event2 list" % (len(event2) - id2)
+            "Could not match all events to generate epochs. Missed " f"{len(event2) - id2} event entries in event2 list"
         )
 
     event1_matched = _event_epoch_slice_by_valid_ids(obj=event1, valid_ids=match_ev1)
@@ -466,7 +464,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         Updated block.
     """
     if not isinstance(block, neo.Block):
-        raise TypeError("block needs to be a Block, not %s" % type(block))
+        raise TypeError(f"block needs to be a Block, not {type(block)}")
 
     new_block = neo.Block()
 
@@ -474,15 +472,15 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         epochs = _get_from_list(seg.epochs, prop=properties)
         if len(epochs) > 1:
             warnings.warn(
-                "Segment %s contains multiple epochs with "
-                "requested properties (%s). Sub-segments can "
-                "have overlapping times" % (seg.name, properties)
+                f"Segment {seg.name} contains multiple epochs with "
+                f"requested properties ({properties}). Sub-segments can "
+                "have overlapping times"
             )
 
         elif len(epochs) == 0:
             warnings.warn(
-                "No epoch is matching the requested epoch properties %s. "
-                "No cutting of segment %s performed." % (properties, seg.name)
+                f"No epoch is matching the requested epoch properties {properties}. "
+                f"No cutting of segment {seg.name} performed."
             )
 
         for epoch in epochs:
@@ -526,10 +524,10 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
         receive the annotations of the corresponding epoch in the input.
     """
     if not isinstance(seg, neo.Segment):
-        raise TypeError("Seg needs to be of type Segment, not %s" % type(seg))
+        raise TypeError(f"Seg needs to be of type Segment, not {type(seg)}")
 
     if not isinstance(epoch, neo.Epoch):
-        raise TypeError("Epoch needs to be of type Epoch, not %s" % type(epoch))
+        raise TypeError(f"Epoch needs to be of type Epoch, not {type(epoch)}")
 
     segments = []
     for ep_id in range(len(epoch)):
