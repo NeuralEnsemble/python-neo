@@ -424,9 +424,76 @@ class NcsSectionsFactory:
             nb = NcsSectionsFactory._parseForMaxGap(ncsMemMap, nb, maxGapToAllow)
 
         return nb
+    
+    @staticmethod
+    def _buildNcsGeneric(ncsMemMap, nlxHdr, sampFreq, gapTolerance=0):
+        """
+        Build 
+
+        This replace:
+        _buildGivenActualFrequency
+        _buildForMaxGap
+        """
+
+        channel_id = ncsMemMap["channel_id"][0]
+
+        ncsSects = NcsSections()
+        # TODO option to use this sampFreq or estimated one
+        ncsSects.sampFreqUsed = sampFreq
+        ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(sampFreq)
+
+        # check if file is one block of records, which is often the case, and avoid full parse
+        # need that last timestamp match the predicted one.
+        predLastBlockStartTime = NcsSectionsFactory.calc_sample_time(
+            sampFreq, ncsMemMap["timestamp"][0], NcsSection._RECORD_SIZE * ncsMemMap.shape[0] - 1
+        )
+        if (
+            channel_id == ncsMemMap["channel_id"][-1]
+            and ncsMemMap["sample_rate"][0] == ncsMemMap["sample_rate"][-1]
+            and ncsMemMap["timestamp"][-1] == predLastBlockStartTime
+        ):
+            lastBlkEndTime = NcsSectionsFactory.calc_sample_time(sampFreq, ncsMemMap["timestamp"][-1], ncsMemMap["nb_valid"][-1])
+            n_samples = NcsSection._RECORD_SIZE * (ncsMemMap.size - 1) + ncsMemMap["nb_valid"][-1]
+            section0 = NcsSection(
+                    startRec=0,
+                    startTime=ncsMemMap["timestamp"][0],
+                    endRec=ncsMemMap.size - 1,
+                    endTime=lastBlkEndTime,
+                    n_samples=n_samples
+                )
+            ncsSects.sects.append(section0)
+        
+        else:
+            # need to parse all data block to detect gaps
+            # check when the predicted timestamp is outside the tolerance
+
+            delta = (ncsMemMap["timestamp"][1:] - ncsMemMap["timestamp"][:-1]).astype(np.int64)
+            delta_prediction = ((ncsMemMap["nb_valid"][:-1] / ncsSects.sampFreqUsed) * 1e6).astype(np.int64)
+            gap_inds = np.flatnonzero(np.abs(delta - delta_prediction) > gapTolerance)
+            gap_inds += 1
+
+            sections_limits = [ 0 ] + gap_inds.tolist() + [len(ncsMemMap)]
+
+            for i in range(len(gap_inds) + 1):
+                start = sections_limits[i]
+                stop = sections_limits[i + 1]
+                ncsSects.sects.append(
+                    NcsSection(
+                        startRec=start,
+                        startTime=ncsMemMap["timestamp"][start],
+                        endRec=stop-1,
+                        endTime=ncsMemMap["timestamp"][stop-1] + np.uint64(ncsMemMap["nb_valid"][stop-1] / ncsSects.sampFreqUsed * 1e6),
+                        n_samples=np.sum(ncsMemMap["nb_valid"][start:stop])
+                    )
+                )
+        
+        return ncsSects
+
+
+
 
     @staticmethod
-    def build_for_ncs_file(ncsMemMap, nlxHdr):
+    def build_for_ncs_file(ncsMemMap, nlxHdr, gapTolerance=None):
         """
         Build an NcsSections object for an NcsFile, given as a memmap and NlxHeader,
         handling gap detection appropriately given the file type as specified by the header.
@@ -443,32 +510,36 @@ class NcsSectionsFactory:
         An NcsSections corresponding to the provided ncsMemMap and nlxHdr
         """
         acqType = nlxHdr.type_of_recording()
+        freq = nlxHdr["sampling_rate"]
 
-        # Old Neuralynx style with truncated whole microseconds for actual sampling. This
-        # restriction arose from the sampling being based on a master 1 MHz clock.
         if acqType == "PRE4":
-            freq = nlxHdr["sampling_rate"]
+            # Old Neuralynx style with truncated whole microseconds for actual sampling. This
+            # restriction arose from the sampling being based on a master 1 MHz clock.
+
             microsPerSampUsed = math.floor(NcsSectionsFactory.get_micros_per_samp_for_freq(freq))
             sampFreqUsed = NcsSectionsFactory.get_freq_for_micros_per_samp(microsPerSampUsed)
-            nb = NcsSectionsFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(freq))
-            nb.sampFreqUsed = sampFreqUsed
-            nb.microsPerSampUsed = microsPerSampUsed
+            if gapTolerance is None:
+                gapTolerance = 0
+            ncsSects = NcsSectionsFactory._buildNcsGeneric(ncsMemMap, nlxHdr, sampFreqUsed, gapTolerance=gapTolerance)
+            ncsSects.sampFreqUsed = sampFreqUsed
+            ncsSects.microsPerSampUsed = microsPerSampUsed
 
-        # digital lynx style with fractional frequency and micros per samp determined from
-        # block times
         elif acqType in ["DIGITALLYNX", "DIGITALLYNXSX", "CHEETAH64", "CHEETAH560", "RAWDATAFILE"]:
-            nomFreq = nlxHdr["sampling_rate"]
-            nb = NcsSectionsFactory._buildForMaxGap(ncsMemMap, nomFreq)
+            # digital lynx style with fractional frequency and micros per samp determined from block times
+            if gapTolerance is None:
+                gapTolerance = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / freq)
+            ncsSects = NcsSectionsFactory._buildNcsGeneric(ncsMemMap, nlxHdr, sampFreqUsed, gapTolerance=gapTolerance)
 
         # BML & ATLAS style with fractional frequency and micros per samp
         elif acqType == "BML" or acqType == "ATLAS":
+            if gapTolerance is None:
+                gapTolerance = 0
             sampFreqUsed = nlxHdr["sampling_rate"]
-            nb = NcsSectionsFactory._buildGivenActualFrequency(ncsMemMap, sampFreqUsed, math.floor(sampFreqUsed))
-
+            ncsSects = NcsSectionsFactory._buildNcsGeneric(ncsMemMap, nlxHdr, freq, gapTolerance=gapTolerance)
         else:
             raise TypeError("Unknown Ncs file type from header.")
 
-        return nb
+        return ncsSects
 
     @staticmethod
     def _verifySectionsStructure(ncsMemMap, ncsSects):
