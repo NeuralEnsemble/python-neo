@@ -1,3 +1,38 @@
+"""
+Objects to represent continguous sections of samples in a Neuralynx continuously sampled .Ncs
+file. These sections are considered contiguous in that they have a start time, a sampling rate,
+and a length.
+
+Defining these sections is complicated due to the physical structure of .Ncs files which contain
+both a header and a set of fixed length records, CscRecords.
+
+Each CscRecord has a start time in microseconds, a channel id (chan_id), a stated sampling
+frequency (sampFreq) which is rounded to the whole sample/s, and a number of valid samples
+(nb_valid), which may be less than the physical maximum of 512. In principle each of these
+parameters may vary in each record in the file; however, there are no known examples of .Ncs
+files where the chan_id or sampFreq varied from record to record.
+
+The header normally, though not always, contains a stated sampling frequency, which may be
+rounded to a whole number of samples per second or not.
+
+Finally, the actual sampling frequency used within a section may be slightly different than any of
+the two frequencies above (that in the records or that in the header). This often arises due to
+clock drift over the course of a longer recording combined with the fact that only whole
+microseconds are recorded in the CscRecords. This can easily be 0.01% amounting to 0.2 seconds over
+the course of a half hour recording.
+
+These files may often contain apparent gaps of time between the sequential CscRecords in a file.
+A gap is where the predicted time at the start of the next record, based on taking the start time
+of the record and then adding 1/sampling rate x nbValid, does not agree exactly with the start time
+given in the next record.
+
+These gaps vary from those of less than one microsecond, likely due to rounding of the start time,
+to gaps of many minutes, which may be introduced by the human operator stopping and starting
+recording during a recording session.
+
+The challenge addressed by the NcsSectionsFactory of this module is to separate those intended
+gaps from those introduced by a quirk of the hardware, recording software, or file format.
+"""
 import math
 import numpy as np
 
