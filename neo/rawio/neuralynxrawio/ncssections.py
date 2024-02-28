@@ -6,7 +6,7 @@ and a length.
 Defining these sections is complicated due to the physical structure of .Ncs files which contain
 both a header and a set of fixed length records, CscRecords.
 
-Each CscRecord has a start time in microseconds, a channel id (chan_id), a stating sampling
+Each CscRecord has a start time in microseconds, a channel id (chan_id), a stated sampling
 frequency (sampFreq) which is rounded to the whole sample/s, and a number of valid samples
 (nb_valid), which may be less than the physical maximum of 512. In principle each of these
 parameters may vary in each record in the file; however, there are no known examples of .Ncs
