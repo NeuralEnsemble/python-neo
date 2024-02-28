@@ -10,7 +10,7 @@ Each CscRecord has a start time in microseconds, a channel id (chan_id), a stati
 frequency (sampFreq) which is rounded to the whole sample/s, and a number of valid samples
 (nb_valid), which may be less than the physical maximum of 512. In principle each of these
 parameters may vary in each record in the file; however, there are no known examples of .Ncs
-files where the chan_id or nb_valid varied from record to record.
+files where the chan_id or sampFreq varied from record to record.
 
 The header normally, though not always, contains a stated sampling frequency, which may be
 rounded to a whole number of samples per second or not.
