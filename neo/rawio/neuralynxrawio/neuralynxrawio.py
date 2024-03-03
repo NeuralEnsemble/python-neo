@@ -319,7 +319,7 @@ class NeuralynxRawIO(BaseRawIO):
                         internal_ids = []
                     else:
                         data = self._get_file_map(filename)
-                        if data.shape[0] == 0: # empty file
+                        if data.shape[0] == 0:  # empty file
                             self._empty_nse_ntt.append(filename)
                         internal_ids = np.unique(data[["event_id", "ttl_input"]]).tolist()
                     for internal_event_id in internal_ids:

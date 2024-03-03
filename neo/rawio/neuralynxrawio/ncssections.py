@@ -33,6 +33,7 @@ recording during a recording session.
 The challenge addressed by the NcsSectionsFactory of this module is to separate those intended
 gaps from those introduced by a quirk of the hardware, recording software, or file format.
 """
+
 import math
 import numpy as np
 
@@ -87,12 +88,12 @@ class NcsSection:
     _RECORD_SIZE = 512  # nb sample per signal record
 
     def __init__(self, startRec, startTime, endRec, endTime, n_samples):
-        self.startRec = startRec # index of starting record
-        self.startTime = startTime # starttime of first record
-        self.endRec = endRec # index of last record (inclusive)
-        self.endTime = endTime # end time of last record, that is, the end time of the last
-                          # sampling period contained in the last record of the section
-        self.n_samples = n_samples # number of samples in record which are valid
+        self.startRec = startRec  # index of starting record
+        self.startTime = startTime  # starttime of first record
+        self.endRec = endRec  # index of last record (inclusive)
+        self.endTime = endTime  # end time of last record, that is, the end time of the last
+        # sampling period contained in the last record of the section
+        self.n_samples = n_samples  # number of samples in record which are valid
 
     def __eq__(self, other):
         return (
@@ -200,7 +201,7 @@ class NcsSectionsFactory:
         delta_prediction = ((ncsMemMap["nb_valid"][:-1] / ncsSects.sampFreqUsed) * 1e6).astype(np.int64)
         gap_inds = np.flatnonzero((delta - delta_prediction) != 0)
         gap_inds += 1
-        sections_limits = [ 0 ] + gap_inds.tolist() + [len(ncsMemMap)]
+        sections_limits = [0] + gap_inds.tolist() + [len(ncsMemMap)]
 
         for i in range(len(gap_inds) + 1):
             start = sections_limits[i]
@@ -209,9 +210,10 @@ class NcsSectionsFactory:
                 NcsSection(
                     startRec=start,
                     startTime=ncsMemMap["timestamp"][start],
-                    endRec=stop-1,
-                    endTime=ncsMemMap["timestamp"][stop-1] + np.uint64(ncsMemMap["nb_valid"][stop-1] / ncsSects.sampFreqUsed * 1e6),
-                    n_samples=np.sum(ncsMemMap["nb_valid"][start:stop])
+                    endRec=stop - 1,
+                    endTime=ncsMemMap["timestamp"][stop - 1]
+                    + np.uint64(ncsMemMap["nb_valid"][stop - 1] / ncsSects.sampFreqUsed * 1e6),
+                    n_samples=np.sum(ncsMemMap["nb_valid"][start:stop]),
                 )
             )
 
@@ -272,13 +274,14 @@ class NcsSectionsFactory:
             ncsSects.sects.append(curBlock)
             return ncsSects
 
-        
         else:
             # otherwise need to scan looking for data gaps
             blkOnePredTime = NcsSectionsFactory.calc_sample_time(actualSampFreq, ts0, nb0)
             # curBlock = NcsSection(0, ts0, -1, -1, -1)
             # ncsSects.sects.append(curBlock)
-            ncsSects = NcsSectionsFactory._parseGivenActualFrequency(ncsMemMap, ncsSects, chanNum, reqFreq, blkOnePredTime)
+            ncsSects = NcsSectionsFactory._parseGivenActualFrequency(
+                ncsMemMap, ncsSects, chanNum, reqFreq, blkOnePredTime
+            )
             return ncsSects
 
     @staticmethod
