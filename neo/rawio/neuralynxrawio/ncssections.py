@@ -487,7 +487,7 @@ class NcsSectionsFactory:
         return ncsSects
 
     @staticmethod
-    def build_for_ncs_file(ncsMemMap, nlxHdr, gapTolerance=None):
+    def build_for_ncs_file(ncsMemMap, nlxHdr, gapTolerance=None, strict_gap_mode=True):
         """
         Build an NcsSections object for an NcsFile, given as a memmap and NlxHeader,
         handling gap detection appropriately given the file type as specified by the header.
@@ -512,7 +512,12 @@ class NcsSectionsFactory:
             microsPerSampUsed = math.floor(NcsSectionsFactory.get_micros_per_samp_for_freq(freq))
             sampFreqUsed = NcsSectionsFactory.get_freq_for_micros_per_samp(microsPerSampUsed)
             if gapTolerance is None:
-                gapTolerance = 0
+                if strict_gap_mode:
+                    # this is the old behavior, maybe we could put 0.9 sample interval no ?
+                    gapTolerance = 0
+                else:
+                    gapTolerance = 0
+
             ncsSects = NcsSectionsFactory._buildNcsGeneric(ncsMemMap, sampFreqUsed, gapTolerance=gapTolerance)
             ncsSects.sampFreqUsed = sampFreqUsed
             ncsSects.microsPerSampUsed = microsPerSampUsed
@@ -520,7 +525,12 @@ class NcsSectionsFactory:
         elif acqType in ["DIGITALLYNX", "DIGITALLYNXSX", "CHEETAH64", "CHEETAH560", "RAWDATAFILE"]:
             # digital lynx style with fractional frequency and micros per samp determined from block times
             if gapTolerance is None:
-                gapTolerance = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / freq)
+                if strict_gap_mode:
+                    # this is the old behavior
+                    gapTolerance = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / freq)
+                else:
+                    # quarter of paquet size is tolerate
+                    gapTolerance = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
             ncsSects = NcsSectionsFactory._buildNcsGeneric(ncsMemMap, freq, gapTolerance=gapTolerance)
             
 
@@ -543,8 +553,12 @@ class NcsSectionsFactory:
         
         elif acqType == "BML" or acqType == "ATLAS":
             # BML & ATLAS style with fractional frequency and micros per samp
-            if gapTolerance is None:
+            if strict_gap_mode:
+                # this is the old behavior, maybe we could put 0.9 sample interval no ?
                 gapTolerance = 0
+            else:
+                # quarter of paquet size is tolerate
+                gapTolerance = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
             ncsSects = NcsSectionsFactory._buildNcsGeneric(ncsMemMap, freq, gapTolerance=gapTolerance)
             ncsSects.sampFreqUsed = freq
             ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(freq)
