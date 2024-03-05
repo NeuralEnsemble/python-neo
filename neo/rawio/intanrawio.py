@@ -174,11 +174,7 @@ class IntanRawIO(BaseRawIO):
         for c, chan_info in enumerate(self._ordered_channels):
             name = chan_info["custom_channel_name"]
             channel_id = chan_info["native_channel_name"]
-            if chan_info["signal_type"] == 20 or (self.file_format != "header-attached" and chan_info["signal_type"] == 0):
-                # exception for temperature and for amplifier in non-header attached files
-                sig_dtype = "int16"
-            else:
-                sig_dtype = "uint16"
+            sig_dtype = chan_info['dtype']
             stream_id = str(chan_info["signal_type"])
             signal_channels.append(
                 (
@@ -473,6 +469,7 @@ def read_rhs(filename):
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
         chan_info["offset"] = -32768 * 0.195
+        chan_info["dtype"] = "uint16"
         ordered_channels.append(chan_info)
         data_dtype += [(name, "uint16", BLOCK_SIZE)]
 
@@ -486,6 +483,7 @@ def read_rhs(filename):
             chan_info_dc["gain"] = 19.23
             chan_info_dc["offset"] = -512 * 19.23
             chan_info_dc["signal_type"] = 10  # put it in another group
+            chan_info_dc["dtype"] = "uint16"
             ordered_channels.append(chan_info_dc)
             data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
 
@@ -500,6 +498,7 @@ def read_rhs(filename):
         chan_info_stim["gain"] = 1.0
         chan_info_stim["offset"] = 0.0
         chan_info_stim["signal_type"] = 11  # put it in another group
+        chan_info_stim["dtype"] = "uint16"
         ordered_channels.append(chan_info_stim)
         data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
 
@@ -515,6 +514,7 @@ def read_rhs(filename):
             chan_info["units"] = "V"
             chan_info["gain"] = 0.0003125
             chan_info["offset"] = -32768 * 0.0003125
+            chan_info["dtype"] = "uint16"
             ordered_channels.append(chan_info)
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
 
@@ -699,8 +699,10 @@ def read_rhd(filename, file_format: str):
         chan_info["gain"] = 0.195
         if file_format == "header-attached":
             chan_info["offset"] = -32768 * 0.195
+            chan_info["dtype"] = "uint16"
         else:
             chan_info["offset"] = 0.0
+            chan_info["dtype"] = "int16"
         ordered_channels.append(chan_info)
         
         if file_format == "header-attached":
@@ -716,6 +718,7 @@ def read_rhd(filename, file_format: str):
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000374
         chan_info["offset"] = 0.0
+        chan_info["dtype"] = "uint16"
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE // 4)]
@@ -730,6 +733,7 @@ def read_rhd(filename, file_format: str):
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000748
         chan_info["offset"] = 0.0
+        chan_info["dtype"] = "uint16"
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16")]
@@ -744,6 +748,7 @@ def read_rhd(filename, file_format: str):
         chan_info["units"] = "Celsius"
         chan_info["gain"] = 0.001
         chan_info["offset"] = 0.0
+        chan_info["dtype"] = "int16"
         ordered_channels.append(chan_info)
         data_dtype += [(name, "int16")]
 
@@ -761,6 +766,7 @@ def read_rhd(filename, file_format: str):
         elif global_info["eval_board_mode"] == 13:
             chan_info["gain"] = 0.0003125
             chan_info["offset"] = -32768 * 0.0003125
+        chan_info["dtype"] = "uint16"
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
@@ -784,6 +790,7 @@ def read_rhd(filename, file_format: str):
             chan_info["units"] = "TTL"  # arbitrary units TTL for logic
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
+            chan_info["dtype"] = "uint16"
             ordered_channels.append(chan_info)
             if file_format == "header-attached":
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
