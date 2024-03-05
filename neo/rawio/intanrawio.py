@@ -174,8 +174,8 @@ class IntanRawIO(BaseRawIO):
         for c, chan_info in enumerate(self._ordered_channels):
             name = chan_info["custom_channel_name"]
             channel_id = chan_info["native_channel_name"]
-            if chan_info["signal_type"] == 20:
-                # exception for temperature
+            if chan_info["signal_type"] == 20 or (self.file_format != "header-attached" and chan_info["signal_type"] == 0):
+                # exception for temperature and for amplifier in non-header attached files
                 sig_dtype = "int16"
             else:
                 sig_dtype = "uint16"
