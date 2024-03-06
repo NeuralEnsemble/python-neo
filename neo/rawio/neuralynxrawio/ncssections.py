@@ -172,13 +172,9 @@ class NcsSectionsFactory:
         return round(startTime + NcsSectionsFactory.get_micros_per_samp_for_freq(sampFr) * posn)
 
     @staticmethod
-    def _buildNcsGeneric(ncsMemMap, sampFreq, gapTolerance=0):
+    def _buildNcsSections(ncsMemMap, sampFreq, gapTolerance=0):
         """
-        Build 
-
-        This replace:
-        _buildGivenActualFrequency
-        _buildForMaxGap
+        Construct NcsSections with fast mode when no gaps or parsing the file to detect gaps.
         """
         channel_id = ncsMemMap["channel_id"][0]
 
@@ -264,7 +260,7 @@ class NcsSectionsFactory:
                 else:
                     gapTolerance = 0
 
-            ncsSects = NcsSectionsFactory._buildNcsGeneric(ncsMemMap, sampFreqUsed, gapTolerance=gapTolerance)
+            ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, sampFreqUsed, gapTolerance=gapTolerance)
             ncsSects.sampFreqUsed = sampFreqUsed
             ncsSects.microsPerSampUsed = microsPerSampUsed
 
@@ -277,7 +273,7 @@ class NcsSectionsFactory:
                 else:
                     # quarter of paquet size is tolerate
                     gapTolerance = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
-            ncsSects = NcsSectionsFactory._buildNcsGeneric(ncsMemMap, freq, gapTolerance=gapTolerance)
+            ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gapTolerance)
             
 
             # take longer data block to compute reaal sampling rate
@@ -305,7 +301,7 @@ class NcsSectionsFactory:
             else:
                 # quarter of paquet size is tolerate
                 gapTolerance = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
-            ncsSects = NcsSectionsFactory._buildNcsGeneric(ncsMemMap, freq, gapTolerance=gapTolerance)
+            ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gapTolerance)
             ncsSects.sampFreqUsed = freq
             ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(freq)
 
