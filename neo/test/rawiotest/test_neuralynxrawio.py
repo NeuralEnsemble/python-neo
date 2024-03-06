@@ -228,7 +228,9 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
         ncsBlocks = NcsSections()
         ncsBlocks.sampFreqUsed = 1 / (35e-6)
         ncsBlocks.microsPerSampUsed = 35
-        ncsBlocks = NcsSectionsFactory._buildGivenActualFrequency(data0, ncsBlocks.sampFreqUsed, 27789)
+        
+        ncsBlocks = NcsSectionsFactory._buildNcsSections(data0, ncsBlocks.sampFreqUsed)
+
         self.assertEqual(len(ncsBlocks.sects), 1)
         self.assertEqual(ncsBlocks.sects[0].startRec, 0)
         self.assertEqual(ncsBlocks.sects[0].endRec, 9)
@@ -267,7 +269,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
         hdr = NlxHeader(filename)
         nb = NcsSectionsFactory.build_for_ncs_file(data0, hdr)
         self.assertListEqual([blk.startTime for blk in nb.sects], [8408806811, 8427832053, 8487768561])
-        self.assertListEqual([blk.endTime for blk in nb.sects], [8427831990, 8487768498, 8515816549])
+        self.assertListEqual([blk.endTime for blk in nb.sects], [8427831990, 8487768497, 8515816549])
 
         # digitallynxsx with single block of records to exercise path in _buildForMaxGap
         filename = self.get_local_path("neuralynx/Cheetah_v1.1.0/original_data/CSC67_trunc.Ncs")
@@ -322,7 +324,7 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
     """
     Test building NcsBlocks for files of different revisions.
     """
-
+    
     entities_to_test = []
 
     def test_equality(self):
@@ -372,3 +374,11 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    # test = TestNeuralynxRawIO()
+    # test.test_scan_ncs_files()
+    # test.test_exclude_filenames()
+
+    # test = TestNcsSectionsFactory()
+    # test.test_ncsblocks_partial()
+    # test.test_build_given_actual_frequency()
