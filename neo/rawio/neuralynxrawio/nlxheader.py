@@ -81,52 +81,53 @@ class NlxHeader(OrderedDict):
         "bml": dict(
             datetime1_regex=r"## Time Opened: \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
             filename_regex=r"## File Name: (?P<filename>\S+)",
-            datetimeformat="%m/%d/%y %H:%M:%S.%f"
+            datetimeformat="%m/%d/%y %H:%M:%S.%f",
         ),
         # Cheetah after version 1 and before version 5
         "bv5": dict(
             datetime1_regex=r"## Time Opened: \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
             filename_regex=r"## File Name: (?P<filename>\S+)",
-            datetimeformat="%m/%d/%Y %H:%M:%S.%f"
+            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
         ),
         # Cheetah version 5.4.0
         "v5.4.0": dict(
             datetime1_regex=r"## Time Opened \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
             datetime2_regex=r"## Time Closed \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
             filename_regex=r"## File Name: (?P<filename>\S+)",
-            datetimeformat="%m/%d/%Y %H:%M:%S.%f"
+            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
         ),
         # Cheetah version 5.6.0, some range of versions in between
         "v5.6.0": dict(
             datetime1_regex=r"## Time Opened: \(m/d/y\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
             filename_regex=r"## File Name: (?P<filename>\S+)",
-            datetimeformat="%m/%d/%Y %H:%M:%S.%f"
+            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
         ),
         # Cheetah version 5 before and including v 5.6.4 as well as version 1
         "bv5.6.4": dict(
             datetime1_regex=r"## Time Opened \(m/d/y\): (?P<date>\S+)" r"  \(h:m:s\.ms\) (?P<time>\S+)",
             datetime2_regex=r"## Time Closed \(m/d/y\): (?P<date>\S+)" r"  \(h:m:s\.ms\) (?P<time>\S+)",
             filename_regex=r"## File Name (?P<filename>\S+)",
-            datetimeformat="%m/%d/%Y %H:%M:%S.%f"
+            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
         ),
         "neuraview2": dict(
             datetime1_regex=r"## Date Opened: \(mm/dd/yyy\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
             datetime2_regex=r"## Date Closed: \(mm/dd/yyy\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
             filename_regex=r"## File Name: (?P<filename>\S+)",
-            datetimeformat="%m/%d/%Y %H:%M:%S"
+            datetimeformat="%m/%d/%Y %H:%M:%S",
         ),
-        'peg': dict(
-            datetime1_regex=r'-TimeCreated (?P<date>\S+) (?P<time>\S+)',
-            datetime2_regex=r'-TimeClosed (?P<date>\S+) (?P<time>\S+)',
+        "peg": dict(
+            datetime1_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
+            datetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
             filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
-            datetimeformat=r'%Y/%m/%d %H:%M:%S',
-            datetime2format=r'%Y/%m/%d %H:%M:%S.f'),
+            datetimeformat=r"%Y/%m/%d %H:%M:%S",
+            datetime2format=r"%Y/%m/%d %H:%M:%S.f",
+        ),
         # Cheetah after v 5.6.4 and default for others such as Pegasus
         "def": dict(
             datetime1_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
             datetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
             filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
-            datetimeformat="%Y/%m/%d %H:%M:%S"
+            datetimeformat="%Y/%m/%d %H:%M:%S",
         ),
     }
 
@@ -144,7 +145,7 @@ class NlxHeader(OrderedDict):
 
         # must start with 8 # characters
         if not props_only and not txt_header.startswith("########"):
-           ValueError("Neuralynx files must start with 8 # characters.")
+            ValueError("Neuralynx files must start with 8 # characters.")
 
         self.read_properties(filename, txt_header)
 
@@ -162,7 +163,6 @@ class NlxHeader(OrderedDict):
         :return: NlxHeader with properties from header text
         """
         res = OrderedDict()
-
 
     def read_properties(self, filename, txt_header):
         """
@@ -272,8 +272,8 @@ class NlxHeader(OrderedDict):
         elif an == "Neuraview":
             hpd = NlxHeader.header_pattern_dicts["neuraview2"]
             av = Version("2")
-        elif an == 'Pegasus':
-            hpd = NlxHeader.header_pattern_dicts['peg']
+        elif an == "Pegasus":
+            hpd = NlxHeader.header_pattern_dicts["peg"]
             av = Version("2")
         else:
             an = "Unknown"
@@ -289,14 +289,15 @@ class NlxHeader(OrderedDict):
             dt1 = sr.groupdict()
             try:  # allow two possible formats for date and time
                 self["recording_opened"] = datetime.datetime.strptime(
-                    dt1["date"] + " " + dt1["time"], hpd["datetimeformat"])
+                    dt1["date"] + " " + dt1["time"], hpd["datetimeformat"]
+                )
             except:
                 try:
                     self["recording_opened"] = datetime.datetime.strptime(
-                        dt1["date"] + " " + dt1["time"], hpd["datetime2format"])
+                        dt1["date"] + " " + dt1["time"], hpd["datetime2format"]
+                    )
                 except:
                     self["recording_opened"] = None
-
 
         # close time, if available
         if "datetime2_regex" in hpd:

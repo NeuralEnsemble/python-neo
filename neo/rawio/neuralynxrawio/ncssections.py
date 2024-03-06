@@ -33,6 +33,7 @@ recording during a recording session.
 The challenge addressed by the NcsSectionsFactory of this module is to separate those intended
 gaps from those introduced by a quirk of the hardware, recording software, or file format.
 """
+
 import math
 import numpy as np
 
@@ -87,12 +88,12 @@ class NcsSection:
     _RECORD_SIZE = 512  # nb sample per signal record
 
     def __init__(self, startRec, startTime, endRec, endTime, n_samples):
-        self.startRec = startRec # index of starting record
-        self.startTime = startTime # starttime of first record
-        self.endRec = endRec # index of last record (inclusive)
-        self.endTime = endTime # end time of last record, that is, the end time of the last
-                          # sampling period contained in the last record of the section
-        self.n_samples = n_samples # number of samples in record which are valid
+        self.startRec = startRec  # index of starting record
+        self.startTime = startTime  # starttime of first record
+        self.endRec = endRec  # index of last record (inclusive)
+        self.endTime = endTime  # end time of last record, that is, the end time of the last
+        # sampling period contained in the last record of the section
+        self.n_samples = n_samples  # number of samples in record which are valid
 
     def __eq__(self, other):
         return (
