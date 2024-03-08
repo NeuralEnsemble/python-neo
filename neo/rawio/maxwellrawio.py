@@ -51,10 +51,11 @@ class MaxwellRawIO(BaseRawIO):
     extensions = ["h5"]
     rawmode = "one-file"
 
-    def __init__(self, filename="", rec_name=None):
+    def __init__(self, filename="", rec_name=None, well_name=None):
         BaseRawIO.__init__(self)
         self.filename = filename
         self.rec_name = rec_name
+        self.well_name = well_name
 
     def _source_name(self):
         return self.filename
@@ -76,8 +77,10 @@ class MaxwellRawIO(BaseRawIO):
             # multi stream stream (one well is one stream)
             self._old_format = False
             stream_ids = list(h5["wells"].keys())
+            stream_dict = {}
             for stream_id in stream_ids:
                 rec_names = list(h5["wells"][stream_id].keys())
+                stream_dict[stream_id] = rec_names
                 if len(rec_names) > 1:
                     if self.rec_name is None:
                         raise ValueError(
@@ -90,6 +93,16 @@ class MaxwellRawIO(BaseRawIO):
                 signal_streams.append((stream_id, stream_id))
         else:
             raise NotImplementedError(f"This version {version} is not supported")
+
+        rec_names = np.array(list(stream_dict.values()))
+        if not (np.all([np.array_equal(rec_names[0], r) for r in rec_names])):
+            if self.well_name is None:
+                raise ValueError(
+                    "Detected different recordings for different wells. "
+                    "Please select a single recording using the `well_name` parameter."
+                )
+            signal_streams = [(self.well_name, self.well_name)]
+
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # create signal channels
