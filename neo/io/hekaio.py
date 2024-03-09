@@ -66,7 +66,9 @@ class HekaIO(BaseIO):
 
         bl = Block()
 
-        self.orig_channels = self.heka.get_series_channels(self.group_idx, self.series_idx)
+        self.orig_num_channels = len(
+            self.heka.get_series_channels(self.group_idx, self.series_idx)
+        )
 
         # First get the raw channels from the data. This does not include
         # stimulation channels which are only loaded if there is only 1 channels.
@@ -76,67 +78,18 @@ class HekaIO(BaseIO):
         # and the stimulus exists.
         self.num_sweeps = self.heka.get_num_sweeps_in_series(self.group_idx, self.series_idx)
 
+        self.series_data = self.get_series_data()
+        self.recording_mode = self.series_data[0]["recording_mode"]
 
-        signal_channels = []
-        self.series_data = []
-        for ch_idx, chan in enumerate(self.orig_channels):
+        if self.orig_num_channels == 1:
+            self.update_series_data_with_stim_trace_if_exists()
 
-            ch_id = ch_idx + 1
-            ch_name = chan["name"]
-            ch_units = chan["unit"]
-            dtype = chan["dtype"]
-            sampling_rate = 1 / chan["sampling_step"] * 1 / pq.s
-            gain = 1
-            offset = 0
-            stream_id = "0"
-            signal_channels.append((ch_name, ch_id, sampling_rate, dtype, ch_units, gain, offset, stream_id))  # turned into numpy array after stim channel added
+        self.reorganise_series_data_to_cc_or_vc_mode()
 
-            self.series_data.append(
-                self.heka.get_series_data(
-                    self.group_idx, self.series_idx, ch_idx,
-                    include_stim_protocol=True, fill_with_mean=True
-                )
-            )
-
-        if len(self.orig_channels) == 1:
-            if np.any(self.series_data[0]["stim"]):
-                signal_channels.append(
-                    ("stimulation",
-                     2,
-                     1 / self.series_data[0]["stim"]["ts"] * 1 / pq.s,
-                     "float64",
-                     self.series_data[0]["stim"]["units"], 1, 0, "0")
-                )
-                stim_data = {}
-                stim_data["time"] = self.series_data[0]["time"]
-                stim_data["data"] = self.series_data[0]["stim"]["data"]
-                self.series_data.append(stim_data)
-
-        # so now we are in a situation where we either have:
-        # 1..3 channels, including a possible leak channel.
-
-        # 1) make sure leak is at back
-        # 2) assert no more than 2 non-leak channels
-        # is_leak =
-        # units =
-        first_channel_units = signal_channels[0][4]  # is units
-
-        self.recording_mode = self.orig_channels[0]["recording_mode"]
-
-        if self.recording_mode == "CClamp" and first_channel_units != "V" or \
-                self.recording_mode == "VClamp" and first_channel_units != "A":
-
-            signal_channels[0], signal_channels[1] = signal_channels[1], signal_channels[0]
-            self.series_data[0],self.series_data[1] = self.series_data[1], self.series_data[0]
-
-        self.make_header(signal_channels)
-
-        if self.recording_mode == "CClamp":
-            assert self.header["signal_channels"]["units"][0] == "V", "bad vc"
-        elif self.recording_mode == "VClamp":
-            assert self.header["signal_channels"]["units"][0] == "A", "bad cc"
+        self.make_header()
 
         if (true_sweep_num := self.series_data[0]["time"].shape[0]) != self.num_sweeps:
+            # sometimes the heka header can be wrong if the protocol stopped before end.
             self.num_sweeps = true_sweep_num
             self.header['nb_segment'] = [self.num_sweeps]
 
@@ -149,16 +102,8 @@ class HekaIO(BaseIO):
             for channel_index, recsig in enumerate(self.header["signal_channels"]):
                 unit = self.header["signal_channels"]["units"][channel_index]
                 name = self.header["signal_channels"]["name"][channel_index]
-                sampling_rate = self.header["signal_channels"]["sampling_rate"][channel_index] * 1 / pq.s
+                sampling_rate = self.header["signal_channels"]["sampling_rate"][channel_index] * (1 / pq.s)
 
-         #       if name == "stimulation":
-          #          assert len(self.orig_channels) == 1, (
-           #             "stimulus should only be included in `make_header` "
-            #            "in the one-channel case."
-             #       )
-              #      t_start = self.series_data[0]["time"][seg_index, 0] * pq.s
-               #     recdata = self.series_data[0]["stim"]["data"][seg_index, :]
-                #else:
                 t_start = self.series_data[channel_index]["time"][seg_index, 0] * pq.s
                 recdata = self.series_data[channel_index]["data"][seg_index, :]
 
@@ -175,7 +120,62 @@ class HekaIO(BaseIO):
 
         return bl
 
-    def make_header(self, signal_channels):  # TODO: 'make header
+    def reorganise_series_data_to_cc_or_vc_mode(self):
+        """
+        """
+        is_leak = [ele["data_kinds"][0]["IsLeak"] if "data_kinds" in ele else False for ele in self.series_data]
+        units = [ele["units"] for ele in self.series_data]
+
+        assert np.sum(is_leak) <= 1, "More than 1 leak channel not currently supported."
+        non_leak = [unit for unit, leak in zip(units, is_leak) if not leak]
+
+        assert len(non_leak) <= 2, "Only 2 non-leak channels are currently supported"
+
+        if any(is_leak):
+            leak_idx = is_leak.index(True)
+            if leak_idx != len(is_leak) - 1:
+                self.series_data.append(self.series_data.pop(leak_idx))
+
+        if len(self.series_data) == 2:
+            first_channel_units = units[0]
+
+            if self.recording_mode == "CClamp" and first_channel_units != "V" or \
+                    self.recording_mode == "VClamp" and first_channel_units != "A":
+                self.series_data[0], self.series_data[1] = self.series_data[1], self.series_data[0]
+
+    def get_series_data(self):
+        """
+        """
+        series_data = []
+        for ch_idx in range(self.orig_num_channels):
+            series_data.append(
+                self.heka.get_series_data(
+                    self.group_idx, self.series_idx, ch_idx, include_stim_protocol=True, fill_with_mean=True
+                )
+            )
+        return series_data
+
+    def update_series_data_with_stim_trace_if_exists(self):
+        """
+        """
+        if np.any(self.series_data[0]["stim"]):
+            stim_data = self.series_data[0]["stim"]
+            stim_data["time"] = self.series_data[0]["time"]
+            self.series_data.append(stim_data)
+
+    def make_header(self):
+
+        signal_channels = []
+        for ch_idx, chan_data in enumerate(self.series_data):
+            ch_id = ch_idx + 1
+            ch_name = chan_data["name"]
+            ch_units = chan_data["units"]
+            dtype = chan_data["dtype"]
+            sampling_rate = (1 / chan_data["sampling_step"]) * 1 / pq.s
+            gain = 1
+            offset = 0
+            stream_id = "0"
+            signal_channels.append((ch_name, ch_id, sampling_rate, dtype, ch_units, gain, offset, stream_id))  # turned into numpy array after stim channel added
 
         # Spike Channels (no spikes)
         spike_channels = []
@@ -196,9 +196,9 @@ class HekaIO(BaseIO):
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
 
-        self.check_channel_sampling_rate()
+        self.check_channel_sampling_rate_and_channel_order()
 
-    def check_channel_sampling_rate(self):
+    def check_channel_sampling_rate_and_channel_order(self):
         """
         this is already checked in load-heka-python but sanity checked here
         """
@@ -206,10 +206,16 @@ class HekaIO(BaseIO):
         for chan in self.header["signal_channels"]:
             sampling_rate.append(chan["sampling_rate"])
 
-        assert len(np.unique(sampling_rate)), "HEAK record sampling are not the same "
+        assert len(np.unique(sampling_rate)), "HEKA record sampling are not the same "
+
+        if self.recording_mode == "CClamp":
+            assert self.header["signal_channels"]["units"][0] == "V", "bad vc"
+        elif self.recording_mode == "VClamp":
+            assert self.header["signal_channels"]["units"][0] == "A", "bad cc"
 
     def make_header_order_match_recording_mode(self):
-
+        """
+        """
         first_channel_units = self.header["signal_channels"][0]["units"]
 
         if self.recording_mode == "CClamp" and first_channel_units != "V" or \
