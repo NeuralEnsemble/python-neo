@@ -228,7 +228,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
         ncsBlocks = NcsSections()
         ncsBlocks.sampFreqUsed = 1 / (35e-6)
         ncsBlocks.microsPerSampUsed = 35
-        
+
         ncsBlocks = NcsSectionsFactory._buildNcsSections(data0, ncsBlocks.sampFreqUsed)
 
         self.assertEqual(len(ncsBlocks.sects), 1)
@@ -324,7 +324,7 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
     """
     Test building NcsBlocks for files of different revisions.
     """
-    
+
     entities_to_test = []
 
     def test_equality(self):
