@@ -284,10 +284,12 @@ class OpenEphysRawIO(BaseRawIO):
                 event_filename = f"all_channels_{oe_index + 1}.events"
 
             fullname = os.path.join(self.dirname, event_filename)
-            event_info = read_file_header(fullname)
-            self._event_sampling_rate = event_info["sampleRate"]
-            data_event = np.memmap(fullname, mode="r", offset=HEADER_SIZE, dtype=events_dtype)
-            self._events_memmap[seg_index] = data_event
+
+            if os.path.exists(fullname):
+                event_info = read_file_header(fullname)
+                self._event_sampling_rate = event_info["sampleRate"]
+                data_event = np.memmap(fullname, mode="r", offset=HEADER_SIZE, dtype=events_dtype)
+                self._events_memmap[seg_index] = data_event
 
         event_channels.append(("all_channels", "", "event"))
         # event_channels.append(('message', '', 'event')) # not implemented
