@@ -65,7 +65,7 @@ class BaseTestRawIO:
         """
         self.shortname = self.rawioclass.__name__.lower().replace("rawio", "")
 
-        if HAVE_DATALAD:
+        if HAVE_DATALAD and self.use_network:
             for remote_path in self.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
         else:
