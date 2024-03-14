@@ -14,6 +14,14 @@ written in Matlab (BSD-2-Clause licence) by :
 and available here:
 http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load
 
+
+The StringsSection parsing (parse_axon_soup) now relies on an idea
+presented in pyABF MIT License Copyright (c) 2018 Scott W Harden
+written by Scott Harden. His unofficial documentation for the formats
+is here:
+https://swharden.com/pyabf/abf2-file-format/
+
+
 Information on abf 1 and 2 formats is available here:
 http://www.moleculardevices.com/pages/software/developer_info.html
 
@@ -461,21 +469,19 @@ def parse_axon_soup(filename):
             # strings sections
             # hack for reading channels names and units
             # this section is not very detailed and so the code
-            # not very robust. The idea is to remove the first
-            # part by finding one of th following KEY
-            # unfortunately the later part contains a the file
-            # that can contain by accident also one of theses keys...
+            # not very robust.
             f.seek(sections["StringsSection"]["uBlockIndex"] * BLOCKSIZE)
             big_string = f.read(sections["StringsSection"]["uBytes"])
-            goodstart = -1
-            for key in [b"AXENGN", b"clampex", b"Clampex", b"EDR3", b"CLAMPEX", b"axoscope", b"AxoScope", b"Clampfit"]:
-                # goodstart = big_string.lower().find(key)
-                goodstart = big_string.find(b"\x00" + key)
-                if goodstart != -1:
-                    break
-            assert goodstart != -1, "This file does not contain clampex, axoscope or clampfit in the header"
-            big_string = big_string[goodstart + 1 :]
-            strings = big_string.split(b"\x00")
+
+            # this idea comes from pyABF https://github.com/swharden/pyABF
+            # previously we searched for clampex, Clampex etc, but this was
+            # brittle. pyABF believes that looking for the \x00\x00 is more
+            # robust. We find these values, replace mu->u, then split into
+            # a set of strings
+            indexed_string = big_string[big_string.rfind(b'\x00\x00'):]
+            indexed_string = indexed_string.replace(b'\xb5', b'\x75')
+            indexed_string = indexed_string.split(b'\x00')
+            strings = indexed_string
 
             # ADC sections
             header["listADCInfo"] = []
