@@ -57,6 +57,7 @@ import numpy as np
 import os
 import pathlib
 import copy
+import warnings
 from collections import namedtuple, OrderedDict
 
 from neo.rawio.neuralynxrawio.ncssections import NcsSection, NcsSectionsFactory
@@ -155,6 +156,14 @@ class NeuralynxRawIO(BaseRawIO):
     def _source_name(self):
         if self.rawmode == "one-file":
             return self.filename
+        elif self.rawmode == "multiple-files":
+            dirname = {os.path.dirname(x) for x in self.filename}
+            if len(dirname) > 1:
+                warnings.warn(
+                    message=f"multiple directories detected! Only the first will be returned.",
+                    category=RuntimeWarning,
+                )
+            return os.path.dirname(self.filename[0])
         else:
             return self.dirname
 
