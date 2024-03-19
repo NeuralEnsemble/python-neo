@@ -138,9 +138,12 @@ class NeuralynxRawIO(BaseRawIO):
         if dirname != "":
             self.dirname = dirname
             self.rawmode = "one-dir"
-        elif filename != "":
+        elif filename != "" and isinstance(filename, str):
             self.filename = filename
             self.rawmode = "one-file"
+        elif isinstance(filename, list):
+            self.filename = filename
+            self.rawmode = "multiple-files"
         else:
             raise ValueError("One of dirname or filename must be provided.")
 
@@ -184,17 +187,20 @@ class NeuralynxRawIO(BaseRawIO):
 
         if self.rawmode == "one-dir":
             filenames = sorted(os.listdir(self.dirname))
-            dirname = self.dirname
+            filenames = [os.path.join(self.dirname, f) for f in filenames]
         else:
-            if not os.path.isfile(self.filename):
-                raise ValueError(
-                    f"Provided Filename is not a file: "
-                    f"{self.filename}. If you want to provide a "
-                    f"directory use the `dirname` keyword"
-                )
+            if self.rawmode == "one-file":
+                filenames = [self.filename]
+            else:
+                filenames = sorted(self.filename)
 
-            dirname, fname = os.path.split(self.filename)
-            filenames = [fname]
+            for filename in filenames:
+                if not os.path.isfile(filename):
+                    raise ValueError(
+                        f"Provided Filename is not a file: "
+                        f"{filename}. If you want to provide a "
+                        f"directory use the `dirname` keyword"
+                    )
 
         if not isinstance(self.exclude_filename, (list, set, np.ndarray)):
             self.exclude_filename = [self.exclude_filename]
@@ -208,8 +214,6 @@ class NeuralynxRawIO(BaseRawIO):
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
         for filename in filenames:
-            filename = os.path.join(dirname, filename)
-
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot
             ext = ext.lower()  # make lower case for comparisons
