@@ -131,7 +131,6 @@ class MaxwellRawIO(BaseRawIO):
                 self._channel_slice = ids
             elif int(version) > 20160704:
                 settings = h5file["wells"][stream_id][self.rec_name]["settings"]
-                settings = h5file["wells"][well_name][rec_name]["settings"]
                 sr = settings["sampling"][0]
                 if "lsb" in settings:
                     gain_uV = settings["lsb"][0] * 1e6
@@ -143,7 +142,7 @@ class MaxwellRawIO(BaseRawIO):
                         gain = settings["gain"][0]
                     gain_uV = 3.3 / (1024 * gain) * 1e6
                 mapping = settings["mapping"]
-                sigs = h5file["wells"][well_name][rec_name]["groups"]["routed"]["raw"]
+                sigs = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
 
             channel_ids = np.array(mapping["channel"])
             electrode_ids = np.array(mapping["electrode"])
