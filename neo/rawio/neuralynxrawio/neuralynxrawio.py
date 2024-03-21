@@ -133,24 +133,46 @@ class NeuralynxRawIO(BaseRawIO):
     ]
 
     def __init__(
-        self, dirname="", filename="", exclude_filename=None, keep_original_times=False, strict_gap_mode=True, **kargs
+            self,
+            dirname="",
+            filename="",
+            include_file_names=None,
+            exclude_filename=None,
+            keep_original_times=False,
+            strict_gap_mode=True,
+            **kargs
     ):
 
+        if (include_file_names is not None) and (filename != ""):
+            raise ValueError("filename and include_filenames cannot be both assigned")
+        if (include_file_names is None) and (filename == "") and (dirname == ""):
+            raise ValueError("One of dirname or filename or include_file_names must be provided.")
+
+        if dirname != "" and (include_file_names is not None):
+            include_file_names = [os.path.join(dirname, f) for f in include_file_names]
+            dirname = ""
+
         if dirname != "":
-            self.dirname = dirname
             self.rawmode = "one-dir"
+<<<<<<< Updated upstream
         elif filename != "" and isinstance(filename, str):
             self.filename = filename
+=======
+        elif filename != "":
+>>>>>>> Stashed changes
             self.rawmode = "one-file"
         elif isinstance(filename, list):
             self.filename = filename
             self.rawmode = "multiple-files"
         else:
-            raise ValueError("One of dirname or filename must be provided.")
+            self.rawmode = "multiple-files"
 
+        self.dirname = dirname
+        self.filename = filename
+        self.include_file_names = include_file_names
+        self.exclude_filename = exclude_filename
         self.keep_original_times = keep_original_times
         self.strict_gap_mode = strict_gap_mode
-        self.exclude_filename = exclude_filename
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
@@ -196,6 +218,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         if self.rawmode == "one-dir":
             filenames = sorted(os.listdir(self.dirname))
+<<<<<<< Updated upstream
             filenames = [os.path.join(self.dirname, f) for f in filenames]
         else:
             if self.rawmode == "one-file":
@@ -210,6 +233,21 @@ class NeuralynxRawIO(BaseRawIO):
                         f"{filename}. If you want to provide a "
                         f"directory use the `dirname` keyword"
                     )
+=======
+            dirname = self.dirname
+        elif self.rawmode == "one-file":
+            if not os.path.isfile(self.filename):
+                raise ValueError(
+                    f"Provided Filename is not a file: "
+                    f"{self.filename}. If you want to provide a "
+                    f"directory use the `dirname` keyword"
+                )
+
+            dirname, fname = os.path.split(self.filename)
+            filenames = [fname]
+        else:
+
+>>>>>>> Stashed changes
 
         if not isinstance(self.exclude_filename, (list, set, np.ndarray)):
             self.exclude_filename = [self.exclude_filename]
