@@ -216,14 +216,7 @@ class NeuralynxRawIO(BaseRawIO):
         if self.rawmode == "one-dir":
             filenames = sorted(os.listdir(self.dirname))
         elif self.rawmode == "one-file":
-            if not os.path.isfile(self.filename):
-                raise ValueError(
-                    f"Provided Filename is not a file: "
-                    f"{self.filename}. If you want to provide a "
-                    f"directory use the `dirname` keyword"
-                )
-            dirname, fname = os.path.split(self.filename)
-            filenames = [fname]
+            filenames = [self.filename]
         else:
             filenames = [os.path.join(self.dirname, f) for f in self.include_files]
 
