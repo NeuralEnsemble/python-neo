@@ -60,15 +60,8 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             shifted to begin at t_start = 0*pq.second.
             Default: False
         """
-        NeuralynxRawIO.__init__(
-            self,
-            dirname=dirname,
-            filename=filename,
-            use_cache=use_cache,
-            cache_path=cache_path,
-            exclude_filename=exclude_filename,
-            keep_original_times=keep_original_times,
-        )
+        NeuralynxRawIO.__init__(self, dirname=dirname, filename=filename, exclude_filename=exclude_filename,
+                                keep_original_times=keep_original_times, use_cache=use_cache, cache_path=cache_path)
         if self.rawmode == "one-file":
             BaseFromRaw.__init__(self, filename)
         elif self.rawmode == "one-dir":

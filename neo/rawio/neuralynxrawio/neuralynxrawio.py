@@ -136,40 +136,37 @@ class NeuralynxRawIO(BaseRawIO):
             self,
             dirname="",
             filename="",
-            include_file_names=None,
+            include_filename=None,
             exclude_filename=None,
             keep_original_times=False,
             strict_gap_mode=True,
             **kargs
     ):
 
-        if (include_file_names is not None) and (filename != ""):
+        if (include_filename is not None) and (filename != ""):
             raise ValueError("filename and include_filenames cannot be both assigned")
-        if (include_file_names is None) and (filename == "") and (dirname == ""):
-            raise ValueError("One of dirname or filename or include_file_names must be provided.")
+        if (include_filename is None) and (filename == "") and (dirname == ""):
+            raise ValueError("One of dirname or filename or include_files must be provided.")
 
-        if dirname != "" and (include_file_names is not None):
-            include_file_names = [os.path.join(dirname, f) for f in include_file_names]
+        if dirname != "" and (include_filename is not None):
+            include_filename = [os.path.join(dirname, f) for f in include_filename]
             dirname = ""
+
+        if not isinstance(include_filename, (list, set, np.ndarray)):
+            include_filename = [include_filename]
+        if not isinstance(exclude_filename, (list, set, np.ndarray)):
+            exclude_filename = [exclude_filename]
 
         if dirname != "":
             self.rawmode = "one-dir"
-<<<<<<< Updated upstream
-        elif filename != "" and isinstance(filename, str):
-            self.filename = filename
-=======
         elif filename != "":
->>>>>>> Stashed changes
             self.rawmode = "one-file"
-        elif isinstance(filename, list):
-            self.filename = filename
-            self.rawmode = "multiple-files"
         else:
             self.rawmode = "multiple-files"
 
         self.dirname = dirname
         self.filename = filename
-        self.include_file_names = include_file_names
+        self.include_files = include_filename
         self.exclude_filename = exclude_filename
         self.keep_original_times = keep_original_times
         self.strict_gap_mode = strict_gap_mode
@@ -218,23 +215,6 @@ class NeuralynxRawIO(BaseRawIO):
 
         if self.rawmode == "one-dir":
             filenames = sorted(os.listdir(self.dirname))
-<<<<<<< Updated upstream
-            filenames = [os.path.join(self.dirname, f) for f in filenames]
-        else:
-            if self.rawmode == "one-file":
-                filenames = [self.filename]
-            else:
-                filenames = sorted(self.filename)
-
-            for filename in filenames:
-                if not os.path.isfile(filename):
-                    raise ValueError(
-                        f"Provided Filename is not a file: "
-                        f"{filename}. If you want to provide a "
-                        f"directory use the `dirname` keyword"
-                    )
-=======
-            dirname = self.dirname
         elif self.rawmode == "one-file":
             if not os.path.isfile(self.filename):
                 raise ValueError(
@@ -242,15 +222,18 @@ class NeuralynxRawIO(BaseRawIO):
                     f"{self.filename}. If you want to provide a "
                     f"directory use the `dirname` keyword"
                 )
-
             dirname, fname = os.path.split(self.filename)
             filenames = [fname]
         else:
+            filenames = [os.path.join(self.dirname, f) for f in self.include_files]
 
->>>>>>> Stashed changes
-
-        if not isinstance(self.exclude_filename, (list, set, np.ndarray)):
-            self.exclude_filename = [self.exclude_filename]
+        for filename in filenames:
+            if not os.path.isfile(filename):
+                raise ValueError(
+                    f"Provided Filename is not a file: "
+                    f"{filename}. If you want to provide a "
+                    f"directory use the `dirname` keyword"
+                )
 
         # remove files that were explicitly excluded
         if self.exclude_filename is not None:
