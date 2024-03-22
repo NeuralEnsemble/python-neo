@@ -150,7 +150,6 @@ class NeuralynxRawIO(BaseRawIO):
 
         if dirname != "" and (include_filename is not None):
             include_filename = [os.path.join(dirname, f) for f in include_filename]
-            dirname = ""
 
         if not isinstance(include_filename, (list, set, np.ndarray)):
             include_filename = [include_filename]
@@ -158,11 +157,12 @@ class NeuralynxRawIO(BaseRawIO):
             exclude_filename = [exclude_filename]
 
         if dirname != "":
-            self.rawmode = "one-dir"
+            if include_filename is not None:
+                self.rawmode = 'multiple-files'
+            else:
+                self.rawmode = "one-dir"
         elif filename != "":
             self.rawmode = "one-file"
-        else:
-            self.rawmode = "multiple-files"
 
         self.dirname = dirname
         self.filename = filename
