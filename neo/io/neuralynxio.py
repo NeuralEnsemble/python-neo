@@ -73,6 +73,7 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             exclude_filename=exclude_filename,
             keep_original_times=keep_original_times,
         )
+
         if self.rawmode == "one-file":
             BaseFromRaw.__init__(self, filename)
         elif self.rawmode == "one-dir":
