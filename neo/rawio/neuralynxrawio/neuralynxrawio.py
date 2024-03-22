@@ -176,13 +176,13 @@ class NeuralynxRawIO(BaseRawIO):
         if self.rawmode == "one-file":
             return self.filename
         elif self.rawmode == "multiple-files":
-            dirname = {os.path.dirname(x) for x in self.filename}
+            dirname = {os.path.dirname(x) for x in self.include_files}
             if len(dirname) > 1:
                 warnings.warn(
-                    message=f"multiple directories detected! Only the first will be returned.",
+                    message=f"multiple directories detected! A random one will be returned.",
                     category=RuntimeWarning,
                 )
-            return os.path.dirname(self.filename[0])
+            return list(dirname)[0]
         else:
             return self.dirname
 
