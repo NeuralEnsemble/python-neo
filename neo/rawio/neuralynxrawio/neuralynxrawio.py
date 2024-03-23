@@ -209,7 +209,7 @@ class NeuralynxRawIO(BaseRawIO):
         event_annotations = []
 
         if self.rawmode == "one-dir":
-            filenames = sorted(os.listdir(self.dirname))
+            filenames = sorted([f for f in os.listdir(self.dirname) if os.path.isfile(f) and not f.startswith('.')])
         elif self.rawmode == "one-file":
             filenames = [self.filename]
         else:
