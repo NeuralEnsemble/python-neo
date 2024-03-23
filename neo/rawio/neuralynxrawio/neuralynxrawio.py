@@ -151,9 +151,9 @@ class NeuralynxRawIO(BaseRawIO):
         if dirname != "" and (include_filename is not None):
             include_filename = [os.path.join(dirname, f) for f in include_filename]
 
-        if not isinstance(include_filename, (list, set, np.ndarray)):
+        if (not isinstance(include_filename, (list, set, np.ndarray))) and (include_filename is not None):
             include_filename = [include_filename]
-        if not isinstance(exclude_filename, (list, set, np.ndarray)):
+        if (not isinstance(exclude_filename, (list, set, np.ndarray))) and (exclude_filename is not None):
             exclude_filename = [exclude_filename]
 
         if dirname != "":
