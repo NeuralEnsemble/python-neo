@@ -299,7 +299,7 @@ def scan_files(dirname):
                 info_list.append(info)
 
     if len(info_list) == 0:
-        raise FileNotFoundError(f'No appropriate combination of .meta and .bin files were detected in {print(dirname)}')
+        raise FileNotFoundError(f"No appropriate combination of .meta and .bin files were detected in {dirname}")
 
     # the segment index will depend on both 'gate_num' and 'trigger_num'
     # so we order by 'gate_num' then 'trigger_num'
