@@ -10,7 +10,7 @@ class TestSpikeGadgetsRawIO(
 ):
     rawioclass = SpikeGadgetsRawIO
     entities_to_download = ["spikegadgets"]
-    entities_to_test = ["spikegadgets/20210225_em8_minirec2_ac.rec", "spikegadgets/W122_06_09_2019_1_fromSD.rec"]
+    entities_to_test = ["spikegadgets/20210225_em8_minirec2_ac.rec", "spikegadgets/W122_06_09_2019_1_fromSD.rec", "spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec"]
 
 
 if __name__ == "__main__":
