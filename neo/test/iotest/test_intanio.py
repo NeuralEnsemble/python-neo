@@ -17,6 +17,8 @@ class TestIntanIO(
     entities_to_test = [
         "intan/intan_rhs_test_1.rhs",
         "intan/intan_rhd_test_1.rhd",
+        "intan/intan_fpc_test_231117_052630/info.rhd",
+        "intan/intan_fps_test_231117_052500/info.rhd",
     ]
 
 
