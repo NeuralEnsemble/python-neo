@@ -141,6 +141,12 @@ class OpenEphysRawIO(BaseRawIO):
                         np.median(diff) == RECORD_SIZE
                     ), f"This file has a non valid data block size for channel {chan_id}, this case cannot be handled"
 
+                diff = np.diff(data_chan["timestamp"])
+                channel_has_corrupted_timestamps = np.any(diff <= 0)
+                if channel_has_corrupted_timestamps:
+                    # protect against corrupted timestamp in channel
+                    raise ValueError(f"{ch_name} has corrputed timestamps, this channels need to be moved away from the folder")
+
                 if seg_index == 0:
                     # add in channel list
                     if ch_name[:2].upper() == "CH":
