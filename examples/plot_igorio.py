@@ -29,3 +29,5 @@ signal = reader.read_analogsignal()
 plt.plot(signal.times, signal)
 plt.xlabel(signal.sampling_period.dimensionality)
 plt.ylabel(signal.dimensionality)
+
+plt.show()
