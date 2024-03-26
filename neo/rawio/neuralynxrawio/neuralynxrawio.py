@@ -57,6 +57,7 @@ import numpy as np
 import os
 import pathlib
 import copy
+import warnings
 from collections import namedtuple, OrderedDict
 
 from neo.rawio.neuralynxrawio.ncssections import NcsSection, NcsSectionsFactory
@@ -132,26 +133,51 @@ class NeuralynxRawIO(BaseRawIO):
     ]
 
     def __init__(
-        self, dirname="", filename="", exclude_filename=None, keep_original_times=False, strict_gap_mode=True, **kargs
+            self,
+            dirname="",
+            filename="",
+            include_filename=None,
+            exclude_filename=None,
+            keep_original_times=False,
+            strict_gap_mode=True,
+            **kargs
     ):
 
-        if dirname != "":
-            self.dirname = dirname
-            self.rawmode = "one-dir"
-        elif filename != "":
-            self.filename = filename
-            self.rawmode = "one-file"
-        else:
-            raise ValueError("One of dirname or filename must be provided.")
+        if (include_filename is not None) and (filename != ""):
+            raise ValueError("filename and include_filenames cannot be both assigned")
+        if (include_filename is None) and (filename == "") and (dirname == ""):
+            raise ValueError("One of dirname or filename or include_files must be provided.")
 
+        if dirname != "" and (include_filename is not None):
+            include_filename = [os.path.join(dirname, f) for f in include_filename]
+
+        if (not isinstance(include_filename, (list, set, np.ndarray))) and (include_filename is not None):
+            include_filename = [include_filename]
+        if (not isinstance(exclude_filename, (list, set, np.ndarray))) and (exclude_filename is not None):
+            exclude_filename = [exclude_filename]
+
+        if dirname != "":
+            if include_filename is not None:
+                self.rawmode = 'multiple-files'
+            else:
+                self.rawmode = "one-dir"
+        elif filename != "":
+            self.rawmode = "one-file"
+
+        self.dirname = dirname
+        self.filename = filename
+        self.include_files = include_filename
+        self.exclude_filename = exclude_filename
         self.keep_original_times = keep_original_times
         self.strict_gap_mode = strict_gap_mode
-        self.exclude_filename = exclude_filename
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
         if self.rawmode == "one-file":
             return self.filename
+        elif self.rawmode == "multiple-files":
+            dirname = [os.path.dirname(x) for x in self.include_files]
+            return dirname[0]
         else:
             return self.dirname
 
@@ -183,21 +209,19 @@ class NeuralynxRawIO(BaseRawIO):
         event_annotations = []
 
         if self.rawmode == "one-dir":
-            filenames = sorted(os.listdir(self.dirname))
-            dirname = self.dirname
+            filenames = sorted([f for f in os.listdir(self.dirname) if os.path.isfile(f) and not f.startswith('.')])
+        elif self.rawmode == "one-file":
+            filenames = [self.filename]
         else:
-            if not os.path.isfile(self.filename):
+            filenames = [os.path.join(self.dirname, f) for f in self.include_files]
+
+        for filename in filenames:
+            if not os.path.isfile(filename):
                 raise ValueError(
                     f"Provided Filename is not a file: "
-                    f"{self.filename}. If you want to provide a "
+                    f"{filename}. If you want to provide a "
                     f"directory use the `dirname` keyword"
                 )
-
-            dirname, fname = os.path.split(self.filename)
-            filenames = [fname]
-
-        if not isinstance(self.exclude_filename, (list, set, np.ndarray)):
-            self.exclude_filename = [self.exclude_filename]
 
         # remove files that were explicitly excluded
         if self.exclude_filename is not None:
@@ -208,8 +232,6 @@ class NeuralynxRawIO(BaseRawIO):
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
         for filename in filenames:
-            filename = os.path.join(dirname, filename)
-
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot
             ext = ext.lower()  # make lower case for comparisons
