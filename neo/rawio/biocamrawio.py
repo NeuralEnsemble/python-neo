@@ -197,25 +197,32 @@ def open_biocam_file_header(filename):
         min_digital = experiment_settings["ValueConverter"]["MinDigitalValue"]
         scale_factor = experiment_settings["ValueConverter"]["ScaleFactor"]
         sampling_rate = experiment_settings["TimeConverter"]["FrameRate"]
+        num_frames = rf['TOC'][-1,-1]
 
+        wellID = None
         for key in rf:
             if key[:5] == "Well_":
+                wellID = key
                 num_channels = len(rf[key]["StoredChIdxs"])
-                if len(rf[key]["Raw"]) % num_channels:
-                    raise RuntimeError(f"Length of raw data array is not multiple of channel number in {key}")
-                num_frames = len(rf[key]["Raw"]) // num_channels
+                if "Raw" in rf[key]:
+                    if len(rf[key]["Raw"]) % num_channels:
+                        raise RuntimeError(f"Length of raw data array is not multiple of channel number in {key}")
+                    if num_frames != len(rf[key]["Raw"]) // num_channels:
+                        raise RuntimeError(f"Estimated number of frames from TOC does not match length of raw data array in {key}")
                 break
-        try:
-            num_channels_x = num_channels_y = int(np.sqrt(num_channels))
-        except NameError:
+        if not wellID:
             raise RuntimeError("No Well found in the file")
+        num_channels_x = num_channels_y = int(np.sqrt(num_channels))
         if num_channels_x * num_channels_y != num_channels:
             raise RuntimeError(f"Cannot determine structure of the MEA plate with {num_channels} channels")
         channels = 1 + np.concatenate(np.transpose(np.meshgrid(range(num_channels_x), range(num_channels_y))))
 
         gain = scale_factor * (max_uv - min_uv) / (max_digital - min_digital)
         offset = min_uv
-        read_function = readHDF5t_brw4
+        if "Raw" in rf[wellID]:
+            read_function = readHDF5t_brw4
+        elif "EventsBasedSparseRaw" in rf[wellID]:
+            read_function = readHDF5t_brw4_sparse
 
         return dict(
             file_handle=rf,
@@ -249,3 +256,115 @@ def readHDF5t_brw4(rf, t0, t1, nch):
     for key in rf:
         if key[:5] == "Well_":
             return rf[key]["Raw"][nch * t0 : nch * t1].reshape((t1 - t0, nch), order="C")
+
+
+def readHDF5t_brw4_sparse(rf, t0, t1, nch):
+    useSyntheticNoise = True
+    noiseStdDev = None
+    startFrame = t0
+    numFrames = t1 - t0
+    for key in rf:
+        if key[:5] == "Well_":
+            wellID = key
+            break
+    # initialize an empty (fill with zeros) data collection
+    data = np.zeros((nch, numFrames), dtype=np.int16)
+    # fill the data collection with Gaussian noise if requested
+    if useSyntheticNoise:
+        generateSyntheticNoise(rf, data, wellID, startFrame, numFrames, stdDev=noiseStdDev)
+    # fill the data collection with the decoded event based sparse raw data
+    decodeEventBasedRawData(rf, data, wellID, startFrame, numFrames)
+    return data.T
+
+
+def decodeEventBasedRawData(rf, data, wellID, startFrame, numFrames):
+    # Source: Documentation by 3Brain
+    # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/biocam/documentation_brw_4.x_bxr_3.x_bcmp_1.x_in_brainwave_5.x_v1.1.3.pdf
+    # collect the TOCs
+    toc = np.array(rf["TOC"])
+    eventsToc = np.array(rf[wellID]["EventsBasedSparseRawTOC"])
+    # from the given start position and duration in frames, localize the corresponding event positions
+    # using the TOC
+    tocStartIdx = np.searchsorted(toc[:, 1], startFrame)
+    tocEndIdx = min(
+            np.searchsorted(toc[:, 1], startFrame + numFrames, side="right") + 1,
+            len(toc) - 1)
+    eventsStartPosition = eventsToc[tocStartIdx]
+    eventsEndPosition = eventsToc[tocEndIdx]
+    # decode all data for the given well ID and time interval
+    binaryData = rf[wellID]["EventsBasedSparseRaw"][eventsStartPosition:eventsEndPosition]
+    binaryDataLength = len(binaryData)
+    pos = 0
+    while pos < binaryDataLength:
+        chIdx = int.from_bytes(binaryData[pos:pos + 4], byteorder="little", signed=True)
+        pos += 4
+        chDataLength = int.from_bytes(binaryData[pos:pos + 4], byteorder="little", signed=True)
+        pos += 4
+        chDataPos = pos
+        while pos < chDataPos + chDataLength:
+            fromInclusive = int.from_bytes(binaryData[pos:pos + 8], byteorder="little", signed=True)
+            pos += 8
+            toExclusive = int.from_bytes(binaryData[pos:pos + 8], byteorder="little", signed=True)
+            pos += 8
+            rangeDataPos = pos
+            for j in range(fromInclusive, toExclusive):
+                if j >= startFrame + numFrames:
+                    break
+                if j >= startFrame:
+                    data[chIdx][j - startFrame] = int.from_bytes(
+                            binaryData[rangeDataPos:rangeDataPos + 2], byteorder="little", signed=True)
+                rangeDataPos += 2
+            pos += (toExclusive - fromInclusive) * 2
+
+
+def generateSyntheticNoise(rf, data, wellID, startFrame, numFrames, stdDev=None):
+    # Source: Documentation by 3Brain
+    # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/biocam/documentation_brw_4.x_bxr_3.x_bcmp_1.x_in_brainwave_5.x_v1.1.3.pdf
+    # collect the TOCs
+    toc = np.array(rf["TOC"])
+    noiseToc = np.array(rf[wellID]["NoiseTOC"])
+    # from the given start position in frames, localize the corresponding noise positions
+    # using the TOC
+    tocStartIdx = np.searchsorted(toc[:, 1], startFrame)
+    noiseStartPosition = noiseToc[tocStartIdx]
+    noiseEndPosition = noiseStartPosition
+    for i in range(tocStartIdx + 1, len(noiseToc)):
+        nextPosition = noiseToc[i]
+        if nextPosition > noiseStartPosition:
+            noiseEndPosition = nextPosition
+        break
+    if noiseEndPosition == noiseStartPosition:
+        for i in range(tocStartIdx - 1, 0, -1):
+            previousPosition = noiseToc[i]
+            if previousPosition < noiseStartPosition:
+                noiseEndPosition = noiseStartPosition
+                noiseStartPosition = previousPosition
+                break
+    # obtain the noise info at the start position
+    noiseChIdxs = rf[wellID]["NoiseChIdxs"][noiseStartPosition:noiseEndPosition]
+    noiseMean = rf[wellID]["NoiseMean"][noiseStartPosition:noiseEndPosition]
+    if stdDev is None:
+        noiseStdDev = rf[wellID]["NoiseStdDev"][noiseStartPosition:noiseEndPosition]
+    else:
+        noiseStdDev = np.repeat(stdDev, noiseEndPosition - noiseStartPosition)
+    noiseLength = noiseEndPosition - noiseStartPosition
+    noiseInfo = {}
+    meanCollection = []
+    stdDevCollection = []
+    for i in range(1, noiseLength):
+        noiseInfo[noiseChIdxs[i]] = [noiseMean[i], noiseStdDev[i]]
+        meanCollection.append(noiseMean[i])
+        stdDevCollection.append(noiseStdDev[i])
+    # calculate the median mean and standard deviation of all channels to be used for
+    # invalid channels
+    dataMean = np.median(meanCollection)
+    dataStdDev = np.median(stdDevCollection)
+    # fill with Gaussian noise
+    for chIdx in range(len(data)):
+        if chIdx in noiseInfo:
+            data[chIdx] = np.array(np.random.normal(noiseInfo[chIdx][0], noiseInfo[chIdx][1],
+                numFrames), dtype=np.int16)
+        else:
+            data[chIdx] = np.array(np.random.normal(dataMean, dataStdDev, numFrames),
+                    dtype=np.int16)
+
