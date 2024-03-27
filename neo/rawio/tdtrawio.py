@@ -557,8 +557,16 @@ def read_tbk(tbk_filename):
         infos.append(info)
 
     # and put into numpy
+    tbk_field_names = [tbk_field_type[0] for tbk_field_type in tbk_field_types]
     info_channel_groups = np.zeros(len(infos), dtype=tbk_field_types)
     for i, info in enumerate(infos):
+        missing_keys = set(tbk_field_names) - set(info.keys())
+        if missing_keys:
+            warnings.warn(
+                f"Could not find all channel group info in tbk file, the missing keys are {missing_keys}.\n"
+                "The reader will continue with channel groups that could be parsed."
+            )
+            continue
         for k, dt in tbk_field_types:
             v = np.dtype(dt).type(info[k])
             info_channel_groups[i][k] = v
