@@ -549,7 +549,7 @@ def explore_folder(dirname, experiment_names=None):
                 for info in rec_structure["continuous"]:
                     # when multi Record Node the stream name also contains
                     # the node name to make it unique
-                    oe_stream_name = Path(info["folder_name"]).name  # remove trailing slash
+                    oe_stream_name = info["folder_name"].split("/")[0]  # remove trailing slash
                     if len(node_name) > 0:
                         stream_name = node_name + "#" + oe_stream_name
                     else:
@@ -580,8 +580,13 @@ def explore_folder(dirname, experiment_names=None):
             if (root / "events").exists() and len(rec_structure["events"]) > 0:
                 recording["streams"]["events"] = {}
                 for info in rec_structure["events"]:
-                    oe_stream_name = Path(info["folder_name"]).name  # remove trailing slash
-                    stream_name = node_name + "#" + oe_stream_name
+                    # when multi Record Node the stream name also contains
+                    # the node name to make it unique
+                    oe_stream_name = info["folder_name"].split("/")[0]  # remove trailing slash
+                    if len(node_name) > 0:
+                        stream_name = node_name + "#" + oe_stream_name
+                    else:
+                        stream_name = oe_stream_name
 
                     event_stream = info.copy()
                     for name in _possible_event_stream_names:
