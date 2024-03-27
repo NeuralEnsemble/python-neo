@@ -14,6 +14,18 @@ written in Matlab (BSD-2-Clause licence) by :
 and available here:
 http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load
 
+
+The StringsSection parsing (parse_axon_soup) now relies on an idea
+presented in pyABF MIT License Copyright (c) 2018 Scott W Harden
+written by Scott Harden. His unofficial documentation for the formats
+is here:
+https://swharden.com/pyabf/abf2-file-format/
+strings section:
+[uModifierNameIndex, uCreatorNameIndex, uProtocolPathIndex, lFileComment, lADCCChannelNames, lADCUnitsIndex
+lDACChannelNameIndex, lDACUnitIndex, lDACFilePath, nLeakSubtractADC]
+['', 'Clampex', '', 'C:/path/protocol.pro', 'some comment', 'IN 0', 'mV', 'IN 1', 'mV', 'Cmd 0', 'pA', 
+'Cmd 1', 'pA', 'Cmd 2', 'mV', 'Cmd 3', 'mV']
+
 Information on abf 1 and 2 formats is available here:
 http://www.moleculardevices.com/pages/software/developer_info.html
 
@@ -461,21 +473,21 @@ def parse_axon_soup(filename):
             # strings sections
             # hack for reading channels names and units
             # this section is not very detailed and so the code
-            # not very robust. The idea is to remove the first
-            # part by finding one of th following KEY
-            # unfortunately the later part contains a the file
-            # that can contain by accident also one of theses keys...
+            # not very robust.
             f.seek(sections["StringsSection"]["uBlockIndex"] * BLOCKSIZE)
             big_string = f.read(sections["StringsSection"]["uBytes"])
-            goodstart = -1
-            for key in [b"AXENGN", b"clampex", b"Clampex", b"EDR3", b"CLAMPEX", b"axoscope", b"AxoScope", b"Clampfit"]:
-                # goodstart = big_string.lower().find(key)
-                goodstart = big_string.find(b"\x00" + key)
-                if goodstart != -1:
-                    break
-            assert goodstart != -1, "This file does not contain clampex, axoscope or clampfit in the header"
-            big_string = big_string[goodstart + 1 :]
-            strings = big_string.split(b"\x00")
+            # this idea comes from pyABF https://github.com/swharden/pyABF
+            # previously we searched for clampex, Clampex etc, but this was
+            # brittle. pyABF believes that looking for the \x00\x00 is more
+            # robust. We find these values, replace mu->u, then split into
+            # a set of strings
+            indexed_string = big_string[big_string.rfind(b'\x00\x00'):]
+            # replace mu -> u for easy display
+            indexed_string = indexed_string.replace(b'\xb5', b'\x75')
+            # we need to remove one of the \x00 to have the indices be
+            # the correct order
+            indexed_string = indexed_string.split(b'\x00')[1:]
+            strings = indexed_string
 
             # ADC sections
             header["listADCInfo"] = []
@@ -489,8 +501,8 @@ def parse_axon_soup(filename):
                         ADCInfo[key] = val[0]
                     else:
                         ADCInfo[key] = np.array(val)
-                ADCInfo["ADCChNames"] = strings[ADCInfo["lADCChannelNameIndex"] - 1]
-                ADCInfo["ADCChUnits"] = strings[ADCInfo["lADCUnitsIndex"] - 1]
+                ADCInfo["ADCChNames"] = strings[ADCInfo["lADCChannelNameIndex"]]
+                ADCInfo["ADCChUnits"] = strings[ADCInfo["lADCUnitsIndex"]]
                 header["listADCInfo"].append(ADCInfo)
 
             # protocol sections
@@ -503,7 +515,7 @@ def parse_axon_soup(filename):
                 else:
                     protocol[key] = np.array(val)
             header["protocol"] = protocol
-            header["sProtocolPath"] = strings[header["uProtocolPathIndex"] - 1]
+            header["sProtocolPath"] = strings[header["uProtocolPathIndex"]]
 
             # tags
             listTag = []
@@ -532,8 +544,8 @@ def parse_axon_soup(filename):
                         DACInfo[key] = val[0]
                     else:
                         DACInfo[key] = np.array(val)
-                DACInfo["DACChNames"] = strings[DACInfo["lDACChannelNameIndex"] - 1]
-                DACInfo["DACChUnits"] = strings[DACInfo["lDACChannelUnitsIndex"] - 1]
+                DACInfo["DACChNames"] = strings[DACInfo["lDACChannelNameIndex"]]
+                DACInfo["DACChUnits"] = strings[DACInfo["lDACChannelUnitsIndex"]]
 
                 header["listDACInfo"].append(DACInfo)
 
