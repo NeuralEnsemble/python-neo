@@ -55,10 +55,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
         Notes
         -----
-        This file format has multiple version. New versions include the gain for scaling.
-        The current implementation does not contain this feature because we don't have
-        files to test this. So now the gain is "hardcoded" to 1, and so units are
-        not handled correctly.
+        This file format has multiple versions:
+            - Newer versions include the gain for scaling to microvolts [uV].
+            - If the scaling is not found in the header, it will be "hardcoded" to 1,
+              in which case the units are not handled correctly.
 
         Examples
         --------
@@ -173,12 +173,17 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
             chan_ind = 0
             for trode in sconf:
+                if "spikeScalingToUv" in trode.attrib:
+                    gain = float(trode.attrib["spikeScalingToUv"])
+                    units = "uV"
+                else:
+                    gain = 1  # revert to hardcoded gain
+                    units = ""
+
                 for schan in trode:
                     name = "trode" + trode.attrib["id"] + "chan" + schan.attrib["hwChan"]
                     chan_id = schan.attrib["hwChan"]
-                    # TODO LATER : handle gain correctly according the file version
-                    units = ""
-                    gain = 1.0
+
                     offset = 0.0
                     signal_channels.append(
                         (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id)
