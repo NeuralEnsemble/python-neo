@@ -167,7 +167,7 @@ class NeuralynxRawIO(BaseRawIO):
         self.dirname = dirname
         self.filename = filename
         self.include_files = include_filename
-        self.exclude_filename = exclude_filename
+        self.exclude_filename = [os.path.basename(f) for f in exclude_filename] if exclude_filename else None
         self.keep_original_times = keep_original_times
         self.strict_gap_mode = strict_gap_mode
         BaseRawIO.__init__(self, **kargs)
@@ -227,8 +227,8 @@ class NeuralynxRawIO(BaseRawIO):
         file_basenames = [os.path.basename(f) for f in filenames]
         if self.exclude_filename is not None:
             for excl_file in self.exclude_filename:
-                if os.path.basename(excl_file) in file_basenames:
-                    filenames.remove(os.path.join(self.dirname, os.path.basename(excl_file)))
+                if excl_file in file_basenames:
+                    filenames.remove(os.path.join(self.dirname, excl_file))
 
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
