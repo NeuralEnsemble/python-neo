@@ -129,7 +129,7 @@ class NeuralynxRawIO(BaseRawIO):
         ("channel_id", "uint32"),
         ("sample_rate", "uint32"),
         ("nb_valid", "uint32"),
-        ("samples", "int16", (NcsSection._RECORD_SIZE)),
+        ("samples", "int16", NcsSection._RECORD_SIZE),
     ]
 
     def __init__(
@@ -224,10 +224,11 @@ class NeuralynxRawIO(BaseRawIO):
                 )
 
         # remove files that were explicitly excluded
+        file_basenames = [os.path.basename(f) for f in filenames]
         if self.exclude_filename is not None:
             for excl_file in self.exclude_filename:
-                if excl_file in filenames:
-                    filenames.remove(excl_file)
+                if os.path.basename(excl_file) in file_basenames:
+                    filenames.remove(os.path.join(self.dirname, os.path.basename(excl_file)))
 
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
