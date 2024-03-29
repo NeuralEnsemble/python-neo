@@ -57,7 +57,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
         -----
         This file format has multiple versions:
             - Newer versions include the gain for scaling to microvolts [uV].
-            - If the scaling is not found in the header, it will be "hardcoded" to 1,
+            - If the scaling is not found in the header, the gain will be "hardcoded" to 1,
               in which case the units are not handled correctly.
 
         Examples
