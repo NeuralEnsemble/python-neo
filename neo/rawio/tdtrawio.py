@@ -563,8 +563,8 @@ def read_tbk(tbk_filename):
         missing_keys = set(tbk_field_names) - set(info.keys())
         if missing_keys:
             warnings.warn(
-                f"Could not find all channel group info in tbk file, the missing keys are {missing_keys}.\n"
-                "The reader will continue with channel groups that could be parsed."
+                f"The tbk file contains incomplete channel group info for group {list(info.items())}. "
+                "This channel group will be skipped."
             )
             continue
         for k, dt in tbk_field_types:
