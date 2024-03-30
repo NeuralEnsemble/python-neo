@@ -167,97 +167,121 @@ class BaseIO:
         """
         if Block in self.writeable_objects:
             if isinstance(bl, Sequence):
-                assert hasattr(
-                    self, "write_all_blocks"
-                ), f"{self.__class__.__name__} does not offer to store a sequence of blocks"
+                if not hasattr(self, "write_all_blocks"):
+                    raise AttributeError(f"{self.__class__.__name__} does not offer to store a sequence of blocks")
                 self.write_all_blocks(bl, **kargs)
             else:
                 self.write_block(bl, **kargs)
         elif Segment in self.writeable_objects:
-            assert len(bl.segments) == 1, (
-                f"{self.__class__.__name__} is based on segment so if you try to write a block it "
-                + "must contain only one Segment"
-            )
+            if len(bl.segments) != 1:
+                raise ValueError(f"{self.__class__.__name__} is based on segment so if you try to write a block it "
+                + "must contain only one Segment")
             self.write_segment(bl.segments[0], **kargs)
         else:
             raise NotImplementedError
 
     ######## All individual read methods #######################
     def read_block(self, **kargs):
-        assert Block in self.readable_objects, read_error
+        if Block not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_segment(self, **kargs):
-        assert Segment in self.readable_objects, read_error
+        if Segment not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_spiketrain(self, **kargs):
-        assert SpikeTrain in self.readable_objects, read_error
+        if SpikeTrain not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_analogsignal(self, **kargs):
-        assert AnalogSignal in self.readable_objects, read_error
+        if AnalogSignal not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_imagesequence(self, **kargs):
-        assert ImageSequence in self.readable_objects, read_error
+        if ImageSequence not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_rectangularregionofinterest(self, **kargs):
-        assert RectangularRegionOfInterest in self.readable_objects, read_error
+        if RectangularRegionOfInterest not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_circularregionofinterest(self, **kargs):
-        assert CircularRegionOfInterest in self.readable_objects, read_error
+        if CircularRegionOfInterest not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_polygonregionofinterest(self, **kargs):
-        assert PolygonRegionOfInterest in self.readable_objects, read_error
+        if PolygonRegionOfInterest not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_irregularlysampledsignal(self, **kargs):
-        assert IrregularlySampledSignal in self.readable_objects, read_error
+        if IrregularlySampledSignal not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_channelview(self, **kargs):
-        assert ChannelView in self.readable_objects, read_error
+        if ChannelView not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_event(self, **kargs):
-        assert Event in self.readable_objects, read_error
+        if Event not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_epoch(self, **kargs):
-        assert Epoch in self.readable_objects, read_error
+        if Epoch not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     def read_group(self, **kargs):
-        assert Group in self.readable_objects, read_error
+        if Group not in self.readable_objects:
+            raise RuntimeError(read_error)
 
     ######## All individual write methods #######################
     def write_block(self, bl, **kargs):
-        assert Block in self.writeable_objects, write_error
+        if Block not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_segment(self, seg, **kargs):
-        assert Segment in self.writeable_objects, write_error
+        if Segment not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_spiketrain(self, sptr, **kargs):
-        assert SpikeTrain in self.writeable_objects, write_error
+        if SpikeTrain not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_analogsignal(self, anasig, **kargs):
-        assert AnalogSignal in self.writeable_objects, write_error
+        if AnalogSignal not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_imagesequence(self, imseq, **kargs):
-        assert ImageSequence in self.writeable_objects, write_error
+        if ImageSequence not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_rectangularregionofinterest(self, rectroi, **kargs):
-        assert RectangularRegionOfInterest in self.writeable_objects, read_error
+        if RectangularRegionOfInterest not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_circularregionofinterest(self, circroi, **kargs):
-        assert CircularRegionOfInterest in self.writeable_objects, read_error
+        if CircularRegionOfInterest not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_polygonregionofinterest(self, polyroi, **kargs):
-        assert PolygonRegionOfInterest in self.writeable_objects, read_error
+        if PolygonRegionOfInterest not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_irregularlysampledsignal(self, irsig, **kargs):
-        assert IrregularlySampledSignal in self.writeable_objects, write_error
+        if IrregularlySampledSignal not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_channelview(self, chv, **kargs):
-        assert ChannelView in self.writeable_objects, write_error
+        if ChannelView not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_event(self, ev, **kargs):
-        assert Event in self.writeable_objects, write_error
+        if Event not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_epoch(self, ep, **kargs):
-        assert Epoch in self.writeable_objects, write_error
+        if Epoch not in self.writeable_objects:
+            raise RuntimeError(write_error)
 
     def write_group(self, group, **kargs):
-        assert Group in self.writeable_objects, write_error
+        if Group not in self.writeable_objects:
+            raise RuntimeError(write_error)

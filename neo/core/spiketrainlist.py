@@ -87,8 +87,8 @@ class SpikeTrainList(ObjectList):
         self._channel_id_array = None
         self._all_channel_ids = None
         self._spiketrain_metadata = {}
-        if parent is not None:
-            assert parent.__class__.__name__ == "Segment"
+        if parent is not None and parent.__class__.__name__ != "Segment":
+            raise AttributeError("The parent class must be a Segment")
         self.segment = parent
 
     @property

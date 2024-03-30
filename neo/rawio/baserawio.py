@@ -497,23 +497,23 @@ class BaseRawIO:
         signal_streams = self.header["signal_streams"]
         signal_channels = self.header["signal_channels"]
         if signal_streams.size > 0:
-            assert signal_channels.size > 0, "Signal stream but no signal_channels!!!"
+            if signal_channels.size < 1:
+                raise ValueError("Signal stream exists but there are no signal channels")
+            
 
         for stream_index in range(signal_streams.size):
             stream_id = signal_streams[stream_index]["id"]
             mask = signal_channels["stream_id"] == stream_id
             characteristics = signal_channels[mask][_common_sig_characteristics]
             unique_characteristics = np.unique(characteristics)
-            assert unique_characteristics.size == 1, (
-                f"Some channels in stream_id {stream_id} "
-                f"do not have same {_common_sig_characteristics} {unique_characteristics}"
-            )
+            if unique_characteristics.size != 1:
+                raise ValueError(f"Some channels in stream_id {stream_id} "
+                                 f"do not have the same {_common_sig_characteristics} {unique_characteristics}")
 
             # also check that channel_id is unique inside a stream
             channel_ids = signal_channels[mask]["id"]
-            assert (
-                np.unique(channel_ids).size == channel_ids.size
-            ), f"signal_channels do not have unique ids for stream {stream_index}"
+            if np.unique(channel_ids) != channel_ids.size:
+                raise ValueError(f"signal_channels do not have unique ids for stream {stream_index}")
 
         self._several_channel_groups = signal_streams.size > 1
 
@@ -540,7 +540,8 @@ class BaseRawIO:
         mask = self.header["signal_channels"]["stream_id"] == stream_id
         signal_channels = self.header["signal_channels"][mask]
         chan_names = list(signal_channels["name"])
-        assert signal_channels.size == np.unique(chan_names).size, "Channel names not unique"
+        if signal_channels.size != np.unique(chan_names).size:
+            raise ValueError("Channel names are not unique")
         channel_indexes = np.array([chan_names.index(name) for name in channel_names])
         return channel_indexes
 
@@ -621,12 +622,12 @@ class BaseRawIO:
 
         """
         if stream_index_arg is None:
-            assert self.header["signal_streams"].size == 1, "stream_index must be given for multiple stream files"
+            if self.header["signal_streams"].size != 1:
+                raise ValueError("stream_index must be given for files with multiple streams")
             stream_index = 0
         else:
-            assert (
-                0 <= stream_index_arg < self.header["signal_streams"].size
-            ), f"stream_index must be between 0 and {self.header['signal_streams'].size}"
+            if stream_index_arg < 0 or stream_index_arg >= self.header["signal_streams"].size:
+                raise ValueError(f"stream_index must be between 0 and {self.header['signal_streams'].size}")
             stream_index = stream_index_arg
         return stream_index
 
@@ -786,7 +787,9 @@ class BaseRawIO:
 
         if isinstance(channel_indexes, np.ndarray):
             if channel_indexes.dtype == "bool":
-                assert self.signal_channels_count(stream_index) == channel_indexes.size
+                if self.signal_channels_count(stream_index) != channel_indexes.size:
+                    raise ValueError("If channel_indexes is a boolean it must have be the same length as the "
+                                     f"number of channels {self.signal_channels_count(stream_index)}")
                 (channel_indexes,) = np.nonzero(channel_indexes)
 
         if prefer_slice and isinstance(channel_indexes, np.ndarray):
@@ -1210,9 +1213,8 @@ class BaseRawIO:
         elif cache_path == "same_as_resource":
             dirname = os.path.dirname(resource_name)
         else:
-            assert os.path.exists(
-                cache_path
-            ), 'cache_path does not exists use "home" or "same_as_resource" to make this auto'
+            if not os.path.exists(cache_path):
+                raise ValueError("cache_path does not exist use 'home' or 'same_as_resource' to make this auto")
 
         # the hash of the resource (dir of file) is done with filename+datetime
         # TODO make something more sophisticated when rawmode='one-dir' that use all
@@ -1233,12 +1235,14 @@ class BaseRawIO:
             self.dump_cache()
 
     def add_in_cache(self, **kargs):
-        assert self.use_cache
+        if not self.use_cache:
+            raise ValueError("Can not use add_in_cache if not using cache")
         self._cache.update(kargs)
         self.dump_cache()
 
     def dump_cache(self):
-        assert self.use_cache
+        if not self.use_cache:
+            raise ValueError("Can not use dump_cache if not using cache")
         joblib.dump(self._cache, self.cache_filename)
 
     ##################
@@ -1336,7 +1340,8 @@ class BaseRawIO:
 
 def pprint_vector(vector, lim: int = 8):
     vector = np.asarray(vector)
-    assert vector.ndim == 1
+    if vector.ndim != 1:
+        raise ValueError(f"`vector` must have a dimension of 1 and not {vector.ndim}")
     if len(vector) > lim:
         part1 = ", ".join(e for e in vector[: lim // 2])
         part2 = " , ".join(e for e in vector[-lim // 2 :])
