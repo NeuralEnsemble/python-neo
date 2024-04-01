@@ -79,6 +79,10 @@ class NeuralynxRawIO(BaseRawIO):
     filename: str, default: ''
         Name of a single ncs, nse, nev, or ntt file to include in dataset. Will be ignored,
         if dirname is provided. But one of either dirname or filename is required.
+    include_filename: str | list | None, default: None
+        Name of a single ncs, nse, nev or ntt file or list of such files. Will only include
+        file names in the list. If this is full path, the direname will be sent to self.dirname.
+        All files should be in a single path.
     exclude_filename: str | list | None, default: None
         Name of a single ncs, nse, nev or ntt file or list of such files. Expects plain
         filenames (without directory path).
@@ -143,8 +147,12 @@ class NeuralynxRawIO(BaseRawIO):
             **kargs
     ):
 
-        if (include_filename is not None) and (filename != ""):
-            raise ValueError("filename and include_filenames cannot be both assigned")
+        if include_filename is not None:
+            if filename != "":
+                raise ValueError("filename and include_filenames cannot be both assigned")
+            include_filepath = [os.path.dirname(f) for f in include_filename]
+            if len(include_filepath) > 1:
+                raise ValueError("Files in include_filename must be in a single path!")
         if (include_filename is None) and (filename == "") and (dirname == ""):
             raise ValueError("One of dirname or filename or include_files must be provided.")
 
@@ -177,7 +185,7 @@ class NeuralynxRawIO(BaseRawIO):
             return self.filename
         elif self.rawmode == "multiple-files":
             dirname = [os.path.dirname(x) for x in self.include_files]
-            return dirname[0]
+            return os.path.join(self.dirname, dirname[0])
         else:
             return self.dirname
 
@@ -209,7 +217,8 @@ class NeuralynxRawIO(BaseRawIO):
         event_annotations = []
 
         if self.rawmode == "one-dir":
-            filenames = sorted([f for f in os.listdir(self.dirname) if os.path.isfile(f) and not f.startswith('.')])
+            filenames = sorted([os.path.join(self.dirname, f) for f in os.listdir(self.dirname)
+                                if os.path.isfile(os.path.join(self.dirname, f)) and not f.startswith('.')])
         elif self.rawmode == "one-file":
             filenames = [self.filename]
         else:
