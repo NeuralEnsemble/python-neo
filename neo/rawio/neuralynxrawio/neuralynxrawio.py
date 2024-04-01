@@ -81,7 +81,8 @@ class NeuralynxRawIO(BaseRawIO):
         if dirname is provided. But one of either dirname or filename is required.
     include_filename: str | list | None, default: None
         Name of a single ncs, nse, nev or ntt file or list of such files. Will only include
-        file names in the list. If this is full path, the direname will be sent to self.dirname.
+        file names in the list. This can be plain filenames or fullpath or path relative to
+        dirname.
         All files should be in a single path.
     exclude_filename: str | list | None, default: None
         Name of a single ncs, nse, nev or ntt file or list of such files. Expects plain
