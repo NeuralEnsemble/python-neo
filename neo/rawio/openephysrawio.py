@@ -8,7 +8,6 @@ https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Open-Ephys-form
 Author: Samuel Garcia
 """
 
-
 import re
 from pathlib import Path
 
@@ -127,7 +126,9 @@ class OpenEphysRawIO(BaseRawIO):
 
                 filesize = continuous_filename.stat().st_size
                 size = (filesize - HEADER_SIZE) // np.dtype(continuous_dtype).itemsize
-                data_chan = np.memmap(continuous_filename, mode="r", offset=HEADER_SIZE, dtype=continuous_dtype, shape=(size,))
+                data_chan = np.memmap(
+                    continuous_filename, mode="r", offset=HEADER_SIZE, dtype=continuous_dtype, shape=(size,)
+                )
                 self._sigs_memmap[seg_index][chan_index] = data_chan
 
                 all_first_timestamps.append(data_chan[0]["timestamp"])
@@ -299,15 +300,17 @@ class OpenEphysRawIO(BaseRawIO):
                     event_filename = Path(self.dirname) / f"all_channels_{oe_index + 1}.events"
                 else:
                     event_filename = event_files[seg_index]
-            event_info = read_file_header(event_filename)
-            try:
-                self._event_sampling_rate = event_info["sampleRate"]
-            except KeyError:
-                self._event_sampling_rate = 0
-            data_event = np.memmap(event_filename, mode="r", offset=HEADER_SIZE, dtype=events_dtype)
-            self._events_memmap[seg_index] = data_event
 
-        event_channels.append(("all_channels", "", "event"))
+            if event_filename.exists():
+                event_info = read_file_header(event_filename)
+                try:
+                    self._event_sampling_rate = event_info["sampleRate"]
+                except KeyError:
+                    break
+                data_event = np.memmap(event_filename, mode="r", offset=HEADER_SIZE, dtype=events_dtype)
+                self._events_memmap[seg_index] = data_event
+
+                event_channels.append((event_filename.stem, "", "event"))
         # event_channels.append(('message', '', 'event')) # not implemented
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
