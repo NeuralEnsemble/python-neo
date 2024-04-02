@@ -289,28 +289,31 @@ class OpenEphysRawIO(BaseRawIO):
             ]
         )
         event_files.sort()
-        for seg_index, oe_index in enumerate(oe_indices):
-            if oe_index == 0:
-                if (event_files[0].parent / "all_channels.events").exists():
-                    event_filename = Path(self.dirname) / "all_channels.events"
+        # only run if we have actual potential event files 
+        if len(event_files) > 0:
+            for seg_index, oe_index in enumerate(oe_indices):
+                if oe_index == 0:
+                    if (event_files[0].parent / "all_channels.events").exists():
+                        event_filename = Path(self.dirname) / "all_channels.events"
+                    else:
+                        event_filename = event_files[seg_index]
                 else:
-                    event_filename = event_files[seg_index]
-            else:
-                if (event_files[0].parent / f"all_channels_{oe_index + 1}.events").exists():
-                    event_filename = Path(self.dirname) / f"all_channels_{oe_index + 1}.events"
-                else:
-                    event_filename = event_files[seg_index]
+                    if (event_files[0].parent / f"all_channels_{oe_index + 1}.events").exists():
+                        event_filename = Path(self.dirname) / f"all_channels_{oe_index + 1}.events"
+                    else:
+                        event_filename = event_files[seg_index]
 
-            if event_filename.exists():
                 event_info = read_file_header(event_filename)
+                # event files can exist, but just not have data
                 try:
                     self._event_sampling_rate = event_info["sampleRate"]
                 except KeyError:
                     break
                 data_event = np.memmap(event_filename, mode="r", offset=HEADER_SIZE, dtype=events_dtype)
                 self._events_memmap[seg_index] = data_event
-
-                event_channels.append((event_filename.stem, "", "event"))
+        # only append event channels if they actually exist & have data
+        if len(self._events_memmap.keys()) > 0:
+            event_channels.append((event_filename.stem, "", "event"))
         # event_channels.append(('message', '', 'event')) # not implemented
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
