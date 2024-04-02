@@ -115,6 +115,7 @@ class OpenEphysRawIO(BaseRawIO):
                 chan_info = read_file_header(continuous_filename)
 
                 s = continuous_filename.stem.split("_")
+                # Formats are ['processor_id', 'ch_name'] or  ['processor_id', 'name', 'ch_name']
                 if len(s) == 2:
                     processor_id, ch_name = s[0], s[1]
                     chan_str = re.split(r"(\d+)", s[1])[0]
@@ -602,7 +603,7 @@ def explore_folder(dirname):
             # For continuous files we check if the last value is an int indicating that a new segment should be
             # generated and if it is not an int then this must be same segment
             try:
-                seg_index = int(s[-1])
+                seg_index = int(s[-1]) - 1
             except ValueError:
                 seg_index = 0
             if seg_index not in info["continuous"].keys():
