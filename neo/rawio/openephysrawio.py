@@ -117,7 +117,7 @@ class OpenEphysRawIO(BaseRawIO):
                 s = continuous_filename.stem.split("_")
                 if len(s) == 2:
                     processor_id, ch_name = s[0], s[1]
-                    chan_str = re.split(r"(\d+)", s[2])[0]
+                    chan_str = re.split(r"(\d+)", s[1])[0]
                 else:
                     processor_id, ch_name = s[0], s[2]
                     chan_str = re.split(r"(\d+)", s[2])[0]
