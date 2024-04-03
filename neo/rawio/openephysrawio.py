@@ -289,20 +289,15 @@ class OpenEphysRawIO(BaseRawIO):
                 if event_file.name != "messages.events"
             ]
         )
-        event_files.sort()
-        # only run if we have actual potential event files 
+        event_files.sort()  # sort should put the xx.events first followed by xx_x.events
+        # only run if we have actual potential event files
         if len(event_files) > 0:
+            event_file_name_0 = event_files[0].stem  # this should always be the file without a '_n' appended
             for seg_index, oe_index in enumerate(oe_indices):
                 if oe_index == 0:
-                    if (event_files[0].parent / "all_channels.events").exists():
-                        event_filename = Path(self.dirname) / "all_channels.events"
-                    else:
-                        event_filename = event_files[seg_index]
+                    event_filename = Path(self.dirname) / event_file_name_0 / ".events"
                 else:
-                    if (event_files[0].parent / f"all_channels_{oe_index + 1}.events").exists():
-                        event_filename = Path(self.dirname) / f"all_channels_{oe_index + 1}.events"
-                    else:
-                        event_filename = event_files[seg_index]
+                    event_filename = Path(self.dirname) / event_file_name_0 / f"_{oe_index}" / ".events"
 
                 event_info = read_file_header(event_filename)
                 # event files can exist, but just not have data
