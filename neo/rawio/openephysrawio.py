@@ -297,7 +297,7 @@ class OpenEphysRawIO(BaseRawIO):
                 if oe_index == 0:
                     event_filename = Path(self.dirname) / (event_file_name_0 + ".events")
                 else:
-                    event_filename = Path(self.dirname) / (event_file_name_0 + f"_{oe_index}.events")
+                    event_filename = Path(self.dirname) / (event_file_name_0 + f"_{oe_index + 1}.events")
 
                 event_info = read_file_header(event_filename)
                 # event files can exist, but just not have data
