@@ -30,24 +30,25 @@ class ChannelView(BaseNeo):
     Note: Any other additional arguments are assumed to be user-specific
             metadata and stored in :attr:`annotations`.
     """
-    _parent_objects = ('Segment',)
-    _parent_attrs = ('segment',)
+
+    _parent_objects = ("Group",)
+    _parent_attrs = ("group",)
     _necessary_attrs = (
-        ('index', np.ndarray, 1, np.dtype('i')),
-        ('obj', ('AnalogSignal', 'IrregularlySampledSignal'), 1)
+        ("obj", ("AnalogSignal", "IrregularlySampledSignal"), 1),
+        ("index", np.ndarray, 1, np.dtype("i")),
     )
+    is_view = True
+
     # "mask" would be an alternative name, proposing "index" for
     # backwards-compatibility with ChannelIndex
 
-    def __init__(self, obj, index, name=None, description=None, file_origin=None,
-                 array_annotations=None, **annotations):
-        super().__init__(name=name, description=description,
-                         file_origin=file_origin, **annotations)
+    def __init__(
+        self, obj, index, name=None, description=None, file_origin=None, array_annotations=None, **annotations
+    ):
+        super().__init__(name=name, description=description, file_origin=file_origin, **annotations)
 
-        if not (isinstance(obj, BaseSignal) or (
-                hasattr(obj, "proxy_for") and issubclass(obj.proxy_for, BaseSignal))):
-            raise ValueError("Can only take a ChannelView of an AnalogSignal "
-                             "or an IrregularlySampledSignal")
+        if not (isinstance(obj, BaseSignal) or (hasattr(obj, "proxy_for") and issubclass(obj.proxy_for, BaseSignal))):
+            raise ValueError("Can only take a ChannelView of an AnalogSignal " "or an IrregularlySampledSignal")
         self.obj = obj
 
         # check type and dtype of index and convert index to a common form
@@ -58,12 +59,12 @@ class ChannelView(BaseNeo):
         if self.index.dtype == bool:  # convert boolean mask to integer index
             if self.index.size != self.obj.shape[-1]:
                 raise ValueError("index size does not match number of channels in signal")
-            self.index, = np.nonzero(self.index)
+            (self.index,) = np.nonzero(self.index)
         # allow any type of integer representation
-        elif self.index.dtype.char not in np.typecodes['AllInteger']:
+        elif self.index.dtype.char not in np.typecodes["AllInteger"]:
             raise ValueError("index must be of a list or array of data type boolean or integer")
 
-        if not hasattr(self, 'array_annotations') or not self.array_annotations:
+        if not hasattr(self, "array_annotations") or not self.array_annotations:
             self.array_annotations = ArrayDict(self._get_arr_ann_length())
         if array_annotations is not None:
             self.array_annotate(**array_annotations)
@@ -73,7 +74,7 @@ class ChannelView(BaseNeo):
         return (self.obj.shape[0], self.index.size)
 
     def _get_arr_ann_length(self):
-        return self.shape[-1]
+        return self.index.size
 
     def array_annotate(self, **array_annotations):
         self.array_annotations.update(array_annotations)

@@ -24,28 +24,31 @@ import pathlib
 
 from neo.core import Block, Segment
 from neo.io.basefromrawio import BaseFromRaw
-from neo.test.tools import (assert_same_sub_schema,
-                            assert_neo_object_is_compliant,
-                            assert_sub_schema_is_lazy_loaded)
+from neo.test.tools import assert_same_sub_schema, assert_neo_object_is_compliant, assert_sub_schema_is_lazy_loaded
 
 from neo.test.rawiotest.tools import can_use_network
 from neo.test.rawiotest.common_rawio_test import repo_for_test
-from neo.utils import (download_dataset, get_local_testing_data_folder)
+from neo.utils import download_dataset, get_local_testing_data_folder
 from neo import list_candidate_ios
 
 try:
     import datalad
+
     HAVE_DATALAD = True
 except:
     HAVE_DATALAD = False
 
-from neo.test.iotest.tools import (close_object_safe, create_generic_io_object,
-                                   create_generic_reader,
-                                   get_test_file_full_path,
-                                   iter_generic_io_objects,
-                                   iter_generic_readers, iter_read_objects,
-                                   read_generic,
-                                   write_generic)
+from neo.test.iotest.tools import (
+    close_object_safe,
+    create_generic_io_object,
+    create_generic_reader,
+    get_test_file_full_path,
+    iter_generic_io_objects,
+    iter_generic_readers,
+    iter_read_objects,
+    read_generic,
+    write_generic,
+)
 
 from neo.test.generate_datasets import generate_from_supported_objects
 
@@ -69,6 +72,7 @@ class BaseTestIO:
     `NewIOTestClass(BaseTestIO, unittest.TestCase):`
 
     """
+
     # __test__ = False
 
     # all IO test need to modify this:
@@ -106,13 +110,11 @@ class BaseTestIO:
         cls.default_arguments = []
         cls.default_keyword_arguments = {}
         cls.higher = cls.ioclass.supported_objects[0]
-        cls.shortname = cls.ioclass.__name__.lower().rstrip('io')
+        cls.shortname = cls.ioclass.__name__.lower().rstrip("io")
         # these objects can both be written and read
-        cls.io_readandwrite = list(set(cls.ioclass.readable_objects) &
-                                    set(cls.ioclass.writeable_objects))
+        cls.io_readandwrite = list(set(cls.ioclass.readable_objects) & set(cls.ioclass.writeable_objects))
         # these objects can be either written or read
-        cls.io_readorwrite = list(set(cls.ioclass.readable_objects) |
-                                   set(cls.ioclass.writeable_objects))
+        cls.io_readorwrite = list(set(cls.ioclass.readable_objects) | set(cls.ioclass.writeable_objects))
         if HAVE_DATALAD:
             for remote_path in cls.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
@@ -148,8 +150,7 @@ class BaseTestIO:
         # when io need external knowledge for writing or reading such as
         # sampling_rate (RawBinaryIO...) the test is too complex to design
         # generically.
-        if (cls.higher in cls.ioclass.read_params and
-                len(cls.ioclass.read_params[cls.higher]) != 0):
+        if cls.higher in cls.ioclass.read_params and len(cls.ioclass.read_params[cls.higher]) != 0:
             return False
 
         # handle cases where the test should write then read
@@ -188,14 +189,11 @@ class BaseTestIO:
         If clean is True, try to delete existing versions of the file
         before creating the io object.  Default is False.
         """
-        return create_generic_io_object(ioclass=cls.ioclass,
-                                        filename=filename,
-                                        directory=cls.local_test_dir,
-                                        return_path=return_path,
-                                        clean=clean)
+        return create_generic_io_object(
+            ioclass=cls.ioclass, filename=filename, directory=cls.local_test_dir, return_path=return_path, clean=clean
+        )
 
-    def read_file(self, filename=None, return_path=False, clean=False,
-                  target=None, readall=False, lazy=False):
+    def read_file(self, filename=None, return_path=False, clean=False, target=None, readall=False, lazy=False):
         """
         Read from the specified filename.
 
@@ -218,17 +216,14 @@ class BaseTestIO:
         If readall is True, use the read_all_ method instead of the read_
         method. Default is False.
         """
-        ioobj, path = self.generic_io_object(filename=filename,
-                                             return_path=True, clean=clean)
-        obj = read_generic(ioobj, target=target, lazy=lazy,
-                           readall=readall, return_reader=False)
+        ioobj, path = self.generic_io_object(filename=filename, return_path=True, clean=clean)
+        obj = read_generic(ioobj, target=target, lazy=lazy, readall=readall, return_reader=False)
 
         if return_path:
             return obj, path
         return obj
 
-    def write_file(self, obj=None, filename=None, return_path=False,
-                   clean=False, target=None):
+    def write_file(self, obj=None, filename=None, return_path=False, clean=False, target=None):
         """
         Write the target object to a file using the given neo io object ioobj.
 
@@ -249,8 +244,7 @@ class BaseTestIO:
         obj is the object to write.  If obj is None, an object is created
         automatically for the io class.
         """
-        ioobj, path = self.generic_io_object(filename=filename,
-                                             return_path=True, clean=clean)
+        ioobj, path = self.generic_io_object(filename=filename, return_path=True, clean=clean)
         obj = write_generic(ioobj, target=target, return_reader=False)
 
         if return_path:
@@ -267,14 +261,15 @@ class BaseTestIO:
         If clean is True, try to delete existing versions of the file
         before creating the io object.  Default is False.
         """
-        return iter_generic_io_objects(ioclass=self.ioclass,
-                                       filenames=self.files_to_test,
-                                       directory=self.local_test_dir,
-                                       return_path=return_path,
-                                       clean=clean)
+        return iter_generic_io_objects(
+            ioclass=self.ioclass,
+            filenames=self.files_to_test,
+            directory=self.local_test_dir,
+            return_path=return_path,
+            clean=clean,
+        )
 
-    def iter_readers(self, target=None, readall=False,
-                     return_path=False, return_ioobj=False, clean=False):
+    def iter_readers(self, target=None, readall=False, return_path=False, return_ioobj=False, clean=False):
         """
         Return an iterable over readers created from files_to_test.
 
@@ -293,18 +288,27 @@ class BaseTestIO:
         If readall is True, use the read_all_ method instead of the
         read_ method. Default is False.
         """
-        return iter_generic_readers(ioclass=self.ioclass,
-                                    filenames=self.files_to_test,
-                                    directory=self.local_test_dir,
-                                    return_path=return_path,
-                                    return_ioobj=return_ioobj,
-                                    target=target,
-                                    clean=clean,
-                                    readall=readall)
+        return iter_generic_readers(
+            ioclass=self.ioclass,
+            filenames=self.files_to_test,
+            directory=self.local_test_dir,
+            return_path=return_path,
+            return_ioobj=return_ioobj,
+            target=target,
+            clean=clean,
+            readall=readall,
+        )
 
-    def iter_objects(self, target=None, return_path=False, return_ioobj=False,
-                     return_reader=False, clean=False, readall=False,
-                     lazy=False):
+    def iter_objects(
+        self,
+        target=None,
+        return_path=False,
+        return_ioobj=False,
+        return_reader=False,
+        clean=False,
+        readall=False,
+        lazy=False,
+    ):
         """
         Iterate over objects read from the list of filenames in files_to_test.
 
@@ -334,15 +338,18 @@ class BaseTestIO:
         If readall is True, use the read_all_ method instead of the read_
         method. Default is False.
         """
-        return iter_read_objects(ioclass=self.ioclass,
-                                 filenames=self.files_to_test,
-                                 directory=self.local_test_dir,
-                                 target=target,
-                                 return_path=return_path,
-                                 return_ioobj=return_ioobj,
-                                 return_reader=return_reader,
-                                 clean=clean, readall=readall,
-                                 lazy=lazy)
+        return iter_read_objects(
+            ioclass=self.ioclass,
+            filenames=self.files_to_test,
+            directory=self.local_test_dir,
+            target=target,
+            return_path=return_path,
+            return_ioobj=return_ioobj,
+            return_reader=return_reader,
+            clean=clean,
+            readall=readall,
+            lazy=lazy,
+        )
 
     @classmethod
     def generate_files_for_io_able_to_write(cls):
@@ -436,7 +443,7 @@ class BaseTestIO:
                 assert_neo_object_is_compliant(obj)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from %s' % os.path.basename(path), )
+                exc.args += f"from {os.path.basename(path)}"
                 raise
 
     def test_read_with_lazy_is_compliant(self):
@@ -464,18 +471,17 @@ class BaseTestIO:
         Test read_block method of BaseFromRaw with different test cases
         for create_group_across_segment.
 
-        """.format(io_name=self.ioclass.__name__)
+        """.format(
+            io_name=self.ioclass.__name__
+        )
 
         test_cases = [
             {"SpikeTrain": True},
             {"AnalogSignal": True},
             {"Event": True},
             {"Epoch": True},
-            {"SpikeTrain": True,
-             "AnalogSignal": True,
-             "Event": True,
-             "Epoch": True},
-            True
+            {"SpikeTrain": True, "AnalogSignal": True, "Event": True, "Epoch": True},
+            True,
         ]
         expected_outcomes = [
             None,
@@ -488,9 +494,7 @@ class BaseTestIO:
 
         mock_test_case = unittest.TestCase()
         if issubclass(self.ioclass, BaseFromRaw):
-            for obj, reader in self.iter_objects(target=Block,
-                                                 lazy=self.ioclass.support_lazy,
-                                                 return_reader=True):
+            for obj, reader in self.iter_objects(target=Block, lazy=self.ioclass.support_lazy, return_reader=True):
                 if "create_group_across_segment" in inspect.signature(reader).parameters.keys():
                     # Ignore testing readers for IOs where read_block is overridden to exclude
                     # the create_group_across_segment functionality, for eg. NixIO_fr
@@ -503,22 +507,18 @@ class BaseTestIO:
 
     def test__handle_pathlib_filename(self):
         if self.files_to_test:
-            filename = get_test_file_full_path(self.ioclass, filename=self.files_to_test[0],
-                                               directory=self.local_test_dir)
+            filename = get_test_file_full_path(
+                self.ioclass, filename=self.files_to_test[0], directory=self.local_test_dir
+            )
             pathlib_filename = pathlib.Path(filename)
 
-            if self.ioclass.mode == 'file':
-                self.ioclass(filename=pathlib_filename,
-                             *self.default_arguments,
-                             **self.default_keyword_arguments)
-            elif self.ioclass.mode == 'dir':
-                self.ioclass(dirname=pathlib_filename,
-                             *self.default_arguments,
-                             **self.default_keyword_arguments)
+            if self.ioclass.mode == "file":
+                self.ioclass(filename=pathlib_filename, *self.default_arguments, **self.default_keyword_arguments)
+            elif self.ioclass.mode == "dir":
+                self.ioclass(dirname=pathlib_filename, *self.default_arguments, **self.default_keyword_arguments)
 
     def test_list_candidate_ios(self):
         for entity in self.entities_to_test:
-            entity = get_test_file_full_path(self.ioclass, filename=entity,
-                                             directory=self.local_test_dir)
+            entity = get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir)
             ios = list_candidate_ios(entity)
             assert self.ioclass in ios

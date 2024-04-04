@@ -24,13 +24,10 @@ def unique(quantities):
     #       due to scaling.
     if len(quantities) > 0:
         common_units = quantities[0].units
-        scaled_quantities = pq.Quantity(
-            [q.rescale(common_units) for q in quantities],
-            common_units)
+        scaled_quantities = pq.Quantity([q.rescale(common_units) for q in quantities], common_units)
         return np.unique(scaled_quantities)
     else:
         return quantities
-
 
 
 class SpikeTrainList(ObjectList):
@@ -74,6 +71,7 @@ class SpikeTrainList(ObjectList):
          <SpikeTrain(array([], dtype=float64) * ms, [0.0 ms, 100.0 ms])>]
 
     """
+
     allowed_contents = (SpikeTrain,)
 
     def __init__(self, items=None, parent=None):
@@ -83,8 +81,7 @@ class SpikeTrainList(ObjectList):
         else:
             for item in items:
                 if not is_spiketrain_or_proxy(item):
-                    raise ValueError(
-                        "`items` can only contain SpikeTrain objects or proxy pbjects")
+                    raise ValueError("`items` can only contain SpikeTrain objects or proxy pbjects")
             self._items = list(items)
         self._spike_time_array = None
         self._channel_id_array = None
@@ -115,15 +112,21 @@ class SpikeTrainList(ObjectList):
         else:
             return SpikeTrainList(items=items)
 
+    def __setitem__(self, i, value):
+        if self._items is None:
+            self._spiketrains_from_array()
+        self._items[i] = value
+
     def __str__(self):
         """Return str(self)"""
         if self._items is None:
             if self._spike_time_array is None:
                 return str([])
             else:
-                return "SpikeTrainList containing {} spikes from {} neurons".format(
-                    self._spike_time_array.size,
-                    len(self._all_channel_ids))
+                return (
+                    f"SpikeTrainList containing {self._spike_time_array.size} "
+                    f"spikes from {len(self._all_channel_ids)} neurons"
+                )
         else:
             return str(self._items)
 
@@ -158,20 +161,16 @@ class SpikeTrainList(ObjectList):
         else:
             # both self and other are storing multiplexed spike trains
             # so we update the array representation
-            if self._spiketrain_metadata['t_start'] != other._spiketrain_metadata['t_start']:
+            if self._spiketrain_metadata["t_start"] != other._spiketrain_metadata["t_start"]:
                 raise ValueError("Incompatible t_start")
                 # todo: adjust times and t_start of other to be compatible with self
-            if self._spiketrain_metadata['t_stop'] != other._spiketrain_metadata['t_stop']:
+            if self._spiketrain_metadata["t_stop"] != other._spiketrain_metadata["t_stop"]:
                 raise ValueError("Incompatible t_stop")
                 # todo: adjust t_stop of self and other as necessary
-            combined_spike_time_array = np.hstack(
-                (self._spike_time_array, other._spike_time_array))
-            combined_channel_id_array = np.hstack(
-                (self._channel_id_array, other._channel_id_array))
+            combined_spike_time_array = np.hstack((self._spike_time_array, other._spike_time_array))
+            combined_channel_id_array = np.hstack((self._channel_id_array, other._channel_id_array))
             combined_channel_ids = set(list(self._all_channel_ids) + other._all_channel_ids)
-            if len(combined_channel_ids) != (
-                len(self._all_channel_ids) + len(other._all_channel_ids)
-            ):
+            if len(combined_channel_ids) != (len(self._all_channel_ids) + len(other._all_channel_ids)):
                 raise ValueError("Duplicate channel ids, please rename channels before adding")
             if in_place:
                 self._spike_time_array = combined_spike_time_array
@@ -184,17 +183,16 @@ class SpikeTrainList(ObjectList):
                     combined_spike_time_array,
                     combined_channel_id_array,
                     combined_channel_ids,
-                    t_start=self._spiketrain_metadata['t_start'],
-                    t_stop=self._spiketrain_metadata['t_stop'])
+                    t_start=self._spiketrain_metadata["t_start"],
+                    t_stop=self._spiketrain_metadata["t_stop"],
+                )
 
     def __add__(self, other):
         """Return self + other"""
         if isinstance(other, self.__class__):
             return self._add_spiketrainlists(other)
         elif other and is_spiketrain_or_proxy(other[0]):
-            return self._add_spiketrainlists(
-                self.__class__(items=other, parent=self.segment)
-            )
+            return self._add_spiketrainlists(self.__class__(items=other, parent=self.segment))
         else:
             if self._items is None:
                 self._spiketrains_from_array()
@@ -250,9 +248,9 @@ class SpikeTrainList(ObjectList):
         self._items.extend(iterable)
 
     @classmethod
-    def from_spike_time_array(cls, spike_time_array, channel_id_array,
-                              all_channel_ids, t_stop, units=None,
-                              t_start=0.0 * pq.s, **annotations):
+    def from_spike_time_array(
+        cls, spike_time_array, channel_id_array, all_channel_ids, t_stop, units=None, t_start=0.0 * pq.s, **annotations
+    ):
         """Create a SpikeTrainList object from an array of spike times
         and an array of channel ids.
 
@@ -286,15 +284,13 @@ class SpikeTrainList(ObjectList):
         obj._spike_time_array = spike_time_array
         obj._channel_id_array = channel_id_array
         obj._all_channel_ids = all_channel_ids
-        obj._spiketrain_metadata = {
-            "t_start": t_start,
-            "t_stop": t_stop
-        }
+        obj._spiketrain_metadata = {"t_start": t_start, "t_stop": t_stop}
         for name, ann_value in annotations.items():
-            if (not isinstance(ann_value, str)
+            if (
+                not isinstance(ann_value, str)
                 and hasattr(ann_value, "__len__")
                 and len(ann_value) != len(all_channel_ids)
-               ):
+            ):
                 raise ValueError(f"incorrect length for annotation '{name}'")
         obj._annotations = annotations
         return obj
@@ -310,10 +306,11 @@ class SpikeTrainList(ObjectList):
                 times = self._spike_time_array[mask]
                 spiketrain = SpikeTrain(times, **self._spiketrain_metadata)
                 for name, value in self._annotations.items():
-                    if (not isinstance(value, str)
+                    if (
+                        not isinstance(value, str)
                         and hasattr(value, "__len__")
                         and len(value) == len(self._all_channel_ids)
-                       ):
+                    ):
                         spiketrain.annotate(**{name: value[i]})
                     else:
                         spiketrain.annotate(**{name: value})
@@ -344,9 +341,7 @@ class SpikeTrainList(ObjectList):
                         spike_times.append(spiketrain.times)
                     else:
                         spike_times.append(spiketrain.times.rescale(dim))
-                    if ("channel_id" in spiketrain.annotations
-                        and isinstance(spiketrain.annotations["channel_id"], int)
-                        ):
+                    if "channel_id" in spiketrain.annotations and isinstance(spiketrain.annotations["channel_id"], int):
                         ch_id = spiketrain.annotations["channel_id"]
                     else:
                         ch_id = i
@@ -360,8 +355,9 @@ class SpikeTrainList(ObjectList):
         if "t_start" in self._spiketrain_metadata:
             return self._spiketrain_metadata["t_start"]
         else:
-            t_start_values = unique([item.t_start for item in self._items
-                                    if isinstance(item, SpikeTrain)])  # ignore proxy objects
+            t_start_values = unique(
+                [item.t_start for item in self._items if isinstance(item, SpikeTrain)]
+            )  # ignore proxy objects
             if len(t_start_values) == 0:
                 raise ValueError("t_start not defined for an empty spike train list")
             elif len(t_start_values) > 1:
@@ -377,8 +373,9 @@ class SpikeTrainList(ObjectList):
         if "t_stop" in self._spiketrain_metadata:
             return self._spiketrain_metadata["t_stop"]
         else:
-            t_stop_values = unique([item.t_stop for item in self._items
-                                    if isinstance(item, SpikeTrain)])  # ignore proxy objects
+            t_stop_values = unique(
+                [item.t_stop for item in self._items if isinstance(item, SpikeTrain)]
+            )  # ignore proxy objects
             if len(t_stop_values) == 0:
                 raise ValueError("t_stop not defined for an empty spike train list")
             elif len(t_stop_values) > 1:
@@ -394,9 +391,7 @@ class SpikeTrainList(ObjectList):
         if self._all_channel_ids is None:
             self._all_channel_ids = []
             for i, spiketrain in enumerate(self._items):
-                if ("channel_id" in spiketrain.annotations
-                    and isinstance(spiketrain.annotations["channel_id"], int)
-                   ):
+                if "channel_id" in spiketrain.annotations and isinstance(spiketrain.annotations["channel_id"], int):
                     ch_id = spiketrain.annotations["channel_id"]
                 else:
                     ch_id = i

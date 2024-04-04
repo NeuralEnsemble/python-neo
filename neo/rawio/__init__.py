@@ -175,6 +175,7 @@ Classes:
     .. autoattribute:: extensions
 
 """
+
 import os
 
 from neo.rawio.alphaomegarawio import AlphaOmegaRawIO
@@ -248,6 +249,18 @@ rawiolist = [
 
 
 def get_rawio_class(filename_or_dirname):
+    """Legacy function for returning class guess from file extension
+    DEPRECATED
+    """
+
+    import warnings
+
+    warnings.warn("get_rawio_class is deprecated. In the future please use get_rawio")
+
+    return get_rawio(filename_or_dirname)
+
+
+def get_rawio(filename_or_dirname):
     """
     Return a neo.rawio class guess from file extension.
     """

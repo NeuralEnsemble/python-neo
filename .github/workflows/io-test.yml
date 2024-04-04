@@ -46,10 +46,10 @@ jobs:
           key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data.outputs.dataset_hash }}
           restore-keys: ${{ runner.os }}-datasets-
 
-      - uses: conda-incubator/setup-miniconda@v2.2.0
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: neo-test-env
-          python-version: ${{ matrix.python-version }}
+          python-version: "${{ matrix.python-version }}"
 
       - name: Get current dependencies hash
         id: dependencies
@@ -81,6 +81,11 @@ jobs:
           git config --global user.email "neo_ci@fake_mail.com"
           git config --global user.name "neo CI"
 
+      - name: Python version
+        run: |
+          which python
+          python --version
+
       - name: Install neo including dependencies
         # installation with dependencies is only required if no cache was found
         # restore-key hits should result in `cache-hit` == 'false'
@@ -103,6 +108,8 @@ jobs:
           sudo apt-get install -yqq --allow-downgrades libc6:i386 libgcc-s1:i386 libstdc++6:i386 wine
 
       - name: Test with pytest
+        env:
+          HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_local_plugin_path
         run: |
           # only neo.rawio and neo.io
           pytest --cov=neo neo/test/rawiotest

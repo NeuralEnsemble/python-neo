@@ -111,33 +111,70 @@ class AsciiSignalIO(BaseIO):
 
     read_params = {
         Segment: [
-            ('delimiter', {'value': '\t', 'possible': ['\t', ' ', ',', ';']}),
-            ('usecols', {'value': None, 'type': int}),
-            ('skiprows', {'value': 0}),
-            ('timecolumn', {'value': None, 'type': int}),
-            ('units', {'value': 'V', }),
-            ('time_units', {'value': pq.s, }),
-            ('sampling_rate', {'value': 1.0 * pq.Hz, }),
-            ('t_start', {'value': 0.0 * pq.s, }),
-            ('method', {'value': 'homemade', 'possible': ['genfromtxt', 'csv', 'homemade']}),
-            ('signal_group_mode', {'value': 'split-all'})
+            ("delimiter", {"value": "\t", "possible": ["\t", " ", ",", ";"]}),
+            ("usecols", {"value": None, "type": int}),
+            ("skiprows", {"value": 0}),
+            ("timecolumn", {"value": None, "type": int}),
+            (
+                "units",
+                {
+                    "value": "V",
+                },
+            ),
+            (
+                "time_units",
+                {
+                    "value": pq.s,
+                },
+            ),
+            (
+                "sampling_rate",
+                {
+                    "value": 1.0 * pq.Hz,
+                },
+            ),
+            (
+                "t_start",
+                {
+                    "value": 0.0 * pq.s,
+                },
+            ),
+            ("method", {"value": "homemade", "possible": ["genfromtxt", "csv", "homemade"]}),
+            ("signal_group_mode", {"value": "split-all"}),
         ]
     }
     write_params = {
         Segment: [
-            ('delimiter', {'value': '\t', 'possible': ['\t', ' ', ',', ';']}),
-            ('writetimecolumn', {'value': True, }),
+            ("delimiter", {"value": "\t", "possible": ["\t", " ", ",", ";"]}),
+            (
+                "writetimecolumn",
+                {
+                    "value": True,
+                },
+            ),
         ]
     }
 
     name = None
-    extensions = ['txt', 'asc', 'csv', 'tsv']
+    extensions = ["txt", "asc", "csv", "tsv"]
 
-    mode = 'file'
+    mode = "file"
 
-    def __init__(self, filename=None, delimiter='\t', usecols=None, skiprows=0, timecolumn=None,
-                 sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, units=pq.V, time_units=pq.s,
-                 method='genfromtxt', signal_group_mode='split-all', metadata_filename=None):
+    def __init__(
+        self,
+        filename=None,
+        delimiter="\t",
+        usecols=None,
+        skiprows=0,
+        timecolumn=None,
+        sampling_rate=1.0 * pq.Hz,
+        t_start=0.0 * pq.s,
+        units=pq.V,
+        time_units=pq.s,
+        method="genfromtxt",
+        signal_group_mode="split-all",
+        metadata_filename=None,
+    ):
         """
         This class read/write AnalogSignal in a text file.
         Each signal is a column.
@@ -167,9 +204,8 @@ class AsciiSignalIO(BaseIO):
         self.units = metadata.get("units", pq.Quantity(1, units))
 
         self.method = metadata.get("method", method)
-        if not(self.method in ('genfromtxt', 'csv', 'homemade') or callable(self.method)):
-            raise ValueError(
-                "method must be one of 'genfromtxt', 'csv', 'homemade', or a function")
+        if not (self.method in ("genfromtxt", "csv", "homemade") or callable(self.method)):
+            raise ValueError("method must be one of 'genfromtxt', 'csv', 'homemade', or a function")
 
         self.signal_group_mode = metadata.get("signal_group_mode", signal_group_mode)
 
@@ -180,49 +216,49 @@ class AsciiSignalIO(BaseIO):
         return block
 
     def read_segment(self, lazy=False):
-        """
-
-        """
+        """ """
         if lazy:
             raise NotImplementedError("lazy mode not supported")
 
         seg = Segment(file_origin=os.path.basename(self.filename))
 
         # loadtxt
-        if self.method == 'genfromtxt':
-            sig = np.genfromtxt(self.filename,
-                                delimiter=self.delimiter,
-                                usecols=self.usecols,
-                                skip_header=self.skiprows,
-                                dtype='f',
-                                filling_values=None,
-                                comments='""',
-                                names=None,
-                                loose=True,
-                                invalid_raise=False)
+        if self.method == "genfromtxt":
+            sig = np.genfromtxt(
+                self.filename,
+                delimiter=self.delimiter,
+                usecols=self.usecols,
+                skip_header=self.skiprows,
+                dtype="f",
+                filling_values=None,
+                comments='""',
+                names=None,
+                loose=True,
+                invalid_raise=False,
+            )
             if len(sig.shape) == 1:
                 sig = sig[:, np.newaxis]
-        elif self.method == 'csv':
+        elif self.method == "csv":
             with open(self.filename, newline=None) as fp:
                 tab = [l for l in csv.reader(fp, delimiter=self.delimiter)]
-            tab = tab[self.skiprows:]
-            sig = np.array(tab, dtype='f')
+            tab = tab[self.skiprows :]
+            sig = np.array(tab, dtype="f")
             if self.usecols is not None:
                 mask = np.array(self.usecols)
                 sig = sig[:, mask]
-        elif self.method == 'homemade':
-            with open(self.filename, 'r', newline=None) as fid:
+        elif self.method == "homemade":
+            with open(self.filename, "r", newline=None) as fid:
                 for _ in range(self.skiprows):
                     fid.readline()
                 tab = []
                 for line in fid.readlines():
-                    line = line.replace('\r', '')
-                    line = line.replace('\n', '')
+                    line = line.replace("\r", "")
+                    line = line.replace("\n", "")
                     parts = line.split(self.delimiter)
-                    while '' in parts:
-                        parts.remove('')
+                    while "" in parts:
+                        parts.remove("")
                     tab.append(parts)
-                sig = np.array(tab, dtype='f')
+                sig = np.array(tab, dtype="f")
                 if self.usecols is not None:
                     mask = np.array(self.usecols)
                     sig = sig[:, mask]
@@ -249,7 +285,7 @@ class AsciiSignalIO(BaseIO):
                 sampling_rate = None
             t_start = sig[0, self.timecolumn] * self.time_units
 
-        if self.signal_group_mode == 'all-in-one':
+        if self.signal_group_mode == "all-in-one":
             channel_index_annotation = self.usecols or np.arange(sig.shape[1])
             channel_index_annotation = np.asarray(channel_index_annotation)
             if self.timecolumn is not None:
@@ -263,14 +299,14 @@ class AsciiSignalIO(BaseIO):
             else:
                 signal = sig
             if sampling_rate is None:
-                irr_sig = IrregularlySampledSignal(signal[:, self.timecolumn] * self.time_units,
-                                                   signal * self.units,
-                                                   name='multichannel')
+                irr_sig = IrregularlySampledSignal(
+                    signal[:, self.timecolumn] * self.time_units, signal * self.units, name="multichannel"
+                )
                 seg.irregularlysampledsignals.append(irr_sig)
             else:
-                ana_sig = AnalogSignal(signal * self.units, sampling_rate=sampling_rate,
-                                       t_start=t_start,
-                                       name='multichannel')
+                ana_sig = AnalogSignal(
+                    signal * self.units, sampling_rate=sampling_rate, t_start=t_start, name="multichannel"
+                )
                 ana_sig.array_annotate(channel_index=channel_index_annotation)
                 seg.analogsignals.append(ana_sig)
         else:
@@ -283,15 +319,18 @@ class AsciiSignalIO(BaseIO):
                     continue
                 signal = sig[:, i] * self.units
                 if sampling_rate is None:
-                    irr_sig = IrregularlySampledSignal(sig[:, time_col] * self.time_units,
-                                                       signal,
-                                                       t_start=t_start, channel_index=i,
-                                                       name='Column %d' % i)
+                    irr_sig = IrregularlySampledSignal(
+                        sig[:, time_col] * self.time_units,
+                        signal,
+                        t_start=t_start,
+                        channel_index=i,
+                        name="Column %d" % i,
+                    )
                     seg.irregularlysampledsignals.append(irr_sig)
                 else:
-                    ana_sig = AnalogSignal(signal, sampling_rate=sampling_rate,
-                                           t_start=t_start, channel_index=i,
-                                           name='Column %d' % i)
+                    ana_sig = AnalogSignal(
+                        signal, sampling_rate=sampling_rate, t_start=t_start, channel_index=i, name="Column %d" % i
+                    )
                     seg.analogsignals.append(ana_sig)
 
         seg.check_relationships()
@@ -361,8 +400,10 @@ class AsciiSignalIO(BaseIO):
         """
         # in future, maybe separate segments by a blank link, or a "magic" comment
         if len(block.segments) > 1:
-            raise ValueError("Can only write blocks containing a single segment."
-                             " This block contains {} segments.".format(len(block.segments)))
+            raise ValueError(
+                "Can only write blocks containing a single segment."
+                f" This block contains {len(block.segments)} segments."
+            )
         self.write_segment(block.segments[0])
 
     def write_metadata(self, metadata_filename=None):
@@ -378,16 +419,13 @@ class AsciiSignalIO(BaseIO):
             "timecolumn": self.timecolumn,
             "sampling_rate": {
                 "value": float(self.sampling_rate.magnitude),
-                "units": self.sampling_rate.dimensionality.string
+                "units": self.sampling_rate.dimensionality.string,
             },
-            "t_start": {
-                "value": float(self.t_start.magnitude),
-                "units": self.t_start.dimensionality.string
-            },
+            "t_start": {"value": float(self.t_start.magnitude), "units": self.t_start.dimensionality.string},
             "units": self.units.dimensionality.string,
             "time_units": self.time_units.dimensionality.string,
             "method": self.method,
-            "signal_group_mode": self.signal_group_mode
+            "signal_group_mode": self.signal_group_mode,
         }
         if metadata_filename is None:
             if self.metadata_filename is None:

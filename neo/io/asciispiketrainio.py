@@ -45,20 +45,25 @@ class AsciiSpikeTrainIO(BaseIO):
 
     read_params = {
         Segment: [
-            ('delimiter', {'value': '\t', 'possible': ['\t', ' ', ',', ';']}),
-            ('t_start', {'value': 0., }),
+            ("delimiter", {"value": "\t", "possible": ["\t", " ", ",", ";"]}),
+            (
+                "t_start",
+                {
+                    "value": 0.0,
+                },
+            ),
         ]
     }
     write_params = {
         Segment: [
-            ('delimiter', {'value': '\t', 'possible': ['\t', ' ', ',', ';']}),
+            ("delimiter", {"value": "\t", "possible": ["\t", " ", ",", ";"]}),
         ]
     }
 
     name = None
-    extensions = ['txt']
+    extensions = ["txt"]
 
-    mode = 'file'
+    mode = "file"
 
     def __init__(self, filename=None):
         """
@@ -73,33 +78,34 @@ class AsciiSpikeTrainIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
 
-    def read_segment(self,
-                     lazy=False,
-                     delimiter='\t',
-                     t_start=0. * pq.s,
-                     unit=pq.s,
-                     ):
+    def read_segment(
+        self,
+        lazy=False,
+        delimiter="\t",
+        t_start=0.0 * pq.s,
+        unit=pq.s,
+    ):
         """
         Arguments:
             delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'
             t_start : time start of all spiketrain 0 by default
             unit : unit of spike times, can be a str or directly a Quantities
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         unit = pq.Quantity(1, unit)
 
         seg = Segment(file_origin=os.path.basename(self.filename))
 
-        with open(self.filename, 'r', newline=None) as f:
+        with open(self.filename, "r", newline=None) as f:
             for i, line in enumerate(f):
                 alldata = line[:-1].split(delimiter)
-                if alldata[-1] == '':
+                if alldata[-1] == "":
                     alldata = alldata[:-1]
-                if alldata[0] == '':
+                if alldata[0] == "":
                     alldata = alldata[1:]
 
-                spike_times = np.array(alldata).astype('f')
+                spike_times = np.array(alldata).astype("f")
                 t_stop = spike_times.max() * unit
 
                 sptr = SpikeTrain(spike_times * unit, t_start=t_start, t_stop=t_stop)
@@ -110,9 +116,11 @@ class AsciiSpikeTrainIO(BaseIO):
         seg.check_relationships()
         return seg
 
-    def write_segment(self, segment,
-                      delimiter='\t',
-                      ):
+    def write_segment(
+        self,
+        segment,
+        delimiter="\t",
+    ):
         """
         Write SpikeTrain of a Segment in a txt file.
         Each row is a spiketrain.
@@ -125,9 +133,9 @@ class AsciiSpikeTrainIO(BaseIO):
 
         """
 
-        f = open(self.filename, 'w')
+        f = open(self.filename, "w")
         for s, sptr in enumerate(segment.spiketrains):
             for ts in sptr:
-                f.write('{:f}{}'.format(ts, delimiter))
-            f.write('\n')
+                f.write(f"{ts}{delimiter}")
+            f.write("\n")
         f.close()

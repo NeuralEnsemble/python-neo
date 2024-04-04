@@ -8,13 +8,15 @@ from neo.io import BiocamIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-class TestBiocamIO(BaseTestIO, unittest.TestCase, ):
+class TestBiocamIO(
+    BaseTestIO,
+    unittest.TestCase,
+):
     ioclass = BiocamIO
-    entities_to_download = [
-        'biocam'
-    ]
+    entities_to_download = ["biocam"]
     entities_to_test = [
-        'biocam/biocam_hw3.0_fw1.6.brw'
+        "biocam/biocam_hw3.0_fw1.6.brw",
+        "biocam/biocam_hw3.0_fw1.7.0.12_raw.brw",
     ]
 
 

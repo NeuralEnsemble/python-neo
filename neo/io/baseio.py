@@ -11,6 +11,9 @@ BaseIO        - abstract class which should be overridden, managing how a
 If you want a model for developing a new IO start from exampleIO.
 """
 
+from __future__ import annotations
+from pathlib import Path
+
 try:
     from collections.abc import Sequence
 except ImportError:
@@ -18,13 +21,21 @@ except ImportError:
 import logging
 
 from neo import logging_handler
-from neo.core import (AnalogSignal, Block,
-                      Epoch, Event, Group,
-                      IrregularlySampledSignal,
-                      ChannelView,
-                      Segment, SpikeTrain, ImageSequence,
-                      RectangularRegionOfInterest, CircularRegionOfInterest,
-                      PolygonRegionOfInterest)
+from neo.core import (
+    AnalogSignal,
+    Block,
+    Epoch,
+    Event,
+    Group,
+    IrregularlySampledSignal,
+    ChannelView,
+    Segment,
+    SpikeTrain,
+    ImageSequence,
+    RectangularRegionOfInterest,
+    CircularRegionOfInterest,
+    PolygonRegionOfInterest,
+)
 
 read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
@@ -90,40 +101,51 @@ class BaseIO:
     read_params = {}
     write_params = {}
 
-    name = 'BaseIO'
-    description = ''
+    name = "BaseIO"
+    description = ""
     extensions = []
 
-    mode = 'file'  # or 'fake' or 'dir' or 'database'
+    mode = "file"  # or 'fake' or 'dir' or 'database'
 
-    def __init__(self, filename=None, **kargs):
+    def __init__(self, filename: str | Path = None, **kargs):
         self.filename = str(filename)
         # create a logger for the IO class
-        fullname = self.__class__.__module__ + '.' + self.__class__.__name__
+        fullname = self.__class__.__module__ + "." + self.__class__.__name__
         self.logger = logging.getLogger(fullname)
         # create a logger for 'neo' and add a handler to it if it doesn't
         # have one already.
         # (it will also not add one if the root logger has a handler)
-        corename = self.__class__.__module__.split('.')[0]
+        corename = self.__class__.__module__.split(".")[0]
         corelogger = logging.getLogger(corename)
         rootlogger = logging.getLogger()
         if not corelogger.handlers and not rootlogger.handlers:
             corelogger.addHandler(logging_handler)
 
     ######## General read/write methods #######################
-    def read(self, lazy=False, **kargs):
+    def read(self, lazy: bool = False, **kargs):
         """
         Return all data from the file as a list of Blocks
+
+        Parameters
+        ----------
+        lazy: bool, default: False
+            Whether to lazily load the data (True) or to load into memory (False)
+        kargs: dict
+            IO specific additional arguments
+
+        Returns
+        ------
+        block_list: list[neo.core.Block]
+            Returns all the data from the file as Blocks
         """
         if lazy and not self.support_lazy:
             raise ValueError("This IO module does not support lazy loading")
         if Block in self.readable_objects:
-            if (hasattr(self, 'read_all_blocks') and
-                    callable(getattr(self, 'read_all_blocks'))):
+            if hasattr(self, "read_all_blocks") and callable(getattr(self, "read_all_blocks")):
                 return self.read_all_blocks(lazy=lazy, **kargs)
             return [self.read_block(lazy=lazy, **kargs)]
         elif Segment in self.readable_objects:
-            bl = Block(name='One segment only')
+            bl = Block(name="One segment only")
             seg = self.read_segment(lazy=lazy, **kargs)
             bl.segments.append(seg)
             bl.check_relationships()
@@ -132,98 +154,110 @@ class BaseIO:
             raise NotImplementedError
 
     def write(self, bl, **kargs):
+        """
+        Writes a given block if IO supports writing
+
+        Parameters
+        ----------
+        bl: neo.core.Block
+            The neo Block to be written
+        kargs: dict
+            IO specific additional arguments
+
+        """
         if Block in self.writeable_objects:
             if isinstance(bl, Sequence):
-                assert hasattr(self, 'write_all_blocks'), \
-                    '%s does not offer to store a sequence of blocks' % \
-                    self.__class__.__name__
+                assert hasattr(
+                    self, "write_all_blocks"
+                ), f"{self.__class__.__name__} does not offer to store a sequence of blocks"
                 self.write_all_blocks(bl, **kargs)
             else:
                 self.write_block(bl, **kargs)
         elif Segment in self.writeable_objects:
-            assert len(bl.segments) == 1, \
-                '%s is based on segment so if you try to write a block it ' + \
-                'must contain only one Segment' % self.__class__.__name__
+            assert len(bl.segments) == 1, (
+                f"{self.__class__.__name__} is based on segment so if you try to write a block it "
+                + "must contain only one Segment"
+            )
             self.write_segment(bl.segments[0], **kargs)
         else:
             raise NotImplementedError
 
     ######## All individual read methods #######################
     def read_block(self, **kargs):
-        assert (Block in self.readable_objects), read_error
+        assert Block in self.readable_objects, read_error
 
     def read_segment(self, **kargs):
-        assert (Segment in self.readable_objects), read_error
+        assert Segment in self.readable_objects, read_error
 
     def read_spiketrain(self, **kargs):
-        assert (SpikeTrain in self.readable_objects), read_error
+        assert SpikeTrain in self.readable_objects, read_error
 
     def read_analogsignal(self, **kargs):
-        assert (AnalogSignal in self.readable_objects), read_error
+        assert AnalogSignal in self.readable_objects, read_error
 
     def read_imagesequence(self, **kargs):
-        assert (ImageSequence in self.readable_objects), read_error
+        assert ImageSequence in self.readable_objects, read_error
 
     def read_rectangularregionofinterest(self, **kargs):
-        assert (RectangularRegionOfInterest in self.readable_objects), read_error
+        assert RectangularRegionOfInterest in self.readable_objects, read_error
 
     def read_circularregionofinterest(self, **kargs):
-        assert (CircularRegionOfInterest in self.readable_objects), read_error
+        assert CircularRegionOfInterest in self.readable_objects, read_error
 
     def read_polygonregionofinterest(self, **kargs):
-        assert (PolygonRegionOfInterest in self.readable_objects), read_error
+        assert PolygonRegionOfInterest in self.readable_objects, read_error
 
     def read_irregularlysampledsignal(self, **kargs):
-        assert (IrregularlySampledSignal in self.readable_objects), read_error
+        assert IrregularlySampledSignal in self.readable_objects, read_error
 
     def read_channelview(self, **kargs):
-        assert (ChannelView in self.readable_objects), read_error
+        assert ChannelView in self.readable_objects, read_error
 
     def read_event(self, **kargs):
-        assert (Event in self.readable_objects), read_error
+        assert Event in self.readable_objects, read_error
 
     def read_epoch(self, **kargs):
-        assert (Epoch in self.readable_objects), read_error
+        assert Epoch in self.readable_objects, read_error
 
     def read_group(self, **kargs):
-        assert (Group in self.readable_objects), read_error
+        assert Group in self.readable_objects, read_error
 
     ######## All individual write methods #######################
     def write_block(self, bl, **kargs):
-        assert (Block in self.writeable_objects), write_error
+        assert Block in self.writeable_objects, write_error
 
     def write_segment(self, seg, **kargs):
-        assert (Segment in self.writeable_objects), write_error
+        assert Segment in self.writeable_objects, write_error
 
     def write_spiketrain(self, sptr, **kargs):
-        assert (SpikeTrain in self.writeable_objects), write_error
+        assert SpikeTrain in self.writeable_objects, write_error
 
     def write_analogsignal(self, anasig, **kargs):
-        assert (AnalogSignal in self.writeable_objects), write_error
+        assert AnalogSignal in self.writeable_objects, write_error
 
     def write_imagesequence(self, imseq, **kargs):
-        assert (ImageSequence in self.writeable_objects), write_error
+        assert ImageSequence in self.writeable_objects, write_error
 
     def write_rectangularregionofinterest(self, rectroi, **kargs):
-        assert (RectangularRegionOfInterest in self.writeable_objects), read_error
+        assert RectangularRegionOfInterest in self.writeable_objects, read_error
 
     def write_circularregionofinterest(self, circroi, **kargs):
-        assert (CircularRegionOfInterest in self.writeable_objects), read_error
+        assert CircularRegionOfInterest in self.writeable_objects, read_error
 
     def write_polygonregionofinterest(self, polyroi, **kargs):
-        assert (PolygonRegionOfInterest in self.writeable_objects), read_error
+        assert PolygonRegionOfInterest in self.writeable_objects, read_error
 
     def write_irregularlysampledsignal(self, irsig, **kargs):
-        assert (IrregularlySampledSignal in self.writeable_objects), write_error
+        assert IrregularlySampledSignal in self.writeable_objects, write_error
 
     def write_channelview(self, chv, **kargs):
-        assert (ChannelView in self.writeable_objects), write_error
+        assert ChannelView in self.writeable_objects, write_error
 
     def write_event(self, ev, **kargs):
-        assert (Event in self.writeable_objects), write_error
+        assert Event in self.writeable_objects, write_error
 
     def write_epoch(self, ep, **kargs):
-        assert (Epoch in self.writeable_objects), write_error
+        assert Epoch in self.writeable_objects, write_error
 
     def write_group(self, group, **kargs):
-        assert (Group in self.writeable_objects), write_error
+        assert Group in self.writeable_objects, write_error

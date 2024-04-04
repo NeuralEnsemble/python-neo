@@ -10,12 +10,10 @@ Supported: Read/Write
 Authors: Andrew Davison
 """
 
-
 import pickle
 
 from neo.io.baseio import BaseIO
-from neo.core import (Block, Segment,
-                      AnalogSignal, SpikeTrain)
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain
 
 
 class PickleIO(BaseIO):
@@ -26,6 +24,7 @@ class PickleIO(BaseIO):
     of Neo to that used to create the file. It should therefore not be used for
     long-term storage, but rather for intermediate results in a pipeline.
     """
+
     is_readable = True
     is_writable = True
     has_header = False
@@ -34,12 +33,12 @@ class PickleIO(BaseIO):
     supported_objects = [Block, Segment, AnalogSignal, SpikeTrain]
     readable_objects = supported_objects
     writeable_objects = supported_objects
-    mode = 'file'
+    mode = "file"
     name = "Python pickle file"
-    extensions = ['pkl', 'pickle']
+    extensions = ["pkl", "pickle"]
 
     def read_block(self, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
         with open(self.filename, "rb") as fp:
             block = pickle.load(fp)
         return block

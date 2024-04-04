@@ -46,8 +46,7 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import (Block, Event,
-                      Group, Segment, SpikeTrain)
+from neo.core import Block, Event, Group, Segment, SpikeTrain
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -112,8 +111,7 @@ class BrainwareSrcIO(BaseIO):
     is_writable = False  # write is not supported
 
     # This class is able to directly or indirectly handle the following objects
-    supported_objects = [Block, Group,
-                         Segment, SpikeTrain, Event]
+    supported_objects = [Block, Group, Segment, SpikeTrain, Event]
 
     readable_objects = [Block]
     writeable_objects = []
@@ -132,10 +130,10 @@ class BrainwareSrcIO(BaseIO):
 
     # does not support write so no GUI stuff
     write_params = None
-    name = 'Brainware SRC File'
-    extensions = ['src']
+    name = "Brainware SRC File"
+    extensions = ["src"]
 
-    mode = 'file'
+    mode = "file"
 
     def __init__(self, filename=None):
         """
@@ -145,7 +143,7 @@ class BrainwareSrcIO(BaseIO):
         BaseIO.__init__(self)
 
         # log the __init__
-        self.logger.info('__init__')
+        self.logger.info("__init__")
 
         # this stores the filename of the current object, exactly as it is
         # provided when the instance is initialized.
@@ -194,7 +192,7 @@ class BrainwareSrcIO(BaseIO):
         """
         # if the file isn't already open, open it and clear the Blocks
         if not self._fsrc or self._fsrc.closed:
-            self._fsrc = open(self._filename, 'rb')
+            self._fsrc = open(self._filename, "rb")
 
             # figure out the filename of the current file
             self._file_origin = os.path.basename(self._filename)
@@ -203,7 +201,7 @@ class BrainwareSrcIO(BaseIO):
         """
         Close the currently-open file and reset the current reading point.
         """
-        self.logger.info('close')
+        self.logger.info("close")
         if self._isopen and not self._fsrc.closed:
             self._fsrc.close()
 
@@ -222,14 +220,13 @@ class BrainwareSrcIO(BaseIO):
 
         If you wish to read more than one Block, please use read_all_blocks.
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
         if kargs:
-            raise NotImplementedError('This method does not have any '
-                                      'arguments implemented yet')
+            raise NotImplementedError("This method does not have any " "arguments implemented yet")
 
         blockobj = self.read_next_block()
         self.close()
@@ -250,8 +247,7 @@ class BrainwareSrcIO(BaseIO):
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
         if kargs:
-            raise NotImplementedError('This method does not have any '
-                                      'arguments implemented yet')
+            raise NotImplementedError("This method does not have any " "arguments implemented yet")
 
         self._opensrc()
 
@@ -262,16 +258,14 @@ class BrainwareSrcIO(BaseIO):
         # create the Block and the contents all Blocks of from IO share
         self._blk = Block(file_origin=self._file_origin)
 
-        self._seg0 = Segment(name='Comments', file_origin=self._file_origin)
-        self._unit0 = Group(name='UnassignedSpikes',
-                           elliptic=[], boundaries=[],
-                           timestamp=[], max_valid=[])
+        self._seg0 = Segment(name="Comments", file_origin=self._file_origin)
+        self._unit0 = Group(name="UnassignedSpikes", elliptic=[], boundaries=[], timestamp=[], max_valid=[])
         self._blk.groups.append(self._unit0)
         self._blk.segments.append(self._seg0)
 
         # this actually reads the contents of the Block
         result = []
-        while hasattr(result, '__iter__'):
+        while hasattr(result, "__iter__"):
             try:
                 result = self._read_by_id()
             except:
@@ -297,7 +291,7 @@ class BrainwareSrcIO(BaseIO):
         # cascading, since the user will know it is done when the method
         # returns a value
         if result is None:
-            self.logger.info('Last Block read.  Closing file.')
+            self.logger.info("Last Block read.  Closing file.")
             self.close()
 
         return blockobj
@@ -316,11 +310,10 @@ class BrainwareSrcIO(BaseIO):
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         if kargs:
-            raise NotImplementedError('This method does not have any '
-                                      'argument implemented yet')
+            raise NotImplementedError("This method does not have any " "argument implemented yet")
 
         self.close()
         self._opensrc()
@@ -353,7 +346,7 @@ class BrainwareSrcIO(BaseIO):
             timestamp = convert_brainwaresrc_timestamp(timestamp, start_date)
         except OverflowError as err:
             timestamp = start_date
-            self.logger.exception('_convert_timestamp overflow')
+            self.logger.exception("_convert_timestamp overflow")
 
         return timestamp
 
@@ -405,7 +398,7 @@ class BrainwareSrcIO(BaseIO):
                 # even the official reference files have invalid keys
                 # when using the official reference reader matlab
                 # scripts
-                self.logger.warning('unknown ID: %s', seqid)
+                self.logger.warning("unknown ID: %s", seqid)
                 return []
 
         try:
@@ -413,7 +406,7 @@ class BrainwareSrcIO(BaseIO):
             return readfunc(self)
         except (EOFError, UnicodeDecodeError) as err:
             # return a warning if the EOF is reached in the middle of a method
-            self.logger.exception('Premature end of file')
+            self.logger.exception("Premature end of file")
             return None
 
     # -------------------------------------------------------------------------
@@ -434,49 +427,41 @@ class BrainwareSrcIO(BaseIO):
         used since manual reorganization may be needed.
         """
         if isinstance(data_obj, Group):
-            self.logger.warning('Unknown Group found, adding to Group list')
+            self.logger.warning("Unknown Group found, adding to Group list")
             self._blk.groups.append(data_obj)
             if data_obj.name:
                 self._unitdict[data_obj.name] = data_obj
         elif isinstance(data_obj, Segment):
-            self.logger.warning('Unknown Segment found, '
-                                'adding to Segments list')
+            self.logger.warning("Unknown Segment found, " "adding to Segments list")
             self._blk.segments.append(data_obj)
         elif isinstance(data_obj, Event):
-            self.logger.warning('Unknown Event found, '
-                                'adding to comment Events list')
+            self.logger.warning("Unknown Event found, " "adding to comment Events list")
             self._seg0.events.append(data_obj)
         elif isinstance(data_obj, SpikeTrain):
-            self.logger.warning('Unknown SpikeTrain found, '
-                                'adding to the UnassignedSpikes Unit')
+            self.logger.warning("Unknown SpikeTrain found, " "adding to the UnassignedSpikes Unit")
             self._unit0.spiketrains.append(data_obj)
-        elif hasattr(data_obj, '__iter__') and not isinstance(data_obj, str):
+        elif hasattr(data_obj, "__iter__") and not isinstance(data_obj, str):
             for sub_obj in data_obj:
                 self._assign_sequence(sub_obj)
         else:
             if self.logger.isEnabledFor(logging.WARNING):
-                self.logger.warning('Unrecognized sequence of type %s found, '
-                                    'skipping', type(data_obj))
+                self.logger.warning("Unrecognized sequence of type %s found, " "skipping", type(data_obj))
 
     _default_datetime = datetime(1, 1, 1)
-    _default_t_start = pq.Quantity(0., units=pq.ms, dtype=np.float32)
-    _init_default_spiketrain = SpikeTrain(times=pq.Quantity([], units=pq.ms,
-                                                            dtype=np.float32),
-                                          t_start=pq.Quantity(0, units=pq.ms,
-                                                              dtype=np.float32
-                                                              ),
-                                          t_stop=pq.Quantity(1, units=pq.ms,
-                                                             dtype=np.float32),
-                                          waveforms=pq.Quantity([[[]]],
-                                                                dtype=np.int8,
-                                                                units=pq.mV),
-                                          dtype=np.float32, copy=False,
-                                          timestamp=_default_datetime,
-                                          respwin=np.array([], dtype=np.int32),
-                                          dama_index=-1,
-                                          trig2=pq.Quantity([], units=pq.ms,
-                                                            dtype=np.uint8),
-                                          side='')
+    _default_t_start = pq.Quantity(0.0, units=pq.ms, dtype=np.float32)
+    _init_default_spiketrain = SpikeTrain(
+        times=pq.Quantity([], units=pq.ms, dtype=np.float32),
+        t_start=pq.Quantity(0, units=pq.ms, dtype=np.float32),
+        t_stop=pq.Quantity(1, units=pq.ms, dtype=np.float32),
+        waveforms=pq.Quantity([[[]]], dtype=np.int8, units=pq.mV),
+        dtype=np.float32,
+        copy=False,
+        timestamp=_default_datetime,
+        respwin=np.array([], dtype=np.int32),
+        dama_index=-1,
+        trig2=pq.Quantity([], units=pq.ms, dtype=np.uint8),
+        side="",
+    )
 
     def _combine_events(self, events):
         """
@@ -484,10 +469,12 @@ class BrainwareSrcIO(BaseIO):
         with single events into one long Event
         """
         if not events:
-            event = Event(times=pq.Quantity([], units=pq.s),
-                          labels=np.array([], dtype='U'),
-                          senders=np.array([], dtype='S'),
-                          t_start=0)
+            event = Event(
+                times=pq.Quantity([], units=pq.s),
+                labels=np.array([], dtype="U"),
+                senders=np.array([], dtype="S"),
+                t_start=0,
+            )
             return event
 
         times = []
@@ -498,20 +485,20 @@ class BrainwareSrcIO(BaseIO):
             if event.labels.shape == (1,):
                 labels.append(event.labels[0])
             else:
-                raise AssertionError("This single event has multiple labels in an array with "
-                                     "shape {} instead of a single label.".
-                                     format(event.labels.shape))
-            senders.append(event.annotations['sender'])
+                raise AssertionError(
+                    "This single event has multiple labels in an array with "
+                    f"shape {event.labels.shape} instead of a single label."
+                )
+            senders.append(event.annotations["sender"])
 
         times = np.array(times, dtype=np.float32)
         t_start = times.min()
         times = pq.Quantity(times - t_start, units=pq.d).rescale(pq.s)
 
-        labels = np.array(labels, dtype='U')
+        labels = np.array(labels, dtype="U")
         senders = np.array(senders)
 
-        event = Event(times=times, labels=labels,
-                      t_start=t_start.tolist(), senders=senders)
+        event = Event(times=times, labels=labels, t_start=t_start.tolist(), senders=senders)
 
         return event
 
@@ -521,7 +508,7 @@ class BrainwareSrcIO(BaseIO):
         Combine all Events in a segment.
         """
         event = self._combine_events(segment.events)
-        event_t_start = event.annotations.pop('t_start')
+        event_t_start = event.annotations.pop("t_start")
         segment.rec_datetime = self._convert_timestamp(event_t_start)
         segment.events = [event]
 
@@ -534,21 +521,18 @@ class BrainwareSrcIO(BaseIO):
         if not spiketrains:
             return self._default_spiketrain.copy()
 
-        if hasattr(spiketrains[0], 'waveforms') and len(spiketrains) == 1:
+        if hasattr(spiketrains[0], "waveforms") and len(spiketrains) == 1:
             train = spiketrains[0]
             return train
 
-        if hasattr(spiketrains[0], 't_stop'):
+        if hasattr(spiketrains[0], "t_stop"):
             # workaround for bug in some broken files
-            istrain = [hasattr(utrain, 'waveforms') for utrain in spiketrains]
+            istrain = [hasattr(utrain, "waveforms") for utrain in spiketrains]
             if not all(istrain):
-                goodtrains = [itrain for i, itrain in enumerate(spiketrains)
-                              if istrain[i]]
-                badtrains = [itrain for i, itrain in enumerate(spiketrains)
-                             if not istrain[i]]
+                goodtrains = [itrain for i, itrain in enumerate(spiketrains) if istrain[i]]
+                badtrains = [itrain for i, itrain in enumerate(spiketrains) if not istrain[i]]
 
-                spiketrains = (goodtrains +
-                               [self._combine_spiketrains(badtrains)])
+                spiketrains = goodtrains + [self._combine_spiketrains(badtrains)]
 
             spiketrains = [itrain for itrain in spiketrains if itrain.size > 0]
             if not spiketrains:
@@ -563,20 +547,17 @@ class BrainwareSrcIO(BaseIO):
             if lens1.max() != lens1.min() or lens2.max() != lens2.min():
                 lens1 = lens1.max() - lens1
                 lens2 = lens2.max() - lens2
-                waveforms = [np.pad(waveform,
-                                    ((0, 0), (0, len1), (0, len2)),
-                                    'constant')
-                             for waveform, len1, len2 in zip(waveforms,
-                                                             lens1,
-                                                             lens2)]
+                waveforms = [
+                    np.pad(waveform, ((0, 0), (0, len1), (0, len2)), "constant")
+                    for waveform, len1, len2 in zip(waveforms, lens1, lens2)
+                ]
 
             waveforms = np.concatenate(waveforms, axis=0)
 
             # extract the trig2 annotation
-            trig2 = np.array(np.concatenate([itrain.annotations['trig2'] for
-                                             itrain in spiketrains], axis=1))
+            trig2 = np.array(np.concatenate([itrain.annotations["trig2"] for itrain in spiketrains], axis=1))
             trig2 = pq.Quantity(trig2, units=pq.ms)
-        elif hasattr(spiketrains[0], 'units'):
+        elif hasattr(spiketrains[0], "units"):
             return self._combine_spiketrains([spiketrains])
         else:
             times, waveforms, trig2 = zip(*spiketrains)
@@ -592,24 +573,29 @@ class BrainwareSrcIO(BaseIO):
             waveforms = np.concatenate(waveforms, axis=0)
 
             # extract the trig2 annotation
-            trig2 = pq.Quantity(np.hstack(trig2),
-                                units=pq.ms, copy=False)
+            trig2 = pq.Quantity(np.hstack(trig2), units=pq.ms, copy=False)
 
         if not times.size:
             return self._default_spiketrain.copy()
 
         # get the maximum time
-        t_stop = times[-1] * 2.
+        t_stop = times[-1] * 2.0
 
         waveforms = pq.Quantity(waveforms, units=pq.mV, copy=False)
 
-        train = SpikeTrain(times=times, copy=False,
-                           t_start=self._default_t_start.copy(), t_stop=t_stop,
-                           file_origin=self._file_origin,
-                           waveforms=waveforms,
-                           timestamp=self._default_datetime,
-                           respwin=np.array([], dtype=np.int32),
-                           dama_index=-1, trig2=trig2, side='')
+        train = SpikeTrain(
+            times=times,
+            copy=False,
+            t_start=self._default_t_start.copy(),
+            t_stop=t_stop,
+            file_origin=self._file_origin,
+            waveforms=waveforms,
+            timestamp=self._default_datetime,
+            respwin=np.array([], dtype=np.int32),
+            dama_index=-1,
+            trig2=trig2,
+            side="",
+        )
         return train
 
     # -------------------------------------------------------------------------
@@ -627,8 +613,8 @@ class BrainwareSrcIO(BaseIO):
         """
         Read a string of a specific length.
         """
-        rawstr = np.fromfile(self._fsrc, dtype='S%s' % numchars, count=1).item()
-        return rawstr.decode('utf-8')
+        rawstr = np.fromfile(self._fsrc, dtype="S%s" % numchars, count=1).item()
+        return rawstr.decode("utf-8")
 
     def __read_annotations(self):
         """
@@ -659,7 +645,7 @@ class BrainwareSrcIO(BaseIO):
 
             # if there is no name, make one up
             if not numchars:
-                name = 'param%s' % i
+                name = "param%s" % i
             else:
                 # char * numchars -- parameter name string
                 name = self.__read_str(numchars)
@@ -672,8 +658,7 @@ class BrainwareSrcIO(BaseIO):
             names.append(name)
 
         # float32 * numelements -- an array of parameter values
-        values = np.fromfile(self._fsrc, dtype=np.float32,
-                             count=numelements)
+        values = np.fromfile(self._fsrc, dtype=np.float32, count=numelements)
 
         # combine the names and values into a dict
         # the dict will be added to the annotations
@@ -702,7 +687,7 @@ class BrainwareSrcIO(BaseIO):
 
         # create dummy names and combine them with the values in a dict
         # the dict will be added to the annotations
-        params = ['param%s' % i for i in range(len(values))]
+        params = ["param%s" % i for i in range(len(values))]
         annotations = dict(zip(params, values))
 
         return annotations
@@ -737,8 +722,9 @@ class BrainwareSrcIO(BaseIO):
         # char * numchars -- comment text
         text = self.__read_str(numchars2, utf=False)
 
-        comment = Event(times=pq.Quantity(time, units=pq.d), labels=[text],
-                        sender=sender, file_origin=self._file_origin)
+        comment = Event(
+            times=pq.Quantity(time, units=pq.d), labels=[text], sender=sender, file_origin=self._file_origin
+        )
 
         self._seg0.events.append(comment)
 
@@ -785,8 +771,7 @@ class BrainwareSrcIO(BaseIO):
 
         if not self._damaged and numelements < 0:
             self._damaged = True
-            self.logger.error('Negative sequence count %s, file damaged',
-                              numelements)
+            self.logger.error("Negative sequence count %s, file damaged", numelements)
 
         if not self._damaged:
             # read the sequences into a list
@@ -838,9 +823,9 @@ class BrainwareSrcIO(BaseIO):
 
         # (data_obj) -- the stimulus parameters for this segment
         annotations = self._read_by_id()
-        annotations['feature_type'] = -1
-        annotations['go_by_closest_unit_center'] = False
-        annotations['include_unit_bounds'] = False
+        annotations["feature_type"] = -1
+        annotations["go_by_closest_unit_center"] = False
+        annotations["include_unit_bounds"] = False
 
         # (data_obj) -- SpikeTrain list of unassigned spikes
         # these go in the first Unit since it is for unassigned spikes
@@ -861,10 +846,9 @@ class BrainwareSrcIO(BaseIO):
                 # if there are no spiketrains at all,
                 # create an empty spike train
                 trains = [[self._default_spiketrain.copy()]]
-        elif hasattr(trains[0], 'dtype'):
+        elif hasattr(trains[0], "dtype"):
             # workaround for some broken files
-            trains = [unassigned_spikes +
-                      [self._combine_spiketrains([trains])]]
+            trains = [unassigned_spikes + [self._combine_spiketrains([trains])]]
         else:
             # get the second element from each returned value,
             # which is the actual SpikeTrains
@@ -873,14 +857,12 @@ class BrainwareSrcIO(BaseIO):
             trains = zip(*trains)
 
         # int32 -- SpikeTrain length in ms
-        spiketrainlen = pq.Quantity(np.fromfile(self._fsrc, dtype=np.int32,
-                                                count=1)[0], units=pq.ms, copy=False)
+        spiketrainlen = pq.Quantity(np.fromfile(self._fsrc, dtype=np.int32, count=1)[0], units=pq.ms, copy=False)
 
         segments = []
         for train in trains:
             # create the Segment and add everything to it
-            segment = Segment(file_origin=self._file_origin,
-                              **annotations)
+            segment = Segment(file_origin=self._file_origin, **annotations)
             segment.spiketrains = train
             self._blk.segments.append(segment)
             segments.append(segment)
@@ -914,7 +896,7 @@ class BrainwareSrcIO(BaseIO):
 
         # [list of sequences] -- individual Segments
         segments = self.__read_list()
-        while not hasattr(segments[0], 'spiketrains'):
+        while not hasattr(segments[0], "spiketrains"):
             segments = list(chain(*segments))
 
         # char -- "side of brain" info
@@ -931,7 +913,7 @@ class BrainwareSrcIO(BaseIO):
         # store what side of the head we are dealing with
         for segment in segments:
             for spiketrain in segment.spiketrains:
-                spiketrain.annotations['side'] = side
+                spiketrain.annotations["side"] = side
 
         return segments
 
@@ -998,21 +980,20 @@ class BrainwareSrcIO(BaseIO):
         segments = self.__read_segment_list_v8()
 
         # uint8
-        feature_type = np.fromfile(self._fsrc, dtype=np.uint8,
-                                   count=1)[0]
+        feature_type = np.fromfile(self._fsrc, dtype=np.uint8, count=1)[0]
 
         # uint8
-        go_by_closest_unit_center = np.fromfile(self._fsrc, dtype=np.bool8,
-                                                count=1)[0]
+        go_by_closest_unit_center = np.fromfile(self._fsrc, dtype=np.bool8, count=1)[0]
 
         # uint8
-        include_unit_bounds = np.fromfile(self._fsrc, dtype=np.bool8,
-                                          count=1)[0]
+        include_unit_bounds = np.fromfile(self._fsrc, dtype=np.bool8, count=1)[0]
 
         # create a dictionary of the annotations
-        annotations = {'feature_type': feature_type,
-                       'go_by_closest_unit_center': go_by_closest_unit_center,
-                       'include_unit_bounds': include_unit_bounds}
+        annotations = {
+            "feature_type": feature_type,
+            "go_by_closest_unit_center": go_by_closest_unit_center,
+            "include_unit_bounds": include_unit_bounds,
+        }
 
         # add the annotations to each Segment
         for segment in segments:
@@ -1037,9 +1018,7 @@ class BrainwareSrcIO(BaseIO):
         """
 
         # float32 -- DA conversion clock period in microsec
-        sampling_period = pq.Quantity(np.fromfile(self._fsrc,
-                                                  dtype=np.float32, count=1),
-                                      units=pq.us, copy=False)[0]
+        sampling_period = pq.Quantity(np.fromfile(self._fsrc, dtype=np.float32, count=1), units=pq.us, copy=False)[0]
 
         # segment_collection -- this is based off a segment_collection
         segments = self.__read_segment_list()
@@ -1068,8 +1047,7 @@ class BrainwareSrcIO(BaseIO):
         time = np.fromfile(self._fsrc, dtype=np.float32, count=1)
 
         # int8 * 40 -- spike shape -- use numpts for spike_var
-        waveform = np.fromfile(self._fsrc, dtype=np.int8,
-                               count=numpts).reshape(1, 1, numpts)
+        waveform = np.fromfile(self._fsrc, dtype=np.int8, count=numpts).reshape(1, 1, numpts)
 
         # uint8 -- point of return to noise
         trig2 = np.fromfile(self._fsrc, dtype=np.uint8, count=1)
@@ -1093,14 +1071,13 @@ class BrainwareSrcIO(BaseIO):
         """
 
         # int32 -- spike time stamp in ms since start of SpikeTrain
-        time = np.fromfile(self._fsrc, dtype=np.int32, count=1) / 25.
+        time = np.fromfile(self._fsrc, dtype=np.int32, count=1) / 25.0
         time = time.astype(np.float32)
 
         # int8 * 40 -- spike shape
         # This needs to be a 3D array, one for each channel.  BrainWare
         # only ever has a single channel per file.
-        waveform = np.fromfile(self._fsrc, dtype=np.int8,
-                               count=40).reshape(1, 1, 40)
+        waveform = np.fromfile(self._fsrc, dtype=np.int8, count=40).reshape(1, 1, 40)
 
         # create a dummy trig2 value
         trig2 = np.array([-1], dtype=np.uint8)
@@ -1145,14 +1122,13 @@ class BrainwareSrcIO(BaseIO):
         """
 
         # int32 -- index of the analogsignalarray in corresponding .dam file
-        dama_index = np.fromfile(self._fsrc, dtype=np.int32,
-                                 count=1)[0]
+        dama_index = np.fromfile(self._fsrc, dtype=np.int32, count=1)[0]
 
         # spiketrain_timestamped -- this is based off a spiketrain_timestamped
         spiketrain = self.__read_spiketrain_timestamped()
 
         # add the property to the dict
-        spiketrain.annotations['dama_index'] = dama_index
+        spiketrain.annotations["dama_index"] = dama_index
 
         return spiketrain
 
@@ -1183,7 +1159,7 @@ class BrainwareSrcIO(BaseIO):
         spiketrain = self._combine_spiketrains(self.__read_list())
 
         # add the timestamp
-        spiketrain.annotations['timestamp'] = timestamp
+        spiketrain.annotations["timestamp"] = timestamp
 
         return spiketrain
 
@@ -1210,15 +1186,11 @@ class BrainwareSrcIO(BaseIO):
         unit, trains = self.__read_unit_unsorted()
 
         # float32 * 18 -- Unit boundaries (IEEE 32-bit floats)
-        unit.annotations['boundaries'] = [np.fromfile(self._fsrc,
-                                                      dtype=np.float32,
-                                                      count=18)]
+        unit.annotations["boundaries"] = [np.fromfile(self._fsrc, dtype=np.float32, count=18)]
 
         # uint8 * 9 -- boolean values indicating elliptic feature boundary
         # dimensions
-        unit.annotations['elliptic'] = [np.fromfile(self._fsrc,
-                                                    dtype=np.uint8,
-                                                    count=9)]
+        unit.annotations["elliptic"] = [np.fromfile(self._fsrc, dtype=np.uint8, count=9)]
 
         return unit, trains
 
@@ -1259,10 +1231,14 @@ class BrainwareSrcIO(BaseIO):
             # remember we need to skip the UnassignedSpikes Unit
             if numunits > len(self._blk.groups) + 1:
                 for ind1 in range(len(self._blk.groups), numunits + 1):
-                    unit = Group(name='unit%s' % ind1,
-                                file_origin=self._file_origin,
-                                elliptic=[], boundaries=[],
-                                timestamp=[], max_valid=[])
+                    unit = Group(
+                        name="unit%s" % ind1,
+                        file_origin=self._file_origin,
+                        elliptic=[],
+                        boundaries=[],
+                        timestamp=[],
+                        max_valid=[],
+                    )
                     self._blk.groups.append(unit)
 
             # {Block} * numelements -- Units
@@ -1276,21 +1252,18 @@ class BrainwareSrcIO(BaseIO):
 
                 # int16 -- a multiplier for the elliptic and boundaries
                 #          properties
-                numelements3 = np.fromfile(self._fsrc, dtype=np.int16,
-                                           count=1)[0]
+                numelements3 = np.fromfile(self._fsrc, dtype=np.int16, count=1)[0]
 
                 # uint8 * 10 * numelements3 -- boolean values indicating
                 # elliptic feature boundary dimensions
-                elliptic = np.fromfile(self._fsrc, dtype=np.uint8,
-                                       count=10 * numelements3)
+                elliptic = np.fromfile(self._fsrc, dtype=np.uint8, count=10 * numelements3)
 
                 # float32 * 20 * numelements3 -- feature boundaries
-                boundaries = np.fromfile(self._fsrc, dtype=np.float32,
-                                         count=20 * numelements3)
+                boundaries = np.fromfile(self._fsrc, dtype=np.float32, count=20 * numelements3)
 
-                unit.annotations['elliptic'].append(elliptic)
-                unit.annotations['boundaries'].append(boundaries)
-                unit.annotations['max_valid'].append(max_valid)
+                unit.annotations["elliptic"].append(elliptic)
+                unit.annotations["boundaries"].append(boundaries)
+                unit.annotations["max_valid"].append(max_valid)
 
         return self._blk.groups[1:maxunit]
 
@@ -1319,7 +1292,7 @@ class BrainwareSrcIO(BaseIO):
         units = self.__read_unit_list()
 
         for unit in units:
-            unit.annotations['timestamp'].append(timestamp)
+            unit.annotations["timestamp"].append(timestamp)
 
         return units
 
@@ -1355,8 +1328,7 @@ class BrainwareSrcIO(BaseIO):
 
         # uint8 * 9 -- boolean values indicating elliptic feature boundary
         # dimensions
-        unit.annotations['elliptic'] = np.fromfile(self._fsrc, dtype=np.uint8,
-                                                   count=9).tolist()
+        unit.annotations["elliptic"] = np.fromfile(self._fsrc, dtype=np.uint8, count=9).tolist()
 
         return unit, trains
 
@@ -1390,8 +1362,7 @@ class BrainwareSrcIO(BaseIO):
         # int32 -- SpikeTrain length in ms
         # int32 * 4 -- response and spon period boundaries
         parts = np.fromfile(self._fsrc, dtype=np.int32, count=5)
-        t_stop = pq.Quantity(parts[0].astype('float32'),
-                             units=pq.ms, copy=False)
+        t_stop = pq.Quantity(parts[0].astype("float32"), units=pq.ms, copy=False)
         respwin = parts[1:]
 
         # (data_obj) -- list of SpikeTrains
@@ -1401,8 +1372,9 @@ class BrainwareSrcIO(BaseIO):
         if name in self._unitdict:
             unit = self._unitdict[name]
         else:
-            unit = Group(name=name, file_origin=self._file_origin,
-                        elliptic=[], boundaries=[], timestamp=[], max_valid=[])
+            unit = Group(
+                name=name, file_origin=self._file_origin, elliptic=[], boundaries=[], timestamp=[], max_valid=[]
+            )
             self._blk.groups.append(unit)
             self._unitdict[name] = unit
 
@@ -1411,7 +1383,7 @@ class BrainwareSrcIO(BaseIO):
         unit.spiketrains.extend(trains)
         for train in trains:
             train.t_stop = t_stop.copy()
-            train.annotations['respwin'] = respwin.copy()
+            train.annotations["respwin"] = respwin.copy()
 
         return unit, trains
 
@@ -1467,33 +1439,33 @@ class BrainwareSrcIO(BaseIO):
     # here in numeric order and the method above in alphabetical order
     #
     # The naming of any private method may change at any time
-    _ID_DICT = {29079: __read_spike_fixed,
-                29081: __read_spike_fixed_old,
-                29082: __read_list,
-                29083: __read_list,
-                29084: __read_unit_unsorted,
-                29091: __read_list,
-                29093: __read_list,
-                29099: __read_annotations_old,
-                29100: __skip_information_old,
-                29106: __read_segment,
-                29107: __read_unit_old,
-                29109: __read_annotations,
-                29110: __read_spiketrain_timestamped,
-                29112: __read_segment_list,
-                29113: __skip_information,
-                29114: __read_segment_list_var,
-                29115: __read_spike_var,
-                29116: __read_unit,
-                29117: __read_segment_list_v8,
-                29119: __read_unit_list_timestamped,
-                29120: __read_segment_list_v9,
-                29121: __read_spiketrain_indexed
-                }
+    _ID_DICT = {
+        29079: __read_spike_fixed,
+        29081: __read_spike_fixed_old,
+        29082: __read_list,
+        29083: __read_list,
+        29084: __read_unit_unsorted,
+        29091: __read_list,
+        29093: __read_list,
+        29099: __read_annotations_old,
+        29100: __skip_information_old,
+        29106: __read_segment,
+        29107: __read_unit_old,
+        29109: __read_annotations,
+        29110: __read_spiketrain_timestamped,
+        29112: __read_segment_list,
+        29113: __skip_information,
+        29114: __read_segment_list_var,
+        29115: __read_spike_var,
+        29116: __read_unit,
+        29117: __read_segment_list_v8,
+        29119: __read_unit_list_timestamped,
+        29120: __read_segment_list_v9,
+        29121: __read_spiketrain_indexed,
+    }
 
 
-def convert_brainwaresrc_timestamp(timestamp,
-                                   start_date=datetime(1899, 12, 30)):
+def convert_brainwaresrc_timestamp(timestamp, start_date=datetime(1899, 12, 30)):
     """
     convert_brainwaresrc_timestamp(timestamp, start_date) - convert a timestamp
     in brainware src file units to a python datetime object.
@@ -1507,23 +1479,23 @@ def convert_brainwaresrc_timestamp(timestamp,
     return start_date + timedelta(days=timestamp)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # run this when calling the file directly as a benchmark
     from neo.test.iotest.test_brainwaresrcio import FILES_TO_TEST
     from neo.test.iotest.common_io_test import url_for_tests
-    from neo.test.iotest.tools import (create_local_temp_dir,
-                                       download_test_file,
-                                       get_test_file_full_path,
-                                       make_all_directories)
+    from neo.test.iotest.tools import (
+        create_local_temp_dir,
+        download_test_file,
+        get_test_file_full_path,
+        make_all_directories,
+    )
 
-    shortname = BrainwareSrcIO.__name__.lower().strip('io')
+    shortname = BrainwareSrcIO.__name__.lower().strip("io")
     local_test_dir = create_local_temp_dir(shortname)
     url = url_for_tests + shortname
-    FILES_TO_TEST.remove('long_170s_1rep_1clust_ch2.src')
+    FILES_TO_TEST.remove("long_170s_1rep_1clust_ch2.src")
     make_all_directories(FILES_TO_TEST, local_test_dir)
     download_test_file(FILES_TO_TEST, local_test_dir, url)
-    for path in get_test_file_full_path(ioclass=BrainwareSrcIO,
-                                        filename=FILES_TO_TEST,
-                                        directory=local_test_dir):
+    for path in get_test_file_full_path(ioclass=BrainwareSrcIO, filename=FILES_TO_TEST, directory=local_test_dir):
         ioobj = BrainwareSrcIO(path)
         ioobj.read_all_blocks(lazy=False)

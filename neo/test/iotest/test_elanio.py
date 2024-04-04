@@ -8,13 +8,14 @@ from neo.io import ElanIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-class TestElanIO(BaseTestIO, unittest.TestCase, ):
+class TestElanIO(
+    BaseTestIO,
+    unittest.TestCase,
+):
     ioclass = ElanIO
-    entities_to_download = [
-        'elan'
-    ]
+    entities_to_download = ["elan"]
     entities_to_test = [
-        'elan/File_elan_1.eeg',
+        "elan/File_elan_1.eeg",
     ]
 
 

@@ -1,6 +1,6 @@
 [project]
 name = "neo"
-version = "0.13.0.dev0"
+version = "0.13.1.dev"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
@@ -62,7 +62,7 @@ test = [
     "coverage",
     "coveralls",
     "pillow",
-    "sonpy",
+    "sonpy;python_version<'3.10'",
     "pynwb",
     "probeinterface",
     "zugbruecke>=0.2",
@@ -70,7 +70,8 @@ test = [
 ]
 
 docs = [
-    "docutils<0.18",
+    "docutils",
+    "sphinx",
     "sphinx-inline-tabs",
     "sphinx-gallery",
     "pydata-sphinx-theme",
@@ -83,7 +84,8 @@ docs = [
 
 dev = [
     "build",
-    "twine"
+    "twine",
+    "black"
 ]
 
 igorproio = ["igor2"]
@@ -124,3 +126,7 @@ all = [
     "zugbruecke>=0.2; sys_platform!='win32'",
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable
+
+
+[tool.black]
+line-length = 120
