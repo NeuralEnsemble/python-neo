@@ -21,7 +21,9 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, SpikeTrain, AnalogSignal
 
-value_type_dict = {"V": pq.mV, "I": pq.pA, "g": pq.CompoundUnit("10^-9*S"), "no type": pq.dimensionless}
+value_type_dict = {"V": pq.mV, "I": pq.pA, 
+                   "g": pq.CompoundUnit("10^-9*S"), 
+                   "no type": pq.dimensionless}
 
 
 class NestIO(BaseIO):
@@ -57,8 +59,7 @@ class NestIO(BaseIO):
     supported_target_objects = ['SpikeTrain', 'AnalogSignal']
     mode = 'file'
 
-    def __init__(self, filenames=None, target_object='SpikeTrain',
-                 additional_parameters={}):
+    def __init__(self, filenames=None, target_object='SpikeTrain', **kwargs):
         """
         Parameters
         ----------
@@ -67,6 +68,9 @@ class NestIO(BaseIO):
             target_object : string or list of strings, default='SpikeTrain'
                 The type of neo object that should be read out from the input.
                 Options are: 'SpikeTrain', 'AnalogSignal'
+            kwargs : dict like
+                keyword arguments that will be passed to `numpy.loadtxt` see
+                https://numpy.org/devdocs/reference/generated/numpy.loadtxt.html
         """
         if target_object not in self.supported_target_objects:
             raise ValueError(f'{target_object} is not a valid object type. '
@@ -82,7 +86,7 @@ class NestIO(BaseIO):
 
         self.IOs = []
         for filename in filenames:
-            self.IOs.append(ColumnIO(filename, additional_parameters))
+            self.IOs.append(ColumnIO(filename, **kwargs))
 
     def __read_analogsignals(
         self,
@@ -694,7 +698,7 @@ class ColumnIO:
     Class for reading an ASCII file containing multiple columns of data.
     """
 
-    def __init__(self, filename, additional_parameters={}):
+    def __init__(self, filename, **kwargs):
         """
         filename: string, path to ASCII file to read.
         """
@@ -719,12 +723,11 @@ class ColumnIO:
             warnings.warn(f'Ignoring {str(header_size)} header lines.')
 
         if '.' not in line:
-            additional_parameters['dtype'] = np.int32
+            kwargs['dtype'] = np.int32
         else:
-            additional_parameters['dtype'] = np.float32
+            kwargs['dtype'] = np.float32
 
-        self.data = np.loadtxt(self.filename, skiprows=header_size,
-                               **additional_parameters)
+        self.data = np.loadtxt(self.filename, skiprows=header_size, **kwargs)
 
         if len(self.data.shape) == 1:
             self.data = self.data[:, np.newaxis]
