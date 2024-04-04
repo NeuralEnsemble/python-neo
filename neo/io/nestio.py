@@ -76,7 +76,7 @@ class NestIO(BaseIO):
             raise ValueError(f'{target_object} is not a valid object type. '
                              f'Valid values are {self.objects}.')
 
-        # Ensure right dimensionality
+        # Ensure filenames is always a list
         if isinstance(filenames, str):
             filenames = [filenames]
 
