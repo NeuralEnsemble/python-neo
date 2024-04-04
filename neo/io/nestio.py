@@ -64,7 +64,7 @@ class NestIO(BaseIO):
         Parameters
         ----------
             filenames: string or list of strings, default=None
-                The filename or list of filename to load.
+                The filename or list of filenames to load.
             target_object : string or list of strings, default='SpikeTrain'
                 The type of neo object that should be read out from the input.
                 Options are: 'SpikeTrain', 'AnalogSignal'
