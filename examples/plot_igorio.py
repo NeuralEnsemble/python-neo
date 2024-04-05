@@ -3,14 +3,16 @@ IgorProIO Demo
 ===========================
 
 """
-
+###########################################################
+# Import our packages
 import os
 from urllib.request import urlretrieve
 import zipfile
 import matplotlib.pyplot as plt
 from neo.io import get_io
 
-
+#############################################################
+# Then download some data
 # Downloaded from Human Brain Project Collaboratory
 # Digital Reconstruction of Neocortical Microcircuitry (nmc-portal)
 # http://microcircuits.epfl.ch/#/animal/8ecde7d1-b2d2-11e4-b949-6003088da632
@@ -23,7 +25,10 @@ zip_ref = zipfile.ZipFile(filename_zip)  # create zipfile object
 zip_ref.extract(path=".", member=filename)  # extract file to dir
 zip_ref.close()
 
-
+######################################################
+# Once we have our data we can use `get_io` to find an 
+# io (Igor in this case). Then we read the analogsignals
+# Finally we will make some nice plots
 reader = get_io(filename)
 signal = reader.read_analogsignal()
 plt.plot(signal.times, signal)

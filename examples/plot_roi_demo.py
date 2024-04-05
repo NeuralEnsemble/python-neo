@@ -3,6 +3,8 @@ Working with RegionOfInterest objects
 =====================================
 
 """
+#############################################
+# Import our packages
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +13,7 @@ from numpy.random import rand
 import random
 import quantities as pq
 
-
+##################################################################
 # First we create our image_sequence. Let's generate some data
 
 l = []
@@ -24,6 +26,8 @@ for frame in range(50):
 
 image_seq = ImageSequence(l, sampling_rate=500 * pq.Hz, spatial_scale="m", units="V")
 
+#################################################################
+# Now we will write a function for plotting an roi
 def plot_roi(roi, shape):
     img = rand(120, 100)
     pir = np.array(roi.pixels_in_region()).T
@@ -35,6 +39,8 @@ def plot_roi(roi, shape):
     ax = plt.gca()
     ax.add_artist(shape)
 
+##################################################################
+# Finally we will plot each roi
 
 roi = CircularRegionOfInterest(image_sequence=image_seq, x=50.3, y=50.8, radius=30.2)
 shape = plt.Circle(roi.centre, roi.radius, color="r", fill=False)

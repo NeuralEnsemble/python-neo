@@ -4,6 +4,9 @@ ImageSequences
 
 """
 
+##########################################################
+# Let's import some packages
+
 from neo.core import ImageSequence
 from neo.core import RectangularRegionOfInterest, CircularRegionOfInterest, PolygonRegionOfInterest
 import matplotlib.pyplot as plt
@@ -11,7 +14,11 @@ import quantities as pq
 
 import random
 
-# generate data
+
+############################################################
+# Now we need to generate some data
+# We will just make a nice box and then we can attach this 
+# ImageSequence to a variety of ROIs
 
 l = []
 for frame in range(50):
@@ -28,6 +35,9 @@ result = image_seq.signal_from_region(
     CircularRegionOfInterest(image_seq, 10, 10, 5),
     PolygonRegionOfInterest(image_seq,(50, 25), (50, 45), (14, 65), (90, 80)),
 )
+
+###############################################################
+# It is easy to plot our results using matplotlib
 
 for i in range(len(result)):
     plt.figure()

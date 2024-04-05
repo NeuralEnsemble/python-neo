@@ -1,5 +1,6 @@
 """
-Example for usecases.rst
+Analyzing and Plotting Data with Neo Structures
+===============================================
 """
 
 from itertools import cycle
@@ -57,8 +58,10 @@ for segment in block.segments:
                 current_group.add(signals[tetrode_id])
 
 
-# Now plot the data
+###################################################
+# Now we will plot the data
 
+###################################################
 # .. by trial
 plt.figure()
 for seg in block.segments:
@@ -70,6 +73,7 @@ for seg in block.segments:
     plt.title(f"PSTH in segment {seg.index}")
 plt.show()
 
+####################################################
 # ..by neuron
 
 plt.figure()
@@ -81,7 +85,8 @@ for i, group in enumerate(block.groups):
     plt.title(f"PSTH of unit {group.name}")
 plt.show()
 
-# ..by tetrode
+###########################################################
+# ..by tetrode (or other electrode number)
 
 plt.figure()
 for i, tetrode_id in enumerate(block.annotations["tetrode_ids"]):
