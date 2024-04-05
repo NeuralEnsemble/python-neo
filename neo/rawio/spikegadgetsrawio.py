@@ -107,10 +107,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
         stream_bytes = {}
         for device in hconf:
             stream_id = device.attrib["name"]
-            if 'numBytes' in device.attrib.keys():
-               num_bytes = int(device.attrib["numBytes"])
-               stream_bytes[stream_id] = packet_size
-               packet_size += num_bytes
+            if "numBytes" in device.attrib.keys():
+                num_bytes = int(device.attrib["numBytes"])
+                stream_bytes[stream_id] = packet_size
+                packet_size += num_bytes
 
         # timestamps 4 uint32
         self._timestamp_byte = packet_size
@@ -140,7 +140,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     # TODO LATER: deal with "headstageSensor" which have interleaved
                     continue
 
-                if ('dataType' in channel.attrib.keys()) and (channel.attrib["dataType"] == "analog"):
+                if ("dataType" in channel.attrib.keys()) and (channel.attrib["dataType"] == "analog"):
 
                     if stream_id not in stream_ids:
                         stream_ids.append(stream_id)
