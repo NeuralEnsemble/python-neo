@@ -77,3 +77,7 @@ doc/*.nev
 doc/*.ns5
 doc/*.nix
 doc/*.nwb
+*.plx
+*.smr
+B95.zip
+grouped_ephys
