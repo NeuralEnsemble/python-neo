@@ -53,6 +53,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from neo.core import NeoReadWriteError
 
 import numpy as np
 
@@ -124,7 +125,8 @@ class AxonRawIO(BaseRawIO):
         elif version >= 2.0:
             mode = info["protocol"]["nOperationMode"]
 
-        assert mode in [1, 2, 3, 5], f"Mode {mode} is not supported"
+        if mode not in [1, 2, 3, 5]:
+            raise NeoReadWriteError(f"Mode {mode} is not currently supported in Neo")
         # event-driven variable-length mode (mode 1)
         # event-driven fixed-length mode (mode 2 or 5)
         # gap free mode (mode 3) can be in several episodes

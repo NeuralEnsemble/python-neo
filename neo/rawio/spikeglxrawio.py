@@ -128,7 +128,8 @@ class SpikeGLXRawIO(BaseRawIO):
         for info in self.signals_info_list:
             # key is (seg_index, stream_name)
             key = (info["seg_index"], info["stream_name"])
-            assert key not in self.signals_info_dict
+            if key in self.signals_info_dict:
+                raise KeyError(f"key {key} is already in the signals_info_dict")
             self.signals_info_dict[key] = info
 
             # create memmap

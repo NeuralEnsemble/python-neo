@@ -24,6 +24,7 @@ from collections import OrderedDict
 from packaging.version import Version as V
 
 import numpy as np
+from neo.core import NeoReadWriteError
 
 from .baserawio import (
     BaseRawIO,
@@ -166,9 +167,10 @@ class IntanRawIO(BaseRawIO):
             time_stream_index = max(self._raw_data.keys())
             timestamp = self._raw_data[time_stream_index][0]
 
-        assert np.all(np.diff(timestamp) == 1), (
-            "Timestamp have gaps, this could be due " "to a corrupted file or an inappropriate file merge"
-        )
+        if not np.all(np.diff(timestamp) == 1):
+            raise NeoReadWriteError(
+                f"Timestamp have gaps, this could be due to a corrupted file or an inappropriate file merge"
+            )
 
         # signals
         signal_channels = []
@@ -448,7 +450,8 @@ def read_rhs(filename):
             if bool(group_info["signal_group_enabled"]):
                 for c in range(group_info["channel_num"]):
                     chan_info = read_variable_header(f, rhs_signal_channel_header)
-                    assert chan_info["signal_type"] not in (1, 2)
+                    if chan_info["signal_type"] in (1, 2):
+                        raise NeoReadWriteError("signal_type of 1 or 2 is not yet implemented in Neo")
                     if bool(chan_info["channel_enabled"]):
                         channels_by_type[chan_info["signal_type"]].append(chan_info)
 

@@ -21,6 +21,8 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+from neo.core import NeoReadWriteError
+
 
 RECORD_SIZE = 1024
 HEADER_SIZE = 1024
@@ -143,9 +145,8 @@ class OpenEphysRawIO(BaseRawIO):
 
                 if channel_has_gaps:
                     # protect against strange timestamp block like in file 'OpenEphys_SampleData_3' CH32
-                    assert (
-                        np.median(diff) == RECORD_SIZE
-                    ), f"This file has a non valid data block size for channel {chan_id}, this case cannot be handled"
+                    if not np.median(diff) == RECORD_SIZE:
+                        raise NeoReadWriteError(f"This file has a non valid data block size for channel {chan_id}, this case cannot be handled")
 
                 if seg_index == 0:
                     # add in channel list
@@ -195,7 +196,8 @@ class OpenEphysRawIO(BaseRawIO):
                 last = all_last_timestamps[0]
 
             # check unique sampling rate
-            assert all(all_samplerate[0] == e for e in all_samplerate), "Not all signals have the same sample rate"
+            if not all(all_samplerate[0] == e for e in all_samplerate):
+                raise NeoReadWriteError("Not all signals have the same sample rate")
 
             self._sig_length[seg_index] = last - first
             self._sig_timestamp0[seg_index] = first
@@ -250,7 +252,8 @@ class OpenEphysRawIO(BaseRawIO):
                 if self._spike_sampling_rate is None:
                     self._spike_sampling_rate = spike_info["sampleRate"]
                 else:
-                    assert self._spike_sampling_rate == spike_info["sampleRate"], "mismatch in spike sampling rate"
+                    if self._spike_sampling_rate != spike_info["sampleRate"]:
+                        raise ValueError("There is a mismatch in spike sampling rate")
 
                 # scan all to detect several all unique(sorted_ids)
                 all_sorted_ids = []

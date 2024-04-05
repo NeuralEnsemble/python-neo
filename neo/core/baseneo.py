@@ -34,6 +34,9 @@ logger = logging.getLogger("Neo")
 class MergeError(Exception):
     pass
 
+class NeoReadWriteError(IOError):
+    pass
+
 
 def _check_annotations(value):
     """
@@ -68,7 +71,8 @@ def merge_annotation(a, b):
         For strings: concatenate with ';'
         Otherwise: fail if the annotations are not equal
     """
-    assert type(a) == type(b), f"type({a})) {type(a)} != type({b}) {type(b)}"
+    if type(a) != type(b):
+        raise TypeError(f"type({a}) {type(a)} != type({b}) {type(b)}")
     if isinstance(a, dict):
         return merge_annotations(a, b)
     elif isinstance(a, np.ndarray):  # concatenate b to a
@@ -81,7 +85,8 @@ def merge_annotation(a, b):
         else:
             return a + ";" + b
     else:
-        assert a == b, f"{a} != {b}"
+        if a != b:
+            raise ValueError(f"{a} != {b}")
         return a
 
 
@@ -131,7 +136,8 @@ def intersect_annotations(A, B):
 
     for key in set(A.keys()) & set(B.keys()):
         v1, v2 = A[key], B[key]
-        assert type(v1) == type(v2), f"type({v1}) {type(v1)} != type({v2}) {type(v2)}"
+        if type(v1) != type(v2):
+            raise TypeError(f"type({v1}) {type(v1)} != type({v2}) {type(v2)}")
         if isinstance(v1, dict) and v1 == v2:
             result[key] = deepcopy(v1)
         elif isinstance(v1, str) and v1 == v2:
