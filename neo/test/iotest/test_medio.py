@@ -13,6 +13,7 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 try:
     import dhn_med_py
+
     HAVE_DHN_MED = True
 except ImportError:
     HAVE_DHN_MED = False
@@ -20,20 +21,20 @@ except ImportError:
 
 # This runs standard tests, this is mandatory for all IOs
 @unittest.skipUnless(HAVE_DHN_MED, "requires dhn_med_py package and all its dependencies")
-class TestMedIO(BaseTestIO, unittest.TestCase, ):
+class TestMedIO(
+    BaseTestIO,
+    unittest.TestCase,
+):
     ioclass = MedIO
-    entities_to_download = ['med']
-    entities_to_test = [
-        'med/sine_waves.medd',
-        'med/test.medd'
-    ]
+    entities_to_download = ["med"]
+    entities_to_test = ["med/sine_waves.medd", "med/test.medd"]
 
     def setUp(self):
 
         super().setUp()
-        self.dirname = self.get_local_path('med/sine_waves.medd')
-        self.dirname2 = self.get_local_path('med/test.medd')
-        self.password = 'L2_password'
+        self.dirname = self.get_local_path("med/sine_waves.medd")
+        self.dirname2 = self.get_local_path("med/test.medd")
+        self.password = "L2_password"
 
     def test_read_segment_lazy(self):
 
@@ -56,8 +57,8 @@ class TestMedIO(BaseTestIO, unittest.TestCase, ):
             self.assertNotEqual(st.size, 0)
 
         # annotations
-        #assert 'seg_extra_info' in seg.annotations
-        assert seg.name == 'Seg #0 Block #0'
+        # assert 'seg_extra_info' in seg.annotations
+        assert seg.name == "Seg #0 Block #0"
         for anasig in seg.analogsignals:
             assert anasig.name is not None
         for ev in seg.events:
@@ -74,16 +75,16 @@ class TestMedIO(BaseTestIO, unittest.TestCase, ):
         self.assertTrue(bl.annotations)
 
         for count, seg in enumerate(bl.segments):
-            assert seg.name == 'Seg #' + str(count) + ' Block #0'
+            assert seg.name == "Seg #" + str(count) + " Block #0"
 
         for anasig in seg.analogsignals:
-                assert anasig.name is not None
+            assert anasig.name is not None
 
         # Verify that the block annotations from the MED session are
         # read properly.  There are a lot of annotations, so we'll just
         # spot-check a couple of them.
-        assert(bl.annotations['metadata']['recording_country'] == 'United States')
-        assert(bl.annotations['metadata']['AC_line_frequency'] == 60.0)
+        assert bl.annotations["metadata"]["recording_country"] == "United States"
+        assert bl.annotations["metadata"]["AC_line_frequency"] == 60.0
 
         r.close()
 
@@ -112,12 +113,12 @@ class TestMedIO(BaseTestIO, unittest.TestCase, ):
         seg = r.read_segment(time_slice=(t_start, t_stop))
 
         # Test that 300 ms were read, which at 32 kHz, is 9600 samples
-        self.assertAlmostEqual(seg.analogsignals[0].shape[0], 9600, delta=1.)
+        self.assertAlmostEqual(seg.analogsignals[0].shape[0], 9600, delta=1.0)
         # Test that it read from 3 channels
         self.assertEqual(seg.analogsignals[0].shape[1], 3)
 
-        self.assertAlmostEqual(seg.t_start.rescale(t_start.units), t_start, delta=5.)
-        self.assertAlmostEqual(seg.t_stop.rescale(t_stop.units), t_stop, delta=5.)
+        self.assertAlmostEqual(seg.t_start.rescale(t_start.units), t_start, delta=5.0)
+        self.assertAlmostEqual(seg.t_stop.rescale(t_stop.units), t_stop, delta=5.0)
 
         r.close()
 

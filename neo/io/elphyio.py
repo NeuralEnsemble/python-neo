@@ -87,7 +87,7 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import (Block, Segment, AnalogSignal, Event, SpikeTrain)
+from neo.core import Block, Segment, AnalogSignal, Event, SpikeTrain
 
 
 # --------------------------------------------------------
@@ -159,7 +159,7 @@ class BaseSignal:
 
     @property
     def data(self):
-        raise NotImplementedError('must be overloaded in subclass')
+        raise NotImplementedError("must be overloaded in subclass")
 
 
 class ElphySignal(BaseSignal):
@@ -174,15 +174,13 @@ class ElphySignal(BaseSignal):
                 ``get_signal_data`` function of the ```layout`` object.
     """
 
-    def __init__(self, layout, episode, channel, x_unit, y_unit, sampling_frequency, start, stop,
-                 name=None):
+    def __init__(self, layout, episode, channel, x_unit, y_unit, sampling_frequency, start, stop, name=None):
         super().__init__(layout, episode, sampling_frequency, start, stop, name)
         self.channel = channel
         self.units = [x_unit, y_unit]
 
     def __str__(self):
-        return "{} ep_{} ch_{} [{}, {}]".format(
-            self.layout.file.name, self.episode, self.channel, self.x_unit, self.y_unit)
+        return f"{self.layout.file.name} ep_{self.episode} ch_{self.channel} [{self.x_unit}, {self.y_unit}]"
 
     def __repr__(self):
         return self.__str__()
@@ -215,15 +213,13 @@ class ElphyTag(BaseSignal):
 
     """
 
-    def __init__(self, layout, episode, number, x_unit, sampling_frequency, start, stop,
-                 name=None):
+    def __init__(self, layout, episode, number, x_unit, sampling_frequency, start, stop, name=None):
         super().__init__(layout, episode, sampling_frequency, start, stop, name)
         self.number = number
         self.units = [x_unit, None]
 
     def __str__(self):
-        return "{} : ep_{} tag_ch_{} [{}]".format(
-            self.layout.file.name, self.episode, self.number, self.x_unit)
+        return f"{self.layout.file.name} : ep_{self.episode} tag_ch_{ self.number} [{self.x_unit}]"
 
     def __repr__(self):
         return self.__str__()
@@ -275,8 +271,7 @@ class ElphyEvent:
         self.ch_number = ch_number
 
     def __str__(self):
-        return "{} : ep_{} evt_ch_{} [{}]".format(
-            self.layout.file.name, self.episode, self.number, self.x_unit)
+        return f"{self.layout.file.name} : ep_{self.episode} evt_ch_{self.number} [{self.x_unit}]"
 
     def __repr__(self):
         return self.__str__()
@@ -316,8 +311,20 @@ class ElphySpikeTrain(ElphyEvent):
     ``waveforms`` : a property triggering waveforms extraction.
     """
 
-    def __init__(self, layout, episode, number, x_unit, n_events, wf_sampling_frequency,
-                 wf_samples, unit_x_wf, unit_y_wf, t_start, name=None):
+    def __init__(
+        self,
+        layout,
+        episode,
+        number,
+        x_unit,
+        n_events,
+        wf_sampling_frequency,
+        wf_samples,
+        unit_x_wf,
+        unit_y_wf,
+        t_start,
+        name=None,
+    ):
         super().__init__(layout, episode, number, x_unit, n_events, name)
         self.wf_samples = wf_samples
         self.wf_sampling_frequency = wf_sampling_frequency
@@ -346,8 +353,7 @@ class ElphySpikeTrain(ElphyEvent):
 
     @property
     def waveforms(self):
-        return self.layout.get_waveform_data(self.episode, self.number) if self.wf_samples \
-            else None
+        return self.layout.get_waveform_data(self.episode, self.number) if self.wf_samples else None
 
 
 # --------------------------------------------------------
@@ -406,8 +412,7 @@ class ElphyBlock(BaseBlock):
 
     """
 
-    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="i",
-                 parent_block=None):
+    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="i", parent_block=None):
         super().__init__(layout, identifier, start, size)
         # a block may be a sub-block of another block
         self.parent_block = parent_block
@@ -421,7 +426,7 @@ class ElphyBlock(BaseBlock):
         # a number of bytes equal to the actual size of the string
         l_ident = len(self.identifier)
         if fixed_length:
-            l_ident += (fixed_length - l_ident)
+            l_ident += fixed_length - l_ident
         self.header_size = l_ident + 1 + type_dict[size_format]
         # starting point of data located in the block
         self.data_offset = self.start + self.header_size
@@ -432,8 +437,7 @@ class ElphyBlock(BaseBlock):
         self.sub_blocks = list()
 
     def __repr__(self):
-        return "{} : size = {}, start = {}, end = {}".format(
-            self.identifier, self.size, self.start, self.end)
+        return f"{self.identifier} : size = {self.size}, start = {self.start}, end = {self.end}"
 
     def add_sub_block(self, block):
         """
@@ -460,11 +464,8 @@ class FileInfoBlock(ElphyBlock):
     the file info extraction.
     """
 
-    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="i",
-                 parent_block=None):
-        super().__init__(layout, identifier, start,
-                         size, fixed_length, size_format,
-                         parent_block=parent_block)
+    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="i", parent_block=None):
+        super().__init__(layout, identifier, start, size, fixed_length, size_format, parent_block=parent_block)
         self.header = None
         self.file = self.layout.file
 
@@ -491,28 +492,28 @@ class FileInfoBlock(ElphyBlock):
         """
 
         header = dict()
-        header['n_div_x'] = read_from_char(self.file, 'h')
-        header['n_div_y'] = read_from_char(self.file, 'h')
-        header['gray_levels'] = read_from_char(self.file, 'h')
-        header['position_x'] = read_from_char(self.file, 'ext')
-        header['position_y'] = read_from_char(self.file, 'ext')
-        header['length'] = read_from_char(self.file, 'ext')
-        header['width'] = read_from_char(self.file, 'ext')
-        header['orientation'] = read_from_char(self.file, 'ext')
-        header['expansion'] = read_from_char(self.file, 'h')
-        header['scotoma'] = read_from_char(self.file, 'h')
-        header['seed'] = read_from_char(self.file, 'h')
+        header["n_div_x"] = read_from_char(self.file, "h")
+        header["n_div_y"] = read_from_char(self.file, "h")
+        header["gray_levels"] = read_from_char(self.file, "h")
+        header["position_x"] = read_from_char(self.file, "ext")
+        header["position_y"] = read_from_char(self.file, "ext")
+        header["length"] = read_from_char(self.file, "ext")
+        header["width"] = read_from_char(self.file, "ext")
+        header["orientation"] = read_from_char(self.file, "ext")
+        header["expansion"] = read_from_char(self.file, "h")
+        header["scotoma"] = read_from_char(self.file, "h")
+        header["seed"] = read_from_char(self.file, "h")
         # dt_on and dt_off may not exist in old revcor formats
         rollback = self.file.tell()
 
-        header['dt_on'] = read_from_char(self.file, 'ext')
-        if header['dt_on'] is None:
+        header["dt_on"] = read_from_char(self.file, "ext")
+        if header["dt_on"] is None:
             self.file.seek(rollback)
 
         rollback = self.file.tell()
 
-        header['dt_off'] = read_from_char(self.file, 'ext')
-        if header['dt_off'] is None:
+        header["dt_off"] = read_from_char(self.file, "ext")
+        if header["dt_off"] is None:
             self.file.seek(rollback)
 
         return header
@@ -526,20 +527,15 @@ class ClassicFileInfo(FileInfoBlock):
 
     def detect_protocol_from_name(self, path):
         pattern = r"\d{4}(\d+|\D)\D"
-        codes = {
-            'r': 'sparsenoise',
-            'o': 'movingbar',
-            'f': 'flashbar',
-            'm': 'multistim'  # here just for assertion
-        }
+        codes = {"r": "sparsenoise", "o": "movingbar", "f": "flashbar", "m": "multistim"}  # here just for assertion
         filename = path.split(path)[1]
         match = re.search(pattern, path)
-        if hasattr(match, 'end'):
+        if hasattr(match, "end"):
             code = codes.get(path[match.end() - 1].lower(), None)
-            assert code != 'm', "multistim file detected"
+            assert code != "m", "multistim file detected"
             return code
-        elif 'spt' in filename.lower():
-            return 'spontaneousactivity'
+        elif "spt" in filename.lower():
+            return "spontaneousactivity"
         else:
             return None
 
@@ -547,11 +543,11 @@ class ClassicFileInfo(FileInfoBlock):
         if self.layout and self.layout.info_block:
             self.file.seek(self.layout.info_block.data_offset)
             version = self.get_title()
-            if version in ['REVCOR1', 'REVCOR2', 'REVCOR + PAIRING']:
+            if version in ["REVCOR1", "REVCOR2", "REVCOR + PAIRING"]:
                 name = "sparsenoise"
-            elif version in ['BARFLASH']:
+            elif version in ["BARFLASH"]:
                 name = "flashbar"
-            elif version in ['ORISTIM', 'ORISTM', 'ORISTM1', 'ORITUN']:
+            elif version in ["ORISTIM", "ORISTM", "ORISTM1", "ORITUN"]:
                 name = "movingbar"
             else:
                 name = self.detect_protocol_from_name(self.file.name)
@@ -560,8 +556,8 @@ class ClassicFileInfo(FileInfoBlock):
         return None, None
 
     def get_title(self):
-        title_length, title = struct.unpack('<B20s', self.file.read(21))
-        if hasattr(title, 'decode'):
+        title_length, title = struct.unpack("<B20s", self.file.read(21))
+        if hasattr(title, "decode"):
             title = title.decode()
         return str(title[0:title_length])
 
@@ -569,15 +565,15 @@ class ClassicFileInfo(FileInfoBlock):
         header = dict()
         if self.layout and self.layout.info_block:
             self.file.seek(self.layout.info_block.data_offset)
-            header['title'] = self.get_title()
+            header["title"] = self.get_title()
 
             # test the protocol name to trigger
             # the right header extraction
-            if self.layout.elphy_file.protocol == 'sparsenoise':
+            if self.layout.elphy_file.protocol == "sparsenoise":
                 header.update(self.get_sparsenoise_revcor())
-            elif self.layout.elphy_file.protocol == 'flashbar':
+            elif self.layout.elphy_file.protocol == "flashbar":
                 header.update(self.get_flashbar_header())
-            elif self.layout.elphy_file.protocol == 'movingbar':
+            elif self.layout.elphy_file.protocol == "movingbar":
                 header.update(self.get_movingbar_header())
 
             self.file.seek(0)
@@ -588,24 +584,24 @@ class ClassicFileInfo(FileInfoBlock):
         orientations = list()
         tmp = self.file.tell()
         for _ in range(0, 50):
-            l, ori = struct.unpack('<B5s', self.file.read(6))
+            l, ori = struct.unpack("<B5s", self.file.read(6))
             try:
                 orientations.append(float(ori[0:l]))
             except:
                 return header
-        header['orientations'] = orientations if orientations else None
+        header["orientations"] = orientations if orientations else None
         self.file.seek(tmp + 50 * 6)
-        _tmp = read_from_char(self.file, 'h')
-        header['number_of_orientations'] = _tmp if tmp < 0 else None
-        _tmp = read_from_char(self.file, 'h')
-        header['number_of_repetitions'] = _tmp if tmp < 0 else None
-        header['position_x'] = read_from_char(self.file, 'ext')
-        header['position_y'] = read_from_char(self.file, 'ext')
-        header['length'] = read_from_char(self.file, 'ext')
-        header['width'] = read_from_char(self.file, 'ext')
-        header['orientation'] = read_from_char(self.file, 'ext')
-        header['excursion'] = read_from_char(self.file, 'i')
-        header['dt_on'] = None
+        _tmp = read_from_char(self.file, "h")
+        header["number_of_orientations"] = _tmp if tmp < 0 else None
+        _tmp = read_from_char(self.file, "h")
+        header["number_of_repetitions"] = _tmp if tmp < 0 else None
+        header["position_x"] = read_from_char(self.file, "ext")
+        header["position_y"] = read_from_char(self.file, "ext")
+        header["length"] = read_from_char(self.file, "ext")
+        header["width"] = read_from_char(self.file, "ext")
+        header["orientation"] = read_from_char(self.file, "ext")
+        header["excursion"] = read_from_char(self.file, "i")
+        header["dt_on"] = None
         return header
 
     def get_movingbar_header(self):
@@ -613,25 +609,25 @@ class ClassicFileInfo(FileInfoBlock):
         orientations = list()
         tmp = self.file.tell()
         for _ in range(0, 50):
-            l, ori = struct.unpack('<B5s', self.file.read(6))
+            l, ori = struct.unpack("<B5s", self.file.read(6))
             orientations.append(float(ori[0:l]))
-        header['orientations'] = orientations if orientations else None
+        header["orientations"] = orientations if orientations else None
         self.file.seek(tmp + 50 * 6)
 
-        _tmp = read_from_char(self.file, 'h')
-        header['number_of_orientations'] = _tmp if tmp < 0 else None
+        _tmp = read_from_char(self.file, "h")
+        header["number_of_orientations"] = _tmp if tmp < 0 else None
 
-        _tmp = read_from_char(self.file, 'h')
-        header['number_of_repetitions'] = _tmp if tmp < 0 else None
-        header['position_x'] = read_from_char(self.file, 'ext')
-        header['position_y'] = read_from_char(self.file, 'ext')
-        header['length'] = read_from_char(self.file, 'ext')
-        header['width'] = read_from_char(self.file, 'ext')
-        header['orientation'] = read_from_char(self.file, 'ext')
-        header['excursion'] = read_from_char(self.file, 'h')
-        header['speed'] = read_from_char(self.file, 'h')
-        header['dim_x'] = read_from_char(self.file, 'h')
-        header['dim_y'] = read_from_char(self.file, 'h')
+        _tmp = read_from_char(self.file, "h")
+        header["number_of_repetitions"] = _tmp if tmp < 0 else None
+        header["position_x"] = read_from_char(self.file, "ext")
+        header["position_y"] = read_from_char(self.file, "ext")
+        header["length"] = read_from_char(self.file, "ext")
+        header["width"] = read_from_char(self.file, "ext")
+        header["orientation"] = read_from_char(self.file, "ext")
+        header["excursion"] = read_from_char(self.file, "h")
+        header["speed"] = read_from_char(self.file, "h")
+        header["dim_x"] = read_from_char(self.file, "h")
+        header["dim_y"] = read_from_char(self.file, "h")
         return header
 
 
@@ -645,13 +641,13 @@ class MultistimFileInfo(FileInfoBlock):
 
             # get the first four parameters
             # acqLGN = read_from_char(self.file, 'i')
-            center = read_from_char(self.file, 'i')
-            surround = read_from_char(self.file, 'i')
+            center = read_from_char(self.file, "i")
+            surround = read_from_char(self.file, "i")
             version = self.get_title()
 
             # test the type of protocol from
             # center and surround parameters
-            if (surround >= 2):
+            if surround >= 2:
                 name = None
                 version = None
             else:
@@ -672,9 +668,9 @@ class MultistimFileInfo(FileInfoBlock):
         return None, None
 
     def get_title(self):
-        title_length = read_from_char(self.file, 'B')
-        title, = struct.unpack('<%ss' % title_length, self.file.read(title_length))
-        if hasattr(title, 'decode'):
+        title_length = read_from_char(self.file, "B")
+        (title,) = struct.unpack(f"<{title_length}s", self.file.read(title_length))
+        if hasattr(title, "decode"):
             title = title.decode()
         self.file.seek(self.file.tell() + 255 - title_length)
         return title
@@ -687,14 +683,14 @@ class MultistimFileInfo(FileInfoBlock):
             self.file.seek(sub_block.data_offset)
 
             # get the first four parameters
-            acqLGN = read_from_char(self.file, 'i')
-            center = read_from_char(self.file, 'i')
-            surround = read_from_char(self.file, 'i')
+            acqLGN = read_from_char(self.file, "i")
+            center = read_from_char(self.file, "i")
+            surround = read_from_char(self.file, "i")
             # store info in the header
-            header['acqLGN'] = acqLGN
-            header['center'] = center
-            header['surround'] = surround
-            if not (header['surround'] >= 2):
+            header["acqLGN"] = acqLGN
+            header["center"] = center
+            header["surround"] = surround
+            if not (header["surround"] >= 2):
                 header.update(self.get_center_header(center))
             self.file.seek(0)
         return header
@@ -733,90 +729,90 @@ class MultistimFileInfo(FileInfoBlock):
 
     def get_center_surround(self, center, surround):
         header = dict()
-        header['stim_center'] = self.get_center_header(center)
-        header['stim_surround'] = self.get_surround_header(surround)
+        header["stim_center"] = self.get_center_header(center)
+        header["stim_surround"] = self.get_surround_header(surround)
         return header
 
     def get_sparsenoise_center(self):
         header = dict()
-        header['title'] = self.get_title()
-        header['number_of_sequences'] = read_from_char(self.file, 'i')
-        header['pretrigger_duration'] = read_from_char(self.file, 'ext')
-        header['n_div_x'] = read_from_char(self.file, 'h')
-        header['n_div_y'] = read_from_char(self.file, 'h')
-        header['gray_levels'] = read_from_char(self.file, 'h')
-        header['position_x'] = read_from_char(self.file, 'ext')
-        header['position_y'] = read_from_char(self.file, 'ext')
-        header['length'] = read_from_char(self.file, 'ext')
-        header['width'] = read_from_char(self.file, 'ext')
-        header['orientation'] = read_from_char(self.file, 'ext')
-        header['expansion'] = read_from_char(self.file, 'h')
-        header['scotoma'] = read_from_char(self.file, 'h')
-        header['seed'] = read_from_char(self.file, 'h')
-        header['luminance_1'] = read_from_char(self.file, 'ext')
-        header['luminance_2'] = read_from_char(self.file, 'ext')
-        header['dt_count'] = read_from_char(self.file, 'i')
+        header["title"] = self.get_title()
+        header["number_of_sequences"] = read_from_char(self.file, "i")
+        header["pretrigger_duration"] = read_from_char(self.file, "ext")
+        header["n_div_x"] = read_from_char(self.file, "h")
+        header["n_div_y"] = read_from_char(self.file, "h")
+        header["gray_levels"] = read_from_char(self.file, "h")
+        header["position_x"] = read_from_char(self.file, "ext")
+        header["position_y"] = read_from_char(self.file, "ext")
+        header["length"] = read_from_char(self.file, "ext")
+        header["width"] = read_from_char(self.file, "ext")
+        header["orientation"] = read_from_char(self.file, "ext")
+        header["expansion"] = read_from_char(self.file, "h")
+        header["scotoma"] = read_from_char(self.file, "h")
+        header["seed"] = read_from_char(self.file, "h")
+        header["luminance_1"] = read_from_char(self.file, "ext")
+        header["luminance_2"] = read_from_char(self.file, "ext")
+        header["dt_count"] = read_from_char(self.file, "i")
         dt_array = list()
-        for _ in range(0, header['dt_count']):
-            dt_array.append(read_from_char(self.file, 'ext'))
-        header['dt_on'] = dt_array if dt_array else None
-        header['dt_off'] = read_from_char(self.file, 'ext')
+        for _ in range(0, header["dt_count"]):
+            dt_array.append(read_from_char(self.file, "ext"))
+        header["dt_on"] = dt_array if dt_array else None
+        header["dt_off"] = read_from_char(self.file, "ext")
         return header
 
     def get_sparsenoise_surround(self):
         header = dict()
-        header['title_surround'] = self.get_title()
-        header['gap'] = read_from_char(self.file, 'ext')
-        header['n_div_x'] = read_from_char(self.file, 'h')
-        header['n_div_y'] = read_from_char(self.file, 'h')
-        header['gray_levels'] = read_from_char(self.file, 'h')
-        header['expansion'] = read_from_char(self.file, 'h')
-        header['scotoma'] = read_from_char(self.file, 'h')
-        header['seed'] = read_from_char(self.file, 'h')
-        header['luminance_1'] = read_from_char(self.file, 'ext')
-        header['luminance_2'] = read_from_char(self.file, 'ext')
-        header['dt_on'] = read_from_char(self.file, 'ext')
-        header['dt_off'] = read_from_char(self.file, 'ext')
+        header["title_surround"] = self.get_title()
+        header["gap"] = read_from_char(self.file, "ext")
+        header["n_div_x"] = read_from_char(self.file, "h")
+        header["n_div_y"] = read_from_char(self.file, "h")
+        header["gray_levels"] = read_from_char(self.file, "h")
+        header["expansion"] = read_from_char(self.file, "h")
+        header["scotoma"] = read_from_char(self.file, "h")
+        header["seed"] = read_from_char(self.file, "h")
+        header["luminance_1"] = read_from_char(self.file, "ext")
+        header["luminance_2"] = read_from_char(self.file, "ext")
+        header["dt_on"] = read_from_char(self.file, "ext")
+        header["dt_off"] = read_from_char(self.file, "ext")
         return header
 
     def get_densenoise_center(self, is_binary):
         header = dict()
-        header['stimulus_type'] = "B" if is_binary else "T"
-        header['title'] = self.get_title()
-        _tmp = read_from_char(self.file, 'i')
-        header['number_of_sequences'] = _tmp if _tmp < 0 else None
+        header["stimulus_type"] = "B" if is_binary else "T"
+        header["title"] = self.get_title()
+        _tmp = read_from_char(self.file, "i")
+        header["number_of_sequences"] = _tmp if _tmp < 0 else None
         rollback = self.file.tell()
-        header['stimulus_duration'] = read_from_char(self.file, 'ext')
-        if header['stimulus_duration'] is None:
+        header["stimulus_duration"] = read_from_char(self.file, "ext")
+        if header["stimulus_duration"] is None:
             self.file.seek(rollback)
-        header['pretrigger_duration'] = read_from_char(self.file, 'ext')
-        header['n_div_x'] = read_from_char(self.file, 'h')
-        header['n_div_y'] = read_from_char(self.file, 'h')
-        header['position_x'] = read_from_char(self.file, 'ext')
-        header['position_y'] = read_from_char(self.file, 'ext')
-        header['length'] = read_from_char(self.file, 'ext')
-        header['width'] = read_from_char(self.file, 'ext')
-        header['orientation'] = read_from_char(self.file, 'ext')
-        header['expansion'] = read_from_char(self.file, 'h')
-        header['seed'] = read_from_char(self.file, 'h')
-        header['luminance_1'] = read_from_char(self.file, 'ext')
-        header['luminance_2'] = read_from_char(self.file, 'ext')
-        header['dt_on'] = read_from_char(self.file, 'ext')
-        header['dt_off'] = read_from_char(self.file, 'ext')
+        header["pretrigger_duration"] = read_from_char(self.file, "ext")
+        header["n_div_x"] = read_from_char(self.file, "h")
+        header["n_div_y"] = read_from_char(self.file, "h")
+        header["position_x"] = read_from_char(self.file, "ext")
+        header["position_y"] = read_from_char(self.file, "ext")
+        header["length"] = read_from_char(self.file, "ext")
+        header["width"] = read_from_char(self.file, "ext")
+        header["orientation"] = read_from_char(self.file, "ext")
+        header["expansion"] = read_from_char(self.file, "h")
+        header["seed"] = read_from_char(self.file, "h")
+        header["luminance_1"] = read_from_char(self.file, "ext")
+        header["luminance_2"] = read_from_char(self.file, "ext")
+        header["dt_on"] = read_from_char(self.file, "ext")
+        header["dt_off"] = read_from_char(self.file, "ext")
         return header
 
     def get_densenoise_surround(self, is_binary):
         header = dict()
-        header['title_surround'] = self.get_title()
-        header['gap'] = read_from_char(self.file, 'ext')
-        header['n_div_x'] = read_from_char(self.file, 'h')
-        header['n_div_y'] = read_from_char(self.file, 'h')
-        header['expansion'] = read_from_char(self.file, 'h')
-        header['seed'] = read_from_char(self.file, 'h')
-        header['luminance_1'] = read_from_char(self.file, 'ext')
-        header['luminance_2'] = read_from_char(self.file, 'ext')
-        header['dt_on'] = read_from_char(self.file, 'ext')
-        header['dt_off'] = read_from_char(self.file, 'ext')
+        header["title_surround"] = self.get_title()
+        header["gap"] = read_from_char(self.file, "ext")
+        header["n_div_x"] = read_from_char(self.file, "h")
+        header["n_div_y"] = read_from_char(self.file, "h")
+        header["expansion"] = read_from_char(self.file, "h")
+        header["seed"] = read_from_char(self.file, "h")
+        header["luminance_1"] = read_from_char(self.file, "ext")
+        header["luminance_2"] = read_from_char(self.file, "ext")
+        header["dt_on"] = read_from_char(self.file, "ext")
+        header["dt_off"] = read_from_char(self.file, "ext")
         return header
 
     def get_grating_center(self):
@@ -900,24 +896,24 @@ class Acquis1Header(Header):
         fileobj.seek(18)
 
         # extract episode properties
-        n_channels = read_from_char(fileobj, 'B')
+        n_channels = read_from_char(fileobj, "B")
         assert not ((n_channels < 1) or (n_channels > 16)), "bad number of channels"
-        nbpt = read_from_char(fileobj, 'h')
-        l_xu, x_unit = struct.unpack('<B3s', fileobj.read(4))
-        if hasattr(x_unit, 'decode'):
+        nbpt = read_from_char(fileobj, "h")
+        l_xu, x_unit = struct.unpack("<B3s", fileobj.read(4))
+        if hasattr(x_unit, "decode"):
             x_unit = x_unit.decode()
         # extract units for each channel
         y_units = list()
         for i in range(1, 7):
-            l_yu, y_unit = struct.unpack('<B3s', fileobj.read(4))
-            if hasattr(y_unit, 'decode'):
+            l_yu, y_unit = struct.unpack("<B3s", fileobj.read(4))
+            if hasattr(y_unit, "decode"):
                 y_unit = y_unit.decode()
             y_units.append(y_unit[0:l_yu])
 
         # extract i1, i2, x1, x2 and compute dX and X0
-        i1, i2 = struct.unpack('<hh', fileobj.read(4))
-        x1 = read_from_char(fileobj, 'ext')
-        x2 = read_from_char(fileobj, 'ext')
+        i1, i2 = struct.unpack("<hh", fileobj.read(4))
+        x1 = read_from_char(fileobj, "ext")
+        x2 = read_from_char(fileobj, "ext")
         if (i1 != i2) and (x1 != x2):
             dX = (x2 - x1) / (i2 - i1)
             X0 = x1 - i1 * dX
@@ -927,14 +923,14 @@ class Acquis1Header(Header):
             # raise Exception("bad X-scale parameters")
 
         # extract j1 and j2, y1 and y2 and compute dY
-        j1 = struct.unpack('<hhhhhh', fileobj.read(12))
-        j2 = struct.unpack('<hhhhhh', fileobj.read(12))
+        j1 = struct.unpack("<hhhhhh", fileobj.read(12))
+        j2 = struct.unpack("<hhhhhh", fileobj.read(12))
         y1 = list()
         for i in range(1, 7):
-            y1.append(read_from_char(fileobj, 'ext'))
+            y1.append(read_from_char(fileobj, "ext"))
         y2 = list()
         for i in range(1, 7):
-            y2.append(read_from_char(fileobj, 'ext'))
+            y2.append(read_from_char(fileobj, "ext"))
         dY_ar = list()
         Y0_ar = list()
         for i in range(0, n_channels):
@@ -946,67 +942,67 @@ class Acquis1Header(Header):
                 dY_ar.append(None)
                 Y0_ar.append(None)
 
-        NbMacq = read_from_char(fileobj, 'h')
+        NbMacq = read_from_char(fileobj, "h")
 
         # fileobj.read(300) #Macq:typeTabMarqueAcq;   { 300 octets }
         max_mark = 100
         Macq = list()
         for i in range(0, max_mark):
-            Macq.append(list(struct.unpack('<ch', fileobj.read(3))))
+            Macq.append(list(struct.unpack("<ch", fileobj.read(3))))
 
         # Xmini,Xmaxi,Ymini,Ymaxi:array[1..6] of float; #fileobj.read(240)
         x_mini = list()
         for i in range(0, 6):
-            x_mini.append(read_from_char(fileobj, 'ext'))
+            x_mini.append(read_from_char(fileobj, "ext"))
         x_maxi = list()
         for i in range(0, 6):
-            x_maxi.append(read_from_char(fileobj, 'ext'))
+            x_maxi.append(read_from_char(fileobj, "ext"))
         y_mini = list()
         for i in range(0, 6):
-            y_mini.append(read_from_char(fileobj, 'ext'))
+            y_mini.append(read_from_char(fileobj, "ext"))
         y_maxi = list()
         for i in range(0, 6):
-            y_maxi.append(read_from_char(fileobj, 'ext'))
+            y_maxi.append(read_from_char(fileobj, "ext"))
 
         # modeA:array[1..6] of byte; #fileobj.read(6)
-        modeA = list(struct.unpack('<BBBBBB', fileobj.read(6)))
+        modeA = list(struct.unpack("<BBBBBB", fileobj.read(6)))
 
-        continuous = read_from_char(fileobj, '?')
-        preSeqI, postSeqI = struct.unpack('<hh', fileobj.read(4))
+        continuous = read_from_char(fileobj, "?")
+        preSeqI, postSeqI = struct.unpack("<hh", fileobj.read(4))
 
         # EchelleSeqI:boolean; #fileobj.read(1)
-        ep_scaled = read_from_char(fileobj, '?')
+        ep_scaled = read_from_char(fileobj, "?")
 
-        nbptEx = read_from_char(fileobj, 'H')
+        nbptEx = read_from_char(fileobj, "H")
 
-        x1s, x2s = struct.unpack('<ff', fileobj.read(8))
+        x1s, x2s = struct.unpack("<ff", fileobj.read(8))
 
         y1s = list()
         for i in range(0, 6):
-            y1s.append(read_from_char(fileobj, 'f'))
+            y1s.append(read_from_char(fileobj, "f"))
 
         y2s = list()
         for i in range(0, 6):
-            y2s.append(read_from_char(fileobj, 'f'))
+            y2s.append(read_from_char(fileobj, "f"))
 
         # fileobj.read(96)   # Xminis,Xmaxis,Yminis,Ymaxis:array[1..6] of single;
         x_minis = list()
         for i in range(0, 6):
-            x_minis.append(read_from_char(fileobj, 'f'))
+            x_minis.append(read_from_char(fileobj, "f"))
         x_maxis = list()
         for i in range(0, 6):
-            x_maxis.append(read_from_char(fileobj, 'f'))
+            x_maxis.append(read_from_char(fileobj, "f"))
         y_minis = list()
         for i in range(0, 6):
-            y_minis.append(read_from_char(fileobj, 'f'))
+            y_minis.append(read_from_char(fileobj, "f"))
         y_maxis = list()
         for i in range(0, 6):
-            y_maxis.append(read_from_char(fileobj, 'f'))
+            y_maxis.append(read_from_char(fileobj, "f"))
 
-        n_ep = read_from_char(fileobj, 'h')
-        tpData = read_from_char(fileobj, 'h')
+        n_ep = read_from_char(fileobj, "h")
+        tpData = read_from_char(fileobj, "h")
         assert tpData in [3, 2, 1, 0], "bad sample size"
-        no_analog_data = read_from_char(fileobj, '?')
+        no_analog_data = read_from_char(fileobj, "?")
 
         self.n_ep = n_ep
         self.n_channels = n_channels
@@ -1134,27 +1130,25 @@ class DAC2GSMainBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="i"):
-        super().__init__(
-            layout, identifier, start, size, fixed_length, size_format)
+        super().__init__(layout, identifier, start, size, fixed_length, size_format)
         # parse the file to retrieve episodes and channels properties
-        n_channels, nbpt, tpData = struct.unpack('<BiB', layout.file.read(6))
-        l_xu, xu, dX, X0 = struct.unpack('<B10sdd', layout.file.read(27))
+        n_channels, nbpt, tpData = struct.unpack("<BiB", layout.file.read(6))
+        l_xu, xu, dX, X0 = struct.unpack("<B10sdd", layout.file.read(27))
         y_units = list()
         dY_ar = list()
         Y0_ar = list()
         for _ in range(0, 16):
-            l_yu, yu, dY, Y0 = struct.unpack('<B10sdd', layout.file.read(27))
+            l_yu, yu, dY, Y0 = struct.unpack("<B10sdd", layout.file.read(27))
             y_units.append(yu[0:l_yu])
             dY_ar.append(dY)
             Y0_ar.append(Y0)
-        preSeqI, postSeqI, continuous, varEp, withTags = struct.unpack(
-            '<ii???', layout.file.read(11))
+        preSeqI, postSeqI, continuous, varEp, withTags = struct.unpack("<ii???", layout.file.read(11))
         # some file doesn't precise the tagShift
         position = layout.file.tell()
         if position >= self.end:
             tagShift = 0
         else:
-            tagShift = read_from_char(layout.file, 'B')
+            tagShift = read_from_char(layout.file, "B")
         # setup object properties
         self.n_channels = n_channels
         self.nbpt = nbpt
@@ -1191,8 +1185,7 @@ class DAC2GSMainBlock(ElphyBlock):
         else:
             self.n_samples = self.nbpt
 
-        self.ep_size = (self.preSeqI + self.postSeqI + self.n_samples * self.sample_size *
-                        self.n_channels)
+        self.ep_size = self.preSeqI + self.postSeqI + self.n_samples * self.sample_size * self.n_channels
         self.n_episodes = self.dat_length / self.ep_size if (self.n_samples != 0) else 0
 
 
@@ -1224,22 +1217,20 @@ class DAC2GSEpisodeBlock(ElphyBlock):
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="i"):
         main = layout.main_block
-        n_channels, nbpt, tpData, postSeqI = struct.unpack('<BiBi', layout.file.read(10))
-        l_xu, xu, dX, X0 = struct.unpack('<B10sdd', layout.file.read(27))
+        n_channels, nbpt, tpData, postSeqI = struct.unpack("<BiBi", layout.file.read(10))
+        l_xu, xu, dX, X0 = struct.unpack("<B10sdd", layout.file.read(27))
         y_units = list()
         dY_ar = list()
         Y0_ar = list()
         for _ in range(0, 16):
-            l_yu, yu, dY, Y0 = struct.unpack('<B10sdd', layout.file.read(27))
-            if hasattr(yu, 'decode'):
+            l_yu, yu, dY, Y0 = struct.unpack("<B10sdd", layout.file.read(27))
+            if hasattr(yu, "decode"):
                 yu = yu.decode()
             y_units.append(yu[0:l_yu])
             dY_ar.append(dY)
             Y0_ar.append(Y0)
 
-        super().__init__(layout, identifier,
-                                                 start, layout.main_block.ep_size, fixed_length,
-                                                 size_format)
+        super().__init__(layout, identifier, start, layout.main_block.ep_size, fixed_length, size_format)
 
         self.n_channels = main.n_channels
         self.nbpt = main.nbpt
@@ -1278,27 +1269,26 @@ class DAC2EpisodeBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super().__init__(
-            layout, identifier, start, size, fixed_length, size_format)
+        super().__init__(layout, identifier, start, size, fixed_length, size_format)
         self.ep_block = None
         self.ch_block = None
         self.ks_block = None
         self.kt_block = None
 
     def set_episode_block(self):
-        blocks = self.layout.get_blocks_of_type('Ep', target_blocks=self.sub_blocks)
+        blocks = self.layout.get_blocks_of_type("Ep", target_blocks=self.sub_blocks)
         self.ep_block = blocks[0] if blocks else None
 
     def set_channel_block(self):
-        blocks = self.layout.get_blocks_of_type('Adc', target_blocks=self.sub_blocks)
+        blocks = self.layout.get_blocks_of_type("Adc", target_blocks=self.sub_blocks)
         self.ch_block = blocks[0] if blocks else None
 
     def set_sub_sampling_block(self):
-        blocks = self.layout.get_blocks_of_type('Ksamp', target_blocks=self.sub_blocks)
+        blocks = self.layout.get_blocks_of_type("Ksamp", target_blocks=self.sub_blocks)
         self.ks_block = blocks[0] if blocks else None
 
     def set_sample_size_block(self):
-        blocks = self.layout.get_blocks_of_type('Ktype', target_blocks=self.sub_blocks)
+        blocks = self.layout.get_blocks_of_type("Ktype", target_blocks=self.sub_blocks)
         self.kt_block = blocks[0] if blocks else None
 
 
@@ -1308,6 +1298,7 @@ class DummyDataBlock(BaseBlock):
     identify chunk of blocks that are actually
     corresponding to acquired data.
     """
+
     pass
 
 
@@ -1324,9 +1315,8 @@ class DAC2RDataBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super().__init__(
-            layout, identifier, start, size, fixed_length, size_format)
-        self.data_start = self.data_offset + read_from_char(layout.file, 'H')
+        super().__init__(layout, identifier, start, size, fixed_length, size_format)
+        self.data_start = self.data_offset + read_from_char(layout.file, "H")
 
 
 class DAC2CyberTagBlock(ElphyBlock):
@@ -1342,9 +1332,8 @@ class DAC2CyberTagBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super().__init__(
-            layout, identifier, start, size, fixed_length, size_format)
-        self.data_start = self.data_offset + read_from_char(layout.file, 'H')
+        super().__init__(layout, identifier, start, size, fixed_length, size_format)
+        self.data_start = self.data_offset + read_from_char(layout.file, "H")
 
 
 class DAC2EventBlock(ElphyBlock):
@@ -1362,20 +1351,19 @@ class DAC2EventBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super().__init__(
-            layout, identifier, start, size, fixed_length, size_format)
+        super().__init__(layout, identifier, start, size, fixed_length, size_format)
         fileobj = self.layout.file
-        jump = self.data_offset + read_from_char(fileobj, 'H')
+        jump = self.data_offset + read_from_char(fileobj, "H")
         fileobj.seek(jump)
 
         # extract the number of event channel
-        self.n_evt_channels = read_from_char(fileobj, 'i')
+        self.n_evt_channels = read_from_char(fileobj, "i")
 
         # extract for each event channel
         # the corresponding number of events
         n_events = list()
         for _ in range(0, self.n_evt_channels):
-            n_events.append(read_from_char(fileobj, 'i'))
+            n_events.append(read_from_char(fileobj, "i"))
         self.n_events = n_events
 
         self.data_start = fileobj.tell()
@@ -1390,20 +1378,19 @@ class DAC2SpikeBlock(DAC2EventBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super().__init__(
-            layout, identifier, start, size, fixed_length, size_format)
+        super().__init__(layout, identifier, start, size, fixed_length, size_format)
         fileobj = self.layout.file
         jump = self.data_offset
         fileobj.seek(jump)  # go to SpikeBlock
-        jump = self.data_offset + read_from_char(fileobj, 'h')
+        jump = self.data_offset + read_from_char(fileobj, "h")
         fileobj.seek(jump)
         # extract the number of event channel
-        self.n_evt_channels = read_from_char(fileobj, 'i')
+        self.n_evt_channels = read_from_char(fileobj, "i")
         # extract for each event channel
         # the corresponding number of events
         n_events = list()
         for _ in range(0, self.n_evt_channels):
-            n_events.append(read_from_char(fileobj, 'i'))
+            n_events.append(read_from_char(fileobj, "i"))
         self.n_events = n_events
         self.data_start = fileobj.tell()
 
@@ -1426,17 +1413,16 @@ class DAC2WaveFormBlock(ElphyBlock):
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l"):
-        super().__init__(
-            layout, identifier, start, size, fixed_length, size_format)
+        super().__init__(layout, identifier, start, size, fixed_length, size_format)
         fileobj = self.layout.file
-        jump = self.data_offset + read_from_char(fileobj, 'H')
+        jump = self.data_offset + read_from_char(fileobj, "H")
         fileobj.seek(jump)
-        self.wavelength = read_from_char(fileobj, 'i')
-        self.pre_trigger = read_from_char(fileobj, 'i')
-        self.n_spk_channels = read_from_char(fileobj, 'i')
+        self.wavelength = read_from_char(fileobj, "i")
+        self.pre_trigger = read_from_char(fileobj, "i")
+        self.n_spk_channels = read_from_char(fileobj, "i")
         n_spikes = list()
         for _ in range(0, self.n_spk_channels):
-            n_spikes.append(read_from_char(fileobj, 'i'))
+            n_spikes.append(read_from_char(fileobj, "i"))
         self.n_spikes = n_spikes
         self.data_start = fileobj.tell()
 
@@ -1475,18 +1461,15 @@ class DAC2EpSubBlock(ElphyBlock):
     episode.
     """
 
-    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l",
-                 parent_block=None):
-        super().__init__(layout, identifier, start,
-                         size, fixed_length, size_format,
-                         parent_block=parent_block)
+    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l", parent_block=None):
+        super().__init__(layout, identifier, start, size, fixed_length, size_format, parent_block=parent_block)
         fileobj = self.layout.file
-        n_channels, nbpt, tpData, l_xu, x_unit, dX, X0 = struct.unpack(
-            '<BiBB10sdd', fileobj.read(33))
-        continuous, tag_mode, tag_shift = struct.unpack('<?BB', fileobj.read(3))
-        DxuSpk, X0uSpk, nbSpk, DyuSpk, Y0uSpk, l_xuspk, unitXSpk, l_yuspk, unitYSpk = \
-            struct.unpack('<ddiddB10sB10s', fileobj.read(58))
-        cyber_time, pc_time = struct.unpack('<dI', fileobj.read(12))
+        n_channels, nbpt, tpData, l_xu, x_unit, dX, X0 = struct.unpack("<BiBB10sdd", fileobj.read(33))
+        continuous, tag_mode, tag_shift = struct.unpack("<?BB", fileobj.read(3))
+        DxuSpk, X0uSpk, nbSpk, DyuSpk, Y0uSpk, l_xuspk, unitXSpk, l_yuspk, unitYSpk = struct.unpack(
+            "<ddiddB10sB10s", fileobj.read(58)
+        )
+        cyber_time, pc_time = struct.unpack("<dI", fileobj.read(12))
         # necessary properties to reconstruct
         # signals stored into the file
         self.n_channels = n_channels
@@ -1525,21 +1508,18 @@ class DAC2AdcSubBlock(ElphyBlock):
 
     """
 
-    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l",
-                 parent_block=None):
-        super().__init__(layout, identifier, start,
-                         size, fixed_length, size_format,
-                         parent_block=parent_block)
+    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l", parent_block=None):
+        super().__init__(layout, identifier, start, size, fixed_length, size_format, parent_block=parent_block)
         fileobj = self.layout.file
         # fileobj.seek(start + len(identifier) + 1)
-        ep_block, = [k for k in self.parent_block.sub_blocks if k.identifier.startswith('Ep')]
+        (ep_block,) = [k for k in self.parent_block.sub_blocks if k.identifier.startswith("Ep")]
         n_channels = ep_block.n_channels
         self.y_units = list()
         self.dY_ar = list()
         self.Y0_ar = list()
         for _ in range(0, n_channels):
-            l_yu, y_unit, dY, Y0 = struct.unpack('<B10sdd', fileobj.read(27))
-            if hasattr(y_unit, 'decode'):
+            l_yu, y_unit, dY, Y0 = struct.unpack("<B10sdd", fileobj.read(27))
+            if hasattr(y_unit, "decode"):
                 y_unit = y_unit.decode()
             self.y_units.append(y_unit[0:l_yu])
             self.dY_ar.append(dY)
@@ -1557,13 +1537,10 @@ class DAC2KSampSubBlock(ElphyBlock):
 
     """
 
-    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l",
-                 parent_block=None):
-        super().__init__(layout, identifier, start,
-                         size, fixed_length, size_format,
-                         parent_block=parent_block)
+    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l", parent_block=None):
+        super().__init__(layout, identifier, start, size, fixed_length, size_format, parent_block=parent_block)
         fileobj = self.layout.file
-        ep_block, = [k for k in self.parent_block.sub_blocks if k.identifier.startswith('Ep')]
+        (ep_block,) = [k for k in self.parent_block.sub_blocks if k.identifier.startswith("Ep")]
         n_channels = ep_block.n_channels
         k_sampling = list()
         for _ in range(0, n_channels):
@@ -1580,13 +1557,10 @@ class DAC2KTypeSubBlock(ElphyBlock):
     to compute sample size.
     """
 
-    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l",
-                 parent_block=None):
-        super().__init__(layout, identifier, start,
-                         size, fixed_length, size_format,
-                         parent_block=parent_block)
+    def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l", parent_block=None):
+        super().__init__(layout, identifier, start, size, fixed_length, size_format, parent_block=parent_block)
         fileobj = self.layout.file
-        ep_block, = [k for k in self.parent_block.sub_blocks if k.identifier.startswith('Ep')]
+        (ep_block,) = [k for k in self.parent_block.sub_blocks if k.identifier.startswith("Ep")]
         n_channels = ep_block.n_channels
         k_types = list()
         for _ in range(0, n_channels):
@@ -1600,70 +1574,56 @@ class DAC2KTypeSubBlock(ElphyBlock):
 
 # symbols of types that could
 # encode a value in an elphy file
-types = (
-    'B',
-    'b',
-    'h',
-    'H',
-    'l',
-    'f',
-    'real48',
-    'd',
-    'ext',
-    's_complex',
-    'd_complex',
-    'complex',
-    'none'
-)
+types = ("B", "b", "h", "H", "l", "f", "real48", "d", "ext", "s_complex", "d_complex", "complex", "none")
 
 # a dictionary linking python.struct
 # formats to their actual size in bytes
 type_dict = {
-    'c': 1,
-    'b': 1,
-    'B': 1,
-    '?': 1,
-    'h': 2,
-    'H': 2,
-    'i': 4,
-    'I': 4,
-    'l': 4,
-    'L': 4,
-    'q': 8,
-    'Q': 8,
-    'f': 4,
-    'd': 8,
-    'H+l': 6,
-    'ext': 10,
-    'real48': 6,
-    's_complex': 8,
-    'd_complex': 16,
-    'complex': 20,
-    'none': 0
+    "c": 1,
+    "b": 1,
+    "B": 1,
+    "?": 1,
+    "h": 2,
+    "H": 2,
+    "i": 4,
+    "I": 4,
+    "l": 4,
+    "L": 4,
+    "q": 8,
+    "Q": 8,
+    "f": 4,
+    "d": 8,
+    "H+l": 6,
+    "ext": 10,
+    "real48": 6,
+    "s_complex": 8,
+    "d_complex": 16,
+    "complex": 20,
+    "none": 0,
 }
 
 # a dictionary liking python.struct
 # formats to numpy formats
 numpy_map = {
-    'b': np.int8,
-    'B': np.uint8,
-    'h': np.int16,
-    'H': np.uint16,
-    'i': np.int32,
-    'I': np.uint32,
-    'l': np.int32,
-    'L': np.uint32,
-    'q': np.int64,
-    'Q': np.uint64,
-    'f': np.float32,
-    'd': np.float64,
-    'H+l': 6,
-    'ext': 10,
-    'real48': 6,
-    'SComp': 8,
-    'DComp': 16,
-    'Comp': 20,
-    'none': 0
+    "b": np.int8,
+    "B": np.uint8,
+    "h": np.int16,
+    "H": np.uint16,
+    "i": np.int32,
+    "I": np.uint32,
+    "l": np.int32,
+    "L": np.uint32,
+    "q": np.int64,
+    "Q": np.uint64,
+    "f": np.float32,
+    "d": np.float64,
+    "H+l": 6,
+    "ext": 10,
+    "real48": 6,
+    "SComp": 8,
+    "DComp": 16,
+    "Comp": 20,
+    "none": 0,
 }
 
 
@@ -1673,10 +1633,10 @@ def read_from_char(data, type_char):
     to the specified character type.
     """
     n_bytes = type_dict[type_char]
-    ascii = data.read(n_bytes) if hasattr(data, 'read') else data
-    if type_char != 'ext':
+    ascii = data.read(n_bytes) if hasattr(data, "read") else data
+    if type_char != "ext":
         try:
-            value = struct.unpack('<%s' % type_char, ascii)[0]
+            value = struct.unpack(f"<{type_char}", ascii)[0]
         except:
             # the value could not been read
             # because the value is not compatible
@@ -1701,8 +1661,8 @@ def least_common_multiple(a, b):
 # LAYOUT
 
 
-b_float = 'f8'
-b_int = 'i2'
+b_float = "f8"
+b_int = "i2"
 
 
 class ElphyLayout:
@@ -1760,29 +1720,29 @@ class ElphyLayout:
         return [k for k in blocks if (k.identifier == identifier)]
 
     def set_info_block(self):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def set_data_blocks(self):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def get_tag(self, episode, tag_channel):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     @property
     def n_episodes(self):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def n_channels(self, episode):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def n_tags(self, episode):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def n_samples(self, episode, channel):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def sample_type(self, ep, ch):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def sample_size(self, ep, ch):
         symbol = self.sample_symbol(ep, ch)
@@ -1793,31 +1753,31 @@ class ElphyLayout:
         try:
             return types[tp]
         except:
-            return 'h'
+            return "h"
 
     def sampling_period(self, ep, ch):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def x_scale_factors(self, ep, ch):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def y_scale_factors(self, ep, ch):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def x_tag_scale_factors(self, ep):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def x_unit(self, ep, ch):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def y_unit(self, ep, ch):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def tag_shift(self, ep):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def get_channel_for_tags(self, ep):
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def get_signal(self, episode, channel):
         """
@@ -1837,7 +1797,7 @@ class ElphyLayout:
             self.y_unit(episode, channel),
             1 / sampling_period,
             t_start,
-            t_stop
+            t_stop,
         )
 
     def create_channel_mask(self, ep):
@@ -1848,7 +1808,7 @@ class ElphyLayout:
         between a sample stored in the file and its relative
         channel.
         """
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def get_data_blocks(self, ep):
         """
@@ -1856,7 +1816,7 @@ class ElphyLayout:
         that defined the actual location of samples in blocks
         encapsulating raw data.
         """
-        raise NotImplementedError('must be overloaded in a subclass')
+        raise NotImplementedError("must be overloaded in a subclass")
 
     def create_bit_mask(self, ep, ch):
         """
@@ -1873,7 +1833,7 @@ class ElphyLayout:
                 _mask.append(val)
         return np.array(_mask)
 
-    def load_bytes(self, data_blocks, dtype='<i1', start=None, end=None, expected_size=None):
+    def load_bytes(self, data_blocks, dtype="<i1", start=None, end=None, expected_size=None):
         """
         Return list of bytes contained
         in the specified set of blocks.
@@ -1882,7 +1842,7 @@ class ElphyLayout:
              find later other solutions to spare memory.
         """
         chunks = list()
-        raw = ''
+        raw = ""
         # keep only data blocks having
         # a size greater than zero
         blocks = [k for k in data_blocks if k.size > 0]
@@ -1899,7 +1859,7 @@ class ElphyLayout:
         else:
             return np.array([])
 
-    def reshape_bytes(self, databytes, reshape, datatypes, order='<'):
+    def reshape_bytes(self, databytes, reshape, datatypes, order="<"):
         """
         Reshape a numpy array containing a set of databytes.
         """
@@ -1928,7 +1888,7 @@ class ElphyLayout:
         data = np.empty([len(reshape), n_samples], dtype=(int, int))
         for index, bit_mask in enumerate(bit_masks):
             tmp = self.filter_bytes(databytes, bit_mask)
-            tp = '{}{}{}'.format(order, datatypes[index], reshape[index])
+            tp = f"{order}{datatypes[index]}{reshape[index]}"
             data[index] = np.frombuffer(tmp, dtype=tp)
 
         return data.T
@@ -1965,7 +1925,7 @@ class ElphyLayout:
 
         # reshape bytes from the sample size
         dt = np.dtype(numpy_map[sample_symbol])
-        dt.newbyteorder('<')
+        dt.newbyteorder("<")
         return np.frombuffer(raw.reshape([int(len(raw) / sample_size), sample_size]), dt)
 
     def apply_op(self, np_array, value, op_type):
@@ -1992,7 +1952,7 @@ class ElphyLayout:
         elif tag_mode in [2, 3]:
             ar_mask = np.zeros(16, dtype=int)
             ar_mask[tag_ch - 1] = 1
-            st = "0b" + ''.join(np.array(np.flipud(ar_mask), dtype=str))
+            st = "0b" + "".join(np.array(np.flipud(ar_mask), dtype=str))
             tag_mask = eval(st)
         return tag_mask
 
@@ -2017,9 +1977,9 @@ class ElphyLayout:
             # store bytes corresponding to the blocks
             # containing tags in a numpy array and reshape
             # it to have a set of tuples (time, value)
-            ck_blocks = self.get_blocks_of_type(ep, 'RCyberTag')
+            ck_blocks = self.get_blocks_of_type(ep, "RCyberTag")
             databytes = self.load_bytes(ck_blocks)
-            raw = self.reshape_bytes(databytes, reshape=(4, 2), datatypes=('u', 'u'), order='<')
+            raw = self.reshape_bytes(databytes, reshape=(4, 2), datatypes=("u", "u"), order="<")
 
             # keep only items that are compatible
             # with the specified tag channel
@@ -2062,13 +2022,13 @@ class ElphyLayout:
         x_data = np.arange(0, len(y_data))
 
         # create a recarray
-        data = np.recarray(len(y_data), dtype=[('x', b_float), ('y', b_float)])
+        data = np.recarray(len(y_data), dtype=[("x", b_float), ("y", b_float)])
 
         # put in the recarray the scaled data
         x_factors = self.x_scale_factors(ep, ch)
         y_factors = self.y_scale_factors(ep, ch)
-        data['x'] = x_factors.scale(x_data)
-        data['y'] = y_factors.scale(y_data)
+        data["x"] = x_factors.scale(x_data)
+        data["y"] = y_factors.scale(y_data)
 
         return data
 
@@ -2083,12 +2043,12 @@ class ElphyLayout:
         x_data = np.arange(0, len(y_data))
 
         # create a recarray
-        data = np.recarray(len(y_data), dtype=[('x', b_float), ('y', b_int)])
+        data = np.recarray(len(y_data), dtype=[("x", b_float), ("y", b_int)])
 
         # put in the recarray the scaled data
         factors = self.x_tag_scale_factors(ep)
-        data['x'] = factors.scale(x_data)
-        data['y'] = y_data
+        data["x"] = factors.scale(x_data)
+        data["y"] = y_data
         return data
 
 
@@ -2119,8 +2079,8 @@ class Acquis1Layout(ElphyLayout):
         raise NotImplementedError()
 
     def set_info_block(self):
-        i_blks = self.get_blocks_of_type('USER INFO')
-        assert len(i_blks) < 2, 'too many info blocks'
+        i_blks = self.get_blocks_of_type("USER INFO")
+        assert len(i_blks) < 2, "too many info blocks"
         if len(i_blks):
             self.info_block = i_blks[0]
 
@@ -2129,7 +2089,7 @@ class Acquis1Layout(ElphyLayout):
         size = self.header.n_samples * self.header.sample_size * self.header.n_channels
         for ep in range(0, self.header.n_episodes):
             start = self.data_offset + ep * self.header.ep_size + self.header.preSeqI
-            data_blocks.append(DummyDataBlock(self, 'Acquis1Data', start, size))
+            data_blocks.append(DummyDataBlock(self, "Acquis1Data", start, size))
         self.data_blocks = data_blocks
 
     def get_data_blocks(self, ep):
@@ -2168,23 +2128,17 @@ class Acquis1Layout(ElphyLayout):
         return self.header.n_samples
 
     def x_tag_scale_factors(self, ep):
-        return ElphyScaleFactor(
-            self.header.dX,
-            self.header.X0
-        )
+        return ElphyScaleFactor(self.header.dX, self.header.X0)
 
     def x_scale_factors(self, ep, ch):
-        return ElphyScaleFactor(
-            self.header.dX,
-            self.header.X0
-        )
+        return ElphyScaleFactor(self.header.dX, self.header.X0)
 
     def y_scale_factors(self, ep, ch):
         dY = self.header.dY_ar[ch - 1]
         Y0 = self.header.Y0_ar[ch - 1]
         # TODO: see why this kind of exception exists
         if dY is None or Y0 is None:
-            raise Exception('bad Y-scale factors for episode {} channel {}'.format(ep, ch))
+            raise Exception(f"bad Y-scale factors for episode {ep} channel {ch}")
         return ElphyScaleFactor(dY, Y0)
 
     def x_unit(self, ep, ch):
@@ -2242,25 +2196,25 @@ class DAC2GSLayout(ElphyLayout):
         raise NotImplementedError()
 
     def set_main_block(self):
-        main_block = self.get_blocks_of_type('MAIN')
+        main_block = self.get_blocks_of_type("MAIN")
         self.main_block = main_block[0] if main_block else None
 
     def set_episode_blocks(self):
-        ep_blocks = self.get_blocks_of_type('DAC2SEQ')
+        ep_blocks = self.get_blocks_of_type("DAC2SEQ")
         self.episode_blocks = ep_blocks if ep_blocks else None
 
     def set_info_block(self):
-        i_blks = self.get_blocks_of_type('USER INFO')
+        i_blks = self.get_blocks_of_type("USER INFO")
         assert len(i_blks) < 2, "too many info blocks"
         if len(i_blks):
             self.info_block = i_blks[0]
 
     def set_data_blocks(self):
         data_blocks = list()
-        identifier = 'DAC2GSData'
+        identifier = "DAC2GSData"
         size = self.main_block.n_samples * self.main_block.sample_size * self.main_block.n_channels
         if not self.is_continuous():
-            blocks = self.get_blocks_of_type('DAC2SEQ')
+            blocks = self.get_blocks_of_type("DAC2SEQ")
             for block in blocks:
                 start = block.start + self.main_block.preSeqI
                 data_blocks.append(DummyDataBlock(self, identifier, start, size))
@@ -2312,10 +2266,7 @@ class DAC2GSLayout(ElphyLayout):
 
     def y_scale_factors(self, ep, ch):
         block = self.episode_block(ep)
-        return ElphyScaleFactor(
-            block.dY_ar[ch - 1],
-            block.Y0_ar[ch - 1]
-        )
+        return ElphyScaleFactor(block.dY_ar[ch - 1], block.Y0_ar[ch - 1])
 
     def x_unit(self, ep, ch):
         block = self.episode_block(ep)
@@ -2374,7 +2325,7 @@ class DAC2GSLayout(ElphyLayout):
         data_block = self.data_blocks[episode - 1]
         n_bytes = data_block.size
         self.file.seek(data_block.start)
-        databytes = np.frombuffer(self.file.read(n_bytes), '<i1')
+        databytes = np.frombuffer(self.file.read(n_bytes), "<i1")
 
         # detect which bits keep to recompose the tag
         ep_mask = np.ones(n_bytes, dtype=int)
@@ -2385,13 +2336,13 @@ class DAC2GSLayout(ElphyLayout):
 
         # create a recarray containing data
         dt = np.dtype(numpy_map[sample_symbol])
-        dt.newbyteorder('<')
+        dt.newbyteorder("<")
         tag_mask = 0b01 if (tag_channel == 1) else 0b10
         y_data = np.frombuffer(raw, dt) & tag_mask
         x_data = np.arange(0, len(y_data)) * block.dX + block.X0
-        data = np.recarray(len(y_data), dtype=[('x', b_float), ('y', b_int)])
-        data['x'] = x_data
-        data['y'] = y_data
+        data = np.recarray(len(y_data), dtype=[("x", b_float), ("y", b_int)])
+        data["x"] = x_data
+        data["y"] = y_data
 
         return data
 
@@ -2419,7 +2370,7 @@ class DAC2Layout(ElphyLayout):
         return self.file_size
 
     def is_continuous(self):
-        ep_blocks = [k for k in self.blocks if k.identifier.startswith('B_Ep')]
+        ep_blocks = [k for k in self.blocks if k.identifier.startswith("B_Ep")]
         if ep_blocks:
             ep_block = ep_blocks[0]
             ep_sub_block = ep_block.sub_blocks[0]
@@ -2428,11 +2379,11 @@ class DAC2Layout(ElphyLayout):
             return False
 
     def set_episode_blocks(self):
-        self.episode_blocks = [k for k in self.blocks if str(k.identifier).startswith('B_Ep')]
+        self.episode_blocks = [k for k in self.blocks if str(k.identifier).startswith("B_Ep")]
 
     def set_info_block(self):
         # in fact the file info are contained into a single sub-block with an USR identifier
-        i_blks = self.get_blocks_of_type('B_Finfo')
+        i_blks = self.get_blocks_of_type("B_Finfo")
         assert len(i_blks) < 2, "too many info blocks"
         if len(i_blks):
             i_blk = i_blks[0]
@@ -2442,15 +2393,15 @@ class DAC2Layout(ElphyLayout):
 
     def set_data_blocks(self):
         data_blocks = list()
-        blocks = self.get_blocks_of_type('RDATA')
+        blocks = self.get_blocks_of_type("RDATA")
         for block in blocks:
             start = block.data_start
             size = block.end + 1 - start
-            data_blocks.append(DummyDataBlock(self, 'RDATA', start, size))
+            data_blocks.append(DummyDataBlock(self, "RDATA", start, size))
         self.data_blocks = data_blocks
 
     def get_data_blocks(self, ep):
-        return self.group_blocks_of_type(ep, 'RDATA')
+        return self.group_blocks_of_type(ep, "RDATA")
 
     def group_blocks_of_type(self, ep, identifier):
         ep_blocks = list()
@@ -2462,7 +2413,7 @@ class DAC2Layout(ElphyLayout):
         return ep_blocks
 
     def get_blocks_stored_in_episode(self, ep):
-        data_blocks = [k for k in self.blocks if k.identifier == 'RDATA']
+        data_blocks = [k for k in self.blocks if k.identifier == "RDATA"]
         n_ep = self.n_episodes
         blk_1 = self.episode_block(ep)
         blk_2 = self.episode_block((ep + 1) % n_ep)
@@ -2475,11 +2426,11 @@ class DAC2Layout(ElphyLayout):
 
     def set_cyberk_blocks(self):
         ck_blocks = list()
-        blocks = self.get_blocks_of_type('RCyberTag')
+        blocks = self.get_blocks_of_type("RCyberTag")
         for block in blocks:
             start = block.data_start
             size = block.end + 1 - start
-            ck_blocks.append(DummyDataBlock(self, 'RCyberTag', start, size))
+            ck_blocks.append(DummyDataBlock(self, "RCyberTag", start, size))
         self.ck_blocks = ck_blocks
 
     def episode_block(self, ep):
@@ -2529,7 +2480,7 @@ class DAC2Layout(ElphyLayout):
         return block.ks_block.k_sampling.count(0)
 
     def n_spiketrains(self, episode):
-        spk_blocks = [k for k in self.blocks if k.identifier == 'RSPK']
+        spk_blocks = [k for k in self.blocks if k.identifier == "RSPK"]
         return spk_blocks[0].n_evt_channels if spk_blocks else 0
 
     def sub_sampling(self, ep, ch):
@@ -2601,10 +2552,7 @@ class DAC2Layout(ElphyLayout):
 
     def x_tag_scale_factors(self, ep):
         block = self.episode_block(ep)
-        return ElphyScaleFactor(
-            block.ep_block.dX,
-            block.ep_block.X0
-        )
+        return ElphyScaleFactor(block.ep_block.dX, block.ep_block.X0)
 
     def x_scale_factors(self, ep, ch):
         block = self.episode_block(ep)
@@ -2615,10 +2563,7 @@ class DAC2Layout(ElphyLayout):
 
     def y_scale_factors(self, ep, ch):
         block = self.episode_block(ep)
-        return ElphyScaleFactor(
-            block.ch_block.dY_ar[ch - 1],
-            block.ch_block.Y0_ar[ch - 1]
-        )
+        return ElphyScaleFactor(block.ch_block.dY_ar[ch - 1], block.ch_block.Y0_ar[ch - 1])
 
     def x_unit(self, ep, ch):
         block = self.episode_block(ep)
@@ -2683,7 +2628,7 @@ class DAC2Layout(ElphyLayout):
 
         block = self.episode_block(ep)
         ag_count = self.aggregate_sample_count(block)
-        mask_ar = np.zeros(ag_count, dtype='i')
+        mask_ar = np.zeros(ag_count, dtype="i")
         ag_size = 0
         i = 0
         k = 0
@@ -2724,14 +2669,11 @@ class DAC2Layout(ElphyLayout):
 
             # verify the validity of the tag channel
             if tag_mode == 1:
-                assert tag_channel in range(
-                    1, 3), "Elphy format support only 2 tag channels for tag_mode == 1"
+                assert tag_channel in range(1, 3), "Elphy format support only 2 tag channels for tag_mode == 1"
             elif tag_mode == 2:
-                assert tag_channel in range(
-                    1, 17), "Elphy format support only 16 tag channels for tag_mode == 2"
+                assert tag_channel in range(1, 17), "Elphy format support only 16 tag channels for tag_mode == 2"
             elif tag_mode == 3:
-                assert tag_channel in range(
-                    1, 17), "Elphy format support only 16 tag channels for tag_mode == 3"
+                assert tag_channel in range(1, 17), "Elphy format support only 16 tag channels for tag_mode == 3"
 
             smp_period = block.ep_block.dX
             smp_freq = 1.0 / smp_period
@@ -2774,7 +2716,7 @@ class DAC2Layout(ElphyLayout):
 
         block = self.episode_block(ep)
         ep_blocks = self.get_blocks_stored_in_episode(ep)
-        evt_blocks = [k for k in ep_blocks if k.identifier == 'REVT']
+        evt_blocks = [k for k in ep_blocks if k.identifier == "REVT"]
         n_events = np.sum([k.n_events[evt_channel - 1] for k in evt_blocks], dtype=int)
         x_unit = block.ep_block.x_unit
 
@@ -2791,12 +2733,11 @@ class DAC2Layout(ElphyLayout):
 
         # compute events on each channel
         n_events = np.sum([k.n_events for k in evt_blocks], dtype=int, axis=0)
-        pre_events = np.sum(n_events[0:evt_channel - 1], dtype=int)
+        pre_events = np.sum(n_events[0 : evt_channel - 1], dtype=int)
         start = pre_events
         end = start + n_events[evt_channel - 1]
         expected_size = 4 * np.sum(n_events, dtype=int)
-        return self.load_bytes(data_blocks, dtype='<i4', start=start, end=end,
-                               expected_size=expected_size)
+        return self.load_bytes(data_blocks, dtype="<i4", start=start, end=end, expected_size=expected_size)
 
     def load_encoded_spikes(self, episode, evt_channel, identifier):
         """
@@ -2812,30 +2753,28 @@ class DAC2Layout(ElphyLayout):
         rspk_block = all_rspk_blocks[episode - 1]
         # RDATA(h?dI) REVT(NbVeV:I, NbEv:256I ... spike data are 4byte integers
         rspk_header = 4 * (rspk_block.size - rspk_block.data_size - 2 + len(rspk_block.n_events))
-        pre_events = np.sum(rspk_block.n_events[0:evt_channel - 1], dtype=int, axis=0)
+        pre_events = np.sum(rspk_block.n_events[0 : evt_channel - 1], dtype=int, axis=0)
         # the real start is after header, preceeding events (which are 4byte) and preceeding
         # labels (1byte)
         start = rspk_header + (4 * pre_events) + pre_events
         end = start + 4 * rspk_block.n_events[evt_channel - 1]
-        raw = self.load_bytes([rspk_block], dtype='<i1', start=start,
-                              end=end, expected_size=rspk_block.size)
+        raw = self.load_bytes([rspk_block], dtype="<i1", start=start, end=end, expected_size=rspk_block.size)
         # re-encoding after reading byte by byte
-        res = np.frombuffer(raw[0:(4 * rspk_block.n_events[evt_channel - 1])], dtype='<i4')
+        res = np.frombuffer(raw[0 : (4 * rspk_block.n_events[evt_channel - 1])], dtype="<i4")
         res.sort()  # sometimes timings are not sorted
         # print "load_encoded_data() - spikes:",res
         return res
 
     def get_episode_name(self, episode):
-        episode_name = "episode %s" % episode
-        names = [k for k in self.blocks if k.identifier == 'COM']
+        episode_name = f"episode {episode}"
+        names = [k for k in self.blocks if k.identifier == "COM"]
         if len(names) > 0:
             name = names[episode - 1]
             start = name.size + 1 - name.data_size + 1
             end = name.end - name.start + 1
-            chars = self.load_bytes([name], dtype='uint8', start=start,
-                                    end=end, expected_size=name.size).tolist()
+            chars = self.load_bytes([name], dtype="uint8", start=start, end=end, expected_size=name.size).tolist()
             # print "chars[%s:%s]: %s" % (start,end,chars)
-            episode_name = ''.join([chr(k) for k in chars])
+            episode_name = "".join([chr(k) for k in chars])
         return episode_name
 
     def get_event_data(self, episode, evt_channel):
@@ -2858,22 +2797,32 @@ class DAC2Layout(ElphyLayout):
         # get some properties stored in the episode sub-block
         block = self.episode_block(episode)
         x_unit = block.ep_block.x_unit
-        x_unit_wf = getattr(block.ep_block, 'x_unit_wf', None)
-        y_unit_wf = getattr(block.ep_block, 'y_unit_wf', None)
+        x_unit_wf = getattr(block.ep_block, "x_unit_wf", None)
+        y_unit_wf = getattr(block.ep_block, "y_unit_wf", None)
         # number of spikes in the entire episode
-        spk_blocks = [k for k in self.blocks if k.identifier == 'RSPK']
+        spk_blocks = [k for k in self.blocks if k.identifier == "RSPK"]
         n_events = np.sum([k.n_events[electrode_id - 1] for k in spk_blocks], dtype=int)
         # number of samples in a waveform
         wf_sampling_frequency = 1.0 / block.ep_block.dX
-        wf_blocks = [k for k in self.blocks if k.identifier == 'RspkWave']
+        wf_blocks = [k for k in self.blocks if k.identifier == "RspkWave"]
         if wf_blocks:
             wf_samples = wf_blocks[0].wavelength
             t_start = wf_blocks[0].pre_trigger * block.ep_block.dX
         else:
             wf_samples = 0
             t_start = 0
-        return ElphySpikeTrain(self, episode, electrode_id, x_unit, n_events,
-                               wf_sampling_frequency, wf_samples, x_unit_wf, y_unit_wf, t_start)
+        return ElphySpikeTrain(
+            self,
+            episode,
+            electrode_id,
+            x_unit,
+            n_events,
+            wf_sampling_frequency,
+            wf_samples,
+            x_unit_wf,
+            y_unit_wf,
+            t_start,
+        )
 
     def get_spiketrain_data(self, episode, electrode_id):
         """
@@ -2909,30 +2858,26 @@ class DAC2Layout(ElphyLayout):
         wf_samples = wf_blocks[0].wavelength
         events = np.sum([k.n_spikes for k in wf_blocks], dtype=int, axis=0)
         n_events = events[electrode_id - 1]
-        pre_events = np.sum(events[0:electrode_id - 1], dtype=int)
+        pre_events = np.sum(events[0 : electrode_id - 1], dtype=int)
         start = pre_events
         end = start + n_events
 
         # data must be reshaped before
         dtype = [
             # the time of the spike arrival
-            ('elphy_time', 'u4', (1,)),
-            ('device_time', 'u4', (1,)),
-
+            ("elphy_time", "u4", (1,)),
+            ("device_time", "u4", (1,)),
             # the identifier of the electrode
             # would also be the 'trodalness'
             # but this tetrode devices are not
             # implemented in Elphy
-            ('channel_id', 'u2', (1,)),
-
+            ("channel_id", "u2", (1,)),
             # the 'category' of the waveform
-            ('unit_id', 'u1', (1,)),
-
+            ("unit_id", "u1", (1,)),
             # do not used
-            ('dummy', 'u1', (13,)),
-
+            ("dummy", "u1", (13,)),
             # samples of the waveform
-            ('waveform', 'i2', (wf_samples,))
+            ("waveform", "i2", (wf_samples,)),
         ]
         x_start = wf_blocks[0].pre_trigger
         x_stop = wf_samples - x_start
@@ -2947,21 +2892,15 @@ class DAC2Layout(ElphyLayout):
         """
         block = self.episode_block(episode)
         times, databytes = self.load_encoded_waveforms(episode, electrode_id)
-        n_events, = databytes.shape
-        wf_samples = databytes['waveform'].shape[1]
-        dtype = [
-            ('time', float),
-            ('electrode_id', int),
-            ('unit_id', int),
-            ('waveform', float, (wf_samples, 2))
-        ]
+        (n_events,) = databytes.shape
+        wf_samples = databytes["waveform"].shape[1]
+        dtype = [("time", float), ("electrode_id", int), ("unit_id", int), ("waveform", float, (wf_samples, 2))]
         data = np.empty(n_events, dtype=dtype)
-        data['electrode_id'] = databytes['channel_id'][:, 0]
-        data['unit_id'] = databytes['unit_id'][:, 0]
-        data['time'] = databytes['elphy_time'][:, 0] * block.ep_block.dX
-        data['waveform'][:, :, 0] = times * block.ep_block.dX
-        data['waveform'][:, :, 1] = databytes['waveform'] * \
-                                    block.ep_block.dY_wf + block.ep_block.Y0_wf
+        data["electrode_id"] = databytes["channel_id"][:, 0]
+        data["unit_id"] = databytes["unit_id"][:, 0]
+        data["time"] = databytes["elphy_time"][:, 0] * block.ep_block.dX
+        data["waveform"][:, :, 0] = times * block.ep_block.dX
+        data["waveform"][:, :, 1] = databytes["waveform"] * block.ep_block.dY_wf + block.ep_block.Y0_wf
         return data
 
     def get_rspk_data(self, spk_channel):
@@ -2969,7 +2908,7 @@ class DAC2Layout(ElphyLayout):
         Return times stored as a 4-bytes integer
         in the specified event channel.
         """
-        evt_blocks = self.get_blocks_of_type('RSPK')
+        evt_blocks = self.get_blocks_of_type("RSPK")
         # compute events on each channel
         n_events = np.sum([k.n_events for k in evt_blocks], dtype=int, axis=0)
         # sum of array values up to spk_channel-1!!!!
@@ -2977,12 +2916,12 @@ class DAC2Layout(ElphyLayout):
         start = pre_events + (7 + len(n_events))  # rspk header
         end = start + n_events[spk_channel]
         expected_size = 4 * np.sum(n_events, dtype=int)  # constant
-        return self.load_bytes(evt_blocks, dtype='<i4', start=start, end=end,
-                               expected_size=expected_size)
+        return self.load_bytes(evt_blocks, dtype="<i4", start=start, end=end, expected_size=expected_size)
 
 
 # ---------------------------------------------------------
 # factories.py
+
 
 class LayoutFactory:
     """
@@ -3003,21 +2942,21 @@ class LayoutFactory:
         Return the actual :class:`ElphyLayout` subclass
         instance used in an :class:`ElphyFile` object.
         """
-        raise Exception('must be overloaded in a subclass')
+        raise Exception("must be overloaded in a subclass")
 
     def create_header(self, layout):
         """
         Return the actual :class:`Header` instance used
         in an :class:`ElphyLayout` subclass object.
         """
-        raise Exception('must be overloaded in a subclass')
+        raise Exception("must be overloaded in a subclass")
 
     def create_block(self, layout):
         """
         Return a :class:`Block` instance composing
         the :class:`ElphyLayout` subclass instance.
         """
-        raise Exception('must be overloaded in a subclass')
+        raise Exception("must be overloaded in a subclass")
 
     def create_sub_block(self, block, sub_offset):
         """
@@ -3025,41 +2964,42 @@ class LayoutFactory:
         in DAC2 objects format files.
         """
         self.file.seek(sub_offset)
-        sub_ident_size = read_from_char(self.file, 'B')
-        sub_identifier, = struct.unpack('<%ss' % sub_ident_size, self.file.read(sub_ident_size))
-        if hasattr(sub_identifier, 'decode'):
+        sub_ident_size = read_from_char(self.file, "B")
+        (sub_identifier,) = struct.unpack(f"<{sub_ident_size}s", self.file.read(sub_ident_size))
+        if hasattr(sub_identifier, "decode"):
             sub_identifier = sub_identifier.decode()
-        sub_data_size = read_from_char(self.file, 'H')
+        sub_data_size = read_from_char(self.file, "H")
         sub_data_offset = sub_offset + sub_ident_size + 3
         size_format = "H"
         if sub_data_size == 0xFFFF:
-            _ch = 'l'
+            _ch = "l"
             sub_data_size = read_from_char(self.file, _ch)
-            size_format += "+%s" % (_ch)
+            size_format += f"+{_ch}"
             sub_data_offset += 4
         sub_size = len(sub_identifier) + 1 + type_dict[size_format] + sub_data_size
-        if sub_identifier == 'Ep':
+        if sub_identifier == "Ep":
             block_type = DAC2EpSubBlock
-        elif sub_identifier == 'Adc':
+        elif sub_identifier == "Adc":
             block_type = DAC2AdcSubBlock
-        elif sub_identifier == 'Ksamp':
+        elif sub_identifier == "Ksamp":
             block_type = DAC2KSampSubBlock
-        elif sub_identifier == 'Ktype':
+        elif sub_identifier == "Ktype":
             block_type = DAC2KTypeSubBlock
-        elif sub_identifier == 'USR':
+        elif sub_identifier == "USR":
             block_type = self.select_file_info_subclass()
         else:
             block_type = ElphyBlock
-        block = block_type(block.layout, sub_identifier, sub_offset, sub_size,
-                           size_format=size_format, parent_block=block)
+        block = block_type(
+            block.layout, sub_identifier, sub_offset, sub_size, size_format=size_format, parent_block=block
+        )
         self.file.seek(self.file.tell() + sub_data_size)
         return block
 
     def create_episode(self, block):
-        raise Exception('must be overloaded in a subclass')
+        raise Exception("must be overloaded in a subclass")
 
     def create_channel(self, block):
-        raise Exception('must be overloaded in a subclass')
+        raise Exception("must be overloaded in a subclass")
 
     def is_multistim(self, path):
         """
@@ -3067,7 +3007,7 @@ class LayoutFactory:
         specified file is a multistim one.
         """
         match = re.search(self.pattern, path)
-        return hasattr(match, 'end') and path[match.end() - 1] in ['m', 'M']
+        return hasattr(match, "end") and path[match.end() - 1] in ["m", "M"]
 
     def select_file_info_subclass(self):
         """
@@ -3095,14 +3035,12 @@ class Acquis1Factory(LayoutFactory):
     def __init__(self, elphy_file):
         super().__init__(elphy_file)
         self.file.seek(16)
-        self.data_offset = read_from_char(self.file, 'h')
+        self.data_offset = read_from_char(self.file, "h")
         self.file.seek(0)
 
         # the set of interesting blocks useful
         # to retrieve data stored in a file
-        self.block_subclasses = {
-            "USER INFO": self.select_file_info_subclass()
-        }
+        self.block_subclasses = {"USER INFO": self.select_file_info_subclass()}
 
     def create_layout(self):
         return Acquis1Layout(self.elphy_file, self.data_offset)
@@ -3112,13 +3050,13 @@ class Acquis1Factory(LayoutFactory):
 
     def create_block(self, layout, offset):
         self.file.seek(offset)
-        ident_size, identifier = struct.unpack('<B15s', self.file.read(16))
-        if hasattr(identifier, 'decode'):
+        ident_size, identifier = struct.unpack("<B15s", self.file.read(16))
+        if hasattr(identifier, "decode"):
             identifier = identifier.decode()
         identifier = identifier[0:ident_size]
-        size = read_from_char(self.file, 'h')
+        size = read_from_char(self.file, "h")
         block_type = self.select_block_subclass(identifier)
-        block = block_type(layout, identifier, offset, size, fixed_length=15, size_format='h')
+        block = block_type(layout, identifier, offset, size, fixed_length=15, size_format="h")
         self.file.seek(0)
         return block
 
@@ -3133,7 +3071,7 @@ class DAC2GSFactory(LayoutFactory):
     def __init__(self, elphy_file):
         super().__init__(elphy_file)
         self.file.seek(16)
-        self.data_offset = read_from_char(self.file, 'i')
+        self.data_offset = read_from_char(self.file, "i")
         self.file.seek(0)
 
         # the set of interesting blocks useful
@@ -3141,7 +3079,7 @@ class DAC2GSFactory(LayoutFactory):
         self.block_subclasses = {
             "USER INFO": self.select_file_info_subclass(),
             "DAC2SEQ": DAC2GSEpisodeBlock,
-            'MAIN': DAC2GSMainBlock,
+            "MAIN": DAC2GSMainBlock,
         }
 
     def create_layout(self):
@@ -3152,20 +3090,20 @@ class DAC2GSFactory(LayoutFactory):
 
     def create_block(self, layout, offset):
         self.file.seek(offset)
-        ident_size, identifier = struct.unpack('<B15s', self.file.read(16))
-        if hasattr(identifier, 'decode'):
+        ident_size, identifier = struct.unpack("<B15s", self.file.read(16))
+        if hasattr(identifier, "decode"):
             identifier = identifier.decode()
         # block title size is 7 or 15 bytes
         # 7 is for sequence blocs
-        if identifier.startswith('DAC2SEQ'):
+        if identifier.startswith("DAC2SEQ"):
             self.file.seek(self.file.tell() - 8)
             length = 7
         else:
             length = 15
         identifier = identifier[0:ident_size]
-        size = read_from_char(self.file, 'i')
+        size = read_from_char(self.file, "i")
         block_type = self.select_block_subclass(identifier)
-        block = block_type(layout, identifier, offset, size, fixed_length=length, size_format='i')
+        block = block_type(layout, identifier, offset, size, fixed_length=length, size_format="i")
         self.file.seek(0)
         return block
 
@@ -3188,7 +3126,7 @@ class DAC2Factory(LayoutFactory):
             "RCyberTag": DAC2CyberTagBlock,
             "REVT": DAC2EventBlock,
             "RSPK": DAC2SpikeBlock,
-            "RspkWave": DAC2WaveFormBlock
+            "RspkWave": DAC2WaveFormBlock,
         }
 
     def create_layout(self):
@@ -3199,13 +3137,13 @@ class DAC2Factory(LayoutFactory):
 
     def create_block(self, layout, offset):
         self.file.seek(offset)
-        size = read_from_char(self.file, 'l')
-        ident_size = read_from_char(self.file, 'B')
-        identifier, = struct.unpack('<%ss' % ident_size, self.file.read(ident_size))
-        if hasattr(identifier, 'decode'):
+        size = read_from_char(self.file, "l")
+        ident_size = read_from_char(self.file, "B")
+        (identifier,) = struct.unpack(f"<{ident_size}s", self.file.read(ident_size))
+        if hasattr(identifier, "decode"):
             identifier = identifier.decode()
         block_type = self.select_block_subclass(identifier)
-        block = block_type(layout, identifier, offset, size, size_format='l')
+        block = block_type(layout, identifier, offset, size, size_format="l")
         self.file.seek(0)
         return block
 
@@ -3213,11 +3151,7 @@ class DAC2Factory(LayoutFactory):
 # caching all available layout factories
 
 
-factories = {
-    "ACQUIS1/GS/1991": Acquis1Factory,
-    "DAC2/GS/2000": DAC2GSFactory,
-    "DAC2 objects": DAC2Factory
-}
+factories = {"ACQUIS1/GS/1991": Acquis1Factory, "DAC2/GS/2000": DAC2GSFactory, "DAC2 objects": DAC2Factory}
 
 # --------------------------------------------------------
 # ELPHY FILE
@@ -3382,9 +3316,9 @@ class ElphyFile:
         if self.file:
             self.file.close()
         try:
-            self.file = open(self.path, 'rb')
+            self.file = open(self.path, "rb")
         except Exception as e:
-            raise Exception("python couldn't open file {} : {}".format(self.path, e))
+            raise Exception(f"python couldn't open file {self.path} : {e}")
         self.file_size = path.getsize(self.file.name)
         self.creation_date = datetime.fromtimestamp(path.getctime(self.file.name))
         self.modification_date = datetime.fromtimestamp(path.getmtime(self.file.name))
@@ -3408,14 +3342,13 @@ class ElphyFile:
         as 16 bytes of binary data.
         """
         self.file.seek(0)
-        length, title = struct.unpack('<B15s', self.file.read(16))
-        if hasattr(title, 'decode'):
+        length, title = struct.unpack("<B15s", self.file.read(16))
+        if hasattr(title, "decode"):
             title = title.decode()
         self.file.seek(0)
         title = title[0:length]
         if title not in factories:
-            title = "format is not implemented ('{}' not in {})".format(
-                title, str(factories.keys()))
+            title = f"format is not implemented ('{title}' not in { str(factories.keys())})"
         return title
 
     def set_nomenclature(self):
@@ -3425,8 +3358,8 @@ class ElphyFile:
         15 characters and stored as 16 bytes of binary data.
         """
         self.file.seek(0)
-        title = 'DAC2 objects'
-        st = struct.Struct('<B15sH')
+        title = "DAC2 objects"
+        st = struct.Struct("<B15sH")
         header_rec = [len(title), title, 18]  # constant header
         header_chr = st.pack(*header_rec)
         self.header_size = len(header_chr)
@@ -3438,7 +3371,7 @@ class ElphyFile:
         useful to build the file layout depending
         on header title.
         """
-        if hasattr(self.nomenclature, 'decode'):
+        if hasattr(self.nomenclature, "decode"):
             self.nomenclature = self.nomenclature.decode()
         return factories[self.nomenclature](self)
 
@@ -3461,9 +3394,9 @@ class ElphyFile:
         if self.file:
             self.file.close()
         try:
-            self.file = open(self.path, 'wb')
+            self.file = open(self.path, "wb")
         except Exception as e:
-            raise Exception("python couldn't open file {} : {}".format(self.path, e))
+            raise Exception(f"python couldn't open file {self.path} : {e}")
         self.file_size = 0
         self.creation_date = datetime.now()
         self.modification_date = datetime.now()
@@ -3517,15 +3450,14 @@ class ElphyFile:
             # DAC2 objects format, maybe it could be useful to
             # spread this to other block types.
             # if isinstance(header, DAC2Header) and (block.identifier in ['B_Ep']) :
-            if isinstance(header, DAC2Header) and (block.identifier in ['B_Ep', 'B_Finfo']):
+            if isinstance(header, DAC2Header) and (block.identifier in ["B_Ep", "B_Finfo"]):
                 sub_offset = block.data_offset
                 while sub_offset < block.start + block.size:
                     sub_block = self.factory.create_sub_block(block, sub_offset)
                     block.add_sub_block(sub_block)
                     sub_offset += sub_block.size
                 # set up some properties of some DAC2Layout sub-blocks
-                if isinstance(sub_block, (
-                        DAC2EpSubBlock, DAC2AdcSubBlock, DAC2KSampSubBlock, DAC2KTypeSubBlock)):
+                if isinstance(sub_block, (DAC2EpSubBlock, DAC2AdcSubBlock, DAC2KSampSubBlock, DAC2KTypeSubBlock)):
                     block.set_episode_block()
                     block.set_channel_block()
                     block.set_sub_sampling_block()
@@ -3542,8 +3474,7 @@ class ElphyFile:
 
             # set up as soon as possible the shortcut
             # to the main block of a DAC2GSLayout
-            if (not detect_main and isinstance(layout, DAC2GSLayout)
-                    and isinstance(block, DAC2GSMainBlock)):
+            if not detect_main and isinstance(layout, DAC2GSLayout) and isinstance(block, DAC2GSMainBlock):
                 layout.set_main_block()
                 detect_main = True
 
@@ -3555,8 +3486,7 @@ class ElphyFile:
         # set up the shortcut to blocks corresponding
         # to episodes, only available for DAC2Layout
         # and also DAC2GSLayout if not continuous
-        if isinstance(layout, DAC2Layout) or (
-                isinstance(layout, DAC2GSLayout) and not layout.is_continuous()):
+        if isinstance(layout, DAC2Layout) or (isinstance(layout, DAC2GSLayout) and not layout.is_continuous()):
             layout.set_episode_blocks()
 
         layout.set_data_blocks()
@@ -3728,7 +3658,7 @@ class ElphyFile:
         Get all available spiketrains stored into an Elphy file.
         """
         spiketrains = list()
-        spk_blocks = self.layout.get_blocks_of_type('RSPK')
+        spk_blocks = self.layout.get_blocks_of_type("RSPK")
         for bl in spk_blocks:
             # print "ElphyFile.get_spiketrains() - identifier:",bl.identifier
             for ch in range(0, bl.n_evt_channels):
@@ -3738,7 +3668,7 @@ class ElphyFile:
 
     def get_names(self):
         com_blocks = list()
-        com_blocks = self.layout.get_blocks_of_type('COM')
+        com_blocks = self.layout.get_blocks_of_type("COM")
         return com_blocks
 
 
@@ -3769,6 +3699,7 @@ class ElphyIO(BaseIO):
         >>> # creating segments, their contents and append to bl
         >>> r.write_block( bl )
     """
+
     is_readable = True  # This class can read data
     is_writable = False  # This class can write data
     # This class is able to directly or indirectly handle the following objects
@@ -3786,15 +3717,13 @@ class ElphyIO(BaseIO):
     # and 'label' (for a descriptive name).
     # Note that if the highest-level object requires parameters,
     # common_io_test will be skipped.
-    read_params = {
-    }
+    read_params = {}
     # do not supported write so no GUI stuff
-    write_params = {
-    }
-    name = 'Elphy IO'
-    extensions = ['DAT']
+    write_params = {}
+    name = "Elphy IO"
+    extensions = ["DAT"]
     # mode can be 'file' or 'dir' or 'fake' or 'database'
-    mode = 'file'
+    mode = "file"
     # internal serialized representation of neo data
     serialized = None
 
@@ -3807,7 +3736,10 @@ class ElphyIO(BaseIO):
         self.filename = filename
         self.elphy_file = ElphyFile(self.filename)
 
-    def read_block(self, lazy=False, ):
+    def read_block(
+        self,
+        lazy=False,
+    ):
         """
         Return :class:`Block`.
 
@@ -3816,7 +3748,7 @@ class ElphyIO(BaseIO):
         lazy : bool
             Postpone actual reading of the file.
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         # basic
         block = Block(name=None)
@@ -3826,12 +3758,12 @@ class ElphyIO(BaseIO):
             self.elphy_file.open()
         except Exception as e:
             self.elphy_file.close()
-            raise Exception("cannot open file {} : {}".format(self.filename, e))
+            raise Exception(f"cannot open file {self.filename} : { e}")
 
         # create a segment containing all analog,
         # tag and event channels for the episode
         if self.elphy_file.n_episodes in [None, 0]:
-            print("File '%s' appears to have no episodes" % (self.filename))
+            print("File '{self.filename}' appears to have no episodes")
             return block
         for episode in range(1, self.elphy_file.n_episodes + 1):
             segment = self.read_segment(episode)
@@ -3874,7 +3806,7 @@ class ElphyIO(BaseIO):
         # serialize first the lowest structures.
         # Iterate over block structures
         elphy_limit = 256
-        All = ''
+        All = ""
         # print "\n\n--------------------------------------------\n"
         # print "write_block() - n_segments:",len(block.segments)
         for seg in block.segments:
@@ -3883,13 +3815,13 @@ class ElphyIO(BaseIO):
             nbpt = 0
             chls = 0
             Dxu = 1e-8  # 0.0000001
-            Rxu = 1e+8  # 10000000.0
+            Rxu = 1e8  # 10000000.0
             X0uSpk = 0.0
             CyberTime = 0.0
             aa_units = []
             NbEv = []
-            serialized_analog_data = ''
-            serialized_spike_data = ''
+            serialized_analog_data = ""
+            serialized_spike_data = ""
             # AnalogSignals
             # Neo signalarrays are 2D numpy array where each row is an array of samples for a
             #  channel:
@@ -3915,7 +3847,8 @@ class ElphyIO(BaseIO):
             # print "write_block() - n_analogsignalarrays:",len(seg.analogsignalarrays)
             for asigar in seg.analogsignalarrays:
                 idx, annotations = self.get_annotations_dict(
-                    annotations, "analogsignal", asigar.annotations.items(), asigar.name, idx)
+                    annotations, "analogsignal", asigar.annotations.items(), asigar.name, idx
+                )
                 # array structure
                 _, chls = asigar.shape
                 # units
@@ -3935,9 +3868,9 @@ class ElphyIO(BaseIO):
                 # get dimensions
                 nbchan, nbpt = analogsignals.shape
                 # serialize AnalogSignal
-                analog_data_fmt = '<' + str(analogsignals.size) + 'f'
+                analog_data_fmt = "<" + str(analogsignals.size) + "f"
                 # serialized flattened numpy channels in 'F'ortran style
-                analog_data_64 = analogsignals.flatten('F')
+                analog_data_64 = analogsignals.flatten("F")
                 # elphy normally uses float32 values (for performance reasons)
                 analog_data = np.array(analog_data_64, dtype=np.float32)
                 serialized_analog_data += struct.pack(analog_data_fmt, *analog_data)
@@ -3955,13 +3888,14 @@ class ElphyIO(BaseIO):
             if len(seg.spiketrains) > elphy_limit:
                 NbVeV = elphy_limit
             # serialize format
-            spiketrain_data_fmt = '<'
+            spiketrain_data_fmt = "<"
             spiketrains = []
             for idx, train in enumerate(seg.spiketrains[:NbVeV]):
                 # print "write_block() - train.size:", train.size,idx
                 # print "write_block() - train:", train
                 fake, annotations = self.get_annotations_dict(
-                    annotations, "spiketrain", train.annotations.items(), '', idx)
+                    annotations, "spiketrain", train.annotations.items(), "", idx
+                )
                 # annotations.update( dict( [("spiketrain-"+str(idx),
                 # train.annotations['source_id'])] ) )
                 # print "write_block() - train[%s].annotation['source_id']:%s"
@@ -3977,41 +3911,40 @@ class ElphyIO(BaseIO):
                 train = train * Rxu
                 # all flattened spike train
                 # blackrock acquisition card also adds a byte for each event to sort it
-                spiketrains.extend([spike.item() for spike in train] +
-                                   [0 for _ in range(train.size)])
+                spiketrains.extend([spike.item() for spike in train] + [0 for _ in range(train.size)])
             # Annotations
             # print annotations
             # using DBrecord elphy block, they will be available as values in elphy environment
             # separate keys and values in two separate serialized strings
-            ST_sub = ''
-            st_fmt = ''
+            ST_sub = ""
+            st_fmt = ""
             st_data = []
-            BUF_sub = ''
-            serialized_ST_data = ''
-            serialized_BUF_data = ''
+            BUF_sub = ""
+            serialized_ST_data = ""
+            serialized_BUF_data = ""
             for key in sorted(annotations.iterkeys()):
                 # take all values, get their type and concatenate
-                fmt = ''
+                fmt = ""
                 data = []
                 value = annotations[key]
                 if isinstance(value, (int, np.int32, np.int64)):
                     # elphy type 2
-                    fmt = '<Bq'
+                    fmt = "<Bq"
                     data = [2, value]
                 elif type(value) == str:
                     # elphy type 4
                     str_len = len(value)
-                    fmt = '<BI' + str(str_len) + 's'
+                    fmt = "<BI" + str(str_len) + "s"
                     data = [4, str_len, value]
                 else:
-                    print("ElphyIO.write_block() - unknown annotation type: %s" % type(value))
+                    print(f"ElphyIO.write_block() - unknown annotation type: {type(value)}")
                     continue
                 # last, serialization
                 # BUF values
                 serialized_BUF_data += struct.pack(fmt, *data)
                 # ST values
                 # take each key and concatenate using 'crlf'
-                st_fmt += str(len(key)) + 's2s'
+                st_fmt += str(len(key)) + "s2s"
                 st_data.extend([key, "\r\n"])
             # ST keys
             serialized_ST_data = struct.pack(st_fmt, *st_data)
@@ -4020,9 +3953,9 @@ class ElphyIO(BaseIO):
             serialized_spike_data += struct.pack(spiketrain_data_fmt, *spiketrains)
             # ------------- Elphy Structures to be filled --------------
             # 'Ep'
-            data_format = '<BiBB10sdd?BBddiddB10sB10sdI'
+            data_format = "<BiBB10sdd?BBddiddB10sB10sdI"
             # setting values
-            uX = 'ms        '
+            uX = "ms        "
             pc_time = datetime.now()
             pc_time = pc_time.microsecond * 1000
             data_values = [
@@ -4044,12 +3977,12 @@ class ElphyIO(BaseIO):
                 10,  # uX length
                 uX,  # unitXSpk : string
                 10,  # uX length
-                '          ',  # unitYSpk : string
+                "          ",  # unitYSpk : string
                 CyberTime,  # CyberTime : double
-                pc_time  # PCtime : longword - time in milliseconds
+                pc_time,  # PCtime : longword - time in milliseconds
             ]
             Ep_chr = self.get_serialized(data_format, data_values)
-            Ep_sub = self.get_serialized_subblock('Ep', Ep_chr)
+            Ep_sub = self.get_serialized_subblock("Ep", Ep_chr)
             # 'Adc'
             # Then, one or more (nbchan) Analog/Digital Channel will be, having their fixed data
             # format
@@ -4060,16 +3993,16 @@ class ElphyIO(BaseIO):
             for dc in aa_units:
                 # create
                 Adc_chr = []  # init
-                Dyu, UnitY = '{}'.format(dc).split()
+                Dyu, UnitY = f"{dc}".split()
                 data_values = [
                     10,  # size
-                    UnitY + '        ',  # uY string : vertical units
+                    UnitY + "        ",  # uY string : vertical units
                     float(Dyu),  # Dyu double : scaling parameter
-                    0.0  # Y0u double : scaling parameter
+                    0.0,  # Y0u double : scaling parameter
                 ]
                 Adc_chr = self.get_serialized(data_format, data_values)
                 Adc_chrl += Adc_chr
-            Adc_sub = self.get_serialized_subblock('Adc', Adc_chrl)
+            Adc_sub = self.get_serialized_subblock("Adc", Adc_chrl)
             # print "Adc size:",len(Adc_sub)
             # 'Ksamp'
             # subblock containing an array of nbchan bytes
@@ -4078,7 +4011,7 @@ class ElphyIO(BaseIO):
             data_format = "<" + ("h" * nbchan)
             data_values = [1 for _ in range(nbchan)]
             Ksamp_chr = self.get_serialized(data_format, data_values)
-            Ksamp_sub = self.get_serialized_subblock('Ksamp', Ksamp_chr)
+            Ksamp_sub = self.get_serialized_subblock("Ksamp", Ksamp_chr)
             # print "Ksamp size: %s" % (len(Ksamp_sub))
             # 'Ktype'
             # subblock containing an array of nbchan bytes
@@ -4099,13 +4032,13 @@ class ElphyIO(BaseIO):
             data_format = "<" + ("B" * nbchan)
             data_values = [ctype for n in range(nbchan)]
             Ktype_chr = self.get_serialized(data_format, data_values)
-            Ktype_sub = self.get_serialized_subblock('Ktype', Ktype_chr)
+            Ktype_sub = self.get_serialized_subblock("Ktype", Ktype_chr)
             # print "Ktype size: %s" % (len(Ktype_sub))
             # Episode data serialization:
             # concatenate all its data strings under a block
             Ep_data = Ep_sub + Adc_sub + Ksamp_sub + Ktype_sub
             # print "\n---- Finishing:\nEp subs size: %s" % (len(Ep_data))
-            Ep_blk = self.get_serialized_block('B_Ep', Ep_data)
+            Ep_blk = self.get_serialized_block("B_Ep", Ep_data)
             # print "B_Ep size: %s" % (len(Ep_blk))
             # 'RDATA'
             # It produces a two part (header+data) content coming from analog/digital inputs.
@@ -4113,7 +4046,7 @@ class ElphyIO(BaseIO):
             data_format = "<h?dI"
             data_values = [15, True, pctime, 0]
             RDATA_chr = self.get_serialized(data_format, data_values, serialized_analog_data)
-            RDATA_blk = self.get_serialized_block('RDATA', RDATA_chr)
+            RDATA_blk = self.get_serialized_block("RDATA", RDATA_chr)
             # print "RDATA size: %s" % (len(RDATA_blk))
             # 'Rspk'
             # like an REVT block + addons
@@ -4123,34 +4056,34 @@ class ElphyIO(BaseIO):
             data_values = [15, True, pctime, 0, NbVeV]
             data_values.extend(NbEv)
             Rspk_chr = self.get_serialized(data_format, data_values, serialized_spike_data)
-            Rspk_blk = self.get_serialized_block('RSPK', Rspk_chr)
+            Rspk_blk = self.get_serialized_block("RSPK", Rspk_chr)
             # print "RSPK size: %s" % (len(Rspk_blk))
             # 'DBrecord'
             # like a block + subblocks
             # serializzation
-            ST_sub = self.get_serialized_subblock('ST', serialized_ST_data)
+            ST_sub = self.get_serialized_subblock("ST", serialized_ST_data)
             # print "ST size: %s" % (len(ST_sub))
-            BUF_sub = self.get_serialized_subblock('BUF', serialized_BUF_data)
+            BUF_sub = self.get_serialized_subblock("BUF", serialized_BUF_data)
             # print "BUF size: %s" % (len(BUF_sub))
             annotations_data = ST_sub + BUF_sub
             # data_format = "<h?dI"
             # data_values = [ 15, True, pctime, 0 ]
             # DBrec_chr = self.get_serialized( data_format, data_values, annotations_data )
-            DBrec_blk = self.get_serialized_block('DBrecord', annotations_data)
+            DBrec_blk = self.get_serialized_block("DBrecord", annotations_data)
             # print "DBrecord size: %s" % (len(DBrec_blk))
             # 'COM'
             # print "write_block() - segment name:", seg.name
             # name of the file - NEO Segment name
-            data_format = '<h' + str(len(seg.name)) + 's'
+            data_format = "<h" + str(len(seg.name)) + "s"
             data_values = [len(seg.name), seg.name]
             SEG_COM_chr = self.get_serialized(data_format, data_values)
-            SEG_COM_blk = self.get_serialized_block('COM', SEG_COM_chr)
+            SEG_COM_blk = self.get_serialized_block("COM", SEG_COM_chr)
             # Complete data serialization: concatenate all data strings
             All += Ep_blk + RDATA_blk + Rspk_blk + DBrec_blk + SEG_COM_blk
         # ElphyFile (open, write and close)
         self.elphy_file.write(All)
 
-    def get_serialized(self, data_format, data_values, ext_data=''):
+    def get_serialized(self, data_format, data_values, ext_data=""):
         data_chr = struct.pack(data_format, *data_values)
         return data_chr + ext_data
 
@@ -4194,16 +4127,15 @@ class ElphyIO(BaseIO):
         data_chr = struct.pack(data_format, *data_values)
         return data_chr + data
 
-    def get_annotations_dict(self, annotations, prefix, items, name='', idx=0):
+    def get_annotations_dict(self, annotations, prefix, items, name="", idx=0):
         """
         Helper function to retrieve annotations in a dictionary to be serialized as Elphy DBrecord
         """
-        for (key, value) in items:
+        for key, value in items:
             # print "get_annotation_dict() - items[%s]" % (key)
             if isinstance(value, (list, tuple, np.ndarray)):
                 for element in value:
-                    annotations.update(
-                        dict([(prefix + "-" + name + "-" + key + "-" + str(idx), element)]))
+                    annotations.update(dict([(prefix + "-" + name + "-" + key + "-" + str(idx), element)]))
                     idx = idx + 1
             else:
                 annotations.update(dict([(prefix + "-" + key + "-" + str(idx), value)]))
@@ -4220,7 +4152,7 @@ class ElphyIO(BaseIO):
         """
         # print "name:",self.elphy_file.layout.get_episode_name(episode)
         episode_name = self.elphy_file.layout.get_episode_name(episode)
-        name = episode_name if len(episode_name) > 0 else "episode %s" % str(episode + 1)
+        name = episode_name if len(episode_name) > 0 else f"episode {str(episode + 1)}"
         segment = Segment(name=name)
         # create an analog signal for
         # each channel in the episode
@@ -4228,13 +4160,13 @@ class ElphyIO(BaseIO):
             signal = self.elphy_file.get_signal(episode, channel)
             x_unit = signal.x_unit.strip().decode()
             analog_signal = AnalogSignal(
-                signal.data['y'],
+                signal.data["y"],
                 units=signal.y_unit,
                 t_start=signal.t_start * getattr(pq, signal.x_unit.strip().decode()),
                 t_stop=signal.t_stop * getattr(pq, signal.x_unit.strip().decode()),
                 # sampling_rate = signal.sampling_frequency * pq.kHz,
                 sampling_period=signal.sampling_period * getattr(pq, x_unit),
-                channel_name="episode {}, channel {}".format(int(episode + 1), int(channel + 1))
+                channel_name=f"episode {int(episode + 1)}, channel { int(channel + 1)}",
             )
             segment.analogsignals.append(analog_signal)
         # create a spiketrain for each
@@ -4263,10 +4195,7 @@ class ElphyIO(BaseIO):
             Index of the event.
         """
         event = self.elphy_file.get_event(episode, evt)
-        neo_event = Event(
-            times=event.times * pq.s,
-            channel_name="episode {}, event channel {}".format(episode + 1, evt + 1)
-        )
+        neo_event = Event(times=event.times * pq.s, channel_name=f"episode {episode + 1}, event channel {evt + 1}")
         return neo_event
 
     def read_spiketrain(self, episode, spk):
@@ -4286,18 +4215,17 @@ class ElphyIO(BaseIO):
         # print "read_spiketrain() - spikes: %s" % (len(spikes))
         # print "read_spiketrain() - spikes:",spikes
         dct = {
-            'times': spikes,
+            "times": spikes,
             # check
-            't_start': block.ep_block.X0_wf if block.ep_block.X0_wf < spikes[0] else spikes[0],
-            't_stop': block.ep_block.cyber_time if block.ep_block.cyber_time > spikes[-1] else
-            spikes[-1],
-            'units': 's',
+            "t_start": block.ep_block.X0_wf if block.ep_block.X0_wf < spikes[0] else spikes[0],
+            "t_stop": block.ep_block.cyber_time if block.ep_block.cyber_time > spikes[-1] else spikes[-1],
+            "units": "s",
             # special keywords to identify the
             # electrode providing the spiketrain
             # event though it is redundant with
             # waveforms
-            'label': "episode {}, electrode {}".format(episode, spk),
-            'electrode_id': spk
+            "label": f"episode {episode}, electrode {spk}",
+            "electrode_id": spk,
         }
         # new spiketrain
         return SpikeTrain(**dct)

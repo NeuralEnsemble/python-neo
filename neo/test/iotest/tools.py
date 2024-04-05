@@ -35,12 +35,12 @@ def cleanup_test_file(mode, path, directory=None):
     """
     if directory is not None and not os.path.isabs(path):
         path = os.path.join(directory, path)
-    if hasattr(mode, 'mode'):
+    if hasattr(mode, "mode"):
         mode = mode.mode
-    if mode == 'file':
+    if mode == "file":
         if os.path.exists(path):
             os.remove(path)
-    elif mode == 'dir':
+    elif mode == "dir":
         if os.path.exists(path):
             shutil.rmtree(path)
 
@@ -60,13 +60,13 @@ def get_test_file_full_path(ioclass, filename=None, directory=None, clean=False)
     """
     # create a filename if none is provided
     if filename is None:
-        filename = 'Generated0_%s' % ioclass.__name__
-        if (ioclass.mode == 'file' and len(ioclass.extensions) >= 1):
-            filename += '.' + ioclass.extensions[0]
-    elif not hasattr(filename, 'lower'):
-        return [get_test_file_full_path(ioclass, filename=fname,
-                                        directory=directory, clean=clean) for
-                fname in filename]
+        filename = f"Generated0_{ioclass.__name__}"
+        if ioclass.mode == "file" and len(ioclass.extensions) >= 1:
+            filename += "." + ioclass.extensions[0]
+    elif not hasattr(filename, "lower"):
+        return [
+            get_test_file_full_path(ioclass, filename=fname, directory=directory, clean=clean) for fname in filename
+        ]
 
     # if a directory is provided add it
     if directory is not None and not os.path.isabs(filename):
@@ -82,8 +82,7 @@ def get_test_file_full_path(ioclass, filename=None, directory=None, clean=False)
 get_test_file_full_path.__test__ = False
 
 
-def create_generic_io_object(ioclass, filename=None, directory=None,
-                             return_path=False, clean=False):
+def create_generic_io_object(ioclass, filename=None, directory=None, return_path=False, clean=False):
     """
     Create an io object in a generic way that can work with both
     file-based and directory-based io objects
@@ -101,13 +100,12 @@ def create_generic_io_object(ioclass, filename=None, directory=None,
     If clean is True, try to delete existing versions of the file
     before creating the io object.  Default is False.
     """
-    filename = get_test_file_full_path(ioclass, filename=filename,
-                                       directory=directory, clean=clean)
+    filename = get_test_file_full_path(ioclass, filename=filename, directory=directory, clean=clean)
     try:
         # actually create the object
-        if ioclass.mode == 'file':
+        if ioclass.mode == "file":
             ioobj = ioclass(filename=filename)
-        elif ioclass.mode == 'dir':
+        elif ioclass.mode == "dir":
             ioobj = ioclass(dirname=filename)
         else:
             ioobj = None
@@ -121,8 +119,7 @@ def create_generic_io_object(ioclass, filename=None, directory=None,
     return ioobj
 
 
-def iter_generic_io_objects(ioclass, filenames, directory=None,
-                            return_path=False, clean=False):
+def iter_generic_io_objects(ioclass, filenames, directory=None, return_path=False, clean=False):
     """
     Return an iterable over the io objects created from a list of filenames.
 
@@ -138,10 +135,9 @@ def iter_generic_io_objects(ioclass, filenames, directory=None,
     before creating the io object.  Default is False.
     """
     for filename in filenames:
-        ioobj, path = create_generic_io_object(ioclass, filename=filename,
-                                               directory=directory,
-                                               return_path=True,
-                                               clean=clean)
+        ioobj, path = create_generic_io_object(
+            ioclass, filename=filename, directory=directory, return_path=True, clean=clean
+        )
 
         if ioobj is None:
             continue
@@ -178,17 +174,17 @@ def create_generic_reader(ioobj, target=None, readall=False):
         return ioobj.read_segment
     elif not target:
         if readall:
-            raise ValueError('readall cannot be True if target is False')
+            raise ValueError("readall cannot be True if target is False")
         return ioobj.read
-    elif hasattr(target, 'lower'):
+    elif hasattr(target, "lower"):
         if readall:
-            return getattr(ioobj, 'read_all_%ss' % target.lower())
-        return getattr(ioobj, 'read_%s' % target.lower())
+            return getattr(ioobj, f"read_all_{target.lower()}s")
+        return getattr(ioobj, f"read_{target.lower()}")
 
 
-def iter_generic_readers(ioclass, filenames, directory=None, target=None,
-                         return_path=False, return_ioobj=False,
-                         clean=False, readall=False):
+def iter_generic_readers(
+    ioclass, filenames, directory=None, target=None, return_path=False, return_ioobj=False, clean=False, readall=False
+):
     """
     Iterate over functions that can read the target object from a list of
     filenames.
@@ -217,11 +213,9 @@ def iter_generic_readers(ioclass, filenames, directory=None, target=None,
     If readall is True, use the read_all_ method instead of the read_ method.
     Default is False.
     """
-    for ioobj, path in iter_generic_io_objects(ioclass=ioclass,
-                                               filenames=filenames,
-                                               directory=directory,
-                                               return_path=True,
-                                               clean=clean):
+    for ioobj, path in iter_generic_io_objects(
+        ioclass=ioclass, filenames=filenames, directory=directory, return_path=True, clean=clean
+    ):
         res = create_generic_reader(ioobj, target=target, readall=readall)
         if not return_path and not return_ioobj:
             yield res
@@ -255,12 +249,11 @@ def create_generic_writer(ioobj, target=None):
         return ioobj.write_segment
     elif not target:
         return ioobj.write
-    elif hasattr(target, 'lower'):
-        return getattr(ioobj, 'write_' + target.lower())
+    elif hasattr(target, "lower"):
+        return getattr(ioobj, "write_" + target.lower())
 
 
-def read_generic(ioobj, target=None, lazy=False, readall=False,
-                 return_reader=False):
+def read_generic(ioobj, target=None, lazy=False, readall=False, return_reader=False):
     """
     Read the target object from a file using the given neo io object ioobj.
 
@@ -285,10 +278,18 @@ def read_generic(ioobj, target=None, lazy=False, readall=False,
     return obj
 
 
-def iter_read_objects(ioclass, filenames, directory=None, target=None,
-                      return_path=False, return_ioobj=False,
-                      return_reader=False, clean=False, readall=False,
-                      lazy=False):
+def iter_read_objects(
+    ioclass,
+    filenames,
+    directory=None,
+    target=None,
+    return_path=False,
+    return_ioobj=False,
+    return_reader=False,
+    clean=False,
+    readall=False,
+    lazy=False,
+):
     """
     Iterate over objects read from a list of filenames.
 
@@ -321,13 +322,16 @@ def iter_read_objects(ioclass, filenames, directory=None, target=None,
     If readall is True, use the read_all_ method instead of the read_ method.
     Default is False.
     """
-    for obj_reader, path, ioobj in iter_generic_readers(ioclass, filenames,
-                                                        directory=directory,
-                                                        target=target,
-                                                        return_path=True,
-                                                        return_ioobj=True,
-                                                        clean=clean,
-                                                        readall=readall):
+    for obj_reader, path, ioobj in iter_generic_readers(
+        ioclass,
+        filenames,
+        directory=directory,
+        target=target,
+        return_path=True,
+        return_ioobj=True,
+        clean=clean,
+        readall=readall,
+    ):
         obj = obj_reader(lazy=lazy)
         if not return_path and not return_ioobj and not return_reader:
             yield obj

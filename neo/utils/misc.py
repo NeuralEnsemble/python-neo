@@ -1,7 +1,7 @@
-'''
+"""
 This module defines multiple utility functions for filtering, creation, slicing,
 etc. of neo.core objects.
-'''
+"""
 
 import copy
 import warnings
@@ -11,7 +11,8 @@ import quantities as pq
 
 import neo
 
-reserved_annotations = ['nix_name']
+reserved_annotations = ["nix_name"]
+
 
 def get_events(container, **properties):
     """
@@ -81,8 +82,8 @@ def get_events(container, **properties):
         return event_lst
     else:
         raise TypeError(
-            'Container needs to be of type Block or Segment, not %s '
-            'in order to extract Events.' % (type(container)))
+            f"Container needs to be of type Block or Segment, not {type(container)} " "in order to extract Events."
+        )
 
 
 def get_epochs(container, **properties):
@@ -154,8 +155,8 @@ def get_epochs(container, **properties):
         return epoch_list
     else:
         raise TypeError(
-            'Container needs to be of type Block or Segment, not %s '
-            'in order to extract Epochs.' % (type(container)))
+            f"Container needs to be of type Block or Segment, not {type(container)} " "in order to extract Epochs."
+        )
 
 
 def _get_from_list(input_list, prop=None):
@@ -171,8 +172,7 @@ def _get_from_list(input_list, prop=None):
         for ep in input_list:
             if isinstance(ep, neo.Epoch) or isinstance(ep, neo.Event):
                 sparse_ep = ep.copy()
-            elif isinstance(ep, neo.io.proxyobjects.EpochProxy) \
-                    or isinstance(ep, neo.io.proxyobjects.EventProxy):
+            elif isinstance(ep, neo.io.proxyobjects.EpochProxy) or isinstance(ep, neo.io.proxyobjects.EventProxy):
                 # need to load the Event/Epoch in order to be able to filter by array annotations
                 sparse_ep = ep.load()
             for k in prop.keys():
@@ -228,7 +228,7 @@ def _event_epoch_slice_by_valid_ids(obj, valid_ids):
     if type(obj) is neo.Event or type(obj) is neo.Epoch:
         sparse_obj = copy.deepcopy(obj[valid_ids])
     else:
-        raise TypeError('Can only slice Event and Epoch objects by valid IDs.')
+        raise TypeError("Can only slice Event and Epoch objects by valid IDs.")
 
     return sparse_obj
 
@@ -243,7 +243,7 @@ def _get_valid_ids(obj, annotation_key, annotation_value):
     if annotation_key in obj.annotations and obj.annotations[annotation_key] == annotation_value:
         valid_mask = np.ones(obj.shape)
 
-    elif annotation_key == 'labels':
+    elif annotation_key == "labels":
         # wrap annotation value to be list
         if not type(annotation_value) in [list, np.ndarray]:
             annotation_value = [annotation_value]
@@ -263,9 +263,7 @@ def _get_valid_ids(obj, annotation_key, annotation_value):
     return valid_ids
 
 
-def add_epoch(
-        segment, event1, event2=None, pre=0 * pq.s, post=0 * pq.s,
-        attach_result=True, **kwargs):
+def add_epoch(segment, event1, event2=None, pre=0 * pq.s, post=0 * pq.s, attach_result=True, **kwargs):
     """
     Create Epochs around a single Event, or between pairs of events. Starting
     and end time of the Epoch can be modified using pre and post as offsets
@@ -307,8 +305,7 @@ def add_epoch(
         event2 = event1
 
     if not isinstance(segment, neo.Segment):
-        raise TypeError(
-            'Segment has to be of type Segment, not %s' % type(segment))
+        raise TypeError(f"Segment has to be of type Segment, not {type(segment)}")
 
     # load the full event if a proxy object has been given as an argument
     if isinstance(event1, neo.io.proxyobjects.EventProxy):
@@ -318,31 +315,28 @@ def add_epoch(
 
     for event in [event1, event2]:
         if not isinstance(event, neo.Event):
-            raise TypeError(
-                'Events have to be of type Event, not %s' % type(event))
+            raise TypeError(f"Events have to be of type Event, not {type(event)}")
 
     if len(event1) != len(event2):
         raise ValueError(
-            'event1 and event2 have to have the same number of entries in '
-            'order to create epochs between pairs of entries. Match your '
-            'events before generating epochs. Current event lengths '
-            'are %i and %i' % (len(event1), len(event2)))
+            "event1 and event2 have to have the same number of entries in "
+            "order to create epochs between pairs of entries. Match your "
+            "events before generating epochs. Current event lengths "
+            f"are {len(event1)} and {len(event2)}"
+        )
 
     times = event1.times + pre
     durations = event2.times + post - times
 
     if any(durations < 0):
-        raise ValueError(
-            'Can not create epoch with negative duration. '
-            'Requested durations %s.' % durations)
+        raise ValueError(f"Can not create epoch with negative duration. " "Requested durations {durations}.")
     elif any(durations == 0):
-        raise ValueError('Can not create epoch with zero duration.')
+        raise ValueError("Can not create epoch with zero duration.")
 
-    if 'name' not in kwargs:
-        kwargs['name'] = 'epoch'
-    if 'labels' not in kwargs:
-        kwargs['labels'] = [u'{}_{}'.format(kwargs['name'], i)
-                            for i in range(len(times))]
+    if "name" not in kwargs:
+        kwargs["name"] = "epoch"
+    if "labels" not in kwargs:
+        kwargs["labels"] = [f"{kwargs['name']}_{i}" for i in range(len(times))]
 
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
 
@@ -405,17 +399,15 @@ def match_events(event1, event2):
 
     if id1 < len(event1):
         warnings.warn(
-            'Could not match all events to generate epochs. Missed '
-            '%s event entries in event1 list' % (len(event1) - id1))
+            "Could not match all events to generate epochs. Missed " f"{len(event1) - id1} event entries in event1 list"
+        )
     if id2 < len(event2):
         warnings.warn(
-            'Could not match all events to generate epochs. Missed '
-            '%s event entries in event2 list' % (len(event2) - id2))
+            "Could not match all events to generate epochs. Missed " f"{len(event2) - id2} event entries in event2 list"
+        )
 
-    event1_matched = _event_epoch_slice_by_valid_ids(
-        obj=event1, valid_ids=match_ev1)
-    event2_matched = _event_epoch_slice_by_valid_ids(
-        obj=event2, valid_ids=match_ev2)
+    event1_matched = _event_epoch_slice_by_valid_ids(obj=event1, valid_ids=match_ev1)
+    event2_matched = _event_epoch_slice_by_valid_ids(obj=event2, valid_ids=match_ev2)
 
     return event1_matched, event2_matched
 
@@ -472,8 +464,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         Updated block.
     """
     if not isinstance(block, neo.Block):
-        raise TypeError(
-            'block needs to be a Block, not %s' % type(block))
+        raise TypeError(f"block needs to be a Block, not {type(block)}")
 
     new_block = neo.Block()
 
@@ -481,18 +472,19 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         epochs = _get_from_list(seg.epochs, prop=properties)
         if len(epochs) > 1:
             warnings.warn(
-                'Segment %s contains multiple epochs with '
-                'requested properties (%s). Sub-segments can '
-                'have overlapping times' % (seg.name, properties))
+                f"Segment {seg.name} contains multiple epochs with "
+                f"requested properties ({properties}). Sub-segments can "
+                "have overlapping times"
+            )
 
         elif len(epochs) == 0:
             warnings.warn(
-                'No epoch is matching the requested epoch properties %s. '
-                'No cutting of segment %s performed.' % (properties, seg.name))
+                f"No epoch is matching the requested epoch properties {properties}. "
+                f"No cutting of segment {seg.name} performed."
+            )
 
         for epoch in epochs:
-            new_segments = cut_segment_by_epoch(
-                seg, epoch=epoch, reset_time=reset_time)
+            new_segments = cut_segment_by_epoch(seg, epoch=epoch, reset_time=reset_time)
             new_block.segments.extend(new_segments)
 
     new_block.check_relationships()
@@ -532,18 +524,14 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
         receive the annotations of the corresponding epoch in the input.
     """
     if not isinstance(seg, neo.Segment):
-        raise TypeError(
-            'Seg needs to be of type Segment, not %s' % type(seg))
+        raise TypeError(f"Seg needs to be of type Segment, not {type(seg)}")
 
     if not isinstance(epoch, neo.Epoch):
-        raise TypeError(
-            'Epoch needs to be of type Epoch, not %s' % type(epoch))
+        raise TypeError(f"Epoch needs to be of type Epoch, not {type(epoch)}")
 
     segments = []
     for ep_id in range(len(epoch)):
-        subseg = seg.time_slice(epoch.times[ep_id],
-                                epoch.times[ep_id] + epoch.durations[ep_id],
-                                reset_time=reset_time)
+        subseg = seg.time_slice(epoch.times[ep_id], epoch.times[ep_id] + epoch.durations[ep_id], reset_time=reset_time)
 
         subseg.annotations = clean_annotations(subseg.annotations)
         subseg.annotate(**clean_annotations(epoch.annotations))
@@ -612,14 +600,14 @@ def is_block_rawio_compatible(block, return_problems=False):
     sig_count_consistent = True
     for seg in block.segments:
         if len(seg.analogsignals) != n_sig:
-            problems.append('Number of AnalogSignals is not consistent across segments')
+            problems.append("Number of AnalogSignals is not consistent across segments")
             sig_count_consistent = False
         if len(seg.spiketrains) != n_st:
-            problems.append('Number of SpikeTrains is not consistent across segments')
+            problems.append("Number of SpikeTrains is not consistent across segments")
         if len(seg.events) != n_ev:
-            problems.append('Number of Events is not consistent across segments')
+            problems.append("Number of Events is not consistent across segments")
         if len(seg.epochs) != n_ep:
-            problems.append('Number of Epochs is not consistent across segments')
+            problems.append("Number of Epochs is not consistent across segments")
 
     # check for AnalogSigal that sampling_rate/units/number of channel
     # is consistent across segments.
@@ -628,19 +616,19 @@ def is_block_rawio_compatible(block, return_problems=False):
         for i in range(n_sig):
             for seg in block.segments:
                 if seg.analogsignals[i].sampling_rate != seg0.analogsignals[i].sampling_rate:
-                    problems.append('AnalogSignals have inconsistent sampling rate across segments')
+                    problems.append("AnalogSignals have inconsistent sampling rate across segments")
                 if seg.analogsignals[i].shape[1] != seg0.analogsignals[i].shape[1]:
-                    problems.append('AnalogSignals have inconsistent channel count across segments')
+                    problems.append("AnalogSignals have inconsistent channel count across segments")
                 if seg.analogsignals[i].units != seg0.analogsignals[i].units:
-                    problems.append('AnalogSignals have inconsistent units across segments')
+                    problems.append("AnalogSignals have inconsistent units across segments")
 
     # check no IrregularlySampledSignal
     for seg in block.segments:
         if len(seg.irregularlysampledsignals) > 0:
-            problems.append('IrregularlySampledSignals are not raw compatible')
+            problems.append("IrregularlySampledSignals are not raw compatible")
 
     # returns
-    is_rawio_compatible = (len(problems) == 0)
+    is_rawio_compatible = len(problems) == 0
     if return_problems:
         return is_rawio_compatible, problems
     else:

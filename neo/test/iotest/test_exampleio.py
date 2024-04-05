@@ -8,37 +8,38 @@ import unittest
 from neo.io.exampleio import ExampleIO  # , HAVE_SCIPY
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.iotest.tools import get_test_file_full_path
-from neo.io.proxyobjects import (AnalogSignalProxy,
-                SpikeTrainProxy, EventProxy, EpochProxy)
-from neo import (AnalogSignal, SpikeTrain)
+from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
+from neo import AnalogSignal, SpikeTrain
 
 import quantities as pq
 import numpy as np
 
 
 # This run standart tests, this is mandatory for all IO
-class TestExampleIO(BaseTestIO, unittest.TestCase, ):
+class TestExampleIO(
+    BaseTestIO,
+    unittest.TestCase,
+):
     ioclass = ExampleIO
     entities_to_download = []
     entities_to_test = [
-        'fake1.fake',
-        'fake2.fake',
+        "fake1.fake",
+        "fake2.fake",
     ]
 
     def setUp(self):
         super().setUp()
         # ensure fake test files exist before running common tests
         for entity in self.entities_to_test:
-            full_path = get_test_file_full_path(self.ioclass, filename=entity,
-                                                directory=self.local_test_dir)
+            full_path = get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir)
             pathlib.Path(full_path).touch()
 
     def tearDown(self) -> None:
         super().tearDown()
         for entity in self.entities_to_test:
-            full_path = get_test_file_full_path(self.ioclass, filename=entity,
-                                                directory=self.local_test_dir)
+            full_path = get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir)
             pathlib.Path(full_path).unlink(missing_ok=True)
+
 
 # This is the minimal variables that are required
 # to run the common IO tests.  IO specific tests
@@ -66,8 +67,8 @@ class Specific_TestExampleIO(unittest.TestCase):
             self.assertNotEqual(st.size, 0)
 
         # annotations
-        assert 'seg_extra_info' in seg.annotations
-        assert seg.name == 'Seg #0 Block #0'
+        assert "seg_extra_info" in seg.annotations
+        assert seg.name == "Seg #0 Block #0"
         for anasig in seg.analogsignals:
             assert anasig.name is not None
         for st in seg.spiketrains:
@@ -80,8 +81,8 @@ class Specific_TestExampleIO(unittest.TestCase):
     def test_read_block(self):
         r = ExampleIO(filename=None)
         bl = r.read_block(lazy=True)
-        #assert len(bl.list_units) == 3
-        #assert len(bl.channel_indexes) == 1 + 1  # signals grouped + units grouped
+        # assert len(bl.list_units) == 3
+        # assert len(bl.channel_indexes) == 1 + 1  # signals grouped + units grouped
 
     def test_read_segment_with_time_slice(self):
         r = ExampleIO(filename=None)

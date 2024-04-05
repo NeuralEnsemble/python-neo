@@ -84,7 +84,7 @@ class ImageSequence(BaseSignal):
             (size * :attr:`frame_duration`)
         :t_stop: (quantity scalar) Time when sequence ends, read-only.
             (:attr:`t_start` + :attr:`duration`)
-     """
+    """
 
     _parent_objects = ("Segment",)
     _parent_attrs = ("segment",)
@@ -97,10 +97,21 @@ class ImageSequence(BaseSignal):
     )
     _recommended_attrs = BaseNeo._recommended_attrs
 
-    def __new__(cls, image_data, units=pq.dimensionless, dtype=None, copy=True, t_start=0 * pq.s,
-                spatial_scale=None, frame_duration=None,
-                sampling_rate=None, name=None, description=None, file_origin=None,
-                **annotations):
+    def __new__(
+        cls,
+        image_data,
+        units=pq.dimensionless,
+        dtype=None,
+        copy=True,
+        t_start=0 * pq.s,
+        spatial_scale=None,
+        frame_duration=None,
+        sampling_rate=None,
+        name=None,
+        description=None,
+        file_origin=None,
+        **annotations,
+    ):
         """
         Constructs new :class:`ImageSequence` from data.
 
@@ -127,16 +138,25 @@ class ImageSequence(BaseSignal):
 
         return obj
 
-    def __init__(self, image_data, units=pq.dimensionless, dtype=None, copy=True, t_start=0 * pq.s,
-                 spatial_scale=None, frame_duration=None,
-                 sampling_rate=None, name=None, description=None, file_origin=None,
-                 **annotations):
+    def __init__(
+        self,
+        image_data,
+        units=pq.dimensionless,
+        dtype=None,
+        copy=True,
+        t_start=0 * pq.s,
+        spatial_scale=None,
+        frame_duration=None,
+        sampling_rate=None,
+        name=None,
+        description=None,
+        file_origin=None,
+        **annotations,
+    ):
         """
         Initializes a newly constructed :class:`ImageSequence` instance.
         """
-        DataObject.__init__(
-            self, name=name, file_origin=file_origin, description=description, **annotations
-        )
+        DataObject.__init__(self, name=name, file_origin=file_origin, description=description, **annotations)
 
     def __array_finalize__spec(self, obj):
 
@@ -176,9 +196,7 @@ class ImageSequence(BaseSignal):
                     average += picture_data[b]
                 data.append((average * 1.0) / len(i))
             analogsignal_list.append(
-                AnalogSignal(
-                    data, units=self.units, t_start=self.t_start, sampling_rate=self.sampling_rate
-                )
+                AnalogSignal(data, units=self.units, t_start=self.t_start, sampling_rate=self.sampling_rate)
             )
 
         return analogsignal_list
@@ -191,17 +209,14 @@ class ImageSequence(BaseSignal):
             f"{self.__class__.__name__} {self.shape[0]} frames with "
             f"width {self.shape[2]} px and height {self.shape[1]} px; "
             f"units {self.units.dimensionality.string}; datatype {self.dtype} "
-            )
+        )
 
         def _pp(line):
             pp.breakable()
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in [
-            f"sampling rate: {self.sampling_rate}",
-            f"spatial_scale: {self.spatial_scale}"
-        ]:
+        for line in [f"sampling rate: {self.sampling_rate}", f"spatial_scale: {self.spatial_scale}"]:
             _pp(line)
 
     def _check_consistency(self, other):
@@ -212,7 +227,7 @@ class ImageSequence(BaseSignal):
         if isinstance(other, ImageSequence):
             for attr in ("sampling_rate", "spatial_scale", "t_start"):
                 if getattr(self, attr) != getattr(other, attr):
-                    raise ValueError("Inconsistent values of %s" % attr)
+                    raise ValueError(f"Inconsistent values of {attr}")
 
     # t_start attribute is handled as a property so type checking can be done
     @property

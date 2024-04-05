@@ -4,15 +4,15 @@
   "license": "https://spdx.org/licenses/BSD-3-Clause",
   "codeRepository": "https://github.com/NeuralEnsemble/python-neo",
   "contIntegration": "https://github.com/NeuralEnsemble/python-neo/actions",
-  "dateModified": "2023-04-04",
-  "downloadUrl": "https://files.pythonhosted.org/packages/4d/95/e79e05c9bc8ef61d89a8a6b949db03adb2046b9fca38422d570c7add543d/neo-0.12.0.tar.gz",
+  "dateModified": "2024-02-02",
+  "downloadUrl": "https://files.pythonhosted.org/packages/b2/07/b8653dd235919dc13671fc31bd8bcbb57571e72d75e4cb04dc1347416357/neo-0.13.0.tar.gz",
   "issueTracker": "https://github.com/NeuralEnsemble/python-neo/issues",
   "name": "Neo",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "identifier": "RRID:SCR_000634",
   "description": "Neo is a Python package for working with electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats, including Spike2, NeuroExplorer, AlphaOmega, Axon, Blackrock, Plexon, Tdt, and support for writing to a subset of these formats plus non-proprietary formats including HDF5.\n\nThe goal of Neo is to improve interoperability between Python tools for analyzing, visualizing and generating electrophysiology data by providing a common, shared object model. In order to be as lightweight a dependency as possible, Neo is deliberately limited to represention of data, with no functions for data analysis or visualization.\n\nNeo is used by a number of other software tools, including SpykeViewer (data analysis and visualization), Elephant (data analysis), the G-node suite (databasing), PyNN (simulations), tridesclous_ (spike sorting) and ephyviewer (data visualization).\n\nNeo implements a hierarchical data model well adapted to intracellular and extracellular electrophysiology and EEG data with support for multi-electrodes (for example tetrodes). Neo's data objects build on the quantities package, which in turn builds on NumPy by adding support for physical dimensions. Thus Neo objects behave just like normal NumPy arrays, but with additional metadata, checks for dimensional consistency and automatic unit conversion.",
   "applicationCategory": "neuroscience",
-  "releaseNotes": "https://neo.readthedocs.io/en/stable/releases/0.12.0.html",
+  "releaseNotes": "https://neo.readthedocs.io/en/stable/releases/0.13.0.html",
   "funding": "https://cordis.europa.eu/project/id/945539",
   "developmentStatus": "active",
   "referencePublication": "https://doi.org/10.3389/fninf.2014.00010",
@@ -26,10 +26,7 @@
     "Python (version 3.8+)",
     "see https://github.com/NeuralEnsemble/python-neo/blob/master/pyproject.toml"
   ],
-  "relatedLink": [
-    "https://neo.readthedocs.io",
-    "https://neuralensemble.org/community"
-  ],
+  "relatedLink": ["https://neo.readthedocs.io", "https://neuralensemble.org/community"],
   "author": [
     { "@type": "Person", "givenName": "Samuel", "familyName": "Garcia" },
     {
@@ -71,34 +68,17 @@
     { "@type": "Person", "givenName": "William", "familyName": "Hart" },
     { "@type": "Person", "alternateName": "erikli(github)" },
     { "@type": "Person", "givenName": "Jeffrey", "familyName": "Gill" },
-    {
-      "@type": "Person",
-      "givenName": "Lucas",
-      "alternateName": "lkoelman@github"
-    },
+    { "@type": "Person", "givenName": "Lucas", "alternateName": "lkoelman@github" },
     { "@type": "Person", "givenName": "Mark", "familyName": "Histed" },
     { "@type": "Person", "givenName": "Mike", "familyName": "Sintsov" },
     { "@type": "Person", "givenName": "Scott W", "familyName": "Harden" },
-    {
-      "@type": "Person",
-      "givenName": "Chek Yin",
-      "familyName": "Choi",
-      "alternateName": "hkchekc@github"
-    },
+    { "@type": "Person", "givenName": "Chek Yin", "familyName": "Choi", "alternateName": "hkchekc@github" },
     { "@type": "Person", "givenName": "Corentin", "familyName": "Fragnaud" },
-    {
-      "@type": "Person",
-      "givenName": "Alexander",
-      "familyName": "Kleinjohann"
-    },
+    { "@type": "Person", "givenName": "Alexander", "familyName": "Kleinjohann" },
     { "@type": "Person", "givenName": "Christian", "familyName": "Kothe" },
     { "@type": "Person", "alternateName": "rishidhingra@github" },
     { "@type": "Person", "givenName": "Hugo", "familyName": "van Kemenade" },
-    {
-      "@type": "Person",
-      "givenName": "Aitor",
-      "familyName": "Morales-Gregorio"
-    },
+    { "@type": "Person", "givenName": "Aitor", "familyName": "Morales-Gregorio" },
     { "@type": "Person", "givenName": "Peter N", "familyName": "Steinmetz" },
     { "@type": "Person", "givenName": "Shashwat", "familyName": "Sridhar" },
     { "@type": "Person", "givenName": "Alessio", "familyName": "Buccino" },
@@ -108,6 +88,21 @@
     { "@type": "Person", "givenName": "Ben", "familyName": "Dichter" },
     { "@type": "Person", "givenName": "Elodie", "familyName": "Legouée" },
     { "@type": "Person", "givenName": "Heberto", "familyName": "Mayorquin" },
-    { "@type": "Person", "givenName": "Thomas", "familyName": "Perret" }
+    { "@type": "Person", "givenName": "Thomas", "familyName": "Perret" },
+    { "@type": "Person", "givenName": "Zach", "familyName": "McKenzie" },
+    { "@type": "Person", "givenName": "Moritz Alexander", "familyName": "Kern" },
+    { "@type": "Person", "givenName": "Joscha", "familyName": "Schmiedt" },
+    { "@type": "Person", "givenName": "Daniel P.", "familyName": "Crepeau" },
+    { "@type": "Person", "givenName": "Divyansh", "familyName": "Gupta" },
+    { "@type": "Person", "givenName": "Nate", "familyName": "Dolensek" },
+    { "@type": "Person", "givenName": "Philipp", "familyName": "Hornauer" },
+    { "@type": "Person", "givenName": "Robert", "familyName": "Wolff" },
+    { "@type": "Person", "givenName": "Jules", "familyName": "Lebert" },
+    { "@type": "Person", "givenName": "Benjamin", "familyName": "Heasly" },
+    { "@type": "Person", "givenName": "Baptiste", "familyName": "Grimaud" },
+    { "@type": "Person", "givenName": "Cody", "familyName": "Baker" },
+    { "@type": "Person", "givenName": "Fernando J.", "familyName": "Chaure" },
+    { "@type": "Person", "alternateName": "Filipe@github" },
+    { "@type": "Person", "givenName": "Matthias Klumpp" }
   ]
 }

@@ -16,11 +16,11 @@ from neo.io import get_io
 # http://microcircuits.epfl.ch/#/animal/8ecde7d1-b2d2-11e4-b949-6003088da632
 datafile_url = "https://microcircuits.epfl.ch/data/released_data/B95.zip"
 filename_zip = "B95.zip"
-filename = 'grouped_ephys/B95/B95_Ch0_IDRest_107.ibw'
+filename = "grouped_ephys/B95/B95_Ch0_IDRest_107.ibw"
 urlretrieve(datafile_url, filename_zip)
 
 zip_ref = zipfile.ZipFile(filename_zip)  # create zipfile object
-zip_ref.extract(path='.', member=filename)  # extract file to dir
+zip_ref.extract(path=".", member=filename)  # extract file to dir
 zip_ref.close()
 
 

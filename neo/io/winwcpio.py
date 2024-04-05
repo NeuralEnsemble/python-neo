@@ -10,7 +10,8 @@ class WinWcpIO(WinWcpRawIO, BaseFromRaw):
     WinWCP is free:
     http://spider.science.strath.ac.uk/sipbs/software.htm
     """
-    _prefered_signal_group_mode = 'group-by-same-units'
+
+    _prefered_signal_group_mode = "group-by-same-units"
 
     def __init__(self, filename):
         WinWcpRawIO.__init__(self, filename=filename)

@@ -33,9 +33,18 @@ import quantities as pq
 import numpy as np
 
 from .baseio import BaseIO
-from ..core import (Block, Segment, AnalogSignal,
-                    IrregularlySampledSignal, Epoch, Event, SpikeTrain,
-                    ImageSequence, ChannelView, Group)
+from ..core import (
+    Block,
+    Segment,
+    AnalogSignal,
+    IrregularlySampledSignal,
+    Epoch,
+    Event,
+    SpikeTrain,
+    ImageSequence,
+    ChannelView,
+    Group,
+)
 from ..io.proxyobjects import BaseProxy
 from .. import __version__ as neover
 
@@ -151,9 +160,17 @@ class NixIO(BaseIO):
     is_readable = True
     is_writable = True
 
-    supported_objects = [Block, Segment, Group, ChannelView,
-                         AnalogSignal, IrregularlySampledSignal,
-                         Epoch, Event, SpikeTrain]
+    supported_objects = [
+        Block,
+        Segment,
+        Group,
+        ChannelView,
+        AnalogSignal,
+        IrregularlySampledSignal,
+        Epoch,
+        Event,
+        SpikeTrain,
+    ]
     readable_objects = [Block]
     writeable_objects = [Block]
 
@@ -179,20 +196,22 @@ class NixIO(BaseIO):
         elif mode == "ow":
             filemode = nixio.FileMode.Overwrite
         else:
-            raise ValueError(f"Invalid mode specified '{mode}'. "
-                             "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
-                             " 'ow' (Overwrite).")
+            raise ValueError(
+                f"Invalid mode specified '{mode}'. "
+                "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
+                " 'ow' (Overwrite)."
+            )
         self.nix_file = nixio.File.open(self.filename, filemode)
 
         if self.nix_file.mode == nixio.FileMode.ReadOnly:
-            self._file_version = '0.5.2'
+            self._file_version = "0.5.2"
             if "neo" in self.nix_file.sections:
                 self._file_version = self.nix_file.sections["neo"]["version"]
         elif self.nix_file.mode == nixio.FileMode.ReadWrite:
             if "neo" in self.nix_file.sections:
                 self._file_version = self.nix_file.sections["neo"]["version"]
             else:
-                self._file_version = '0.5.2'
+                self._file_version = "0.5.2"
                 filemd = self.nix_file.create_section("neo", "neo.metadata")
                 filemd["version"] = self._file_version
         else:
@@ -221,8 +240,7 @@ class NixIO(BaseIO):
     def read_all_blocks(self, lazy=False):
         if lazy:
             raise Exception("Lazy loading is not supported for NixIO")
-        return list(self._nix_to_neo_block(blk)
-                    for blk in self.nix_file.blocks)
+        return list(self._nix_to_neo_block(blk) for blk in self.nix_file.blocks)
 
     def read_block(self, index=None, nixname=None, neoname=None, lazy=False):
         """
@@ -260,8 +278,7 @@ class NixIO(BaseIO):
             nix_block = self.nix_file.blocks[nixname]
         elif neoname is not None:
             for blk in self.nix_file.blocks:
-                if ("neo_name" in blk.metadata
-                        and blk.metadata["neo_name"] == neoname):
+                if "neo_name" in blk.metadata and blk.metadata["neo_name"] == neoname:
                     nix_block = blk
                     break
             else:
@@ -343,11 +360,17 @@ class NixIO(BaseIO):
         # this will probably get all the DAs anyway, but if we change any part
         # of the mapping to add other kinds of DataArrays to a group, such as
         # MultiTag positions and extents, this filter will be necessary
-        dataarrays = list(filter(
-            lambda da: da.type in ("neo.analogsignal",
-                                   "neo.irregularlysampledsignal",
-                                   "neo.imagesequence",),
-            nix_group.data_arrays))
+        dataarrays = list(
+            filter(
+                lambda da: da.type
+                in (
+                    "neo.analogsignal",
+                    "neo.irregularlysampledsignal",
+                    "neo.imagesequence",
+                ),
+                nix_group.data_arrays,
+            )
+        )
         dataarrays = self._group_signals(dataarrays)
         # descend into DataArrays
         for name, das in dataarrays.items():
@@ -380,11 +403,17 @@ class NixIO(BaseIO):
         parent_name = neo_attrs.pop("neo_parent", None)
         neo_group = Group(**neo_attrs)
         self._neo_map[nix_group.name] = neo_group
-        dataarrays = list(filter(
-            lambda da: da.type in ("neo.analogsignal",
-                                   "neo.irregularlysampledsignal",
-                                   "neo.imagesequence",),
-            nix_group.data_arrays))
+        dataarrays = list(
+            filter(
+                lambda da: da.type
+                in (
+                    "neo.analogsignal",
+                    "neo.irregularlysampledsignal",
+                    "neo.imagesequence",
+                ),
+                nix_group.data_arrays,
+            )
+        )
         dataarrays = self._group_signals(dataarrays)
         # descend into DataArrays
         for name in dataarrays:
@@ -402,7 +431,7 @@ class NixIO(BaseIO):
     def _nix_to_neo_channelview(self, nix_mtag):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
         index = nix_mtag.positions
-        nix_name, = self._group_signals(nix_mtag.references).keys()
+        (nix_name,) = self._group_signals(nix_mtag.references).keys()
         obj = self._neo_map[nix_name]
         neo_chview = ChannelView(obj, index, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_chview
@@ -437,8 +466,7 @@ class NixIO(BaseIO):
         else:
             t_start = create_quantity(timedim.offset, timedim.unit)
 
-        neo_signal = AnalogSignal(signal=signaldata, sampling_period=sampling_period,
-                                  t_start=t_start, **neo_attrs)
+        neo_signal = AnalogSignal(signal=signaldata, sampling_period=sampling_period, t_start=t_start, **neo_attrs)
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
         # all DAs reference the same sources
         srcnames = list(src.name for src in nix_da_group[0].sources)
@@ -474,9 +502,14 @@ class NixIO(BaseIO):
         else:
             t_start = 0.0 * pq.ms
 
-        neo_seq = ImageSequence(image_data=imgseq, sampling_rate=sampling_rate,
-                                spatial_scale=spatial_scale, units=unit,
-                                t_start=t_start, **neo_attrs)
+        neo_seq = ImageSequence(
+            image_data=imgseq,
+            sampling_rate=sampling_rate,
+            spatial_scale=spatial_scale,
+            units=unit,
+            t_start=t_start,
+            **neo_attrs,
+        )
 
         self._neo_map[neo_attrs["nix_name"]] = neo_seq
         # all DAs reference the same sources
@@ -550,12 +583,10 @@ class NixIO(BaseIO):
             wftime = self._get_time_dimension(wfda)
             neo_spiketrain.waveforms = create_quantity(wfda, wfda.unit)
             interval_units = wftime.unit
-            neo_spiketrain.sampling_period = create_quantity(wftime.sampling_interval,
-                                                             interval_units)
+            neo_spiketrain.sampling_period = create_quantity(wftime.sampling_interval, interval_units)
             left_sweep_units = wftime.unit
             if "left_sweep" in wfda.metadata:
-                neo_spiketrain.left_sweep = create_quantity(wfda.metadata["left_sweep"],
-                                                            left_sweep_units)
+                neo_spiketrain.left_sweep = create_quantity(wfda.metadata["left_sweep"], left_sweep_units)
         self._neo_map[nix_mtag.name] = neo_spiketrain
 
         srcnames = list(src.name for src in nix_mtag.sources)
@@ -643,21 +674,16 @@ class NixIO(BaseIO):
         if "nix_name" in chview.annotations:
             nix_name = chview.annotations["nix_name"]
         else:
-            nix_name = "neo.channelview.{}".format(self._generate_nix_name())
+            nix_name = f"neo.channelview.{self._generate_nix_name()}"
             chview.annotate(nix_name=nix_name)
 
         # create a new data array if this channelview was not saved yet
         if not nix_name in self._view_map:
-            channels = nixblock.create_data_array(
-                "{}.index".format(nix_name), "neo.channelview.index", data=chview.index
-            )
+            channels = nixblock.create_data_array(f"{nix_name}.index", "neo.channelview.index", data=chview.index)
 
-            nixmt = nixblock.create_multi_tag(nix_name, "neo.channelview",
-                                              positions=channels)
+            nixmt = nixblock.create_multi_tag(nix_name, "neo.channelview", positions=channels)
 
-            nixmt.metadata = nixgroup.metadata.create_section(
-                nix_name, "neo.channelview.metadata"
-            )
+            nixmt.metadata = nixgroup.metadata.create_section(nix_name, "neo.channelview.metadata")
             metadata = nixmt.metadata
             neoname = chview.name if chview.name is not None else ""
             metadata["neo_name"] = neoname
@@ -668,8 +694,7 @@ class NixIO(BaseIO):
             self._view_map[nix_name] = nixmt
 
             # link tag to the data array for the ChannelView's signal
-            if not ("nix_name" in chview.obj.annotations
-                    and chview.obj.annotations["nix_name"] in self._signal_map):
+            if not ("nix_name" in chview.obj.annotations and chview.obj.annotations["nix_name"] in self._signal_map):
                 # the following restriction could be relaxed later
                 # but for a first pass this simplifies my mental model
                 raise Exception("Need to save signals before saving views")
@@ -695,8 +720,7 @@ class NixIO(BaseIO):
             segment.annotate(nix_name=nix_name)
 
         nixgroup = nixblock.create_group(nix_name, "neo.segment")
-        nixgroup.metadata = nixblock.metadata.create_section(nix_name,
-                                                             "neo.segment.metadata")
+        nixgroup.metadata = nixblock.metadata.create_section(nix_name, "neo.segment.metadata")
         metadata = nixgroup.metadata
         neoname = segment.name if segment.name is not None else ""
         metadata["neo_name"] = neoname
@@ -747,13 +771,11 @@ class NixIO(BaseIO):
         if "nix_name" in neo_group.annotations:
             nix_name = neo_group.annotations["nix_name"]
         else:
-            nix_name = "{}.{}".format(label, self._generate_nix_name())
+            nix_name = f"{label}.{self._generate_nix_name()}"
             neo_group.annotate(nix_name=nix_name)
 
         nixgroup = nixblock.create_group(nix_name, label)
-        nixgroup.metadata = nixblock.metadata.create_section(
-            nix_name, f"{label}.metadata"
-        )
+        nixgroup.metadata = nixblock.metadata.create_section(nix_name, f"{label}.metadata")
         metadata = nixgroup.metadata
         neoname = neo_group.name if neo_group.name is not None else ""
         metadata["neo_name"] = neoname
@@ -771,8 +793,7 @@ class NixIO(BaseIO):
             neo_group.irregularlysampledsignals,
             neo_group.imagesequences,
         ):
-            if not ("nix_name" in obj.annotations
-                    and obj.annotations["nix_name"] in self._signal_map):
+            if not ("nix_name" in obj.annotations and obj.annotations["nix_name"] in self._signal_map):
                 # the following restriction could be relaxed later
                 # but for a first pass this simplifies my mental model
                 raise Exception("Orphan signals/image sequences cannot be stored, needs to belong to a Segment")
@@ -788,8 +809,7 @@ class NixIO(BaseIO):
             neo_group.epochs,
             neo_group.spiketrains,
         ):
-            if not ("nix_name" in obj.annotations
-                    and obj.annotations["nix_name"] in nixblock.multi_tags):
+            if not ("nix_name" in obj.annotations and obj.annotations["nix_name"] in nixblock.multi_tags):
                 # the following restriction could be relaxed later
                 # but for a first pass this simplifies my mental model
                 raise Exception("Orphan epochs/events/spiketrains cannot be stored, needs to belong to a Segment")
@@ -878,15 +898,15 @@ class NixIO(BaseIO):
 
     def _write_imagesequence(self, imgseq, nixblock, nixgroup):
         """
-       Convert the provided ``imgseq`` (ImageSequence) to a list of NIX
-       DataArray objects and write them to the NIX file. All DataArray objects
-       created from the same ImageSequence have their metadata section point to
-       the same object.
+        Convert the provided ``imgseq`` (ImageSequence) to a list of NIX
+        DataArray objects and write them to the NIX file. All DataArray objects
+        created from the same ImageSequence have their metadata section point to
+        the same object.
 
-       :param anasig: The Neo ImageSequence to be written
-       :param nixblock: NIX Block where the DataArrays will be created
-       :param nixgroup: NIX Group where the DataArrays will be attached
-       """
+        :param anasig: The Neo ImageSequence to be written
+        :param nixblock: NIX Block where the DataArrays will be created
+        :param nixgroup: NIX Group where the DataArrays will be attached
+        """
 
         if "nix_name" in imgseq.annotations:
             nix_name = imgseq.annotations["nix_name"]
@@ -1096,8 +1116,7 @@ class NixIO(BaseIO):
         timesda.unit = tunits
         nixmt = nixblock.create_multi_tag(nix_name, "neo.epoch", positions=timesda)
 
-        durada = nixblock.create_data_array(f"{nix_name}.durations", "neo.epoch.durations",
-                                            data=durations)
+        durada = nixblock.create_data_array(f"{nix_name}.durations", "neo.epoch.durations", data=durations)
         durada.unit = dunits
         nixmt.extents = durada
 
@@ -1155,8 +1174,7 @@ class NixIO(BaseIO):
         tunits = units_to_string(spiketrain.times.units)
         waveforms = spiketrain.waveforms
 
-        timesda = nixblock.create_data_array(f"{nix_name}.times", "neo.spiketrain.times",
-                                             data=times)
+        timesda = nixblock.create_data_array(f"{nix_name}.times", "neo.spiketrain.times", data=times)
         timesda.unit = tunits
         nixmt = nixblock.create_multi_tag(nix_name, "neo.spiketrain", positions=timesda)
 
@@ -1183,11 +1201,9 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(nixmt)
 
         if waveforms is not None:
-            wfdata = list(wf.magnitude for wf in
-                          list(wfgroup for wfgroup in spiketrain.waveforms))
+            wfdata = list(wf.magnitude for wf in list(wfgroup for wfgroup in spiketrain.waveforms))
             wfunits = units_to_string(spiketrain.waveforms.units)
-            wfda = nixblock.create_data_array(f"{nix_name}.waveforms", "neo.waveforms",
-                                              data=wfdata)
+            wfda = nixblock.create_data_array(f"{nix_name}.waveforms", "neo.waveforms", data=wfdata)
             wfda.unit = wfunits
             wfda.metadata = nixmt.metadata.create_section(wfda.name, "neo.waveforms.metadata")
             nixmt.create_feature(wfda, nixio.LinkType.Indexed)
@@ -1237,7 +1253,7 @@ class NixIO(BaseIO):
             if hasattr(v, "ndim") and v.ndim == 0:
                 values = v.item()
             # handling empty arrays or lists
-            elif (hasattr(v, 'size') and (v.size == 0)) or (len(v) == 0):
+            elif (hasattr(v, "size") and (v.size == 0)) or (len(v) == 0):
                 # NIX supports empty properties but dtype must be specified
                 # Defaulting to String and using definition to signify empty
                 # iterable as opposed to empty string
@@ -1252,18 +1268,19 @@ class NixIO(BaseIO):
                         if unit is None:
                             unit = current_unit
                         elif unit != current_unit:
-                            raise ValueError(f'Inconsistent units detected for '
-                                             f'property {name}: {v}')
+                            raise ValueError(f"Inconsistent units detected for " f"property {name}: {v}")
                         item = item.magnitude.item()
                     elif isinstance(item, Iterable):
-                        self.logger.warn("Multidimensional arrays and nested "
-                                         "containers are not currently "
-                                         "supported when writing to NIX.")
+                        self.logger.warn(
+                            "Multidimensional arrays and nested "
+                            "containers are not currently "
+                            "supported when writing to NIX."
+                        )
                         return None
                     else:
                         item = item
                     values.append(item)
-            if hasattr(v, 'dimensionality'):
+            if hasattr(v, "dimensionality"):
                 unit = str(v.dimensionality)
             section.create_property(name, values)
             section.props[name].unit = unit
@@ -1307,10 +1324,10 @@ class NixIO(BaseIO):
                 if prop.definition in (DATEANNOTATION, TIMEANNOTATION, DATETIMEANNOTATION):
                     values = dt_from_nix(values, prop.definition)
                 if prop.type == ARRAYANNOTATION:
-                    if 'array_annotations' in neo_attrs:
-                        neo_attrs['array_annotations'][prop.name] = values
+                    if "array_annotations" in neo_attrs:
+                        neo_attrs["array_annotations"][prop.name] = values
                     else:
-                        neo_attrs['array_annotations'] = {prop.name: values}
+                        neo_attrs["array_annotations"] = {prop.name: values}
                 else:
                     neo_attrs[prop.name] = values
         # since the 'neo_name' NIX property becomes the actual object's name,
@@ -1396,9 +1413,7 @@ class NixIO(BaseIO):
                 # Events, Epochs, and SpikeTrains
                 check_unique(eests)
             except ValueError as exc:
-                raise ValueError(
-                    f"{errmsg} in Event, Epoch, and Spiketrain names of Block '{blk.name}'"
-                ) from exc
+                raise ValueError(f"{errmsg} in Event, Epoch, and Spiketrain names of Block '{blk.name}'") from exc
 
             # groups
             groups = []
@@ -1417,7 +1432,7 @@ class NixIO(BaseIO):
         """
         Closes the open nix file and resets maps.
         """
-        if (hasattr(self, "nix_file") and self.nix_file and self.nix_file.is_open()):
+        if hasattr(self, "nix_file") and self.nix_file and self.nix_file.is_open():
             self.nix_file.close()
             self.nix_file = None
             self._neo_map = None

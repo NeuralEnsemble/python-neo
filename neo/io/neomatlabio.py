@@ -12,6 +12,7 @@ Supported : Read/Write
 Author: sgarcia, Robert Pröpper
 """
 
+from collections.abc import Mapping
 from datetime import datetime
 import re
 
@@ -22,12 +23,42 @@ from packaging.version import Version
 
 
 from neo.io.baseio import BaseIO
-from neo.core import (Block, Segment, AnalogSignal, IrregularlySampledSignal,
-                      Event, Epoch, SpikeTrain, objectnames, class_by_name)
+from neo.core import (
+    Block,
+    Segment,
+    AnalogSignal,
+    IrregularlySampledSignal,
+    Event,
+    Epoch,
+    SpikeTrain,
+    Group,
+    ImageSequence,
+    ChannelView,
+    RectangularRegionOfInterest,
+    CircularRegionOfInterest,
+    PolygonRegionOfInterest,
+    objectnames,
+    class_by_name,
+)
+from neo.core.regionofinterest import RegionOfInterest
+from neo.core.baseneo import _container_name
 
-classname_lower_to_upper = {}
-for k in objectnames:
-    classname_lower_to_upper[k.lower()] = k
+
+def get_classname_from_container_name(container_name, struct):
+    if container_name == "regionsofinterest":
+        if "radius" in struct._fieldnames:
+            return "CircularRegionOfInterest"
+        elif "vertices" in struct._fieldnames:
+            return "PolygonRegionOfInterest"
+        else:
+            return "RectangularRegionOfInterest"
+    else:
+        for classname in objectnames:
+            if _container_name(classname) == container_name:
+                return classname
+
+
+PY_NONE = "Py_None"
 
 
 class NeoMatlabIO(BaseIO):
@@ -172,11 +203,25 @@ class NeoMatlabIO(BaseIO):
             w.write(blocks[0])
 
     """
+
     is_readable = True
     is_writable = True
 
-    supported_objects = [Block, Segment, AnalogSignal, IrregularlySampledSignal,
-                         Epoch, Event, SpikeTrain]
+    supported_objects = [
+        Block,
+        Segment,
+        AnalogSignal,
+        IrregularlySampledSignal,
+        Epoch,
+        Event,
+        SpikeTrain,
+        Group,
+        ImageSequence,
+        ChannelView,
+        RectangularRegionOfInterest,
+        CircularRegionOfInterest,
+        PolygonRegionOfInterest,
+    ]
     readable_objects = [Block]
     writeable_objects = [Block]
 
@@ -185,10 +230,10 @@ class NeoMatlabIO(BaseIO):
     read_params = {Block: []}
     write_params = {Block: []}
 
-    name = 'neomatlab'
-    extensions = ['mat']
+    name = "neomatlab"
+    extensions = ["mat"]
 
-    mode = 'file'
+    mode = "file"
 
     def __init__(self, filename=None):
         """
@@ -197,15 +242,18 @@ class NeoMatlabIO(BaseIO):
         Arguments:
             filename : the filename to read
         """
-        import scipy
+        import scipy.version
 
-        if Version(scipy.version.version) < Version('0.12.0'):
-            raise ImportError("your scipy version is too old to support "
-                                    + "MatlabIO, you need at least 0.12.0. "
-                                    + "You have %s" % scipy.version.version)
+        if Version(scipy.version.version) < Version("0.12.0"):
+            raise ImportError(
+                "your scipy version is too old to support "
+                + "MatlabIO, you need at least 0.12.0. "
+                + f"You have {scipy.version.version}"
+            )
 
         BaseIO.__init__(self)
         self.filename = filename
+        self._refs = {}
 
     def read_block(self, lazy=False):
         """
@@ -213,117 +261,127 @@ class NeoMatlabIO(BaseIO):
 
         """
         import scipy.io
-        assert not lazy, 'Do not support lazy'
 
-        d = scipy.io.loadmat(self.filename, struct_as_record=False,
-                             squeeze_me=True, mat_dtype=True)
-        if 'block' not in d:
-            self.logger.exception('No block in ' + self.filename)
+        assert not lazy, "Does not support lazy"
+
+        d = scipy.io.loadmat(self.filename, struct_as_record=False, squeeze_me=True, mat_dtype=True)
+        if "block" not in d:
+            self.logger.exception("No block in " + self.filename)
             return None
 
-        bl_struct = d['block']
-        bl = self.create_ob_from_struct(
-            bl_struct, 'Block')
+        bl_struct = d["block"]
+        bl = self.create_ob_from_struct(bl_struct, "Block")
+        self._resolve_references(bl)
         bl.check_relationships()
         return bl
 
     def write_block(self, bl, **kargs):
         """
         Arguments:
-            bl: the block to b saved
+            bl: the block to be saved
         """
         import scipy.io
+
         bl_struct = self.create_struct_from_obj(bl)
 
         for seg in bl.segments:
             seg_struct = self.create_struct_from_obj(seg)
-            bl_struct['segments'].append(seg_struct)
+            bl_struct["segments"].append(seg_struct)
 
-            for anasig in seg.analogsignals:
-                anasig_struct = self.create_struct_from_obj(anasig)
-                seg_struct['analogsignals'].append(anasig_struct)
+            for container_name in seg._child_containers:
+                for child_obj in getattr(seg, container_name):
+                    child_struct = self.create_struct_from_obj(child_obj)
+                    seg_struct[container_name].append(child_struct)
 
-            for irrsig in seg.irregularlysampledsignals:
-                irrsig_struct = self.create_struct_from_obj(irrsig)
-                seg_struct['irregularlysampledsignals'].append(irrsig_struct)
+        for group in bl.groups:
+            group_structure = self.create_struct_from_obj(group)
+            bl_struct["groups"].append(group_structure)
 
-            for ea in seg.events:
-                ea_struct = self.create_struct_from_obj(ea)
-                seg_struct['events'].append(ea_struct)
+            for container_name in group._child_containers:
+                for child_obj in getattr(group, container_name):
+                    if isinstance(child_obj, (ChannelView, RegionOfInterest)):
+                        child_struct = self.create_struct_from_view(child_obj)
+                        group_structure[container_name].append(child_struct)
+                    else:
+                        group_structure[container_name].append(id(child_obj))
 
-            for ea in seg.epochs:
-                ea_struct = self.create_struct_from_obj(ea)
-                seg_struct['epochs'].append(ea_struct)
+        scipy.io.savemat(self.filename, {"block": bl_struct}, oned_as="row")
 
-            for sptr in seg.spiketrains:
-                sptr_struct = self.create_struct_from_obj(sptr)
-                seg_struct['spiketrains'].append(sptr_struct)
-
-        scipy.io.savemat(self.filename, {'block': bl_struct}, oned_as='row')
+    def _get_matlab_value(self, ob, attrname):
+        units = None
+        if hasattr(ob, "_quantity_attr") and ob._quantity_attr == attrname:
+            units = ob.dimensionality.string
+            value = ob.magnitude
+        else:
+            try:
+                value = getattr(ob, attrname)
+            except AttributeError:
+                value = ob[attrname]
+            if isinstance(value, pq.Quantity):
+                units = value.dimensionality.string
+                value = value.magnitude
+            elif isinstance(value, datetime):
+                value = str(value)
+            elif isinstance(value, Mapping):
+                new_value = {}
+                for key in value:
+                    subvalue, subunits = self._get_matlab_value(value, key)
+                    if subvalue is not None:
+                        new_value[key] = subvalue
+                        if subunits:
+                            new_value[f"{key}_units"] = subunits
+                    elif attrname == "annotations":
+                        # In general we don't send None to MATLAB
+                        # but we make an exception for annotations.
+                        # However, we have to save then retrieve some
+                        # special value as actual `None` is ignored by default.
+                        new_value[key] = PY_NONE
+                value = new_value
+        return value, units
 
     def create_struct_from_obj(self, ob):
-        struct = {}
+        struct = {"neo_id": id(ob)}
 
         # relationship
-        for childname in getattr(ob, '_child_containers', []):
-            supported_containers = [subob.__name__.lower() + 's' for subob in
-                                    self.supported_objects]
+        for childname in getattr(ob, "_child_containers", []):
+            supported_containers = [_container_name(subob.__name__) for subob in self.supported_objects]
             if childname in supported_containers:
                 struct[childname] = []
 
         # attributes
         all_attrs = list(ob._all_attrs)
-        if hasattr(ob, 'annotations'):
-            all_attrs.append(('annotations', type(ob.annotations)))
+        if hasattr(ob, "annotations"):
+            all_attrs.append(("annotations", type(ob.annotations)))
 
-        for i, attr in enumerate(all_attrs):
+        for attr in all_attrs:
             attrname, attrtype = attr[0], attr[1]
+            attr_value, attr_units = self._get_matlab_value(ob, attrname)
+            if attr_value is not None:
+                struct[attrname] = attr_value
+                if attr_units:
+                    struct[attrname + "_units"] = attr_units
+        return struct
 
-            # ~ if attrname =='':
-            # ~ struct['array'] = ob.magnitude
-            # ~ struct['units'] = ob.dimensionality.string
-            # ~ continue
-
-            if (hasattr(ob, '_quantity_attr') and
-                    ob._quantity_attr == attrname):
-                struct[attrname] = ob.magnitude
-                struct[attrname + '_units'] = ob.dimensionality.string
-                continue
-
-            if not (attrname in ob.annotations or hasattr(ob, attrname)):
-                continue
-            if getattr(ob, attrname) is None:
-                continue
-
-            if attrtype == pq.Quantity:
-                # ndim = attr[2]
-                struct[attrname] = getattr(ob, attrname).magnitude
-                struct[attrname + '_units'] = getattr(
-                    ob, attrname).dimensionality.string
-            elif attrtype == datetime:
-                struct[attrname] = str(getattr(ob, attrname))
-            else:
-                struct[attrname] = getattr(ob, attrname)
-
+    def create_struct_from_view(self, ob):
+        # for "view" objects (ChannelView and RegionOfInterest), we just store
+        # a reference to the object (AnalogSignal, ImageSequence) that the view
+        # points to
+        struct = self.create_struct_from_obj(ob)
+        obj_name = ob._necessary_attrs[0][0]  # this is fragile, better to add an attribute _view_attr
+        viewed_obj = getattr(ob, obj_name)
+        struct[obj_name] = id(viewed_obj)
+        struct["viewed_classname"] = viewed_obj.__class__.__name__
         return struct
 
     def create_ob_from_struct(self, struct, classname):
         cl = class_by_name[classname]
-        # check if inherits Quantity
-        # ~ is_quantity = False
-        # ~ for attr in cl._necessary_attrs:
-        # ~ if attr[0] == '' and attr[1] == pq.Quantity:
-        # ~ is_quantity = True
-        # ~ break
-        # ~ is_quantiy = hasattr(cl, '_quantity_attr')
 
         # ~ if is_quantity:
-        if hasattr(cl, '_quantity_attr'):
+        if hasattr(cl, "_quantity_attr"):
             quantity_attr = cl._quantity_attr
             arr = getattr(struct, quantity_attr)
             # ~ data_complement = dict(units=str(struct.units))
-            data_complement = dict(units=str(
-                getattr(struct, quantity_attr + '_units')))
+            data_complement = dict(units=str(getattr(struct, quantity_attr + "_units")))
             if "sampling_rate" in (at[0] for at in cl._necessary_attrs):
                 # put fake value for now, put correct value later
                 data_complement["sampling_rate"] = 0 * pq.kHz
@@ -343,6 +401,11 @@ class NeoMatlabIO(BaseIO):
                     data_complement["t_start"] = arr.min()
                 else:
                     data_complement["t_start"] = 0.0
+            if "spatial_scale" in (at[0] for at in cl._necessary_attrs):
+                if len(arr) > 0:
+                    data_complement["spatial_scale"] = arr
+                else:
+                    data_complement["spatial_scale"] = 1.0
 
             if "times" in (at[0] for at in cl._necessary_attrs) and quantity_attr != "times":
                 # handle IrregularlySampledSignal
@@ -351,48 +414,75 @@ class NeoMatlabIO(BaseIO):
                 ob = cl(times, arr, **data_complement)
             else:
                 ob = cl(arr, **data_complement)
+        elif cl.is_view:
+            kwargs = {}
+            for i, attr in enumerate(cl._necessary_attrs):
+                value = getattr(struct, attr[0])
+                if i == 0:
+                    # this is a bit hacky, should really add an attribute _view_attr to ChannelView and RegionOfInterest
+                    assert isinstance(value, int)  # object id
+                    kwargs[attr[0]] = _Ref(identifier=value, target_class_name=struct.viewed_classname)
+                else:
+                    if attr[1] == np.ndarray and isinstance(value, int):
+                        value = np.array([value])
+                    kwargs[attr[0]] = value
+            ob = cl(**kwargs)
         else:
             ob = cl()
 
         for attrname in struct._fieldnames:
             # check children
-            if attrname in getattr(ob, '_child_containers', []):
+            if attrname in getattr(ob, "_child_containers", []):
                 child_struct = getattr(struct, attrname)
                 try:
                     # try must only surround len() or other errors are captured
                     child_len = len(child_struct)
                 except TypeError:
                     # strange scipy.io behavior: if len is 1 there is no len()
-                    child = self.create_ob_from_struct(
-                        child_struct,
-                        classname_lower_to_upper[attrname[:-1]])
+                    child_struct = [child_struct]
+                    child_len = 1
+
+                for c in range(child_len):
+                    child_class_name = get_classname_from_container_name(attrname, child_struct[c])
+                    if classname == "Group":
+                        if child_class_name == ("ChannelView") or "RegionOfInterest" in child_class_name:
+                            child = self.create_ob_from_struct(child_struct[c], child_class_name)
+                        else:
+                            child = _Ref(child_struct[c], child_class_name)
+                    else:
+                        child = self.create_ob_from_struct(child_struct[c], child_class_name)
                     getattr(ob, attrname.lower()).append(child)
-                else:
-                    for c in range(child_len):
-                        child = self.create_ob_from_struct(
-                            child_struct[c],
-                            classname_lower_to_upper[attrname[:-1]])
-                        getattr(ob, attrname.lower()).append(child)
                 continue
 
             # attributes
-            if attrname.endswith('_units') or attrname == 'units':
+            if attrname.endswith("_units") or attrname == "units":
                 # linked with another field
                 continue
 
-            if hasattr(cl, '_quantity_attr') and cl._quantity_attr == attrname:
+            if hasattr(cl, "_quantity_attr") and cl._quantity_attr == attrname:
+                continue
+
+            if cl.is_view and attrname in (
+                "obj",
+                "index",
+                "image_sequence",
+                "x",
+                "y",
+                "radius",
+                "width",
+                "height",
+                "vertices",
+            ):
                 continue
 
             item = getattr(struct, attrname)
-
-            attributes = cl._necessary_attrs + cl._recommended_attrs \
-                                             + (('annotations', dict),)
+            attributes = cl._necessary_attrs + cl._recommended_attrs + (("annotations", dict),)
             dict_attributes = dict([(a[0], a[1:]) for a in attributes])
 
             if attrname in dict_attributes:
                 attrtype = dict_attributes[attrname][0]
                 if attrtype == datetime:
-                    m = r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
+                    m = r"(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)"
                     r = re.findall(m, str(item))
                     if len(r) == 1:
                         item = datetime(*[int(e) for e in r[0]])
@@ -400,20 +490,73 @@ class NeoMatlabIO(BaseIO):
                         item = None
                 elif attrtype == np.ndarray:
                     dt = dict_attributes[attrname][2]
-                    item = item.astype(dt)
+                    try:
+                        item = item.astype(dt)
+                    except AttributeError:
+                        # it seems arrays of length 1 are stored as scalars
+                        item = np.array([item], dtype=dt)
                 elif attrtype == pq.Quantity:
                     ndim = dict_attributes[attrname][1]
-                    units = str(getattr(struct, attrname + '_units'))
+                    units = str(getattr(struct, attrname + "_units"))
                     if ndim == 0:
                         item = pq.Quantity(item, units)
                     else:
                         item = pq.Quantity(item, units)
                 elif attrtype == dict:
-                    # FIXME: works but doesn't convert nested struct to dict
-                    item = {fn: getattr(item, fn) for fn in item._fieldnames}
+                    new_item = {}
+                    for fn in item._fieldnames:
+                        value = getattr(item, fn)
+                        if value == PY_NONE:
+                            value = None
+                        new_item[fn] = value
+                    item = new_item
                 else:
                     item = attrtype(item)
 
             setattr(ob, attrname, item)
 
+        neo_id = getattr(struct, "neo_id", None)
+        if neo_id:
+            setattr(ob, "_id", neo_id)
         return ob
+
+    def _resolve_references(self, bl):
+        if bl.groups:
+            obj_lookup = {}
+            for ob in bl.children_recur:
+                if hasattr(ob, "_id"):
+                    obj_lookup[ob._id] = ob
+            for grp in bl.groups:
+                for container_name in grp._child_containers:
+                    container = getattr(grp, container_name)
+                    for i, item in enumerate(container):
+                        if isinstance(item, _Ref):
+                            assert isinstance(item.identifier, (int, np.integer))
+                            # A reference to an object that already exists
+                            container[i] = obj_lookup[item.identifier]
+                        else:
+                            # ChannelView and RegionOfInterest
+                            assert item.is_view
+                            assert isinstance(item.obj, _Ref)
+                            item.obj = obj_lookup[item.obj.identifier]
+
+
+class _Ref:
+    def __init__(self, identifier, target_class_name):
+        self.identifier = identifier
+        if target_class_name:
+            self.target_cls = class_by_name[target_class_name]
+        else:
+            self.target_cls = None
+
+    @property
+    def proxy_for(self):
+        return self.target_cls
+
+    @property
+    def data_children_recur(self):
+        return []
+
+    @property
+    def container_children_recur(self):
+        return []

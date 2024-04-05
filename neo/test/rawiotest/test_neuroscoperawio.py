@@ -10,13 +10,11 @@ from neo.utils.datasets import get_local_testing_data_folder
 
 class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = NeuroScopeRawIO
-    entities_to_download = [
-        'neuroscope'
-    ]
+    entities_to_download = ["neuroscope"]
     entities_to_test = [
-        'neuroscope/test1/test1',
-        'neuroscope/test1/test1.dat',
-        'neuroscope/dataset_1/YutaMouse42-151117.eeg'
+        "neuroscope/test1/test1",
+        "neuroscope/test1/test1.dat",
+        "neuroscope/dataset_1/YutaMouse42-151117.eeg",
     ]
 
     def test_binary_argument_with_non_canonical_xml_file(self):
@@ -26,7 +24,7 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         binary_file = local_test_dir / "neuroscope/test2/signal1.dat"
         reader = NeuroScopeRawIO(filename=filename, binary_file=binary_file)
 
-        msg = 'Before parser_header() no header information should be present'
+        msg = "Before parser_header() no header information should be present"
         assert reader.header is None, msg
 
         reader.parse_header()
@@ -36,8 +34,8 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         assert reader.xml_file_path == filename
 
         txt = reader.__repr__()
-        msg = 'After parser_header() nb_block should be known'
-        assert 'nb_block' in txt, msg
+        msg = "After parser_header() nb_block should be known"
+        assert "nb_block" in txt, msg
         txt = reader._repr_annotations()
 
         # launch a series of test compliance
@@ -48,7 +46,6 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         compliance.read_spike_waveforms(reader)
         compliance.read_events(reader)
         compliance.has_annotations(reader)
-
 
 
 if __name__ == "__main__":

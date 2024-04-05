@@ -14,13 +14,14 @@ def can_use_network():
     """
     try:
         import datalad
+
         HAVE_DATALAD = True
     except:
         HAVE_DATALAD = False
     if not HAVE_DATALAD:
         return False
-    if os.environ.get('NOSETESTS_NO_NETWORK', False):
+    if os.environ.get("NOSETESTS_NO_NETWORK", False):
         return False
-    if os.environ.get('TRAVIS') == 'true':
+    if os.environ.get("TRAVIS") == "true":
         return False
     return True

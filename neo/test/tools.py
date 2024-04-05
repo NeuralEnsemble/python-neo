@@ -1,6 +1,6 @@
-'''
+"""
 Tools for use with neo tests.
-'''
+"""
 
 import hashlib
 import os
@@ -19,89 +19,87 @@ from neo.io.basefromrawio import proxyobjectlist, EventProxy, EpochProxy
 
 
 def assert_arrays_equal(a, b, dtype=False):
-    '''
+    """
     Check if two arrays have the same shape and contents.
 
     If dtype is True (default=False), then also theck that they have the same
     dtype.
-    '''
-    assert isinstance(a, np.ndarray), "a is a %s" % type(a)
-    assert isinstance(b, np.ndarray), "b is a %s" % type(b)
-    assert a.shape == b.shape, "{} != {}".format(a, b)
+    """
+    assert isinstance(a, np.ndarray), f"a is a {type(a)}"
+    assert isinstance(b, np.ndarray), f"b is a {type(b)}"
+    assert a.shape == b.shape, f"{a} != {b}"
     # assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b,
     #                                                               a.dtype,
     #                                                               b.dtype)
     try:
-        assert (a.flatten() == b.flatten()).all(), "{} != {}".format(a, b)
+        assert (a.flatten() == b.flatten()).all(), f"{a} != {b}"
     except (AttributeError, ValueError):
         try:
             ar = np.array(a)
             br = np.array(b)
-            assert (ar.flatten() == br.flatten()).all(), "{} != {}".format(ar, br)
+            assert (ar.flatten() == br.flatten()).all(), f"{ar} != {br}"
         except (AttributeError, ValueError):
-            assert np.all(a.flatten() == b.flatten()), "{} != {}".format(a, b)
+            assert np.all(a.flatten() == b.flatten()), f"{a} != {b}"
 
     if dtype:
-        assert a.dtype == b.dtype, "{} and {} not same dtype {} and {}".format(
-            a, b, a.dtype, b.dtype)
+        assert a.dtype == b.dtype, f"{a} and {b} not same dtype {a.dtype} and {b.dtype}"
 
 
 def assert_arrays_almost_equal(a, b, threshold, dtype=False):
-    '''
+    """
     Check if two arrays have the same shape and contents that differ
     by abs(a - b) <= threshold for all elements.
 
     If threshold is None, do an absolute comparison rather than a relative
     comparison.
-    '''
+    """
     if threshold is None:
         return assert_arrays_equal(a, b, dtype=dtype)
 
-    assert isinstance(a, np.ndarray), "a is a %s" % type(a)
-    assert isinstance(b, np.ndarray), "b is a %s" % type(b)
-    assert a.shape == b.shape, "{} != {}".format(a, b)
+    assert isinstance(a, np.ndarray), f"a is a {type(a)}"
+    assert isinstance(b, np.ndarray), f"b is a {type(b)}"
+    assert a.shape == b.shape, f"{a} != {b}"
     # assert a.dtype == b.dtype, "%s and %b not same dtype %s %s" % (a, b,
     #                                                               a.dtype,
     #                                                               b.dtype)
-    if a.dtype.kind in ['f', 'c', 'i']:
-        assert (abs(
-            a - b) < threshold).all(), "abs(%s - %s)    max(|a - b|) = %s    threshold:%s" \
-                                       "" % (a, b, (abs(a - b)).max(), threshold)
+    if a.dtype.kind in ["f", "c", "i"]:
+        assert (abs(a - b) < threshold).all(), (
+            f"abs({a} - {b})    max(|a - b|) = {(abs(a - b)).max()}    threshold:{threshold}" ""
+        )
 
     if dtype:
-        assert a.dtype == b.dtype, "{} and {} not same dtype {} and {}".format(
-            a, b, a.dtype, b.dtype)
+        assert a.dtype == b.dtype, f"{a} and {b} not same dtype {a.dtype} and {b.dtype}"
 
 
 def file_digest(filename):
-    '''
+    """
     Get the sha1 hash of the file with the given filename.
-    '''
-    with open(filename, 'rb') as fobj:
+    """
+    with open(filename, "rb") as fobj:
         return hashlib.sha1(fobj.read()).hexdigest()
 
 
 def assert_file_contents_equal(a, b):
-    '''
+    """
     Assert that two files have the same size and hash.
-    '''
+    """
 
     def generate_error_message(a, b):
-        '''
+        """
         This creates the error message for the assertion error
-        '''
+        """
         size_a = os.stat(a).st_size
         size_b = os.stat(b).st_size
         if size_a == size_b:
             return "Files have the same size but different contents"
         else:
-            return "Files have different sizes: a:%d b: %d" % (size_a, size_b)
+            return f"Files have different sizes: a:{size_a} b: {size_b}"
 
     assert file_digest(a) == file_digest(b), generate_error_message(a, b)
 
 
 def assert_neo_object_is_compliant(ob, check_type=True):
-    '''
+    """
     Test neo compliance of one object and sub objects
     (one_to_many_relation only):
       * check types and/or presence of necessary and recommended attribute.
@@ -109,70 +107,69 @@ def assert_neo_object_is_compliant(ob, check_type=True):
       * If attribute is numpy.ndarray also check dtype.kind.
 
     check_type=True by default can be set to false for testing ProxyObject
-    '''
+    """
     if check_type:
-        assert type(ob) in objectlist, \
-            '%s is not a neo object' % (type(ob))
+        assert type(ob) in objectlist, f"{type(ob)} is not a neo object"
     classname = ob.__class__.__name__
 
     # test presence of necessary attributes
     for ioattr in ob._necessary_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
         # ~ if attrname != '':
-        if not hasattr(ob, '_quantity_attr'):
-            assert hasattr(ob, attrname), '{} neo obect does not have {}'.format(
-                classname, attrname)
+        if not hasattr(ob, "_quantity_attr"):
+            assert hasattr(ob, attrname), f"{classname} neo obect does not have {attrname}"
 
     # test attributes types
     for ioattr in ob._all_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
 
-        if (hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname and (
-                attrtype == pq.Quantity or attrtype == np.ndarray)):
+        if (
+            hasattr(ob, "_quantity_attr")
+            and ob._quantity_attr == attrname
+            and (attrtype == pq.Quantity or attrtype == np.ndarray)
+        ):
             # object inherits from Quantity (AnalogSignal, SpikeTrain, ...)
             ndim = ioattr[2]
-            assert ob.ndim == ndim, '%s dimension is %d should be %d' % (classname, ob.ndim, ndim)
+            assert ob.ndim == ndim, f"{classname} dimension is {ob.ndim} should be {ndim}"
             if attrtype == np.ndarray:
                 dtp = ioattr[3]
-                assert ob.dtype.kind == dtp.kind, '%s dtype.kind is %s should be %s' \
-                                                  '' % (classname, ob.dtype.kind, dtp.kind)
+                assert ob.dtype.kind == dtp.kind, f"{classname} dtype.kind is {ob.dtype.kind} should be {dtp.kind}" ""
 
         elif hasattr(ob, attrname):
             if getattr(ob, attrname) is not None:
                 obattr = getattr(ob, attrname)
-                assert issubclass(type(obattr), attrtype), '%s in %s is %s should be %s' \
-                                                           '' % (attrname, classname,
-                                                                 type(obattr), attrtype)
+                assert issubclass(type(obattr), attrtype), (
+                    f"{attrname} in {classname} is {type(obattr)} should be {attrtype}" ""
+                )
                 if attrtype == pq.Quantity or attrtype == np.ndarray:
                     ndim = ioattr[2]
-                    assert obattr.ndim == ndim, '%s.%s dimension is %d should be %d' \
-                                                '' % (classname, attrname, obattr.ndim, ndim)
+                    assert obattr.ndim == ndim, f"{classname}.{attrname} dimension is {obattr.ndim} should be {ndim}" ""
                 if attrtype == np.ndarray:
                     dtp = ioattr[3]
-                    assert obattr.dtype.kind == dtp.kind, '%s.%s dtype.kind is %s should be %s' \
-                                                          '' % (classname, attrname,
-                                                                obattr.dtype.kind, dtp.kind)
+                    assert obattr.dtype.kind == dtp.kind, (
+                        f"{classname}.{attrname} dtype.kind is {obattr.dtype.kind} should be {dtp.kind}" ""
+                    )
 
     # test bijectivity : parents and children
     if classname != "Group":  # objects in a Group do not keep a reference to the group.
-        for container in getattr(ob, '_single_child_containers', []):
+        for container in getattr(ob, "_single_child_containers", []):
             for i, child in enumerate(getattr(ob, container, [])):
-                assert hasattr(child, _reference_name(
-                    classname)), '%s should have %s attribute (2 way relationship)' \
-                                '' % (container, _reference_name(classname))
+                assert hasattr(child, _reference_name(classname)), (
+                    f"{container} should have {_reference_name(classname)} attribute (2 way relationship)" ""
+                )
                 if hasattr(child, _reference_name(classname)):
                     parent = getattr(child, _reference_name(classname))
-                    assert parent == ob, '%s.%s %s is not symmetric with %s.%s' \
-                                        '' % (container, _reference_name(classname), i, classname,
-                                            container)
+                    assert parent == ob, (
+                        f"{container}.{_reference_name(classname)} {i} is not symmetric with {classname}.{container}" ""
+                    )
 
     # recursive on one to many rel
-    for i, child in enumerate(getattr(ob, 'children', [])):
+    for i, child in enumerate(getattr(ob, "children", [])):
         try:
             assert_neo_object_is_compliant(child)
         # intercept exceptions and add more information
         except BaseException as exc:
-            exc.args += ('from {} {} of {}'.format(child.__class__.__name__, i, classname),)
+            exc.args += (f"from {child.__class__.__name__} {i} of {classname}",)
             raise
 
 
@@ -188,7 +185,7 @@ def types_match(ob1, ob2):
 
 
 def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude=None):
-    '''
+    """
     Test if ob1 and ob2 has the same sub schema.
     Explore all parent/child relationships.
     Many_to_many_relationship is not tested
@@ -200,12 +197,13 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
         exclude: a list of attributes and annotations to ignore in
                  the comparison
 
-    '''
+    """
     if isinstance(ob1, SpikeTrainList) and isinstance(ob2, list):
         # for debugging occasional test failure
-        raise Exception("items={}\nspike_time_array={}\nlist length: {}".format(
-            str(ob1._items), str(ob1._spike_time_array), len(ob2)))
-    errmsg = 'type({}) != type({})'.format(type(ob1), type(ob2))
+        raise Exception(
+            f"items={str(ob1._items)}\nspike_time_array={str(ob1._spike_time_array)}\nlist length: {len(ob2)}"
+        )
+    errmsg = f"type({type(ob1)}) != type({type(ob2)})"
     assert types_match(ob1, ob2), errmsg
     classname = ob1.__class__.__name__
 
@@ -213,52 +211,48 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
         exclude = []
 
     if isinstance(ob1, (list, ObjectList)):
-        assert len(ob1) == len(ob2), 'lens %s and %s not equal for %s and %s' \
-                                     '' % (len(ob1), len(ob2), ob1, ob2)
+        assert len(ob1) == len(ob2), f"lens {len(ob1)} and {len(ob2)} not equal for {ob1} and {ob2}" ""
         for i, (sub1, sub2) in enumerate(zip(ob1, ob2)):
             try:
-                assert_same_sub_schema(sub1, sub2, equal_almost=equal_almost, threshold=threshold,
-                                       exclude=exclude)
+                assert_same_sub_schema(sub1, sub2, equal_almost=equal_almost, threshold=threshold, exclude=exclude)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('{}[{}]'.format(classname, i),)
+                exc.args += f"{classname}[{i}]"
                 raise
         return
 
     # test parent/child relationship
-    for container in getattr(ob1, '_single_child_containers', []):
+    for container in getattr(ob1, "_single_child_containers", []):
         if container in exclude:
             continue
         if not hasattr(ob1, container):
-            assert not hasattr(ob2, container), '%s 2 does have %s but not %s 1' \
-                                                '' % (classname, container, classname)
+            assert not hasattr(ob2, container), f"{classname} 2 does have {container} but not {classname} 1" ""
             continue
         else:
-            assert hasattr(ob2, container), '{} 1 has {} but not {} 2'.format(classname, container,
-                                                                          classname)
+            assert hasattr(ob2, container), f"{classname} 1 has {container} but not {classname} 2"
 
         sub1 = getattr(ob1, container)
         sub2 = getattr(ob2, container)
 
-        assert len(sub1) == len(
-            sub2), 'theses two %s do not have the same %s number: %s and %s' \
-                   '' % (classname, container, len(sub1), len(sub2))
+        assert len(sub1) == len(sub2), (
+            f"these two {classname} do not have the same {container} number: {len(sub1)} and {len(sub2)}" ""
+        )
         for i in range(len(getattr(ob1, container))):
             # previously lacking parameter
             try:
-                assert_same_sub_schema(sub1[i], sub2[i], equal_almost=equal_almost,
-                                       threshold=threshold, exclude=exclude)
+                assert_same_sub_schema(
+                    sub1[i], sub2[i], equal_almost=equal_almost, threshold=threshold, exclude=exclude
+                )
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from {}[{}] of {}'.format(container, i, classname),)
+                exc.args += f"from {container}[{i}] of {classname}"
                 raise
 
-    assert_same_attributes(ob1, ob2, equal_almost=equal_almost, threshold=threshold,
-                           exclude=exclude)
+    assert_same_attributes(ob1, ob2, equal_almost=equal_almost, threshold=threshold, exclude=exclude)
 
 
 def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude=None):
-    '''
+    """
     Test if ob1 and ob2 has the same attributes.
 
     Arguments:
@@ -267,7 +261,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
         exclude: a list of attributes and annotations to ignore in
                  the comparison
 
-    '''
+    """
     classname = ob1.__class__.__name__
 
     if exclude is None:
@@ -284,39 +278,35 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
             continue
         attrname, attrtype = ioattr[0], ioattr[1]
         # ~ if attrname =='':
-        if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
+        if hasattr(ob1, "_quantity_attr") and ob1._quantity_attr == attrname:
             # object is inherited from Quantity (AnalogSignal, SpikeTrain, ...)
             try:
-                assert_arrays_almost_equal(ob1.magnitude, ob2.magnitude, threshold=threshold,
-                                           dtype=dtype)
+                assert_arrays_almost_equal(ob1.magnitude, ob2.magnitude, threshold=threshold, dtype=dtype)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from {} {}'.format(classname, attrname),)
+                exc.args += (f"from {classname} {attrname}",)
                 raise
-            assert ob1.dimensionality.string == ob2.dimensionality.string,\
-                'Units of %s %s are not the same: %s and %s' \
-                '' % (classname, attrname, ob1.dimensionality.string, ob2.dimensionality.string)
+            assert ob1.dimensionality.string == ob2.dimensionality.string, (
+                f"Units of {classname} {attrname} are not the same: {ob1.dimensionality.string} and {ob2.dimensionality.string}"
+                ""
+            )
             continue
 
         if not hasattr(ob1, attrname):
-            assert not hasattr(ob2, attrname), '%s 2 does have %s but not %s 1' \
-                                               '' % (classname, attrname, classname)
+            assert not hasattr(ob2, attrname), f"{classname} 2 does have {attrname} but not {classname} 1" ""
             continue
         else:
-            assert hasattr(ob2, attrname), '%s 1 has %s but not %s 2' \
-                                           '' % (classname, attrname, classname)
+            assert hasattr(ob2, attrname), f"%{classname} 1 has {attrname} but not {classname} 2" ""
 
         if getattr(ob1, attrname) is None:
-            assert getattr(ob2, attrname) is None, 'In %s.%s %s and %s differed' \
-                                                   '' % (classname, attrname,
-                                                         getattr(ob1, attrname),
-                                                         getattr(ob2, attrname))
+            assert getattr(ob2, attrname) is None, (
+                f"In {classname}.{attrname} {getattr(ob1, attrname)} and {getattr(ob2, attrname)} differed" ""
+            )
             continue
         if getattr(ob2, attrname) is None:
-            assert getattr(ob1, attrname) is None, 'In %s.%s %s and %s differed' \
-                                                   '' % (classname, attrname,
-                                                         getattr(ob1, attrname),
-                                                         getattr(ob2, attrname))
+            assert getattr(ob1, attrname) is None, (
+                f"In {classname}.{attrname} {getattr(ob1, attrname)} and { getattr(ob2, attrname)} differed" ""
+            )
             continue
 
         if attrtype == pq.Quantity:
@@ -329,22 +319,22 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                 assert_arrays_almost_equal(mag1, mag2, threshold=threshold, dtype=dtype)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from {} of {}'.format(attrname, classname),)
+                exc.args += (f"from {attrname} of {classname}",)
                 raise
             # Compare dimensionalities
             dim1 = getattr(ob1, attrname).dimensionality.simplified
             dim2 = getattr(ob2, attrname).dimensionality.simplified
             dimstr1 = getattr(ob1, attrname).dimensionality.string
             dimstr2 = getattr(ob2, attrname).dimensionality.string
-            assert dim1 == dim2, 'Attribute %s of %s are not the same: %s != %s' \
-                                 '' % (attrname, classname, dimstr1, dimstr2)
+            assert dim1 == dim2, f"Attribute {attrname} of {classname} are not the same: {dimstr1} != {dimstr2}" ""
         elif attrtype == np.ndarray:
             try:
-                assert_arrays_almost_equal(getattr(ob1, attrname), getattr(ob2, attrname),
-                                           threshold=threshold, dtype=dtype)
+                assert_arrays_almost_equal(
+                    getattr(ob1, attrname), getattr(ob2, attrname), threshold=threshold, dtype=dtype
+                )
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from {} of {}'.format(attrname, classname),)
+                exc.args += (f"from {attrname} of {classname}",)
                 raise
 
         elif isinstance(attrtype, tuple):
@@ -355,26 +345,24 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
             if isinstance(attr1, BaseSignal):
                 assert isinstance(attr2, BaseSignal)
                 # Compare magnitudes
-                assert_arrays_almost_equal(attr1.magnitude, attr2.magnitude,
-                                           threshold=threshold, dtype=dtype)
+                assert_arrays_almost_equal(attr1.magnitude, attr2.magnitude, threshold=threshold, dtype=dtype)
                 # Compare dimensionalities
                 dim1 = attr1.dimensionality
                 dim2 = attr2.dimensionality
-                errmsg = "Attribute {} of {} are not the same: {} != {}".format(
-                            attrname, classname, dim1.string, dim2.string)
+                errmsg = f"Attribute {attrname} of {classname} are not the same: {dim1.string} != {dim2.string}"
                 assert dim1.simplified == dim2.simplified, errmsg
                 assert attr1.name == attr2.name
                 # todo: check annotations
         else:
             # ~ print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
-            assert getattr(ob1, attrname) == getattr(ob2, attrname),\
-                'Attribute %s.%s are not the same %s %s %s %s' \
-                '' % (classname, attrname, type(getattr(ob1, attrname)), getattr(ob1, attrname),
-                      type(getattr(ob2, attrname)), getattr(ob2, attrname))
+            assert getattr(ob1, attrname) == getattr(ob2, attrname), (
+                f"Attribute {classname}.{attrname} are not the same { type(getattr(ob1, attrname))} {getattr(ob1, attrname)} {type(getattr(ob2, attrname))} {getattr(ob2, attrname)}"
+                ""
+            )
 
 
 def assert_same_annotations(ob1, ob2, equal_almost=True, threshold=1e-10, exclude=None):
-    '''
+    """
     Test if ob1 and ob2 has the same annotations.
 
     Arguments:
@@ -383,7 +371,7 @@ def assert_same_annotations(ob1, ob2, equal_almost=True, threshold=1e-10, exclud
         exclude: a list of attributes and annotations to ignore in
                  the comparison
 
-    '''
+    """
     if exclude is None:
         exclude = []
 
@@ -411,7 +399,7 @@ def assert_same_annotations(ob1, ob2, equal_almost=True, threshold=1e-10, exclud
 
 
 def assert_same_array_annotations(ob1, ob2, equal_almost=True, threshold=1e-10, exclude=None):
-    '''
+    """
     Test if ob1 and ob2 has the same annotations.
 
     Arguments:
@@ -420,7 +408,7 @@ def assert_same_array_annotations(ob1, ob2, equal_almost=True, threshold=1e-10, 
         exclude: a list of attributes and annotations to ignore in
                  the comparison
 
-    '''
+    """
     if exclude is None:
         exclude = []
 
@@ -442,18 +430,17 @@ def assert_same_array_annotations(ob1, ob2, equal_almost=True, threshold=1e-10, 
         try:
             assert_arrays_equal(value, ob2.array_annotations[key])
         except ValueError:
-            assert_arrays_almost_equal(ob1, ob2,
-                                                    threshold=threshold, dtype=False)
+            assert_arrays_almost_equal(ob1, ob2, threshold=threshold, dtype=False)
 
 
 def assert_sub_schema_is_lazy_loaded(ob):
-    '''
+    """
     This is util for testing lazy load. All data object must be in proxyobjectlist.
-    '''
+    """
     classname = ob.__class__.__name__
 
     if isinstance(ob, Container):
-        for container in getattr(ob, '_single_child_containers', []):
+        for container in getattr(ob, "_single_child_containers", []):
             if not hasattr(ob, container):
                 continue
             sub = getattr(ob, container)
@@ -462,39 +449,38 @@ def assert_sub_schema_is_lazy_loaded(ob):
                     assert_sub_schema_is_lazy_loaded(child)
                 # intercept exceptions and add more information
                 except BaseException as exc:
-                    exc.args += ('from {} {} of {}'.format(container, i, classname),)
+                    exc.args += (f"from {container} {i} of {classname}",)
                     raise
     else:
-        assert ob.__class__ in proxyobjectlist, 'Data object must lazy %' % classname
+        assert ob.__class__ in proxyobjectlist, f"Data object must lazy {classname}"
         loaded_ob = ob.load()
         assert_neo_object_is_compliant(loaded_ob)
         assert_same_annotations(ob, loaded_ob)
         exclude = []
         if isinstance(ob, EventProxy):
-            exclude = ['labels']
+            exclude = ["labels"]
         elif isinstance(ob, EpochProxy):
-            exclude = ['labels', 'durations']
+            exclude = ["labels", "durations"]
         else:
             exclude = []
         assert_same_array_annotations(ob, loaded_ob, exclude=exclude)
 
 
 def assert_objects_equivalent(obj1, obj2):
-    '''
+    """
     Compares two NEO objects by looping over the attributes and annotations
     and asserting their hashes. No relationships involved.
-    '''
+    """
 
     def assert_attr(obj1, obj2, attr_name):
-        '''
+        """
         Assert a single attribute and annotation are the same
-        '''
+        """
         assert hasattr(obj1, attr_name)
         attr1 = hashlib.md5(getattr(obj1, attr_name)).hexdigest()
         assert hasattr(obj2, attr_name)
         attr2 = hashlib.md5(getattr(obj2, attr_name)).hexdigest()
-        assert attr1 == attr2, "Attribute %s for class %s is not equal." \
-                               "" % (attr_name, obj1.__class__.__name__)
+        assert attr1 == attr2, f"Attribute {attr_name} for class {obj1.__class__.__name__} is not equal." ""
 
     obj_type = obj1.__class__.__name__
     assert obj_type == obj2.__class__.__name__
@@ -511,12 +497,12 @@ def assert_objects_equivalent(obj1, obj2):
 
 
 def assert_children_empty(obj, parent):
-    '''
+    """
     Check that the children of a neo object are empty.  Used
     to check the cascade is implemented properly
-    '''
+    """
     classname = obj.__class__.__name__
-    errmsg = '''%s reader with cascade=False should return
-        empty children''' % parent.__name__
-    if hasattr(obj, 'children'):
+    errmsg = f"""{parent.__name__} reader with cascade=False should return
+        empty children"""
+    if hasattr(obj, "children"):
         assert not obj.children, errmsg

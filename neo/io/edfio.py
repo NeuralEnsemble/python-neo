@@ -18,11 +18,12 @@ class EDFIO(EDFRawIO, BaseFromRaw):
     """
     IO for reading edf and edf+ files.
     """
-    name = 'EDF IO'
+
+    name = "EDF IO"
     description = "IO for reading EDF and EDF+ files"
 
-    _prefered_signal_group_mode = 'group-by-same-units'
+    _prefered_signal_group_mode = "group-by-same-units"
 
-    def __init__(self, filename=''):
+    def __init__(self, filename=""):
         EDFRawIO.__init__(self, filename=filename)
         BaseFromRaw.__init__(self, filename)
