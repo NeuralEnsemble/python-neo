@@ -95,10 +95,26 @@ class IntanRawIO(BaseRawIO):
             raise FileNotFoundError(f"{filename} does not exist")
 
         if self.filename.endswith(".rhs"):
-            self.file_format = "header-attached"
-            self._global_info, self._ordered_channels, data_dtype, header_size, self._block_size = read_rhs(
-                self.filename
-            )
+            if filename.name == "info.rhs":
+                if any((filename.parent / file).exists for file in one_file_per_signal_filenames):
+                    self.file_format = "one-file-per-signal"
+                    raw_file_paths_dict = create_one_file_per_signal_dict(dirname=filename.parent, rhs=True)
+                else:
+                    self.file_format = "one-file-per-channel"
+                    raw_file_paths_dict = create_one_file_per_channel_dict(dirname=filename.parent, rhs=True)
+            else:
+                self.file_format = "header-attached"
+
+            (
+                self._global_info,
+                self._ordered_channels,
+                data_dtype,
+                header_size,
+                self._block_size,
+                channel_number_dict,
+            ) = read_rhs(self.filename)
+
+
         # 3 possibilities for rhd files, one combines the header and the data in the same file with suffix `rhd` while
         # the other two separates the data from the header which is always called `info.rhd`
         # attached to the actual binary file with data
@@ -107,11 +123,11 @@ class IntanRawIO(BaseRawIO):
                 # first we have one-file-per-signal which is where one neo stream/file is saved as .dat files
                 if any((filename.parent / file).exists() for file in one_file_per_signal_filenames):
                     self.file_format = "one-file-per-signal"
-                    raw_file_paths_dict = create_one_file_per_signal_dict(filename.parent)
+                    raw_file_paths_dict = create_one_file_per_signal_dict(dirname=filename.parent)
                 # then there is one-file-per-channel where each channel in a neo stream is in its own .dat file
                 else:
                     self.file_format = "one-file-per-channel"
-                    raw_file_paths_dict = create_one_file_per_channel_dict(filename.parent)
+                    raw_file_paths_dict = create_one_file_per_channel_dict(dirname=filename.parent)
             # finally the format with the header-attached to the binary file as one giant file
             else:
                 self.file_format = "header-attached"
@@ -435,13 +451,15 @@ rhs_signal_channel_header = [
 ]
 
 
-def read_rhs(filename):
+def read_rhs(filename, file_format: str):
     BLOCK_SIZE = 128  # sample per block
 
     with open(filename, mode="rb") as f:
         global_info = read_variable_header(f, rhs_global_header)
 
         channels_by_type = {k: [] for k in [0, 3, 4, 5, 6]}
+        if not file_format == "header-attached":
+            data_dtype = {k: [] for k in range(7)}  # 5 streams + 6 for timestamps for not header attached
         for g in range(global_info["nb_signal_group"]):
             group_info = read_variable_header(f, rhs_signal_group_header)
 
@@ -451,6 +469,10 @@ def read_rhs(filename):
                     assert chan_info["signal_type"] not in (1, 2)
                     if bool(chan_info["channel_enabled"]):
                         channels_by_type[chan_info["signal_type"]].append(chan_info)
+
+
+        # useful dictionary for knowing the number of channels for non-header attached formats
+        channel_number_dict = {i: len(channels_by_type[i]) for i in range(6)}
 
         header_size = f.tell()
 
@@ -469,7 +491,14 @@ def read_rhs(filename):
         chan_info["offset"] = -32768 * 0.195
         chan_info["dtype"] = "uint16"
         ordered_channels.append(chan_info)
-        data_dtype += [(name, "uint16", BLOCK_SIZE)]
+        if file_format == "header-attached":
+            data_dtype += [(name, "uint16", BLOCK_SIZE)]
+        else:
+            data_dtype[0] = "int16" 
+
+
+    # TODO @Heberto I need to read about this section more.... I'm not
+    # sure how it works
 
     if bool(global_info["dc_amplifier_data_saved"]):
         for chan_info in channels_by_type[0]:
@@ -500,6 +529,9 @@ def read_rhs(filename):
         ordered_channels.append(chan_info_stim)
         data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
 
+    # TODO @Heberto to update to version 3 we also likely need to add in the
+    # supply and aux voltages.
+
     # 3: Analog input channel.
     # 4: Analog output channel.
     for sig_type in [
@@ -514,23 +546,46 @@ def read_rhs(filename):
             chan_info["offset"] = -32768 * 0.0003125
             chan_info["dtype"] = "uint16"
             ordered_channels.append(chan_info)
-            data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            if file_format == "header-attached":
+                data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            else:
+                data_dtype[sig_type] = "unit16"
 
     # 5: Digital input channel.
     # 6: Digital output channel.
     for sig_type in [5, 6]:
-        # at the moment theses channel are not in sig channel list
-        # but they are in the raw memamp
         if len(channels_by_type[sig_type]) > 0:
-            name = {5: "DIGITAL-IN", 6: "DIGITAL-OUT"}[sig_type]
-            data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
+            chan_info = channels_by_type[sig_type][0]
+            # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
+            # make this memory map work correctly. So since our digital data is not organized
+            # by channel like analog/ADC are we have to overwrite the native name to create
+            # a single permanent name that we can find with channel id
+            chan_info["native_channel_name"] = name  # overwite to allow memmap to work
+            chan_info["sampling_rate"] = sr
+            chan_info["units"] = "TTL"  # arbitrary units TTL for logic
+            chan_info["gain"] = 1.0
+            chan_info["offset"] = 0.0
+            chan_info["dtype"] = "uint16"
+            ordered_channels.append(chan_info)
+            if file_format == "header-attached":
+                data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            else:
+                data_dtype[sig_type] = "uint16"
 
-    if bool(global_info["notch_filter_mode"]) and global_info["major_version"] >= 3:
-        global_info["notch_filter_applied"] = True
+    if global_info["notch_filter_mode"] == 2 and global_info["major_version"] >= V("3.0"):
+        global_info["notch_filter"] = "60Hz"
+    elif global_info["notch_filter_mode"] == 1 and global_info["major_version"]>= V("3.0"):
+        global_info["notch_filter"] = "50Hz"
     else:
-        global_info["notch_filter_applied"] = False
+        global_info["notch_filter"] = False
 
-    return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
+    if not file_format == "header-attached":
+        # filter out dtypes without any values
+        data_dtype = {k: v for (k, v) in data_dtype.items() if len(v) > 0}
+        channel_number_dict = {k: v for (k, v) in channel_number_dict.items() if v > 0}
+
+    return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE, channel_number_dict
 
 
 ###############
@@ -808,8 +863,11 @@ def read_rhd(filename, file_format: str):
     return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE, channel_number_dict
 
 
-###########################
-# RHD Zone for Binary Files
+##########################################################################
+# RHX Zone for Binary Files
+# This zone gives the headerless binary files for both rhs and rhd header files
+# This occurs with the new rhx version of the intan recording software as an
+# optional software that can be turned
 
 # For One File Per Signal
 one_file_per_signal_filenames = [
@@ -822,13 +880,29 @@ one_file_per_signal_filenames = [
 ]
 
 
-def create_one_file_per_signal_dict(dirname):
-    """Function for One File Per Signal Type"""
+def create_one_file_per_signal_dict(dirname, rhs: bool=False):
+    """Function for One File Per Signal Type
+    
+    Parameters
+    ----------
+    dirname: pathlib.Path
+        The folder to explore
+    rhs: bool, default: False
+        Whether this is an rhd or an rhs file
+    """
+
+    # if rhs we have an extra stream to add
+    if rhs:
+        one_file_per_signal_filenames.insert(4, "analogout.dat")
+
     raw_file_paths_dict = {}
     for raw_index, raw_file in enumerate(one_file_per_signal_filenames):
         if Path(dirname / raw_file).is_file():
             raw_file_paths_dict[raw_index] = Path(dirname / raw_file)
-    raw_file_paths_dict[6] = Path(dirname / "time.dat")
+    if rhs:
+        raw_file_paths_dict[7] = Path(dirname / "time.dat")
+    else:
+        raw_file_paths_dict[6] = Path(dirname / "time.dat")
 
     return raw_file_paths_dict
 
@@ -838,19 +912,34 @@ possible_raw_file_prefixes = [
     "amp",
     "aux",
     "vdd",
-    "board-ANALOG",
+    "board-ANALOG-IN",
     "board-DIGITAL-IN",
     "board-DIGITAL-OUT",
 ]
 
 
-def create_one_file_per_channel_dict(dirname):
-    """Utility function for One File Per Channel"""
+def create_one_file_per_channel_dict(dirname, rhs: bool=False):
+    """Utility function for One File Per Channel
+    
+    Parameters
+    ----------
+    dirname: pathlib.Path
+        The folder to explore
+    rhs: bool, default: False
+        Whether this is an rhd or an rhs file
+    """
+    # if rhs we have an extra stream to add
+    if rhs:
+        possible_raw_file_prefixes.insert(4, "board-ANALOG-OUT")
+
     file_names = dirname.glob("**/*.dat")
     files = [file for file in file_names if file.is_file()]
     raw_file_paths_dict = {}
     for raw_index, prefix in enumerate(possible_raw_file_prefixes):
         raw_file_paths_dict[raw_index] = [file for file in files if prefix in file.name]
-    raw_file_paths_dict[6] = [Path(dirname / "time.dat")]
+    if rhs:
+        raw_file_paths_dict[7] = [Path(dirname / "time.dat")]
+    else:
+        raw_file_paths_dict[6] = [Path(dirname / "time.dat")]
 
     return raw_file_paths_dict
