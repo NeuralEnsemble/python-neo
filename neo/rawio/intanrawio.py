@@ -112,7 +112,7 @@ class IntanRawIO(BaseRawIO):
                 header_size,
                 self._block_size,
                 channel_number_dict,
-            ) = read_rhs(self.filename)
+            ) = read_rhs(self.filename, self.file_format)
 
 
         # 3 possibilities for rhd files, one combines the header and the data in the same file with suffix `rhd` while
