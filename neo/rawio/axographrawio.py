@@ -565,7 +565,7 @@ class AxographRawIO(BaseRawIO):
             #   format version 3
             if header_id == "AxGr":
                 format_ver, n_cols = f.read_f("HH")
-                if format_ver != 1 or format_ver != 2:
+                if format_ver != 1 and format_ver != 2:
                     raise ValueError(
                         f'Mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
                 )
