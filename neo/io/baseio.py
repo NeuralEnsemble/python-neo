@@ -35,6 +35,7 @@ from neo.core import (
     RectangularRegionOfInterest,
     CircularRegionOfInterest,
     PolygonRegionOfInterest,
+    NeoReadWriteError
 )
 
 read_error = "This type is not supported by this file format for reading"
@@ -139,7 +140,7 @@ class BaseIO:
             Returns all the data from the file as Blocks
         """
         if lazy and not self.support_lazy:
-            raise ValueError("This IO module does not support lazy loading")
+            raise NeoReadWriteError("This IO module does not support lazy loading")
         if Block in self.readable_objects:
             if hasattr(self, "read_all_blocks") and callable(getattr(self, "read_all_blocks")):
                 return self.read_all_blocks(lazy=lazy, **kargs)
@@ -168,13 +169,13 @@ class BaseIO:
         if Block in self.writeable_objects:
             if isinstance(bl, Sequence):
                 if not hasattr(self, "write_all_blocks"):
-                    raise AttributeError(f"{self.__class__.__name__} does not offer to store a sequence of blocks")
+                    raise NeoReadWriteError(f"{self.__class__.__name__} does not offer to store a sequence of blocks")
                 self.write_all_blocks(bl, **kargs)
             else:
                 self.write_block(bl, **kargs)
         elif Segment in self.writeable_objects:
             if len(bl.segments) != 1:
-                raise ValueError(f"{self.__class__.__name__} is based on segment so if you try to write a block it "
+                raise NeoReadWriteError(f"{self.__class__.__name__} is based on segment so if you try to write a block it "
                 + "must contain only one Segment")
             self.write_segment(bl.segments[0], **kargs)
         else:
@@ -183,105 +184,105 @@ class BaseIO:
     ######## All individual read methods #######################
     def read_block(self, **kargs):
         if Block not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_segment(self, **kargs):
         if Segment not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_spiketrain(self, **kargs):
         if SpikeTrain not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_analogsignal(self, **kargs):
         if AnalogSignal not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_imagesequence(self, **kargs):
         if ImageSequence not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_rectangularregionofinterest(self, **kargs):
         if RectangularRegionOfInterest not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_circularregionofinterest(self, **kargs):
         if CircularRegionOfInterest not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_polygonregionofinterest(self, **kargs):
         if PolygonRegionOfInterest not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_irregularlysampledsignal(self, **kargs):
         if IrregularlySampledSignal not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_channelview(self, **kargs):
         if ChannelView not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_event(self, **kargs):
         if Event not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_epoch(self, **kargs):
         if Epoch not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     def read_group(self, **kargs):
         if Group not in self.readable_objects:
-            raise RuntimeError(read_error)
+            raise NeoReadWriteError(read_error)
 
     ######## All individual write methods #######################
     def write_block(self, bl, **kargs):
         if Block not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_segment(self, seg, **kargs):
         if Segment not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_spiketrain(self, sptr, **kargs):
         if SpikeTrain not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_analogsignal(self, anasig, **kargs):
         if AnalogSignal not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_imagesequence(self, imseq, **kargs):
         if ImageSequence not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_rectangularregionofinterest(self, rectroi, **kargs):
         if RectangularRegionOfInterest not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_circularregionofinterest(self, circroi, **kargs):
         if CircularRegionOfInterest not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_polygonregionofinterest(self, polyroi, **kargs):
         if PolygonRegionOfInterest not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_irregularlysampledsignal(self, irsig, **kargs):
         if IrregularlySampledSignal not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_channelview(self, chv, **kargs):
         if ChannelView not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_event(self, ev, **kargs):
         if Event not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_epoch(self, ep, **kargs):
         if Epoch not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
 
     def write_group(self, group, **kargs):
         if Group not in self.writeable_objects:
-            raise RuntimeError(write_error)
+            raise NeoReadWriteError(write_error)
