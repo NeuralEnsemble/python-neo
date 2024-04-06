@@ -206,7 +206,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
         if self.selected_streams is not None:
             if isinstance(self.selected_streams, str):
                 self.selected_streams = [self.selected_streams]
-            assert isinstance(self.selected_streams, list)
+            if not isinstance(self.selected_streams, list):
+                raise TypeError(
+                    f"`selected_streams` must be of type str or list not of type {type(self.selected_streams)}"
+                )
 
             keep = np.isin(signal_streams["id"], self.selected_streams)
             signal_streams = signal_streams[keep]

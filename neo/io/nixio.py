@@ -313,7 +313,8 @@ class NixIO(BaseIO):
                 neo_block.segments.append(newseg)
             elif grp.type == "neo.group":
                 newgrp, parent_name = self._nix_to_neo_group(grp)
-                assert parent_name is None
+                if parent_name is not None:
+                    raise ValueError(f"`parent_name` must be None and is {parent_name}")
                 neo_block.groups.append(newgrp)
             elif grp.type == "neo.subgroup":
                 newgrp, parent_name = self._nix_to_neo_group(grp)

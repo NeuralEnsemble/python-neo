@@ -146,11 +146,13 @@ class NeuroScopeRawIO(BaseRawIO):
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
@@ -195,8 +197,10 @@ class NeuroScopeRawIO(BaseRawIO):
                     f"data binary not found for file {xml_file_path.stem} with supported extensions: {supported_extensions}"
                 )
 
-        assert xml_file_path.is_file(), f"xml file not found at the expected location {xml_file_path}"
-        assert data_file_path.is_file(), f"binary file not found at the expected location {data_file_path}"
+        if not xml_file_path.is_file():
+            raise FileNotFoundError(f"XML file not found at the expected location {xml_file_path}")
+        if not data_file_path.is_file():
+            raise FileNotFoundError(f"Binary file not found at the expected location {data_file_path}")
 
         self.xml_file_path = xml_file_path
         self.data_file_path = data_file_path
