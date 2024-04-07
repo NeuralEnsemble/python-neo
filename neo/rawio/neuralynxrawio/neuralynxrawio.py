@@ -76,15 +76,12 @@ class NeuralynxRawIO(BaseRawIO):
     dirname: str, default: ''
         Name of directory containing all files for a dataset. If provided, filename is
         ignored. But one of either dirname or filename is required.
-    filename: str, default: ''
-        Name of a single ncs, nse, nev, or ntt file to include in dataset. Will be ignored,
-        if dirname is provided. But one of either dirname or filename is required.
-    include_filename: str | list | None, default: None
+    include_filenames: str | list | None, default: None
         Name of a single ncs, nse, nev or ntt file or list of such files. Will only include
         file names in the list. This can be plain filenames or fullpath or path relative to
         dirname.
         All files should be in a single path.
-    exclude_filename: str | list | None, default: None
+    exclude_filenames: str | list | None, default: None
         Name of a single ncs, nse, nev or ntt file or list of such files. Expects plain
         filenames (without directory path).
         None will search for all file types
@@ -140,55 +137,46 @@ class NeuralynxRawIO(BaseRawIO):
     def __init__(
             self,
             dirname="",
-            filename="",
-            include_filename=None,
-            exclude_filename=None,
+            include_filenames=None,
+            exclude_filenames=None,
             keep_original_times=False,
             strict_gap_mode=True,
             **kargs
     ):
 
-        if include_filename is not None:
-            if filename != "":
-                raise ValueError("filename and include_filenames cannot be both assigned")
-            include_filepath = [os.path.dirname(f) for f in include_filename]
+        if include_filenames:
+            include_filepath = [os.path.dirname(f) for f in include_filenames]
             if len(include_filepath) > 1:
                 raise ValueError("Files in include_filename must be in a single path!")
-        if (include_filename is None) and (filename == "") and (dirname == ""):
-            raise ValueError("One of dirname or filename or include_files must be provided.")
 
-        if dirname != "" and (include_filename is not None):
-            include_filename = [os.path.join(dirname, f) for f in include_filename]
+        if (include_filenames is None) and (dirname == ""):
+            raise ValueError("One of dirname or include_filenames must be provided.")
 
-        if (not isinstance(include_filename, (list, set, np.ndarray))) and (include_filename is not None):
-            include_filename = [include_filename]
-        if (not isinstance(exclude_filename, (list, set, np.ndarray))) and (exclude_filename is not None):
-            exclude_filename = [exclude_filename]
+        if (not isinstance(include_filenames, (list, set, np.ndarray))) and (include_filenames is not None):
+            include_filenames = [include_filenames]
+        if (not isinstance(exclude_filenames, (list, set, np.ndarray))) and (exclude_filenames is not None):
+            exclude_filenames = [exclude_filenames]
 
-        if dirname != "":
-            if include_filename is not None:
-                self.rawmode = 'multiple-files'
-            else:
-                self.rawmode = "one-dir"
-        elif filename != "":
-            self.rawmode = "one-file"
+        if dirname and include_filenames:
+            dirname = os.path.join(dirname, os.path.dirname(include_filenames[0]))
+            include_filenames = [os.path.basename(f) for f in include_filenames]
+
+        if exclude_filenames:
+            exclude_filenames = {os.path.basename(f) for f in exclude_filenames}
+
+        if include_filenames is not None:
+            self.rawmode = 'multiple-files'
+        else:
+            self.rawmode = "one-dir"
 
         self.dirname = dirname
-        self.filename = filename
-        self.include_files = include_filename
-        self.exclude_filename = [os.path.basename(f) for f in exclude_filename] if exclude_filename else None
+        self.include_filenames = [f for f in include_filenames if f not in exclude_filenames]
         self.keep_original_times = keep_original_times
         self.strict_gap_mode = strict_gap_mode
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
-        if self.rawmode == "one-file":
-            return self.filename
-        elif self.rawmode == "multiple-files":
-            dirname = [os.path.dirname(x) for x in self.include_files]
-            return os.path.join(self.dirname, dirname[0])
-        else:
-            return self.dirname
+        return self.dirname
 
     def _parse_header(self):
 
@@ -220,10 +208,8 @@ class NeuralynxRawIO(BaseRawIO):
         if self.rawmode == "one-dir":
             filenames = sorted([os.path.join(self.dirname, f) for f in os.listdir(self.dirname)
                                 if os.path.isfile(os.path.join(self.dirname, f)) and not f.startswith('.')])
-        elif self.rawmode == "one-file":
-            filenames = [self.filename]
         else:
-            filenames = [os.path.join(self.dirname, f) for f in self.include_files]
+            filenames = [os.path.join(self.dirname, f) for f in self.include_filenames]
 
         for filename in filenames:
             if not os.path.isfile(filename):
@@ -232,13 +218,6 @@ class NeuralynxRawIO(BaseRawIO):
                     f"{filename}. If you want to provide a "
                     f"directory use the `dirname` keyword"
                 )
-
-        # remove files that were explicitly excluded
-        file_basenames = [os.path.basename(f) for f in filenames]
-        if self.exclude_filename is not None:
-            for excl_file in self.exclude_filename:
-                if excl_file in file_basenames:
-                    filenames.remove(os.path.join(self.dirname, excl_file))
 
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 

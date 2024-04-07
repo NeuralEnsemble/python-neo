@@ -30,7 +30,6 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
     def __init__(
         self,
         dirname="",
-        filename="",
         use_cache=False,
         cache_path="same_as_resource",
         include_filename=None,
@@ -44,9 +43,6 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         ----------
         dirname : str
             Directory containing data files
-        filename : str
-            Name of a single ncs, nse, nev, or ntt file to include in dataset. Will be ignored,
-            if dirname is provided.
         use_cache : bool, optional
             Cache results of initial file scans for faster loading in subsequent runs.
             Default: False
@@ -63,20 +59,17 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             shifted to begin at t_start = 0*pq.second.
             Default: False
         """
+
         NeuralynxRawIO.__init__(
-            self,
-            dirname=dirname,
-            filename=filename,
-            use_cache=use_cache,
-            cache_path=cache_path,
-            include_filename=include_filename,
-            exclude_filename=exclude_filename,
+            self, dirname=dirname,
+            include_filenames=include_filename,
+            exclude_filenames=exclude_filename,
             keep_original_times=keep_original_times,
+            use_cache=use_cache,
+            cache_path=cache_path
         )
 
-        if self.rawmode == "one-file":
-            BaseFromRaw.__init__(self, filename)
-        elif self.rawmode == "one-dir":
+        if self.rawmode == "one-dir":
             BaseFromRaw.__init__(self, dirname)
         elif self.rawmode == "multiple-files":
             BaseFromRaw.__init__(self, include_filename=include_filename)

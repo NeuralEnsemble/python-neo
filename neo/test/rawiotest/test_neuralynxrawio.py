@@ -143,7 +143,7 @@ class TestNeuralynxRawIO(
     def test_exclude_filenames(self):
         # exclude single ncs file from session
         dname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data/")
-        rawio = NeuralynxRawIO(dirname=dname, exclude_filename="CSC2.ncs")
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filenames="CSC2.ncs")
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
@@ -157,7 +157,7 @@ class TestNeuralynxRawIO(
         self.assertEqual(len(rawio.header["event_channels"]), 2)
 
         # exclude multiple files from session
-        rawio = NeuralynxRawIO(dirname=dname, exclude_filename=["Events.nev", "CSC2.ncs"])
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filenames=["Events.nev", "CSC2.ncs"])
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
