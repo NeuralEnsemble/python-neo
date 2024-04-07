@@ -105,14 +105,14 @@ class TestNeuralynxRawIO(
         # check that there are only 3 memmaps
         self.assertEqual(len(rawio._sigs_memmaps[seg_idx]), 3)
 
-    def test_single_file_mode(self):
+    def test_include_filenames(self):
         """
-        Tests reading of single files.
+        Tests include_filenames with only one file
         """
 
         # test single analog signal channel
         fname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs")
-        rawio = NeuralynxRawIO(filename=fname)
+        rawio = NeuralynxRawIO(include_filenames=fname)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
@@ -127,7 +127,7 @@ class TestNeuralynxRawIO(
 
         # test one single electrode channel
         fname = self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse")
-        rawio = NeuralynxRawIO(filename=fname)
+        rawio = NeuralynxRawIO(include_filenames=fname)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 1)
