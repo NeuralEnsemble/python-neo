@@ -32,8 +32,8 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         dirname="",
         use_cache=False,
         cache_path="same_as_resource",
-        include_filename=None,
-        exclude_filename=None,
+        include_filenames=None,
+        exclude_filenames=None,
         keep_original_times=False,
     ):
         """
@@ -49,9 +49,9 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         cache_path : str, optional
             Folder path to use for cache files.
             Default: 'same_as_resource'
-        include_filename: str or list
+        include_filenames: str or list
             Filename or list of filenames to be included. This can be absolute path or path relative to dirname.
-        exclude_filename: str or list
+        exclude_filenames: str or list
             Filename or list of filenames to be excluded. Expects base filenames without
             directory path.
         keep_original_times : bool
@@ -62,8 +62,8 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
 
         NeuralynxRawIO.__init__(
             self, dirname=dirname,
-            include_filenames=include_filename,
-            exclude_filenames=exclude_filename,
+            include_filenames=include_filenames,
+            exclude_filenames=exclude_filenames,
             keep_original_times=keep_original_times,
             use_cache=use_cache,
             cache_path=cache_path
@@ -72,5 +72,5 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         if self.rawmode == "one-dir":
             BaseFromRaw.__init__(self, dirname)
         elif self.rawmode == "multiple-files":
-            BaseFromRaw.__init__(self, include_filename=include_filename)
+            BaseFromRaw.__init__(self, include_filenames=include_filenames)
 
