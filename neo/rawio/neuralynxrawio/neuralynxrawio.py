@@ -152,7 +152,7 @@ class NeuralynxRawIO(BaseRawIO):
         if exclude_filenames is None:
             exclude_filenames = set()
         elif not isinstance(exclude_filenames, (list, set, np.ndarray)):
-            exclude_filenames = set(exclude_filenames)
+            exclude_filenames = set([exclude_filenames])
 
         if include_filenames:
             include_filepath = {os.path.dirname(f) for f in include_filenames}
@@ -167,7 +167,7 @@ class NeuralynxRawIO(BaseRawIO):
             include_filenames = [os.path.basename(f) for f in include_filenames]
 
         if exclude_filenames:
-            exclude_filenames = {os.path.basename(f) for f in exclude_filenames}
+            exclude_filenames = {os.path.join(dirname, os.path.basename(f)) for f in exclude_filenames}
 
         if include_filenames:
             self.rawmode = 'multiple-files'
