@@ -24,6 +24,7 @@ for frame in range(50):
 
 image_seq = ImageSequence(l, sampling_rate=500 * pq.Hz, spatial_scale="m", units="V")
 
+
 def plot_roi(roi, shape):
     img = rand(120, 100)
     pir = np.array(roi.pixels_in_region()).T

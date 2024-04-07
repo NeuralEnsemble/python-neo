@@ -24,9 +24,9 @@ for frame in range(50):
 image_seq = ImageSequence(l, sampling_rate=500 * pq.Hz, spatial_scale="m", units="V")
 
 result = image_seq.signal_from_region(
-    CircularRegionOfInterest(image_seq,50, 50, 25),
+    CircularRegionOfInterest(image_seq, 50, 50, 25),
     CircularRegionOfInterest(image_seq, 10, 10, 5),
-    PolygonRegionOfInterest(image_seq,(50, 25), (50, 45), (14, 65), (90, 80)),
+    PolygonRegionOfInterest(image_seq, (50, 25), (50, 45), (14, 65), (90, 80)),
 )
 
 for i in range(len(result)):
