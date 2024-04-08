@@ -2,5 +2,6 @@ name: neo-test-env
 channels:
   - conda-forge
 dependencies:
+  - python=3.9
   - datalad
   - pip
