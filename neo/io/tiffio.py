@@ -139,7 +139,7 @@ class TiffIO(BaseIO):
             for file_name in file_name_list:
                 image = PIL.Image.open(self.filename + "/" + file_name).convert("L")
                 data = np.array(image).astype(np.float32)
-                if self.orgin == "bottom-left":
+                if self.origin == "bottom-left":
                     data = np.flip(data, axis=2)
                 list_data_image.append(data)
 
