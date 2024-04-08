@@ -25,9 +25,9 @@ class TiffIO(BaseIO):
         The sampling rate
     spatial_scale: Quantity unit | None, default: None
         The scale of the images
-    python_image_origin: bool, default: True
-        Whether to use the python default origin for images which is upper left corner
-        as orgin or to default to lower left corner.
+    origin: Literal['top-left'| 'bottom-left'], default: 'top-left'
+        Whether to use the python default origin for images which is upper left corner ('top-left')
+        as orgin or to use a bottom left corner as orgin ('bottom-left')
         Note that plotting functions like matplotlib.pyplot.imshow expect upper left corner.
     **kwargs: dict
         The standard neo annotation kwargs
@@ -90,16 +90,21 @@ class TiffIO(BaseIO):
         units=None,
         sampling_rate=None,
         spatial_scale=None,
-        python_image_origin=True,
+        origin='top-left',
         **kwargs,
     ):
-        import PIL
+        # this block is because people might be confused about the PIL -> pillow change
+        # between python2 -> python3 (both with namespace PIL)
+        try:
+            import PIL
+        except ImportError:
+            raise ImportError("To use TiffIO you must first `pip install pillow`")
 
         BaseIO.__init__(self, directory_path, **kwargs)
         self.units = units
         self.sampling_rate = sampling_rate
         self.spatial_scale = spatial_scale
-        self.python_image_origin = python_image_origin
+        self.origin = origin
 
     def read_block(self, lazy=False, **kwargs):
         import PIL
@@ -125,7 +130,7 @@ class TiffIO(BaseIO):
         list_data_image = []
         for file_name in file_name_list:
             data = np.array(PIL.Image.open(self.filename + "/" + file_name)).astype(np.float32)
-            if not self.python_image_origin:
+            if self.origin == "bottom-left":
                 data = np.flip(data, axis=2)
             list_data_image.append(data)
         list_data_image = np.array(list_data_image)
@@ -134,7 +139,7 @@ class TiffIO(BaseIO):
             for file_name in file_name_list:
                 image = PIL.Image.open(self.filename + "/" + file_name).convert("L")
                 data = np.array(image).astype(np.float32)
-                if not self.python_image_origin:
+                if self.orgin == "bottom-left":
                     data = np.flip(data, axis=2)
                 list_data_image.append(data)
 
