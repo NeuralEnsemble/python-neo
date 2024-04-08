@@ -41,7 +41,7 @@ class TestTiffIO(unittest.TestCase):
             units="V",
             sampling_rate=1.0 * pq.Hz,
             spatial_scale=1.0 * pq.micrometer,
-            python_image_orgin=False,
+            origin='bottom-left',
         )
         blck_bl_origin = ioclass_bl_origin.read_block()
 
