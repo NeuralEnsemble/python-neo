@@ -444,18 +444,23 @@ class NestIO(BaseIO):
         Returns
         list of selected gids
         """
-        gids = np.array([0, data.shape[0]])
+        gids = np.array([0, data.shape[id_column]])
         if id_column is not None:
-            gids = np.array([np.searchsorted(data[:, 0], gid, side='left'),
-                             np.searchsorted(data[:, 0], gid, side='right')])
+            gids = np.array([np.searchsorted(data[:, id_column], gid, side='left'),
+                             np.searchsorted(data[:, id_column], gid, side='right')])
         gid_data = data[gids[0]:gids[1], :]
 
         # select only requested time range
         id_shifts = np.array([0, 0])
         if time_column is not None:
-            id_shifts[0] = np.searchsorted(gid_data[:, 1], t_start.rescale(time_unit).magnitude, side="left")
+            id_shifts[0] = np.searchsorted(gid_data[:, time_column], 
+                                           t_start.rescale(time_unit).magnitude,
+                                           side="left")
             id_shifts[1] = (
-                np.searchsorted(gid_data[:, 1], t_stop.rescale(time_unit).magnitude, side="left") - gid_data.shape[0]
+                np.searchsorted(gid_data[:, time_column], 
+                                t_stop.rescale(time_unit).magnitude, 
+                                side="left") 
+                - gid_data.shape[0]
             )
 
         selected_ids = gids + id_shifts
