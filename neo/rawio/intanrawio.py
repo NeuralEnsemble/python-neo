@@ -22,6 +22,7 @@ from pathlib import Path
 import os
 from collections import OrderedDict
 from packaging.version import Version as V
+import warnings
 
 import numpy as np
 
@@ -113,7 +114,6 @@ class IntanRawIO(BaseRawIO):
                 self._block_size,
                 channel_number_dict,
             ) = read_rhs(self.filename, self.file_format)
-
 
         # 3 possibilities for rhd files, one combines the header and the data in the same file with suffix `rhd` while
         # the other two separates the data from the header which is always called `info.rhd`
@@ -457,9 +457,12 @@ def read_rhs(filename, file_format: str):
     with open(filename, mode="rb") as f:
         global_info = read_variable_header(f, rhs_global_header)
 
+        # channels_by_type is simpler than data_dtype because 0 contains 0, 10 and 11 internally
         channels_by_type = {k: [] for k in [0, 3, 4, 5, 6]}
         if not file_format == "header-attached":
-            data_dtype = {k: [] for k in range(7)}  # 5 streams + 6 for timestamps for not header attached
+            # data_dtype for rhs is complicated. There is not 1, 2 (supply and aux),
+            # but there are dc-amp (10) and stim (11). we make timestamps (7)
+            data_dtype = {k: [] for k in [0, 3, 4, 5, 6, 7, 10, 11]}
         for g in range(global_info["nb_signal_group"]):
             group_info = read_variable_header(f, rhs_signal_group_header)
 
@@ -470,9 +473,8 @@ def read_rhs(filename, file_format: str):
                     if bool(chan_info["channel_enabled"]):
                         channels_by_type[chan_info["signal_type"]].append(chan_info)
 
-
         # useful dictionary for knowing the number of channels for non-header attached formats
-        channel_number_dict = {i: len(channels_by_type[i]) for i in range(6)}
+        channel_number_dict = {i: len(channels_by_type[i]) for i in [0, 3, 4, 5, 6]}
 
         header_size = f.tell()
 
@@ -480,7 +482,11 @@ def read_rhs(filename, file_format: str):
 
     # construct dtype by re-ordering channels by types
     ordered_channels = []
-    data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
+    if file_format == "header-attached":
+        data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
+    else:
+        data_dtype[7] = "int32"
+        channel_number_dict[7] = 1
 
     # 0: RHS2000 amplifier channel.
     for chan_info in channels_by_type[0]:
@@ -488,19 +494,23 @@ def read_rhs(filename, file_format: str):
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
-        chan_info["offset"] = -32768 * 0.195
-        chan_info["dtype"] = "uint16"
+        if file_format == "header-attached":
+            chan_info["offset"] = -32768 * 0.195
+        else:
+            chan_info["offset"] = 0.0
+        if file_format == "header-attached":
+            chan_info["dtype"] = "uint16"
+        else:
+            chan_info["dtype"] = "int16"
         ordered_channels.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
-            data_dtype[0] = "int16" 
-
-
-    # TODO @Heberto I need to read about this section more.... I'm not
-    # sure how it works
+            data_dtype[0] = "int16"
 
     if bool(global_info["dc_amplifier_data_saved"]):
+        # if we have dc amp we need to grab the correct number of channels
+        channel_number_dict[10] = channel_number_dict[0]
         for chan_info in channels_by_type[0]:
             name = chan_info["native_channel_name"]
             chan_info_dc = dict(chan_info)
@@ -512,25 +522,35 @@ def read_rhs(filename, file_format: str):
             chan_info_dc["signal_type"] = 10  # put it in another group
             chan_info_dc["dtype"] = "uint16"
             ordered_channels.append(chan_info_dc)
-            data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
+            if file_format == "header-attached":
+                data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
+            else:
+                data_dtype[10] = "unit16"
+    # I can't seem to get stim files to generate for one-file-per-channel
+    # so let's skip for now and can be given on request
 
-    for chan_info in channels_by_type[0]:
-        name = chan_info["native_channel_name"]
-        chan_info_stim = dict(chan_info)
-        chan_info_stim["native_channel_name"] = name + "_STIM"
-        chan_info_stim["sampling_rate"] = sr
-        # stim channel are coplicated because they are coded
-        # with bits, they do not fit the gain/offset rawio strategy
-        chan_info_stim["units"] = ""
-        chan_info_stim["gain"] = 1.0
-        chan_info_stim["offset"] = 0.0
-        chan_info_stim["signal_type"] = 11  # put it in another group
-        chan_info_stim["dtype"] = "uint16"
-        ordered_channels.append(chan_info_stim)
-        data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
+    if file_format != "one-file-per-channel":
+        for chan_info in channels_by_type[0]:
+            name = chan_info["native_channel_name"]
+            chan_info_stim = dict(chan_info)
+            chan_info_stim["native_channel_name"] = name + "_STIM"
+            chan_info_stim["sampling_rate"] = sr
+            # stim channel are complicated because they are coded
+            # with bits, they do not fit the gain/offset rawio strategy
+            chan_info_stim["units"] = ""
+            chan_info_stim["gain"] = 1.0
+            chan_info_stim["offset"] = 0.0
+            chan_info_stim["signal_type"] = 11  # put it in another group
+            chan_info_stim["dtype"] = "uint16"
+            ordered_channels.append(chan_info_stim)
+            if file_format == "header-attached":
+                data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
+            else:
+                data_dtype[11] == "unit16"
+    else:
+        warnings.warn('Stim not implemented for one-file-per-channel due to lack of test files')
 
-    # TODO @Heberto to update to version 3 we also likely need to add in the
-    # supply and aux voltages.
+    # No supply or aux for rhs files (ie no stream 1 and 2)
 
     # 3: Analog input channel.
     # 4: Analog output channel.
@@ -575,7 +595,7 @@ def read_rhs(filename, file_format: str):
 
     if global_info["notch_filter_mode"] == 2 and global_info["major_version"] >= V("3.0"):
         global_info["notch_filter"] = "60Hz"
-    elif global_info["notch_filter_mode"] == 1 and global_info["major_version"]>= V("3.0"):
+    elif global_info["notch_filter_mode"] == 1 and global_info["major_version"] >= V("3.0"):
         global_info["notch_filter"] = "50Hz"
     else:
         global_info["notch_filter"] = False
@@ -880,9 +900,9 @@ one_file_per_signal_filenames = [
 ]
 
 
-def create_one_file_per_signal_dict(dirname, rhs: bool=False):
+def create_one_file_per_signal_dict(dirname, rhs: bool = False):
     """Function for One File Per Signal Type
-    
+
     Parameters
     ----------
     dirname: pathlib.Path
@@ -892,6 +912,7 @@ def create_one_file_per_signal_dict(dirname, rhs: bool=False):
     """
 
     # if rhs we have an extra stream to add
+
     if rhs:
         one_file_per_signal_filenames.insert(4, "analogout.dat")
 
@@ -903,6 +924,13 @@ def create_one_file_per_signal_dict(dirname, rhs: bool=False):
         raw_file_paths_dict[7] = Path(dirname / "time.dat")
     else:
         raw_file_paths_dict[6] = Path(dirname / "time.dat")
+
+    if rhs:
+        # 10 and 11 are hardcoded in the rhs_reader above so hardcoded here too
+        if Path(dirname / "dcamplifier.dat").is_file():
+            raw_file_paths_dict[10] = Path(dirname / "dcamplifier.dat")
+        if Path(dirname / "stim.dat").is_file():
+            raw_file_paths_dict[11] = Path(dirname / "stim.dat")
 
     return raw_file_paths_dict
 
@@ -918,9 +946,9 @@ possible_raw_file_prefixes = [
 ]
 
 
-def create_one_file_per_channel_dict(dirname, rhs: bool=False):
+def create_one_file_per_channel_dict(dirname, rhs: bool = False):
     """Utility function for One File Per Channel
-    
+
     Parameters
     ----------
     dirname: pathlib.Path
@@ -941,5 +969,12 @@ def create_one_file_per_channel_dict(dirname, rhs: bool=False):
         raw_file_paths_dict[7] = [Path(dirname / "time.dat")]
     else:
         raw_file_paths_dict[6] = [Path(dirname / "time.dat")]
+
+    if rhs:
+        # 10 and 11 are hardcoded in the rhs reader so hardcoded here
+        raw_file_paths_dict[10] = [file for file in files if "dc-" in file.name]
+        # we can find the files, but I can see how to read them out of header
+        # so for now we don't expose the stim files in one-file-per-channel
+        raw_file_paths_dict[11] = [file for file in files if "stim-" in file.name]
 
     return raw_file_paths_dict
