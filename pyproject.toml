@@ -79,7 +79,8 @@ docs = [
     "ipython",
     "matplotlib",
     "nixio",
-    "pynwb"
+    "pynwb",
+    "igor2"
 ]
 
 dev = [
