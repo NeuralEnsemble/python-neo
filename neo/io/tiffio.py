@@ -131,7 +131,7 @@ class TiffIO(BaseIO):
         for file_name in file_name_list:
             data = np.array(PIL.Image.open(self.filename + "/" + file_name)).astype(np.float32)
             if self.origin == "bottom-left":
-                data = np.flip(data, axis=2)
+                data = np.flip(data, axis=1)
             list_data_image.append(data)
         list_data_image = np.array(list_data_image)
         if len(list_data_image.shape) == 4:
@@ -140,7 +140,7 @@ class TiffIO(BaseIO):
                 image = PIL.Image.open(self.filename + "/" + file_name).convert("L")
                 data = np.array(image).astype(np.float32)
                 if self.origin == "bottom-left":
-                    data = np.flip(data, axis=2)
+                    data = np.flip(data, axis=1)
                 list_data_image.append(data)
 
         print("read block")
