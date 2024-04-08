@@ -64,7 +64,7 @@ class NestIO(BaseIO):
         Parameters
         ----------
             filenames: string or list of strings, default=None
-                The filename or list of filename to load.
+                The filename or list of filenames to load.
             target_object : string or list of strings, default='SpikeTrain'
                 The type of neo object that should be read out from the input.
                 Options are: 'SpikeTrain', 'AnalogSignal'
@@ -76,7 +76,7 @@ class NestIO(BaseIO):
             raise ValueError(f'{target_object} is not a valid object type. '
                              f'Valid values are {self.objects}.')
 
-        # Ensure right dimensionality
+        # Ensure filenames is always a list
         if isinstance(filenames, str):
             filenames = [filenames]
 
