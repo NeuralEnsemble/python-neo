@@ -87,11 +87,11 @@ class NeuralynxRawIO(BaseRawIO):
         Otherwise set 0 of time to first time in dataset
     strict_gap_mode: bool, default: True
         Detect gaps using strict mode or not.
-          * strict_gap_mode = True then a gap is consider when timstamp difference between two 
+          * strict_gap_mode = True then a gap is consider when timstamp difference between two
             consequtive data packet is more than one sample interval.
           * strict_gap_mode = False then a gap has an increased tolerance. Some new system with different clock need this option
             otherwise, too many gaps are detected
-    
+
     Notes
     -----
     * This IO supports NCS, NEV, NSE and NTT file formats (not NVT or NRD yet)
@@ -131,7 +131,9 @@ class NeuralynxRawIO(BaseRawIO):
         ("samples", "int16", (NcsSection._RECORD_SIZE)),
     ]
 
-    def __init__(self, dirname="", filename="", exclude_filename=None, keep_original_times=False, strict_gap_mode=True, **kargs):
+    def __init__(
+        self, dirname="", filename="", exclude_filename=None, keep_original_times=False, strict_gap_mode=True, **kargs
+    ):
 
         if dirname != "":
             self.dirname = dirname
@@ -797,7 +799,9 @@ class NeuralynxRawIO(BaseRawIO):
 
             verify_sec_struct = NcsSectionsFactory._verifySectionsStructure
             if not chanSectMap or (not verify_sec_struct(data, chan_ncs_sections)):
-                chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader, strict_gap_mode=self.strict_gap_mode)
+                chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(
+                    data, nlxHeader, strict_gap_mode=self.strict_gap_mode
+                )
 
             # register file section structure for all contained channels
             for chan_uid in zip(nlxHeader["channel_names"], np.asarray(nlxHeader["channel_ids"], dtype=str)):
