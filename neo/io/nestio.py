@@ -556,7 +556,8 @@ class NestIO(BaseIO):
 
         if isinstance(gid_list, tuple):
             if gid_list[0] > gid_list[1]:
-                raise ValueError("The second entry in gid_list must be " "greater or equal to the first entry.")
+                raise ValueError("The second entry in gid_list must be "
+                                 "greater or equal to the first entry.")
             gid_list = range(gid_list[0], gid_list[1] + 1)
 
         # __read_xxx() needs a list of IDs
