@@ -84,9 +84,7 @@ class NestIO(BaseIO):
         self.filenames = filenames
         self.target_object = target_object
 
-        self.IOs = []
-        for filename in filenames:
-            self.IOs.append(ColumnIO(filename, **kwargs))
+        self.IOs = [ColumnIO(filename, **kwargs) for filename in filenames]
 
     def __read_analogsignals(
         self,
