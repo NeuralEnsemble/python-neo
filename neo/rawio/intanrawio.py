@@ -211,7 +211,10 @@ class IntanRawIO(BaseRawIO):
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
         signal_streams["id"] = stream_ids
         for stream_index, stream_id in enumerate(stream_ids):
-            signal_streams["name"][stream_index] = stream_type_to_name.get(int(stream_id), "")
+            if self.filename.endswith('.rhd'):
+                signal_streams["name"][stream_index] = stream_type_to_name_rhd.get(int(stream_id), "")
+            else:
+                signal_streams["name"][stream_index] = stream_type_to_name_rhs.get(int(stream_id), "")
 
         self._max_sampling_rate = np.max(signal_channels["sampling_rate"])
 
@@ -450,6 +453,16 @@ rhs_signal_channel_header = [
     ("electrode_impedance_phase", "float32"),
 ]
 
+stream_type_to_name_rhs= {
+    0: "RHS2000 amplifier channel",
+    3: "USB board ADC input channel",
+    4: "USB board ADC output channel",
+    5: "USB board digital input channel",
+    6: "USB board digital output channel",
+    10: "DC Amplifier channel",
+    11: "Stim channel"
+}
+
 
 def read_rhs(filename, file_format: str):
     BLOCK_SIZE = 128  # sample per block
@@ -530,6 +543,7 @@ def read_rhs(filename, file_format: str):
     # so let's skip for now and can be given on request
 
     if file_format != "one-file-per-channel":
+        channel_number_dict[11] = channel_number_dict[0] # should be one stim / amplifier channel
         for chan_info in channels_by_type[0]:
             name = chan_info["native_channel_name"]
             chan_info_stim = dict(chan_info)
@@ -548,7 +562,7 @@ def read_rhs(filename, file_format: str):
             else:
                 data_dtype[11] == "unit16"
     else:
-        warnings.warn('Stim not implemented for one-file-per-channel due to lack of test files')
+        warnings.warn("Stim not implemented for `one-file-per-channel` due to lack of test files")
 
     # No supply or aux for rhs files (ie no stream 1 and 2)
 
@@ -575,7 +589,7 @@ def read_rhs(filename, file_format: str):
     # 6: Digital output channel.
     for sig_type in [5, 6]:
         if len(channels_by_type[sig_type]) > 0:
-            name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
+            name = {5: "DIGITAL-IN", 6: "DIGITAL-OUT"}[sig_type]
             chan_info = channels_by_type[sig_type][0]
             # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
             # make this memory map work correctly. So since our digital data is not organized
@@ -675,7 +689,7 @@ rhd_signal_channel_header = [
     ("electrode_impedance_phase", "float32"),
 ]
 
-stream_type_to_name = {
+stream_type_to_name_rhd = {
     0: "RHD2000 amplifier channel",
     1: "RHD2000 auxiliary input channel",
     2: "RHD2000 supply voltage channel",
