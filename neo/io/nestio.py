@@ -159,7 +159,7 @@ class NestIO(BaseIO):
                                   data)
 
             # extracting complete gid list for anasig generation
-            if (gid_list == []) and id_column is not None:
+            if not gid_list and id_column is not None:
                 current_gid_list = np.unique(data[:, id_column])
             else:
                 current_gid_list = gid_list
