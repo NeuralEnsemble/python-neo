@@ -136,7 +136,7 @@ class NeuralynxRawIO(BaseRawIO):
 
     def __init__(
             self,
-            dirname,
+            dirname="",
             include_filenames=None,
             exclude_filenames=None,
             keep_original_times=False,
@@ -145,6 +145,9 @@ class NeuralynxRawIO(BaseRawIO):
             exclude_filename=None,
             **kargs
     ):
+
+        if not dirname:
+            raise ValueError("`dirname` cannot be empty.")
 
         if filename:
             include_filenames = filename

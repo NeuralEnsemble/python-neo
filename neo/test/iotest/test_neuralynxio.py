@@ -182,7 +182,8 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
 
     def test_include_filenames(self):
         filename = self.get_local_path("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs")
-        nio = NeuralynxIO(include_filenames=filename, use_cache=False)
+        dirname, filename = os.path.split(filename)
+        nio = NeuralynxIO(dirname=dirname, include_filenames=filename, use_cache=False)
         block = nio.read_block()
         self.assertTrue(len(block.segments[0].analogsignals) > 0)
         self.assertTrue((len(block.segments[0].spiketrains)) == 0)

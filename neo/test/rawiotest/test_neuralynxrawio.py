@@ -1,5 +1,6 @@
 import unittest
 
+import os
 import numpy as np
 
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
@@ -112,7 +113,8 @@ class TestNeuralynxRawIO(
 
         # test single analog signal channel
         fname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs")
-        rawio = NeuralynxRawIO(include_filenames=fname)
+        dirname, filename = os.path.split(fname)
+        rawio = NeuralynxRawIO(dirname=dirname, include_filenames=filename)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
