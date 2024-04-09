@@ -136,13 +136,23 @@ class NeuralynxRawIO(BaseRawIO):
 
     def __init__(
             self,
-            dirname="",
+            dirname,
             include_filenames=None,
             exclude_filenames=None,
             keep_original_times=False,
             strict_gap_mode=True,
+            filename=None,
+            exclude_filename=None,
             **kargs
     ):
+
+        if filename:
+            include_filenames = filename
+            raise DeprecationWarning("`filename` is deprecated and will be removed. Please use `include_filenames` instead")
+
+        if exclude_filename:
+            exclude_filenames = exclude_filename
+            raise DeprecationWarning("`exclude_filename` is deprecated and will be removed. Please use `exclude_filenames` instead")
 
         if include_filenames is None:
             include_filenames = []
@@ -158,9 +168,6 @@ class NeuralynxRawIO(BaseRawIO):
             include_filepath = {os.path.dirname(f) for f in include_filenames}
             if len(include_filepath) > 1:
                 raise ValueError("Files in include_filename must be in a single path!")
-
-        if (include_filenames is None) and (dirname == ""):
-            raise ValueError("One of dirname or include_filenames must be provided.")
 
         if dirname and include_filenames:
             dirname = os.path.join(dirname, os.path.dirname(include_filenames[0]))

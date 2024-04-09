@@ -29,12 +29,14 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
 
     def __init__(
         self,
-        dirname="",
+        dirname,
         use_cache=False,
         cache_path="same_as_resource",
         include_filenames=None,
         exclude_filenames=None,
         keep_original_times=False,
+        filename=None,
+        exclude_filename=None,
     ):
         """
         Initialise IO instance
@@ -63,7 +65,8 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         """
 
         NeuralynxRawIO.__init__(
-            self, dirname=dirname,
+            self,
+            dirname=dirname,
             include_filenames=include_filenames,
             exclude_filenames=exclude_filenames,
             keep_original_times=keep_original_times,
