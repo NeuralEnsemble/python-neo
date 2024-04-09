@@ -49,6 +49,8 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         cache_path : str, optional
             Folder path to use for cache files.
             Default: 'same_as_resource'
+        exclude_filename: None,
+            Deprecated and will be removed. Please use `exclude_filenames` instead
         include_filenames: str or list
             Filename or list of filenames to be included. This can be absolute path or path relative to dirname.
         exclude_filenames: str or list
