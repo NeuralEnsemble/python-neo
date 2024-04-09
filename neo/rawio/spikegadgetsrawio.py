@@ -59,6 +59,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
             - Newer versions include the gain for scaling to microvolts [uV].
             - If the scaling is not found in the header, the gain will be "hardcoded" to 1,
               in which case the units are not handled correctly.
+        This will not affect functions that do not rely on the data having physical units,
+            e.g., _get_analogsignal_chunk, but functions such as rescale_signal_raw_to_float
+            will be inaccurate.
 
         Examples
         --------
@@ -172,6 +175,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
             self._mask_channels_bytes[stream_id] = []
 
             chan_ind = 0
+            self.is_scaleable = "spikeScalingToUv" in sconf[0].attrib
+            if not self.is_scaleable:
+                self.logger.warning("Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!")
+
             for trode in sconf:
                 if "spikeScalingToUv" in trode.attrib:
                     gain = float(trode.attrib["spikeScalingToUv"])
