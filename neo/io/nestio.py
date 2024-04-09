@@ -127,7 +127,7 @@ class NestIO(BaseIO):
         if value_columns is not None:
             column_list += value_columns
         column_list_no_None = [c for c in column_list if c is not None]
-        if len(np.unique(column_list_no_None)) < len(column_list_no_None):
+        if len(set(column_list_no_None)) < len(column_list_no_None):
             raise ValueError(
                 "One or more columns have been specified to contain "
                 "the same data. Columns were specified to {column_list_no_None}."
