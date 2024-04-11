@@ -6,7 +6,7 @@ import unittest
 
 from neo.rawio.spikeglxrawio import SpikeGLXRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
-
+import numpy
 
 class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = SpikeGLXRawIO
@@ -29,6 +29,7 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/NP2_with_sync",
         "spikeglx/NP2_no_sync",
         "spikeglx/NP2_subset_with_sync",
+        "/mnt/DATA/data/studies/manish/playpen/test_run2",
     ]
 
     def test_with_location(self):
@@ -85,6 +86,20 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         )
         assert chunk.shape[1] == 120
 
+    def test_nidq_digital_channel(self):
+        rawio_digital = SpikeGLXRawIO("/mnt/DATA/data/studies/manish/playpen/test_run2")
+        rawio_digital_channel.parse_header()
+        # This data should have 8 event channels
+        assert(np.shape(rawio_digital.header['event_channels'])[0] == 8)
+
+        # Channel 0 in this data will have sync pulses at 1 Hz, let's confirm that
+        all_events = rawio_digital.get_event_timestamps(0,0,0)
+        on_events = np.where(all_events[2] == 'XD0 ON')
+        on_ts = this_events[0][on_events]
+        on_diff = np.unique(np.diff(on_ts))
+        for diff in this_on_diff:
+            error = 0.0001*rawio_digital.get_signal_sampling_rate()
+            assert abs(diff - rawio_digital.get_signal_sampling_rate()) < error
 
 if __name__ == "__main__":
     unittest.main()
