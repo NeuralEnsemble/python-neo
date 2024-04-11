@@ -266,7 +266,7 @@ class SpikeGLXRawIO(BaseRawIO):
             ch_idx = 7 - int(channel[2:]) # They are in the reverse order
             this_stream = event_data[:,ch_idx]
             this_rising = np.where(np.diff(this_stream)==1)[0] + 1
-            this_falling = np.where(np.diff(this_stream)==-1)[0] + 1
+            this_falling = np.where(np.diff(this_stream)==255)[0] + 1 #behcause the data is in unsigned 8 bit, -1 = 255!
             if len(this_rising) > 0:
                 timestamps.extend(this_rising)
                 labels.extend([channel + ' ON']*len(this_rising))
