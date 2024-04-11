@@ -129,7 +129,8 @@ class TestNeuralynxRawIO(
 
         # test one single electrode channel
         fname = self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse")
-        rawio = NeuralynxRawIO(include_filenames=fname)
+        dirname, filename = os.path.split(fname)
+        rawio = NeuralynxRawIO(dirname=dirname, include_filenames=filename)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 1)
@@ -377,10 +378,10 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
-    # test = TestNeuralynxRawIO()
+    test = TestNeuralynxRawIO()
     # test.test_scan_ncs_files()
     # test.test_exclude_filenames()
-    # test.test_include_filenames()
+    test.test_include_filenames()
 
     # test = TestNcsSectionsFactory()
     # test.test_ncsblocks_partial()
