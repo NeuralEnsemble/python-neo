@@ -29,7 +29,7 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/NP2_with_sync",
         "spikeglx/NP2_no_sync",
         "spikeglx/NP2_subset_with_sync",
-        "/mnt/DATA/data/studies/manish/playpen/test_run2",
+        "spikeglx/DigitalChannelTest_g0",
     ]
 
     def test_with_location(self):
@@ -87,7 +87,7 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         assert chunk.shape[1] == 120
 
     def test_nidq_digital_channel(self):
-        rawio_digital = SpikeGLXRawIO("/mnt/DATA/data/studies/manish/playpen/test_run2")
+        rawio_digital = SpikeGLXRawIO("spikeglx/DigitalChannelTest_g0")
         rawio_digital_channel.parse_header()
         # This data should have 8 event channels
         assert(np.shape(rawio_digital.header['event_channels'])[0] == 8)
