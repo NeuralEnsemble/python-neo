@@ -39,9 +39,13 @@ class FilterCondition(ABC):
         """
         Initialize new FilterCondition object.
 
-        Parameters:
-            control: Any - The control value to be used for filtering.
+        Parameters
+        ----------
+        control: Any 
+            The control value to be used for filtering.
 
+        Notes
+        -----
         This is an abstract base class and should not be instantiated directly.
         """
 
@@ -51,11 +55,16 @@ class FilterCondition(ABC):
         Evaluate the filter condition for given value.
 
         Parameters:
-            compare: Any - The value to be compared with the control value.
+        -----------
+        compare: Any
+        The value to be compared with the control value.
 
-        Returns:
-            bool: True if the condition is satisfied, False otherwise.
+        Returns
+        -------
+        bool: True if the condition is satisfied, False otherwise.
 
+        Notes
+        -----
         This method should be implemented in subclasses.
         """
 
@@ -153,14 +162,26 @@ class InRange(FilterCondition):
     """
     Filter condition to check if a value is in a specified range.
 
-    Usage:
-        InRange(upper_bound, upper_bound, left_closed=False, right_closed=False)
+    Parameters
+    -----------
+    lower_bound: int
+        The lower bound of the range.
+    upper_bound: int
+        The upper bound of the range.
+    left_closed: bool
+        If True, the range includes the lower bound (lower_bound <= compare).
+    right_closed: bool
+        If True, the range includes the upper bound (compare <= upper_bound).
 
-    Parameters:
-        lower_bound: int - The lower bound of the range.
-        upper_bound: int - The upper bound of the range.
-        left_closed: bool - If True, the range includes the lower bound (lower_bound <= compare).
-        right_closed: bool - If True, the range includes the upper bound (compare <= upper_bound).
+    Returns
+    -------
+    bool:
+    whether the values are in range
+
+    Examples
+    --------
+
+    >>> InRange(lower_bound, upper_bound, left_closed=False, right_closed=False)
     """
 
     def __init__(

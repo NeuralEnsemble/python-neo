@@ -141,6 +141,20 @@ class DataObject(BaseNeo, pq.Quantity):
     This is the base class from which all objects containing data inherit
     It contains common functionality for all those objects and handles array_annotations.
 
+    Parameters
+    ----------
+    name: str | None, default: None
+        Name of the Neo object
+    description: str | None, default: None
+        Human readable string description of the Neo object
+    array_annotations: dict | None, default: None
+        Dictionary containing arrays / lists which annotate individual data points of the Neo object.
+    **annotations: dict | None:
+        Other keyword annotations to be included
+
+    Notes
+    -----
+
     Common functionality that is not included in BaseNeo includes:
     - duplicating with new data
     - rescaling the object
@@ -154,13 +168,6 @@ class DataObject(BaseNeo, pq.Quantity):
     They can contain the same data types as regular annotations, but are always represented
     as numpy arrays of the same length as the number of data points of the annotated neo object.
 
-    Args:
-        name (str, optional): Name of the Neo object
-        description (str, optional): Human readable string description of the Neo object
-        file_origin (str, optional): Origin of the data contained in this Neo object
-        array_annotations (dict, optional): Dictionary containing arrays / lists which annotate
-            individual data points of the Neo object.
-        kwargs: regular annotations stored in a separate annotation dictionary
     """
 
     def __init__(self, name=None, description=None, file_origin=None, array_annotations=None, **annotations):
@@ -182,8 +189,13 @@ class DataObject(BaseNeo, pq.Quantity):
         Add array annotations (annotations for individual data points) as arrays to a Neo data
         object.
 
-        Example:
-
+        Parameters
+        ----------
+        **array_annotations: dict
+            Series of keyword annotations to add to the object
+        
+        Examples
+        --------
         >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
         >>> obj.array_annotations['code'][1]
         'b'
@@ -194,12 +206,19 @@ class DataObject(BaseNeo, pq.Quantity):
     def array_annotations_at_index(self, index):
         """
         Return dictionary of array annotations at a given index or list of indices
-        :param index: int, list, numpy array: The index (indices) from which the annotations
-                      are extracted
-        :return: dictionary of values or numpy arrays containing all array annotations
-                 for given index/indices
 
-        Example:
+        Parameters
+        ----------
+        index: int | list | np.ndarray
+            The index (indices) from which the annotations are extracted
+        
+        Returns
+        -------
+        index_annotations: dict
+            Dictionary of values or numpy arrays containing all array annotations for given index/indices
+
+        Examples
+        --------
         >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
         >>> obj.array_annotations_at_index(1)
         {code='b', category=1}
@@ -228,10 +247,22 @@ class DataObject(BaseNeo, pq.Quantity):
     def _merge_array_annotations(self, other):
         """
         Merges array annotations of 2 different objects.
+
+        Parameters
+        ----------
+        other: any
+            The annotation to attemp to merge
+        
+        Returns
+        -------
+        merged_array_annotations: dict
+            The merged annotations
+        
+        Notes
+        -----
         The merge happens in such a way that the result fits the merged data
         In general this means concatenating the arrays from the 2 objects.
         If an annotation is only present in one of the objects, it will be omitted
-        :return Merged array_annotations
         """
 
         merged_array_annotations = {}
@@ -274,9 +305,23 @@ class DataObject(BaseNeo, pq.Quantity):
     def rescale(self, units, dtype=None):
         """
         Return a copy of the object converted to the specified units.
-        The `dtype` argument exists only for backward compatibility within quantities, see
+
+        Parameters
+        ----------
+        units: quantity unit
+            The units to convert the object to
+        dtype: a numpy dtype
+            Only exists for backward compatibility see [1]
+        
+        Returns
+        -------
+        self.copy(): Any
+            A copy of the object with the desired units
+        
+        Notes
+        -----
+        [1] The `dtype` argument exists only for backward compatibility within quantities, see
         https://github.com/python-quantities/python-quantities/pull/204
-        :return: Copy of self with specified units
         """
 
         # Use simpler functionality, if nothing will be changed
@@ -308,6 +353,16 @@ class DataObject(BaseNeo, pq.Quantity):
     def as_array(self, units=None):
         """
         Return the object's data as a plain NumPy array.
+
+        Parameters
+        ----------
+        units: quantities units | None, default: None
+            The data return as a np.ndarray with units requested
+        
+        Returns
+        -------
+        data_array: np.ndarray
+            The data as an array
 
         If `units` is specified, first rescale to those units.
         """
@@ -375,7 +430,7 @@ class DataObject(BaseNeo, pq.Quantity):
         return new_obj
 
 
-class ArrayDict(dict):
+class ArrayDict(dict): 
     """Dictionary subclass to handle array annotations
 
     When setting `obj.array_annotations[key]=value`, checks for consistency
