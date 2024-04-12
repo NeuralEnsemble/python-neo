@@ -44,7 +44,10 @@ class MaxwellRawIO(BaseRawIO):
     filename: str, default: ''
         The *.h5 file to be loaded
     rec_name: str | None, default: None
-        If multiple recordings the one to analyze
+        If the file has multiple recordings, specify the one to read.
+        For 24-well plates, the rec_name needs to be specified since different well
+        rows generate different recording ids.
+        E.g., rec0001, rec0002, etc.
 
     """
 
@@ -62,9 +65,9 @@ class MaxwellRawIO(BaseRawIO):
     def _parse_header(self):
         import h5py
 
-        h5 = h5py.File(self.filename, mode="r")
-        self.h5_file = h5
-        version = h5["version"][0].decode()
+        h5file = h5py.File(self.filename, mode="r")
+        self.h5_file = h5file
+        version = h5file["version"][0].decode()
 
         # create signal stream
         # one stream per well
@@ -75,21 +78,33 @@ class MaxwellRawIO(BaseRawIO):
         elif int(version) > 20160704:
             # multi stream stream (one well is one stream)
             self._old_format = False
-            stream_ids = list(h5["wells"].keys())
-            for stream_id in stream_ids:
-                rec_names = list(h5["wells"][stream_id].keys())
-                if len(rec_names) > 1:
-                    if self.rec_name is None:
-                        raise ValueError(
-                            "Detected multiple recordings. Please select a "
-                            "single recording using the `rec_name` parameter. "
-                            f"Possible rec_name {rec_names}"
-                        )
+            well_ids = list(h5file["wells"].keys())
+            unique_rec_names = []
+            for well_name in well_ids:
+                rec_names = list(h5file["wells"][well_name].keys())
+                for rec_name in rec_names:
+                    unique_rec_names.append(rec_name)
+            # check consistency of rec_names
+            unique_rec_names = np.unique(unique_rec_names)
+            if len(unique_rec_names) > 1:
+                if self.rec_name is None:
+                    raise ValueError(
+                        f"Detected multiple recording IDs across wells. "
+                        f"Please select a single recording using the `rec_name` parameter. "
+                        f"Possible rec_names: {unique_rec_names}"
+                    )
                 else:
-                    self.rec_name = rec_names[0]
-                signal_streams.append((stream_id, stream_id))
+                    assert self.rec_name in unique_rec_names, f"rec_name {self.rec_name} not found"
+            else:
+                self.rec_name = unique_rec_names[0]
+            # add streams that contain the selected rec_name
+            for well_name in well_ids:
+                rec_names = list(h5file["wells"][well_name].keys())
+                if self.rec_name in rec_names:
+                    signal_streams.append((well_name, well_name))
         else:
             raise NotImplementedError(f"This version {version} is not supported")
+
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # create signal channels
@@ -99,7 +114,7 @@ class MaxwellRawIO(BaseRawIO):
         for stream_id in signal_streams["id"]:
             if int(version) == 20160704:
                 sr = 20000.0
-                settings = h5["settings"]
+                settings = h5file["settings"]
                 if "lsb" in settings:
                     gain_uV = settings["lsb"][0] * 1e6
                 else:
@@ -109,13 +124,13 @@ class MaxwellRawIO(BaseRawIO):
                     else:
                         gain = settings["gain"][0]
                     gain_uV = 3.3 / (1024 * gain) * 1e6
-                sigs = h5["sig"]
-                mapping = h5["mapping"]
+                sigs = h5file["sig"]
+                mapping = h5file["mapping"]
                 ids = np.array(mapping["channel"])
                 ids = ids[ids >= 0]
                 self._channel_slice = ids
             elif int(version) > 20160704:
-                settings = h5["wells"][stream_id][self.rec_name]["settings"]
+                settings = h5file["wells"][stream_id][self.rec_name]["settings"]
                 sr = settings["sampling"][0]
                 if "lsb" in settings:
                     gain_uV = settings["lsb"][0] * 1e6
@@ -127,7 +142,7 @@ class MaxwellRawIO(BaseRawIO):
                         gain = settings["gain"][0]
                     gain_uV = 3.3 / (1024 * gain) * 1e6
                 mapping = settings["mapping"]
-                sigs = h5["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
+                sigs = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
 
             channel_ids = np.array(mapping["channel"])
             electrode_ids = np.array(mapping["electrode"])

@@ -25,12 +25,12 @@ import struct
 class WinWcpRawIO(BaseRawIO):
     """
     Class for reading WinWCP data
-    
+
     Parameters
     ----------
     filename: str, default: ''
         The *.wcp file to load
-        
+
     """
 
     extensions = ["wcp"]

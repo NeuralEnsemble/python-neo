@@ -248,7 +248,7 @@ class NeoMatlabIO(BaseIO):
             raise ImportError(
                 "your scipy version is too old to support "
                 + "MatlabIO, you need at least 0.12.0. "
-                + f"You have {scipy.version.version}" 
+                + f"You have {scipy.version.version}"
             )
 
         BaseIO.__init__(self)

@@ -103,7 +103,7 @@ class BaseFromRaw(BaseIO):
             By default None since the default is dependant on the IO
         load_waveforms: bool, default: False
             Determines whether SpikeTrains.waveforms is created
-        
+
         Returns
         -------
         bl: neo.core.Block
@@ -241,7 +241,9 @@ class BaseFromRaw(BaseIO):
         """
 
         if lazy:
-            assert time_slice is None, "For lazy=True you must specify a time_slice when LazyObject.load(time_slice=...)"
+            assert (
+                time_slice is None
+            ), "For lazy=True you must specify a time_slice when LazyObject.load(time_slice=...)"
 
             assert (
                 not load_waveforms

@@ -115,7 +115,7 @@ class BaseTestIO:
         cls.io_readandwrite = list(set(cls.ioclass.readable_objects) & set(cls.ioclass.writeable_objects))
         # these objects can be either written or read
         cls.io_readorwrite = list(set(cls.ioclass.readable_objects) | set(cls.ioclass.writeable_objects))
-        if HAVE_DATALAD:
+        if HAVE_DATALAD and can_use_network():
             for remote_path in cls.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
 
@@ -443,7 +443,7 @@ class BaseTestIO:
                 assert_neo_object_is_compliant(obj)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += (f"from {os.path.basename(path)}")
+                exc.args += f"from {os.path.basename(path)}"
                 raise
 
     def test_read_with_lazy_is_compliant(self):

@@ -55,10 +55,13 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
         Notes
         -----
-        This file format has multiple version. New versions include the gain for scaling.
-        The current implementation does not contain this feature because we don't have
-        files to test this. So now the gain is "hardcoded" to 1, and so units are
-        not handled correctly.
+        This file format has multiple versions:
+            - Newer versions include the gain for scaling to microvolts [uV].
+            - If the scaling is not found in the header, the gain will be "hardcoded" to 1,
+              in which case the units are not handled correctly.
+        This will not affect functions that do not rely on the data having physical units,
+            e.g., _get_analogsignal_chunk, but functions such as rescale_signal_raw_to_float
+            will be inaccurate.
 
         Examples
         --------
@@ -66,8 +69,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
         >>> reader = neo.rawio.SpikeGadgetRawIO(filename='data.rec') # all streams
         # just the electrode channels
         >>> reader_trodes = neo.rawio.SpikeGadgetRawIO(filename='data.rec', selected_streams='trodes')
-        
-        
+
+
         """
         BaseRawIO.__init__(self)
         self.filename = filename
@@ -107,9 +110,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
         stream_bytes = {}
         for device in hconf:
             stream_id = device.attrib["name"]
-            num_bytes = int(device.attrib["numBytes"])
-            stream_bytes[stream_id] = packet_size
-            packet_size += num_bytes
+            if "numBytes" in device.attrib.keys():
+                num_bytes = int(device.attrib["numBytes"])
+                stream_bytes[stream_id] = packet_size
+                packet_size += num_bytes
 
         # timestamps 4 uint32
         self._timestamp_byte = packet_size
@@ -139,7 +143,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     # TODO LATER: deal with "headstageSensor" which have interleaved
                     continue
 
-                if channel.attrib["dataType"] == "analog":
+                if ("dataType" in channel.attrib.keys()) and (channel.attrib["dataType"] == "analog"):
 
                     if stream_id not in stream_ids:
                         stream_ids.append(stream_id)
@@ -171,13 +175,22 @@ class SpikeGadgetsRawIO(BaseRawIO):
             self._mask_channels_bytes[stream_id] = []
 
             chan_ind = 0
+            self.is_scaleable = "spikeScalingToUv" in sconf[0].attrib
+            if not self.is_scaleable:
+                self.logger.warning("Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!")
+
             for trode in sconf:
+                if "spikeScalingToUv" in trode.attrib:
+                    gain = float(trode.attrib["spikeScalingToUv"])
+                    units = "uV"
+                else:
+                    gain = 1  # revert to hardcoded gain
+                    units = ""
+
                 for schan in trode:
                     name = "trode" + trode.attrib["id"] + "chan" + schan.attrib["hwChan"]
                     chan_id = schan.attrib["hwChan"]
-                    # TODO LATER : handle gain correctly according the file version
-                    units = ""
-                    gain = 1.0
+
                     offset = 0.0
                     signal_channels.append(
                         (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id)

@@ -85,6 +85,12 @@ class NeuralynxRawIO(BaseRawIO):
     keep_original_times: bool, default: False
         If True, keep original start time as in files,
         Otherwise set 0 of time to first time in dataset
+    strict_gap_mode: bool, default: True
+        Detect gaps using strict mode or not.
+          * strict_gap_mode = True then a gap is consider when timstamp difference between two
+            consequtive data packet is more than one sample interval.
+          * strict_gap_mode = False then a gap has an increased tolerance. Some new system with different clock need this option
+            otherwise, too many gaps are detected
 
     Notes
     -----
@@ -125,8 +131,10 @@ class NeuralynxRawIO(BaseRawIO):
         ("samples", "int16", (NcsSection._RECORD_SIZE)),
     ]
 
-    def __init__(self, dirname="", filename="", exclude_filename=None, keep_original_times=False, **kargs):
-        
+    def __init__(
+        self, dirname="", filename="", exclude_filename=None, keep_original_times=False, strict_gap_mode=True, **kargs
+    ):
+
         if dirname != "":
             self.dirname = dirname
             self.rawmode = "one-dir"
@@ -137,6 +145,7 @@ class NeuralynxRawIO(BaseRawIO):
             raise ValueError("One of dirname or filename must be provided.")
 
         self.keep_original_times = keep_original_times
+        self.strict_gap_mode = strict_gap_mode
         self.exclude_filename = exclude_filename
         BaseRawIO.__init__(self, **kargs)
 
@@ -319,6 +328,8 @@ class NeuralynxRawIO(BaseRawIO):
                         internal_ids = []
                     else:
                         data = self._get_file_map(filename)
+                        if data.shape[0] == 0:  # empty file
+                            self._empty_nse_ntt.append(filename)
                         internal_ids = np.unique(data[["event_id", "ttl_input"]]).tolist()
                     for internal_event_id in internal_ids:
                         if internal_event_id not in self.internal_event_ids:
@@ -519,7 +530,8 @@ class NeuralynxRawIO(BaseRawIO):
                 # ~ ev_ann['digital_marker'] =
                 # ~ ev_ann['analog_marker'] =
 
-    def _get_file_map(self, filename):
+    @staticmethod
+    def _get_file_map(filename):
         """
         Create memory maps when needed
         see also https://github.com/numpy/numpy/issues/19340
@@ -528,7 +540,7 @@ class NeuralynxRawIO(BaseRawIO):
         suffix = filename.suffix.lower()[1:]
 
         if suffix == "ncs":
-            return np.memmap(filename, dtype=self._ncs_dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
+            return np.memmap(filename, dtype=NeuralynxRawIO._ncs_dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
 
         elif suffix in ["nse", "ntt"]:
             info = NlxHeader(filename)
@@ -536,7 +548,6 @@ class NeuralynxRawIO(BaseRawIO):
 
             # return empty map if file does not contain data
             if os.path.getsize(filename) <= NlxHeader.HEADER_SIZE:
-                self._empty_nse_ntt.append(filename)
                 return np.zeros((0,), dtype=dtype)
 
             return np.memmap(filename, dtype=dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
@@ -788,7 +799,9 @@ class NeuralynxRawIO(BaseRawIO):
 
             verify_sec_struct = NcsSectionsFactory._verifySectionsStructure
             if not chanSectMap or (not verify_sec_struct(data, chan_ncs_sections)):
-                chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader)
+                chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(
+                    data, nlxHeader, strict_gap_mode=self.strict_gap_mode
+                )
 
             # register file section structure for all contained channels
             for chan_uid in zip(nlxHeader["channel_names"], np.asarray(nlxHeader["channel_ids"], dtype=str)):
