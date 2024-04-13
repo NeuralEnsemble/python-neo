@@ -88,7 +88,7 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
 
     def test_nidq_digital_channel(self):
         rawio_digital = SpikeGLXRawIO("spikeglx/DigitalChannelTest_g0")
-        rawio_digital_channel.parse_header()
+        rawio_digital.parse_header()
         # This data should have 8 event channels
         assert(np.shape(rawio_digital.header['event_channels'])[0] == 8)
 
