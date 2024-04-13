@@ -2,7 +2,6 @@
 Tests of the neo.core.view.ChannelView class and related functions
 """
 
-
 import unittest
 
 import numpy as np
@@ -19,19 +18,24 @@ class TestView(unittest.TestCase):
     def setUp(self):
         self.test_data = np.random.rand(100, 8) * pq.mV
         channel_names = np.array(["a", "b", "c", "d", "e", "f", "g", "h"])
-        self.test_signal = AnalogSignal(self.test_data,
-                                        sampling_period=0.1 * pq.ms,
-                                        name="test signal",
-                                        description="this is a test signal",
-                                        array_annotations={"channel_names": channel_names},
-                                        attUQoLtUaE=42)
+        self.test_signal = AnalogSignal(
+            self.test_data,
+            sampling_period=0.1 * pq.ms,
+            name="test signal",
+            description="this is a test signal",
+            array_annotations={"channel_names": channel_names},
+            attUQoLtUaE=42,
+        )
 
     def test_create_integer_index(self):
-        view = ChannelView(self.test_signal, [1, 2, 5, 7],
-                    name="view of test signal",
-                    description="this is a view of a test signal",
-                    array_annotations={"something": np.array(["A", "B", "C", "D"])},
-                    sLaTfat="fish")
+        view = ChannelView(
+            self.test_signal,
+            [1, 2, 5, 7],
+            name="view of test signal",
+            description="this is a view of a test signal",
+            array_annotations={"something": np.array(["A", "B", "C", "D"])},
+            sLaTfat="fish",
+        )
 
         assert view.obj is self.test_signal
         assert_array_equal(view.index, np.array([1, 2, 5, 7]))
@@ -46,16 +50,18 @@ class TestView(unittest.TestCase):
         self.assertEqual(view1.shape, view2.shape)
 
     def test_resolve(self):
-        view = ChannelView(self.test_signal, [1, 2, 5, 7],
-                    name="view of test signal",
-                    description="this is a view of a test signal",
-                    array_annotations={"something": np.array(["A", "B", "C", "D"])},
-                    sLaTfat="fish")
+        view = ChannelView(
+            self.test_signal,
+            [1, 2, 5, 7],
+            name="view of test signal",
+            description="this is a view of a test signal",
+            array_annotations={"something": np.array(["A", "B", "C", "D"])},
+            sLaTfat="fish",
+        )
         signal2 = view.resolve()
         self.assertIsInstance(signal2, AnalogSignal)
         self.assertEqual(signal2.shape, (100, 4))
-        for attr in ('name', 'description', 'sampling_period', 'units'):
+        for attr in ("name", "description", "sampling_period", "units"):
             self.assertEqual(getattr(self.test_signal, attr), getattr(signal2, attr))
-        assert_array_equal(signal2.array_annotations["channel_names"],
-                           np.array(["b", "c", "f", "h"]))
+        assert_array_equal(signal2.array_annotations["channel_names"], np.array(["b", "c", "f", "h"]))
         assert_array_equal(self.test_data[:, [1, 2, 5, 7]], signal2.magnitude)

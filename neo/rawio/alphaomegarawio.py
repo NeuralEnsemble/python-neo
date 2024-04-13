@@ -47,20 +47,21 @@ from .baserawio import (
 class AlphaOmegaRawIO(BaseRawIO):
     """
     AlphaOmega MPX file format 4 reader. Handles several segments.
-
-    A segment is a continuous record (when record starts/stops).
-
+    A segment is a continuous recording (when recording starts/stops).
     Only files in current `dirname` are loaded, subfolders are not explored.
 
-    :param dirname: folder from where to load the data
-    :type dirname: str or Path-like
-    :param lsx_files: list of lsx files in `dirname` referencing mpx files to
-        load (optional). If None (default), read all mpx files in `dirname`
-    :type lsx_files: list of strings or None
-    :param prune_channels: if True removes the empty channels, defaults to True
-    :type prune_channels: bool
+    Parameters
+    ----------
+    dirname: str | Path
+        The folder from which the data will be loaded
+    lsx_files: list[str] | None, default: None
+        List of lsx files in `dirname` referencing mpx files to load (optional)
+        If None all mpx files will be read
+    prune_channels: bool, default: True
+        If True removes the empty channels
 
-    .. warning::
+    Notes
+    -----
         Because channels must be gathered into coherent streams, channels names
         **must** be the default channel names in AlphaRS or Alpha LAB SNR
         software.
@@ -168,19 +169,12 @@ class AlphaOmegaRawIO(BaseRawIO):
                     self.logger.error("First block must be of type h not type {bt}")
                 except UnicodeDecodeError:
                     self.logger.error(
-                        (
-                            f"First block must be of type h not type "
-                            f"{int.from_bytes(bt, 'little')} (int format)"
-                        )
+                        (f"First block must be of type h not type " f"{int.from_bytes(bt, 'little')} (int format)")
                     )
-                raise Exception(
-                    "First block of AlphaOmega MPX file format must be of type h"
-                )
+                raise Exception("First block of AlphaOmega MPX file format must be of type h")
             if not length == 60:
                 self.logger.error("First block must be of size 60 (got size {length})")
-                raise Exception(
-                    "First block of AlphaOmega MPX file format must be of size 60"
-                )
+                raise Exception("First block of AlphaOmega MPX file format must be of size 60")
             (
                 next_block,
                 version,
@@ -207,15 +201,11 @@ class AlphaOmegaRawIO(BaseRawIO):
             try:
                 resource_version = int(resource_version)
             except ValueError:
-                self.logger.error(
-                    f"m_ResourceVersion should be an integer (got: {resource_version}"
-                )
+                self.logger.error(f"m_ResourceVersion should be an integer (got: {resource_version}")
             metadata = {
                 "application_version": version,
                 "application_name": decode_string(application_name),
-                "record_date": datetime(
-                    year, month, day, hour, minute, second, 10000 * hsecond
-                ),
+                "record_date": datetime(year, month, day, hour, minute, second, 10000 * hsecond),
                 "start_time": minimum_time,
                 "stop_time": maximum_time,
                 "erase_count": erase_count,
@@ -241,12 +231,8 @@ class AlphaOmegaRawIO(BaseRawIO):
                     break
 
                 if block_type == b"h":
-                    self.logger.error(
-                        "Type h block must exist only at the beginning of file"
-                    )
-                    raise Exception(
-                        "AlphaOmega MPX file format must not have type h block after first block"
-                    )
+                    self.logger.error("Type h block must exist only at the beginning of file")
+                    raise Exception("AlphaOmega MPX file format must not have type h block after first block")
 
                 if block_type == b"2":
                     (
@@ -274,21 +260,17 @@ class AlphaOmegaRawIO(BaseRawIO):
                             "mode_spike_slave": mode_spike_slave,
                             "mode_spike_linked_channel": mode_spike_linked_channel,
                         }
-                        metadata["max_sample_rate"] = max(
-                            metadata["max_sample_rate"], sample_rate * 1000
-                        )
+                        metadata["max_sample_rate"] = max(metadata["max_sample_rate"], sample_rate * 1000)
                         if amplitude <= 5:
                             # This is true for any logging software for map
                             # version >4 (specs say only for ALab SNR but AO
                             # engineer says it's true for any software)
-                            amplitude = 1250000 / 2 ** 15
+                            amplitude = 1250000 / 2**15
                         if mode == 0:
                             # continuous analog channel definition block
                             assert channel_number not in channel_type
                             channel_type[channel_number] = "continuous_analog"
-                            duration, total_gain_100 = SDefContinAnalog.unpack(
-                                f.read(SDefContinAnalog.size)
-                            )
+                            duration, total_gain_100 = SDefContinAnalog.unpack(f.read(SDefContinAnalog.size))
                             name_length = length - 38
                             name = get_name(f, name_length)
                             assert channel_number not in continuous_analog_channels
@@ -334,9 +316,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                                 "positions": defaultdict(list),
                             }
                         else:
-                            self.logger.error(
-                                f"Unknown type 2 analog block mode: {mode}"
-                            )
+                            self.logger.error(f"Unknown type 2 analog block mode: {mode}")
                             continue
                     elif is_analog == 0 and is_input == 1:
                         # digital input channel definition
@@ -348,9 +328,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                             duration,
                             prev_status,
                         ) = SDefDigitalInput.unpack(f.read(SDefDigitalInput.size))
-                        metadata["max_sample_rate"] = max(
-                            metadata["max_sample_rate"], sample_rate * 1000
-                        )
+                        metadata["max_sample_rate"] = max(metadata["max_sample_rate"], sample_rate * 1000)
                         assert channel_number not in digital_channels
                         name_length = length - 30
                         name = get_name(f, name_length)
@@ -364,18 +342,12 @@ class AlphaOmegaRawIO(BaseRawIO):
                             "samples": [],
                         }
                     else:
-                        self.logger.error(
-                            f"Unknown type 2 block: analog={is_analog}, input={is_input}"
-                        )
+                        self.logger.error(f"Unknown type 2 block: analog={is_analog}, input={is_input}")
                         continue
                 elif block_type == b"S":
                     # stream data definition block
-                    next_block, channel_number, sample_rate = SDefStream.unpack(
-                        f.read(SDefStream.size)
-                    )
-                    metadata["max_sample_rate"] = max(
-                        metadata["max_sample_rate"], sample_rate * 1000
-                    )
+                    next_block, channel_number, sample_rate = SDefStream.unpack(f.read(SDefStream.size))
+                    metadata["max_sample_rate"] = max(metadata["max_sample_rate"], sample_rate * 1000)
                     assert channel_number not in channel_type
                     channel_type[channel_number] = "stream_data"
                     name_length = length - 18
@@ -386,12 +358,8 @@ class AlphaOmegaRawIO(BaseRawIO):
                     }
                 elif block_type == b"b":
                     # digital input/output port definition block
-                    board_number, port, sample_rate, prev_value = SDefPortX.unpack(
-                        f.read(SDefPortX.size)
-                    )
-                    metadata["max_sample_rate"] = max(
-                        metadata["max_sample_rate"], sample_rate * 1000
-                    )
+                    board_number, port, sample_rate, prev_value = SDefPortX.unpack(f.read(SDefPortX.size))
+                    metadata["max_sample_rate"] = max(metadata["max_sample_rate"], sample_rate * 1000)
                     assert port not in channel_type
                     channel_type[port] = "port"
                     name_length = length - 18
@@ -405,9 +373,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                     }
                 elif block_type == b"5":
                     # channel data block
-                    unit_number, channel_number = SDataChannel.unpack(
-                        f.read(SDataChannel.size)
-                    )
+                    unit_number, channel_number = SDataChannel.unpack(f.read(SDataChannel.size))
                     assert channel_number in channel_type
                     unit_number = int.from_bytes(unit_number, "little")
                     if "analog" in channel_type[channel_number]:
@@ -418,13 +384,9 @@ class AlphaOmegaRawIO(BaseRawIO):
                         f.seek(2 * data_length, io.SEEK_CUR)
                         if channel_type[channel_number].startswith("continuous"):
                             assert channel_number in continuous_analog_channels
-                            continuous_analog_channels[channel_number]["positions"][
-                                filename
-                            ].append(
+                            continuous_analog_channels[channel_number]["positions"][filename].append(
                                 (
-                                    SDataChannel_sample_id.unpack(
-                                        f.read(SDataChannel_sample_id.size)
-                                    )[0],
+                                    SDataChannel_sample_id.unpack(f.read(SDataChannel_sample_id.size))[0],
                                     data_start,
                                     data_length,
                                 )
@@ -432,39 +394,27 @@ class AlphaOmegaRawIO(BaseRawIO):
                         elif channel_type[channel_number].startswith("segmented"):
                             assert channel_number in segmented_analog_channels
                             if unit_number > 0 and unit_number <= 4:
-                                segmented_analog_channels[channel_number]["positions"][
-                                    filename
-                                ].append(
+                                segmented_analog_channels[channel_number]["positions"][filename].append(
                                     (
-                                        SDataChannel_sample_id.unpack(
-                                            f.read(SDataChannel_sample_id.size)
-                                        )[0],
+                                        SDataChannel_sample_id.unpack(f.read(SDataChannel_sample_id.size))[0],
                                         data_start,
                                         data_length,
                                     )
                                 )
                             elif unit_number == 0:
-                                segmented_analog_channels[channel_number]["positions"][
-                                    filename
-                                ].append(
+                                segmented_analog_channels[channel_number]["positions"][filename].append(
                                     (
-                                        SDataChannel_sample_id.unpack(
-                                            f.read(SDataChannel_sample_id.size)
-                                        )[0],
+                                        SDataChannel_sample_id.unpack(f.read(SDataChannel_sample_id.size))[0],
                                         data_start,
                                         data_length,
                                     )
                                 )
                             else:
-                                self.logger.error(
-                                    f"Unknown unit_number={unit_number} in channel data block"
-                                )
+                                self.logger.error(f"Unknown unit_number={unit_number} in channel data block")
                                 continue
                     elif channel_type[channel_number] == "digital":
                         assert channel_number in digital_channels
-                        sample_number, value = SDataChannelDigital.unpack(
-                            f.read(SDataChannelDigital.size)
-                        )
+                        sample_number, value = SDataChannelDigital.unpack(f.read(SDataChannelDigital.size))
                         digital_channels[channel_number]["samples"].append(
                             (
                                 sample_number,
@@ -475,9 +425,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                         assert channel_number in ports
                         # specifications says that for ports it should be "<Lh"
                         # but the data shows clearly "<HL"
-                        value, sample_number = SDataChannelPort.unpack(
-                            f.read(SDataChannelPort.size)
-                        )
+                        value, sample_number = SDataChannelPort.unpack(f.read(SDataChannelPort.size))
                         ports[channel_number]["samples"].append(
                             (
                                 sample_number,
@@ -485,27 +433,21 @@ class AlphaOmegaRawIO(BaseRawIO):
                             )
                         )
                     else:
-                        self.logger.error(
-                            f"Unknown channel_type={channel_type[channel_number]} for block type 5"
-                        )
+                        self.logger.error(f"Unknown channel_type={channel_type[channel_number]} for block type 5")
                 elif block_type == b"E":
                     type_event, timestamp = SAOEvent.unpack(f.read(SAOEvent.size))
                     stream_data_length = length - 8
                     events.append(
                         {
                             "timestamp": timestamp,
-                            "stream_data": struct.unpack(
-                                f"<{stream_data_length}s", f.read(stream_data_length)
-                            )[0],
+                            "stream_data": struct.unpack(f"<{stream_data_length}s", f.read(stream_data_length))[0],
                         }
                     )
                 else:
                     if not self._ignore_unknown_datablocks:
                         try:
                             bt = block_type.decode()
-                            self.logger.debug(
-                                f"Unknown block type: block length: {length}, block_type: {bt}"
-                            )
+                            self.logger.debug(f"Unknown block type: block length: {length}, block_type: {bt}")
                         except UnicodeDecodeError:
                             self.logger.debug(
                                 (
@@ -585,17 +527,17 @@ class AlphaOmegaRawIO(BaseRawIO):
             possible_same_segments = [
                 s
                 for s in self._segments
-                if s["metadata"]["record_date"].date()
-                == segment["metadata"]["record_date"].date()
-                and s["metadata"]["record_date"]
-                >= segment["metadata"]["record_date"]
+                if s["metadata"]["record_date"].date() == segment["metadata"]["record_date"].date()
+                and s["metadata"]["record_date"] >= segment["metadata"]["record_date"]
                 and 0
                 <= (s["metadata"]["start_time"] - segment["metadata"]["stop_time"])
                 <= factor_period / segment["metadata"]["max_sample_rate"]
                 and s is not segment
             ]
             if len(possible_same_segments) not in (0, 1):
-                self.logger.error(f"Cannot merge segments. Found {len(possible_same_segments)} segments following segment: {segment['metadata']}")
+                self.logger.error(
+                    f"Cannot merge segments. Found {len(possible_same_segments)} segments following segment: {segment['metadata']}"
+                )
                 continue
             if possible_same_segments:
                 existing_merges = [s for segs in segments_to_merge for s in segs]
@@ -607,13 +549,11 @@ class AlphaOmegaRawIO(BaseRawIO):
             sample_rate = segment["metadata"]["max_sample_rate"]
             sample_rate_merge = segment_to_merge["metadata"]["max_sample_rate"]
             if sample_rate != sample_rate_merge:
-                self.logger.error(f"Segment to merge has sample_rate={sample_rate_merge}, expected {sample_rate}. Continuing anyway.")
-            segment["metadata"]["stop_time"] = segment_to_merge["metadata"][
-                "stop_time"
-            ]
-            segment["metadata"]["filenames"].extend(
-                segment_to_merge["metadata"]["filenames"]
-            )
+                self.logger.error(
+                    f"Segment to merge has sample_rate={sample_rate_merge}, expected {sample_rate}. Continuing anyway."
+                )
+            segment["metadata"]["stop_time"] = segment_to_merge["metadata"]["stop_time"]
+            segment["metadata"]["filenames"].extend(segment_to_merge["metadata"]["filenames"])
             for stream in segment_to_merge["streams"]:
                 for channel_id in segment_to_merge["streams"][stream]:
                     try:
@@ -635,9 +575,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                     # port channel data and the port could have been pruned
                     segment["events"][channel_id] = segment_to_merge["events"][channel_id]
                 else:
-                    channel["samples"].extend(
-                        segment_to_merge["events"][channel_id]["samples"]
-                    )
+                    channel["samples"].extend(segment_to_merge["events"][channel_id]["samples"])
             for channel_id in segment_to_merge["spikes"]:
                 try:
                     channel = segment["spikes"][channel_id]
@@ -647,32 +585,22 @@ class AlphaOmegaRawIO(BaseRawIO):
                     segment["spikes"][channel_id] = segment_to_merge["spikes"][channel_id]
                 else:
                     for f in segment_to_merge["spikes"][channel_id]["positions"]:
-                        channel["positions"][f].extend(
-                            segment_to_merge["spikes"][channel_id]["positions"][f]
-                        )
+                        channel["positions"][f].extend(segment_to_merge["spikes"][channel_id]["positions"][f])
             segment["ao_events"].extend(segment_to_merge["ao_events"])
             for channel_id in segment_to_merge["stream_data"]:
                 # To be honest, I have no idea what is a
                 # stream_data_channels so let's just overwrite it here
-                segment["stream_data"][channel_id] = segment_to_merge[
-                    "stream_data"
-                ][channel_id]
+                segment["stream_data"][channel_id] = segment_to_merge["stream_data"][channel_id]
             self._segments.remove(segment_to_merge)
 
     def _parse_header(self):
         segments = []
         for i, filename in enumerate(self._mpx_files):
-            metadata, cac, sac, dc, ct, sd, p, e, ub = self._read_file_datablocks(
-                filename, self._prune_channels
-            )
+            metadata, cac, sac, dc, ct, sd, p, e, ub = self._read_file_datablocks(filename, self._prune_channels)
             metadata["filenames"] = [filename]
             streams = {}
             for stream_name, channel_name_start, stream_id in self.STREAM_CHANNELS:
-                channels = {
-                    i: c
-                    for i, c in cac.items()
-                    if c["name"].startswith(channel_name_start)
-                }
+                channels = {i: c for i, c in cac.items() if c["name"].startswith(channel_name_start)}
                 streams[stream_id] = channels
             events = dc.copy()
             events.update(p)
@@ -738,9 +666,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         event_channels = set(
-            (event["name"], i, "event")
-            for segment in self._segments
-            for i, event in segment["events"].items()
+            (event["name"], i, "event") for segment in self._segments for i, event in segment["events"].items()
         )
         event_channels = list(event_channels)
         event_channels.sort(key=lambda x: x[1])
@@ -757,36 +683,22 @@ class AlphaOmegaRawIO(BaseRawIO):
         self._generate_minimal_annotations()
 
         bl_ann = self.raw_annotations["blocks"][0]
-        bl_ann["name"] = "Block #{}{}".format(
-            0, " from lsx file(s) {self._lsx_files}" if self._lsx_files else ""
-        )
+        bl_ann["name"] = "Block #{}{}".format(0, " from lsx file(s) {self._lsx_files}" if self._lsx_files else "")
         bl_ann["file_origin"] = (
-            "\n".join(str(self.dirname / f) for f in self._lsx_files)
-            if self._lsx_files else bl_ann["file_origin"]
+            "\n".join(str(self.dirname / f) for f in self._lsx_files) if self._lsx_files else bl_ann["file_origin"]
         )
-        bl_ann["rec_datetime"] = self._segments[0]["metadata"][
-            "record_date"
-        ]
+        bl_ann["rec_datetime"] = self._segments[0]["metadata"]["record_date"]
         for seg_index, segment in enumerate(self._segments):
             seg_ann = bl_ann["segments"][seg_index]
-            seg_ann["name"] = "Seg #{} Block #0".format(seg_index)
-            seg_ann["file_origin"] = "\n".join(
-                str(f)
-                for f in self._segments[seg_index]["metadata"][
-                    "filenames"
-                ]
-            )
-            seg_ann["rec_datetime"] = self._segments[seg_index][
-                "metadata"
-            ]["record_date"]
+            seg_ann["name"] = f"Seg #{seg_index} Block #0"
+            seg_ann["file_origin"] = "\n".join(str(f) for f in self._segments[seg_index]["metadata"]["filenames"])
+            seg_ann["rec_datetime"] = self._segments[seg_index]["metadata"]["record_date"]
             for c_index, c in enumerate(seg_ann["signals"]):
                 c = c.copy()
                 c["file_origin"] = "\n".join(
                     set(
                         str(f)
-                        for channels in self._segments[seg_index][
-                            "streams"
-                        ][c["stream_id"]].values()
+                        for channels in self._segments[seg_index]["streams"][c["stream_id"]].values()
                         for f in channels["positions"]
                     )
                 )
@@ -826,14 +738,8 @@ class AlphaOmegaRawIO(BaseRawIO):
     def _get_signal_size(self, block_index, seg_index, stream_index):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         sizes = [
-            sum(
-                sample[2]
-                for sample_by_file in channel["positions"].values()
-                for sample in sample_by_file
-            )
-            for channel in self._segments[seg_index]["streams"][
-                stream_id
-            ].values()
+            sum(sample[2] for sample_by_file in channel["positions"].values() for sample in sample_by_file)
+            for channel in self._segments[seg_index]["streams"][stream_id].values()
         ]
         assert all(s == sizes[0] for s in sizes)
         return sizes[0]
@@ -841,9 +747,7 @@ class AlphaOmegaRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._segment_t_start(block_index, seg_index)
 
-    def _get_analogsignal_chunk(
-        self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes
-    ):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         if i_start is None:
             i_start = 0
         signal_size = self._get_signal_size(block_index, seg_index, stream_index)
@@ -851,9 +755,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             i_stop = signal_size
         stream_id = self.header["signal_streams"][stream_index]["id"]
         mask = self.header["signal_channels"]["stream_id"] == stream_id
-        channel_ids = self.header["signal_channels"][mask]["id"][
-            channel_indexes
-        ].flatten()
+        channel_ids = self.header["signal_channels"][mask]["id"][channel_indexes].flatten()
 
         # the data refers to timestamp (see docstrings) which does not start at
         # 0 but at time_start (see type H docstring)
@@ -863,9 +765,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             first_pos.append(
                 min(
                     p[0]
-                    for f in self._segments[seg_index]["streams"][stream_id][
-                        channel_id
-                    ]["positions"].values()
+                    for f in self._segments[seg_index]["streams"][stream_id][channel_id]["positions"].values()
                     for p in f
                 )
             )
@@ -877,15 +777,9 @@ class AlphaOmegaRawIO(BaseRawIO):
             channel_id = int(channel_id)
             effective_start = i_start + first_pos[i]
             effective_stop = i_stop + first_pos[i]
-            for filename, positions in self._segments[seg_index]["streams"][
-                stream_id
-            ][channel_id]["positions"].items():
+            for filename, positions in self._segments[seg_index]["streams"][stream_id][channel_id]["positions"].items():
                 file_chunks[filename].extend(
-                    [
-                        (i, *p)
-                        for p in positions
-                        if p[0] + p[2] > effective_start and p[0] < effective_stop
-                    ]
+                    [(i, *p) for p in positions if p[0] + p[2] > effective_start and p[0] < effective_stop]
                 )
 
         # we almost surely loaded more than asked (because the blocks are not
@@ -894,21 +788,10 @@ class AlphaOmegaRawIO(BaseRawIO):
         for channel_index, channel_id in enumerate(channel_ids):
             channel_id = int(channel_id)
             min_pos = (
-                min(
-                    p[0]
-                    for f in file_chunks.values()
-                    for i, *p in f
-                    if i == channel_index
-                )
-                - first_pos[channel_index]
+                min(p[0] for f in file_chunks.values() for i, *p in f if i == channel_index) - first_pos[channel_index]
             )
             max_pos = (
-                max(
-                    p[0] + p[2]
-                    for f in file_chunks.values()
-                    for i, *p in f
-                    if i == channel_index
-                )
+                max(p[0] + p[2] for f in file_chunks.values() for i, *p in f if i == channel_index)
                 - first_pos[channel_index]
             )
             slices_channels.append((min_pos, max_pos))
@@ -922,13 +805,9 @@ class AlphaOmegaRawIO(BaseRawIO):
             # true for hard drives but shouldn't hurt flash memory
             file_chunks[filename].sort(key=lambda x: x[2])
         for filename in file_chunks:
-            for channel_index, chunk_index, file_position, chunk_size in file_chunks[
-                filename
-            ]:
+            for channel_index, chunk_index, file_position, chunk_size in file_chunks[filename]:
                 sig_offset = chunk_index - first_pos[channel_index] - min_size
-                sigs[
-                    sig_offset : sig_offset + chunk_size, channel_index
-                ] = np.frombuffer(
+                sigs[sig_offset : sig_offset + chunk_size, channel_index] = np.frombuffer(
                     self._opened_files[filename]["mmap"],
                     dtype=np.short,
                     count=chunk_size,
@@ -938,14 +817,10 @@ class AlphaOmegaRawIO(BaseRawIO):
 
     def _spike_count(self, block_index, seg_index, spike_channel_index):
         spike_id = int(self.header["spike_channels"]["id"][spike_channel_index])
-        nb_spikes = sum(
-            len(f) for f in self._segments[seg_index]["spikes"][spike_id]["positions"].values()
-        )
+        nb_spikes = sum(len(f) for f in self._segments[seg_index]["spikes"][spike_id]["positions"].values())
         return nb_spikes
 
-    def _get_spike_timestamps(
-        self, block_index, seg_index, spike_channel_index, t_start, t_stop
-    ):
+    def _get_spike_timestamps(self, block_index, seg_index, spike_channel_index, t_start, t_stop):
         if self._spike_count(block_index, seg_index, spike_channel_index):
             spike_id = int(self.header["spike_channels"]["id"][spike_channel_index])
             spikes = self._segments[seg_index]["spikes"][spike_id]
@@ -955,7 +830,9 @@ class AlphaOmegaRawIO(BaseRawIO):
                 t_stop = self._segment_t_stop(block_index, seg_index)
             effective_start = t_start * spikes["sample_rate"]
             effective_stop = t_stop * spikes["sample_rate"]
-            timestamps = np.array([p[0] for f in spikes["positions"].values() for p in f if effective_start <= p[0] <= effective_stop])
+            timestamps = np.array(
+                [p[0] for f in spikes["positions"].values() for p in f if effective_start <= p[0] <= effective_stop]
+            )
         else:
             timestamps = np.array([], dtype=np.uint32)
         return timestamps
@@ -966,9 +843,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         spike_timestamps = spike_timestamps.astype(dtype) / sample_rate
         return spike_timestamps
 
-    def _get_spike_raw_waveforms(
-        self, block_index, seg_index, spike_channel_index, t_start, t_stop
-    ):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, spike_channel_index, t_start, t_stop):
         spike_id = int(self.header["spike_channels"]["id"][spike_channel_index])
         #  nb_spikes = self._spike_count(block_index, seg_index, spike_channel_index)
         nb_spikes = self._get_spike_timestamps(block_index, seg_index, spike_channel_index, t_start, t_stop).size
@@ -1006,9 +881,7 @@ class AlphaOmegaRawIO(BaseRawIO):
             nb_events = 0
         return nb_events
 
-    def _get_event_timestamps(
-        self, block_index, seg_index, event_channel_index, t_start, t_stop
-    ):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         if self._event_count(block_index, seg_index, event_channel_index):
             event_id = int(self.header["event_channels"]["id"][event_channel_index])
             event = self._segments[seg_index]["events"][event_id]

@@ -1,6 +1,6 @@
-'''
+"""
 Generate datasets for testing
-'''
+"""
 
 from datetime import datetime
 import random
@@ -9,10 +9,19 @@ import numpy as np
 from numpy.random import rand
 import quantities as pq
 
-from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, Group,
-                      Segment, SpikeTrain, ImageSequence, ChannelView,
-                      CircularRegionOfInterest, RectangularRegionOfInterest,
-                      PolygonRegionOfInterest)
+from neo.core import (
+    AnalogSignal,
+    Block,
+    Epoch,
+    Event,
+    IrregularlySampledSignal,
+    Group,
+    Segment,
+    SpikeTrain,
+    ImageSequence,
+    ChannelView,
+    CircularRegionOfInterest,
+)
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.fromtimestamp(424242424), None]
 
@@ -28,12 +37,7 @@ def random_datetime(min_year=1990, max_year=datetime.now().year):
 
 
 def random_annotations(n=1):
-    annotation_generators = (
-        random.random,
-        random_datetime,
-        random_string,
-        lambda: None
-    )
+    annotation_generators = (random.random, random_datetime, random_string, lambda: None)
     annotations = {}
     for i in range(n):
         var_name = random_string(6)
@@ -55,8 +59,8 @@ def random_signal(name=None, **annotations):
         name=name or random_string(),
         file_origin=random_string(),
         description=random_string(100),
-        array_annotations=None,   # todo
-        **annotations
+        array_annotations=None,  # todo
+        **annotations,
     )
     return obj
 
@@ -75,8 +79,8 @@ def random_irreg_signal(name=None, **annotations):
         name=name or random_string(),
         file_origin=random_string(),
         description=random_string(100),
-        array_annotations=None,   # todo
-        **annotations
+        array_annotations=None,  # todo
+        **annotations,
     )
     return obj
 
@@ -92,8 +96,8 @@ def random_event(name=None, **annotations):
         labels=labels,
         units="ms",
         name=name or random_string(),
-        array_annotations=None,   # todo
-        **annotations
+        array_annotations=None,  # todo
+        **annotations,
     )
     return obj
 
@@ -109,8 +113,8 @@ def random_epoch():
         labels=labels,
         units="ms",
         name=random_string(),
-        array_annotations=None,   # todo
-        **random_annotations(3)
+        array_annotations=None,  # todo
+        **random_annotations(3),
     )
     return obj
 
@@ -126,8 +130,28 @@ def random_spiketrain(name=None, **annotations):
         t_stop=times[-1] + random.uniform(0, 5),
         units="ms",
         name=name or random_string(),
-        array_annotations=None,   # todo
-        **annotations
+        array_annotations=None,  # todo
+        **annotations,
+    )
+    return obj
+
+
+def random_image_sequence(name=None, **annotations):
+    pixels_i = random.randint(2, 7)
+    pixels_j = random.randint(2, 7)
+    seq_length = random.randint(20, 200)
+    if len(annotations) == 0:
+        annotations = random_annotations(5)
+    obj = ImageSequence(
+        np.random.uniform(size=(seq_length, pixels_i, pixels_j)),
+        t_start=random.uniform(0, 10) * pq.ms,
+        sampling_rate=random.uniform(0.1, 10) * pq.kHz,
+        spatial_scale=random.uniform(0.1, 10) * pq.um,
+        name=name or random_string(),
+        file_origin=random_string(),
+        description=random_string(100),
+        array_annotations=None,  # todo
+        **annotations,
     )
     return obj
 
@@ -139,7 +163,7 @@ def random_segment():
         file_origin=random_string(20),
         file_datetime=random_datetime(),
         rec_datetime=random_datetime(),
-        **random_annotations(4)
+        **random_annotations(4),
     )
     n_sigs = random.randint(0, 5)
     for i in range(n_sigs):
@@ -156,7 +180,10 @@ def random_segment():
     n_spiketrains = random.randint(0, 20)
     for i in range(n_spiketrains):
         seg.spiketrains.append(random_spiketrain())
-    # todo: add some ImageSequence and ROI objects
+    n_imgs = random.randint(0, 5)
+    for i in range(n_imgs):
+        seg.imagesequences.append(random_image_sequence())
+    # todo: add some and ROI objects
 
     return seg
 
@@ -169,9 +196,7 @@ def random_group(candidates):
     else:
         k = random.randint(1, len(candidates))
         objects = random.sample(candidates, k)
-    obj = Group(objects=objects,
-                name=random_string(),
-                **random_annotations(5))
+    obj = Group(objects=objects, name=random_string(), **random_annotations(5))
     return obj
 
 
@@ -180,15 +205,18 @@ def random_channelview(signal):
     if n_channels > 2:
         view_size = np.random.randint(1, n_channels - 1)
         index = np.random.choice(np.arange(signal.shape[1]), view_size, replace=False)
-        obj = ChannelView(
-            signal,
-            index,
-            name=random_string(),
-            **random_annotations(3)
-        )
+        obj = ChannelView(signal, index, name=random_string(), **random_annotations(3))
         return obj
     else:
         return None
+
+
+def random_roi(imgseq):
+    x = np.random.randint(imgseq.shape[1])
+    y = np.random.randint(imgseq.shape[2])
+    radius = np.random.uniform() * imgseq.shape[1]
+    obj = CircularRegionOfInterest(imgseq, x, y, radius, name=random_string(), **random_annotations(3))
+    return obj
 
 
 def random_block():
@@ -198,7 +226,7 @@ def random_block():
         file_origin=random_string(20),
         file_datetime=random_datetime(),
         rec_datetime=random_datetime(),
-        **random_annotations(6)
+        **random_annotations(6),
     )
     n_seg = random.randint(0, 5)
     for i in range(n_seg):
@@ -213,6 +241,12 @@ def random_block():
                 chv = random_channelview(child)
                 if chv:
                     views.append(chv)
+        elif isinstance(child, ImageSequence):
+            PROB_IMGSEQ_HAS_ROI = 0.5
+            if np.random.random_sample() < PROB_IMGSEQ_HAS_ROI:
+                roi = random_roi(child)
+                if roi:
+                    views.append(roi)
     children.extend(views)
     n_groups = random.randint(0, 5)
     for i in range(n_groups):
@@ -224,116 +258,109 @@ def random_block():
 
 
 def simple_block():
-    block = Block(
-        name="test block",
-        species="rat",
-        brain_region="cortex"
-    )
+    block = Block(name="test block", species="rat", brain_region="cortex")
     block.segments = [
-        Segment(name="test segment #1",
-                cell_type="spiny stellate"),
-        Segment(name="test segment #2",
-                cell_type="pyramidal",
-                thing="amajig")
+        Segment(name="test segment #1", cell_type="spiny stellate"),
+        Segment(name="test segment #2", cell_type="pyramidal", thing="amajig"),
     ]
-    block.segments[0].analogsignals.extend((
-        random_signal(name="signal #1 in segment #1", thing="wotsit"),
-        random_signal(name="signal #2 in segment #1", thing="frooble"),
-    ))
-    block.segments[1].analogsignals.extend((
-        random_signal(name="signal #1 in segment #2", thing="amajig"),
-    ))
-    block.segments[1].irregularlysampledsignals.extend((
-        random_irreg_signal(name="signal #1 in segment #2", thing="amajig"),
-    ))
-    block.segments[0].events.extend((
-        random_event(name="event array #1 in segment #1", thing="frooble"),
-    ))
-    block.segments[1].events.extend((
-        random_event(name="event array #1 in segment #2", thing="wotsit"),
-    ))
-    block.segments[0].spiketrains.extend((
-        random_spiketrain(name="spiketrain #1 in segment #1", thing="frooble"),
-        random_spiketrain(name="spiketrain #2 in segment #1", thing="wotsit")
-    ))
+    block.segments[0].analogsignals.extend(
+        (
+            random_signal(name="signal #1 in segment #1", thing="wotsit"),
+            random_signal(name="signal #2 in segment #1", thing="frooble"),
+        )
+    )
+    block.segments[1].analogsignals.extend((random_signal(name="signal #1 in segment #2", thing="amajig"),))
+    block.segments[1].irregularlysampledsignals.extend(
+        (random_irreg_signal(name="signal #1 in segment #2", thing="amajig"),)
+    )
+    block.segments[0].events.extend((random_event(name="event array #1 in segment #1", thing="frooble"),))
+    block.segments[1].events.extend((random_event(name="event array #1 in segment #2", thing="wotsit"),))
+    block.segments[0].spiketrains.extend(
+        (
+            random_spiketrain(name="spiketrain #1 in segment #1", thing="frooble"),
+            random_spiketrain(name="spiketrain #2 in segment #1", thing="wotsit"),
+        )
+    )
     return block
 
 
-def generate_one_simple_block(block_name='block_0', nb_segment=3, supported_objects=[], **kws):
+def generate_one_simple_block(block_name="block_0", nb_segment=3, supported_objects=[], **kws):
     if supported_objects and Block not in supported_objects:
-        raise ValueError('Block must be in supported_objects')
+        raise ValueError("Block must be in supported_objects")
     bl = Block()  # name = block_name)
 
     objects = supported_objects
     if Segment in objects:
         for s in range(nb_segment):
-            seg = generate_one_simple_segment(seg_name="seg" + str(s), supported_objects=objects,
-                                              **kws)
+            seg = generate_one_simple_segment(seg_name="seg" + str(s), supported_objects=objects, **kws)
             bl.segments.append(seg)
 
     bl.check_relationships()
     return bl
 
 
-def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_analogsignal=4,
-                                t_start=0. * pq.s, sampling_rate=10 * pq.kHz, duration=6. * pq.s,
-
-                                nb_spiketrain=6, spikerate_range=[.5 * pq.Hz, 12 * pq.Hz],
-
-                                event_types={'stim': ['a', 'b', 'c', 'd'],
-                                             'enter_zone': ['one', 'two'],
-                                             'color': ['black', 'yellow', 'green'], },
-                                event_size_range=[5, 20],
-
-                                epoch_types={'animal state': ['Sleep', 'Freeze', 'Escape'],
-                                             'light': ['dark', 'lighted']},
-                                epoch_duration_range=[.5, 3.],
-                                # this should be multiplied by pq.s, no?
-
-                                array_annotations={'valid': np.array([True, False]),
-                                                   'number': np.array(range(5))}
-
-                                ):
+def generate_one_simple_segment(
+    seg_name="segment 0",
+    supported_objects=[],
+    nb_analogsignal=4,
+    t_start=0.0 * pq.s,
+    sampling_rate=10 * pq.kHz,
+    duration=6.0 * pq.s,
+    nb_spiketrain=6,
+    spikerate_range=[0.5 * pq.Hz, 12 * pq.Hz],
+    event_types={
+        "stim": ["a", "b", "c", "d"],
+        "enter_zone": ["one", "two"],
+        "color": ["black", "yellow", "green"],
+    },
+    event_size_range=[5, 20],
+    epoch_types={"animal state": ["Sleep", "Freeze", "Escape"], "light": ["dark", "lighted"]},
+    epoch_duration_range=[0.5, 3.0],
+    # this should be multiplied by pq.s, no?
+    array_annotations={"valid": np.array([True, False]), "number": np.array(range(5))},
+):
     if supported_objects and Segment not in supported_objects:
-        raise ValueError('Segment must be in supported_objects')
+        raise ValueError("Segment must be in supported_objects")
     seg = Segment(name=seg_name)
     if AnalogSignal in supported_objects:
         for a in range(nb_analogsignal):
-            anasig = AnalogSignal(rand(int((sampling_rate * duration).simplified)),
-                                  sampling_rate=sampling_rate,
-                                  t_start=t_start, units=pq.mV, channel_index=a,
-                                  name='sig %d for segment %s' % (a, seg.name))
+            anasig = AnalogSignal(
+                rand(int((sampling_rate * duration).simplified)),
+                sampling_rate=sampling_rate,
+                t_start=t_start,
+                units=pq.mV,
+                channel_index=a,
+                name=f"sig {a} for segment {seg.name}",
+            )
             seg.analogsignals.append(anasig)
 
     if SpikeTrain in supported_objects:
         for s in range(nb_spiketrain):
-            spikerate = rand() * np.diff(spikerate_range)
-            spikerate += spikerate_range[0].magnitude
-            # spikedata = rand(int((spikerate*duration).simplified))*duration
-            # sptr = SpikeTrain(spikedata,
-            #                  t_start=t_start, t_stop=t_start+duration)
-            #                  #, name = 'spiketrain %d'%s)
+            spikerate = rand() * np.diff(spikerate_range)[0]
+            spikerate += spikerate_range[0].item()
             spikes = rand(int((spikerate * duration).simplified))
             spikes.sort()  # spikes are supposed to be an ascending sequence
             sptr = SpikeTrain(spikes * duration, t_start=t_start, t_stop=t_start + duration)
-            sptr.annotations['channel_index'] = s
+            sptr.annotations["channel_index"] = s
             # Randomly generate array_annotations from given options
-            arr_ann = {key: value[(rand(len(spikes)) * len(value)).astype('i')] for (key, value) in
-                       array_annotations.items()}
+            arr_ann = {
+                key: value[(rand(len(spikes)) * len(value)).astype("i")] for (key, value) in array_annotations.items()
+            }
             sptr.array_annotate(**arr_ann)
             seg.spiketrains.append(sptr)
 
     if Event in supported_objects:
         for name, labels in event_types.items():
-            evt_size = rand() * np.diff(event_size_range)
+            evt_size = rand() * np.diff(event_size_range)[0]
             evt_size += event_size_range[0]
             evt_size = int(evt_size)
-            labels = np.array(labels, dtype='U')
-            labels = labels[(rand(evt_size) * len(labels)).astype('i')]
+            labels = np.array(labels, dtype="U")
+            labels = labels[(rand(evt_size) * len(labels)).astype("i")]
             evt = Event(times=rand(evt_size) * duration, labels=labels)
             # Randomly generate array_annotations from given options
-            arr_ann = {key: value[(rand(evt_size) * len(value)).astype('i')] for (key, value) in
-                       array_annotations.items()}
+            arr_ann = {
+                key: value[(rand(evt_size) * len(value)).astype("i")] for (key, value) in array_annotations.items()
+            }
             evt.array_annotate(**arr_ann)
             seg.events.append(evt)
 
@@ -348,17 +375,20 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
                 dur += epoch_duration_range[0]
                 durations.append(dur)
                 t = t + dur
-            labels = np.array(labels, dtype='U')
-            labels = labels[(rand(len(times)) * len(labels)).astype('i')]
+            labels = np.array(labels, dtype="U")
+            labels = labels[(rand(len(times)) * len(labels)).astype("i")]
             assert len(times) == len(durations)
             assert len(times) == len(labels)
-            epc = Epoch(times=pq.Quantity(times, units=pq.s),
-                        durations=pq.Quantity(durations, units=pq.s),
-                        labels=labels,)
-            assert epc.times.dtype == 'float'
+            epc = Epoch(
+                times=pq.Quantity(times, units=pq.s),
+                durations=pq.Quantity(durations, units=pq.s),
+                labels=labels,
+            )
+            assert epc.times.dtype == "float"
             # Randomly generate array_annotations from given options
-            arr_ann = {key: value[(rand(len(times)) * len(value)).astype('i')] for (key, value) in
-                       array_annotations.items()}
+            arr_ann = {
+                key: value[(rand(len(times)) * len(value)).astype("i")] for (key, value) in array_annotations.items()
+            }
             epc.array_annotate(**arr_ann)
             seg.epochs.append(epc)
 
@@ -370,7 +400,7 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
 
 def generate_from_supported_objects(supported_objects):
     if not supported_objects:
-        raise ValueError('No objects specified')
+        raise ValueError("No objects specified")
     objects = supported_objects
     if Block in supported_objects:
         higher = generate_one_simple_block(supported_objects=objects)

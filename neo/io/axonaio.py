@@ -3,7 +3,7 @@ from neo.rawio.axonarawio import AxonaRawIO
 
 
 class AxonaIO(AxonaRawIO, BaseFromRaw):
-    name = 'Axona IO'
+    name = "Axona IO"
     description = "Read raw continuous data (.bin and .set files)"
 
     def __init__(self, filename):

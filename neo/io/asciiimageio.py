@@ -25,10 +25,10 @@ class AsciiImageIO(BaseIO):
 
     """
 
-    name = 'AsciiImage IO'
+    name = "AsciiImage IO"
     description = "Neo IO module for optical imaging data stored as a folder of TIFF images."
 
-    _prefered_signal_group_mode = 'group-by-same-units'
+    _prefered_signal_group_mode = "group-by-same-units"
     is_readable = True
     is_writable = False
 
@@ -43,10 +43,19 @@ class AsciiImageIO(BaseIO):
 
     extensions = []
 
-    mode = 'file'
+    mode = "file"
 
-    def __init__(self, file_name=None, nb_frame=None, nb_row=None, nb_column=None, units=None, sampling_rate=None,
-                 spatial_scale=None, **kwargs):
+    def __init__(
+        self,
+        file_name=None,
+        nb_frame=None,
+        nb_row=None,
+        nb_column=None,
+        units=None,
+        sampling_rate=None,
+        spatial_scale=None,
+        **kwargs,
+    ):
 
         BaseIO.__init__(self, file_name, **kwargs)
         self.nb_frame = nb_frame
@@ -58,7 +67,7 @@ class AsciiImageIO(BaseIO):
 
     def read_block(self, lazy=False, **kwargs):
 
-        file = open(self.filename, 'r')
+        file = open(self.filename, "r")
         data = file.read()
         print("read block")
         liste_value = []
@@ -82,8 +91,12 @@ class AsciiImageIO(BaseIO):
                     data[i][y].append(liste_value[nb])
                     nb += 1
 
-        image_sequence = ImageSequence(np.array(data, dtype='float'), units=self.units,
-                                       sampling_rate=self.sampling_rate, spatial_scale=self.spatial_scale)
+        image_sequence = ImageSequence(
+            np.array(data, dtype="float"),
+            units=self.units,
+            sampling_rate=self.sampling_rate,
+            spatial_scale=self.spatial_scale,
+        )
         file.close()
         print("creating segment")
         segment = Segment(file_origin=self.filename)

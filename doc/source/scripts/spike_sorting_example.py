@@ -9,15 +9,21 @@ from quantities import Hz
 # generate some fake data
 seg = Segment()
 seg.analogsignals.append(
-    AnalogSignal([[0.1, 0.1, 0.1, 0.1],
-                  [-2.0, -2.0, -2.0, -2.0],
-                  [0.1, 0.1, 0.1, 0.1],
-                  [-0.1, -0.1, -0.1, -0.1],
-                  [-0.1, -0.1, -0.1, -0.1],
-                  [-3.0, -3.0, -3.0, -3.0],
-                  [0.1, 0.1, 0.1, 0.1],
-                  [0.1, 0.1, 0.1, 0.1]],
-                 sampling_rate=1000 * Hz, units='V'))
+    AnalogSignal(
+        [
+            [0.1, 0.1, 0.1, 0.1],
+            [-2.0, -2.0, -2.0, -2.0],
+            [0.1, 0.1, 0.1, 0.1],
+            [-0.1, -0.1, -0.1, -0.1],
+            [-0.1, -0.1, -0.1, -0.1],
+            [-3.0, -3.0, -3.0, -3.0],
+            [0.1, 0.1, 0.1, 0.1],
+            [0.1, 0.1, 0.1, 0.1],
+        ],
+        sampling_rate=1000 * Hz,
+        units="V",
+    )
+)
 
 # extract spike trains from all channels
 st_list = []
@@ -32,7 +38,7 @@ for signal in seg.analogsignals:
     # remember the spike waveforms
     wf_list = []
     for spike_idx in np.nonzero(spike_mask)[0]:
-        wf_list.append(signal[spike_idx - 1:spike_idx + 2, :])
+        wf_list.append(signal[spike_idx - 1 : spike_idx + 2, :])
     st.waveforms = np.array(wf_list)
 
     st_list.append(st)

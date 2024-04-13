@@ -8,109 +8,121 @@
 # You are free to modify or share this file, provided that the above
 # copyright notice is kept intact.
 
-from sys import platform
-import os
+import platform
+import subprocess
 import pathlib
 import warnings
+import numpy as np
 
-if any(platform.startswith(name) for name in ('linux', 'darwin', 'freebsd')):
+platform_is_windows = platform.system() == "Windows"
+
+if platform_is_windows:
+    import ctypes
+else:
+    is_wine_available = subprocess.run(["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    if is_wine_available.returncode != 0:
+        raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
+
     from zugbruecke import CtypesSession
 
     ctypes = CtypesSession(log_level=100)
 
-elif platform.startswith('win'):
-    import ctypes
-else:
-    raise SystemError('unsupported platform')
-
-import numpy as np
-
 
 class tm(ctypes.Structure):
-    _fields_ = [("tm_sec", ctypes.c_int),
-                ("tm_min", ctypes.c_int),
-                ("tm_hour", ctypes.c_int),
-                ("tm_mday", ctypes.c_int),
-                ("tm_mon", ctypes.c_int),
-                ("tm_year", ctypes.c_int),
-                ("tm_wday", ctypes.c_int),
-                ("tm_yday", ctypes.c_int),
-                ("tm_isdst", ctypes.c_int)]
+    _fields_ = [
+        ("tm_sec", ctypes.c_int),
+        ("tm_min", ctypes.c_int),
+        ("tm_hour", ctypes.c_int),
+        ("tm_mday", ctypes.c_int),
+        ("tm_mon", ctypes.c_int),
+        ("tm_year", ctypes.c_int),
+        ("tm_wday", ctypes.c_int),
+        ("tm_yday", ctypes.c_int),
+        ("tm_isdst", ctypes.c_int),
+    ]
 
 
 class PL2FileInfo(ctypes.Structure):
-    _fields_ = [("m_CreatorComment", ctypes.c_char * 256),
-                ("m_CreatorSoftwareName", ctypes.c_char * 64),
-                ("m_CreatorSoftwareVersion", ctypes.c_char * 16),
-                ("m_CreatorDateTime", tm),
-                ("m_CreatorDateTimeMilliseconds", ctypes.c_int),
-                ("m_TimestampFrequency", ctypes.c_double),
-                ("m_NumberOfChannelHeaders", ctypes.c_uint),
-                ("m_TotalNumberOfSpikeChannels", ctypes.c_uint),
-                ("m_NumberOfRecordedSpikeChannels", ctypes.c_uint),
-                ("m_TotalNumberOfAnalogChannels", ctypes.c_uint),
-                ("m_NumberOFRecordedAnalogChannels", ctypes.c_uint),
-                ("m_NumberOfDigitalChannels", ctypes.c_uint),
-                ("m_MinimumTrodality", ctypes.c_uint),
-                ("m_MaximumTrodality", ctypes.c_uint),
-                ("m_NumberOfNonOmniPlexSources", ctypes.c_uint),
-                ("m_Unused", ctypes.c_int),
-                ("m_ReprocessorComment", ctypes.c_char * 256),
-                ("m_ReprocessorSoftwareName", ctypes.c_char * 64),
-                ("m_ReprocessorSoftwareVersion", ctypes.c_char * 16),
-                ("m_ReprocessorDateTime", tm),
-                ("m_ReprocessorDateTimeMilliseconds", ctypes.c_int),
-                ("m_StartRecordingTime", ctypes.c_ulonglong),
-                ("m_DurationOfRecording", ctypes.c_ulonglong)]
+    _fields_ = [
+        ("m_CreatorComment", ctypes.c_char * 256),
+        ("m_CreatorSoftwareName", ctypes.c_char * 64),
+        ("m_CreatorSoftwareVersion", ctypes.c_char * 16),
+        ("m_CreatorDateTime", tm),
+        ("m_CreatorDateTimeMilliseconds", ctypes.c_int),
+        ("m_TimestampFrequency", ctypes.c_double),
+        ("m_NumberOfChannelHeaders", ctypes.c_uint),
+        ("m_TotalNumberOfSpikeChannels", ctypes.c_uint),
+        ("m_NumberOfRecordedSpikeChannels", ctypes.c_uint),
+        ("m_TotalNumberOfAnalogChannels", ctypes.c_uint),
+        ("m_NumberOFRecordedAnalogChannels", ctypes.c_uint),
+        ("m_NumberOfDigitalChannels", ctypes.c_uint),
+        ("m_MinimumTrodality", ctypes.c_uint),
+        ("m_MaximumTrodality", ctypes.c_uint),
+        ("m_NumberOfNonOmniPlexSources", ctypes.c_uint),
+        ("m_Unused", ctypes.c_int),
+        ("m_ReprocessorComment", ctypes.c_char * 256),
+        ("m_ReprocessorSoftwareName", ctypes.c_char * 64),
+        ("m_ReprocessorSoftwareVersion", ctypes.c_char * 16),
+        ("m_ReprocessorDateTime", tm),
+        ("m_ReprocessorDateTimeMilliseconds", ctypes.c_int),
+        ("m_StartRecordingTime", ctypes.c_ulonglong),
+        ("m_DurationOfRecording", ctypes.c_ulonglong),
+    ]
 
 
 class PL2AnalogChannelInfo(ctypes.Structure):
-    _fields_ = [("m_Name", ctypes.c_char * 64),
-                ("m_Source", ctypes.c_uint),
-                ("m_Channel", ctypes.c_uint),
-                ("m_ChannelEnabled", ctypes.c_uint),
-                ("m_ChannelRecordingEnabled", ctypes.c_uint),
-                ("m_Units", ctypes.c_char * 16),
-                ("m_SamplesPerSecond", ctypes.c_double),
-                ("m_CoeffToConvertToUnits", ctypes.c_double),
-                ("m_SourceTrodality", ctypes.c_uint),
-                ("m_OneBasedTrode", ctypes.c_ushort),
-                ("m_OneBasedChannelInTrode", ctypes.c_ushort),
-                ("m_NumberOfValues", ctypes.c_ulonglong),
-                ("m_MaximumNumberOfFragments", ctypes.c_ulonglong)]
+    _fields_ = [
+        ("m_Name", ctypes.c_char * 64),
+        ("m_Source", ctypes.c_uint),
+        ("m_Channel", ctypes.c_uint),
+        ("m_ChannelEnabled", ctypes.c_uint),
+        ("m_ChannelRecordingEnabled", ctypes.c_uint),
+        ("m_Units", ctypes.c_char * 16),
+        ("m_SamplesPerSecond", ctypes.c_double),
+        ("m_CoeffToConvertToUnits", ctypes.c_double),
+        ("m_SourceTrodality", ctypes.c_uint),
+        ("m_OneBasedTrode", ctypes.c_ushort),
+        ("m_OneBasedChannelInTrode", ctypes.c_ushort),
+        ("m_NumberOfValues", ctypes.c_ulonglong),
+        ("m_MaximumNumberOfFragments", ctypes.c_ulonglong),
+    ]
 
 
 class PL2SpikeChannelInfo(ctypes.Structure):
-    _fields_ = [("m_Name", ctypes.c_char * 64),
-                ("m_Source", ctypes.c_uint),
-                ("m_Channel", ctypes.c_uint),
-                ("m_ChannelEnabled", ctypes.c_uint),
-                ("m_ChannelRecordingEnabled", ctypes.c_uint),
-                ("m_Units", ctypes.c_char * 16),
-                ("m_SamplesPerSecond", ctypes.c_double),
-                ("m_CoeffToConvertToUnits", ctypes.c_double),
-                ("m_SamplesPerSpike", ctypes.c_uint),
-                ("m_Threshold", ctypes.c_int),
-                ("m_PreThresholdSamples", ctypes.c_uint),
-                ("m_SortEnabled", ctypes.c_uint),
-                ("m_SortMethod", ctypes.c_uint),
-                ("m_NumberOfUnits", ctypes.c_uint),
-                ("m_SortRangeStart", ctypes.c_uint),
-                ("m_SortRangeEnd", ctypes.c_uint),
-                ("m_UnitCounts", ctypes.c_ulonglong * 256),
-                ("m_SourceTrodality", ctypes.c_uint),
-                ("m_OneBasedTrode", ctypes.c_ushort),
-                ("m_OneBasedChannelInTrode", ctypes.c_ushort),
-                ("m_NumberOfSpikes", ctypes.c_ulonglong)]
+    _fields_ = [
+        ("m_Name", ctypes.c_char * 64),
+        ("m_Source", ctypes.c_uint),
+        ("m_Channel", ctypes.c_uint),
+        ("m_ChannelEnabled", ctypes.c_uint),
+        ("m_ChannelRecordingEnabled", ctypes.c_uint),
+        ("m_Units", ctypes.c_char * 16),
+        ("m_SamplesPerSecond", ctypes.c_double),
+        ("m_CoeffToConvertToUnits", ctypes.c_double),
+        ("m_SamplesPerSpike", ctypes.c_uint),
+        ("m_Threshold", ctypes.c_int),
+        ("m_PreThresholdSamples", ctypes.c_uint),
+        ("m_SortEnabled", ctypes.c_uint),
+        ("m_SortMethod", ctypes.c_uint),
+        ("m_NumberOfUnits", ctypes.c_uint),
+        ("m_SortRangeStart", ctypes.c_uint),
+        ("m_SortRangeEnd", ctypes.c_uint),
+        ("m_UnitCounts", ctypes.c_ulonglong * 256),
+        ("m_SourceTrodality", ctypes.c_uint),
+        ("m_OneBasedTrode", ctypes.c_ushort),
+        ("m_OneBasedChannelInTrode", ctypes.c_ushort),
+        ("m_NumberOfSpikes", ctypes.c_ulonglong),
+    ]
 
 
 class PL2DigitalChannelInfo(ctypes.Structure):
-    _fields_ = [("m_Name", ctypes.c_char * 64),
-                ("m_Source", ctypes.c_uint),
-                ("m_Channel", ctypes.c_uint),
-                ("m_ChannelEnabled", ctypes.c_uint),
-                ("m_ChannelRecordingEnabled", ctypes.c_uint),
-                ("m_NumberOfEvents", ctypes.c_ulonglong)]
+    _fields_ = [
+        ("m_Name", ctypes.c_char * 64),
+        ("m_Source", ctypes.c_uint),
+        ("m_Channel", ctypes.c_uint),
+        ("m_ChannelEnabled", ctypes.c_uint),
+        ("m_ChannelRecordingEnabled", ctypes.c_uint),
+        ("m_NumberOfEvents", ctypes.c_ulonglong),
+    ]
 
 
 def to_array(c_array):
@@ -127,21 +139,21 @@ class PyPL2FileReader:
         """
         PyPL2FileReader class implements functions in the C++ PL2 File Reader
         API provided by Plexon, Inc.
-        
+
         Args:
             pl2_dll_file_path - path where PL2FileReader.dll is location.
                 The default value assumes the .dll files are located in the
                 'bin' directory, which is a subdirectory of this package.
                 Any file path passed is converted to an absolute path and checked
                 to see if the .dll exists there.
-        
+
         Returns:
             None
         """
         self._file_handle = ctypes.c_int(0)
         self.pl2_file_info = None
         if pl2_dll_file_path is None:
-            pl2_dll_file_path = pathlib.Path(__file__).parents[1] / 'bin' / 'PL2FileReader.dll'
+            pl2_dll_file_path = pathlib.Path(__file__).parents[1] / "bin" / "PL2FileReader.dll"
         self.pl2_dll_path = pathlib.Path(pl2_dll_file_path).absolute()
 
         # use default '32bit' dll version
@@ -150,21 +162,23 @@ class PyPL2FileReader:
         try:
             self.pl2_dll = ctypes.CDLL(str(self.pl2_dll_file_path))
         except IOError:
-            raise IOError(f"Error: Can't load PL2FileReader.dll at: {self.pl2_dll_file_path}. "
-                          "PL2FileReader.dll is bundled with the C++ PL2 Offline Files SDK "
-                          "located on the Plexon Inc website: www.plexon.com "
-                          "Contact Plexon Support for more information: support@plexon.com")
+            raise IOError(
+                f"Error: Can't load PL2FileReader.dll at: {self.pl2_dll_file_path}. "
+                "PL2FileReader.dll is bundled with the C++ PL2 Offline Files SDK "
+                "located on the Plexon Inc website: www.plexon.com "
+                "Contact Plexon Support for more information: support@plexon.com"
+            )
 
     def pl2_open_file(self, pl2_file):
         """
         Opens and returns a handle to a PL2 file.
-        
+
         Args:
             pl2_file - full path of the file
-            
+
         Returns:
             None
-            
+
         """
         if isinstance(pl2_file, pathlib.Path):
             pl2_file = str(pl2_file)
@@ -174,13 +188,13 @@ class PyPL2FileReader:
         )
         self.pl2_dll.PL2_OpenFile.memsync = [
             {
-                'p': [0],  # ctypes.POINTER argument
-                'n': True,  # null-terminated string flag
+                "p": [0],  # ctypes.POINTER argument
+                "n": True,  # null-terminated string flag
             }
         ]
 
         self.pl2_dll.PL2_OpenFile(
-            pl2_file.encode('ascii'),
+            pl2_file.encode("ascii"),
             ctypes.byref(self._file_handle),
         )
 
@@ -197,18 +211,16 @@ class PyPL2FileReader:
             None
         """
 
-        self.pl2_dll.PL2_CloseFile.argtypes = (
-            ctypes.POINTER(ctypes.c_int),
-        )
+        self.pl2_dll.PL2_CloseFile.argtypes = (ctypes.POINTER(ctypes.c_int),)
         self.pl2_dll.PL2_CloseFile(ctypes.c_int(1))
 
     def pl2_close_all_files(self):
         """
         Closes all files that have been opened by the .dll
-        
+
         Args:
             None
-        
+
         Returns:
             None
         """
@@ -228,13 +240,7 @@ class PyPL2FileReader:
             ctypes.POINTER(ctypes.c_char),
             ctypes.c_int,
         )
-        self.pl2_dll.PL2_GetLastError.memsync = [
-            {
-                'p': [0],
-                'l': [1],
-                't': ctypes.c_char
-            }
-        ]
+        self.pl2_dll.PL2_GetLastError.memsync = [{"p": [0], "l": [1], "t": ctypes.c_char}]
 
         buffer = (ctypes.c_char * 256)()
         self.pl2_dll.PL2_GetLastError(buffer, ctypes.c_int(256))
@@ -259,10 +265,12 @@ class PyPL2FileReader:
             channel_info = self.pl2_get_spike_channel_info(i)
 
             if channel_info.m_SamplesPerSpike != n_samples_per_spike:
-                warnings.warn('The spike channels contain different number of samples per spike. '
-                              'Spiking data can probably not be loaded using zugbruecke. '
-                              'Use a windows operating system or remove the offending channels '
-                              'from the file.')
+                warnings.warn(
+                    "The spike channels contain different number of samples per spike. "
+                    "Spiking data can probably not be loaded using zugbruecke. "
+                    "Use a windows operating system or remove the offending channels "
+                    "from the file."
+                )
                 return
 
     def pl2_get_file_info(self):
@@ -292,10 +300,10 @@ class PyPL2FileReader:
     def pl2_get_analog_channel_info(self, zero_based_channel_index):
         """
         Retrieve information about an analog channel
-        
+
         Args:
             zero_based_channel_index - zero-based analog channel index
-        
+
         Returns:
             pl2_analog_channel_info - PL2AnalogChannelInfo class instance
         """
@@ -307,9 +315,9 @@ class PyPL2FileReader:
         )
 
         pl2_analog_channel_info = PL2AnalogChannelInfo()
-        result = self.pl2_dll.PL2_GetAnalogChannelInfo(self._file_handle,
-                                                       ctypes.c_int(zero_based_channel_index),
-                                                       ctypes.byref(pl2_analog_channel_info))
+        result = self.pl2_dll.PL2_GetAnalogChannelInfo(
+            self._file_handle, ctypes.c_int(zero_based_channel_index), ctypes.byref(pl2_analog_channel_info)
+        )
 
         if not result:
             self._print_error()
@@ -320,10 +328,10 @@ class PyPL2FileReader:
     def pl2_get_analog_channel_info_by_name(self, channel_name):
         """
         Retrieve information about an analog channel
-        
+
         Args:
             channel_name - analog channel name
-        
+
         Returns:
             pl2_analog_channel_info - PL2AnalogChannelInfo class instance
         """
@@ -336,19 +344,19 @@ class PyPL2FileReader:
 
         self.pl2_dll.PL2_GetAnalogChannelInfoByName.memsync = [
             {
-                'p': [1],
-                'n': True,  # null-terminated string flag
+                "p": [1],
+                "n": True,  # null-terminated string flag
             }
         ]
 
-        if hasattr(channel_name, 'encode'):
-            channel_name = channel_name.encode('ascii')
+        if hasattr(channel_name, "encode"):
+            channel_name = channel_name.encode("ascii")
 
         pl2_analog_channel_info = PL2AnalogChannelInfo()
 
-        result = self.pl2_dll.PL2_GetAnalogChannelInfoByName(self._file_handle,
-                                                             channel_name,
-                                                             ctypes.byref(pl2_analog_channel_info))
+        result = self.pl2_dll.PL2_GetAnalogChannelInfoByName(
+            self._file_handle, channel_name, ctypes.byref(pl2_analog_channel_info)
+        )
 
         if not result:
             self._print_error()
@@ -358,11 +366,11 @@ class PyPL2FileReader:
     def pl2_get_analog_channel_info_by_source(self, source_id, one_based_channel_index_in_source):
         """
         Retrieve information about an analog channel
-        
+
         Args:
             source_id - numeric source ID
             one_based_channel_index_in_source - one-based channel index within the source
-        
+
         Returns:
             pl2_analog_channel_info - PL2AnalogChannelInfo class instance
         """
@@ -379,7 +387,8 @@ class PyPL2FileReader:
             self._file_handle,
             ctypes.c_int(source_id),
             ctypes.c_int(one_based_channel_index_in_source),
-            ctypes.byref(pl2_analog_channel_info))
+            ctypes.byref(pl2_analog_channel_info),
+        )
 
         if not result:
             self._print_error()
@@ -390,10 +399,10 @@ class PyPL2FileReader:
     def pl2_get_analog_channel_data(self, zero_based_channel_index):
         """
         Retrieve analog channel data
-        
+
         Args:
             zero_based_channel_index - zero based channel index
-            
+
         Returns:
             fragment_timestamps - array the size of PL2AnalogChannelInfo.m_MaximumNumberOfFragments
             fragment_counts - array the size of PL2AnalogChannelInfo.m_MaximumNumberOfFragments
@@ -419,30 +428,20 @@ class PyPL2FileReader:
         )
 
         self.pl2_dll.PL2_GetAnalogChannelData.memsync = [
-            {
-                'p': [4],
-                'l': [2],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [5],
-                'l': [2],
-                't': ctypes.c_ulonglong
-            },
-            {
-                'p': [6],
-                'l': [3],
-                't': ctypes.c_short
-            }
+            {"p": [4], "l": [2], "t": ctypes.c_longlong},
+            {"p": [5], "l": [2], "t": ctypes.c_ulonglong},
+            {"p": [6], "l": [3], "t": ctypes.c_short},
         ]
 
-        result = self.pl2_dll.PL2_GetAnalogChannelData(self._file_handle,
-                                                       ctypes.c_int(zero_based_channel_index),
-                                                       num_fragments_returned,
-                                                       num_data_points_returned,
-                                                       fragment_timestamps,
-                                                       fragment_counts,
-                                                       values)
+        result = self.pl2_dll.PL2_GetAnalogChannelData(
+            self._file_handle,
+            ctypes.c_int(zero_based_channel_index),
+            num_fragments_returned,
+            num_data_points_returned,
+            fragment_timestamps,
+            fragment_counts,
+            values,
+        )
 
         if not result:
             self._print_error()
@@ -456,18 +455,18 @@ class PyPL2FileReader:
     def pl2_get_analog_channel_data_by_name(self, channel_name):
         """
         Retrieve analog channel data
-        
+
         Args:
             channel_name - analog channel name
-            
+
         Returns:
             fragment_timestamps - array the size of PL2AnalogChannelInfo.m_MaximumNumberOfFragments
             fragment_counts - array the size of PL2AnalogChannelInfo.m_MaximumNumberOfFragments
             values - array the size of PL2AnalogChannelInfo.m_NumberOfValues
         """
-        
-        if hasattr(channel_name, 'encode'):
-            channel_name = channel_name.encode('ascii')
+
+        if hasattr(channel_name, "encode"):
+            channel_name = channel_name.encode("ascii")
 
         achannel_info = self.pl2_get_analog_channel_info_by_name(channel_name)
 
@@ -489,24 +488,12 @@ class PyPL2FileReader:
 
         self.pl2_dll.PL2_GetAnalogChannelDataByName.memsync = [
             {
-                'p': [1],
-                'n': True,  # null-terminated string flag
+                "p": [1],
+                "n": True,  # null-terminated string flag
             },
-            {
-                'p': [4],
-                'l': [2],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [5],
-                'l': [2],
-                't': ctypes.c_ulonglong
-            },
-            {
-                'p': [6],
-                'l': [3],
-                't': ctypes.c_short
-            }
+            {"p": [4], "l": [2], "t": ctypes.c_longlong},
+            {"p": [5], "l": [2], "t": ctypes.c_ulonglong},
+            {"p": [6], "l": [3], "t": ctypes.c_short},
         ]
 
         result = self.pl2_dll.PL2_GetAnalogChannelDataByName(
@@ -516,22 +503,23 @@ class PyPL2FileReader:
             num_data_points_returned,
             fragment_timestamps,
             fragment_counts,
-            values)
+            values,
+        )
 
         if not result:
             self._print_error()
             return None
-        
+
         return to_array(fragment_timestamps), to_array(fragment_counts), to_array(values)
 
     def pl2_get_analog_channel_data_by_source(self, source_id, one_based_channel_index_in_source):
         """
         Retrieve analog channel data
-        
+
         Args:
             source_id - numeric source ID
             one_based_channel_index_in_source - one-based channel index within the source
-            
+
         Returns:
             fragment_timestamps - array the size of PL2AnalogChannelInfo.m_MaximumNumberOfFragments
             fragment_counts - array the size of PL2AnalogChannelInfo.m_MaximumNumberOfFragments
@@ -558,31 +546,21 @@ class PyPL2FileReader:
         )
 
         self.pl2_dll.PL2_GetAnalogChannelDataBySource.memsync = [
-            {
-                'p': [5],
-                'l': [3],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [6],
-                'l': [3],
-                't': ctypes.c_ulonglong
-            },
-            {
-                'p': [7],
-                'l': [4],
-                't': ctypes.c_short
-            }
+            {"p": [5], "l": [3], "t": ctypes.c_longlong},
+            {"p": [6], "l": [3], "t": ctypes.c_ulonglong},
+            {"p": [7], "l": [4], "t": ctypes.c_short},
         ]
 
-        result = self.pl2_dll.PL2_GetAnalogChannelDataBySource(self._file_handle,
-                                                               ctypes.c_int(source_id),
-                                                               ctypes.c_int(one_based_channel_index_in_source),
-                                                               num_fragments_returned,
-                                                               num_data_points_returned,
-                                                               fragment_timestamps,
-                                                               fragment_counts,
-                                                               values)
+        result = self.pl2_dll.PL2_GetAnalogChannelDataBySource(
+            self._file_handle,
+            ctypes.c_int(source_id),
+            ctypes.c_int(one_based_channel_index_in_source),
+            num_fragments_returned,
+            num_data_points_returned,
+            fragment_timestamps,
+            fragment_counts,
+            values,
+        )
 
         if not result:
             self._print_error()
@@ -593,10 +571,10 @@ class PyPL2FileReader:
     def pl2_get_spike_channel_info(self, zero_based_channel_index):
         """
         Retrieve information about a spike channel
-        
+
         Args:
             zero_based_channel_index - zero-based spike channel index
-        
+
         Returns:
             pl2_spike_channel_info - PL2SpikeChannelInfo class instance
         """
@@ -609,9 +587,9 @@ class PyPL2FileReader:
             ctypes.POINTER(PL2SpikeChannelInfo),
         )
 
-        result = self.pl2_dll.PL2_GetSpikeChannelInfo(self._file_handle,
-                                                      ctypes.c_int(zero_based_channel_index),
-                                                      ctypes.byref(pl2_spike_channel_info))
+        result = self.pl2_dll.PL2_GetSpikeChannelInfo(
+            self._file_handle, ctypes.c_int(zero_based_channel_index), ctypes.byref(pl2_spike_channel_info)
+        )
 
         if not result:
             self._print_error()
@@ -622,10 +600,10 @@ class PyPL2FileReader:
     def pl2_get_spike_channel_info_by_name(self, channel_name):
         """
         Retrieve information about a spike channel
-        
+
         Args:
             channel_name - spike channel name
-        
+
         Returns:
             pl2_spike_channel_info - PL2SpikeChannelInfo class instance
         """
@@ -636,21 +614,21 @@ class PyPL2FileReader:
             ctypes.POINTER(PL2SpikeChannelInfo),
         )
 
-        if hasattr(channel_name, 'encode'):
-            channel_name = channel_name.encode('ascii')
+        if hasattr(channel_name, "encode"):
+            channel_name = channel_name.encode("ascii")
 
         self.pl2_dll.PL2_GetSpikeChannelInfoByName.memsync = [
             {
-                'p': [1],
-                'n': True,  # null-terminated string flag
+                "p": [1],
+                "n": True,  # null-terminated string flag
             }
         ]
 
         pl2_spike_channel_info = PL2SpikeChannelInfo()
 
-        result = self.pl2_dll.PL2_GetSpikeChannelInfoByName(self._file_handle,
-                                                            channel_name,
-                                                            ctypes.byref(pl2_spike_channel_info))
+        result = self.pl2_dll.PL2_GetSpikeChannelInfoByName(
+            self._file_handle, channel_name, ctypes.byref(pl2_spike_channel_info)
+        )
 
         if not result:
             self._print_error()
@@ -661,11 +639,11 @@ class PyPL2FileReader:
     def pl2_get_spike_channel_info_by_source(self, source_id, one_based_channel_index_in_source):
         """
         Retrieve information about a spike channel
-        
+
         Args:
             source_id - numeric source ID
             one_based_channel_index_in_source - one-based channel index within the source
-        
+
         Returns:
             pl2_spike_channel_info - PL2SpikeChannelInfo class instance
         """
@@ -682,7 +660,8 @@ class PyPL2FileReader:
             self._file_handle,
             ctypes.c_int(source_id),
             ctypes.c_int(one_based_channel_index_in_source),
-            ctypes.byref(pl2_spike_channel_info))
+            ctypes.byref(pl2_spike_channel_info),
+        )
 
         if not result:
             self._print_error()
@@ -693,10 +672,10 @@ class PyPL2FileReader:
     def pl2_get_spike_channel_data(self, zero_based_channel_index):
         """
         Retrieve spike channel data
-        
+
         Args:
             zero_based_channel_index - zero based channel index
-        
+
         Returns:
             spike_timestamps - array the size of PL2SpikeChannelInfo.m_NumberOfSpikes
             units - array the size of PL2SpikeChannelInfo.m_NumberOfSpikes
@@ -715,41 +694,29 @@ class PyPL2FileReader:
             ctypes.POINTER(ctypes.c_ulonglong),
             ctypes.POINTER(ctypes.c_ulonglong),
             ctypes.POINTER(ctypes.c_ushort),
-            ctypes.POINTER(ctypes.c_short)
+            ctypes.POINTER(ctypes.c_short),
         )
 
         self.pl2_dll.PL2_GetSpikeChannelData.memsync = [
-            {
-                'p': [3],
-                'l': [2],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [4],
-                'l': [2],
-                't': ctypes.c_ushort
-            },
-            {
-                'p': [5],
-                'l': ([2],),
-                'func': f'lambda x: x.value * {samples_per_spike}',
-                't': ctypes.c_short
-            }
+            {"p": [3], "l": [2], "t": ctypes.c_longlong},
+            {"p": [4], "l": [2], "t": ctypes.c_ushort},
+            {"p": [5], "l": ([2],), "func": f"lambda x: x.value * {samples_per_spike}", "t": ctypes.c_short},
         ]
 
         # These will be filled in by the dll method.
         num_spikes_returned = ctypes.c_ulonglong(schannel_info.m_NumberOfSpikes)
         spike_timestamps = (ctypes.c_ulonglong * schannel_info.m_NumberOfSpikes)()
         units = (ctypes.c_ushort * schannel_info.m_NumberOfSpikes)()
-        values = (ctypes.c_short * (
-                schannel_info.m_NumberOfSpikes * schannel_info.m_SamplesPerSpike))()
+        values = (ctypes.c_short * (schannel_info.m_NumberOfSpikes * schannel_info.m_SamplesPerSpike))()
 
-        result = self.pl2_dll.PL2_GetSpikeChannelData(self._file_handle,
-                                                      ctypes.c_int(zero_based_channel_index),
-                                                      num_spikes_returned,
-                                                      spike_timestamps,
-                                                      units,
-                                                      values)
+        result = self.pl2_dll.PL2_GetSpikeChannelData(
+            self._file_handle,
+            ctypes.c_int(zero_based_channel_index),
+            num_spikes_returned,
+            spike_timestamps,
+            units,
+            values,
+        )
 
         if not result:
             self._print_error()
@@ -762,18 +729,18 @@ class PyPL2FileReader:
     def pl2_get_spike_channel_data_by_name(self, channel_name):
         """
         Retrieve spike channel data
-        
+
         Args:
             channel_name = channel name
-        
+
         Returns:
             spike_timestamps - array the size of PL2SpikeChannelInfo.m_NumberOfSpikes
             units - array the size of PL2SpikeChannelInfo.m_NumberOfSpikes
             values - array the size of (PL2SpikeChannelInfo.m_NumberOfSpikes * PL2SpikeChannelInfo.m_SamplesPerSpike)
         """
 
-        if hasattr(channel_name, 'encode'):
-            channel_name = channel_name.encode('ascii')
+        if hasattr(channel_name, "encode"):
+            channel_name = channel_name.encode("ascii")
 
         self.pl2_dll.PL2_GetSpikeChannelDataByName.argtypes = (
             ctypes.c_int,
@@ -781,7 +748,7 @@ class PyPL2FileReader:
             ctypes.POINTER(ctypes.c_ulonglong),
             ctypes.POINTER(ctypes.c_ulonglong),
             ctypes.POINTER(ctypes.c_ushort),
-            ctypes.POINTER(ctypes.c_short)
+            ctypes.POINTER(ctypes.c_short),
         )
 
         # extracting m_SamplesPerSpike to prepare data reading
@@ -792,40 +759,23 @@ class PyPL2FileReader:
 
         self.pl2_dll.PL2_GetSpikeChannelDataByName.memsync = [
             {
-                'p': [1],
-                'n': True,  # null-terminated string flag
+                "p": [1],
+                "n": True,  # null-terminated string flag
             },
-            {
-                'p': [3],
-                'l': [2],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [4],
-                'l': [2],
-                't': ctypes.c_ushort
-            },
-            {
-                'p': [5],
-                'l': ([2],),
-                'func': f'lambda x: x.value * {samples_per_spike}',
-                't': ctypes.c_short
-            }
+            {"p": [3], "l": [2], "t": ctypes.c_longlong},
+            {"p": [4], "l": [2], "t": ctypes.c_ushort},
+            {"p": [5], "l": ([2],), "func": f"lambda x: x.value * {samples_per_spike}", "t": ctypes.c_short},
         ]
 
         # These will be filled in by the dll method.
         num_spikes_returned = ctypes.c_ulonglong(schannel_info.m_NumberOfSpikes)
         spike_timestamps = (ctypes.c_ulonglong * schannel_info.m_NumberOfSpikes)()
         units = (ctypes.c_ushort * schannel_info.m_NumberOfSpikes)()
-        values = (ctypes.c_short * (
-                schannel_info.m_NumberOfSpikes * schannel_info.m_SamplesPerSpike))()
+        values = (ctypes.c_short * (schannel_info.m_NumberOfSpikes * schannel_info.m_SamplesPerSpike))()
 
-        result = self.pl2_dll.PL2_GetSpikeChannelDataByName(self._file_handle,
-                                                            channel_name,
-                                                            num_spikes_returned,
-                                                            spike_timestamps,
-                                                            units,
-                                                            values)
+        result = self.pl2_dll.PL2_GetSpikeChannelDataByName(
+            self._file_handle, channel_name, num_spikes_returned, spike_timestamps, units, values
+        )
 
         if not result:
             self._print_error()
@@ -833,13 +783,12 @@ class PyPL2FileReader:
 
         spike_array_shape = (schannel_info.m_NumberOfSpikes, schannel_info.m_SamplesPerSpike)
 
-        return to_array(spike_timestamps), to_array(units), to_array(values).reshape(
-            spike_array_shape)
+        return to_array(spike_timestamps), to_array(units), to_array(values).reshape(spike_array_shape)
 
     def pl2_get_spike_channel_data_by_source(self, source_id, one_based_channel_index_in_source):
         """
         Retrieve spike channel data
-        
+
         Args:
             source_id - numeric source ID
             one_based_channel_index_in_source - one-based channel index within the source
@@ -867,38 +816,26 @@ class PyPL2FileReader:
         samples_per_spike = schannel_info.m_SamplesPerSpike
 
         self.pl2_dll.PL2_GetSpikeChannelDataBySource.memsync = [
-            {
-                'p': [4],
-                'l': [3],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [5],
-                'l': [3],
-                't': ctypes.c_ushort
-            },
-            {
-                'p': [6],
-                'l': ([3],),
-                'func': f'lambda x: x.value * {samples_per_spike}',
-                't': ctypes.c_short
-            }
+            {"p": [4], "l": [3], "t": ctypes.c_longlong},
+            {"p": [5], "l": [3], "t": ctypes.c_ushort},
+            {"p": [6], "l": ([3],), "func": f"lambda x: x.value * {samples_per_spike}", "t": ctypes.c_short},
         ]
 
         # These will be filled in by the dll method.
         num_spikes_returned = ctypes.c_ulonglong(schannel_info.m_NumberOfSpikes)
         spike_timestamps = (ctypes.c_ulonglong * schannel_info.m_NumberOfSpikes)()
         units = (ctypes.c_ushort * schannel_info.m_NumberOfSpikes)()
-        values = (ctypes.c_short * (
-                schannel_info.m_NumberOfSpikes * schannel_info.m_SamplesPerSpike))()
+        values = (ctypes.c_short * (schannel_info.m_NumberOfSpikes * schannel_info.m_SamplesPerSpike))()
 
-        result = self.pl2_dll.PL2_GetSpikeChannelDataBySource(self._file_handle,
-                                                              ctypes.c_int(source_id),
-                                                              ctypes.c_int(one_based_channel_index_in_source),
-                                                              num_spikes_returned,
-                                                              spike_timestamps,
-                                                              units,
-                                                              values)
+        result = self.pl2_dll.PL2_GetSpikeChannelDataBySource(
+            self._file_handle,
+            ctypes.c_int(source_id),
+            ctypes.c_int(one_based_channel_index_in_source),
+            num_spikes_returned,
+            spike_timestamps,
+            units,
+            values,
+        )
 
         if not result:
             self._print_error()
@@ -906,16 +843,15 @@ class PyPL2FileReader:
 
         spike_array_shape = (schannel_info.m_NumberOfSpikes, schannel_info.m_SamplesPerSpike)
 
-        return to_array(spike_timestamps), to_array(units), to_array(values).reshape(
-            spike_array_shape)
+        return to_array(spike_timestamps), to_array(units), to_array(values).reshape(spike_array_shape)
 
     def pl2_get_digital_channel_info(self, zero_based_channel_index):
         """
         Retrieve information about a digital event channel
-        
+
         Args:
             zero_based_channel_index - zero-based digital event channel index
-        
+
         Returns:
             pl2_digital_channel_info - PL2DigitalChannelInfo class instance
         """
@@ -929,9 +865,7 @@ class PyPL2FileReader:
         pl2_digital_channel_info = PL2DigitalChannelInfo()
 
         result = self.pl2_dll.PL2_GetDigitalChannelInfo(
-            self._file_handle,
-            ctypes.c_int(zero_based_channel_index),
-            ctypes.byref(pl2_digital_channel_info)
+            self._file_handle, ctypes.c_int(zero_based_channel_index), ctypes.byref(pl2_digital_channel_info)
         )
 
         if not result:
@@ -943,16 +877,16 @@ class PyPL2FileReader:
     def pl2_get_digital_channel_info_by_name(self, channel_name):
         """
         Retrieve information about a digital event channel
-        
+
         Args:
             channel_name - digital event channel name
-        
+
         Returns:
             pl2_digital_channel_info - PL2DigitalChannelInfo class instance
         """
 
-        if hasattr(channel_name, 'encode'):
-            channel_name = channel_name.encode('ascii')
+        if hasattr(channel_name, "encode"):
+            channel_name = channel_name.encode("ascii")
 
         self.pl2_dll.PL2_GetDigitalChannelInfoByName.argtypes = (
             ctypes.c_int,
@@ -962,17 +896,15 @@ class PyPL2FileReader:
 
         self.pl2_dll.PL2_GetDigitalChannelInfoByName.memsync = [
             {
-                'p': [1],  # ctypes.POINTER argument
-                'n': True,  # null-terminated string flag
+                "p": [1],  # ctypes.POINTER argument
+                "n": True,  # null-terminated string flag
             }
         ]
 
         pl2_digital_channel_info = PL2DigitalChannelInfo()
 
         result = self.pl2_dll.PL2_GetDigitalChannelInfoByName(
-            self._file_handle,
-            channel_name,
-            ctypes.byref(pl2_digital_channel_info)
+            self._file_handle, channel_name, ctypes.byref(pl2_digital_channel_info)
         )
 
         if not result:
@@ -984,11 +916,11 @@ class PyPL2FileReader:
     def pl2_get_digital_channel_info_by_source(self, source_id, one_based_channel_index_in_source):
         """
         Retrieve information about a digital event channel
-        
+
         Args:
             source_id - numeric source ID
             one_based_channel_index_in_source - one-based channel index within the source
-        
+
         Returns:
             pl2_digital_channel_info - PL2DigitalChannelInfo class instance
         """
@@ -1006,7 +938,7 @@ class PyPL2FileReader:
             self._file_handle,
             ctypes.c_int(source_id),
             ctypes.c_int(one_based_channel_index_in_source),
-            ctypes.byref(pl2_digital_channel_info)
+            ctypes.byref(pl2_digital_channel_info),
         )
 
         if not result:
@@ -1018,10 +950,10 @@ class PyPL2FileReader:
     def pl2_get_digital_channel_data(self, zero_based_channel_index):
         """
         Retrieve digital even channel data
-        
+
         Args:
             zero_based_channel_index - zero-based digital event channel index
-        
+
         Returns:
             event_timestamps - array the size of PL2DigitalChannelInfo.m_NumberOfEvents
             event_values - array the size of PL2DigitalChannelInfo.m_NumberOfEvents
@@ -1036,16 +968,8 @@ class PyPL2FileReader:
         )
 
         self.pl2_dll.PL2_GetDigitalChannelData.memsync = [
-            {
-                'p': [3],
-                'l': [2],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [4],
-                'l': [2],
-                't': ctypes.c_ushort
-            },
+            {"p": [3], "l": [2], "t": ctypes.c_longlong},
+            {"p": [4], "l": [2], "t": ctypes.c_ushort},
         ]
 
         echannel_info = self.pl2_get_digital_channel_info(zero_based_channel_index)
@@ -1060,28 +984,29 @@ class PyPL2FileReader:
             ctypes.c_int(zero_based_channel_index),
             num_events_returned,
             event_timestamps,
-            event_values)
+            event_values,
+        )
 
         if not result:
             self._print_error()
             return None
-        
+
         return to_array(event_timestamps), to_array(event_values)
 
     def pl2_get_digital_channel_data_by_name(self, channel_name):
         """
         Retrieve digital even channel data
-        
+
         Args:
             channel_name - digital event channel name
-        
+
         Returns:
             event_timestamps - array the size of PL2DigitalChannelInfo.m_NumberOfEvents
             event_values - array the size of PL2DigitalChannelInfo.m_NumberOfEvents
         """
 
-        if hasattr(channel_name, 'encode'):
-            channel_name = channel_name.encode('ascii')
+        if hasattr(channel_name, "encode"):
+            channel_name = channel_name.encode("ascii")
 
         self.pl2_dll.PL2_GetDigitalChannelDataByName.argtypes = (
             ctypes.c_int,  # file handle
@@ -1093,33 +1018,23 @@ class PyPL2FileReader:
 
         self.pl2_dll.PL2_GetDigitalChannelDataByName.memsync = [
             {
-                'p': [1],  # ctypes.POINTER argument
-                'n': True,  # null-terminated string flag
+                "p": [1],  # ctypes.POINTER argument
+                "n": True,  # null-terminated string flag
             },
-            {
-                'p': [3],
-                'l': [2],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [4],
-                'l': [2],
-                't': ctypes.c_ushort
-            }
+            {"p": [3], "l": [2], "t": ctypes.c_longlong},
+            {"p": [4], "l": [2], "t": ctypes.c_ushort},
         ]
-        
+
         echannel_info = self.pl2_get_digital_channel_info_by_name(channel_name)
 
         # These will be filled in by the dll method.
         num_events_returned = ctypes.c_ulonglong(echannel_info.m_NumberOfEvents)
         event_timestamps = (ctypes.c_longlong * echannel_info.m_NumberOfEvents)()
         event_values = (ctypes.c_ushort * echannel_info.m_NumberOfEvents)()
-        
-        result = self.pl2_dll.PL2_GetDigitalChannelDataByName(self._file_handle,
-                                                              channel_name,
-                                                              num_events_returned,
-                                                              event_timestamps,
-                                                              event_values)
+
+        result = self.pl2_dll.PL2_GetDigitalChannelDataByName(
+            self._file_handle, channel_name, num_events_returned, event_timestamps, event_values
+        )
 
         if not result:
             self._print_error()
@@ -1130,11 +1045,11 @@ class PyPL2FileReader:
     def pl2_get_digital_channel_data_by_source(self, source_id, one_based_channel_index_in_source):
         """
         Retrieve digital even channel data
-        
+
         Args:
             source_id - numeric source ID
             one_based_channel_index_in_source - one-based channel index within the source
-        
+
         Returns:
             event_timestamps - array the size of PL2DigitalChannelInfo.m_NumberOfEvents
             event_values - array the size of PL2DigitalChannelInfo.m_NumberOfEvents
@@ -1150,20 +1065,11 @@ class PyPL2FileReader:
         )
 
         self.pl2_dll.PL2_GetDigitalChannelDataBySource.memsync = [
-            {
-                'p': [4],
-                'l': [3],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [5],
-                'l': [3],
-                't': ctypes.c_ushort
-            }
+            {"p": [4], "l": [3], "t": ctypes.c_longlong},
+            {"p": [5], "l": [3], "t": ctypes.c_ushort},
         ]
 
-        echannel_info = self.pl2_get_digital_channel_info_by_source(source_id,
-                                                                    one_based_channel_index_in_source)
+        echannel_info = self.pl2_get_digital_channel_info_by_source(source_id, one_based_channel_index_in_source)
 
         # These will be filled in by the dll method.
         num_events_returned = ctypes.c_ulonglong(echannel_info.m_NumberOfEvents)
@@ -1176,7 +1082,8 @@ class PyPL2FileReader:
             ctypes.c_int(one_based_channel_index_in_source),
             num_events_returned,
             event_timestamps,
-            event_values)
+            event_values,
+        )
 
         if not result:
             self._print_error()
@@ -1187,39 +1094,33 @@ class PyPL2FileReader:
     def pl2_get_start_stop_channel_info(self, number_of_start_stop_events):
         """
         Retrieve information about start/stop channel
-        
+
         Args:
             _file_handle - file handle
             number_of_start_stop_events - ctypes.c_ulonglong class instance
-        
+
         Returns:
             1 - Success
             0 - Failure
             The class instances passed to the function are filled with values
         """
 
-        self.pl2_dll.PL2_GetStartStopChannelInfo.argtypes = (
-            ctypes.c_int,
-            ctypes.POINTER(ctypes.c_ulonglong)
-        )
+        self.pl2_dll.PL2_GetStartStopChannelInfo.argtypes = (ctypes.c_int, ctypes.POINTER(ctypes.c_ulonglong))
 
-        result = self.pl2_dll.PL2_GetStartStopChannelInfo(
-            self._file_handle,
-            number_of_start_stop_events
-        )
+        result = self.pl2_dll.PL2_GetStartStopChannelInfo(self._file_handle, number_of_start_stop_events)
 
         return result
 
     def pl2_get_start_stop_channel_data(self, num_events_returned, event_timestamps, event_values):
         """
         Retrieve digital channel data
-        
+
         Args:
             _file_handle - file handle
             num_events_returned - ctypes.c_ulonglong class instance
             event_timestamps - ctypes.c_longlong class instance
             event_values - point to ctypes.c_ushort class instance
-        
+
         Returns:
             1 - Success
             0 - Failure
@@ -1230,32 +1131,23 @@ class PyPL2FileReader:
             ctypes.c_int,
             ctypes.POINTER(ctypes.c_ulonglong),
             ctypes.POINTER(ctypes.c_longlong),
-            ctypes.POINTER(ctypes.c_ushort)
+            ctypes.POINTER(ctypes.c_ushort),
         )
 
         self.pl2_dll.PL2_GetStartStopChannelInfo.memsync = [
-            {
-                'p': [2],
-                'l': [1],
-                't': ctypes.c_longlong
-            },
-            {
-                'p': [3],
-                'l': [1],
-                't': ctypes.c_ushort
-            },
+            {"p": [2], "l": [1], "t": ctypes.c_longlong},
+            {"p": [3], "l": [1], "t": ctypes.c_ushort},
         ]
 
-        result = self.pl2_dll.PL2_GetStartStopChannelData(self._file_handle,
-                                                          num_events_returned,
-                                                          event_timestamps,
-                                                          event_values)
+        result = self.pl2_dll.PL2_GetStartStopChannelData(
+            self._file_handle, num_events_returned, event_timestamps, event_values
+        )
 
         return result
 
     def _print_error(self):
         error_message = self.pl2_get_last_error()
-        print(f'pypl2lib error: {error_message}')
+        print(f"pypl2lib error: {error_message}")
 
     # PL2 data block functions purposefully not implemented.
     def pl2_read_first_data_block(self):

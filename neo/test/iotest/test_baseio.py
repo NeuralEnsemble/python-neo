@@ -13,11 +13,14 @@ class TestIOObjects(unittest.TestCase):
         reader = BaseIO()
         for ob in objectlist:
             if ob not in BaseIO.readable_objects:
-                meth = getattr(reader, 'read_' + ob.__name__.lower())
-                self.assertRaises(AssertionError, meth, )
+                meth = getattr(reader, "read_" + ob.__name__.lower())
+                self.assertRaises(
+                    AssertionError,
+                    meth,
+                )
 
             if ob not in BaseIO.writeable_objects:
-                meth = getattr(reader, 'write_' + ob.__name__.lower())
+                meth = getattr(reader, "write_" + ob.__name__.lower())
                 self.assertRaises(AssertionError, meth, ())
 
 

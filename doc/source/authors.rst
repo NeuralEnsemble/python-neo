@@ -60,9 +60,25 @@ and may not be the current affiliation of a contributor.
 * Etienne Combrisson [6]
 * Ben Dichter [24]
 * Elodie Legouée [21]
+* Oliver Kloss [13]
 * Heberto Mayorquin [24]
 * Thomas Perret [25]
 * Kyle Johnsen [26, 27]
+* Zach McKenzie [28]
+* Moritz Alexander Kern
+* Joscha Schmiedt
+* Daniel P. Crepeau
+* Divyansh Gupta
+* Nate Dolensek
+* Philipp Hornauer
+* Robert Wolff
+* Jules Lebert
+* Benjamin Heasly
+* Baptiste Grimaud
+* Cody Baker
+* Fernando J. Chaure
+* Filipe*github
+* Matthias Klumpp
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -91,6 +107,7 @@ and may not be the current affiliation of a contributor.
 25. Institut des Sciences Cognitives Marc Jeannerod, CNRS UMR5229, Lyon, France
 26. Georgia Institute of Technology
 27. Emory University
+28. Harvard Medical School
 
 If we've somehow missed you off the list we're very sorry - please let us know.
 

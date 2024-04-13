@@ -11,24 +11,30 @@ except ImportError:
 
 import numpy as np
 
-from neo.core import (AnalogSignal, Block,
-                      Epoch, Event,
-                      IrregularlySampledSignal,
-                      Group, ChannelView,
-                      Segment, SpikeTrain)
+from neo.core import (
+    AnalogSignal,
+    Block,
+    Epoch,
+    Event,
+    IrregularlySampledSignal,
+    Group,
+    ChannelView,
+    Segment,
+    SpikeTrain,
+)
 
 
 class LazyList(MutableSequence):
-    """ An enhanced list that can load its members on demand. Behaves exactly
+    """An enhanced list that can load its members on demand. Behaves exactly
     like a regular list for members that are Neo objects. Each item should
     contain the information that ``load_lazy_cascade`` needs to load the
     respective object.
     """
-    _container_objects = {
-        Block, Segment, Group}
+
+    _container_objects = {Block, Segment, Group}
     _neo_objects = _container_objects.union(
-        [AnalogSignal, Epoch, Event, ChannelView,
-         IrregularlySampledSignal, SpikeTrain])
+        [AnalogSignal, Epoch, Event, ChannelView, IrregularlySampledSignal, SpikeTrain]
+    )
 
     def __init__(self, io, lazy, items=None):
         """
@@ -81,7 +87,7 @@ class LazyList(MutableSequence):
         self._data.remove(value)
 
     def __str__(self):
-        return '<' + self.__class__.__name__ + '>' + self._data.__str__()
+        return "<" + self.__class__.__name__ + ">" + self._data.__str__()
 
     def __repr__(self):
-        return '<' + self.__class__.__name__ + '>' + self._data.__repr__()
+        return "<" + self.__class__.__name__ + ">" + self._data.__repr__()

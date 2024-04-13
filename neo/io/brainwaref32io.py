@@ -1,4 +1,4 @@
-'''
+"""
 Class for reading from Brainware F32 files
 
 F32 files are simplified binary files for holding spike data.  Unlike SRC
@@ -22,7 +22,7 @@ development of this code
 The code is implemented with the permission of Dr. Jan Schnupp
 
 Author: Todd Jennings
-'''
+"""
 
 # import needed core python modules
 from os import path
@@ -39,7 +39,7 @@ from neo.io.baseio import BaseIO
 
 
 class BrainwareF32IO(BaseIO):
-    '''
+    """
     Class for reading Brainware Spike ReCord files with the extension '.f32'
 
     The read_block method returns the first Block of the file.  It will
@@ -72,15 +72,14 @@ class BrainwareF32IO(BaseIO):
         >>> print blk1.units[0].name
         >>> print blk2
         >>> print blk2[0].segments
-    '''
+    """
 
     is_readable = True  # This class can only read data
     is_writable = False  # write is not supported
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects = [Block, Group,
-                         Segment, SpikeTrain]
+    supported_objects = [Block, Group, Segment, SpikeTrain]
 
     readable_objects = [Block]
     writeable_objects = []
@@ -99,16 +98,16 @@ class BrainwareF32IO(BaseIO):
 
     # does not support write so no GUI stuff
     write_params = None
-    name = 'Brainware F32 File'
-    extensions = ['f32']
+    name = "Brainware F32 File"
+    extensions = ["f32"]
 
-    mode = 'file'
+    mode = "file"
 
     def __init__(self, filename=None):
-        '''
+        """
         Arguments:
             filename: the filename
-        '''
+        """
         BaseIO.__init__(self)
         self._path = filename
         self._filename = path.basename(filename)
@@ -124,25 +123,24 @@ class BrainwareF32IO(BaseIO):
         self.__spiketimes = None
 
     def read_block(self, lazy=False, **kargs):
-        '''
+        """
         Reads a block from the simple spike data file "fname" generated
         with BrainWare
-        '''
-        assert not lazy, 'Do not support lazy'
+        """
+        assert not lazy, "Do not support lazy"
 
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
         if kargs:
-            raise NotImplementedError('This method does not have any '
-                                      'argument implemented yet')
+            raise NotImplementedError("This method does not have any " "argument implemented yet")
         self._fsrc = None
 
         self._blk = Block(file_origin=self._filename)
         block = self._blk
 
         # create the objects to store other objects
-        self.__unit_group =  Group(file_origin=self._filename)
+        self.__unit_group = Group(file_origin=self._filename)
         block.groups.append(self.__unit_group)
 
         # initialize values
@@ -152,7 +150,7 @@ class BrainwareF32IO(BaseIO):
         self.__spiketimes = None
 
         # open the file
-        with open(self._path, 'rb') as self._fsrc:
+        with open(self._path, "rb") as self._fsrc:
             res = True
             # while the file is not done keep reading segments
             while res:
@@ -184,11 +182,11 @@ class BrainwareF32IO(BaseIO):
     # -------------------------------------------------------------------------
 
     def __read_id(self):
-        '''
+        """
         Read the next ID number and do the appropriate task with it.
 
         Returns nothing.
-        '''
+        """
         try:
             # float32 -- ID of the first data sequence
             objid = np.fromfile(self._fsrc, dtype=np.float32, count=1)[0]
@@ -208,47 +206,44 @@ class BrainwareF32IO(BaseIO):
         return True
 
     def __read_condition(self):
-        '''
+        """
         Read the parameter values for a single stimulus condition.
 
         Returns nothing.
-        '''
+        """
         # float32 -- SpikeTrain length in ms
         self.__t_stop = np.fromfile(self._fsrc, dtype=np.float32, count=1)[0]
 
         # float32 -- number of stimulus parameters
-        numelements = int(np.fromfile(self._fsrc, dtype=np.float32,
-                                      count=1)[0])
+        numelements = int(np.fromfile(self._fsrc, dtype=np.float32, count=1)[0])
 
         # [float32] * numelements -- stimulus parameter values
-        paramvals = np.fromfile(self._fsrc, dtype=np.float32,
-                                count=numelements).tolist()
+        paramvals = np.fromfile(self._fsrc, dtype=np.float32, count=numelements).tolist()
 
         # organize the parameers into a dictionary with arbitrary names
-        paramnames = ['Param%s' % i for i in range(len(paramvals))]
+        paramnames = [f"Param{i}" for i in range(len(paramvals))]
         self.__params = dict(zip(paramnames, paramvals))
 
     def __read_segment(self):
-        '''
+        """
         Setup the next Segment.
 
         Returns nothing.
-        '''
+        """
         # if we have a previous segment, save it
         self.__save_segment()
 
         # create the segment
-        self.__seg = Segment(file_origin=self._filename,
-                             **self.__params)
+        self.__seg = Segment(file_origin=self._filename, **self.__params)
 
         # create an empy array to save the spike times
         # this needs to be converted to a SpikeTrain before it can be used
         self.__spiketimes = []
 
     def __save_segment(self):
-        '''
+        """
         Write the segment to the Block if it exists
-        '''
+        """
         # if this is the beginning of the first condition, then we don't want
         # to save, so exit
         # but set __seg from None to False so we know next time to create a
@@ -259,15 +254,11 @@ class BrainwareF32IO(BaseIO):
 
         if not self.__seg:
             # create dummy values if there are no SpikeTrains in this condition
-            self.__seg = Segment(file_origin=self._filename,
-                                 **self.__params)
+            self.__seg = Segment(file_origin=self._filename, **self.__params)
             self.__spiketimes = []
 
-        times = pq.Quantity(self.__spiketimes, dtype=np.float32,
-                            units=pq.ms)
-        train = SpikeTrain(times,
-                           t_start=0 * pq.ms, t_stop=self.__t_stop * pq.ms,
-                           file_origin=self._filename)
+        times = pq.Quantity(self.__spiketimes, dtype=np.float32, units=pq.ms)
+        train = SpikeTrain(times, t_start=0 * pq.ms, t_stop=self.__t_stop * pq.ms, file_origin=self._filename)
 
         self.__seg.spiketrains = [train]
         self.__unit_group.spiketrains.append(train)

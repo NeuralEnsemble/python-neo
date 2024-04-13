@@ -18,15 +18,15 @@ class MedIO(MedRawIO, BaseFromRaw):
     """
     IO for reading MED datasets.
     """
-    name = 'MED IO'
+
+    name = "MED IO"
     description = "IO for reading MED datasets"
-    
-    _prefered_signal_group_mode = 'group-by-same-units'
-    mode = 'dir'
+
+    _prefered_signal_group_mode = "group-by-same-units"
+    mode = "dir"
 
     def __init__(self, dirname=None, password=None, keep_original_times=False):
-        MedRawIO.__init__(self, dirname=dirname, password=password,
-            keep_original_times=keep_original_times)
+        MedRawIO.__init__(self, dirname=dirname, password=password, keep_original_times=keep_original_times)
         """
         Initialise IO instance
 
@@ -44,9 +44,9 @@ class MedIO(MedRawIO, BaseFromRaw):
             Default: False
         """
         BaseFromRaw.__init__(self, dirname)
-        
+
     def close(self):
         MedRawIO.close(self)
-        
+
     def __del__(self):
         MedRawIO.__del__(self)

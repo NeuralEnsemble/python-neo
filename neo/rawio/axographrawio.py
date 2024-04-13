@@ -154,8 +154,13 @@ Acquisition modes:
     Intervals".
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+from .baserawio import (
+    BaseRawIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
+)
 
 import os
 from datetime import datetime
@@ -169,57 +174,56 @@ class AxographRawIO(BaseRawIO):
     """
     RawIO class for reading AxoGraph files (.axgd, .axgx)
 
-    Args:
-        filename (string):
-            File name of the AxoGraph file to read.
-        force_single_segment (bool):
-            Episodic files are normally read as multi-Segment Neo objects. This
-            parameter can force AxographRawIO to put all signals into a single
-            Segment. Default: False.
+    Parameters
+    ----------
+    filename: str
+        File name of the AxoGraph file to read.
+    force_single_segment: bool, default: False
+        Episodic files are normally read as multi-Segment Neo objects. This
+        parameter can force AxographRawIO to put all signals into a single
+        Segment.
 
-    Example:
+    Examples
+    --------
         >>> import neo
-        >>> r = neo.rawio.AxographRawIO(filename=filename)
-        >>> r.parse_header()
-        >>> print(r)
+        >>> reader = neo.rawio.AxographRawIO(filename=filename)
+        >>> reader.parse_header()
+        >>> print(reader)
 
         >>> # get signals
-        >>> raw_chunk = r.get_analogsignal_chunk(
-        ...     block_index=0, seg_index=0,
-        ...     i_start=0, i_stop=1024,
-        ...     channel_names=channel_names)
-        >>> float_chunk = r.rescale_signal_raw_to_float(
-        ...     raw_chunk,
-        ...     dtype='float64',
-        ...     channel_names=channel_names)
+        >>> raw_chunk = reader.get_analogsignal_chunk(block_index=0,
+        ...                                           seg_index=0,
+        ...                                           i_start=0,
+        ...                                           i_stop=1024,
+        ...                                           channel_names=channel_names)
+
+        >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk,
+        ...                                             dtype='float64',
+        ...                                             channel_names=channel_names)
         >>> print(float_chunk)
 
         >>> # get event markers
-        >>> ev_raw_times, _, ev_labels = r.get_event_timestamps(
-        ...     event_channel_index=0)
-        >>> ev_times = r.rescale_event_timestamp(
-        ...     ev_raw_times, dtype='float64')
+        >>> ev_raw_times, _, ev_labels = reader.get_event_timestamps(event_channel_index=0)
+        >>> ev_times = reader.rescale_event_timestamp(ev_raw_times, dtype='float64')
         >>> print([ev for ev in zip(ev_times, ev_labels)])
 
         >>> # get interval bars
-        >>> ep_raw_times, ep_raw_durations, ep_labels = r.get_event_timestamps(
-        ...     event_channel_index=1)
-        >>> ep_times = r.rescale_event_timestamp(
-        ...     ep_raw_times, dtype='float64')
-        >>> ep_durations = r.rescale_epoch_duration(
-        ...     ep_raw_durations, dtype='float64')
+        >>> ep_raw_times, ep_raw_durations, ep_labels = reader.get_event_timestamps(event_channel_index=1)
+        >>> ep_times = reader.rescale_event_timestamp(ep_raw_times, dtype='float64')
+        >>> ep_durations = reader.rescale_epoch_duration(ep_raw_durations, dtype='float64')
         >>> print([ep for ep in zip(ep_times, ep_durations, ep_labels)])
 
         >>> # get notes
-        >>> print(r.info['notes'])
+        >>> print(reader.info['notes'])
 
         >>> # get other miscellaneous info
-        >>> print(r.info)
+        >>> print(reader.info)
     """
-    name = 'AxographRawIO'
-    description = 'This IO reads .axgd/.axgx files created with AxoGraph'
-    extensions = ['axgd', 'axgx', '']
-    rawmode = 'one-file'
+
+    name = "AxographRawIO"
+    description = "This IO reads .axgd/.axgx files created with AxoGraph"
+    extensions = ["axgd", "axgx", ""]
+    rawmode = "one-file"
 
     def __init__(self, filename, force_single_segment=False):
         BaseRawIO.__init__(self)
@@ -233,23 +237,22 @@ class AxographRawIO(BaseRawIO):
         self._scan_axograph_file()
 
         if not self.force_single_segment and self._safe_to_treat_as_episodic():
-            self.logger.debug('Will treat as episodic')
+            self.logger.debug("Will treat as episodic")
             self._convert_to_multi_segment()
         else:
-            self.logger.debug('Will not treat as episodic')
-        self.logger.debug('')
+            self.logger.debug("Will not treat as episodic")
+        self.logger.debug("")
 
         self._generate_minimal_annotations()
-        blk_annotations = self.raw_annotations['blocks'][0]
-        blk_annotations['format_ver'] = self.info['format_ver']
-        blk_annotations['comment'] = self.info['comment'] if 'comment' in self.info else None
-        blk_annotations['notes'] = self.info['notes'] if 'notes' in self.info else None
-        blk_annotations['rec_datetime'] = self._get_rec_datetime()
+        blk_annotations = self.raw_annotations["blocks"][0]
+        blk_annotations["format_ver"] = self.info["format_ver"]
+        blk_annotations["comment"] = self.info["comment"] if "comment" in self.info else None
+        blk_annotations["notes"] = self.info["notes"] if "notes" in self.info else None
+        blk_annotations["rec_datetime"] = self._get_rec_datetime()
 
         # modified time is not ideal but less prone to
         # cross-platform issues than created time (ctime)
-        blk_annotations['file_datetime'] = datetime.fromtimestamp(
-            os.path.getmtime(self.filename))
+        blk_annotations["file_datetime"] = datetime.fromtimestamp(os.path.getmtime(self.filename))
 
     def _source_name(self):
         return self.filename
@@ -260,8 +263,7 @@ class AxographRawIO(BaseRawIO):
 
     def _segment_t_stop(self, block_index, seg_index):
         # same for all signals in all segments
-        t_stop = self._t_start + \
-            len(self._raw_signals[seg_index][0]) * self._sampling_period
+        t_stop = self._t_start + len(self._raw_signals[seg_index][0]) * self._sampling_period
         return t_stop
 
     ###
@@ -275,18 +277,14 @@ class AxographRawIO(BaseRawIO):
         # same for all signals in all segments
         return self._t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
-                                stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
 
-        if channel_indexes is None or \
-           np.all(channel_indexes == slice(None, None, None)):
+        if channel_indexes is None or np.all(channel_indexes == slice(None, None, None)):
             channel_indexes = range(self.signal_channels_count(stream_index))
 
-        raw_signals = [self._raw_signals
-                       [seg_index]
-                       [channel_index]
-                       [slice(i_start, i_stop)]
-                       for channel_index in channel_indexes]
+        raw_signals = [
+            self._raw_signals[seg_index][channel_index][slice(i_start, i_stop)] for channel_index in channel_indexes
+        ]
         raw_signals = np.array(raw_signals).T  # loads data into memory
 
         return raw_signals
@@ -298,8 +296,7 @@ class AxographRawIO(BaseRawIO):
         # not supported
         return None
 
-    def _get_spike_timestamps(self, block_index, seg_index, unit_index,
-                              t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         # not supported
         return None
 
@@ -310,8 +307,7 @@ class AxographRawIO(BaseRawIO):
     ###
     # spike waveforms zone
 
-    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
-                                 t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         # not supported
         return None
 
@@ -332,8 +328,7 @@ class AxographRawIO(BaseRawIO):
 
         return self._raw_event_epoch_timestamps[event_channel_index].size
 
-    def _get_event_timestamps(self, block_index, seg_index,
-                              event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
 
         # Retrieve either event or epoch data, unscaled:
         #   event_channel_index: 0 AxoGraph Tags, 1 AxoGraph Intervals
@@ -366,8 +361,7 @@ class AxographRawIO(BaseRawIO):
             # epochs
             if t_start is not None:
                 # keep if epoch ends after t_start ...
-                keep = timestamps + durations >= \
-                    int(t_start / self._sampling_period)
+                keep = timestamps + durations >= int(t_start / self._sampling_period)
                 timestamps = timestamps[keep]
                 durations = durations[keep]
                 labels = labels[keep]
@@ -407,58 +401,51 @@ class AxographRawIO(BaseRawIO):
 
         # First check: Old AxoGraph file formats do not contain enough metadata
         # to know for certain that the file is episodic.
-        if self.info['format_ver'] < 3:
-            self.logger.debug('Cannot treat as episodic because old format '
-                              'contains insufficient metadata')
+        if self.info["format_ver"] < 3:
+            self.logger.debug("Cannot treat as episodic because old format " "contains insufficient metadata")
             return False
 
         # Second check: If the file is episodic, it should report that it
         # contains more than 1 episode.
-        if 'n_episodes' not in self.info:
-            self.logger.debug('Cannot treat as episodic because episode '
-                              'metadata is missing or could not be parsed')
+        if "n_episodes" not in self.info:
+            self.logger.debug("Cannot treat as episodic because episode " "metadata is missing or could not be parsed")
             return False
-        if self.info['n_episodes'] == 1:
-            self.logger.debug('Cannot treat as episodic because file reports '
-                              'one episode')
+        if self.info["n_episodes"] == 1:
+            self.logger.debug("Cannot treat as episodic because file reports " "one episode")
             return False
 
         # Third check: If the file is episodic, groups of traces should all
         # contain the same number of traces, one for each episode. This is
         # generally true of "continuous" (single-episode) recordings as well,
         # which normally have 1 trace per group.
-        if 'group_header_info_list' not in self.info:
-            self.logger.debug('Cannot treat as episodic because group '
-                              'metadata is missing or could not be parsed')
+        if "group_header_info_list" not in self.info:
+            self.logger.debug("Cannot treat as episodic because group " "metadata is missing or could not be parsed")
             return False
-        if 'trace_header_info_list' not in self.info:
-            self.logger.debug('Cannot treat as episodic because trace '
-                              'metadata is missing or could not be parsed')
+        if "trace_header_info_list" not in self.info:
+            self.logger.debug("Cannot treat as episodic because trace " "metadata is missing or could not be parsed")
             return False
 
         group_id_to_col_indexes = {}
-        for group_id in self.info['group_header_info_list']:
+        for group_id in self.info["group_header_info_list"]:
             col_indexes = []
-            for trace_header in self.info['trace_header_info_list'].values():
-                if trace_header['group_id_for_this_trace'] == group_id:
-                    col_indexes.append(trace_header['y_index'])
+            for trace_header in self.info["trace_header_info_list"].values():
+                if trace_header["group_id_for_this_trace"] == group_id:
+                    col_indexes.append(trace_header["y_index"])
             group_id_to_col_indexes[group_id] = col_indexes
-        n_traces_by_group = {k: len(v) for k, v in
-                             group_id_to_col_indexes.items()}
-        all_groups_have_same_number_of_traces = len(np.unique(list(
-            n_traces_by_group.values()))) == 1
+        n_traces_by_group = {k: len(v) for k, v in group_id_to_col_indexes.items()}
+        all_groups_have_same_number_of_traces = len(np.unique(list(n_traces_by_group.values()))) == 1
 
         if not all_groups_have_same_number_of_traces:
-            self.logger.debug('Cannot treat as episodic because groups differ '
-                              'in number of traces')
+            self.logger.debug("Cannot treat as episodic because groups differ " "in number of traces")
             return False
 
         # Fourth check: The number of traces in each group should equal
         # n_episodes.
         n_traces_per_group = np.unique(list(n_traces_by_group.values()))
-        if n_traces_per_group != self.info['n_episodes']:
-            self.logger.debug('Cannot treat as episodic because n_episodes '
-                              'does not match number of traces per group')
+        if n_traces_per_group != self.info["n_episodes"]:
+            self.logger.debug(
+                "Cannot treat as episodic because n_episodes " "does not match number of traces per group"
+            )
             return False
 
         # Fifth check: If the file is episodic, all traces within a group
@@ -466,28 +453,23 @@ class AxographRawIO(BaseRawIO):
         # except for their unique ids. This too is generally true of
         # "continuous" (single-episode) files, which normally have 1 trace per
         # group.
-        signal_channels_with_ids_dropped = \
-            self.header['signal_channels'][
-                [n for n in self.header['signal_channels'].dtype.names
-                 if n != 'id']]
+        signal_channels_with_ids_dropped = self.header["signal_channels"][
+            [n for n in self.header["signal_channels"].dtype.names if n != "id"]
+        ]
         group_has_uniform_signal_parameters = {}
         for group_id, col_indexes in group_id_to_col_indexes.items():
             # subtract 1 from indexes in next statement because time is not
             # included in signal_channels
-            signal_params_for_group = np.array(
-                signal_channels_with_ids_dropped[np.array(col_indexes) - 1])
-            group_has_uniform_signal_parameters[group_id] = \
-                len(np.unique(signal_params_for_group)) == 1
-        all_groups_have_uniform_signal_parameters = \
-            np.all(list(group_has_uniform_signal_parameters.values()))
+            signal_params_for_group = np.array(signal_channels_with_ids_dropped[np.array(col_indexes) - 1])
+            group_has_uniform_signal_parameters[group_id] = len(np.unique(signal_params_for_group)) == 1
+        all_groups_have_uniform_signal_parameters = np.all(list(group_has_uniform_signal_parameters.values()))
 
         if not all_groups_have_uniform_signal_parameters:
-            self.logger.debug('Cannot treat as episodic because some groups '
-                              'have heterogeneous signal parameters')
+            self.logger.debug("Cannot treat as episodic because some groups " "have heterogeneous signal parameters")
             return False
 
         # all checks passed
-        self.logger.debug('Can treat as episodic')
+        self.logger.debug("Can treat as episodic")
         return True
 
     def _convert_to_multi_segment(self):
@@ -495,24 +477,20 @@ class AxographRawIO(BaseRawIO):
         Reshape signal headers and signal data for an episodic file
         """
 
-        self.header['nb_segment'] = [self.info['n_episodes']]
+        self.header["nb_segment"] = [self.info["n_episodes"]]
 
         # drop repeated signal headers
-        self.header['signal_channels'] = \
-            self.header['signal_channels'].reshape(
-                self.info['n_episodes'], -1)[0]
+        self.header["signal_channels"] = self.header["signal_channels"].reshape(self.info["n_episodes"], -1)[0]
 
         # reshape signal memmap list
         new_sig_memmaps = []
-        n_channels = len(self.header['signal_channels'])
+        n_channels = len(self.header["signal_channels"])
         sig_memmaps = self._raw_signals[0]
         for first_index in np.arange(0, len(sig_memmaps), n_channels):
-            new_sig_memmaps.append(
-                sig_memmaps[first_index:first_index + n_channels])
+            new_sig_memmaps.append(sig_memmaps[first_index : first_index + n_channels])
         self._raw_signals = new_sig_memmaps
 
-        self.logger.debug('New number of segments: {}'.format(
-            self.info['n_episodes']))
+        self.logger.debug(f"New number of segments: {self.info['n_episodes']}")
 
         return
 
@@ -525,32 +503,31 @@ class AxographRawIO(BaseRawIO):
         """
 
         rec_datetime = None
-        date_string = ''
-        time_string = ''
-        datetime_string = ''
+        date_string = ""
+        time_string = ""
+        datetime_string = ""
 
-        if 'notes' not in self.info:
+        if "notes" not in self.info:
             return None
 
-        for note_line in self.info['notes'].split('\n'):
+        for note_line in self.info["notes"].split("\n"):
 
             # episodic acquisition mode
-            if note_line.startswith('Created on '):
-                date_string = note_line.strip('Created on ')
-            if note_line.startswith('Start data acquisition at '):
-                time_string = note_line.strip('Start data acquisition at ')
+            if note_line.startswith("Created on "):
+                date_string = note_line.strip("Created on ")
+            if note_line.startswith("Start data acquisition at "):
+                time_string = note_line.strip("Start data acquisition at ")
 
             # continuous acquisition mode
-            if note_line.startswith('Created : '):
-                datetime_string = note_line.strip('Created : ')
+            if note_line.startswith("Created : "):
+                datetime_string = note_line.strip("Created : ")
 
         if date_string and time_string:
-            datetime_string = ' '.join([date_string, time_string])
+            datetime_string = " ".join([date_string, time_string])
 
         if datetime_string:
             try:
-                rec_datetime = datetime.strptime(datetime_string,
-                                                 '%a %b %d %Y %H:%M:%S')
+                rec_datetime = datetime.strptime(datetime_string, "%a %b %d %Y %H:%M:%S")
             except ValueError:
                 pass
 
@@ -564,21 +541,20 @@ class AxographRawIO(BaseRawIO):
 
         self.info = {}
 
-        with open(self.filename, 'rb') as fid:
+        with open(self.filename, "rb") as fid:
             f = StructFile(fid)
 
-            self.logger.debug('filename: {}'.format(self.filename))
-            self.logger.debug('')
+            self.logger.debug(f"filename: {self.filename}")
+            self.logger.debug("")
 
             # the first 4 bytes are always a 4-character file type identifier
             # - for early versions of AxoGraph, this identifier was 'AxGr'
             # - starting with AxoGraph X, the identifier is 'axgx'
-            header_id = f.read(4).decode('utf-8')
-            self.info['header_id'] = header_id
-            assert header_id in ['AxGr', 'axgx'], \
-                'not an AxoGraph binary file! "{}"'.format(self.filename)
+            header_id = f.read(4).decode("utf-8")
+            self.info["header_id"] = header_id
+            assert header_id in ["AxGr", "axgx"], f'not an AxoGraph binary file! "{self.filename}"'
 
-            self.logger.debug('header_id: {}'.format(header_id))
+            self.logger.debug(f"{header_id=}")
 
             # the next two numbers store the format version number and the
             # number of data columns to follow
@@ -586,26 +562,24 @@ class AxographRawIO(BaseRawIO):
             # - for 'axgx' files, these numbers are 4-byte long ints
             # - the 4-character identifier changed from 'AxGr' to 'axgx' with
             #   format version 3
-            if header_id == 'AxGr':
-                format_ver, n_cols = f.read_f('HH')
-                assert format_ver == 1 or format_ver == 2, \
-                    'mismatch between header identifier "{}" and format ' \
-                    'version "{}"!'.format(header_id, format_ver)
-            elif header_id == 'axgx':
-                format_ver, n_cols = f.read_f('ll')
-                assert format_ver >= 3, \
-                    'mismatch between header identifier "{}" and format ' \
-                    'version "{}"!'.format(header_id, format_ver)
+            if header_id == "AxGr":
+                format_ver, n_cols = f.read_f("HH")
+                assert format_ver == 1 or format_ver == 2, (
+                    f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                )
+            elif header_id == "axgx":
+                format_ver, n_cols = f.read_f("ll")
+                assert format_ver >= 3, (
+                    f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                )
             else:
-                raise NotImplementedError(
-                    'unimplemented file header identifier "{}"!'.format(
-                        header_id))
-            self.info['format_ver'] = format_ver
-            self.info['n_cols'] = n_cols
+                raise NotImplementedError(f'unimplemented file header identifier "{header_id}"!')
+            self.info["format_ver"] = format_ver
+            self.info["n_cols"] = n_cols
 
-            self.logger.debug('format_ver: {}'.format(format_ver))
-            self.logger.debug('n_cols: {}'.format(n_cols))
-            self.logger.debug('')
+            self.logger.debug(f"format_ver: {format_ver}")
+            self.logger.debug(f"n_cols: {n_cols}")
+            self.logger.debug("")
 
             ##############################################
             # BEGIN COLUMNS
@@ -614,14 +588,14 @@ class AxographRawIO(BaseRawIO):
             sig_channels = []
             for i in range(n_cols):
 
-                self.logger.debug('== COLUMN INDEX {} =='.format(i))
+                self.logger.debug(f"== COLUMN INDEX {i} ==")
 
                 ##############################################
                 # NUMBER OF DATA POINTS IN COLUMN
 
-                n_points = f.read_f('l')
+                n_points = f.read_f("l")
 
-                self.logger.debug('n_points: {}'.format(n_points))
+                self.logger.debug(f"n_points: {n_points}")
 
                 ##############################################
                 # COLUMN TYPE
@@ -634,13 +608,11 @@ class AxographRawIO(BaseRawIO):
                 if format_ver == 1 or format_ver == 2:
                     col_type = None
                 elif format_ver >= 3:
-                    col_type = f.read_f('l')
+                    col_type = f.read_f("l")
                 else:
-                    raise NotImplementedError(
-                        'unimplemented file format version "{}"!'.format(
-                            format_ver))
+                    raise NotImplementedError(f'unimplemented file format version "{format_ver}"!')
 
-                self.logger.debug('col_type: {}'.format(col_type))
+                self.logger.debug(f"col_type: {col_type}")
 
                 ##############################################
                 # COLUMN NAME AND UNITS
@@ -653,28 +625,25 @@ class AxographRawIO(BaseRawIO):
                 #   variable-length strings (see StructFile.read_string for
                 #   details)
                 if format_ver == 1 or format_ver == 2:
-                    title = f.read_f('80p').decode('utf-8')
+                    title = f.read_f("80p").decode("utf-8")
                 elif format_ver >= 3:
-                    title = f.read_f('S')
+                    title = f.read_f("S")
                 else:
-                    raise NotImplementedError(
-                        'unimplemented file format version "{}"!'.format(
-                            format_ver))
+                    raise NotImplementedError(f'unimplemented file format version "{format_ver}"!')
 
-                self.logger.debug('title: {}'.format(title))
+                self.logger.debug(f"title: {title}")
 
                 # units are given in parentheses at the end of a column title,
                 # unless units are absent
-                if len(title.split()) > 0 and title.split()[-1][0] == '(' and \
-                   title.split()[-1][-1] == ')':
-                    name = ' '.join(title.split()[:-1])
-                    units = title.split()[-1].strip('()')
+                if len(title.split()) > 0 and title.split()[-1][0] == "(" and title.split()[-1][-1] == ")":
+                    name = " ".join(title.split()[:-1])
+                    units = title.split()[-1].strip("()")
                 else:
                     name = title
-                    units = ''
+                    units = ""
 
-                self.logger.debug('name: {}'.format(name))
-                self.logger.debug('units: {}'.format(units))
+                self.logger.debug(f"name: {name}")
+                self.logger.debug(f"units: {units}")
 
                 ##############################################
                 # COLUMN DTYPE, SCALE, OFFSET
@@ -683,7 +652,7 @@ class AxographRawIO(BaseRawIO):
 
                     # for format version 1, all columns are arrays of floats
 
-                    dtype = 'f'
+                    dtype = "f"
                     gain, offset = 1, 0  # data is neither scaled nor off-set
 
                 elif format_ver == 2:
@@ -696,31 +665,25 @@ class AxographRawIO(BaseRawIO):
                     if i == 0:
 
                         # series
-                        first_value, increment = f.read_f('ff')
+                        first_value, increment = f.read_f("ff")
 
-                        self.logger.debug(
-                            'interval: {}, freq: {}'.format(
-                                increment, 1 / increment))
-                        self.logger.debug(
-                            'start: {}, end: {}'.format(
-                                first_value,
-                                first_value + increment * (n_points - 1)))
+                        self.logger.debug(f"interval: {increment}, freq: {1 / increment}")
+                        self.logger.debug(f"start: {first_value}, end: {first_value + increment * (n_points - 1)}")
 
                         # assume this is the time column
                         t_start, sampling_period = first_value, increment
-                        self.info['t_start'] = t_start
-                        self.info['sampling_period'] = sampling_period
+                        self.info["t_start"] = t_start
+                        self.info["sampling_period"] = sampling_period
 
-                        self.logger.debug('')
+                        self.logger.debug("")
 
                         continue  # skip memmap, chan info for time col
 
                     else:
 
                         # scaled short
-                        dtype = 'h'
-                        gain, offset = \
-                            f.read_f('f'), 0  # data is scaled without offset
+                        dtype = "h"
+                        gain, offset = f.read_f("f"), 0  # data is scaled without offset
 
                 elif format_ver >= 3:
 
@@ -737,85 +700,72 @@ class AxographRawIO(BaseRawIO):
                     if col_type == 9:
 
                         # series
-                        first_value, increment = f.read_f('dd')
+                        first_value, increment = f.read_f("dd")
 
-                        self.logger.debug(
-                            'interval: {}, freq: {}'.format(
-                                increment, 1 / increment))
-                        self.logger.debug(
-                            'start: {}, end: {}'.format(
-                                first_value,
-                                first_value + increment * (n_points - 1)))
+                        self.logger.debug(f"interval: {increment}, freq: {1 / increment}")
+                        self.logger.debug("start: {first_value}, end: {first_value + increment * (n_points - 1)}")
 
                         if i == 0:
 
                             # assume this is the time column
                             t_start, sampling_period = first_value, increment
-                            self.info['t_start'] = t_start
-                            self.info['sampling_period'] = sampling_period
+                            self.info["t_start"] = t_start
+                            self.info["sampling_period"] = sampling_period
 
-                            self.logger.debug('')
+                            self.logger.debug("")
 
                             continue  # skip memmap, chan info for time col
 
                         else:
 
                             raise NotImplementedError(
-                                'series data are supported only for the first '
-                                'data column (time)!')
+                                "series data are supported only for the first " "data column (time)!"
+                            )
 
                     elif col_type == 4:
 
                         # short
-                        dtype = 'h'
+                        dtype = "h"
                         gain, offset = 1, 0  # data neither scaled nor off-set
 
                     elif col_type == 5:
 
                         # long
-                        dtype = 'l'
+                        dtype = "l"
                         gain, offset = 1, 0  # data neither scaled nor off-set
 
                     elif col_type == 6:
 
                         # float
-                        dtype = 'f'
+                        dtype = "f"
                         gain, offset = 1, 0  # data neither scaled nor off-set
 
                     elif col_type == 7:
 
                         # double
-                        dtype = 'd'
+                        dtype = "d"
                         gain, offset = 1, 0  # data neither scaled nor off-set
 
                     elif col_type == 10:
 
                         # scaled short
-                        dtype = 'h'
-                        gain, offset = f.read_f('dd')  # data scaled w/ offset
+                        dtype = "h"
+                        gain, offset = f.read_f("dd")  # data scaled w/ offset
 
                     else:
 
-                        raise NotImplementedError(
-                            'unimplemented column type "{}"!'.format(col_type))
+                        raise NotImplementedError(f'unimplemented column type "{col_type}"!')
 
                 else:
 
-                    raise NotImplementedError(
-                        'unimplemented file format version "{}"!'.format(
-                            format_ver))
+                    raise NotImplementedError(f'unimplemented file format version "{format_ver}"!')
 
                 ##############################################
                 # COLUMN MEMMAP AND CHANNEL INFO
 
                 # create a memory map that allows accessing parts of the file
                 # without loading it all into memory
-                array = np.memmap(
-                    self.filename,
-                    mode='r',
-                    dtype=f.byte_order + dtype,
-                    offset=f.tell(),
-                    shape=n_points)
+                array = np.memmap(self.filename, mode="r", dtype=f.byte_order + dtype, offset=f.tell(), shape=n_points)
 
                 # advance the file position to after the data array
                 f.seek(array.nbytes, 1)
@@ -826,50 +776,42 @@ class AxographRawIO(BaseRawIO):
                     # verify times are spaced regularly
                     diffs = np.diff(array)
                     increment = np.median(diffs)
-                    max_frac_step_deviation = np.max(np.abs(
-                        diffs / increment - 1))
+                    max_frac_step_deviation = np.max(np.abs(diffs / increment - 1))
                     tolerance = 1e-3
                     if max_frac_step_deviation > tolerance:
-                        self.logger.debug('largest proportional deviation '
-                                          'from median step size in the first '
-                                          'column exceeds the tolerance '
-                                          'of ' + str(tolerance) + ':'
-                                          ' ' + str(max_frac_step_deviation))
-                        raise ValueError('first data column (assumed to be '
-                                         'time) is not regularly spaced')
+                        self.logger.debug(
+                            "largest proportional deviation "
+                            "from median step size in the first "
+                            "column exceeds the tolerance "
+                            "of " + str(tolerance) + ":"
+                            " " + str(max_frac_step_deviation)
+                        )
+                        raise ValueError("first data column (assumed to be " "time) is not regularly spaced")
 
                     first_value = array[0]
 
-                    self.logger.debug(
-                        'interval: {}, freq: {}'.format(
-                            increment, 1 / increment))
-                    self.logger.debug(
-                        'start: {}, end: {}'.format(
-                            first_value,
-                            first_value + increment * (n_points - 1)))
+                    self.logger.debug(f"interval: {increment}, freq: {1 / increment}")
+                    self.logger.debug(f"start: {first_value}, end: {first_value + increment * (n_points - 1)}")
 
                     t_start, sampling_period = first_value, increment
-                    self.info['t_start'] = t_start
-                    self.info['sampling_period'] = sampling_period
+                    self.info["t_start"] = t_start
+                    self.info["sampling_period"] = sampling_period
 
-                    self.logger.debug('')
+                    self.logger.debug("")
 
                     continue  # skip saving memmap, chan info for time col
 
                 else:
                     # not a time column
 
-                    self.logger.debug('gain: {}, offset: {}'.format(gain, offset))
-                    self.logger.debug('initial data: {}'.format(
-                        array[:5] * gain + offset))
+                    self.logger.debug(f"gain: {gain}, offset: {offset}")
+                    self.logger.debug("initial data: {array[:5] * gain + offset}")
 
                     # channel_info will be cast to _signal_channel_dtype
-                    channel_info = (
-                        name, str(i), 1 / sampling_period, f.byte_order + dtype,
-                        units, gain, offset, '0')
+                    channel_info = (name, str(i), 1 / sampling_period, f.byte_order + dtype, units, gain, offset, "0")
 
-                    self.logger.debug('channel_info: {}'.format(channel_info))
-                    self.logger.debug('')
+                    self.logger.debug("channel_info: {channel_info}")
+                    self.logger.debug("")
 
                     sig_memmaps.append(array)
                     sig_channels.append(channel_info)
@@ -890,116 +832,110 @@ class AxographRawIO(BaseRawIO):
                 ##############################################
                 # COMMENT
 
-                self.logger.debug('== COMMENT ==')
+                self.logger.debug("== COMMENT ==")
 
-                comment = f.read_f('S')
-                self.info['comment'] = comment
+                comment = f.read_f("S")
+                self.info["comment"] = comment
 
-                self.logger.debug(comment if comment else 'no comment!')
-                self.logger.debug('')
+                self.logger.debug(comment if comment else "no comment!")
+                self.logger.debug("")
 
                 ##############################################
                 # NOTES
 
-                self.logger.debug('== NOTES ==')
+                self.logger.debug("== NOTES ==")
 
-                notes = f.read_f('S')
-                self.info['notes'] = notes
+                notes = f.read_f("S")
+                self.info["notes"] = notes
 
-                self.logger.debug(notes if notes else 'no notes!')
-                self.logger.debug('')
+                self.logger.debug(notes if notes else "no notes!")
+                self.logger.debug("")
 
                 ##############################################
                 # TRACES
 
-                self.logger.debug('== TRACES ==')
+                self.logger.debug("== TRACES ==")
 
-                n_traces = f.read_f('l')
-                self.info['n_traces'] = n_traces
+                n_traces = f.read_f("l")
+                self.info["n_traces"] = n_traces
 
-                self.logger.debug('n_traces: {}'.format(n_traces))
-                self.logger.debug('')
+                self.logger.debug(f"n_traces: {n_traces}")
+                self.logger.debug("")
 
                 trace_header_info_list = {}
                 group_ids = []
                 for i in range(n_traces):
 
                     # AxoGraph traces are 1-indexed in GUI, so use i+1 below
-                    self.logger.debug('== TRACE #{} =='.format(i + 1))
+                    self.logger.debug(f"== TRACE #{i+1} ==")
 
                     trace_header_info = {}
 
                     if format_ver < 6:
                         # before format version 6, there was only one version
                         # of the header, and version numbers were not provided
-                        trace_header_info['trace_header_version'] = 1
+                        trace_header_info["trace_header_version"] = 1
                     else:
                         # for format versions 6 and later, the header version
                         # must be read
-                        trace_header_info['trace_header_version'] = \
-                            f.read_f('l')
+                        trace_header_info["trace_header_version"] = f.read_f("l")
 
-                    if trace_header_info['trace_header_version'] == 1:
+                    if trace_header_info["trace_header_version"] == 1:
                         TraceHeaderDescription = TraceHeaderDescriptionV1
-                    elif trace_header_info['trace_header_version'] == 2:
+                    elif trace_header_info["trace_header_version"] == 2:
                         TraceHeaderDescription = TraceHeaderDescriptionV2
                     else:
                         raise NotImplementedError(
-                            'unimplemented trace header version "{}"!'.format(
-                                trace_header_info['trace_header_version']))
+                            f'unimplemented trace header version `{trace_header_info["trace_header_version"]}`!'
+                        )
 
                     for key, fmt in TraceHeaderDescription:
                         trace_header_info[key] = f.read_f(fmt)
                     # AxoGraph traces are 1-indexed in GUI, so use i+1 below
                     trace_header_info_list[i + 1] = trace_header_info
-                    group_ids.append(
-                        trace_header_info['group_id_for_this_trace'])
+                    group_ids.append(trace_header_info["group_id_for_this_trace"])
 
                     self.logger.debug(trace_header_info)
-                    self.logger.debug('')
-                self.info['trace_header_info_list'] = trace_header_info_list
+                    self.logger.debug("")
+                self.info["trace_header_info_list"] = trace_header_info_list
 
                 ##############################################
                 # GROUPS
 
-                self.logger.debug('== GROUPS ==')
+                self.logger.debug("== GROUPS ==")
 
-                n_groups = f.read_f('l')
-                self.info['n_groups'] = n_groups
-                group_ids = \
-                    np.sort(list(set(group_ids)))  # remove duplicates and sort
-                assert n_groups == len(group_ids), \
-                    'expected group_ids to have length {}: {}'.format(
-                        n_groups, group_ids)
+                n_groups = f.read_f("l")
+                self.info["n_groups"] = n_groups
+                group_ids = np.sort(list(set(group_ids)))  # remove duplicates and sort
+                assert n_groups == len(group_ids), f"expected group_ids to have length {n_groups}: {group_ids}"
 
-                self.logger.debug('n_groups: {}'.format(n_groups))
-                self.logger.debug('group_ids: {}'.format(group_ids))
-                self.logger.debug('')
+                self.logger.debug(f"n_groups: {n_groups}")
+                self.logger.debug(f"group_ids: {group_ids}")
+                self.logger.debug("")
 
                 group_header_info_list = {}
                 for i in group_ids:
 
                     # AxoGraph groups are 0-indexed in GUI, so use i below
-                    self.logger.debug('== GROUP #{} =='.format(i))
+                    self.logger.debug(f"== GROUP #{i} ==")
 
                     group_header_info = {}
 
                     if format_ver < 6:
                         # before format version 6, there was only one version
                         # of the header, and version numbers were not provided
-                        group_header_info['group_header_version'] = 1
+                        group_header_info["group_header_version"] = 1
                     else:
                         # for format versions 6 and later, the header version
                         # must be read
-                        group_header_info['group_header_version'] = \
-                            f.read_f('l')
+                        group_header_info["group_header_version"] = f.read_f("l")
 
-                    if group_header_info['group_header_version'] == 1:
+                    if group_header_info["group_header_version"] == 1:
                         GroupHeaderDescription = GroupHeaderDescriptionV1
                     else:
                         raise NotImplementedError(
-                            'unimplemented group header version "{}"!'.format(
-                                group_header_info['group_header_version']))
+                            f'unimplemented group header version `{group_header_info["group_header_version"]}`!'
+                        )
 
                     for key, fmt in GroupHeaderDescription:
                         group_header_info[key] = f.read_f(fmt)
@@ -1007,119 +943,108 @@ class AxographRawIO(BaseRawIO):
                     group_header_info_list[i] = group_header_info
 
                     self.logger.debug(group_header_info)
-                    self.logger.debug('')
-                self.info['group_header_info_list'] = group_header_info_list
+                    self.logger.debug("")
+                self.info["group_header_info_list"] = group_header_info_list
 
                 ##############################################
                 # UNKNOWN
 
-                self.logger.debug('>> UNKNOWN 1 <<')
+                self.logger.debug(">> UNKNOWN 1 <<")
 
                 # 36 bytes of undeciphered data (types here are guesses)
-                unknowns = f.read_f('9l')
+                unknowns = f.read_f("9l")
 
                 self.logger.debug(unknowns)
-                self.logger.debug('')
+                self.logger.debug("")
 
                 ##############################################
                 # EPISODES
 
-                self.logger.debug('== EPISODES ==')
+                self.logger.debug("== EPISODES ==")
 
                 # a subset of episodes can be selected for "review", or
                 # episodes can be paged through one by one, and the indexes of
                 # those currently in review appear in this list
                 episodes_in_review = []
-                n_episodes = f.read_f('l')
-                self.info['n_episodes'] = n_episodes
+                n_episodes = f.read_f("l")
+                self.info["n_episodes"] = n_episodes
                 for i in range(n_episodes):
-                    episode_bool = f.read_f('Z')
+                    episode_bool = f.read_f("Z")
                     if episode_bool:
                         episodes_in_review.append(i + 1)
-                self.info['episodes_in_review'] = episodes_in_review
+                self.info["episodes_in_review"] = episodes_in_review
 
-                self.logger.debug('n_episodes: {}'.format(n_episodes))
-                self.logger.debug('episodes_in_review: {}'.format(
-                    episodes_in_review))
+                self.logger.debug(f"n_episodes: {n_episodes}")
+                self.logger.debug(f"episodes_in_review: {episodes_in_review}")
 
                 if format_ver == 5:
 
                     # the test file for version 5 contains this extra list of
                     # episode indexes with unknown purpose
                     old_unknown_episode_list = []
-                    n_episodes2 = f.read_f('l')
+                    n_episodes2 = f.read_f("l")
                     for i in range(n_episodes2):
-                        episode_bool = f.read_f('Z')
+                        episode_bool = f.read_f("Z")
                         if episode_bool:
                             old_unknown_episode_list.append(i + 1)
 
-                    self.logger.debug('old_unknown_episode_list: {}'.format(
-                        old_unknown_episode_list))
+                    self.logger.debug(f"old_unknown_episode_list: {old_unknown_episode_list}")
                     if n_episodes2 != n_episodes:
-                        self.logger.debug(
-                            'n_episodes2 ({}) and n_episodes ({}) '
-                            'differ!'.format(n_episodes2, n_episodes))
+                        self.logger.debug(f"n_episodes2 ({n_episodes2}) and n_episodes ({n_episodes}) " "differ!")
 
                 # another list of episode indexes with unknown purpose
                 unknown_episode_list = []
-                n_episodes3 = f.read_f('l')
+                n_episodes3 = f.read_f("l")
                 for i in range(n_episodes3):
-                    episode_bool = f.read_f('Z')
+                    episode_bool = f.read_f("Z")
                     if episode_bool:
                         unknown_episode_list.append(i + 1)
 
-                self.logger.debug('unknown_episode_list: {}'.format(
-                    unknown_episode_list))
+                self.logger.debug(f"unknown_episode_list: {unknown_episode_list}")
                 if n_episodes3 != n_episodes:
-                    self.logger.debug(
-                        'n_episodes3 ({}) and n_episodes ({}) '
-                        'differ!'.format(n_episodes3, n_episodes))
+                    self.logger.debug(f"n_episodes3 ({n_episodes3,}) and n_episodes ({n_episodes}) " "differ!")
 
                 # episodes can be masked to be removed from the pool of
                 # reviewable episodes completely until unmasked, and the
                 # indexes of those currently masked appear in this list
                 masked_episodes = []
-                n_episodes4 = f.read_f('l')
+                n_episodes4 = f.read_f("l")
                 for i in range(n_episodes4):
-                    episode_bool = f.read_f('Z')
+                    episode_bool = f.read_f("Z")
                     if episode_bool:
                         masked_episodes.append(i + 1)
-                self.info['masked_episodes'] = masked_episodes
+                self.info["masked_episodes"] = masked_episodes
 
-                self.logger.debug('masked_episodes: {}'.format(
-                    masked_episodes))
+                self.logger.debug(f"masked_episodes: {masked_episodes}")
                 if n_episodes4 != n_episodes:
-                    self.logger.debug(
-                        'n_episodes4 ({}) and n_episodes ({}) '
-                        'differ!'.format(n_episodes4, n_episodes))
-                self.logger.debug('')
+                    self.logger.debug(f"n_episodes4 ({n_episodes4}) and n_episodes ({n_episodes}) " "differ!")
+                self.logger.debug("")
 
                 ##############################################
                 # UNKNOWN
 
-                self.logger.debug('>> UNKNOWN 2 <<')
+                self.logger.debug(">> UNKNOWN 2 <<")
 
                 # 68 bytes of undeciphered data (types here are guesses)
-                unknowns = f.read_f('d 9l d 4l')
+                unknowns = f.read_f("d 9l d 4l")
 
                 self.logger.debug(unknowns)
-                self.logger.debug('')
+                self.logger.debug("")
 
                 ##############################################
                 # FONTS
 
                 if format_ver >= 6:
-                    font_categories = ['axis titles', 'axis labels (ticks)',
-                                       'notes', 'graph title']
+                    font_categories = ["axis titles", "axis labels (ticks)", "notes", "graph title"]
                 else:
                     # would need an old version of AxoGraph to determine how it
                     # used these settings
-                    font_categories = ['everything (?)']
+                    font_categories = ["everything (?)"]
 
                 font_settings_info_list = {}
                 for i in font_categories:
 
-                    self.logger.debug('== FONT SETTINGS FOR {} =='.format(i))
+                    self.logger.debug(f"== FONT SETTINGS FOR {i} ==")
 
                     font_settings_info = {}
                     for key, fmt in FontSettingsDescription:
@@ -1129,110 +1054,101 @@ class AxographRawIO(BaseRawIO):
                     # represent this switch, but it seems they were
                     # - setting1 could contain other undeciphered data as a
                     #   bitmask, like setting2
-                    assert font_settings_info['setting1'] in \
-                        [FONT_BOLD, FONT_NOT_BOLD], \
-                        'expected setting1 ({}) to have value FONT_BOLD ' \
-                        '({}) or FONT_NOT_BOLD ({})'.format(
-                            font_settings_info['setting1'],
-                            FONT_BOLD,
-                            FONT_NOT_BOLD)
+                    assert font_settings_info["setting1"] in [
+                        FONT_BOLD,
+                        FONT_NOT_BOLD,
+                    ], (
+                        f"expected setting1 ({ font_settings_info['setting1']}) to have value FONT_BOLD "
+                        f"({FONT_BOLD}) or FONT_NOT_BOLD ({FONT_NOT_BOLD})"
+                    )
 
                     # size is stored 10 times bigger than real value
-                    font_settings_info['size'] = \
-                        font_settings_info['size'] / 10.0
-                    font_settings_info['bold'] = \
-                        bool(font_settings_info['setting1'] == FONT_BOLD)
-                    font_settings_info['italics'] = \
-                        bool(font_settings_info['setting2'] & FONT_ITALICS)
-                    font_settings_info['underline'] = \
-                        bool(font_settings_info['setting2'] & FONT_UNDERLINE)
-                    font_settings_info['strikeout'] = \
-                        bool(font_settings_info['setting2'] & FONT_STRIKEOUT)
+                    font_settings_info["size"] = font_settings_info["size"] / 10.0
+                    font_settings_info["bold"] = bool(font_settings_info["setting1"] == FONT_BOLD)
+                    font_settings_info["italics"] = bool(font_settings_info["setting2"] & FONT_ITALICS)
+                    font_settings_info["underline"] = bool(font_settings_info["setting2"] & FONT_UNDERLINE)
+                    font_settings_info["strikeout"] = bool(font_settings_info["setting2"] & FONT_STRIKEOUT)
                     font_settings_info_list[i] = font_settings_info
 
                     self.logger.debug(font_settings_info)
-                    self.logger.debug('')
-                self.info['font_settings_info_list'] = font_settings_info_list
+                    self.logger.debug("")
+                self.info["font_settings_info_list"] = font_settings_info_list
 
                 ##############################################
                 # X-AXIS SETTINGS
 
-                self.logger.debug('== X-AXIS SETTINGS ==')
+                self.logger.debug("== X-AXIS SETTINGS ==")
 
                 x_axis_settings_info = {}
                 for key, fmt in XAxisSettingsDescription:
                     x_axis_settings_info[key] = f.read_f(fmt)
-                self.info['x_axis_settings_info'] = x_axis_settings_info
+                self.info["x_axis_settings_info"] = x_axis_settings_info
 
                 self.logger.debug(x_axis_settings_info)
-                self.logger.debug('')
+                self.logger.debug("")
 
                 ##############################################
                 # UNKNOWN
 
-                self.logger.debug('>> UNKNOWN 3 <<')
+                self.logger.debug(">> UNKNOWN 3 <<")
 
                 # 108 bytes of undeciphered data (types here are guesses)
-                unknowns = f.read_f('8l 3d 13l')
+                unknowns = f.read_f("8l 3d 13l")
 
                 self.logger.debug(unknowns)
-                self.logger.debug('')
+                self.logger.debug("")
 
                 ##############################################
                 # EVENTS / TAGS
 
-                self.logger.debug('=== EVENTS / TAGS ===')
+                self.logger.debug("=== EVENTS / TAGS ===")
 
-                n_events, n_events_again = f.read_f('ll')
-                self.info['n_events'] = n_events
+                n_events, n_events_again = f.read_f("ll")
+                self.info["n_events"] = n_events
 
-                self.logger.debug('n_events: {}'.format(n_events))
+                self.logger.debug(f"n_events: {n_events}")
 
                 # event / tag timing is stored as an index into time
                 raw_event_timestamps = []
                 event_labels = []
                 for i in range(n_events_again):
-                    event_index = f.read_f('l')
+                    event_index = f.read_f("l")
                     raw_event_timestamps.append(event_index)
-                n_events_yet_again = f.read_f('l')
+                n_events_yet_again = f.read_f("l")
                 for i in range(n_events_yet_again):
-                    title = f.read_f('S')
+                    title = f.read_f("S")
                     event_labels.append(title)
 
                 event_list = []
-                for event_label, event_index in \
-                        zip(event_labels, raw_event_timestamps):
+                for event_label, event_index in zip(event_labels, raw_event_timestamps):
                     # t_start shouldn't be added here
                     event_time = event_index * sampling_period
-                    event_list.append({
-                        'title': event_label,
-                        'index': event_index,
-                        'time': event_time})
-                self.info['event_list'] = event_list
+                    event_list.append({"title": event_label, "index": event_index, "time": event_time})
+                self.info["event_list"] = event_list
                 for event in event_list:
                     self.logger.debug(event)
-                self.logger.debug('')
+                self.logger.debug("")
 
                 ##############################################
                 # UNKNOWN
 
-                self.logger.debug('>> UNKNOWN 4 <<')
+                self.logger.debug(">> UNKNOWN 4 <<")
 
                 # 28 bytes of undeciphered data (types here are guesses)
-                unknowns = f.read_f('7l')
+                unknowns = f.read_f("7l")
 
                 self.logger.debug(unknowns)
-                self.logger.debug('')
+                self.logger.debug("")
 
                 ##############################################
                 # EPOCHS / INTERVAL BARS
 
-                self.logger.debug('=== EPOCHS / INTERVAL BARS ===')
+                self.logger.debug("=== EPOCHS / INTERVAL BARS ===")
 
-                n_epochs = f.read_f('l')
-                self.info['n_epochs'] = n_epochs
+                n_epochs = f.read_f("l")
+                self.info["n_epochs"] = n_epochs
 
-                self.logger.debug('n_epochs: {}'.format(n_epochs))
+                self.logger.debug(f"n_epochs: {n_epochs}")
 
                 epoch_list = []
                 for i in range(n_epochs):
@@ -1240,7 +1156,7 @@ class AxographRawIO(BaseRawIO):
                     for key, fmt in EpochInfoDescription:
                         epoch_info[key] = f.read_f(fmt)
                     epoch_list.append(epoch_info)
-                self.info['epoch_list'] = epoch_list
+                self.info["epoch_list"] = epoch_list
 
                 # epoch / interval bar timing and duration are stored in
                 # seconds, so here they are converted to (possibly non-integer)
@@ -1250,27 +1166,24 @@ class AxographRawIO(BaseRawIO):
                 raw_epoch_durations = []
                 epoch_labels = []
                 for epoch in epoch_list:
-                    raw_epoch_timestamps.append(
-                        epoch['t_start'] / sampling_period)
-                    raw_epoch_durations.append(
-                        (epoch['t_stop'] - epoch['t_start']) / sampling_period)
-                    epoch_labels.append(epoch['title'])
+                    raw_epoch_timestamps.append(epoch["t_start"] / sampling_period)
+                    raw_epoch_durations.append((epoch["t_stop"] - epoch["t_start"]) / sampling_period)
+                    epoch_labels.append(epoch["title"])
                     self.logger.debug(epoch)
-                self.logger.debug('')
+                self.logger.debug("")
 
                 ##############################################
                 # UNKNOWN
 
-                self.logger.debug(
-                    '>> UNKNOWN 5 (includes y-axis plot ranges) <<')
+                self.logger.debug(">> UNKNOWN 5 (includes y-axis plot ranges) <<")
 
                 # lots of undeciphered data
                 rest_of_the_file = f.read()
 
                 self.logger.debug(rest_of_the_file)
-                self.logger.debug('')
+                self.logger.debug("")
 
-                self.logger.debug('End of file reached (expected)')
+                self.logger.debug("End of file reached (expected)")
 
             except EOFError as e:
                 if format_ver == 1 or format_ver == 2:
@@ -1278,49 +1191,51 @@ class AxographRawIO(BaseRawIO):
                     # information was stored separately in the "resource fork"
                     # of the file, so reaching the end of the file before all
                     # metadata is parsed is expected
-                    self.logger.debug('End of file reached (expected)')
+                    self.logger.debug("End of file reached (expected)")
                     pass
                 else:
                     # for format versions 3 and later, there should be metadata
                     # stored at the end of the file, so warn that something may
                     # have gone wrong, but try to continue anyway
-                    self.logger.warning('End of file reached unexpectedly '
-                                        'while parsing metadata, will attempt '
-                                        'to continue')
+                    self.logger.warning(
+                        "End of file reached unexpectedly " "while parsing metadata, will attempt " "to continue"
+                    )
                     self.logger.debug(e, exc_info=True)
                     pass
 
             except UnicodeDecodeError as e:
                 # warn that something went wrong with reading a string, but try
                 # to continue anyway
-                self.logger.warning('Problem decoding text while parsing '
-                                    'metadata, will ignore any remaining '
-                                    'metadata and attempt to continue')
+                self.logger.warning(
+                    "Problem decoding text while parsing "
+                    "metadata, will ignore any remaining "
+                    "metadata and attempt to continue"
+                )
                 self.logger.debug(e, exc_info=True)
                 pass
 
-        self.logger.debug('')
+        self.logger.debug("")
 
         ##############################################
         # RAWIO HEADER
 
         # event_channels will be cast to _event_channel_dtype
         event_channels = []
-        event_channels.append(('AxoGraph Tags', '', 'event'))
-        event_channels.append(('AxoGraph Intervals', '', 'epoch'))
+        event_channels.append(("AxoGraph Tags", "", "event"))
+        event_channels.append(("AxoGraph Intervals", "", "epoch"))
 
         if len(sig_channels) > 0:
-            signal_streams = [('Signals', '0')]
+            signal_streams = [("Signals", "0")]
         else:
             signal_streams = []
 
         # organize header
-        self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
-        self.header['signal_streams'] = np.array(signal_streams, dtype=_signal_stream_dtype)
-        self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
-        self.header['event_channels'] = np.array(event_channels, dtype=_event_channel_dtype)
-        self.header['spike_channels'] = np.array([], dtype=_spike_channel_dtype)
+        self.header["nb_block"] = 1
+        self.header["nb_segment"] = [1]
+        self.header["signal_streams"] = np.array(signal_streams, dtype=_signal_stream_dtype)
+        self.header["signal_channels"] = np.array(sig_channels, dtype=_signal_channel_dtype)
+        self.header["event_channels"] = np.array(event_channels, dtype=_event_channel_dtype)
+        self.header["spike_channels"] = np.array([], dtype=_spike_channel_dtype)
 
         ##############################################
         # DATA OBJECTS
@@ -1329,15 +1244,9 @@ class AxographRawIO(BaseRawIO):
         self._sampling_period = sampling_period
         self._t_start = t_start
         self._raw_signals = [sig_memmaps]  # first index is seg_index
-        self._raw_event_epoch_timestamps = [
-            np.array(raw_event_timestamps),
-            np.array(raw_epoch_timestamps)]
-        self._raw_event_epoch_durations = [
-            None,
-            np.array(raw_epoch_durations)]
-        self._event_epoch_labels = [
-            np.array(event_labels, dtype='U'),
-            np.array(epoch_labels, dtype='U')]
+        self._raw_event_epoch_timestamps = [np.array(raw_event_timestamps), np.array(raw_epoch_timestamps)]
+        self._raw_event_epoch_durations = [None, np.array(raw_epoch_durations)]
+        self._event_epoch_labels = [np.array(event_labels, dtype="U"), np.array(epoch_labels, dtype="U")]
 
 
 class StructFile(BufferedReader):
@@ -1351,16 +1260,16 @@ class StructFile(BufferedReader):
         # regardless of the system architecture on which it was created, but
         # here I provide means for controlling byte ordering in case a counter
         # example is found.
-        self.byte_order = kwargs.pop('byte_order', '>')
-        if self.byte_order == '>':
+        self.byte_order = kwargs.pop("byte_order", ">")
+        if self.byte_order == ">":
             # big-endian
-            self.utf_16_decoder = 'utf-16-be'
-        elif self.byte_order == '<':
+            self.utf_16_decoder = "utf-16-be"
+        elif self.byte_order == "<":
             # little-endian
-            self.utf_16_decoder = 'utf-16-le'
+            self.utf_16_decoder = "utf-16-le"
         else:
             # unspecified
-            self.utf_16_decoder = 'utf-16'
+            self.utf_16_decoder = "utf-16"
         super().__init__(*args, **kwargs)
 
     def read_and_unpack(self, fmt):
@@ -1369,11 +1278,9 @@ class StructFile(BufferedReader):
         in that number of bytes, and unpack them according to the format string
         """
         try:
-            return unpack(
-                self.byte_order + fmt,
-                self.read(calcsize(self.byte_order + fmt)))
+            return unpack(self.byte_order + fmt, self.read(calcsize(self.byte_order + fmt)))
         except Exception as e:
-            if e.args[0].startswith('unpack requires a buffer of'):
+            if e.args[0].startswith("unpack requires a buffer of"):
                 raise EOFError(e)
             else:
                 raise
@@ -1389,18 +1296,18 @@ class StructFile(BufferedReader):
         """
 
         # length may be -1, 0, or a positive integer
-        length = self.read_and_unpack('l')[0]
+        length = self.read_and_unpack("l")[0]
         if length > 0:
             return self.read(length).decode(self.utf_16_decoder)
         else:
-            return ''
+            return ""
 
     def read_bool(self):
         """
         AxoGraph files encode each boolean as 4-byte integer (long) with value
         1 = True, 0 = False. This function reads in one of these booleans.
         """
-        return bool(self.read_and_unpack('l')[0])
+        return bool(self.read_and_unpack("l")[0])
 
     def read_f(self, fmt, offset=None):
         """
@@ -1416,18 +1323,18 @@ class StructFile(BufferedReader):
             self.seek(offset)
 
         # place commas before and after each instance of S or Z
-        for special in ['S', 'Z']:
-            fmt = fmt.replace(special, ',' + special + ',')
+        for special in ["S", "Z"]:
+            fmt = fmt.replace(special, "," + special + ",")
 
         # split S and Z into isolated strings
-        fmt = fmt.split(',')
+        fmt = fmt.split(",")
 
         # construct a tuple of unpacked data
         data = ()
         for subfmt in fmt:
-            if subfmt == 'S':
+            if subfmt == "S":
                 data += (self.read_string(),)
-            elif subfmt == 'Z':
+            elif subfmt == "Z":
                 data += (self.read_bool(),)
             else:
                 data += self.read_and_unpack(subfmt)
@@ -1438,7 +1345,7 @@ class StructFile(BufferedReader):
             return data
 
 
-FONT_BOLD = 75      # mysterious arbitrary constant
+FONT_BOLD = 75  # mysterious arbitrary constant
 FONT_NOT_BOLD = 50  # mysterious arbitrary constant
 FONT_ITALICS = 1
 FONT_UNDERLINE = 2
@@ -1446,79 +1353,79 @@ FONT_STRIKEOUT = 4
 
 TraceHeaderDescriptionV1 = [
     # documented in AxoGraph_ReadWrite.h
-    ('x_index', 'l'),
-    ('y_index', 'l'),
-    ('err_bar_index', 'l'),
-    ('group_id_for_this_trace', 'l'),
-    ('hidden', 'Z'),  # AxoGraph_ReadWrite.h incorrectly states "shown" instead
-    ('min_x', 'd'),
-    ('max_x', 'd'),
-    ('min_positive_x', 'd'),
-    ('x_is_regularly_spaced', 'Z'),
-    ('x_increases_monotonically', 'Z'),
-    ('x_interval_if_regularly_spaced', 'd'),
-    ('min_y', 'd'),
-    ('max_y', 'd'),
-    ('min_positive_y', 'd'),
-    ('trace_color', 'xBBB'),
-    ('display_joined_line_plot', 'Z'),
-    ('line_thickness', 'd'),
-    ('pen_style', 'l'),
-    ('display_symbol_plot', 'Z'),
-    ('symbol_type', 'l'),
-    ('symbol_size', 'l'),
-    ('draw_every_data_point', 'Z'),
-    ('skip_points_by_distance_instead_of_pixels', 'Z'),
-    ('pixels_between_symbols', 'l'),
-    ('display_histogram_plot', 'Z'),
-    ('histogram_type', 'l'),
-    ('histogram_bar_separation', 'l'),
-    ('display_error_bars', 'Z'),
-    ('display_pos_err_bar', 'Z'),
-    ('display_neg_err_bar', 'Z'),
-    ('err_bar_width', 'l'),
+    ("x_index", "l"),
+    ("y_index", "l"),
+    ("err_bar_index", "l"),
+    ("group_id_for_this_trace", "l"),
+    ("hidden", "Z"),  # AxoGraph_ReadWrite.h incorrectly states "shown" instead
+    ("min_x", "d"),
+    ("max_x", "d"),
+    ("min_positive_x", "d"),
+    ("x_is_regularly_spaced", "Z"),
+    ("x_increases_monotonically", "Z"),
+    ("x_interval_if_regularly_spaced", "d"),
+    ("min_y", "d"),
+    ("max_y", "d"),
+    ("min_positive_y", "d"),
+    ("trace_color", "xBBB"),
+    ("display_joined_line_plot", "Z"),
+    ("line_thickness", "d"),
+    ("pen_style", "l"),
+    ("display_symbol_plot", "Z"),
+    ("symbol_type", "l"),
+    ("symbol_size", "l"),
+    ("draw_every_data_point", "Z"),
+    ("skip_points_by_distance_instead_of_pixels", "Z"),
+    ("pixels_between_symbols", "l"),
+    ("display_histogram_plot", "Z"),
+    ("histogram_type", "l"),
+    ("histogram_bar_separation", "l"),
+    ("display_error_bars", "Z"),
+    ("display_pos_err_bar", "Z"),
+    ("display_neg_err_bar", "Z"),
+    ("err_bar_width", "l"),
 ]
 
 # documented in AxoGraph_ReadWrite.h
 # - only one difference exists between versions 1 and 2
 TraceHeaderDescriptionV2 = list(TraceHeaderDescriptionV1)  # make a copy
-TraceHeaderDescriptionV2.insert(3, ('neg_err_bar_index', 'l'))
+TraceHeaderDescriptionV2.insert(3, ("neg_err_bar_index", "l"))
 
 GroupHeaderDescriptionV1 = [
     # undocumented and reverse engineered
-    ('title', 'S'),
-    ('unknown1', 'h'),     # 2 bytes of undeciphered data (types are guesses)
-    ('units', 'S'),
-    ('unknown2', 'hll'),   # 10 bytes of undeciphered data (types are guesses)
+    ("title", "S"),
+    ("unknown1", "h"),  # 2 bytes of undeciphered data (types are guesses)
+    ("units", "S"),
+    ("unknown2", "hll"),  # 10 bytes of undeciphered data (types are guesses)
 ]
 
 FontSettingsDescription = [
     # undocumented and reverse engineered
-    ('font', 'S'),
-    ('size', 'h'),         # divide this 2-byte integer by 10 to get font size
-    ('unknown1', '5b'),    # 5 bytes of undeciphered data (types are guesses)
-    ('setting1', 'B'),     # includes bold setting
-    ('setting2', 'B'),     # italics, underline, strikeout specified in bitmap
+    ("font", "S"),
+    ("size", "h"),  # divide this 2-byte integer by 10 to get font size
+    ("unknown1", "5b"),  # 5 bytes of undeciphered data (types are guesses)
+    ("setting1", "B"),  # includes bold setting
+    ("setting2", "B"),  # italics, underline, strikeout specified in bitmap
 ]
 
 XAxisSettingsDescription = [
     # undocumented and reverse engineered
-    ('unknown1', '3l2d'),  # 28 bytes of undeciphered data (types are guesses)
-    ('plotted_x_range', 'dd'),
-    ('unknown2', 'd'),     # 8 bytes of undeciphered data (types are guesses)
-    ('auto_x_ticks', 'Z'),
-    ('x_minor_ticks', 'd'),
-    ('x_major_ticks', 'd'),
-    ('x_axis_title', 'S'),
-    ('unknown3', 'h'),     # 2 bytes of undeciphered data (types are guesses)
-    ('units', 'S'),
-    ('unknown4', 'h'),     # 2 bytes of undeciphered data (types are guesses)
+    ("unknown1", "3l2d"),  # 28 bytes of undeciphered data (types are guesses)
+    ("plotted_x_range", "dd"),
+    ("unknown2", "d"),  # 8 bytes of undeciphered data (types are guesses)
+    ("auto_x_ticks", "Z"),
+    ("x_minor_ticks", "d"),
+    ("x_major_ticks", "d"),
+    ("x_axis_title", "S"),
+    ("unknown3", "h"),  # 2 bytes of undeciphered data (types are guesses)
+    ("units", "S"),
+    ("unknown4", "h"),  # 2 bytes of undeciphered data (types are guesses)
 ]
 
 EpochInfoDescription = [
     # undocumented and reverse engineered
-    ('title', 'S'),
-    ('t_start', 'd'),
-    ('t_stop', 'd'),
-    ('y_pos', 'd'),
+    ("title", "S"),
+    ("t_start", "d"),
+    ("t_stop", "d"),
+    ("y_pos", "d"),
 ]
