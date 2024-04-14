@@ -308,11 +308,16 @@ class SpikeGLXRawIO(BaseRawIO):
             )  # because the data is in unsigned 8 bit, -1 = 255!
             if len(this_rising) > 0:
                 timestamps.extend(this_rising)
-                labels.extend([channel + " ON"] * len(this_rising))
+                labels.extend([f"{channel} ON"] * len(this_rising))
             if len(this_falling) > 0:
                 timestamps.extend(this_falling)
-                labels.extend([channel + " OFF"] * len(this_falling))
-        return np.asarray(timestamps), np.asarray(durations), np.asarray(labels)
+                labels.extend([f"{channel} OFF"] * len(this_falling))
+        timestamps = np.asarray(timestamps)
+        if len(labels) == 0:
+            labels = np.asarray(labels, dtype="U1")
+        else:
+            labels = np.asarray(labels)
+        return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         info = self.signals_info_dict[0, "nidq"]  # There are no events that are not in the nidq stream
@@ -321,6 +326,9 @@ class SpikeGLXRawIO(BaseRawIO):
         else:  # Does this ever happen?
             event_times = event_timestamps.astype(dtype)
         return event_times
+
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
+        return None
 
 
 def scan_files(dirname):
