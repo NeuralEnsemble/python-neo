@@ -39,7 +39,7 @@ reader.parse_header()
 
 ############################################################
 # as always we can look view some interesting information about the
-# metadata and structure of a file just by printing the reader and 
+# metadata and structure of a file just by printing the reader and
 # it's header
 print(reader)
 print(f"Header information: {reader.header}")
@@ -49,31 +49,33 @@ print(f"Header information: {reader.header}")
 # Now let's make a function that we want to apply to
 # look at lazy vs eager uses of the API
 
+
 def apply_my_fancy_average(sig_list):
     """basic average along triggers and then channels
     here we go back to numpy with magnitude
     to be able to use np.stack.
-    
+
     Because neo uses quantities to keep track of units
-    we can always get just the magnitude of an array 
+    we can always get just the magnitude of an array
     with `.magnitude`
     """
     sig_list = [s.magnitude for s in sig_list]
     sigs = np.stack(sig_list, axis=0)
     return np.mean(np.mean(sigs, axis=0), axis=1)
 
+
 #################################################
 # Let's set our limits for both cases. We will
-# use quantities to include time dimensions. 
+# use quantities to include time dimensions.
 
-lim_start = -20 * pq.ms # 20 milliseconds before
-lim_end = +20 * pq.ms # 20 milliseconds after
+lim_start = -20 * pq.ms  # 20 milliseconds before
+lim_end = +20 * pq.ms  # 20 milliseconds after
 
 ##################################################
 # We start with eager (where `lazy=False`.) Everything
 # is loaded into memory. We will read a segment of data.
-# This includes analog signal data and events data 
-# (final contents of a segment are dependent on the 
+# This includes analog signal data and events data
+# (final contents of a segment are dependent on the
 # underlying IO being used)
 
 
@@ -86,7 +88,7 @@ for t in triggers.times:
     anasig_chunk = anasig.time_slice(t0, t1)
     all_sig_chunks.append(anasig_chunk)
 
-# After pulling all data into memory and then iterating through triggers 
+# After pulling all data into memory and then iterating through triggers
 # we end by doing our average
 m1 = apply_my_fancy_average(all_sig_chunks)
 
@@ -111,7 +113,7 @@ for t in triggers.times:
 m2 = apply_my_fancy_average(all_sig_chunks)
 
 ##########################################################
-# We see that either way the result is the same, but 
+# We see that either way the result is the same, but
 # we do not exhaust our RAM/memory
 print(f"Eagerly loading data and averaging: {m1}")
 print(f"Lazy loading data and average {m2}")

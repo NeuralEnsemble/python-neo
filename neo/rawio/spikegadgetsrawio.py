@@ -177,7 +177,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
             chan_ind = 0
             self.is_scaleable = "spikeScalingToUv" in sconf[0].attrib
             if not self.is_scaleable:
-                self.logger.warning("Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!")
+                self.logger.warning(
+                    "Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!"
+                )
 
             for trode in sconf:
                 if "spikeScalingToUv" in trode.attrib:

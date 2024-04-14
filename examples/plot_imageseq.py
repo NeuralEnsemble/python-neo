@@ -17,7 +17,7 @@ import random
 
 ############################################################
 # Now we need to generate some data
-# We will just make a nice box and then we can attach this 
+# We will just make a nice box and then we can attach this
 # ImageSequence to a variety of ROIs
 # our ImageSequence will be 50 frames of 100x100 pixel images
 
@@ -36,9 +36,9 @@ for frame in range(50):
 image_seq = ImageSequence(l, sampling_rate=500 * pq.Hz, spatial_scale="m", units="V")
 
 result = image_seq.signal_from_region(
-    CircularRegionOfInterest(image_seq,50, 50, 25),
+    CircularRegionOfInterest(image_seq, 50, 50, 25),
     CircularRegionOfInterest(image_seq, 10, 10, 5),
-    PolygonRegionOfInterest(image_seq,(50, 25), (50, 45), (14, 65), (90, 80)),
+    PolygonRegionOfInterest(image_seq, (50, 25), (50, 45), (14, 65), (90, 80)),
 )
 
 ###############################################################
