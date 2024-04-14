@@ -8,6 +8,7 @@ from neo.rawio.spikeglxrawio import SpikeGLXRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 import numpy as np
 
+
 class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = SpikeGLXRawIO
     entities_to_download = ["spikeglx"]
@@ -89,16 +90,17 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         rawio_digital = SpikeGLXRawIO(self.get_local_path("spikeglx/DigitalChannelTest_g0"))
         rawio_digital.parse_header()
         # This data should have 8 event channels
-        assert(np.shape(rawio_digital.header['event_channels'])[0] == 8)
+        assert np.shape(rawio_digital.header["event_channels"])[0] == 8
 
         # Channel 0 in this data will have sync pulses at 1 Hz, let's confirm that
         all_events = rawio_digital.get_event_timestamps(0, 0, 0)
-        on_events = np.where(all_events[2] == 'XD0 ON')
+        on_events = np.where(all_events[2] == "XD0 ON")
         on_ts = all_events[0][on_events]
         on_ts_scaled = rawio_digital.rescale_event_timestamp(on_ts)
         on_diff = np.diff(on_ts_scaled)
         atol = 0.001
-        assert np.allclose(on_diff, 1, atol=atol)        
+        assert np.allclose(on_diff, 1, atol=atol)
+
 
 if __name__ == "__main__":
     unittest.main()
