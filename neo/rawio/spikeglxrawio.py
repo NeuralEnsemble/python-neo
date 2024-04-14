@@ -290,8 +290,7 @@ class SpikeGLXRawIO(BaseRawIO):
         return raw_signals
     
     def _event_count(self, event_channel_idx, block_index=None, seg_index=None):
-        timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_index,
-                                                      None, None)
+        timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_idx, None, None)
         return timestamps.size
     
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start=None, t_stop=None):
@@ -304,7 +303,7 @@ class SpikeGLXRawIO(BaseRawIO):
             ch_idx = 7 - int(channel[2:]) # They are in the reverse order
             this_stream = event_data[:,ch_idx]
             this_rising = np.where(np.diff(this_stream)==1)[0] + 1
-            this_falling = np.where(np.diff(this_stream)==255)[0] + 1 #behcause the data is in unsigned 8 bit, -1 = 255!
+            this_falling = np.where(np.diff(this_stream)==255)[0] + 1 # because the data is in unsigned 8 bit, -1 = 255!
             if len(this_rising) > 0:
                 timestamps.extend(this_rising)
                 labels.extend([channel + ' ON']*len(this_rising))
