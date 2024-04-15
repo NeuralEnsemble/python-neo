@@ -481,12 +481,12 @@ def parse_axon_soup(filename):
             # brittle. pyABF believes that looking for the \x00\x00 is more
             # robust. We find these values, replace mu->u, then split into
             # a set of strings
-            indexed_string = big_string[big_string.rfind(b'\x00\x00'):]
+            indexed_string = big_string[big_string.rfind(b"\x00\x00") :]
             # replace mu -> u for easy display
-            indexed_string = indexed_string.replace(b'\xb5', b'\x75')
+            indexed_string = indexed_string.replace(b"\xb5", b"\x75")
             # we need to remove one of the \x00 to have the indices be
             # the correct order
-            indexed_string = indexed_string.split(b'\x00')[1:]
+            indexed_string = indexed_string.split(b"\x00")[1:]
             strings = indexed_string
 
             # ADC sections

@@ -19,7 +19,6 @@ localfile = "File_plexon_3.plx"
 urllib.request.urlretrieve(distantfile, localfile)
 
 
-
 ###################################################
 # Now we can create our reader and read some data
 
@@ -31,7 +30,7 @@ print(blks)
 
 ######################################################
 # Once we have our blocks we can iterate through each
-# block of data and see the contents of all parts of 
+# block of data and see the contents of all parts of
 # that data
 
 # access to segments
@@ -45,7 +44,7 @@ for blk in blks:
 
 #######################################################
 # Let's look at another file type
-            
+
 # CED Spike2 files
 distantfile = url_repo + "spike2/File_spike2_1.smr"
 localfile = "./File_spike2_1.smr"
