@@ -29,6 +29,8 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/NP2_with_sync",
         "spikeglx/NP2_no_sync",
         "spikeglx/NP2_subset_with_sync",
+        # NP-ultra
+        "spikeglx/np_ultra_stub",
     ]
 
     def test_with_location(self):
