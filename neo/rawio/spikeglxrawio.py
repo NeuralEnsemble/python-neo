@@ -111,7 +111,6 @@ class SpikeGLXRawIO(BaseRawIO):
         self.dirname = dirname
         self.load_sync_channel = load_sync_channel
         self.load_channel_location = load_channel_location
-        self._use_direct_evt_timestamps = None
 
     def _source_name(self):
         return self.dirname
@@ -321,10 +320,7 @@ class SpikeGLXRawIO(BaseRawIO):
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         info = self.signals_info_dict[0, "nidq"]  # There are no events that are not in the nidq stream
-        if not self._use_direct_evt_timestamps:
-            event_times = event_timestamps.astype(dtype) / float(info["sampling_rate"])
-        else:  # Does this ever happen?
-            event_times = event_timestamps.astype(dtype)
+        event_times = event_timestamps.astype(dtype) / float(info["sampling_rate"])
         return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
