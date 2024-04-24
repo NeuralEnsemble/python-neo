@@ -74,7 +74,7 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             include_filenames = [filename]
 
         if exclude_filename:
-            warnings.warn('Deprecated and will be removed. Please use `include_filenames` instead')
+            warnings.warn('Deprecated and will be removed. Please use `exclude_filenames` instead')
             exclude_filenames = exclude_filename
 
         NeuralynxRawIO.__init__(
