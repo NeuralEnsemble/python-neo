@@ -9,6 +9,7 @@ Supported: Read
 Author: Julia Sprenger, Carlos Canova
 """
 
+import warnings
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
 
@@ -67,6 +68,14 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             shifted to begin at t_start = 0*pq.second.
             Default: False
         """
+
+        if filename:
+            warnings.warn('Deprecated and will be removed. Please use `include_filenames` instead')
+            include_filenames = [filename]
+
+        if exclude_filename:
+            warnings.warn('Deprecated and will be removed. Please use `include_filenames` instead')
+            exclude_filenames = exclude_filename
 
         NeuralynxRawIO.__init__(
             self,
