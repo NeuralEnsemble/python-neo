@@ -10,7 +10,7 @@ Analyzing and Plotting Data with Neo Structures
 
 from itertools import cycle
 import numpy as np
-from quantities import ms, mV, kHz
+from neo.units import ms, mV, kHz
 import matplotlib.pyplot as plt
 from neo import Block, Segment, ChannelView, Group, SpikeTrain, AnalogSignal
 

@@ -223,7 +223,7 @@ objects directly, e.g.:
 
     In [20]: import numpy as np
 
-    In [21]: from quantities import mV, kHz
+    In [21]: from neo.units import mV, kHz
 
     In [22]: from neo import AnalogSignal
 
@@ -245,7 +245,7 @@ specify the array of times at which the signal was sampled.
 
 .. ipython::
 
-    In [25]: from quantities import ms, nA
+    In [25]: from neo.units import ms, nA
 
     In [26]: from neo import IrregularlySampledSignal
 
@@ -336,7 +336,7 @@ It behaves similarly to :class:`AnalogSignal`, but in 3D rather than 2D.
 
 .. ipython::
 
-    In [38]: from quantities import Hz, micrometer
+    In [38]: from neo.units import Hz, micrometer
 
     In [39]: from neo import ImageSequence
 
@@ -367,7 +367,7 @@ For any metadata not covered by the required or recommended fields, additional a
 
 .. ipython::
 
-    In [43]: from quantities import um as µm
+    In [43]: from neo.units import um as µm
 
     In [44]: signal.annotate(pipette_tip_diameter=1.5 * µm)
 

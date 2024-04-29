@@ -10,7 +10,7 @@ ImageSequences
 from neo.core import ImageSequence
 from neo.core import RectangularRegionOfInterest, CircularRegionOfInterest, PolygonRegionOfInterest
 import matplotlib.pyplot as plt
-import quantities as pq
+import neo.units
 
 import random
 
@@ -33,7 +33,7 @@ for frame in range(50):
 # we then make our image sequence and pull out our results from the
 # image_seq
 
-image_seq = ImageSequence(l, sampling_rate=500 * pq.Hz, spatial_scale="m", units="V")
+image_seq = ImageSequence(l, sampling_rate=500 * neo.units.Hz, spatial_scale="m", units="V")
 
 result = image_seq.signal_from_region(
     CircularRegionOfInterest(image_seq, 50, 50, 25),

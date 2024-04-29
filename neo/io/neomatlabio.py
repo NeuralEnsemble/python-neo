@@ -156,7 +156,7 @@ class NeoMatlabIO(BaseIO):
         This Python code generates the same block as in the previous scenario::
 
             import neo
-            import quantities as pq
+            import neo.units
             from scipy import rand, array
 
             bl = neo.Block(name='my block with neo')
@@ -164,14 +164,14 @@ class NeoMatlabIO(BaseIO):
                 seg = neo.Segment(name='segment' + str(s))
                 bl.segments.append(seg)
                 for a in range(5):
-                    anasig = neo.AnalogSignal(rand(100)*pq.mV, t_start=0*pq.s,
+                    anasig = neo.AnalogSignal(rand(100)*neo.units.mV, t_start=0*neo.units.s,
                                               sampling_rate=100*pq.Hz)
                     seg.analogsignals.append(anasig)
                 for t in range(7):
-                    sptr = neo.SpikeTrain(rand(40)*pq.ms, t_start=0*pq.ms, t_stop=10*pq.ms)
+                    sptr = neo.SpikeTrain(rand(40)*pq.ms, t_start=0*neo.units.ms, t_stop=10*neo.units.ms)
                     seg.spiketrains.append(sptr)
-                ev = neo.Event([0, 10, 30]*pq.ms, labels=array(['trig0', 'trig1', 'trig2']))
-                ep = neo.Epoch([10, 20]*pq.ms, durations=[4, 10]*pq.ms, labels=array(['a0', 'a1']))
+                ev = neo.Event([0, 10, 30]*neo.units.ms, labels=array(['trig0', 'trig1', 'trig2']))
+                ep = neo.Epoch([10, 20]*neo.units.ms, durations=[4, 10]*neo.units.ms, labels=array(['a0', 'a1']))
                 seg.events.append(ev)
                 seg.epochs.append(ep)
 

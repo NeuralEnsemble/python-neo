@@ -9,9 +9,9 @@ class AsciiImageIO(BaseIO):
 
     *Usage*:
         >>> from neo import io
-        >>> import quantities as pq
+        >>> import neo.units
         >>> r = io.AsciiImageIO(file_name='File_asciiimage_1.txt',nb_frame=511, nb_row=100,
-        ...                     nb_column=100,units='mm', sampling_rate=1.0*pq.Hz,
+        ...                     nb_column=100,units='mm', sampling_rate=1.0*neo.units.Hz,
         ...                     spatial_scale=1.0*pq.mm)
         >>> block = r.read_block()
         read block
