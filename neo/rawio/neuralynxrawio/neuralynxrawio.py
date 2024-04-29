@@ -87,8 +87,8 @@ class NeuralynxRawIO(BaseRawIO):
         Otherwise set 0 of time to first time in dataset
     strict_gap_mode: bool, default: True
         Detect gaps using strict mode or not.
-          * strict_gap_mode = True then a gap is consider when timstamp difference between two
-            consequtive data packet is more than one sample interval.
+          * strict_gap_mode = True then a gap is consider when timestamp difference between two
+            consecutive data packet is more than one sample interval.
           * strict_gap_mode = False then a gap has an increased tolerance. Some new system with different clock need this option
             otherwise, too many gaps are detected
 
