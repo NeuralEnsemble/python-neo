@@ -93,6 +93,8 @@ class NeuroScopeRawIO(BaseRawIO):
                 channel_group[int(xml_rc.text)] = grp_index
 
         sig_dtype = "int16"
+        # scale to convert sample values to voltage in mV = range of recording in volts *
+        #  1000 mV/V /(number of bits * amplification)
         if nbits == 16:
             gain = voltage_range * 1000 / (2**nbits) / amplification
             # ~ elif nbits==32:
