@@ -538,7 +538,7 @@ def read_rhs(filename, file_format: str):
             if file_format == "header-attached":
                 data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
             else:
-                data_dtype[10] = "unit16"
+                data_dtype[10] = "uint16"
     # I can't seem to get stim files to generate for one-file-per-channel
     # so let's skip for now and can be given on request
 
@@ -560,7 +560,7 @@ def read_rhs(filename, file_format: str):
             if file_format == "header-attached":
                 data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
             else:
-                data_dtype[11] == "unit16"
+                data_dtype[11] == "uint16"
     else:
         warnings.warn("Stim not implemented for `one-file-per-channel` due to lack of test files")
 
@@ -583,7 +583,7 @@ def read_rhs(filename, file_format: str):
             if file_format == "header-attached":
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
             else:
-                data_dtype[sig_type] = "unit16"
+                data_dtype[sig_type] = "uint16"
 
     # 5: Digital input channel.
     # 6: Digital output channel.
