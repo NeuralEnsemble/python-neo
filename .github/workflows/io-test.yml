@@ -107,6 +107,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -yqq --allow-downgrades libc6:i386 libgcc-s1:i386 libstdc++6:i386 wine
 
+      - name: Pip list
+        run: |
+          pip list
+
+      - name: Conda list
+        run: |
+          conda list
+
       - name: Test with pytest
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_local_plugin_path
