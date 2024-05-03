@@ -98,12 +98,12 @@ class IntanRawIO(BaseRawIO):
 
         if self.filename.endswith(".rhs"):
             if filename.name == "info.rhs":
-                if any((filename.parent / file).exists() for file in one_file_per_signal_filenames):
+                if any((filename.parent / file).exists() for file in one_file_per_signal_filenames_rhs):
                     self.file_format = "one-file-per-signal"
-                    raw_file_paths_dict = create_one_file_per_signal_dict(dirname=filename.parent, rhs=True)
+                    raw_file_paths_dict = create_one_file_per_signal_dict_rhs(dirname=filename.parent)
                 else:
                     self.file_format = "one-file-per-channel"
-                    raw_file_paths_dict = create_one_file_per_channel_dict(dirname=filename.parent, rhs=True)
+                    raw_file_paths_dict = create_one_file_per_channel_dict_rhs(dirname=filename.parent)
             else:
                 self.file_format = "header-attached"
 
@@ -122,13 +122,13 @@ class IntanRawIO(BaseRawIO):
         elif self.filename.endswith(".rhd"):
             if filename.name == "info.rhd":
                 # first we have one-file-per-signal which is where one neo stream/file is saved as .dat files
-                if any((filename.parent / file).exists() for file in one_file_per_signal_filenames):
+                if any((filename.parent / file).exists() for file in one_file_per_signal_filenames_rhd):
                     self.file_format = "one-file-per-signal"
-                    raw_file_paths_dict = create_one_file_per_signal_dict(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_signal_dict_rhd(dirname=filename.parent)
                 # then there is one-file-per-channel where each channel in a neo stream is in its own .dat file
                 else:
                     self.file_format = "one-file-per-channel"
-                    raw_file_paths_dict = create_one_file_per_channel_dict(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_channel_dict_rhd(dirname=filename.parent)
             # finally the format with the header-attached to the binary file as one giant file
             else:
                 self.file_format = "header-attached"
@@ -175,7 +175,8 @@ class IntanRawIO(BaseRawIO):
         # check timestamp continuity
         if self.file_format == "header-attached":
             timestamp = self._raw_data["timestamp"].flatten()
-        # timestamps are always the last stream
+
+        # timestamps are always 6 for rhd and 7 for rhs
         elif self.file_format == "one-file-per-signal":
             time_stream_index = max(self._raw_data.keys())
             timestamp = self._raw_data[time_stream_index]
@@ -213,7 +214,7 @@ class IntanRawIO(BaseRawIO):
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
         signal_streams["id"] = stream_ids
         for stream_index, stream_id in enumerate(stream_ids):
-            if self.filename.endswith('.rhd'):
+            if self.filename.endswith(".rhd"):
                 signal_streams["name"][stream_index] = stream_type_to_name_rhd.get(int(stream_id), "")
             else:
                 signal_streams["name"][stream_index] = stream_type_to_name_rhs.get(int(stream_id), "")
@@ -455,14 +456,14 @@ rhs_signal_channel_header = [
     ("electrode_impedance_phase", "float32"),
 ]
 
-stream_type_to_name_rhs= {
+stream_type_to_name_rhs = {
     0: "RHS2000 amplifier channel",
     3: "USB board ADC input channel",
     4: "USB board ADC output channel",
     5: "USB board digital input channel",
     6: "USB board digital output channel",
     10: "DC Amplifier channel",
-    11: "Stim channel"
+    11: "Stim channel",
 }
 
 
@@ -501,8 +502,8 @@ def read_rhs(filename, file_format: str):
     if file_format == "header-attached":
         data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
     else:
-        data_dtype[7] = "int32"
-        channel_number_dict[7] = 1
+        data_dtype[15] = "int32"
+        channel_number_dict[15] = 1
 
     # 0: RHS2000 amplifier channel.
     for chan_info in channels_by_type[0]:
@@ -546,7 +547,7 @@ def read_rhs(filename, file_format: str):
     # so let's skip for now and can be given on request
 
     if file_format != "one-file-per-channel":
-        channel_number_dict[11] = channel_number_dict[0] # should be one stim / amplifier channel
+        channel_number_dict[11] = channel_number_dict[0]  # should be one stim / amplifier channel
         for chan_info in channels_by_type[0]:
             name = chan_info["native_channel_name"]
             chan_info_stim = dict(chan_info)
@@ -902,12 +903,11 @@ def read_rhd(filename, file_format: str):
 
 ##########################################################################
 # RHX Zone for Binary Files
-# This zone gives the headerless binary files for both rhs and rhd header files
-# This occurs with the new rhx version of the intan recording software as an
-# optional software that can be turned
+# This section provides all possible headerless binary files in both the rhs and rhd
+# formats.
 
-# For One File Per Signal
-one_file_per_signal_filenames = [
+# RHD Binary Files for One File Per Signal
+one_file_per_signal_filenames_rhd = [
     "amplifier.dat",
     "auxiliary.dat",
     "supply.dat",
@@ -917,43 +917,73 @@ one_file_per_signal_filenames = [
 ]
 
 
-def create_one_file_per_signal_dict(dirname, rhs: bool = False):
+def create_one_file_per_signal_dict_rhd(dirname):
     """Function for One File Per Signal Type
 
     Parameters
     ----------
     dirname: pathlib.Path
         The folder to explore
-    rhs: bool, default: False
-        Whether this is an rhd or an rhs file
+
+    Returns
+    -------
+    raw_files_paths_dict: dict
+        A dict of all the file paths
     """
 
-    # if rhs we have an extra stream to add
-
-    if rhs:
-        one_file_per_signal_filenames.insert(4, "analogout.dat")
-
     raw_file_paths_dict = {}
-    for raw_index, raw_file in enumerate(one_file_per_signal_filenames):
+    for raw_index, raw_file in enumerate(one_file_per_signal_filenames_rhd):
         if Path(dirname / raw_file).is_file():
             raw_file_paths_dict[raw_index] = Path(dirname / raw_file)
-    if rhs:
-        raw_file_paths_dict[7] = Path(dirname / "time.dat")
-    else:
-        raw_file_paths_dict[6] = Path(dirname / "time.dat")
 
-    if rhs:
-        # 10 and 11 are hardcoded in the rhs_reader above so hardcoded here too
-        if Path(dirname / "dcamplifier.dat").is_file():
-            raw_file_paths_dict[10] = Path(dirname / "dcamplifier.dat")
-        if Path(dirname / "stim.dat").is_file():
-            raw_file_paths_dict[11] = Path(dirname / "stim.dat")
+    raw_file_paths_dict[6] = Path(dirname / "time.dat")
 
     return raw_file_paths_dict
 
 
-# For One File Per Channel
-possible_raw_file_prefixes = [
+# RHS Binary Files for One File Per Signal
+one_file_per_signal_filenames_rhs = [
+    "amplifier.dat",
+    "auxiliary.dat",
+    "supply.dat",
+    "analogin.dat",
+    "analogout.dat" "digitalin.dat",
+    "digitalout.dat",
+]
+
+
+def create_one_file_per_signal_dict_rhs(dirname):
+    """Function for One File Per Signal Type
+
+    Parameters
+    ----------
+    dirname: pathlib.Path
+        The folder to explore
+
+    Returns
+    -------
+    raw_files_paths_dict: dict
+        A dict of all the file paths
+    """
+
+    raw_file_paths_dict = {}
+    for raw_index, raw_file in enumerate(one_file_per_signal_filenames_rhs):
+        if Path(dirname / raw_file).is_file():
+            raw_file_paths_dict[raw_index] = Path(dirname / raw_file)
+
+    # we need time to be the last value
+    raw_file_paths_dict[15] = Path(dirname / "time.dat")
+    # 10 and 11 are hardcoded in the rhs_reader above so hardcoded here too
+    if Path(dirname / "dcamplifier.dat").is_file():
+        raw_file_paths_dict[10] = Path(dirname / "dcamplifier.dat")
+    if Path(dirname / "stim.dat").is_file():
+        raw_file_paths_dict[11] = Path(dirname / "stim.dat")
+
+    return raw_file_paths_dict
+
+
+# RHD Binary Files for One File Per Channel
+possible_raw_file_prefixes_rhd = [
     "amp",
     "aux",
     "vdd",
@@ -963,35 +993,71 @@ possible_raw_file_prefixes = [
 ]
 
 
-def create_one_file_per_channel_dict(dirname, rhs: bool = False):
+def create_one_file_per_channel_dict_rhd(dirname):
     """Utility function for One File Per Channel
 
     Parameters
     ----------
     dirname: pathlib.Path
         The folder to explore
-    rhs: bool, default: False
-        Whether this is an rhd or an rhs file
+
+    Returns
+    -------
+    raw_files_paths_dict: dict
+        A dict of all the file paths
     """
-    # if rhs we have an extra stream to add
-    if rhs:
-        possible_raw_file_prefixes.insert(4, "board-ANALOG-OUT")
 
     file_names = dirname.glob("**/*.dat")
     files = [file for file in file_names if file.is_file()]
     raw_file_paths_dict = {}
-    for raw_index, prefix in enumerate(possible_raw_file_prefixes):
+    for raw_index, prefix in enumerate(possible_raw_file_prefixes_rhd):
         raw_file_paths_dict[raw_index] = [file for file in files if prefix in file.name]
-    if rhs:
-        raw_file_paths_dict[7] = [Path(dirname / "time.dat")]
-    else:
-        raw_file_paths_dict[6] = [Path(dirname / "time.dat")]
 
-    if rhs:
-        # 10 and 11 are hardcoded in the rhs reader so hardcoded here
-        raw_file_paths_dict[10] = [file for file in files if "dc-" in file.name]
-        # we can find the files, but I can see how to read them out of header
-        # so for now we don't expose the stim files in one-file-per-channel
-        raw_file_paths_dict[11] = [file for file in files if "stim-" in file.name]
+    raw_file_paths_dict[6] = [Path(dirname / "time.dat")]
+
+    return raw_file_paths_dict
+
+
+# RHS Binary Files for One File Per Channel
+possible_raw_file_prefixes_rhs = [
+    "amp",
+    "aux",
+    "vdd",
+    "board-ANALOG-IN",
+    "board-ANALOG-OUT",
+    "board-DIGITAL-IN",
+    "board-DIGITAL-OUT",
+]
+
+
+def create_one_file_per_channel_dict_rhs(
+    dirname,
+):
+    """Utility function for One File Per Channel
+
+    Parameters
+    ----------
+    dirname: pathlib.Path
+        The folder to explore
+
+    Returns
+    -------
+    raw_files_paths_dict: dict
+        A dict of all the file paths
+    """
+
+    file_names = dirname.glob("**/*.dat")
+    files = [file for file in file_names if file.is_file()]
+    raw_file_paths_dict = {}
+    for raw_index, prefix in enumerate(possible_raw_file_prefixes_rhs):
+        raw_file_paths_dict[raw_index] = [file for file in files if prefix in file.name]
+    
+    # we need time to be the last value
+    raw_file_paths_dict[15] = [Path(dirname / "time.dat")]
+    # 10 and 11 are hardcoded in the rhs reader so hardcoded here
+    raw_file_paths_dict[10] = [file for file in files if "dc-" in file.name]
+    # we can find the files, but I can see how to read them out of header
+    # so for now we don't expose the stim files in one-file-per-channel
+    raw_file_paths_dict[11] = [file for file in files if "stim-" in file.name]
 
     return raw_file_paths_dict
