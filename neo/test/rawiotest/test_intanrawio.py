@@ -16,8 +16,8 @@ class TestIntanRawIO(
         "intan/intan_rhd_test_1.rhd",
         "intan/intan_fpc_test_231117_052630/info.rhd",
         "intan/intan_fps_test_231117_052500/info.rhd",
-        "intan/intan_fpc_rhs_test_240329_091536/info.rhs",
-        "intan/intan_fps_rhs_test_240329_091637/info.rhs",
+        "intan/intan_fpc_rhs_test_240329_091537/info.rhs",
+        "intan/intan_fps_rhs_test_240329_091636/info.rhs",
     ]
 
 
