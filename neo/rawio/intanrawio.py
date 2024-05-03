@@ -97,7 +97,7 @@ class IntanRawIO(BaseRawIO):
 
         if self.filename.endswith(".rhs"):
             if filename.name == "info.rhs":
-                if any((filename.parent / file).exists for file in one_file_per_signal_filenames):
+                if any((filename.parent / file).exists() for file in one_file_per_signal_filenames):
                     self.file_format = "one-file-per-signal"
                     raw_file_paths_dict = create_one_file_per_signal_dict(dirname=filename.parent, rhs=True)
                 else:
