@@ -212,7 +212,11 @@ class IntanRawIO(BaseRawIO):
 
         stream_ids = np.unique(signal_channels["stream_id"])
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
-        signal_streams["id"] = stream_ids
+
+        # we need to sort the data because the string of 10 is mis-sorted.
+        stream_ids_sorted = sorted([int(stream_id) for stream_id in stream_ids])
+        signal_streams["id"] = [str(stream_id) for stream_id in stream_ids_sorted]
+
         for stream_index, stream_id in enumerate(stream_ids):
             if self.filename.endswith(".rhd"):
                 signal_streams["name"][stream_index] = stream_type_to_name_rhd.get(int(stream_id), "")
