@@ -28,7 +28,7 @@ class TestBlackrockRawIO(
         "blackrock/FileSpec2.3001",
         "blackrock/blackrock_2_1/l101210-001",
         "blackrock/blackrock_3_0/file_spec_3_0",
-        "blackrock/blackrock_3_0_ptp",
+        "blackrock/blackrock_3_0_ptp/20231027-125608-001",
     ]
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
@@ -186,7 +186,7 @@ class TestBlackrockRawIO(
                         assert_equal(python_digievents, matlab_digievents)
 
     def test_blackrockrawio_ptp_timestamps(self):
-        dirname = self.get_local_path("blackrock/blackrock_3_0_ptp")
+        dirname = self.get_local_path("blackrock/blackrock_3_0_ptp/20231027-125608-001")
         reader = BlackrockRawIO(filename=dirname)
         reader.parse_header()
 
