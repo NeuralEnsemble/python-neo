@@ -186,7 +186,7 @@ class TestBlackrockRawIO(
                         assert_equal(python_digievents, matlab_digievents)
 
     def test_blackrockrawio_ptp_timestamps(self):
-        dirname = self.get_local_path("blackrock/blackrock_3_0_ptp/20231027-125608")
+        dirname = self.get_local_path("blackrock/blackrock_3_0_ptp")
         reader = BlackrockRawIO(filename=dirname)
         reader.parse_header()
 
