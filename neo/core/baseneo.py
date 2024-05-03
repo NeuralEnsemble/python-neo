@@ -34,6 +34,27 @@ logger = logging.getLogger("Neo")
 class MergeError(Exception):
     pass
 
+class NeoReadWriteError(IOError):
+    """
+    This is the main neo-specific error that has to deal with
+    ephys data that does not follow the requirements for the Neo
+    object hierarchy.
+
+    It should be used for:
+        1) When an IO does not support a specific read/write functionality
+        2) A file format does not support the structural requirements
+            * Different sampling rates among streams
+            * Different expectations for a file format (could also be
+            a NotImplementedError depending on circumstances)
+        
+    It should NOT be used when other errors more accurately describe
+    the problem:
+        1) ValueError: for incorrect values (like t_start, t_stop)
+        2) TypeError: use of an inappropriate type for an argument
+        3) FileNotFoundError: for use when a file is not found
+    """
+    pass
+
 
 def _check_annotations(value):
     """
@@ -68,7 +89,8 @@ def merge_annotation(a, b):
         For strings: concatenate with ';'
         Otherwise: fail if the annotations are not equal
     """
-    assert type(a) == type(b), f"type({a})) {type(a)} != type({b}) {type(b)}"
+    if type(a) != type(b):
+        raise TypeError(f"type({a}) {type(a)} != type({b}) {type(b)}")
     if isinstance(a, dict):
         return merge_annotations(a, b)
     elif isinstance(a, np.ndarray):  # concatenate b to a
@@ -81,7 +103,8 @@ def merge_annotation(a, b):
         else:
             return a + ";" + b
     else:
-        assert a == b, f"{a} != {b}"
+        if a != b:
+            raise ValueError(f"{a} != {b}")
         return a
 
 
@@ -131,7 +154,8 @@ def intersect_annotations(A, B):
 
     for key in set(A.keys()) & set(B.keys()):
         v1, v2 = A[key], B[key]
-        assert type(v1) == type(v2), f"type({v1}) {type(v1)} != type({v2}) {type(v2)}"
+        if type(v1) != type(v2):
+            raise TypeError(f"type({v1}) {type(v1)} != type({v2}) {type(v2)}")
         if isinstance(v1, dict) and v1 == v2:
             result[key] = deepcopy(v1)
         elif isinstance(v1, str) and v1 == v2:

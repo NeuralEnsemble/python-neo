@@ -31,6 +31,8 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+from neo.core import NeoReadWriteError
+
 import numpy as np
 
 
@@ -94,7 +96,8 @@ class MaxwellRawIO(BaseRawIO):
                         f"Possible rec_names: {unique_rec_names}"
                     )
                 else:
-                    assert self.rec_name in unique_rec_names, f"rec_name {self.rec_name} not found"
+                    if self.rec_name not in unique_rec_names:
+                        raise NeoReadWriteError(f"rec_name {self.rec_name} not found")
             else:
                 self.rec_name = unique_rec_names[0]
             # add streams that contain the selected rec_name

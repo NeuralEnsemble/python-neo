@@ -450,7 +450,8 @@ class Container(BaseNeo):
             else:
                 container = getattr(self, _container_name(child.__class__.__name__))
             if container.parent is not None:
-                assert getattr(child, parent_name, None) is self
+                if getattr(child, parent_name, None) is not self:
+                    raise AttributeError("Child should have its parent as an attribute")
         if recursive:
             for child in self.container_children:
                 child.check_relationships(recursive=True)

@@ -552,7 +552,8 @@ class AxographRawIO(BaseRawIO):
             # - starting with AxoGraph X, the identifier is 'axgx'
             header_id = f.read(4).decode("utf-8")
             self.info["header_id"] = header_id
-            assert header_id in ["AxGr", "axgx"], f'not an AxoGraph binary file! "{self.filename}"'
+            if header_id not in ["AxGr", "axgx"]:
+                raise NeoReadWriteError(f'File "{self.filename}" is not an AxoGraph binary file! Use other neo reader')
 
             self.logger.debug(f"{header_id=}")
 
@@ -564,13 +565,15 @@ class AxographRawIO(BaseRawIO):
             #   format version 3
             if header_id == "AxGr":
                 format_ver, n_cols = f.read_f("HH")
-                assert format_ver == 1 or format_ver == 2, (
-                    f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                if format_ver != 1 and format_ver != 2:
+                    raise ValueError(
+                        f'Mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
                 )
             elif header_id == "axgx":
                 format_ver, n_cols = f.read_f("ll")
-                assert format_ver >= 3, (
-                    f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                if format_ver < 3:
+                    raise ValueError(
+                    f'Mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
                 )
             else:
                 raise NotImplementedError(f'unimplemented file header identifier "{header_id}"!')
@@ -907,7 +910,8 @@ class AxographRawIO(BaseRawIO):
                 n_groups = f.read_f("l")
                 self.info["n_groups"] = n_groups
                 group_ids = np.sort(list(set(group_ids)))  # remove duplicates and sort
-                assert n_groups == len(group_ids), f"expected group_ids to have length {n_groups}: {group_ids}"
+                if n_groups != len(group_ids):
+                    raise ValueError(f"expected group_ids to have length {n_groups}: {group_ids}")
 
                 self.logger.debug(f"n_groups: {n_groups}")
                 self.logger.debug(f"group_ids: {group_ids}")
@@ -1054,10 +1058,11 @@ class AxographRawIO(BaseRawIO):
                     # represent this switch, but it seems they were
                     # - setting1 could contain other undeciphered data as a
                     #   bitmask, like setting2
-                    assert font_settings_info["setting1"] in [
+                    if font_settings_info["setting1"] not in [
                         FONT_BOLD,
                         FONT_NOT_BOLD,
-                    ], (
+                    ]: 
+                        raise ValueError(
                         f"expected setting1 ({ font_settings_info['setting1']}) to have value FONT_BOLD "
                         f"({FONT_BOLD}) or FONT_NOT_BOLD ({FONT_NOT_BOLD})"
                     )

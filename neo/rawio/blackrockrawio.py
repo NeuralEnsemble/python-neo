@@ -73,6 +73,8 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+from neo.core import NeoReadWriteError
+
 
 class BlackrockRawIO(BaseRawIO):
     """
@@ -330,15 +332,15 @@ class BlackrockRawIO(BaseRawIO):
         else:
             raise (ValueError("nsx_to_load is wrong"))
 
-        assert all(
-            nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load
-        ), "nsx_to_load do not match available nsx list"
+        if not all(nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load):
+            raise FileNotFoundError(f"nsx_to_load does not match available nsx list")
 
         # check that all files come from the same specification
         all_spec = [self.__nsx_spec[nsx_nb] for nsx_nb in self.nsx_to_load]
         if self._avail_files["nev"]:
             all_spec.append(self.__nev_spec)
-        assert all(all_spec[0] == spec for spec in all_spec), "Files don't have the same internal version"
+        if not all(all_spec[0] == spec for spec in all_spec):
+            raise NeoReadWriteError("Files don't have the same internal version")
 
         if len(self.nsx_to_load) > 0 and self.__nsx_spec[self.nsx_to_load[0]] == "2.1" and not self._avail_files["nev"]:
             pass
@@ -401,9 +403,8 @@ class BlackrockRawIO(BaseRawIO):
 
             # check nb segment per nsx
             nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]
-            assert all(
-                nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx
-            ), "Segment nb not consistent across nsX files"
+            if not all(nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx):
+                raise NeoReadWriteError("Segment nb not consistent across nsX files")
             self._nb_segment = nb_segments_for_nsx[0]
 
             self.__delete_empty_segments()
@@ -1263,11 +1264,12 @@ class BlackrockRawIO(BaseRawIO):
                         ev_ids[mask_after_seg] += 1
 
             # consistency check: same number of segments for nsx and nev data
-            assert nb_possible_nev_segments == len(nonempty_nsx_segments), (
-                f"Inconsistent ns{nsx_nb} and nev file. {nb_possible_nev_segments} "
-                f"segments present in .nev file, but {len(nonempty_nsx_segments)} in "
-                "ns{nsx_nb} file."
-            )
+            if nb_possible_nev_segments != len(nonempty_nsx_segments):
+                raise NeoReadWriteError(
+                    f"Inconsistent ns{nsx_nb} and nev file. {nb_possible_nev_segments} "
+                    f"segments present in .nev file, but {len(nonempty_nsx_segments)} in "
+                    f"ns{nsx_nb} file."
+                )
 
             new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments), sorted(list(nonempty_nsx_segments))))
 

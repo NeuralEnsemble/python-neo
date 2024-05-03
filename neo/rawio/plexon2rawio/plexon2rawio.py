@@ -160,7 +160,8 @@ class Plexon2RawIO(BaseRawIO):
             existing_source = source_characteristics.setdefault(source_id, channel_source)
 
             # ensure that stream of this channel and existing stream have same properties
-            assert channel_source == existing_source
+            if channel_source != existing_source:
+                raise ValueError(f"The channel source {channel_source} must be the same as the existing source {existing_source}")
 
             ch_name = achannel_info.m_Name.decode()
             chan_id = f"source{achannel_info.m_Source}.{achannel_info.m_Channel}"
@@ -348,7 +349,8 @@ class Plexon2RawIO(BaseRawIO):
 
         stream_id = self.header["signal_streams"][stream_index]["id"]
         stream_characteristic = list(self.signal_stream_characteristics.values())[stream_index]
-        assert stream_id == stream_characteristic.id
+        if stream_id != stream_characteristic.id:
+            raise ValueError(f"The `stream_id` must be {stream_characteristic.id}")
         return int(stream_characteristic.n_samples)  # Avoids returning a numpy.int64 scalar
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
