@@ -414,8 +414,10 @@ class AxonaRawIO(BaseRawIO):
         return nb_unit_spikes
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        assert block_index == 0
-        assert seg_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index must be 0")
+        if seg_index != 0:
+            raise ValueError("`seg_index` must be 0")
 
         tetrode_id = unit_index
         raw_spikes = self._raw_spikes[tetrode_id]
@@ -442,8 +444,10 @@ class AxonaRawIO(BaseRawIO):
         return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        assert block_index == 0
-        assert seg_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index must be 0")
+        if seg_index != 0:
+            raise ValueError("`seg_index` must be 0")
 
         tetrode_id = unit_index
         waveforms = self._raw_spikes[tetrode_id]["samples"]

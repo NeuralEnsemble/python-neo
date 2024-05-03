@@ -51,6 +51,8 @@ from neo.core.regionofinterest import RectangularRegionOfInterest, CircularRegio
 from neo.core.view import ChannelView
 from neo.core.group import Group
 
+from neo.core.baseneo import NeoReadWriteError
+
 # Block should always be first in this list
 objectlist = [
     Block,

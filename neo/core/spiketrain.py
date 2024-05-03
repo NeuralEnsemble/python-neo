@@ -891,8 +891,8 @@ class SpikeTrain(DataObject):
         the spikes.
         :return Merged array_annotations
         """
-
-        assert sorting is not None, "The order of the merged spikes must be known"
+        if sorting is None:
+            raise ValueError("The order of the merged spikes must be known")
 
         merged_array_annotations = {}
 

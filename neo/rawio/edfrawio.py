@@ -193,7 +193,10 @@ class EDFRawIO(BaseRawIO):
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         # only dealing with single block and segment edf files
-        assert (block_index, seg_index) == (0, 0)
+        if block_index != 0:
+            raise ValueError("`block_index` must be 0")
+        if seg_index != 0:
+            raise ValueError("`seg_index` must be 0")
 
         stream_channel_idxs = self.stream_idx_to_chidx[stream_index]
 

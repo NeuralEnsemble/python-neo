@@ -197,11 +197,13 @@ class PhyRawIO(BaseRawIO):
                 spiketrain_an["pc_feature_ind"] = self._pc_feature_ind[unique_templates]
 
     def _segment_t_start(self, block_index, seg_index):
-        assert block_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index` must be 0")
         return self._t_start
 
     def _segment_t_stop(self, block_index, seg_index):
-        assert block_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index` must be 0")
         return self._t_stop
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
@@ -214,7 +216,8 @@ class PhyRawIO(BaseRawIO):
         return None
 
     def _spike_count(self, block_index, seg_index, spike_channel_index):
-        assert block_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index` must be 0")
         spikes = self._spike_clusters
         unit_label = self.unit_labels[spike_channel_index]
         mask = spikes == unit_label
@@ -222,8 +225,10 @@ class PhyRawIO(BaseRawIO):
         return nb_spikes
 
     def _get_spike_timestamps(self, block_index, seg_index, spike_channel_index, t_start, t_stop):
-        assert block_index == 0
-        assert seg_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index` must be 0")
+        if seg_index != 0:
+            raise ValueError("`seg_index` must be 0")
 
         unit_label = self.unit_labels[spike_channel_index]
         mask = self._spike_clusters == unit_label
