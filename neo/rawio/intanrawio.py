@@ -217,7 +217,7 @@ class IntanRawIO(BaseRawIO):
         stream_ids_sorted = sorted([int(stream_id) for stream_id in stream_ids])
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids_sorted]
 
-        for stream_index, stream_id in enumerate(stream_ids):
+        for stream_index, stream_id in enumerate(stream_ids_sorted):
             if self.filename.endswith(".rhd"):
                 signal_streams["name"][stream_index] = stream_type_to_name_rhd.get(int(stream_id), "")
             else:
