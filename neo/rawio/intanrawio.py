@@ -481,8 +481,8 @@ def read_rhs(filename, file_format: str):
         channels_by_type = {k: [] for k in [0, 3, 4, 5, 6]}
         if not file_format == "header-attached":
             # data_dtype for rhs is complicated. There is not 1, 2 (supply and aux),
-            # but there are dc-amp (10) and stim (11). we make timestamps (7)
-            data_dtype = {k: [] for k in [0, 3, 4, 5, 6, 7, 10, 11]}
+            # but there are dc-amp (10) and stim (11). we make timestamps (15)
+            data_dtype = {k: [] for k in [0, 3, 4, 5, 6, 10, 11, 15]}
         for g in range(global_info["nb_signal_group"]):
             group_info = read_variable_header(f, rhs_signal_group_header)
 
@@ -568,7 +568,7 @@ def read_rhs(filename, file_format: str):
             if file_format == "header-attached":
                 data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
             else:
-                data_dtype[11] == "uint16"
+                data_dtype[11] = "uint16"
     else:
         warnings.warn("Stim not implemented for `one-file-per-channel` due to lack of test files")
 
@@ -952,7 +952,7 @@ one_file_per_signal_filenames_rhs = [
     "supply.dat",
     "analogin.dat",
     "analogout.dat",
-     "digitalin.dat",
+    "digitalin.dat",
     "digitalout.dat",
 ]
 
