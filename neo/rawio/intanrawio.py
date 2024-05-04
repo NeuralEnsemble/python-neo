@@ -176,7 +176,7 @@ class IntanRawIO(BaseRawIO):
         if self.file_format == "header-attached":
             timestamp = self._raw_data["timestamp"].flatten()
 
-        # timestamps are always 6 for rhd and 7 for rhs
+        # timestamps are always last stream for headerless binary files
         elif self.file_format == "one-file-per-signal":
             time_stream_index = max(self._raw_data.keys())
             timestamp = self._raw_data[time_stream_index]
@@ -951,7 +951,8 @@ one_file_per_signal_filenames_rhs = [
     "auxiliary.dat",
     "supply.dat",
     "analogin.dat",
-    "analogout.dat" "digitalin.dat",
+    "analogout.dat",
+     "digitalin.dat",
     "digitalout.dat",
 ]
 
