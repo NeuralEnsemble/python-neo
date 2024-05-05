@@ -110,7 +110,7 @@ class IrregularlySampledSignal(BaseSignal):
     array_annotations: dict | None, default: None
         Dict mapping strings to numpy arrays containing annotations for all data points
     **annotations: dict
-        Optional additional metadata supplied by the user as a dict. Will be stored in 
+        Optional additional metadata supplied by the user as a dict. Will be stored in
         the annotations attribute of the object
 
     Notes
@@ -354,7 +354,7 @@ class IrregularlySampledSignal(BaseSignal):
         ValueError
          * Dimensionality of objects don't match for signal
          * If times are different between the two objects
-        
+
         Returns
         -------
         None if check passes
@@ -488,8 +488,8 @@ class IrregularlySampledSignal(BaseSignal):
     def time_slice(self, t_start, t_stop):
         """
         Creates a new :class:`IrregularlySampledSignal` corresponding to the time slice of
-        the original :class:`IrregularlySampledSignal` 
-        
+        the original :class:`IrregularlySampledSignal`
+
         Parameters
         ----------
         t_start: float | None

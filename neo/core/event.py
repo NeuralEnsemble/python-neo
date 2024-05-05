@@ -262,7 +262,7 @@ class Event(DataObject):
         ---------
         other: neo.core.Event
             The `Event` to merge into this one
-        
+
         Notes
         -----
         * The :class:`Event` objects are concatenated horizontally

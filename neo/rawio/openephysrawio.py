@@ -146,12 +146,16 @@ class OpenEphysRawIO(BaseRawIO):
                 if channel_has_gaps:
                     # protect against strange timestamp block like in file 'OpenEphys_SampleData_3' CH32
                     if not np.median(diff) == RECORD_SIZE:
-                        raise NeoReadWriteError(f"This file has a non valid data block size for channel {chan_id}, this case cannot be handled")
+                        raise NeoReadWriteError(
+                            f"This file has a non valid data block size for channel {chan_id}, this case cannot be handled"
+                        )
 
                 channel_has_corrupted_timestamps = np.any(diff <= 0)
                 if channel_has_corrupted_timestamps:
                     # protect against corrupted timestamp in channel
-                    raise ValueError(f"{ch_name} has timestamps with zero values or negative differences between consecutive timestamps, this file ({continuous_filename}) with corrupted timestamps needs to be moved away from the folder.")
+                    raise ValueError(
+                        f"{ch_name} has timestamps with zero values or negative differences between consecutive timestamps, this file ({continuous_filename}) with corrupted timestamps needs to be moved away from the folder."
+                    )
 
                 if seg_index == 0:
                     # add in channel list

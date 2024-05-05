@@ -161,7 +161,9 @@ class Plexon2RawIO(BaseRawIO):
 
             # ensure that stream of this channel and existing stream have same properties
             if channel_source != existing_source:
-                raise ValueError(f"The channel source {channel_source} must be the same as the existing source {existing_source}")
+                raise ValueError(
+                    f"The channel source {channel_source} must be the same as the existing source {existing_source}"
+                )
 
             ch_name = achannel_info.m_Name.decode()
             chan_id = f"source{achannel_info.m_Source}.{achannel_info.m_Channel}"

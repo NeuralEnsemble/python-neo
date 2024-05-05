@@ -35,7 +35,7 @@ from neo.core import (
     RectangularRegionOfInterest,
     CircularRegionOfInterest,
     PolygonRegionOfInterest,
-    NeoReadWriteError
+    NeoReadWriteError,
 )
 
 read_error = "This type is not supported by this file format for reading"
@@ -175,8 +175,10 @@ class BaseIO:
                 self.write_block(bl, **kargs)
         elif Segment in self.writeable_objects:
             if len(bl.segments) != 1:
-                raise NeoReadWriteError(f"{self.__class__.__name__} is based on segment so if you try to write a block it "
-                + "must contain only one Segment")
+                raise NeoReadWriteError(
+                    f"{self.__class__.__name__} is based on segment so if you try to write a block it "
+                    + "must contain only one Segment"
+                )
             self.write_segment(bl.segments[0], **kargs)
         else:
             raise NotImplementedError

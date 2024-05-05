@@ -34,6 +34,7 @@ logger = logging.getLogger("Neo")
 class MergeError(Exception):
     pass
 
+
 class NeoReadWriteError(IOError):
     """
     This is the main neo-specific error that has to deal with
@@ -46,13 +47,14 @@ class NeoReadWriteError(IOError):
             * Different sampling rates among streams
             * Different expectations for a file format (could also be
             a NotImplementedError depending on circumstances)
-        
+
     It should NOT be used when other errors more accurately describe
     the problem:
         1) ValueError: for incorrect values (like t_start, t_stop)
         2) TypeError: use of an inappropriate type for an argument
         3) FileNotFoundError: for use when a file is not found
     """
+
     pass
 
 

@@ -41,7 +41,7 @@ class FilterCondition(ABC):
 
         Parameters
         ----------
-        control: Any 
+        control: Any
             The control value to be used for filtering.
 
         Notes

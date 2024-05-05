@@ -499,7 +499,6 @@ class BaseRawIO:
         if signal_streams.size > 0:
             if signal_channels.size < 1:
                 raise ValueError("Signal stream exists but there are no signal channels")
-            
 
         for stream_index in range(signal_streams.size):
             stream_id = signal_streams[stream_index]["id"]
@@ -507,8 +506,10 @@ class BaseRawIO:
             characteristics = signal_channels[mask][_common_sig_characteristics]
             unique_characteristics = np.unique(characteristics)
             if unique_characteristics.size != 1:
-                raise ValueError(f"Some channels in stream_id {stream_id} "
-                                 f"do not have the same {_common_sig_characteristics} {unique_characteristics}")
+                raise ValueError(
+                    f"Some channels in stream_id {stream_id} "
+                    f"do not have the same {_common_sig_characteristics} {unique_characteristics}"
+                )
 
             # also check that channel_id is unique inside a stream
             channel_ids = signal_channels[mask]["id"]
@@ -788,8 +789,10 @@ class BaseRawIO:
         if isinstance(channel_indexes, np.ndarray):
             if channel_indexes.dtype == "bool":
                 if self.signal_channels_count(stream_index) != channel_indexes.size:
-                    raise ValueError("If channel_indexes is a boolean it must have be the same length as the "
-                                     f"number of channels {self.signal_channels_count(stream_index)}")
+                    raise ValueError(
+                        "If channel_indexes is a boolean it must have be the same length as the "
+                        f"number of channels {self.signal_channels_count(stream_index)}"
+                    )
                 (channel_indexes,) = np.nonzero(channel_indexes)
 
         if prefer_slice and isinstance(channel_indexes, np.ndarray):
