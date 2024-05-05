@@ -2685,7 +2685,7 @@ class DAC2Layout(ElphyLayout):
             if tag_mode == 1:
                 if tag_channel not in range(1, 3):
                     raise ValueError("Elphy format support only 2 tag channels for tag_mode == 1")
-            elif tag_mode == 2 or tag_mode ==3:
+            elif tag_mode == 2 or tag_mode == 3:
                 if tag_channel not in range(1, 17):
                     raise ValueError("Elphy format support only 16 tag channels for tag_mode == 2 or tag_mode == 3")
 
@@ -2812,7 +2812,9 @@ class DAC2Layout(ElphyLayout):
         if episode not in range(1, self.n_episodes + 1):
             raise ValueError(f"`episode` must be in {range(1, self.n_episodes + 1)}, but is {episode}")
         if electrode_id not in range(1, self.n_spiketrains(episode) + 1):
-            raise ValueError(f"`eletrodee_id` must be in {range(1, self.n_spiketrains(episode)+1)}, but is {electrode_id}")
+            raise ValueError(
+                f"`eletrodee_id` must be in {range(1, self.n_spiketrains(episode)+1)}, but is {electrode_id}"
+            )
         # get some properties stored in the episode sub-block
         block = self.episode_block(episode)
         x_unit = block.ep_block.x_unit

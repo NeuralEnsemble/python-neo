@@ -24,7 +24,7 @@ def unique(quantities):
     Parameters
     ----------
     quantities: array-like[pq.Quantity dtype]
-        An array-like object containing quantities 
+        An array-like object containing quantities
 
     Returns
     -------
@@ -257,7 +257,7 @@ class SpikeTrainList(ObjectList):
     def append(self, obj):
         """
         Appends to the SpikeTrainList with a new neo.core.SpikeTrain
-        
+
         Parameters
         ----------
         obj: neo.core.SpikeTrain
@@ -281,12 +281,12 @@ class SpikeTrainList(ObjectList):
 
     def extend(self, iterable):
         """Extends the SpikeTrainList with additional SpikeTrain's from an iterable
-        
+
         Parameters
         ----------
         iterable: iterable[neo.core.SpikeTrain]
             A list-like or array-like object containing neo.core.SpikeTrain to be added to the SpikeTrainList
-            
+
         Examples
         --------
         # with SpikeTrainList stl with two SpikeTrains and stl_other with three SpikeTrains

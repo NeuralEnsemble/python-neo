@@ -75,7 +75,7 @@ class BrainVisionRawIO(BaseRawIO):
 
         if fmt not in fmts:
             raise NeoReadWriteError(f"the fmt {fmt} is not implmented. Must be one of {fmts}")
-        
+
         sig_dtype = fmts[fmt]
 
         # raw signals memmap

@@ -568,13 +568,13 @@ class AxographRawIO(BaseRawIO):
                 if format_ver != 1 and format_ver != 2:
                     raise ValueError(
                         f'Mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
-                )
+                    )
             elif header_id == "axgx":
                 format_ver, n_cols = f.read_f("ll")
                 if format_ver < 3:
                     raise ValueError(
-                    f'Mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
-                )
+                        f'Mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                    )
             else:
                 raise NotImplementedError(f'unimplemented file header identifier "{header_id}"!')
             self.info["format_ver"] = format_ver
@@ -1061,11 +1061,11 @@ class AxographRawIO(BaseRawIO):
                     if font_settings_info["setting1"] not in [
                         FONT_BOLD,
                         FONT_NOT_BOLD,
-                    ]: 
+                    ]:
                         raise ValueError(
-                        f"expected setting1 ({ font_settings_info['setting1']}) to have value FONT_BOLD "
-                        f"({FONT_BOLD}) or FONT_NOT_BOLD ({FONT_NOT_BOLD})"
-                    )
+                            f"expected setting1 ({ font_settings_info['setting1']}) to have value FONT_BOLD "
+                            f"({FONT_BOLD}) or FONT_NOT_BOLD ({FONT_NOT_BOLD})"
+                        )
 
                     # size is stored 10 times bigger than real value
                     font_settings_info["size"] = font_settings_info["size"] / 10.0

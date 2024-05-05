@@ -262,7 +262,9 @@ class TdtRawIO(BaseRawIO):
                             self._sig_dtype_by_group[stream_index] = np.dtype(dtype)
                         else:
                             if self._sig_dtype_by_group[stream_index] != dtype:
-                                raise TypeError(f"The dtype for the signal in {stream_index=} is not the correct dtype of {dtype}")
+                                raise TypeError(
+                                    f"The dtype for the signal in {stream_index=} is not the correct dtype of {dtype}"
+                                )
                     else:
                         if sampling_rate != _sampling_rate:
                             raise ValueError("sampling is changing!!!")

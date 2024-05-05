@@ -44,6 +44,7 @@ from .baserawio import (
 )
 from neo.core import NeoReadWriteError
 
+
 class AlphaOmegaRawIO(BaseRawIO):
     """
     AlphaOmega MPX file format 4 reader. Handles several segments.

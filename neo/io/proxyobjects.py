@@ -274,7 +274,9 @@ class AnalogSignalProxy(BaseProxy):
 
         if magnitude_mode == "raw":
             if self._raw_units is None:
-                raise ValueError("raw magnitude is not supported if the gain are not the same for all channels or offset is not 0")
+                raise ValueError(
+                    "raw magnitude is not supported if the gain are not the same for all channels or offset is not 0"
+                )
             sig = raw_signal
             units = self._raw_units
         elif magnitude_mode == "rescaled":

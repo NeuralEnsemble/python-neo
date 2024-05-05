@@ -164,7 +164,7 @@ class BCI2000RawIO(BaseRawIO):
             raise ValueError("`i_start` is outside of data range")
         if (i_stop < 0) or (i_stop > self._read_info["n_samps"]):
             raise ValueError("`i_stop` is outside of data range")
-        
+
         if channel_indexes is None:
             channel_indexes = np.arange(self.header["signal_channels"].size)
         return self._memmap["raw_vector"][i_start:i_stop, channel_indexes]

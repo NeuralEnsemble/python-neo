@@ -30,7 +30,7 @@ class ChannelView(BaseNeo):
         Filesystem path or URL of the original data file.
     array_annotations: dict | None, default: None
         Dict mapping strings to numpy arrays containing annotations for all data points
-    **annotations: dict 
+    **annotations: dict
         Other use-specified metadata with keywords
     """
 

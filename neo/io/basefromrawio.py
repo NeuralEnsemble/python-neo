@@ -244,7 +244,9 @@ class BaseFromRaw(BaseIO):
             if time_slice is not None:
                 raise ValueError("For lazy=True you must specify a time_slice when LazyObject.load(time_slice=...)")
             if load_waveforms:
-                raise ValueError("For lazy=True you must specify load_waveforms when SpikeTrain.load(load_waveforms=...)")
+                raise ValueError(
+                    "For lazy=True you must specify load_waveforms when SpikeTrain.load(load_waveforms=...)"
+                )
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode

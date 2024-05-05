@@ -74,7 +74,7 @@ def _check_time_in_range(value, t_start, t_stop, view=False) -> None:
         * If t_stop < t_start
         * value.min() < t_start
         * value.max() > t_start
-    
+
     Returns
     -------
     None: If check passes
@@ -106,7 +106,7 @@ def _check_waveform_dimensions(spiketrain) -> None:
     ----------
     spiketrain: neo.core.SpikeTrain
         The neo.core.SpikeTrain to check for waveforms
-    
+
     Raises
     ------
     ValueError
@@ -238,10 +238,10 @@ class SpikeTrain(DataObject):
     ----------
     times: quantity array 1D | numpy array 1D | list
         The times of each spike.
-    t_stop: quantity scalar | numpy scalar |float 
+    t_stop: quantity scalar | numpy scalar |float
         Time at which the SpikeTrain ended. This will be converted to thesame units as `times`.
         This argument is required because it specifies the period of time over which spikes could have occurred.
-        Note that :attr:`t_start` is highly recommended for the same reason.        
+        Note that :attr:`t_start` is highly recommended for the same reason.
     units: (quantity units) | None, default: None
         Required if `times` is a list or numpy.ndarray`
         Not required if times is a quantities.Quantity
@@ -266,7 +266,7 @@ class SpikeTrain(DataObject):
         A text description of this dataset
     file_origin: str | Filesystem path | URL | None, default: None
         The path or location of the original data file.
-    array_annotations: dict 
+    array_annotations: dict
         A dictonary mapping of strings to numpy arrays containing annotations for all data points
     **annotations: dict
         Other user defined metadata given as a dict
@@ -279,7 +279,7 @@ class SpikeTrain(DataObject):
             Interval between two samples (1/`sampling_rate`)
      * duration: quantity scalar
             Duration over which spikes can occur read-only (`t_stop` - `t_start`)
-     * spike_duration: quantity scalar 
+     * spike_duration: quantity scalar
             Duration of a waveform, read-only (`waveform`.shape[2] * `sampling_period`)
      * right_sweep: quantity scalar
             Time from the trigger times of the spikes to the end of the waveforms, read-only
@@ -293,7 +293,7 @@ class SpikeTrain(DataObject):
         metadata, except that :attr:`waveforms` is also sliced in the same way
         (along dimension 0). Note that t_start and t_stop are not changed
         automatically, although you can still manually change them.
-    
+
     Examples
     --------
 
@@ -311,7 +311,7 @@ class SpikeTrain(DataObject):
     <SpikeTrain(array([ 3.,  4.,  5.]) * s, [0.0 s, 10.0 s])>
     >>> train2
     <SpikeTrain(array([ 4.,  5.]) * s, [0.0 s, 10.0 s])>
-    
+
     """
 
     _parent_objects = ("Segment",)

@@ -24,7 +24,7 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         reader = NeuroScopeRawIO(filename=fname)
         reader.parse_header()
 
-        gain = reader.header['signal_channels'][0]['gain']
+        gain = reader.header["signal_channels"][0]["gain"]
 
         # scale is in mV = range of recording in volts * 1000 mV/V /(number of bits * ampification)
         self.assertAlmostEqual(20.0 * 1000 / (2**16 * 1000), gain)

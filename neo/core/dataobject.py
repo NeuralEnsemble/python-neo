@@ -193,7 +193,7 @@ class DataObject(BaseNeo, pq.Quantity):
         ----------
         **array_annotations: dict
             Series of keyword annotations to add to the object
-        
+
         Examples
         --------
         >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
@@ -211,7 +211,7 @@ class DataObject(BaseNeo, pq.Quantity):
         ----------
         index: int | list | np.ndarray
             The index (indices) from which the annotations are extracted
-        
+
         Returns
         -------
         index_annotations: dict
@@ -252,12 +252,12 @@ class DataObject(BaseNeo, pq.Quantity):
         ----------
         other: any
             The annotation to attemp to merge
-        
+
         Returns
         -------
         merged_array_annotations: dict
             The merged annotations
-        
+
         Notes
         -----
         The merge happens in such a way that the result fits the merged data
@@ -312,12 +312,12 @@ class DataObject(BaseNeo, pq.Quantity):
             The units to convert the object to
         dtype: a numpy dtype
             Only exists for backward compatibility see [1]
-        
+
         Returns
         -------
         self.copy(): Any
             A copy of the object with the desired units
-        
+
         Notes
         -----
         [1] The `dtype` argument exists only for backward compatibility within quantities, see
@@ -358,7 +358,7 @@ class DataObject(BaseNeo, pq.Quantity):
         ----------
         units: quantities units | None, default: None
             The data return as a np.ndarray with units requested
-        
+
         Returns
         -------
         data_array: np.ndarray
@@ -430,7 +430,7 @@ class DataObject(BaseNeo, pq.Quantity):
         return new_obj
 
 
-class ArrayDict(dict): 
+class ArrayDict(dict):
     """Dictionary subclass to handle array annotations
 
     When setting `obj.array_annotations[key]=value`, checks for consistency
