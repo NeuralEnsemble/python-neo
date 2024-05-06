@@ -16,19 +16,22 @@ class ChannelView(BaseNeo):
     A tool for indexing a subset of the channels within an :class:`AnalogSignal`
     or :class:`IrregularlySampledSignal`;
 
-    *Required attributes/properties*:
-        :obj: (AnalogSignal or IrregularlySampledSignal) The signal being indexed.
-        :index: (list/1D-array) boolean or integer mask to select the channels of interest.
-
-    *Recommended attributes/properties*:
-        :name: (str) A label for the view.
-        :description: (str) Text description.
-        :file_origin: (str) Filesystem path or URL of the original data file.
-        :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations
-                            for all data points
-
-    Note: Any other additional arguments are assumed to be user-specific
-            metadata and stored in :attr:`annotations`.
+    Parameters
+    ----------
+    obj: Neo.AnalogSignal | Neo.IrregularlySampledSignal
+        The neo object to index
+    index: list | np.ndarray
+        Boolean or integer mask to select the channels of interest
+    name: str | None, default: None
+        A label for the dataset.
+    description: str | None, default: None
+         Text description.
+    file_origin: str | None, default: None
+        Filesystem path or URL of the original data file.
+    array_annotations: dict | None, default: None
+        Dict mapping strings to numpy arrays containing annotations for all data points
+    **annotations: dict
+        Other use-specified metadata with keywords
     """
 
     _parent_objects = ("Group",)

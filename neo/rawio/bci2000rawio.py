@@ -10,7 +10,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
+from neo.core import NeoReadWriteError
 
 import numpy as np
 import re
@@ -145,20 +145,26 @@ class BCI2000RawIO(BaseRawIO):
         return self._read_info["n_samps"] / self._read_info["sampling_rate"]
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return self._read_info["n_samps"]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         if i_start is None:
             i_start = 0
         if i_stop is None:
             i_stop = self._read_info["n_samps"]
-        assert 0 <= i_start <= self._read_info["n_samps"], "i_start outside data range"
-        assert 0 <= i_stop <= self._read_info["n_samps"], "i_stop outside data range"
+
+        if (i_start < 0) or (i_start > self._read_info["n_samps"]):
+            raise ValueError("`i_start` is outside of data range")
+        if (i_stop < 0) or (i_stop > self._read_info["n_samps"]):
+            raise ValueError("`i_stop` is outside of data range")
+
         if channel_indexes is None:
             channel_indexes = np.arange(self.header["signal_channels"].size)
         return self._memmap["raw_vector"][i_start:i_stop, channel_indexes]
@@ -309,7 +315,8 @@ def parse_bci2000_header(filename):
 
         # The next lines contain state vector definitions.
         temp = fid.readline().decode("utf8").strip()
-        assert temp == "[ State Vector Definition ]", f"State definitions not found in header {filename}"
+        if temp != "[ State Vector Definition ]":
+            raise NeoReadWriteError(f"State definitions not found in header {filename}")
         state_defs = []
         state_def_dtype = [("name", "a64"), ("length", int), ("startVal", int), ("bytePos", int), ("bitPos", int)]
         while True:
@@ -323,7 +330,8 @@ def parse_bci2000_header(filename):
 
         # The next lines contain parameter definitions.
         # There are many, and their formatting can be complicated.
-        assert temp == "[ Parameter Definition ]", f"Parameter definitions not found in header {filename}"
+        if temp != "[ Parameter Definition ]":
+            raise NeoReadWriteError(f"Parameter definitions not found in header {filename}")
         param_defs = {}
         while True:
             temp = fid.readline().decode("utf8")

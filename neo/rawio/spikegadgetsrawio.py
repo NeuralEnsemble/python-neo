@@ -177,7 +177,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
             chan_ind = 0
             self.is_scaleable = "spikeScalingToUv" in sconf[0].attrib
             if not self.is_scaleable:
-                self.logger.warning("Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!")
+                self.logger.warning(
+                    "Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!"
+                )
 
             for trode in sconf:
                 if "spikeScalingToUv" in trode.attrib:
@@ -218,7 +220,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
         if self.selected_streams is not None:
             if isinstance(self.selected_streams, str):
                 self.selected_streams = [self.selected_streams]
-            assert isinstance(self.selected_streams, list)
+            if not isinstance(self.selected_streams, list):
+                raise TypeError(
+                    f"`selected_streams` must be of type str or list not of type {type(self.selected_streams)}"
+                )
 
             keep = np.isin(signal_streams["id"], self.selected_streams)
             signal_streams = signal_streams[keep]

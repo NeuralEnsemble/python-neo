@@ -18,7 +18,21 @@ def is_spiketrain_or_proxy(obj):
 
 
 def unique(quantities):
-    """np.unique doesn't work with a list of quantities of different scale,
+    """
+    Function to mimic np.unique for use with quantities
+
+    Parameters
+    ----------
+    quantities: array-like[pq.Quantity dtype]
+        An array-like object containing quantities
+
+    Returns
+    -------
+    unique_quantities: array[pq.Quantity dtype]
+        The unique entries within the array
+    Notes
+    -----
+    np.unique doesn't work with a list of quantities of different scale,
     this function can be used instead."""
     # todo: add a tolerance to handle floating point discrepancies
     #       due to scaling.
@@ -37,38 +51,48 @@ class SpikeTrainList(ObjectList):
     (all spike times in a single array, with a second array indicating which
     neuron/channel the spike is from).
 
+    Parameters
+    ----------
+    items: list[neo.SpikeTrain] | array[neo.SpikeTrain] | None, default: None
+        The SpikeTrains to add to the list
+    parent: neo.Segment | None, default: None
+        The Segment to include the SpikeTrainList within or None for no parent
+
+    Notes
+    -----
     A SpikeTrainList object should behave like a list of SpikeTrains
     for iteration and item access. It is not intended to be used directly
     by users, but is available as the attribute `spiketrains` of Segments.
 
-    Examples:
+    Examples
+    --------
+    # Create from list of SpikeTrain objects
 
-        # Create from list of SpikeTrain objects
+    >>> stl = SpikeTrainList(items=(
+    ...     SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+    ...     SpikeTrain([0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+    ...     SpikeTrain([1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+    ...     SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+    ...                             )
+    ...                     )
+    >>> stl.multiplexed
+    (array([0, 0, 0, 0, 1, 1, 2, 2]),
+    array([ 0.5,  0.6, 23.6, 99.2,  0.7, 11.2,  1.1, 88.5]) * ms)
 
-        >>> stl = SpikeTrainList(items=(
-        ...     SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ...     SpikeTrain([0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ...     SpikeTrain([1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ...     SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ... ))
-        >>> stl.multiplexed
-        (array([0, 0, 0, 0, 1, 1, 2, 2]),
-         array([ 0.5,  0.6, 23.6, 99.2,  0.7, 11.2,  1.1, 88.5]) * ms)
+    # Create from a pair of arrays
 
-        # Create from a pair of arrays
-
-        >>> stl = SpikeTrainList.from_spike_time_array(
-        ...     np.array([0.5, 0.6, 0.7, 1.1, 11.2, 23.6, 88.5, 99.2]),
-        ...     np.array([0, 0, 1, 2, 1, 0, 2, 0]),
-        ...     all_channel_ids=[0, 1, 2, 3],
-        ...     units='ms',
-        ...     t_start=0 * pq.ms,
-        ...     t_stop=100.0 * pq.ms)
-        >>> list(stl)
-        [<SpikeTrain(array([ 0.5,  0.6, 23.6, 99.2]) * ms, [0.0 ms, 100.0 ms])>,
-         <SpikeTrain(array([ 0.7, 11.2]) * ms, [0.0 ms, 100.0 ms])>,
-         <SpikeTrain(array([ 1.1, 88.5]) * ms, [0.0 ms, 100.0 ms])>,
-         <SpikeTrain(array([], dtype=float64) * ms, [0.0 ms, 100.0 ms])>]
+    >>> stl = SpikeTrainList.from_spike_time_array(
+    ...     np.array([0.5, 0.6, 0.7, 1.1, 11.2, 23.6, 88.5, 99.2]),
+    ...     np.array([0, 0, 1, 2, 1, 0, 2, 0]),
+    ...     all_channel_ids=[0, 1, 2, 3],
+    ...     units='ms',
+    ...     t_start=0 * pq.ms,
+    ...     t_stop=100.0 * pq.ms)
+    >>> list(stl)
+    [<SpikeTrain(array([ 0.5,  0.6, 23.6, 99.2]) * ms, [0.0 ms, 100.0 ms])>,
+    <SpikeTrain(array([ 0.7, 11.2]) * ms, [0.0 ms, 100.0 ms])>,
+    <SpikeTrain(array([ 1.1, 88.5]) * ms, [0.0 ms, 100.0 ms])>,
+    <SpikeTrain(array([], dtype=float64) * ms, [0.0 ms, 100.0 ms])>]
 
     """
 
@@ -81,14 +105,14 @@ class SpikeTrainList(ObjectList):
         else:
             for item in items:
                 if not is_spiketrain_or_proxy(item):
-                    raise ValueError("`items` can only contain SpikeTrain objects or proxy pbjects")
+                    raise ValueError("`items` can only contain SpikeTrain objects or proxy objects")
             self._items = list(items)
         self._spike_time_array = None
         self._channel_id_array = None
         self._all_channel_ids = None
         self._spiketrain_metadata = {}
-        if parent is not None:
-            assert parent.__class__.__name__ == "Segment"
+        if parent is not None and parent.__class__.__name__ != "Segment":
+            raise AttributeError("The parent class must be a Segment")
         self.segment = parent
 
     @property
@@ -231,7 +255,23 @@ class SpikeTrainList(ObjectList):
             return other + self._items
 
     def append(self, obj):
-        """L.append(object) -> None -- append object to end"""
+        """
+        Appends to the SpikeTrainList with a new neo.core.SpikeTrain
+
+        Parameters
+        ----------
+        obj: neo.core.SpikeTrain
+            The new neo.core.SpikeTrain to append to the current SpikeTrainList
+
+        Examples
+        --------
+        # with SpikeTrainList stl with two SpikeTrains
+        >>> len(stl)
+        2
+        >>> stl.append(SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms))
+        >>> len(stl)
+        3
+        """
         if not is_spiketrain_or_proxy(obj):
             raise ValueError("Can only append SpikeTrain objects")
         if self._items is None:
@@ -240,7 +280,25 @@ class SpikeTrainList(ObjectList):
         self._items.append(obj)
 
     def extend(self, iterable):
-        """L.extend(iterable) -> None -- extend list by appending elements from the iterable"""
+        """Extends the SpikeTrainList with additional SpikeTrain's from an iterable
+
+        Parameters
+        ----------
+        iterable: iterable[neo.core.SpikeTrain]
+            A list-like or array-like object containing neo.core.SpikeTrain to be added to the SpikeTrainList
+
+        Examples
+        --------
+        # with SpikeTrainList stl with two SpikeTrains and stl_other with three SpikeTrains
+        >>> len(stl)
+        2
+        >>> len(stl_other)
+        3
+        >>> stl.extend(stl_other)
+        >>> len(stl)
+        5
+        """
+
         if self._items is None:
             self._spiketrains_from_array()
         for obj in iterable:
@@ -254,30 +312,24 @@ class SpikeTrainList(ObjectList):
         """Create a SpikeTrainList object from an array of spike times
         and an array of channel ids.
 
-        *Required attributes/properties*:
+        Parameters
+        ----------
+        spike_time_array: quantity array 1D | numpy array 1D, | list
+            The times of all spikes.
+        channel_id_array: numpy array 1D of dtype int
+            The id of the channel (e.g. the neuron) to which each spike belongs. This array should have the same length
+            as the `spike_time_array`
+        all_channel_ids: list | tuple, | numpy array 1D containing integers
+            All channel ids. This is needed to represent channels in which there are no spikes.
+        t_stop: quantity scalar | numpy scalar | float
+            Time at which spike recording ended. This will be converted to the same units as `spike_time_array` or `units`.
+        units: quantity units | None, default: None
+            Required if `spike_time_array is not a :class:`~quantities.Quantity`.
+        :t_start: quantity scalar | numpy scalar | float, default: 0.0 * pq.s
+            Time at which spike recording began. This will be converted to the same units as `spike_time_array` or `units`
+        **annotations: dict
+            The neo.core.baseneo annotations (e.g. name, or user-defined)
 
-        :spike_time_array: (quantity array 1D, numpy array 1D, or list) The times of
-            all spikes.
-        :channel_id_array: (numpy array 1D of dtype int) The id of the channel (e.g. the
-            neuron) to which each spike belongs. This array should have the same length
-            as :attr:`spike_time_array`
-        :all_channel_ids: (list, tuple, or numpy array 1D containing integers) All
-            channel ids. This is needed to represent channels in which there are no
-            spikes.
-        :units: (quantity units) Required if :attr:`spike_time_array` is not a
-                :class:`~quantities.Quantity`.
-        :t_stop: (quantity scalar, numpy scalar, or float) Time at which
-            spike recording ended. This will be converted to the
-            same units as :attr:`spike_time_array` or :attr:`units`.
-
-        *Recommended attributes/properties*:
-        :t_start: (quantity scalar, numpy scalar, or float) Time at which
-            spike recording began. This will be converted to the
-            same units as :attr:`spike_time_array` or :attr:`units`.
-            Default: 0.0 seconds.
-
-
-        *Optional attributes/properties*:
         """
         spike_time_array, dim = normalize_times_array(spike_time_array, units)
         obj = cls()
@@ -320,10 +372,15 @@ class SpikeTrainList(ObjectList):
 
     @property
     def multiplexed(self):
-        """Return spike trains as a pair of arrays.
+        """
+        Return spike trains as a pair of arrays.
 
-        The first (plain NumPy) array contains the ids of the channels/neurons that produced
-        each spike, the second (Quantity) array contains the times of the spikes.
+        Returns
+        -------
+        channel_id_array: np.ndarray
+            The ids of the channels/neurons that produced each spike
+        spike_time_array: np.ndarray of dtype Quantity
+            The Quantity array containing the times of the spikes
         """
         if self._spike_time_array is None:
             # need to convert list of SpikeTrains into multiplexed spike times array

@@ -31,42 +31,46 @@ class Segment(Container):
     data sharing a common clock (time basis) but not necessary the same
     sampling rate, start or end time.
 
-    *Usage*::
-        >>> from neo.core import Segment, SpikeTrain, AnalogSignal
-        >>> from quantities import Hz, s
-        >>>
-        >>> seg = Segment(index=5)
-        >>>
-        >>> train0 = SpikeTrain(times=[.01, 3.3, 9.3], units='sec', t_stop=10)
-        >>> seg.spiketrains.append(train0)
-        >>>
-        >>> train1 = SpikeTrain(times=[100.01, 103.3, 109.3], units='sec',
-        ...                     t_stop=110)
-        >>> seg.spiketrains.append(train1)
-        >>>
-        >>> sig0 = AnalogSignal(signal=[.01, 3.3, 9.3], units='uV',
-        ...                     sampling_rate=1*Hz)
-        >>> seg.analogsignals.append(sig0)
-        >>>
-        >>> sig1 = AnalogSignal(signal=[100.01, 103.3, 109.3], units='nA',
-        ...                     sampling_period=.1*s)
-        >>> seg.analogsignals.append(sig1)
+    Parameters
+    ----------
+    name: str | None, default: None
+        A label for the dataset.
+    description: str | None, default: None
+         Text description.
+    file_origin: str | None, default: None
+        Filesystem path or URL of the original data file.
+    rec_datetime: datetime.datetime| None, default: None
+        The date and time of the original recording
+    index: int | None, default: None
+        You can use this to define a temporal ordering of your Segment.
+        For instance you could use this for trial numbers.
+    **annotations: dict | None,
+        Other keyword annotations for the dataset
 
-    *Required attributes/properties*:
-        None
+    Examples
+    --------
+    >>> from neo.core import Segment, SpikeTrain, AnalogSignal
+    >>> from quantities import Hz, s
+    >>>
+    >>> seg = Segment(index=5)
+    >>>
+    >>> train0 = SpikeTrain(times=[.01, 3.3, 9.3], units='sec', t_stop=10)
+    >>> seg.spiketrains.append(train0)
+    >>>
+    >>> train1 = SpikeTrain(times=[100.01, 103.3, 109.3], units='sec',
+    ...                     t_stop=110)
+    >>> seg.spiketrains.append(train1)
+    >>>
+    >>> sig0 = AnalogSignal(signal=[.01, 3.3, 9.3], units='uV',
+    ...                     sampling_rate=1*Hz)
+    >>> seg.analogsignals.append(sig0)
+    >>>
+    >>> sig1 = AnalogSignal(signal=[100.01, 103.3, 109.3], units='nA',
+    ...                     sampling_period=.1*s)
+    >>> seg.analogsignals.append(sig1)
 
-    *Recommended attributes/properties*:
-        :name: (str) A label for the dataset.
-        :description: (str) Text description.
-        :file_origin: (str) Filesystem path or URL of the original data file.
-        :file_datetime: (datetime) The creation date and time of the original
-            data file.
-        :rec_datetime: (datetime) The date and time of the original recording
-        :index: (int) You can use this to define a temporal ordering of
-            your Segment. For instance you could use this for trial numbers.
-
-    Note: Any other additional arguments are assumed to be user-specific
-    metadata and stored in :attr:`annotations`.
+    Notes
+    -----
 
     *Container of*:
         :class:`Epoch`
@@ -161,6 +165,11 @@ class Segment(Container):
     def t_start(self):
         """
         Time when first signal begins.
+
+        Returns
+        -------
+        t_start: float | None
+            Returns the starting time if exists otherwise None
         """
         t_starts = [sig.t_start for sig in self.analogsignals + self.spiketrains + self.irregularlysampledsignals]
 
@@ -182,6 +191,11 @@ class Segment(Container):
     def t_stop(self):
         """
         Time when last signal ends.
+
+        Returns
+        -------
+        t_stop: float | None
+            Returns the stopping time if exists otherwise None
         """
         t_stops = [sig.t_stop for sig in self.analogsignals + self.spiketrains + self.irregularlysampledsignals]
 

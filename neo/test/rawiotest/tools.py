@@ -17,6 +17,7 @@ def can_use_network():
         return False
     try:
         import datalad
+
         HAVE_DATALAD = True
     except:
         HAVE_DATALAD = False
