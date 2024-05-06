@@ -149,35 +149,24 @@ class NeuralynxRawIO(BaseRawIO):
         if not dirname:
             raise ValueError("`dirname` cannot be empty.")
 
-        if filename:
-            include_filenames = filename
+        if filename is not None:
+            include_filenames = [filename]
             warnings.warn("`filename` is deprecated and will be removed. Please use `include_filenames` instead")
 
-        if exclude_filename:
-            exclude_filenames = exclude_filename
+        if exclude_filename is not None:
+            if isinstance(exclude_filename, str):
+                exclude_filenames = [exclude_filename]
+            else:
+                exclude_filenames = exclude_filename
             warnings.warn("`exclude_filename` is deprecated and will be removed. Please use `exclude_filenames` instead")
 
         if include_filenames is None:
             include_filenames = []
-        elif not isinstance(include_filenames, (list, set, np.ndarray)):
-            include_filenames = [include_filenames]
 
         if exclude_filenames is None:
             exclude_filenames = set()
         elif not isinstance(exclude_filenames, (list, set, np.ndarray)):
             exclude_filenames = {exclude_filenames}
-
-        if include_filenames:
-            include_filepath = {os.path.dirname(f) for f in include_filenames}
-            if len(include_filepath) > 1:
-                raise ValueError("Files in include_filename must be in a single path!")
-
-        if dirname and include_filenames:
-            dirname = os.path.join(dirname, os.path.dirname(include_filenames[0]))
-            include_filenames = [os.path.basename(f) for f in include_filenames]
-
-        if exclude_filenames:
-            exclude_filenames = {os.path.join(dirname, os.path.basename(f)) for f in exclude_filenames}
 
         if include_filenames:
             self.rawmode = 'multiple-files'
@@ -186,7 +175,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         self.dirname = dirname
         self.include_filenames = include_filenames
-        self.execlude_filenames = exclude_filenames
+        self.exclude_filenames = exclude_filenames
         self.keep_original_times = keep_original_times
         self.strict_gap_mode = strict_gap_mode
         BaseRawIO.__init__(self, **kargs)
@@ -222,12 +211,11 @@ class NeuralynxRawIO(BaseRawIO):
         event_annotations = []
 
         if self.rawmode == "one-dir":
-            filenames = sorted([os.path.join(self.dirname, f) for f in os.listdir(self.dirname)
-                                if os.path.isfile(os.path.join(self.dirname, f)) and not f.startswith('.')])
+            filenames = [os.path.join(self.dirname, f) for f in os.listdir(self.dirname)]
         else:
             filenames = [os.path.join(self.dirname, f) for f in self.include_filenames]
 
-        filenames = [f for f in filenames if f not in self.execlude_filenames]
+        filenames = [f for f in filenames if f not in self.exclude_filenames]
 
         for filename in filenames:
             if not os.path.isfile(filename):
@@ -240,6 +228,7 @@ class NeuralynxRawIO(BaseRawIO):
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
         for filename in filenames:
+            filename = os.path.join(self.dirname, filename)
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot
             ext = ext.lower()  # make lower case for comparisons

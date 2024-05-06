@@ -69,11 +69,11 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             Default: False
         """
 
-        if filename:
+        if filename is not None:
             warnings.warn('Deprecated and will be removed. Please use `include_filenames` instead')
             include_filenames = [filename]
 
-        if exclude_filename:
+        if exclude_filename is not None:
             warnings.warn('Deprecated and will be removed. Please use `exclude_filenames` instead')
             exclude_filenames = exclude_filename
 
