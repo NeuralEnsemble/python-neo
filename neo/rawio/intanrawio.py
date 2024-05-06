@@ -42,7 +42,9 @@ class IntanRawIO(BaseRawIO):
     Parameters
     ----------
     filename: str, default: ''
-       name of the 'rhd' or 'rhs' data file
+        name of the 'rhd' or 'rhs' data file
+    strict_mode_for_timestamps: bool, default: True
+        If True, the reader will raise an error if timestamps are not continuous.
 
     Notes
     -----
@@ -79,10 +81,11 @@ class IntanRawIO(BaseRawIO):
     extensions = ["rhd", "rhs", "dat"]
     rawmode = "one-file"
 
-    def __init__(self, filename=""):
+    def __init__(self, filename="", strict_mode_for_timestamps=True):
 
         BaseRawIO.__init__(self)
         self.filename = filename
+        self.strict_mode_for_timestamps = strict_mode_for_timestamps
 
     def _source_name(self):
         return self.filename
@@ -165,10 +168,15 @@ class IntanRawIO(BaseRawIO):
         elif self.file_format == "one-file-per-channel":
             time_stream_index = max(self._raw_data.keys())
             timestamp = self._raw_data[time_stream_index][0]
-
-        assert np.all(np.diff(timestamp) == 1), (
-            "Timestamp have gaps, this could be due " "to a corrupted file or an inappropriate file merge"
-        )
+        
+        if self.strict_mode_for_timestamps:
+            timestamps_are_not_contigious = np.any(np.diff(timestamp) != 1)
+            if timestamps_are_not_contigious:
+                error_msg = (
+                    "Timestamps are not continuous, this could be due to a corrupted file or an inappropriate file merge. "
+                    "Set strict_mode_for_timestamps to False to ignore this error and open the file."
+                )
+                raise ValueError(error_msg)
 
         # signals
         signal_channels = []
