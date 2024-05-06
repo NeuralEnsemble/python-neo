@@ -44,9 +44,11 @@ class IntanRawIO(BaseRawIO):
     ----------
     filename: str, default: ''
         name of the 'rhd' or 'rhs' data file
-    strict_mode_for_timestamps: bool, default: True
-        If True, the reader will raise an error if timestamps are not continuous.
-
+    load_unsafe_data: bool, default: False
+        If True, data that violates integrity assumptions will be loaded. At the moment the only integrity
+        check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
+        the attribute `unsafe_timestamps` to True if the timestamps are not continous. This attribute can be checked 
+        after parsing the header to see if the timestamps are continuous or not.
     Notes
     -----
     * Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
@@ -82,11 +84,13 @@ class IntanRawIO(BaseRawIO):
     extensions = ["rhd", "rhs", "dat"]
     rawmode = "one-file"
 
-    def __init__(self, filename="", strict_mode_for_timestamps=True):
+    def __init__(self, filename="", load_unsafe_data=True):
 
         BaseRawIO.__init__(self)
         self.filename = filename
-        self.strict_mode_for_timestamps = strict_mode_for_timestamps
+        self.load_unsafe_data = load_unsafe_data
+        self.unsafe_timestamps = False
+
 
     def _source_name(self):
         return self.filename
@@ -170,12 +174,13 @@ class IntanRawIO(BaseRawIO):
             time_stream_index = max(self._raw_data.keys())
             timestamp = self._raw_data[time_stream_index][0]
         
-        if self.strict_mode_for_timestamps:
-            timestamps_are_not_contigious = np.any(np.diff(timestamp) != 1)
-            if timestamps_are_not_contigious:
+        timestamps_are_not_contigious = np.any(np.diff(timestamp) != 1)
+        if timestamps_are_not_contigious:
+            self.unsafe_timestamps = True
+            if not self.load_unsafe_data:
                 error_msg = (
                     "Timestamps are not continuous, this could be due to a corrupted file or an inappropriate file merge. "
-                    "Set strict_mode_for_timestamps to False to ignore this error and open the file."
+                    "Initialize the reader with `load_unsafe_data=True` to ignore this error and open the file."
                 )
                 raise NeoReadWriteError(error_msg)
 
