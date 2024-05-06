@@ -164,9 +164,9 @@ class NeuralynxRawIO(BaseRawIO):
             include_filenames = []
 
         if exclude_filenames is None:
-            exclude_filenames = set()
+            exclude_filenames = []
         elif not isinstance(exclude_filenames, (list, set, np.ndarray)):
-            exclude_filenames = {exclude_filenames}
+            exclude_filenames = [exclude_filenames]
 
         if include_filenames:
             self.rawmode = 'multiple-files'
