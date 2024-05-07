@@ -55,7 +55,7 @@ and may not be the current affiliation of a contributor.
 * Aitor Morales-Gregorio [13]
 * Peter N Steinmetz [22]
 * Shashwat Sridhar
-* Alessio Buccino [23]
+* Alessio Buccino [23, 24, 38]
 * Regimantas Jurkus [13]
 * Steffen Buergers [24]
 * Etienne Combrisson [6]
@@ -121,6 +121,7 @@ and may not be the current affiliation of a contributor.
 35. Institute of Biomedical Engineering, University of Buenos Aires, Argentina
 36. Bernstein Center for Computational Neuroscience, Berlin, Germany
 37. University of Edinburgh
+38. Allen Institute for Neural Dynamics, Seattle, WA, United States
 
 
 If we've somehow missed you off the list we're very sorry - please let us know.
