@@ -27,6 +27,7 @@ and may not be the current affiliation of a contributor.
 * Kyler Brown
 * Mikkel Elle Lepperød [11]
 * C Daniel Meliza [12]
+* Michael Denker [13, 29]
 * Julia Sprenger [13, 6]
 * Maximilian Schmidt [13]
 * Johanna Senk [13]
@@ -65,20 +66,23 @@ and may not be the current affiliation of a contributor.
 * Thomas Perret [25]
 * Kyle Johnsen [26, 27]
 * Zach McKenzie [28]
-* Moritz Alexander Kern
+* Moritz Alexander Kern [29]
 * Joscha Schmiedt
-* Daniel P. Crepeau
-* Divyansh Gupta
-* Nate Dolensek
-* Philipp Hornauer
+* Daniel P. Crepeau [30]
+* Divyansh Gupta [31]
+* Nate Dolensek [3]
+* Philipp Hornauer [32]
 * Robert Wolff
-* Jules Lebert
+* Jules Lebert [33]
 * Benjamin Heasly
-* Baptiste Grimaud
-* Cody Baker
-* Fernando J. Chaure
+* Baptiste Grimaud [34]
+* Cody Baker [24]
+* Fernando J. Chaure [35]
 * Filipe*github
 * Matthias Klumpp
+* Greg Knoll [36]
+* Chris Halcrow [37]
+* Szonja Weigl [24]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -108,6 +112,16 @@ and may not be the current affiliation of a contributor.
 26. Georgia Institute of Technology
 27. Emory University
 28. Harvard Medical School
+29. Institute for Advanced Simulation (IAS-6), Forschungszentrum Jülich, Germany
+30. Dark Horse Neuro, Inc.
+31. IST Austria
+32. Department of Biosystems Science and Engineering, ETH Zürich, Basel, Switzerland
+33. University College London
+34. École Normale Supérieure Paris-Saclay
+35. Institute of Biomedical Engineering, University of Buenos Aires, Argentina
+36. Bernstein Center for Computational Neuroscience, Berlin, Germany
+37. University of Edinburgh
+
 
 If we've somehow missed you off the list we're very sorry - please let us know.
 
