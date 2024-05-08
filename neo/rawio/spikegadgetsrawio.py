@@ -356,7 +356,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
             keep = np.isin(signal_streams["id"], self.selected_streams)
             signal_streams = signal_streams[keep]
 
-            keep = np.in1d(signal_channels["stream_id"], self.selected_streams)
+            keep = np.isin(signal_channels["stream_id"], self.selected_streams)
             signal_channels = signal_channels[keep]
 
         # No events channels
