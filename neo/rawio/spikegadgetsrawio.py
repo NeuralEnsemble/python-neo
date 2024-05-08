@@ -9,12 +9,12 @@ https://bitbucket.org/mkarlsso/trodes/wiki/Configuration
 
 Note :
   * this file format have multiple version. news version include the gain for scaling.
-     The actual implementation do not contain this feature because we don't have
-     files to test this. So now the gain is "hardcoded" to 1. and so units
-     is not handled correctly.
+     The actual implementation does not contain this feature because we don't have
+     files to test this. So now the gain is "hardcoded" to 1. and so units are
+      not handled correctly.
 
 The ".rec" file format contains:
-  * a first  text part with information in an XML structure
+  * a first text part with information in an XML structure
   * a second part for the binary buffer
 
 Author: Samuel Garcia
@@ -23,7 +23,7 @@ import functools
 from xml.etree import ElementTree
 
 import numpy as np
-from neo.rawio.baserawio import (  # TODO the import location was updated for this notebook
+from .baserawio import (
     BaseRawIO,
     _event_channel_dtype,
     _signal_channel_dtype,
@@ -48,16 +48,35 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
         Initialize a SpikeGadgetsRawIO for a single ".rec" file.
 
-        Args:
-            filename: str
-                The filename
-            selected_streams: None, list, str
-                sublist of streams to load/expose to API
-                useful for spikeextractor when one stream only is needed.
-                For instance streams = ['ECU', 'trodes']
-                'trodes' is name for ephy channel (ntrodes)
-            interpolate_dropped_packets: bool
-                If True, interpolates single dropped packets in the analog data.
+        Parameters
+        ----------
+        filename: str, default: ''
+            The *.rec file to be loaded
+        selected_streams: str | list | None, default: None
+            sublist of streams to load/expose to API, e.g., ['ECU', 'trodes']
+            'trodes' is name for ephy channel (ntrodes)
+            None will keep all streams
+        interpolate_dropped_packets: bool, default: False
+            If True, interpolates single dropped packets in the analog data.
+
+        Notes
+        -----
+        This file format has multiple versions:
+            - Newer versions include the gain for scaling to microvolts [uV].
+            - If the scaling is not found in the header, the gain will be "hardcoded" to 1,
+              in which case the units are not handled correctly.
+        This will not affect functions that do not rely on the data having physical units,
+            e.g., _get_analogsignal_chunk, but functions such as rescale_signal_raw_to_float
+            will be inaccurate.
+
+        Examples
+        --------
+        >>> import neo.rawio
+        >>> reader = neo.rawio.SpikeGadgetRawIO(filename='data.rec') # all streams
+        # just the electrode channels
+        >>> reader_trodes = neo.rawio.SpikeGadgetRawIO(filename='data.rec', selected_streams='trodes')
+
+
         """
         BaseRawIO.__init__(self)
         self.filename = filename
@@ -130,9 +149,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
         device_bytes = {}
         for device in hconf:
             device_name = device.attrib["name"]
-            num_bytes = int(device.attrib["numBytes"])
-            device_bytes[device_name] = packet_size
-            packet_size += num_bytes
+            if "numBytes" in device.attrib.keys():
+                num_bytes = int(device.attrib["numBytes"])
+                device_bytes[device_name] = packet_size
+                packet_size += num_bytes
         self.sysClock_byte = (
             device_bytes["SysClock"] if "SysClock" in device_bytes else False
         )
@@ -307,7 +327,20 @@ class SpikeGadgetsRawIO(BaseRawIO):
             )
 
             chan_ind = 0
+            self.is_scaleable = "spikeScalingToUv" in sconf[0].attrib
+            if not self.is_scaleable:
+                self.logger.warning(
+                    "Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!"
+                )
+
             for trode in sconf:
+                if "spikeScalingToUv" in trode.attrib:
+                    gain = float(trode.attrib["spikeScalingToUv"])
+                    units = "uV"
+                else:
+                    gain = 1  # revert to hardcoded gain
+                    units = ""
+
                 for schan in trode:
                     chan_id = str(channel_ids[chan_ind])
                     name = "hwChan " + chan_id
@@ -351,7 +384,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
         if self.selected_streams is not None:
             if isinstance(self.selected_streams, str):
                 self.selected_streams = [self.selected_streams]
-            assert isinstance(self.selected_streams, list)
+            if not isinstance(self.selected_streams, list):
+                raise TypeError(
+                    f"`selected_streams` must be of type str or list not of type {type(self.selected_streams)}"
+                )
 
             keep = np.isin(signal_streams["id"], self.selected_streams)
             signal_streams = signal_streams[keep]

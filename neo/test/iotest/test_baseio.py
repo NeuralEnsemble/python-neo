@@ -6,6 +6,7 @@ import unittest
 
 from neo.core import objectlist
 from neo.io.baseio import BaseIO
+from neo.core import NeoReadWriteError
 
 
 class TestIOObjects(unittest.TestCase):
@@ -13,12 +14,15 @@ class TestIOObjects(unittest.TestCase):
         reader = BaseIO()
         for ob in objectlist:
             if ob not in BaseIO.readable_objects:
-                meth = getattr(reader, 'read_' + ob.__name__.lower())
-                self.assertRaises(AssertionError, meth, )
+                meth = getattr(reader, "read_" + ob.__name__.lower())
+                self.assertRaises(
+                    NeoReadWriteError,
+                    meth,
+                )
 
             if ob not in BaseIO.writeable_objects:
-                meth = getattr(reader, 'write_' + ob.__name__.lower())
-                self.assertRaises(AssertionError, meth, ())
+                meth = getattr(reader, "write_" + ob.__name__.lower())
+                self.assertRaises(NeoReadWriteError, meth, ())
 
 
 if __name__ == "__main__":

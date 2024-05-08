@@ -1,23 +1,22 @@
-'''
+"""
 This module defines :class:`Block`, the main container gathering all the data,
 whether discrete or continuous, for a given recording session. base class
 used by all :module:`neo.core` classes.
 
 :class:`Block` derives from :class:`Container`,
 from :module:`neo.core.container`.
-'''
+"""
 
 from datetime import datetime
 
 from neo.core.container import Container, unique_objs
 from neo.core.group import Group
 from neo.core.objectlist import ObjectList
-from neo.core.regionofinterest import RegionOfInterest
 from neo.core.segment import Segment
 
 
 class Block(Container):
-    '''
+    """
     Main container gathering all the data, whether discrete or continuous, for a
     given recording session.
 
@@ -65,58 +64,61 @@ class Block(Container):
         :class:`Segment`
         :class:`Group`
 
-    '''
+    """
 
-    _container_child_objects = ('Segment', 'Group')
-    _recommended_attrs = ((('file_datetime', datetime),
-                           ('rec_datetime', datetime),
-                           ('index', int)) +
-                          Container._recommended_attrs)
-    _repr_pretty_attrs_keys_ = (Container._repr_pretty_attrs_keys_ +
-                                ('file_origin', 'file_datetime',
-                                 'rec_datetime', 'index'))
-    _repr_pretty_containers = ('segments',)
+    _container_child_objects = ("Segment", "Group")
+    _recommended_attrs = (
+        ("file_datetime", datetime),
+        ("rec_datetime", datetime),
+        ("index", int),
+    ) + Container._recommended_attrs
+    _repr_pretty_attrs_keys_ = Container._repr_pretty_attrs_keys_ + (
+        "file_origin",
+        "file_datetime",
+        "rec_datetime",
+        "index",
+    )
+    _repr_pretty_containers = ("segments",)
 
-    def __init__(self, name=None, description=None, file_origin=None,
-                 file_datetime=None, rec_datetime=None, index=None,
-                 **annotations):
-        '''
+    def __init__(
+        self,
+        name=None,
+        description=None,
+        file_origin=None,
+        file_datetime=None,
+        rec_datetime=None,
+        index=None,
+        **annotations,
+    ):
+        """
         Initialize a new :class:`Block` instance.
-        '''
-        super().__init__(name=name, description=description,
-                                    file_origin=file_origin, **annotations)
+        """
+        super().__init__(name=name, description=description, file_origin=file_origin, **annotations)
 
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
         self._segments = ObjectList(Segment, parent=self)
         self._groups = ObjectList(Group, parent=self)
-        self._regionsofinterest = ObjectList(RegionOfInterest, parent=self)
 
     segments = property(
         fget=lambda self: self._get_object_list("_segments"),
         fset=lambda self, value: self._set_object_list("_segments", value),
-        doc="list of Segments contained in this block"
+        doc="list of Segments contained in this block",
     )
 
     groups = property(
         fget=lambda self: self._get_object_list("_groups"),
         fset=lambda self, value: self._set_object_list("_groups", value),
-        doc="list of Groups contained in this block"
-    )
-
-    regionsofinterest = property(
-        fget=lambda self: self._get_object_list("_regionsofinterest"),
-        fset=lambda self, value: self._set_object_list("_regionsofinterest", value),
-        doc="list of RegionOfInterest objects contained in this block"
+        doc="list of Groups contained in this block",
     )
 
     @property
     def data_children_recur(self):
-        '''
+        """
         All data child objects stored in the current object,
         obtained recursively.
-        '''
+        """
         # subclassing this to remove duplicate objects such as SpikeTrain
         # objects in both Segment and Group
         # Only Block can have duplicate items right now, so implement
@@ -124,12 +126,12 @@ class Block(Container):
         return tuple(unique_objs(super().data_children_recur))
 
     def list_children_by_class(self, cls):
-        '''
+        """
         List all children of a particular class recursively.
 
         You can either provide a class object, a class name,
         or the name of the container storing the class.
-        '''
+        """
         # subclassing this to remove duplicate objects such as SpikeTrain
         # objects in both Segment and Group
         # Only Block can have duplicate items right now, so implement

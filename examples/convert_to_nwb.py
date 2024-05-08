@@ -13,7 +13,7 @@ dataset_url = "https://object.cscs.ch/v1/AUTH_63ea6845b1d34ad7a43c8158d9572867/h
 
 folder = "GrC_Subject15_180116"
 
-#filenames = ["180116_0004 IV -70.abf", "180116_0005 CC step.abf", "180116_0006 EPSP.abf"]
+# filenames = ["180116_0004 IV -70.abf", "180116_0005 CC step.abf", "180116_0006 EPSP.abf"]
 filenames = ["180116_0005 CC step.abf"]
 
 for filename in filenames:
@@ -30,10 +30,10 @@ global_metadata = {
     "session_id": "180116_0005",
     "institution": "University of Pavia",
     "lab": "D'Angelo Lab",
-    "related_publications": "https://doi.org/10.1038/s42003-020-0953-x"
+    "related_publications": "https://doi.org/10.1038/s42003-020-0953-x",
 }
 
-#data[0].annotate(**global_metadata)
+# data[0].annotate(**global_metadata)
 
 signal_metadata = {
     "nwb_group": "acquisition",
@@ -41,13 +41,11 @@ signal_metadata = {
     "nwb_electrode": {
         "name": "patch clamp electrode",
         "description": "The patch-clamp pipettes were pulled from borosilicate glass capillaries "
-                        "(Hilgenberg, Malsfeld, Germany) and filled with intracellular solution "
-                        "(K-gluconate based solution)",
-        "device": {
-           "name": "patch clamp electrode"
-        }
+        "(Hilgenberg, Malsfeld, Germany) and filled with intracellular solution "
+        "(K-gluconate based solution)",
+        "device": {"name": "patch clamp electrode"},
     },
-    "nwb:gain": 1.0
+    "nwb:gain": 1.0,
 }
 
 for segment in data[0].segments:
@@ -55,5 +53,6 @@ for segment in data[0].segments:
     signal.annotate(**signal_metadata)
 
 from neo.io import NWBIO
+
 writer = NWBIO("GrC_Subject15_180116.nwb", mode="w", **global_metadata)
 writer.write(data)

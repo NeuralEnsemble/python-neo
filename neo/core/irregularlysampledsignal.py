@@ -1,4 +1,4 @@
-'''
+"""
 This module implements :class:`IrregularlySampledSignal`, an array of analog
 signals with samples taken at arbitrary time points.
 
@@ -17,7 +17,7 @@ This is where user-specified attributes are set.
 * :meth:`__array_finalize__` is called for all new objects, including those
 created by slicing. This is where attributes are copied over from
 the old object.
-'''
+"""
 
 from copy import deepcopy, copy
 
@@ -37,22 +37,44 @@ from neo.core.analogsignal import AnalogSignal
 from neo.core.dataobject import DataObject
 
 
-def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
-                                  copy=True, name=None, file_origin=None, description=None,
-                                  array_annotations=None, annotations=None, segment=None):
-    '''
+def _new_IrregularlySampledSignal(
+    cls,
+    times,
+    signal,
+    units=None,
+    time_units=None,
+    dtype=None,
+    copy=True,
+    name=None,
+    file_origin=None,
+    description=None,
+    array_annotations=None,
+    annotations=None,
+    segment=None,
+):
+    """
     A function to map IrregularlySampledSignal.__new__ to a function that
     does not do the unit checking. This is needed for pickle to work.
-    '''
-    iss = cls(times=times, signal=signal, units=units, time_units=time_units, dtype=dtype,
-              copy=copy, name=name, file_origin=file_origin, description=description,
-              array_annotations=array_annotations, **annotations)
+    """
+    iss = cls(
+        times=times,
+        signal=signal,
+        units=units,
+        time_units=time_units,
+        dtype=dtype,
+        copy=copy,
+        name=name,
+        file_origin=file_origin,
+        description=description,
+        array_annotations=array_annotations,
+        **annotations,
+    )
     iss.segment = segment
     return iss
 
 
 class IrregularlySampledSignal(BaseSignal):
-    '''
+    """
     An array of one or more analog signals with samples taken at arbitrary time points.
 
     A representation of one or more continuous, analog signals acquired at time
@@ -62,77 +84,99 @@ class IrregularlySampledSignal(BaseSignal):
     Inherits from :class:`quantities.Quantity`, which in turn inherits from
     :class:`numpy.ndarray`.
 
-    *Usage*::
+    Parameters
+    ----------
+    times: quantity array 1D |numpy array 1D | list
+        The time of each data point. Must have the same size as `signal`.
+    signal: quantity array 2D | numpy array 2D | list (data, channel)
+        The data itself organized as (n_data x n_channel)
+    units: quantity units | None, default: None
+        The units for the signal if signal is numpy array or list
+        Ignored if signal is a quantity array
+    time_units: quantity units | None, default: None
+        The units for times if times is a numpy array or list
+        Ignored if times is a quantity array
+    dtype: numpy dtype | string | None, default: None
+        Overrides the signal array dtype
+        Does not affect the dtype of the times which must be floats
+    copy: bool, default: True
+        Whether copy should be set to True when making the quantity array
+    name: str | None, default: None
+        An optional label for the dataset
+    description: str | None, default: None
+        An optional text description of the dataset
+    file_origin: str | None, default: None
+        The filesystem path or url of the orginal data
+    array_annotations: dict | None, default: None
+        Dict mapping strings to numpy arrays containing annotations for all data points
+    **annotations: dict
+        Optional additional metadata supplied by the user as a dict. Will be stored in
+        the annotations attribute of the object
 
-        >>> from neo.core import IrregularlySampledSignal
-        >>> from quantities import s, nA
-        >>>
-        >>> irsig0 = IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3],
-        ...                                   units='mV', time_units='ms')
-        >>> irsig1 = IrregularlySampledSignal([0.01, 0.03, 0.12]*s,
-        ...                                   [[4, 5], [5, 4], [6, 3]]*nA)
-
-    *Required attributes/properties*:
-        :times: (quantity array 1D, numpy array 1D, or list)
-            The time of each data point. Must have the same size as :attr:`signal`.
-        :signal: (quantity array 2D, numpy array 2D, or list (data, channel))
-            The data itself.
-        :units: (quantity units)
-            Required if the signal is a list or NumPy array, not if it is
-            a :class:`Quantity`.
-        :time_units: (quantity units) Required if :attr:`times` is a list or
-            NumPy array, not if it is a :class:`Quantity`.
-
-    *Recommended attributes/properties*:.
-        :name: (str) A label for the dataset
-        :description: (str) Text description.
-        :file_origin: (str) Filesystem path or URL of the original data file.
-
-    *Optional attributes/properties*:
-        :dtype: (numpy dtype or str) Override the dtype of the signal array.
-            (times are always floats).
-        :copy: (bool) True by default.
-        :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
-                                   for all data points
-
-    Note: Any other additional arguments are assumed to be user-specific
-    metadata and stored in :attr:`annotations`.
-
-    *Properties available on this object*:
-        :sampling_intervals: (quantity array 1D) Interval between each adjacent
-            pair of samples.
-            (``times[1:] - times[:-1]``)
-        :duration: (quantity scalar) Signal duration, read-only.
-            (``times[-1] - times[0]``)
-        :t_start: (quantity scalar) Time when signal begins, read-only.
-            (``times[0]``)
-        :t_stop: (quantity scalar) Time when signal ends, read-only.
-            (``times[-1]``)
-
-    *Slicing*:
-        :class:`IrregularlySampledSignal` objects can be sliced. When this
-        occurs, a new :class:`IrregularlySampledSignal` (actually a view) is
-        returned, with the same metadata, except that :attr:`times` is also
+    Notes
+    -----
+    Attributes that can accessed for this object:
+     * sampling_intervals: quantity 1d array
+            Interval between each adjacent pair of samples (times[1:] - times[:-1])
+     * duration: quantity scalar
+            Signal duration, read-only (times[-1]-times[0])
+     * t_start: quantity scalar
+            Time when signal begins, read-only (times[0])
+     * t_stop: quantity scalar
+            Time when signal ends, read-only (times[-1])
+    Slicing
+     * `IrregularlySampledSignal` objects can be sliced. When this
+        occurs, a new `IrregularlySampledSignal` (actually a view) is
+        returned, with the same metadata, except that `times` is also
         sliced in the same way.
+    Operations
+     * ==
+     * !=
+     * +
+     * *
+     * /
 
-    *Operations available on this object*:
-        == != + * /
 
-    '''
+    Examples
+    --------
 
-    _parent_objects = ('Segment',)
-    _parent_attrs = ('segment',)
-    _quantity_attr = 'signal'
-    _necessary_attrs = (('times', pq.Quantity, 1), ('signal', pq.Quantity, 2))
+    >>> from neo.core import IrregularlySampledSignal
+    >>> from quantities import s, nA
+    >>>
+    >>> irsig0 = IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3],
+    ...                                   units='mV', time_units='ms')
+    >>> irsig1 = IrregularlySampledSignal([0.01, 0.03, 0.12]*s,
+    ...                                   [[4, 5], [5, 4], [6, 3]]*nA)
+    >>> irsig0 == irsig1
+    False
 
-    def __new__(cls, times, signal, units=None, time_units=None, dtype=None, copy=True, name=None,
-                file_origin=None, description=None, array_annotations=None, **annotations):
-        '''
+    """
+
+    _parent_objects = ("Segment",)
+    _parent_attrs = ("segment",)
+    _quantity_attr = "signal"
+    _necessary_attrs = (("times", pq.Quantity, 1), ("signal", pq.Quantity, 2))
+
+    def __new__(
+        cls,
+        times,
+        signal,
+        units=None,
+        time_units=None,
+        dtype=None,
+        copy=True,
+        name=None,
+        file_origin=None,
+        description=None,
+        array_annotations=None,
+        **annotations,
+    ):
+        """
         Construct a new :class:`IrregularlySampledSignal` instance.
 
         This is called whenever a new :class:`IrregularlySampledSignal` is
         created from the constructor, but not when slicing.
-        '''
+        """
         signal = cls._rescale(signal, units=units)
         if time_units is None:
             if hasattr(times, "units"):
@@ -148,57 +192,82 @@ class IrregularlySampledSignal(BaseSignal):
         if obj.ndim == 1:
             obj = obj.reshape(-1, 1)
         if len(times) != obj.shape[0]:
-            raise ValueError("times array and signal array must "
-                             "have same length")
+            raise ValueError("times array and signal array must have same length")
         obj.times = pq.Quantity(times, units=time_units, dtype=float, copy=copy)
         obj.segment = None
 
         return obj
 
-    def __init__(self, times, signal, units=None, time_units=None, dtype=None, copy=True,
-                 name=None, file_origin=None, description=None, array_annotations=None,
-                 **annotations):
-        '''
+    def __init__(
+        self,
+        times,
+        signal,
+        units=None,
+        time_units=None,
+        dtype=None,
+        copy=True,
+        name=None,
+        file_origin=None,
+        description=None,
+        array_annotations=None,
+        **annotations,
+    ):
+        """
         Initializes a newly constructed :class:`IrregularlySampledSignal`
         instance.
-        '''
-        DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
-                            array_annotations=array_annotations, **annotations)
+        """
+        DataObject.__init__(
+            self,
+            name=name,
+            file_origin=file_origin,
+            description=description,
+            array_annotations=array_annotations,
+            **annotations,
+        )
 
     def __reduce__(self):
-        '''
+        """
         Map the __new__ function onto _new_IrregularlySampledSignal, so that pickle
         works
-        '''
-        return _new_IrregularlySampledSignal, (self.__class__, self.times, np.array(self),
-                                               self.units, self.times.units, self.dtype, True,
-                                               self.name, self.file_origin, self.description,
-                                               self.array_annotations, self.annotations,
-                                               self.segment)
+        """
+        return _new_IrregularlySampledSignal, (
+            self.__class__,
+            self.times,
+            np.array(self),
+            self.units,
+            self.times.units,
+            self.dtype,
+            True,
+            self.name,
+            self.file_origin,
+            self.description,
+            self.array_annotations,
+            self.annotations,
+            self.segment,
+        )
 
     def _array_finalize_spec(self, obj):
-        '''
+        """
         Set default values for attributes specific to :class:`IrregularlySampledSignal`.
 
         Common attributes are defined in
         :meth:`__array_finalize__` in :class:`basesignal.BaseSignal`),
         which is called every time a new signal is created
         and calls this method.
-        '''
-        self.times = getattr(obj, 'times', None)
+        """
+        self.times = getattr(obj, "times", None)
         return obj
 
     def __repr__(self):
-        '''
+        """
         Returns a string representing the :class:`IrregularlySampledSignal`.
-        '''
-        return (f"<{self.__class__.__name__}({super().__repr__()} "
-        f"at times {self.times})>")
+        """
+        return f"<{self.__class__.__name__}({super().__repr__()} " f"at times {self.times})>"
 
     def __getitem__(self, i):
-        '''
+        """
         Get the item or slice :attr:`i`.
-        '''
+        """
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
             obj = super().__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
@@ -213,7 +282,7 @@ class IrregularlySampledSignal(BaseSignal):
                 elif isinstance(j, np.ndarray):
                     raise NotImplementedError("Arrays not yet supported")
                 else:
-                    raise TypeError("%s not supported" % type(j))
+                    raise TypeError(f"{type(j)} not supported")
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
                 obj.array_annotations = deepcopy(self.array_annotations_at_index(k))
@@ -232,83 +301,97 @@ class IrregularlySampledSignal(BaseSignal):
                 obj = obj.T.reshape(self.shape[1], -1).T
                 obj = pq.Quantity(obj, units=self.units)
             else:
-                raise IndexError("indexing of an IrregularlySampledSignal needs to keep the same "
-                                 "number of sample for each trace contained")
+                raise IndexError(
+                    "indexing of an IrregularlySampledSignal needs to keep the same "
+                    "number of sample for each trace contained"
+                )
         else:
             raise IndexError("index should be an integer, tuple, slice or boolean numpy array")
         return obj
 
     @property
     def duration(self):
-        '''
+        """
         Signal duration.
 
         (:attr:`times`[-1] - :attr:`times`[0])
-        '''
+        """
         return self.times[-1] - self.times[0]
 
     @property
     def t_start(self):
-        '''
+        """
         Time when signal begins.
 
         (:attr:`times`[0])
-        '''
+        """
         return self.times[0]
 
     @property
     def t_stop(self):
-        '''
+        """
         Time when signal ends.
 
         (:attr:`times`[-1])
-        '''
+        """
         return self.times[-1]
 
     def __eq__(self, other):
-        '''
+        """
         Equality test (==)
-        '''
-        if (isinstance(other, IrregularlySampledSignal) and not (self.times == other.times).all()):
+        """
+        if isinstance(other, IrregularlySampledSignal) and not (self.times == other.times).all():
             return False
         return super().__eq__(other)
 
-    def _check_consistency(self, other):
-        '''
+    def _check_consistency(self, other) -> None:
+        """
         Check if the attributes of another :class:`IrregularlySampledSignal`
         are compatible with this one.
-        '''
+
+        Raises
+        ------
+        ValueError
+         * Dimensionality of objects don't match for signal
+         * If times are different between the two objects
+
+        Returns
+        -------
+        None if check passes
+        """
         # if not an array, then allow the calculation
-        if not hasattr(other, 'ndim'):
+        if not hasattr(other, "ndim"):
             return
         # if a scalar array, then allow the calculation
         if not other.ndim:
             return
         # dimensionality should match
         if self.ndim != other.ndim:
-            raise ValueError(f'Dimensionality does not match: {self.ndim} vs {other.ndim}')
+            raise ValueError(f"Dimensionality does not match: {self.ndim} vs {other.ndim}")
         # if if the other array does not have a times property,
         # then it should be okay to add it directly
-        if not hasattr(other, 'times'):
+        if not hasattr(other, "times"):
             return
 
         # if there is a times property, the times need to be the same
         if not (self.times == other.times).all():
-            raise ValueError(f'Times do not match: {self.times} vs {other.times}')
+            raise ValueError(f"Times do not match: {self.times} vs {other.times}")
 
     def __rsub__(self, other, *args):
-        '''
+        """
         Backwards subtraction (other-self)
-        '''
+        """
         return self.__mul__(-1) + other
 
     def _repr_pretty_(self, pp, cycle):
-        '''
+        """
         Handle pretty-printing the :class:`IrregularlySampledSignal`.
-        '''
-        pp.text(f"{self.__class__.__name__} with {self.shape[1]} channels of length "
-                f"{self.shape[0]}; units {self.units.dimensionality.string}; datatype "
-                f"{self.dtype}")
+        """
+        pp.text(
+            f"{self.__class__.__name__} with {self.shape[1]} channels of length "
+            f"{self.shape[0]}; units {self.units.dimensionality.string}; datatype "
+            f"{self.dtype}"
+        )
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
@@ -323,21 +406,30 @@ class IrregularlySampledSignal(BaseSignal):
 
     @property
     def sampling_intervals(self):
-        '''
+        """
         Interval between each adjacent pair of samples.
 
         (:attr:`times[1:]` - :attr:`times`[:-1])
-        '''
+        """
         return self.times[1:] - self.times[:-1]
 
     def mean(self, interpolation=None):
-        '''
+        """
         Calculates the mean, optionally using interpolation between sampling
         times.
 
-        If :attr:`interpolation` is None, we assume that values change
-        stepwise at sampling times.
-        '''
+        Parameters
+        ----------
+        interpolation: function | None
+            Optionally interpolate between samples. Not currently implemented
+            If none uses the standard mean assuming that values change stepwise
+            in sampling time.
+
+        Returns
+        -------
+        mean: float
+            The mean of the IrregularlySampledSignal
+        """
         if interpolation is None:
             return (self[:-1] * self.sampling_intervals.reshape(-1, 1)).sum() / self.duration
         else:
@@ -366,36 +458,52 @@ class IrregularlySampledSignal(BaseSignal):
         """
 
         if not HAVE_SCIPY:
-            raise ImportError('Resampling requires availability of scipy.signal')
+            raise ImportError("Resampling requires availability of scipy.signal")
 
         # Resampling is only permitted along the time axis (axis=0)
-        if 'axis' in kwargs:
-            kwargs.pop('axis')
-        if 't' in kwargs:
-            kwargs.pop('t')
+        if "axis" in kwargs:
+            kwargs.pop("axis")
+        if "t" in kwargs:
+            kwargs.pop("t")
 
-        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count,
-                                                                t=self.times.magnitude,
-                                                                axis=0, **kwargs)
+        resampled_data, resampled_times = scipy.signal.resample(
+            self.magnitude, sample_count, t=self.times.magnitude, axis=0, **kwargs
+        )
 
         new_sampling_rate = (sample_count - 1) / self.duration
-        resampled_signal = AnalogSignal(resampled_data, units=self.units, dtype=self.dtype,
-                                        t_start=self.t_start,
-                                        sampling_rate=new_sampling_rate,
-                                        array_annotations=self.array_annotations.copy(),
-                                        **self.annotations.copy())
+        resampled_signal = AnalogSignal(
+            resampled_data,
+            units=self.units,
+            dtype=self.dtype,
+            t_start=self.t_start,
+            sampling_rate=new_sampling_rate,
+            array_annotations=self.array_annotations.copy(),
+            **self.annotations.copy(),
+        )
 
         # since the number of channels stays the same, we can also copy array annotations here
         resampled_signal.array_annotations = self.array_annotations.copy()
         return resampled_signal
 
     def time_slice(self, t_start, t_stop):
-        '''
+        """
         Creates a new :class:`IrregularlySampledSignal` corresponding to the time slice of
-        the original :class:`IrregularlySampledSignal` between times
-        `t_start` and `t_stop`. Either parameter can also be None
-        to use infinite endpoints for the time interval.
-        '''
+        the original :class:`IrregularlySampledSignal`
+
+        Parameters
+        ----------
+        t_start: float | None
+            The starting time of the time slice
+            If None it will use -np.inf to determine the start index
+        t_stop: float | None
+            The stopping time of the time slice
+            If None it will use np,inf to determine the end index
+
+        Returns
+        -------
+        new_st: neo.core.IrregularlySampledSignal
+            A new IrregularlySampledSignal with the demanded times
+        """
         _t_start = t_start
         _t_stop = t_stop
 
@@ -446,7 +554,7 @@ class IrregularlySampledSignal(BaseSignal):
         return new_sig
 
     def merge(self, other):
-        '''
+        """
         Merge another signal into this one.
 
         The signal objects are concatenated horizontally
@@ -456,14 +564,13 @@ class IrregularlySampledSignal(BaseSignal):
         compatible, an Exception is raised.
 
         Required attributes of the signal are used.
-        '''
+        """
 
         if not np.array_equal(self.times, other.times):
             raise MergeError("Cannot merge these two signals as the sample times differ.")
 
         if self.segment != other.segment:
-            raise MergeError(
-                "Cannot merge these two signals as they belong to different segments.")
+            raise MergeError("Cannot merge these two signals as they belong to different segments.")
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
                 if self.lazy_shape[0] != other.lazy_shape[0]:
@@ -485,8 +592,7 @@ class IrregularlySampledSignal(BaseSignal):
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
-        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype,
-                                copy=False, **kwargs)
+        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype, copy=False, **kwargs)
         signal.segment = self.segment
         signal.array_annotate(**self._merge_array_annotations(other))
 
@@ -496,7 +602,7 @@ class IrregularlySampledSignal(BaseSignal):
         return signal
 
     def concatenate(self, other, allow_overlap=False):
-        '''
+        """
         Combine this and another signal along the time axis.
 
         The signal objects are concatenated vertically
@@ -530,19 +636,17 @@ class IrregularlySampledSignal(BaseSignal):
         ------
         MergeError
             If `other` object has incompatible attributes.
-        '''
+        """
 
         for attr in self._necessary_attrs:
-            if not (attr[0] in ['signal', 'times', 't_start', 't_stop', 'times']):
+            if not (attr[0] in ["signal", "times", "t_start", "t_stop", "times"]):
                 if getattr(self, attr[0], None) != getattr(other, attr[0], None):
-                    raise MergeError(
-                        "Cannot concatenate these two signals as the %s differ." % attr[0])
+                    raise MergeError(f"Cannot concatenate these two signals as the {attr[0]} differ.")
 
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
                 if self.lazy_shape[-1] != other.lazy_shape[-1]:
-                    raise MergeError("Cannot concatenate signals as they contain"
-                                     " different numbers of traces.")
+                    raise MergeError("Cannot concatenate signals as they contain" " different numbers of traces.")
                 merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0], self.lazy_shape[-1])
             else:
                 raise MergeError("Cannot concatenate a lazy object with a real object.")
@@ -564,20 +668,28 @@ class IrregularlySampledSignal(BaseSignal):
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
-        kwargs['array_annotations'] = intersect_annotations(self.array_annotations,
-                                                            other.array_annotations)
+        kwargs["array_annotations"] = intersect_annotations(self.array_annotations, other.array_annotations)
 
         if not allow_overlap:
             if max(self.t_start, other.t_start) <= min(self.t_stop, other.t_stop):
-                raise ValueError('Can not combine signals that overlap in time. Allow for '
-                                 'overlapping samples using the "no_overlap" parameter.')
+                raise ValueError(
+                    "Can not combine signals that overlap in time. Allow for "
+                    'overlapping samples using the "no_overlap" parameter.'
+                )
 
         t_start = min(self.t_start, other.t_start)
         t_stop = max(self.t_start, other.t_start)
 
-        signal = IrregularlySampledSignal(signal=new_samples[sorting], times=new_times[sorting],
-                                          units=self.units, dtype=self.dtype, copy=False,
-                                          t_start=t_start, t_stop=t_stop, **kwargs)
+        signal = IrregularlySampledSignal(
+            signal=new_samples[sorting],
+            times=new_times[sorting],
+            units=self.units,
+            dtype=self.dtype,
+            copy=False,
+            t_start=t_start,
+            t_stop=t_stop,
+            **kwargs,
+        )
         signal.segment = None
 
         if hasattr(self, "lazy_shape"):

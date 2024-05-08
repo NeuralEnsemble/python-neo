@@ -8,7 +8,6 @@ import quantities as pq
 
 
 class BlkIO(BaseIO):
-
     """
     Neo IO module for optical imaging data stored as BLK file
 
@@ -35,10 +34,10 @@ class BlkIO(BaseIO):
     Many thanks to Thomas Deneux for the MATLAB code on which this was based.
     """
 
-    name = 'BLK IO'
+    name = "BLK IO"
     description = "Neo IO module for optical imaging data stored as BLK file"
 
-    _prefered_signal_goup_mode = 'group-by-same-units'
+    _prefered_signal_goup_mode = "group-by-same-units"
     is_readable = True
     is_wirtable = False
 
@@ -52,7 +51,7 @@ class BlkIO(BaseIO):
 
     extensions = []
 
-    mode = 'file'
+    mode = "file"
 
     def __init__(self, file_name=None, units=None, sampling_rate=None, spatial_scale=None, **kwargs):
         BaseIO.__init__(self, file_name, **kwargs)
@@ -65,31 +64,38 @@ class BlkIO(BaseIO):
         Return all data from the file as a list of Blocks
         """
         if lazy:
-            raise ValueError('This IO module does not support lazy loading')
-        return [self.read_block(lazy=lazy, units=self.units, sampling_rate=self.sampling_rate,
-                                spatial_scale=self.spatial_scale, **kwargs)]
+            raise ValueError("This IO module does not support lazy loading")
+        return [
+            self.read_block(
+                lazy=lazy,
+                units=self.units,
+                sampling_rate=self.sampling_rate,
+                spatial_scale=self.spatial_scale,
+                **kwargs,
+            )
+        ]
 
     def read_block(self, lazy=False, **kargs):
 
         def read(name, type, nb, dictionary, file):
 
-            if type == 'int32':
+            if type == "int32":
                 # dictionary[name] = int.from_bytes(file.read(4), byteorder=sys.byteorder, signed=True)
                 dictionary[name] = struct.unpack("i", file.read(4))[0]
-            if type == 'float32':
-                dictionary[name] = struct.unpack('f', file.read(4))[0]
-            if type == 'uint8':
+            if type == "float32":
+                dictionary[name] = struct.unpack("f", file.read(4))[0]
+            if type == "uint8":
                 l = []
                 for i in range(nb):
-                    l.append(chr(struct.unpack('B', file.read(1))[0]))
+                    l.append(chr(struct.unpack("B", file.read(1))[0]))
                 dictionary[name] = l
-            if type == 'uint16':
+            if type == "uint16":
                 l = []
                 for i in range(nb):
-                    l.append((struct.unpack('H', file.read(2)))[0])
+                    l.append((struct.unpack("H", file.read(2)))[0])
                 dictionary[name] = l
-            if type == 'short':
-                dictionary[name] = struct.unpack('h', file.read(2))[0]
+            if type == "short":
+                dictionary[name] = struct.unpack("h", file.read(2))[0]
 
             return dictionary
 
@@ -98,61 +104,61 @@ class BlkIO(BaseIO):
             file = open(file_name, "rb")
 
             i = [
-                ['file_size', 'int32', 1],
-                ['checksum_header', 'int32', 1],
-                ['check_data', 'int32', 1],
-                ['lenheader', 'int32', 1],
-                ['versionid', 'float32', 1],
-                ['filetype', 'int32', 1],
-                ['filesubtype', 'int32', 1],
-                ['datatype', 'int32', 1],
-                ['sizeof', 'int32', 1],
-                ['framewidth', 'int32', 1],
-                ['frameheight', 'int32', 1],
-                ['nframesperstim', 'int32', 1],
-                ['nstimuli', 'int32', 1],
-                ['initialxbinfactor', 'int32', 1],
-                ['initialybinfactor', 'int32', 1],
-                ['xbinfactor', 'int32', 1],
-                ['ybinfactor', 'int32', 1],
-                ['username', 'uint8', 32],
-                ['recordingdate', 'uint8', 16],
-                ['x1roi', 'int32', 1],
-                ['y1roi', 'int32', 1],
-                ['x2roi', 'int32', 1],
-                ['y2roi', 'int32', 1],
-                ['stimoffs', 'int32', 1],
-                ['stimsize', 'int32', 1],
-                ['frameoffs', 'int32', 1],
-                ['framesize', 'int32', 1],
-                ['refoffs', 'int32', 1],
-                ['refsize', 'int32', 1],
-                ['refwidth', 'int32', 1],
-                ['refheight', 'int32', 1],
-                ['whichblocks', 'uint16', 16],
-                ['whichframe', 'uint16', 16],
-                ['loclip', 'int32', 1],
-                ['hiclip', 'int32', 1],
-                ['lopass', 'int32', 1],
-                ['hipass', 'int32', 1],
-                ['operationsperformed', 'uint8', 64],
-                ['magnification', 'float32', 1],
-                ['gain', 'uint16', 1],
-                ['wavelength', 'uint16', 1],
-                ['exposuretime', 'int32', 1],
-                ['nrepetitions', 'int32', 1],
-                ['acquisitiondelay', 'int32', 1],
-                ['interstiminterval', 'int32', 1],
-                ['creationdate', 'uint8', 16],
-                ['datafilename', 'uint8', 64],
-                ['orareserved', 'uint8', 256]
+                ["file_size", "int32", 1],
+                ["checksum_header", "int32", 1],
+                ["check_data", "int32", 1],
+                ["lenheader", "int32", 1],
+                ["versionid", "float32", 1],
+                ["filetype", "int32", 1],
+                ["filesubtype", "int32", 1],
+                ["datatype", "int32", 1],
+                ["sizeof", "int32", 1],
+                ["framewidth", "int32", 1],
+                ["frameheight", "int32", 1],
+                ["nframesperstim", "int32", 1],
+                ["nstimuli", "int32", 1],
+                ["initialxbinfactor", "int32", 1],
+                ["initialybinfactor", "int32", 1],
+                ["xbinfactor", "int32", 1],
+                ["ybinfactor", "int32", 1],
+                ["username", "uint8", 32],
+                ["recordingdate", "uint8", 16],
+                ["x1roi", "int32", 1],
+                ["y1roi", "int32", 1],
+                ["x2roi", "int32", 1],
+                ["y2roi", "int32", 1],
+                ["stimoffs", "int32", 1],
+                ["stimsize", "int32", 1],
+                ["frameoffs", "int32", 1],
+                ["framesize", "int32", 1],
+                ["refoffs", "int32", 1],
+                ["refsize", "int32", 1],
+                ["refwidth", "int32", 1],
+                ["refheight", "int32", 1],
+                ["whichblocks", "uint16", 16],
+                ["whichframe", "uint16", 16],
+                ["loclip", "int32", 1],
+                ["hiclip", "int32", 1],
+                ["lopass", "int32", 1],
+                ["hipass", "int32", 1],
+                ["operationsperformed", "uint8", 64],
+                ["magnification", "float32", 1],
+                ["gain", "uint16", 1],
+                ["wavelength", "uint16", 1],
+                ["exposuretime", "int32", 1],
+                ["nrepetitions", "int32", 1],
+                ["acquisitiondelay", "int32", 1],
+                ["interstiminterval", "int32", 1],
+                ["creationdate", "uint8", 16],
+                ["datafilename", "uint8", 64],
+                ["orareserved", "uint8", 256],
             ]
 
             dic = {}
             for x in i:
                 dic = read(name=x[0], type=x[1], nb=x[2], dictionary=dic, file=file)
 
-            if dic['filesubtype'] == 13:
+            if dic["filesubtype"] == 13:
                 i = [
                     ["includesrefframe", "int32", 1],
                     ["temp", "uint8", 128],
@@ -170,13 +176,13 @@ class BlkIO(BaseIO):
                     ["sizeofanalogbufferinframes", "short", 1],
                     ["cameratrials", "short", 1],
                     ["filler", "uint8", 106],
-                    ["dyedaqreserved", "uint8", 106]
+                    ["dyedaqreserved", "uint8", 106],
                 ]
                 for x in i:
                     dic = read(name=x[0], type=x[1], nb=x[2], dictionary=dic, file=file)
                 # nottested
                 #  p.listofstimuli=temp(1:max(find(temp~=0)))';  % up to first non-zero stimulus
-                dic["listofstimuli"] = dic["temp"][0:np.argwhere(x != 0).max(0)]
+                dic["listofstimuli"] = dic["temp"][0 : np.argwhere(x != 0).max(0)]
             else:
                 i = [
                     ["includesrefframe", "int32", 1],
@@ -186,7 +192,7 @@ class BlkIO(BaseIO):
                     ["scalefactor", "int32", 1],
                     ["meanampgain", "float32", 1],
                     ["meanampdc", "float32", 1],
-                    ["vdaqreserved", "uint8", 256]
+                    ["vdaqreserved", "uint8", 256],
                 ]
                 for x in i:
                     dic = read(name=x[0], type=x[1], nb=x[2], dictionary=dic, file=file)
@@ -202,22 +208,24 @@ class BlkIO(BaseIO):
         nblocks = 1
         print("reading the header")
         header = read_header(self.filename)
-        nstim = header['nstimuli']
-        ni = header['framewidth']
-        nj = header['frameheight']
-        nfr = header['nframesperstim']
-        lenh = header['lenheader']
-        framesize = header['framesize']
-        filesize = header['file_size']
-        dtype = header['datatype']
-        gain = header['meanampgain']
-        dc = header['meanampdc']
-        scalefactor = header['scalefactor']
+        nstim = header["nstimuli"]
+        ni = header["framewidth"]
+        nj = header["frameheight"]
+        nfr = header["nframesperstim"]
+        lenh = header["lenheader"]
+        framesize = header["framesize"]
+        filesize = header["file_size"]
+        dtype = header["datatype"]
+        gain = header["meanampgain"]
+        dc = header["meanampdc"]
+        scalefactor = header["scalefactor"]
 
         # [["dtype","nbytes","datatype","type_out"],[...]]
         l = [
-            [11, 1, "uchar", "uint8", "B"], [12, 2, "ushort", "uint16", "H"],
-            [13, 4, "ulong", "uint32", "I"], [14, 4, "float", "single", "f"]
+            [11, 1, "uchar", "uint8", "B"],
+            [12, 2, "ushort", "uint16", "H"],
+            [13, 4, "ulong", "uint32", "I"],
+            [14, 4, "float", "single", "f"],
         ]
 
         for i in l:
@@ -240,22 +248,19 @@ class BlkIO(BaseIO):
         data = [[[np.zeros((ni, nj, nfr), type_out)] for x in range(ncond)] for i in range(nbin)]
         for k in range(1, nbin + 1):
             print("reading block")
-            bin = np.arange(math.floor((k - 1 / nbin * nblocks) + 1),
-                            math.floor((k / nbin * nblocks) + 1))
+            bin = np.arange(math.floor((k - 1 / nbin * nblocks) + 1), math.floor((k / nbin * nblocks) + 1))
             sbin = bin.size
             for j in range(1, sbin + 1):
-                file = open(self.filename, 'rb')
+                file = open(self.filename, "rb")
                 for i in range(1, ncond + 1):
 
                     framestart = conds[i - 1] * nfr2 - nfr
                     offset = framestart * ni * nj * nbytes + lenh
                     file.seek(offset, 0)
 
-                    a = [(struct.unpack(struct_type, file.read(nbytes)))[0]
-                         for m in range(ni * nj * nfr)]
-                    a = np.reshape(np.array(a, dtype=type_out, order='F'),
-                                   (ni * nj, nfr), order='F')
-                    a = np.reshape(a, (ni, nj, nfr), order='F')
+                    a = [(struct.unpack(struct_type, file.read(nbytes)))[0] for m in range(ni * nj * nfr)]
+                    a = np.reshape(np.array(a, dtype=type_out, order="F"), (ni * nj, nfr), order="F")
+                    a = np.reshape(a, (ni, nj, nfr), order="F")
 
                     if includesrefframe:
                         # not tested
@@ -264,8 +269,7 @@ class BlkIO(BaseIO):
 
                         file.seek(offset)
 
-                        ref = [(struct.unpack(struct_type, file.read(nbytes)))[0]
-                               for m in range(ni * nj)]
+                        ref = [(struct.unpack(struct_type, file.read(nbytes)))[0] for m in range(ni * nj)]
                         ref = np.array(ref, dtype=type_out)
                         for y in range(len(ref)):
                             ref[y] *= scalefactor
@@ -276,8 +280,7 @@ class BlkIO(BaseIO):
                             for x in range(len(a[y])):
                                 b[y + 1].append([])
                                 for frame in range(len(a[y][x])):
-                                    b[y + 1][x][frame] = (a[y][x][frame] / gain) - \
-                                        (scalefactor * dc / gain)
+                                    b[y + 1][x][frame] = (a[y][x][frame] / gain) - (scalefactor * dc / gain)
                         a = b
                     if sbin == 1:
                         data[k - 1][i - 1] = a
@@ -305,7 +308,7 @@ class BlkIO(BaseIO):
         for block in range(len(data)):
             for stim in range(len(data[block])):
                 a = []
-                for frame in range(header['nframesperstim']):
+                for frame in range(header["nframesperstim"]):
                     a.append([])
                     for width in range(len(data[block][stim])):
                         a[frame].append([])
@@ -317,10 +320,10 @@ class BlkIO(BaseIO):
 
         block = Block(file_origin=self.filename)
         for stim in range(len(data[0])):
-            image_sequence = ImageSequence(data[0][stim], units=self.units,
-                                           sampling_rate=self.sampling_rate,
-                                           spatial_scale=self.spatial_scale)
-            segment = Segment(file_origin=self.filename, description=("stim nb:"+str(stim)))
+            image_sequence = ImageSequence(
+                data[0][stim], units=self.units, sampling_rate=self.sampling_rate, spatial_scale=self.spatial_scale
+            )
+            segment = Segment(file_origin=self.filename, description=("stim nb:" + str(stim)))
             segment.imagesequences = [image_sequence]
             for key in header:
                 block.annotations[key] = header[key]

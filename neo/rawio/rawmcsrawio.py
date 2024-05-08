@@ -14,8 +14,13 @@ could be written instead of this ersatz.
 Author: Samuel Garcia
 """
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                _spike_channel_dtype, _event_channel_dtype)
+from .baserawio import (
+    BaseRawIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
+)
 
 import numpy as np
 
@@ -24,10 +29,20 @@ import sys
 
 
 class RawMCSRawIO(BaseRawIO):
-    extensions = ['raw']
-    rawmode = 'one-file'
+    """
+    Class for reading an mcs file converted by the MC_DataToo binary converter
 
-    def __init__(self, filename=''):
+    Parameters
+    ----------
+    filename: str, default: ''
+        The *.raw MCS file to be loaded
+
+    """
+
+    extensions = ["raw"]
+    rawmode = "one-file"
+
+    def __init__(self, filename=""):
         BaseRawIO.__init__(self)
         self.filename = filename
 
@@ -37,23 +52,33 @@ class RawMCSRawIO(BaseRawIO):
     def _parse_header(self):
         self._info = info = parse_mcs_raw_header(self.filename)
 
-        self.dtype = 'uint16'
-        self.sampling_rate = info['sampling_rate']
-        self.nb_channel = len(info['channel_names'])
+        self.dtype = "uint16"
+        self.sampling_rate = info["sampling_rate"]
+        self.nb_channel = len(info["channel_names"])
 
         # one unique stream
-        signal_streams = np.array([('Signals', '0')], dtype=_signal_stream_dtype)
+        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
 
-        self._raw_signals = np.memmap(self.filename, dtype=self.dtype, mode='r',
-                                      offset=info['header_size']).reshape(-1, self.nb_channel)
+        self._raw_signals = np.memmap(self.filename, dtype=self.dtype, mode="r", offset=info["header_size"]).reshape(
+            -1, self.nb_channel
+        )
 
         sig_channels = []
         for c in range(self.nb_channel):
             chan_id = str(c)
-            stream_id = '0'
-            sig_channels.append((info['channel_names'][c], chan_id, self.sampling_rate,
-                                self.dtype, info['signal_units'], info['signal_gain'],
-                                info['signal_offset'], stream_id))
+            stream_id = "0"
+            sig_channels.append(
+                (
+                    info["channel_names"][c],
+                    chan_id,
+                    self.sampling_rate,
+                    self.dtype,
+                    info["signal_units"],
+                    info["signal_gain"],
+                    info["signal_offset"],
+                    stream_id,
+                )
+            )
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No events
@@ -66,18 +91,18 @@ class RawMCSRawIO(BaseRawIO):
 
         # fille into header dict
         self.header = {}
-        self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
-        self.header['signal_streams'] = signal_streams
-        self.header['signal_channels'] = sig_channels
-        self.header['spike_channels'] = spike_channels
-        self.header['event_channels'] = event_channels
+        self.header["nb_block"] = 1
+        self.header["nb_segment"] = [1]
+        self.header["signal_streams"] = signal_streams
+        self.header["signal_channels"] = sig_channels
+        self.header["spike_channels"] = spike_channels
+        self.header["event_channels"] = event_channels
 
         # insert some annotation at some place
         self._generate_minimal_annotations()
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.
+        return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = self._raw_signals.shape[0] / self.sampling_rate
@@ -87,10 +112,9 @@ class RawMCSRawIO(BaseRawIO):
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        return 0.
+        return 0.0
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
-                                stream_index, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
@@ -106,52 +130,52 @@ def parse_mcs_raw_header(filename):
     """
     MAX_HEADER_SIZE = 5000
 
-    with open(filename, mode='rb') as f:
+    with open(filename, mode="rb") as f:
         raw_header = f.read(MAX_HEADER_SIZE)
 
-        header_size = raw_header.find(b'EOH')
-        assert header_size != -1, 'Error in reading raw mcs header'
+        header_size = raw_header.find(b"EOH")
+        assert header_size != -1, "Error in reading raw mcs header"
         header_size = header_size + 5
         raw_header = raw_header[:header_size]
-        raw_header = raw_header.replace(b'\r', b'')
+        raw_header = raw_header.replace(b"\r", b"")
 
         info = {}
-        info['header_size'] = header_size
+        info["header_size"] = header_size
 
         def parse_line(line, key):
-            if key + b' = ' in line:
-                v = line.replace(key, b'').replace(b' ', b'').replace(b'=', b'')
+            if key + b" = " in line:
+                v = line.replace(key, b"").replace(b" ", b"").replace(b"=", b"")
                 return v
 
-        keys = (b'Sample rate', b'ADC zero', b'ADC zero', b'El', b'Streams')
+        keys = (b"Sample rate", b"ADC zero", b"ADC zero", b"El", b"Streams")
 
-        for line in raw_header.split(b'\n'):
+        for line in raw_header.split(b"\n"):
             for key in keys:
                 v = parse_line(line, key)
                 if v is None:
                     continue
 
-                if key == b'Sample rate':
-                    info['sampling_rate'] = float(v)
+                if key == b"Sample rate":
+                    info["sampling_rate"] = float(v)
 
-                elif key == b'ADC zero':
-                    info['adc_zero'] = int(v)
+                elif key == b"ADC zero":
+                    info["adc_zero"] = int(v)
 
-                elif key == b'El':
-                    v = v.decode('Windows-1252')
-                    v = v.replace('/AD', '')
+                elif key == b"El":
+                    v = v.decode("Windows-1252")
+                    v = v.replace("/AD", "")
                     split_pos = 0
-                    while v[split_pos] in '1234567890.':
+                    while v[split_pos] in "1234567890.":
                         split_pos += 1
                         if split_pos == len(v):
                             split_pos = None
                             break
-                    assert split_pos is not None, 'Impossible to find units and scaling'
-                    info['signal_gain'] = float(v[:split_pos])
-                    info['signal_units'] = v[split_pos:].replace('µ', 'u')
-                    info['signal_offset'] = -info['signal_gain'] * info['adc_zero']
+                    assert split_pos is not None, "Impossible to find units and scaling"
+                    info["signal_gain"] = float(v[:split_pos])
+                    info["signal_units"] = v[split_pos:].replace("µ", "u")
+                    info["signal_offset"] = -info["signal_gain"] * info["adc_zero"]
 
-                elif key == b'Streams':
-                    info['channel_names'] = v.decode('Windows-1252').split(';')
+                elif key == b"Streams":
+                    info["channel_names"] = v.decode("Windows-1252").split(";")
 
     return info

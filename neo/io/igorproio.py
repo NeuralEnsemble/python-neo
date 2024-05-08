@@ -15,8 +15,7 @@ from warnings import warn
 import pathlib
 import quantities as pq
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal
-
+from neo.core import Block, Segment, AnalogSignal, NeoReadWriteError
 
 
 class IgorIO(BaseIO):
@@ -42,9 +41,9 @@ class IgorIO(BaseIO):
     writeable_objects = []
     has_header = False
     is_streameable = False
-    name = 'igorpro'
-    extensions = ['ibw', 'pxp']
-    mode = 'file'
+    name = "igorpro"
+    extensions = ["ibw", "pxp"]
+    mode = "file"
 
     def __init__(self, filename=None, parse_notes=None):
         """
@@ -60,15 +59,16 @@ class IgorIO(BaseIO):
         """
         BaseIO.__init__(self)
         filename = pathlib.Path(filename)
-        assert filename.suffix[1:] in self.extensions, \
-            "Only the following extensions are supported: %s" % self.extensions
+        if filename.suffix[1:] not in self.extensions:
+            raise NotImplementedError(f"Only the following extensions are supported: {self.extensions}")
         self.filename = filename
         self.extension = filename.suffix[1:]
         self.parse_notes = parse_notes
         self._filesystem = None
 
     def read_block(self, lazy=False):
-        assert not lazy, 'This IO does not support lazy mode'
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy reading")
 
         block = Block(file_origin=str(self.filename))
         block.segments.append(self.read_segment(lazy=lazy))
@@ -78,85 +78,90 @@ class IgorIO(BaseIO):
         import igor2.packed as pxp
         from igor2.record.wave import WaveRecord
 
-        assert not lazy, 'This IO does not support lazy mode'
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy mode")
         segment = Segment(file_origin=str(self.filename))
 
-        if self.extension == 'pxp':
+        if self.extension == "pxp":
             if not self._filesystem:
                 _, self.filesystem = pxp.load(str(self.filename))
 
             def callback(dirpath, key, value):
                 if isinstance(value, WaveRecord):
-                    signal = self._wave_to_analogsignal(value.wave['wave'], dirpath)
+                    signal = self._wave_to_analogsignal(value.wave["wave"], dirpath)
                     segment.analogsignals.append(signal)
 
             pxp.walk(self.filesystem, callback)
         else:
-            segment.analogsignals.append(
-                self.read_analogsignal(lazy=lazy))
+            segment.analogsignals.append(self.read_analogsignal(lazy=lazy))
         return segment
 
     def read_analogsignal(self, path=None, lazy=False):
         import igor2.binarywave as bw
         import igor2.packed as pxp
 
-        assert not lazy, 'This IO does not support lazy mode'
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy mode")
 
-        if self.extension == 'ibw':
+        if self.extension == "ibw":
             data = bw.load(str(self.filename))
-            version = data['version']
+            version = data["version"]
             if version > 5:
-                raise IOError("Igor binary wave file format version {} "
-                               "is not supported.".format(version))
-        elif self.extension == 'pxp':
-            assert type(path) is str, \
-                "A colon-separated Igor-style path must be provided."
+                raise IOError(f"Igor binary wave file format version {version} " "is not supported.")
+        elif self.extension == "pxp":
+            if type(path) is not str:
+                raise TypeError("A colon-separated Igor-style path must be provided.")
             if not self._filesystem:
                 _, self.filesystem = pxp.load(str(self.filename))
-                path = path.split(':')
-                location = self.filesystem['root']
+                path = path.split(":")
+                location = self.filesystem["root"]
                 for element in path:
-                    if element != 'root':
-                        location = location[element.encode('utf8')]
+                    if element != "root":
+                        location = location[element.encode("utf8")]
             data = location.wave
 
-        return self._wave_to_analogsignal(data['wave'], [])
+        return self._wave_to_analogsignal(data["wave"], [])
 
     def _wave_to_analogsignal(self, content, dirpath):
         if "padding" in content:
-            assert content['padding'].size == 0, \
-                "Cannot handle non-empty padding"
-        signal = content['wData']
-        note = content['note']
-        header = content['wave_header']
-        name = str(header['bname'].decode('utf-8'))
-        units = "".join([x.decode() for x in header['dataUnits']])
-        try:
-            time_units = "".join([x.decode() for x in header['xUnits']])
-            assert len(time_units)
-        except:
+            if content["padding"].size != 0:
+                raise NeoReadWriteError("Cannot handle non-empty padding")
+        signal = content["wData"]
+        note = content["note"]
+        header = content["wave_header"]
+        name = str(header["bname"].decode("utf-8"))
+        units = "".join([x.decode() for x in header["dataUnits"]])
+        time_units = "".join([x.decode() for x in header["xUnits"]])
+        if len(time_units) == 0:
             time_units = "s"
         try:
-            t_start = pq.Quantity(header['hsB'], time_units)
+            t_start = pq.Quantity(header["hsB"], time_units)
         except KeyError:
-            t_start = pq.Quantity(header['sfB'][0], time_units)
+            t_start = pq.Quantity(header["sfB"][0], time_units)
         try:
-            sampling_period = pq.Quantity(header['hsA'], time_units)
-        except:
-            sampling_period = pq.Quantity(header['sfA'][0], time_units)
+            sampling_period = pq.Quantity(header["hsA"], time_units)
+        except KeyError:
+            sampling_period = pq.Quantity(header["sfA"][0], time_units)
         if self.parse_notes:
             try:
                 annotations = self.parse_notes(note)
             except ValueError:
                 warn("Couldn't parse notes field.")
-                annotations = {'note': note}
+                annotations = {"note": note}
         else:
-            annotations = {'note': note}
-        annotations["igor_path"] = ":".join(item.decode('utf-8') for item in dirpath)
+            annotations = {"note": note}
+        annotations["igor_path"] = ":".join(item.decode("utf-8") for item in dirpath)
 
-        signal = AnalogSignal(signal, units=units, copy=False, t_start=t_start,
-                              sampling_period=sampling_period, name=name,
-                              file_origin=str(self.filename), **annotations)
+        signal = AnalogSignal(
+            signal,
+            units=units,
+            copy=False,
+            t_start=t_start,
+            sampling_period=sampling_period,
+            name=name,
+            file_origin=str(self.filename),
+            **annotations,
+        )
         return signal
 
 

@@ -60,6 +60,7 @@ Notice that the last line must end with a newline or carriage return.
 
 class KlustaKwikIO(BaseIO):
     """Reading and writing from KlustaKwik-format files."""
+
     # Class variables demonstrating capabilities of this IO
     is_readable = True
     is_writable = True
@@ -84,13 +85,13 @@ class KlustaKwikIO(BaseIO):
     write_params = {}
 
     # The IO name and the file extensions it uses
-    name = 'KlustaKwik'
-    extensions = ['fet', 'clu', 'res', 'spk']
+    name = "KlustaKwik"
+    extensions = ["fet", "clu", "res", "spk"]
 
     # Operates on directories
-    mode = 'dir'
+    mode = "dir"
 
-    def __init__(self, dirname, sampling_rate=30000.):
+    def __init__(self, dirname, sampling_rate=30000.0):
         """Create a new IO to operate on a directory
 
         dirname : the directory to contain the files
@@ -123,19 +124,19 @@ class KlustaKwikIO(BaseIO):
         boundaries, and then change this code to put the spikes in the right
         segments.
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         # Create block and segment to hold all the data
         block = Block()
         # Search data directory for KlustaKwik files.
         # If nothing found, return empty block
-        self._fetfiles = self._fp.read_filenames('fet')
-        self._clufiles = self._fp.read_filenames('clu')
+        self._fetfiles = self._fp.read_filenames("fet")
+        self._clufiles = self._fp.read_filenames("clu")
         if len(self._fetfiles) == 0:
             return block
 
         # Create a single segment to hold all of the data
-        seg = Segment(name='seg0', index=0, file_origin=str(self.session_dir / self.basename))
+        seg = Segment(name="seg0", index=0, file_origin=str(self.session_dir / self.basename))
         block.segments.append(seg)
 
         # Load spike times from each group and store in a dict, keyed
@@ -162,21 +163,22 @@ class KlustaKwikIO(BaseIO):
             unique_unit_ids = np.unique(uids)
             for unit_id in sorted(unique_unit_ids):
                 # Initialize the unit
-                u = Group(name=('unit %d from group %d' % (unit_id, group)),
-                         index=unit_id, group=group)
+                u = Group(name=(f"unit {unit_id} from group {group}"), index=unit_id, group=group)
 
                 # Initialize a new SpikeTrain for the spikes from this unit
                 st = SpikeTrain(
                     times=spks[uids == unit_id] / self.sampling_rate,
-                    units='sec', t_start=0.0,
+                    units="sec",
+                    t_start=0.0,
                     t_stop=spks.max() / self.sampling_rate,
-                    name=('unit %d from group %d' % (unit_id, group)))
-                st.annotations['cluster'] = unit_id
-                st.annotations['group'] = group
+                    name=(f"unit {unit_id} from group {group}"),
+                )
+                st.annotations["cluster"] = unit_id
+                st.annotations["group"] = group
 
                 # put features in
                 if len(features) != 0:
-                    st.annotations['waveform_features'] = features
+                    st.annotations["waveform_features"] = features
 
                 # Link
                 u.add(st)
@@ -188,27 +190,27 @@ class KlustaKwikIO(BaseIO):
     # Helper hidden functions for reading
     def _load_spike_times(self, fetfilename):
         """Reads and returns the spike times and features"""
-        with open(fetfilename, mode='r') as f:
+        with open(fetfilename, mode="r") as f:
             # Number of clustering features is integer on first line
             nbFeatures = int(f.readline().strip())
 
             # Each subsequent line consists of nbFeatures values, followed by
             # the spike time in samples.
-            names = ['fet%d' % n for n in range(nbFeatures)]
-            names.append('spike_time')
+            names = [f"fet{n}" for n in range(nbFeatures)]
+            names.append("spike_time")
 
         # Load into recarray
-        data = np.recfromtxt(fetfilename, names=names, skip_header=1, delimiter=' ')
+        data = np.recfromtxt(fetfilename, names=names, skip_header=1, delimiter=" ")
 
         # get features
-        features = np.array([data['fet%d' % n] for n in range(nbFeatures)])
+        features = np.array([data[f"fet{n}"] for n in range(nbFeatures)])
 
         # Return the spike_time column
-        return data['spike_time'], features.transpose()
+        return data["spike_time"], features.transpose()
 
     def _load_unit_id(self, clufilename):
         """Reads and return the cluster ids as int32"""
-        with open(clufilename, mode='r') as f:
+        with open(clufilename, mode="r") as f:
             # Number of clusters on this tetrode is integer on first line
             nbClusters = int(f.readline().strip())
 
@@ -222,14 +224,14 @@ class KlustaKwikIO(BaseIO):
         try:
             cluster_ids = [int(name) for name in cluster_names]
         except ValueError:
-            raise ValueError(
-                "Could not convert cluster name to integer in %s" % clufilename)
+            raise ValueError(f"Could not convert cluster name to integer in {clufilename}")
 
         # convert to numpy array and error check
         cluster_ids = np.array(cluster_ids, dtype=np.int32)
         if len(np.unique(cluster_ids)) != nbClusters:
-            logging.warning("warning: I got %d clusters instead of %d in %s" % (
-                len(np.unique(cluster_ids)), nbClusters, clufilename))
+            logging.warning(
+                f"warning: I got {len(np.unique(cluster_ids))} clusters instead of {nbClusters} in {clufilename}"
+            )
 
         return cluster_ids
 
@@ -261,7 +263,7 @@ class KlustaKwikIO(BaseIO):
         # set basename
         if self.basename is None:
             logging.warning("warning: no basename provided, using `basename`")
-            self.basename = 'basename'
+            self.basename = "basename"
 
         # First create file handles for each group which will be stored
         self._make_all_file_handles(block)
@@ -283,21 +285,19 @@ class KlustaKwikIO(BaseIO):
 
                 # Choose sampling rate to convert to samples
                 try:
-                    sr = st.annotations['sampling_rate']
+                    sr = st.annotations["sampling_rate"]
                 except KeyError:
                     sr = self.sampling_rate
 
                 # Convert to samples
-                spike_times_in_samples = np.rint(
-                    np.array(st) * sr).astype(np.int64)
+                spike_times_in_samples = np.rint(np.array(st) * sr).astype(np.int64)
 
                 # Try to get features from spiketrain
                 try:
-                    all_features = st.annotations['waveform_features']
+                    all_features = st.annotations["waveform_features"]
                 except KeyError:
                     # Use empty
-                    all_features = [
-                        [] for _ in range(len(spike_times_in_samples))]
+                    all_features = [[] for _ in range(len(spike_times_in_samples))]
                 all_features = np.asarray(all_features)
                 if all_features.ndim != 2:
                     raise ValueError("waveform features should be 2d array")
@@ -311,11 +311,12 @@ class KlustaKwikIO(BaseIO):
                     self._group2features[group] = n_features
 
                     # and write to first line of file
-                    fetfilehandle.write("%d\n" % n_features)
+                    fetfilehandle.write(f"{n_features}\n")
                 if n_features != all_features.shape[1]:
-                    raise ValueError("inconsistent number of features: " +
-                                     "supposed to be %d but I got %d" %
-                                     (n_features, all_features.shape[1]))
+                    raise ValueError(
+                        "inconsistent number of features: "
+                        + f"supposed to be {n_features} but I got {all_features.shape[1]}"
+                    )
 
                 # Write features and time for each spike
                 for stt, features in zip(spike_times_in_samples, all_features):
@@ -325,10 +326,10 @@ class KlustaKwikIO(BaseIO):
                         fetfilehandle.write(" ")
 
                     # now time
-                    fetfilehandle.write("%d\n" % stt)
+                    fetfilehandle.write(f"{stt}\n")
 
                     # and cluster id
-                    clufilehandle.write("%d\n" % cluster)
+                    clufilehandle.write(f"{cluster}\n")
 
         # We're done, so close the files
         self._close_all_files()
@@ -337,14 +338,14 @@ class KlustaKwikIO(BaseIO):
     def st2group(self, st):
         # Not sure this is right so make it a method in case we change it
         try:
-            return st.annotations['group']
+            return st.annotations["group"]
         except KeyError:
             return 0
 
     def st2cluster(self, st):
         # Not sure this is right so make it a method in case we change it
         try:
-            return st.annotations['cluster']
+            return st.annotations["cluster"]
         except KeyError:
             return 0
 
@@ -372,22 +373,22 @@ class KlustaKwikIO(BaseIO):
 
     def _new_group(self, id_group, nbClusters):
         # generate filenames
-        fetfilename = self.session_dir / (self.basename + ('.fet.%d' % id_group))
-        clufilename = self.session_dir / (self.basename + ('.clu.%d' % id_group))
+        fetfilename = self.session_dir / (self.basename + (f".fet.{id_group}"))
+        clufilename = self.session_dir / (self.basename + (f".clu.{id_group}"))
 
         # back up before overwriting
         if fetfilename.exists():
-            shutil.copyfile(fetfilename, fetfilename + '~')
+            shutil.copyfile(fetfilename, fetfilename + "~")
         if clufilename.exists():
-            shutil.copyfile(clufilename, clufilename + '~')
+            shutil.copyfile(clufilename, clufilename + "~")
 
         # create file handles
-        self._fetfilehandles[id_group] = open(fetfilename, mode='w')
-        self._clufilehandles[id_group] = open(clufilename, mode='w')
+        self._fetfilehandles[id_group] = open(fetfilename, mode="w")
+        self._clufilehandles[id_group] = open(clufilename, mode="w")
 
         # write out first line
         # self._fetfilehandles[id_group].write("0\n") # Number of features
-        self._clufilehandles[id_group].write("%d\n" % nbClusters)
+        self._clufilehandles[id_group].write(f"{nbClusters}\n")
 
     def _close_all_files(self):
         for val in self._fetfilehandles.values():
@@ -416,7 +417,7 @@ class FilenameParser:
         if not self.dirname.is_dir():
             raise ValueError("dirname must be a directory")
 
-    def read_filenames(self, typestring='fet'):
+    def read_filenames(self, typestring="fet"):
         """Returns filenames in the data directory matching the type.
 
         Generally, `typestring` is one of the following:
@@ -433,14 +434,14 @@ class FilenameParser:
         a sequence of digits are valid. The digits are converted to an integer
         and used as the group number.
         """
-        all_filenames = self.dirname.glob('*')
+        all_filenames = self.dirname.glob("*")
 
         # Fill the dict with valid filenames
         d = {}
         for v in all_filenames:
             # Test whether matches format, ie ends with digits
             split_fn = v.name
-            m = re.search(rf'^(.*)\.{typestring}\.(\d+)$', split_fn)
+            m = re.search(rf"^(.*)\.{typestring}\.(\d+)$", split_fn)
             if m is not None:
                 # get basename from first hit if not specified
                 if self.basename is None:
