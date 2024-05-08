@@ -213,13 +213,14 @@ class NeuralynxRawIO(BaseRawIO):
         event_annotations = []
 
         if self.rawmode == "one-dir":
-            filenames = [os.path.join(self.dirname, f) for f in os.listdir(self.dirname)]
+            filenames = os.listdir(self.dirname)
         else:
-            filenames = [os.path.join(self.dirname, f) for f in self.include_filenames]
+            filenames = self.include_filenames
 
         filenames = [f for f in filenames if f not in self.exclude_filenames]
+        full_filenames = [os.path.join(self.dirname, f) for f in filenames]
 
-        for filename in filenames:
+        for filename in full_filenames:
             if not os.path.isfile(filename):
                 raise ValueError(
                     f"Provided Filename is not a file: "
@@ -229,7 +230,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
-        for filename in filenames:
+        for filename in full_filenames:
             filename = os.path.join(self.dirname, filename)
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot
