@@ -380,8 +380,8 @@ if __name__ == "__main__":
 
     test = TestNeuralynxRawIO()
     # test.test_scan_ncs_files()
-    # test.test_exclude_filenames()
-    test.test_include_filenames()
+    test.test_exclude_filenames()
+    # test.test_include_filenames()
 
     # test = TestNcsSectionsFactory()
     # test.test_ncsblocks_partial()

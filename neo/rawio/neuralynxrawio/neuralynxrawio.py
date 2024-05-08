@@ -162,10 +162,12 @@ class NeuralynxRawIO(BaseRawIO):
 
         if include_filenames is None:
             include_filenames = []
+        elif isinstance(include_filenames, str):
+            include_filenames = [include_filenames]
 
         if exclude_filenames is None:
             exclude_filenames = []
-        elif not isinstance(exclude_filenames, (list, set, np.ndarray)):
+        elif isinstance(exclude_filenames, str):
             exclude_filenames = [exclude_filenames]
 
         if include_filenames:
