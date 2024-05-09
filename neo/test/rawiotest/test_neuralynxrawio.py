@@ -378,9 +378,9 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
-    test = TestNeuralynxRawIO()
+    # test = TestNeuralynxRawIO()
     # test.test_scan_ncs_files()
-    test.test_exclude_filenames()
+    # test.test_exclude_filenames()
     # test.test_include_filenames()
 
     # test = TestNcsSectionsFactory()
