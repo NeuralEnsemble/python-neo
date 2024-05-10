@@ -75,7 +75,7 @@ jobs:
         if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
           conda env update --name neo-test-env --file environment_testing.yml --prune
-          conda update python=${{ matrix.python-version }}
+          conda install python=${{ matrix.python-version }}
 
       - name: Configure git
         run: |
