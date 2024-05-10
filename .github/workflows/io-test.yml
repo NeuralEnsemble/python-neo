@@ -13,7 +13,7 @@ concurrency:  # Cancel previous workflows on the same pull request
 
 jobs:
   build-and-test:
-    name: Test on (${{ inputs.os }})
+    name: Test on (${{ inputs.os }}) (${{ matrix.python-version}})
     runs-on: ${{ inputs.os }}
     strategy:
       fail-fast: true
@@ -75,6 +75,7 @@ jobs:
         if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
           conda env update --name neo-test-env --file environment_testing.yml --prune
+          conda update python= ${{ matrix.python-version }}
 
       - name: Configure git
         run: |
