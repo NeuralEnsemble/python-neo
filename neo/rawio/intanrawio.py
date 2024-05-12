@@ -1056,7 +1056,7 @@ def create_one_file_per_channel_dict_rhs(
     raw_file_paths_dict = {}
     for raw_index, prefix in enumerate(possible_raw_file_prefixes_rhs):
         raw_file_paths_dict[raw_index] = [file for file in files if prefix in file.name]
-    
+
     # we need time to be the last value
     raw_file_paths_dict[15] = [Path(dirname / "time.dat")]
     # 10 and 11 are hardcoded in the rhs reader so hardcoded here
