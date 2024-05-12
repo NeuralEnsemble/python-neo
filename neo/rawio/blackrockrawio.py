@@ -319,8 +319,10 @@ class BlackrockRawIO(BaseRawIO):
 
             # The only way to know if it is the PTP-variant of file spec 3.0
             # is to check for nanosecond timestamp resolution.
-            if "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names \
-                and self.__nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000:
+            if (
+                "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names
+                and self.__nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000
+            ):
                 nsx_dataheader_reader = self.__nsx_dataheader_reader["3.0-ptp"]
             else:
                 nsx_dataheader_reader = self.__nsx_dataheader_reader[spec]
@@ -372,8 +374,10 @@ class BlackrockRawIO(BaseRawIO):
                 spec = self.__nsx_spec[nsx_nb]
                 # The only way to know if it is the PTP-variant of file spec 3.0
                 # is to check for nanosecond timestamp resolution.
-                if "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names \
-                    and self.__nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000:
+                if (
+                    "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names
+                    and self.__nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000
+                ):
                     _data_reader_fun = self.__nsx_data_reader["3.0-ptp"]
                 else:
                     _data_reader_fun = self.__nsx_data_reader[spec]
@@ -437,7 +441,7 @@ class BlackrockRawIO(BaseRawIO):
                     if "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names:
                         ts_res = self.__nsx_basic_header[nsx_nb]["timestamp_resolution"]
                     elif spec == "2.1":
-                        ts_res = self.__nsx_params[spec](nsx_nb)['timestamp_resolution']
+                        ts_res = self.__nsx_params[spec](nsx_nb)["timestamp_resolution"]
                     else:
                         ts_res = 30_000
                     period = self.__nsx_basic_header[nsx_nb]["period"]
@@ -966,7 +970,11 @@ class BlackrockRawIO(BaseRawIO):
         return data_header
 
     def __read_nsx_dataheader_variant_c(
-            self, nsx_nb, filesize=None, offset=None, ):
+        self,
+        nsx_nb,
+        filesize=None,
+        offset=None,
+    ):
         """
         Reads the nsx data header for each data block for file spec 3.0 with PTP timestamps
         """
@@ -984,7 +992,7 @@ class BlackrockRawIO(BaseRawIO):
             ("reserved", "uint8"),
             ("timestamps", "uint64"),
             ("num_data_points", "uint32"),
-            ("samples", "int16", self.__nsx_basic_header[nsx_nb]["channel_count"])
+            ("samples", "int16", self.__nsx_basic_header[nsx_nb]["channel_count"]),
         ]
         npackets = int((filesize - offset) / np.dtype(ptp_dt).itemsize)
         struct_arr = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=offset, mode="r")
@@ -1001,28 +1009,20 @@ class BlackrockRawIO(BaseRawIO):
         _clock_rate = self.__nsx_basic_header[nsx_nb]["timestamp_resolution"]  # clocks per sec
         clk_per_samp = _clock_rate / _nominal_rate  # clk/sec / smp/sec = clk/smp
         seg_thresh_clk = int(2 * clk_per_samp)
-        seg_starts = np.hstack(
-            (0, 1 + np.argwhere(np.diff(struct_arr["timestamps"]) > seg_thresh_clk).flatten())
-        )
+        seg_starts = np.hstack((0, 1 + np.argwhere(np.diff(struct_arr["timestamps"]) > seg_thresh_clk).flatten()))
         for seg_ix, seg_start_idx in enumerate(seg_starts):
             if seg_ix < (len(seg_starts) - 1):
                 seg_stop_idx = seg_starts[seg_ix + 1]
             else:
-                seg_stop_idx = (len(struct_arr) - 1)
+                seg_stop_idx = len(struct_arr) - 1
             seg_offset = offset + seg_start_idx * struct_arr.dtype.itemsize
             num_data_pts = seg_stop_idx - seg_start_idx
-            seg_struct_arr = np.memmap(
-                filename,
-                dtype=ptp_dt,
-                shape=num_data_pts,
-                offset=seg_offset,
-                mode="r"
-            )
+            seg_struct_arr = np.memmap(filename, dtype=ptp_dt, shape=num_data_pts, offset=seg_offset, mode="r")
             data_header[seg_ix] = {
                 "header": None,
                 "timestamp": seg_struct_arr["timestamps"],  # Note, this is an array, not a scalar
                 "nb_data_points": num_data_pts,
-                "offset_to_data_block": seg_offset
+                "offset_to_data_block": seg_offset,
             }
         return data_header
 
@@ -1075,7 +1075,7 @@ class BlackrockRawIO(BaseRawIO):
             ("reserved", "uint8"),
             ("timestamps", "uint64"),
             ("num_data_points", "uint32"),
-            ("samples", "int16", self.__nsx_basic_header[nsx_nb]["channel_count"])
+            ("samples", "int16", self.__nsx_basic_header[nsx_nb]["channel_count"]),
         ]
 
         data = {}
@@ -1084,7 +1084,8 @@ class BlackrockRawIO(BaseRawIO):
                 filename,
                 dtype=ptp_dt,
                 shape=bl_header["nb_data_points"],
-                offset=bl_header["offset_to_data_block"], mode="r"
+                offset=bl_header["offset_to_data_block"],
+                mode="r",
             )
             # Does this concretize the data?
             # If yes then investigate np.ndarray with buffer=file,
