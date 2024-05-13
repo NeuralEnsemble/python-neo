@@ -189,8 +189,8 @@ class IntanRawIO(BaseRawIO):
             time_stream_index = max(self._raw_data.keys())
             timestamp = self._raw_data[time_stream_index][0]
         
-        timestamps_are_not_contigious = np.any(np.diff(timestamp) != 1)
-        if timestamps_are_not_contigious:
+        timestamps_are_not_contiguous = np.any(np.diff(timestamp) != 1)
+        if timestamps_are_not_contiguous:
             self.unsafe_timestamps = True
             if not self.load_data_unsafely:
                 error_msg = (
