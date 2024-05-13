@@ -19,8 +19,6 @@ Author: Samuel Garcia (Initial), Zach McKenzie & Heberto Mayorquin (Updates)
 """
 
 from pathlib import Path
-import os
-from collections import OrderedDict
 from packaging.version import Version as V
 import warnings
 
@@ -45,7 +43,7 @@ class IntanRawIO(BaseRawIO):
     ----------
     filename: str, default: ''
         name of the 'rhd' or 'rhs' data file
-    load_unsafe_data: bool, default: False
+    load_data_unsafely: bool, default: False
         If True, data that violates integrity assumptions will be loaded. At the moment the only integrity
         check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
         the attribute `unsafe_timestamps` to True if the timestamps are not continous. This attribute can be checked 
@@ -85,11 +83,11 @@ class IntanRawIO(BaseRawIO):
     extensions = ["rhd", "rhs", "dat"]
     rawmode = "one-file"
 
-    def __init__(self, filename="", load_unsafe_data=True):
+    def __init__(self, filename="", load_data_unsafely=True):
 
         BaseRawIO.__init__(self)
         self.filename = filename
-        self.load_unsafe_data = load_unsafe_data
+        self.load_data_unsafely = load_data_unsafely
         self.unsafe_timestamps = False
 
 
@@ -194,10 +192,10 @@ class IntanRawIO(BaseRawIO):
         timestamps_are_not_contigious = np.any(np.diff(timestamp) != 1)
         if timestamps_are_not_contigious:
             self.unsafe_timestamps = True
-            if not self.load_unsafe_data:
+            if not self.load_data_unsafely:
                 error_msg = (
                     "Timestamps are not continuous, this could be due to a corrupted file or an inappropriate file merge. "
-                    "Initialize the reader with `load_unsafe_data=True` to ignore this error and open the file."
+                    "Initialize the reader with `load_data_unsafely=True` to ignore this error and open the file."
                 )
                 raise NeoReadWriteError(error_msg)
 
