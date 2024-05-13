@@ -83,7 +83,7 @@ class IntanRawIO(BaseRawIO):
     extensions = ["rhd", "rhs", "dat"]
     rawmode = "one-file"
 
-    def __init__(self, filename="", load_data_unsafely=True):
+    def __init__(self, filename="", load_data_unsafely=False):
 
         BaseRawIO.__init__(self)
         self.filename = filename
@@ -189,13 +189,15 @@ class IntanRawIO(BaseRawIO):
             time_stream_index = max(self._raw_data.keys())
             timestamp = self._raw_data[time_stream_index][0]
         
-        timestamps_are_not_contiguous = np.any(np.diff(timestamp) != 1)
+        discontinuous_timestamps = np.diff(timestamp) != 1
+        timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
         if timestamps_are_not_contiguous:
             self.unsafe_timestamps = True
             if not self.load_data_unsafely:
                 error_msg = (
                     "Timestamps are not continuous, this could be due to a corrupted file or an inappropriate file merge. "
-                    "Initialize the reader with `load_data_unsafely=True` to ignore this error and open the file."
+                    "Initialize the reader with `load_data_unsafely=True` to ignore this error and open the file. \n"
+                    f"Indexes of discontinuous timestamps: {timestamp[discontinuous_timestamps]}"
                 )
                 raise NeoReadWriteError(error_msg)
 
