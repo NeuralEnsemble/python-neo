@@ -197,7 +197,7 @@ class IntanRawIO(BaseRawIO):
                 error_msg = (
                     "Timestamps are not continuous, this could be due to a corrupted file or an inappropriate file merge. "
                     "Initialize the reader with `load_data_unsafely=True` to ignore this error and open the file. \n"
-                    f"Indexes of discontinuous timestamps: {timestamp[discontinuous_timestamps]}"
+                    f"Timestamps around discontinuities: {timestamp[discontinuous_timestamps]}"
                 )
                 raise NeoReadWriteError(error_msg)
 
