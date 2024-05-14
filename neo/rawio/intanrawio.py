@@ -263,10 +263,14 @@ class IntanRawIO(BaseRawIO):
             signal_annotation["intan_version"] = (
                 f"{self._global_info['major_version']}." f"{self._global_info['minor_version']}"
             )
-            global_keys_to_skip = ["major_version", "minor_version", "sampling_rate", "magic_number"]
+            global_keys_to_skip = ["major_version", "minor_version", "sampling_rate", "magic_number", "reference_channel"]
             global_keys_to_annotate = set(self._global_info.keys()) - set(global_keys_to_skip)
             for key in global_keys_to_annotate:
                 signal_annotation[key] = self._global_info[key]
+
+            reference_channel = self._global_info.get("reference_channel", None)
+            # Following the pdf specification 
+            reference_channel = "hardware" if reference_channel == "n/a" else reference_channel
 
             # Add channel annotations
             array_annotations = signal_annotation["__array_annotations__"]
