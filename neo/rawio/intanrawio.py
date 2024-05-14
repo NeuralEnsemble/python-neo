@@ -289,6 +289,7 @@ class IntanRawIO(BaseRawIO):
                 "channel_enabled",
                 "dtype",
                 "units",
+                "sampling_rate",
             ]
 
             channel_keys_to_annotate = set(channel_info.keys()) - set(channel_keys_to_skip)
