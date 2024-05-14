@@ -598,7 +598,7 @@ def read_rhs(filename, file_format: str):
     for sig_type in [5, 6]:
         if file_format in ["header-attached", "one-file-per-signal"]:
             if len(channels_by_type[sig_type]) > 0:
-                name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
+                name = {5: "DIGITAL-IN", 6: "DIGITAL-OUT"}[sig_type]
                 chan_info = channels_by_type[sig_type][0]
                 # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
                 # make this memory map work correctly. So since our digital data is not organized
