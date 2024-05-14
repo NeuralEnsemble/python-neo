@@ -66,8 +66,8 @@ class IntanRawIO(BaseRawIO):
     4: 'USB board digital input channel',
     5: 'USB board digital output channel'
 
-    * For the "header-attached" format to the structure of the digital input and output channels these can be accessed
-    as one long vector, which must be post-processed.
+    * For the "header-attached" and "one-file-per-signal" formats, the structure of the digital input and output channels
+    these can be accessed as one long vector, which must be post-processed. 
 
     Examples
     --------
@@ -557,6 +557,7 @@ def read_rhs(filename, file_format: str):
         channel_number_dict[11] = channel_number_dict[0]  # should be one stim / amplifier channel
         for chan_info in channels_by_type[0]:
             chan_info_stim = dict(chan_info)
+            name = chan_info["native_channel_name"]
             chan_info_stim["native_channel_name"] = name + "_STIM"
             chan_info_stim["sampling_rate"] = sr
             # stim channel are complicated because they are coded
@@ -568,7 +569,6 @@ def read_rhs(filename, file_format: str):
             chan_info_stim["dtype"] = "uint16"
             ordered_channels.append(chan_info_stim)
             if file_format == "header-attached":
-                name = chan_info["native_channel_name"]
                 data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
             else:
                 data_dtype[11] = "uint16"
