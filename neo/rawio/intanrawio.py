@@ -44,7 +44,7 @@ class IntanRawIO(BaseRawIO):
     Parameters
     ----------
     filename: str, default: ''
-       name of the 'rhd' or 'rhs' data file
+        name of the 'rhd' or 'rhs' data file
 
     Notes
     -----
@@ -109,7 +109,7 @@ class IntanRawIO(BaseRawIO):
 
             (
                 self._global_info,
-                self._ordered_channels,
+                self._ordered_channel_info,
                 data_dtype,
                 header_size,
                 self._block_size,
@@ -135,7 +135,7 @@ class IntanRawIO(BaseRawIO):
 
             (
                 self._global_info,
-                self._ordered_channels,
+                self._ordered_channel_info,
                 data_dtype,
                 header_size,
                 self._block_size,
@@ -191,7 +191,7 @@ class IntanRawIO(BaseRawIO):
 
         # signals
         signal_channels = []
-        for c, chan_info in enumerate(self._ordered_channels):
+        for c, chan_info in enumerate(self._ordered_channel_info):
             name = chan_info["custom_channel_name"]
             channel_id = chan_info["native_channel_name"]
             sig_dtype = chan_info["dtype"]
@@ -254,6 +254,50 @@ class IntanRawIO(BaseRawIO):
         self.header["event_channels"] = event_channels
 
         self._generate_minimal_annotations()
+
+        bl_annotations = self.raw_annotations["blocks"][0]
+        seg_annotations = bl_annotations["segments"][0]
+
+        for signal_annotation in seg_annotations["signals"]:
+            # Add global annotations
+            signal_annotation["intan_version"] = (
+                f"{self._global_info['major_version']}." f"{self._global_info['minor_version']}"
+            )
+            global_keys_to_skip = ["major_version", "minor_version", "sampling_rate", "magic_number"]
+            global_keys_to_annotate = set(self._global_info.keys()) - set(global_keys_to_skip)
+            for key in global_keys_to_annotate:
+                signal_annotation[key] = self._global_info[key]
+
+            # Add channel annotations
+            array_annotations = signal_annotation["__array_annotations__"]
+            channel_ids = array_annotations["channel_ids"]
+
+            # TODO refactor ordered channel dict to make this easier
+            # Use this to find which elements of the ordered channels correspond to the current signal
+            signal_type = int(signal_annotation["stream_id"])
+            channel_info = next((info for info in self._ordered_channel_info if info["signal_type"] == signal_type))
+            channel_keys_to_skip = [
+                "signal_type",
+                "custom_channel_name",
+                "native_channel_name",
+                "gain",
+                "offset",
+                "channel_enabled",
+                "dtype",
+                "units",
+            ]
+
+            channel_keys_to_annotate = set(channel_info.keys()) - set(channel_keys_to_skip)
+            properties_dict = {key: [] for key in channel_keys_to_annotate}
+            for channel_id in channel_ids:
+                matching_info = next(
+                    info for info in self._ordered_channel_info if info["native_channel_name"] == channel_id
+                )
+                for key in channel_keys_to_annotate:
+                    properties_dict[key].append(matching_info[key])
+
+            for key in channel_keys_to_annotate:
+                array_annotations[key] = properties_dict[key]
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.0
@@ -502,7 +546,7 @@ def read_rhs(filename, file_format: str):
     sr = global_info["sampling_rate"]
 
     # construct dtype by re-ordering channels by types
-    ordered_channels = []
+    ordered_channel_info = []
     if file_format == "header-attached":
         data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
     else:
@@ -523,7 +567,7 @@ def read_rhs(filename, file_format: str):
             chan_info["dtype"] = "uint16"
         else:
             chan_info["dtype"] = "int16"
-        ordered_channels.append(chan_info)
+        ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
@@ -542,7 +586,7 @@ def read_rhs(filename, file_format: str):
             chan_info_dc["offset"] = -512 * 19.23
             chan_info_dc["signal_type"] = 10  # put it in another group
             chan_info_dc["dtype"] = "uint16"
-            ordered_channels.append(chan_info_dc)
+            ordered_channel_info.append(chan_info_dc)
             if file_format == "header-attached":
                 data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
             else:
@@ -564,7 +608,7 @@ def read_rhs(filename, file_format: str):
             chan_info_stim["offset"] = 0.0
             chan_info_stim["signal_type"] = 11  # put it in another group
             chan_info_stim["dtype"] = "uint16"
-            ordered_channels.append(chan_info_stim)
+            ordered_channel_info.append(chan_info_stim)
             if file_format == "header-attached":
                 data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
             else:
@@ -587,7 +631,7 @@ def read_rhs(filename, file_format: str):
             chan_info["gain"] = 0.0003125
             chan_info["offset"] = -32768 * 0.0003125
             chan_info["dtype"] = "uint16"
-            ordered_channels.append(chan_info)
+            ordered_channel_info.append(chan_info)
             if file_format == "header-attached":
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
             else:
@@ -609,7 +653,7 @@ def read_rhs(filename, file_format: str):
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "uint16"
-            ordered_channels.append(chan_info)
+            ordered_channel_info.append(chan_info)
             if file_format == "header-attached":
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
             else:
@@ -627,7 +671,7 @@ def read_rhs(filename, file_format: str):
         data_dtype = {k: v for (k, v) in data_dtype.items() if len(v) > 0}
         channel_number_dict = {k: v for (k, v) in channel_number_dict.items() if v > 0}
 
-    return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE, channel_number_dict
+    return global_info, ordered_channel_info, data_dtype, header_size, BLOCK_SIZE, channel_number_dict
 
 
 ###############
@@ -771,7 +815,7 @@ def read_rhd(filename, file_format: str):
     else:
         BLOCK_SIZE = 60  # 256 channels
 
-    ordered_channels = []
+    ordered_channel_info = []
 
     if version >= V("1.2"):
         if file_format == "header-attached":
@@ -798,7 +842,7 @@ def read_rhd(filename, file_format: str):
         else:
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "int16"
-        ordered_channels.append(chan_info)
+        ordered_channel_info.append(chan_info)
 
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
@@ -813,7 +857,7 @@ def read_rhd(filename, file_format: str):
         chan_info["gain"] = 0.0000374
         chan_info["offset"] = 0.0
         chan_info["dtype"] = "uint16"
-        ordered_channels.append(chan_info)
+        ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE // 4)]
         else:
@@ -827,7 +871,7 @@ def read_rhd(filename, file_format: str):
         chan_info["gain"] = 0.0000748
         chan_info["offset"] = 0.0
         chan_info["dtype"] = "uint16"
-        ordered_channels.append(chan_info)
+        ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16")]
         else:
@@ -842,7 +886,7 @@ def read_rhd(filename, file_format: str):
         chan_info["gain"] = 0.001
         chan_info["offset"] = 0.0
         chan_info["dtype"] = "int16"
-        ordered_channels.append(chan_info)
+        ordered_channel_info.append(chan_info)
         data_dtype += [(name, "int16")]
 
     # 3: USB board ADC input channel
@@ -860,7 +904,7 @@ def read_rhd(filename, file_format: str):
             chan_info["gain"] = 0.0003125
             chan_info["offset"] = -32768 * 0.0003125
         chan_info["dtype"] = "uint16"
-        ordered_channels.append(chan_info)
+        ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
@@ -884,7 +928,7 @@ def read_rhd(filename, file_format: str):
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "uint16"
-            ordered_channels.append(chan_info)
+            ordered_channel_info.append(chan_info)
             if file_format == "header-attached":
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
             else:
@@ -902,7 +946,7 @@ def read_rhd(filename, file_format: str):
         data_dtype = {k: v for (k, v) in data_dtype.items() if len(v) > 0}
         channel_number_dict = {k: v for (k, v) in channel_number_dict.items() if v > 0}
 
-    return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE, channel_number_dict
+    return global_info, ordered_channel_info, data_dtype, header_size, BLOCK_SIZE, channel_number_dict
 
 
 ##########################################################################
