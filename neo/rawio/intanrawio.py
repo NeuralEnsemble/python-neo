@@ -537,6 +537,7 @@ def read_rhs(filename, file_format: str):
         channel_number_dict[10] = channel_number_dict[0]
         for chan_info in channels_by_type[0]:
             chan_info_dc = dict(chan_info)
+            name = chan_info["native_channel_name"]
             chan_info_dc["native_channel_name"] = name + "_DC"
             chan_info_dc["sampling_rate"] = sr
             chan_info_dc["units"] = "mV"
@@ -546,7 +547,6 @@ def read_rhs(filename, file_format: str):
             chan_info_dc["dtype"] = "uint16"
             ordered_channels.append(chan_info_dc)
             if file_format == "header-attached":
-                name = chan_info["native_channel_name"]
                 data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
             else:
                 data_dtype[10] = "uint16"
