@@ -581,7 +581,7 @@ def read_rhs(filename, file_format: str):
     # 4: Analog output channel.
     for sig_type in [
         3,
-        4,
+        4
     ]:
         for chan_info in channels_by_type[sig_type]:
             name = chan_info["native_channel_name"]
@@ -599,24 +599,35 @@ def read_rhs(filename, file_format: str):
     # 5: Digital input channel.
     # 6: Digital output channel.
     for sig_type in [5, 6]:
-        if len(channels_by_type[sig_type]) > 0:
-            name = {5: "DIGITAL-IN", 6: "DIGITAL-OUT"}[sig_type]
-            chan_info = channels_by_type[sig_type][0]
-            # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
-            # make this memory map work correctly. So since our digital data is not organized
-            # by channel like analog/ADC are we have to overwrite the native name to create
-            # a single permanent name that we can find with channel id
-            chan_info["native_channel_name"] = name  # overwite to allow memmap to work
-            chan_info["sampling_rate"] = sr
-            chan_info["units"] = "TTL"  # arbitrary units TTL for logic
-            chan_info["gain"] = 1.0
-            chan_info["offset"] = 0.0
-            chan_info["dtype"] = "uint16"
-            ordered_channels.append(chan_info)
-            if file_format == "header-attached":
-                data_dtype += [(name, "uint16", BLOCK_SIZE)]
-            else:
+        if file_format in ["header-attached", "one-file-per-signal"]:
+            if len(channels_by_type[sig_type]) > 0:
+                name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
+                chan_info = channels_by_type[sig_type][0]
+                # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
+                # make this memory map work correctly. So since our digital data is not organized
+                # by channel like analog/ADC are we have to overwrite the native name to create
+                # a single permanent name that we can find with channel id
+                chan_info["native_channel_name"] = name                
+                chan_info["sampling_rate"] = sr
+                chan_info["units"] = "TTL"  # arbitrary units TTL for logic
+                chan_info["gain"] = 1.0
+                chan_info["offset"] = 0.0
+                chan_info["dtype"] = "uint16"
+                ordered_channels.append(chan_info)
+                if file_format == "header-attached":
+                    data_dtype += [(name, "uint16", BLOCK_SIZE)]
+                else:
+                    data_dtype[sig_type] = "uint16"      
+        elif file_format == "one-file-per-channel":
+            for chan_info in channels_by_type[sig_type]:
+                chan_info["sampling_rate"] = sr
+                chan_info["units"] = "TTL"
+                chan_info["gain"] = 1.0
+                chan_info["offset"] = 0.0
+                chan_info["dtype"] = "uint16"
+                ordered_channels.append(chan_info)
                 data_dtype[sig_type] = "uint16"
+    
 
     if global_info["notch_filter_mode"] == 2 and global_info["major_version"] >= V("3.0"):
         global_info["notch_filter"] = "60Hz"
@@ -871,10 +882,8 @@ def read_rhd(filename, file_format: str):
 
     # 4: USB board digital input channel
     # 5: USB board digital output channel
-    if file_format in ["header-attached", "one-file-per-signal"]:
-        for sig_type in [4, 5]:
-            # Now these are included so that user can obtain the
-            # dig signals and process them at the same time
+    for sig_type in [4, 5]:
+        if file_format in ["header-attached", "one-file-per-signal"]:
             if len(channels_by_type[sig_type]) > 0:
                 name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
                 chan_info = channels_by_type[sig_type][0]
@@ -882,7 +891,7 @@ def read_rhd(filename, file_format: str):
                 # make this memory map work correctly. So since our digital data is not organized
                 # by channel like analog/ADC are we have to overwrite the native name to create
                 # a single permanent name that we can find with channel id
-                chan_info["native_channel_name"] = name  # overwite to allow memmap to work
+                chan_info["native_channel_name"] = name                
                 chan_info["sampling_rate"] = sr
                 chan_info["units"] = "TTL"  # arbitrary units TTL for logic
                 chan_info["gain"] = 1.0
@@ -892,26 +901,20 @@ def read_rhd(filename, file_format: str):
                 if file_format == "header-attached":
                     data_dtype += [(name, "uint16", BLOCK_SIZE)]
                 else:
-                    data_dtype[sig_type] = "uint16"
-    else:
-        for chan_info in channels_by_type[4]:
-            chan_info["sampling_rate"] = sr
-            chan_info["units"] = "TTL"  
-            chan_info["gain"] = 1.0
-            chan_info["offset"] = 0.0
-            chan_info["dtype"] = "uint16"
-            ordered_channels.append(chan_info)
-            data_dtype[4] = "uint16"
+                    data_dtype[sig_type] = "uint16"      
+        elif file_format == "one-file-per-channel":
+            for chan_info in channels_by_type[sig_type]:
+                chan_info["sampling_rate"] = sr
+                chan_info["units"] = "TTL"
+                chan_info["gain"] = 1.0
+                chan_info["offset"] = 0.0
+                chan_info["dtype"] = "uint16"
+                ordered_channels.append(chan_info)
+                data_dtype[sig_type] = "uint16"
+    
+    
+ 
 
-        for chan_info in channels_by_type[5]:
-            chan_info["sampling_rate"] = sr
-            chan_info["units"] = "TTL"
-            chan_info["gain"] = 1.0
-            chan_info["offset"] = 0.0
-            chan_info["dtype"] = "uint16"
-            ordered_channels.append(chan_info)
-            data_dtype[5] = "uint16"
-            
     if global_info["notch_filter_mode"] == 2 and version >= V("3.0"):
         global_info["notch_filter"] = "60Hz"
     elif global_info["notch_filter_mode"] == 1 and version >= V("3.0"):
