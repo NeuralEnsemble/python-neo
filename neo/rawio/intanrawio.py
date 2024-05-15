@@ -66,8 +66,8 @@ class IntanRawIO(BaseRawIO):
     4: 'USB board digital input channel',
     5: 'USB board digital output channel'
 
-    * For the "header-attached" and "one-file-per-signal" formats, the structure of the digital input and output channels
-    these can be accessed as one long vector, which must be post-processed. 
+    * For the "header-attached" and "one-file-per-signal" formats, the structure of the digital input and output channels is
+    one long vector, which must be post-processed to extract individual digital channel information. See the intantech website for more information on performing this post-processing.
 
     Examples
     --------
