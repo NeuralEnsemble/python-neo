@@ -19,7 +19,7 @@ class TestIntanRawIO(
         # "intan/intan_fpc_rhs_test_240329_091637/info.rhs",  # Format one-file-per-channel
         # "intan/intan_fps_rhs_test_240329_091536/info.rhs",   # Format one-file-per-signal
         "intan/rhd_fpc_multistim_240514_082044/info.rhd",  # Multiple digital channels one-file-per-channel
-        "intan/rhd_fps_multistim_240514_082044/info.rhd",  # Multiple digital channels one-file-per-signal
+        "intan/rhs_fpc_multistim_240514_082243/info.rhs",  # Multiple digital channels one-file-per-channel rhs
     ]
 
 
