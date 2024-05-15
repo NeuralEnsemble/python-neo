@@ -615,6 +615,7 @@ def read_rhs(filename, file_format: str):
                     data_dtype += [(name, "uint16", BLOCK_SIZE)]
                 else:
                     data_dtype[sig_type] = "uint16"
+        # This case behaves as a binary with 0 and 1 coded as uint16
         elif file_format == "one-file-per-channel":
             for chan_info in channels_by_type[sig_type]:
                 chan_info["sampling_rate"] = sr
