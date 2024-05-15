@@ -21,7 +21,7 @@ Author: Samuel Garcia (Initial), Zach McKenzie & Heberto Mayorquin (Updates)
 from pathlib import Path
 import os
 from collections import OrderedDict
-from packaging.version import Version as V
+from packaging.version import Version
 import warnings
 
 import numpy as np
@@ -664,9 +664,9 @@ def read_rhs(filename, file_format: str):
             else:
                 data_dtype[sig_type] = "uint16"
 
-    if global_info["notch_filter_mode"] == 2 and global_info["major_version"] >= V("3.0"):
+    if global_info["notch_filter_mode"] == 2 and global_info["major_version"] >= Version("3.0"):
         global_info["notch_filter"] = "60Hz"
-    elif global_info["notch_filter_mode"] == 1 and global_info["major_version"] >= V("3.0"):
+    elif global_info["notch_filter_mode"] == 1 and global_info["major_version"] >= Version("3.0"):
         global_info["notch_filter"] = "50Hz"
     else:
         global_info["notch_filter"] = False
@@ -771,22 +771,22 @@ def read_rhd(filename, file_format: str):
 
         global_info = read_variable_header(f, rhd_global_header_base)
 
-        version = V(f"{global_info['major_version']}.{global_info['minor_version']}")
+        version = Version(f"{global_info['major_version']}.{global_info['minor_version']}")
 
         # the header size depends on the version :-(
         header = list(rhd_global_header_part1)  # make a copy
 
-        if version >= V("1.1"):
+        if version >= Version("1.1"):
             header = header + rhd_global_header_v11
         else:
             global_info["num_temp_sensor_channels"] = 0
 
-        if version >= V("1.3"):
+        if version >= Version("1.3"):
             header = header + rhd_global_header_v13
         else:
             global_info["eval_board_mode"] = 0
 
-        if version >= V("2.0"):
+        if version >= Version("2.0"):
             header = header + rhd_global_header_v20
         else:
             global_info["reference_channel"] = ""
@@ -815,14 +815,14 @@ def read_rhd(filename, file_format: str):
     sr = global_info["sampling_rate"]
 
     # construct the data block dtype and reorder channels
-    if version >= V("2.0"):
+    if version >= Version("2.0"):
         BLOCK_SIZE = 128
     else:
         BLOCK_SIZE = 60  # 256 channels
 
     ordered_channel_info = []
 
-    if version >= V("1.2"):
+    if version >= Version("1.2"):
         if file_format == "header-attached":
             data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
         else:
@@ -939,9 +939,9 @@ def read_rhd(filename, file_format: str):
             else:
                 data_dtype[sig_type] = "uint16"
 
-    if global_info["notch_filter_mode"] == 2 and version >= V("3.0"):
+    if global_info["notch_filter_mode"] == 2 and version >= Version("3.0"):
         global_info["notch_filter"] = "60Hz"
-    elif global_info["notch_filter_mode"] == 1 and version >= V("3.0"):
+    elif global_info["notch_filter_mode"] == 1 and version >= Version("3.0"):
         global_info["notch_filter"] = "50Hz"
     else:
         global_info["notch_filter"] = False
