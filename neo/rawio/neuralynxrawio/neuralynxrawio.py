@@ -231,7 +231,6 @@ class NeuralynxRawIO(BaseRawIO):
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
         for filename in full_filenames:
-            filename = os.path.join(self.dirname, filename)
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot
             ext = ext.lower()  # make lower case for comparisons
