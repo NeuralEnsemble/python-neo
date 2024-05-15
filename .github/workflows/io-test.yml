@@ -44,7 +44,7 @@ jobs:
         with:
           path: ~/ephy_testing_data
           key: ${{ runner.os }}-datasets-${{ steps.ephy_testing_data.outputs.dataset_hash }}
-          # restore-keys: ${{ runner.os }}-datasets-
+          restore-keys: ${{ runner.os }}-datasets-
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
