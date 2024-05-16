@@ -91,9 +91,9 @@ class BlackrockRawIO(BaseRawIO):
         Any .nsX or .nev, .sif, or .ccf extensions are ignored when parsing this parameter.
     nsx_override: str | None, default: None
         File name of the .nsX files (without extension). If None, filename is used.
-    nev_override str | None, default: None
+    nev_override: str | None, default: None
         File name of the .nev file (without extension). If None, filename is used.
-    nsx_to_load int | list | 'max' | 'all' | None, default None:
+    nsx_to_load: int | list | 'max' | 'all' | None, default: None
         IDs of nsX file from which to load data, e.g., if set to 5 only data from the ns5 file are loaded.
         If 'all', then all nsX will be loaded. Contrary to previous version of the IO  (<0.7), nsx_to_load
         must be set at the init before parse_header().
@@ -103,8 +103,8 @@ class BlackrockRawIO(BaseRawIO):
     Notes
     -----
     * Note: This routine will handle files according to specification 2.1, 2.2,
-    and 2.3. Recording pauses that may occur in file specifications 2.2 and
-    2.3 are automatically extracted and the data set is split into different
+    2.3, 3.0 and 3.0-ptp. Recording pauses that may occur in file specifications
+    2.2 and 2.3 are automatically extracted and the data set is split into different
     segments.
 
     * The Blackrock data format consists not of a single file, but a set of
