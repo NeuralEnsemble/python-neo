@@ -8,7 +8,8 @@ These 2 formats are more or less the same but:
 
 RHS supported version 1.0
 RHD supported version  1.0 1.1 1.2 1.3 2.0 3.0, 3.1
-RHD headerless binary support 3.1
+RHD headerless binary support 3.x
+RHS headerless binary support 3.x
 
 See:
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
@@ -44,27 +45,43 @@ class IntanRawIO(BaseRawIO):
     Parameters
     ----------
     filename: str, default: ''
-        name of the 'rhd' or 'rhs' data file
+        name of the 'rhd' or 'rhs' data/header file
 
     Notes
     -----
-    * Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
+    * The Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
     check for the file extension and will gather the header information based on the
-    extension. Additionally it functions with RHS v 1.0 and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
-    3.0, and 3.1 files.
+    extension. Additionally it functions with RHS v 1.0 and v 3.x and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
+    3.x files.
+
+    * The Intan reader can also handle the headerless binary formats 'one-file-per-signal' and
+    'one-file-per-channel' which have a header file called 'info.rhd' or 'info.rhs' and a series
+    of binary files with the '.dat' suffix
 
     * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
     depending on the port in which they were recorded along with the following
-    additional channels.
-    0: 'RHD2000' amplifier channel
+    additional channels for RHD:
+
+    0: 'RHD2000 amplifier channel'
     1: 'RHD2000 auxiliary input channel',
     2: 'RHD2000 supply voltage channel',
     3: 'USB board ADC input channel',
     4: 'USB board digital input channel',
     5: 'USB board digital output channel'
 
+    And for RHS:
+
+    0: 'RHS2000 amplfier channel'
+    3: 'USB board ADC input channel',
+    4: 'USB board ADC output channel',
+    5: 'USB board digital input channel',
+    6: 'USB board digital output channel',
+    10: 'DC Amplifier channel',
+    11: 'Stim channel',
+
     * Due to the structure of the digital input and output channels these can be accessed
-    as one long vector, which must be post-processed.
+    as one long vector, which must be post-processed in the case of 'header-attached' or
+    'one-file-per-stream' formats.
 
     Examples
     --------
@@ -96,6 +113,7 @@ class IntanRawIO(BaseRawIO):
         if not filename.exists() or not filename.is_file():
             raise FileNotFoundError(f"{filename} does not exist")
 
+        # see comment below for RHD which explains the division between file types
         if self.filename.endswith(".rhs"):
             if filename.name == "info.rhs":
                 if any((filename.parent / file).exists() for file in one_file_per_signal_filenames_rhs):
@@ -236,6 +254,7 @@ class IntanRawIO(BaseRawIO):
         # are in a list we just take the first channel in each list of channels
         else:
             self._max_sigs_length = max([raw_data[0].size for raw_data in self._raw_data.values()])
+            
         # No events
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
@@ -263,13 +282,19 @@ class IntanRawIO(BaseRawIO):
             signal_annotation["intan_version"] = (
                 f"{self._global_info['major_version']}." f"{self._global_info['minor_version']}"
             )
-            global_keys_to_skip = ["major_version", "minor_version", "sampling_rate", "magic_number", "reference_channel"]
+            global_keys_to_skip = [
+                "major_version",
+                "minor_version",
+                "sampling_rate",
+                "magic_number",
+                "reference_channel",
+            ]
             global_keys_to_annotate = set(self._global_info.keys()) - set(global_keys_to_skip)
             for key in global_keys_to_annotate:
                 signal_annotation[key] = self._global_info[key]
 
             reference_channel = self._global_info.get("reference_channel", None)
-            # Following the pdf specification 
+            # Following the pdf specification
             reference_channel = "hardware" if reference_channel == "n/a" else reference_channel
 
             # Add channel annotations
@@ -664,6 +689,10 @@ def read_rhs(filename, file_format: str):
             else:
                 data_dtype[sig_type] = "uint16"
 
+    # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
+    # was a request for postprocessing to be done in one of their scripts. From version 3+ the notch
+    # filter is now applied to the data in realtime and only the post notched amplifier data is
+    # saved.
     if global_info["notch_filter_mode"] == 2 and global_info["major_version"] >= Version("3.0"):
         global_info["notch_filter"] = "60Hz"
     elif global_info["notch_filter_mode"] == 1 and global_info["major_version"] >= Version("3.0"):
@@ -939,6 +968,10 @@ def read_rhd(filename, file_format: str):
             else:
                 data_dtype[sig_type] = "uint16"
 
+    # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
+    # was a request for postprocessing to be done in one of their scripts. From version 3+ the notch
+    # filter is now applied to the data in realtime and only the post notched amplifier data is
+    # saved.
     if global_info["notch_filter_mode"] == 2 and version >= Version("3.0"):
         global_info["notch_filter"] = "60Hz"
     elif global_info["notch_filter_mode"] == 1 and version >= Version("3.0"):
