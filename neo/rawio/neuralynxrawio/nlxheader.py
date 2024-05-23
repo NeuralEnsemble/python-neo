@@ -66,6 +66,21 @@ class NlxHeader(OrderedDict):
         ("AcquisitionSystem", "", None),
         ("ReferenceChannel", "", None),
         ("NLX_Base_Class_Type", "", None),  # in version 4 and earlier versions of Cheetah
+        ("VideoFormat", "", None),
+        ("IntensityThreshold", "", None),
+        ("RedThreshold", "", None),
+        ("GreenThreshold", "", None),
+        ("BlueThreshold", "", None),
+        ("Saturation", "", int),
+        ("Hue", "", int),
+        ("Brightness", "", int),
+        ("Contrast", "", int),
+        ("Sharpness", "", int),
+        ("DirectionOffset", "", int),
+        ("Resolution", "", None),
+        ("CameraDelay", "", int),
+        ("EnableFieldEstimation", "field_estimation_enabled", _to_bool),
+        ("TargetDist", "", None),
     ]
 
     # Filename and datetime may appear in header lines starting with # at
@@ -170,16 +185,17 @@ class NlxHeader(OrderedDict):
         :param filename: name of ncs file, used for extracting channel number
         :param txt_header: header text
         """
+        print(txt_header)
         # find keys
         for k1, k2, type_ in NlxHeader.txt_header_keys:
-            pattern = r"-(?P<name>" + k1 + r")\s+(?P<value>[\S ]*)"
+            pattern = r"-(?P<name>" + k1 + r")\s+(?P<value>.+)"
             matches = re.findall(pattern, txt_header)
             for match in matches:
                 if k2 == "":
                     name = match[0]
                 else:
                     name = k2
-                value = match[1].rstrip(" ")
+                value = match[1].replace("\t", " ").replace("\r", "").rstrip(" ")
                 if type_ is not None:
                     value = type_(value)
                 self[name] = value
@@ -243,6 +259,36 @@ class NlxHeader(OrderedDict):
             assert len(self["InputRange"]) == len(
                 chid_entries
             ), "Number of channel ids does not match input range values."
+        if "Resolution" in self:
+            ir_entries = re.findall(r"\w+", self["Resolution"])
+            if len(ir_entries) == 1:
+                self["Resolution"] = [int(ir_entries[0])] * len(chid_entries)
+            else:
+                self["Resolution"] = [int(e) for e in ir_entries]
+        if "IntensityThreshold" in self:
+            ir_entries = re.findall(r"\w+", self["IntensityThreshold"])
+            if len(ir_entries) == 1:
+                self["IntensityThreshold"] = [int(ir_entries[0])] * len(chid_entries)
+            else:
+                self["IntensityThreshold"] = [int(e) for e in ir_entries]
+        if "RedThreshold" in self:
+            ir_entries = re.findall(r"\w+", self["RedThreshold"])
+            if len(ir_entries) == 1:
+                self["RedThreshold"] = [int(ir_entries[0])] * len(chid_entries)
+            else:
+                self["RedThreshold"] = [int(e) for e in ir_entries]
+        if "GreenThreshold" in self:
+            ir_entries = re.findall(r"\w+", self["GreenThreshold"])
+            if len(ir_entries) == 1:
+                self["GreenThreshold"] = [int(ir_entries[0])] * len(chid_entries)
+            else:
+                self["GreenThreshold"] = [int(e) for e in ir_entries]
+        if "BlueThreshold" in self:
+            ir_entries = re.findall(r"\w+", self["BlueThreshold"])
+            if len(ir_entries) == 1:
+                self["BlueThreshold"] = [int(ir_entries[0])] * len(chid_entries)
+            else:
+                self["BlueThreshold"] = [int(e) for e in ir_entries]
 
     def readTimeDate(self, txt_header):
         """
