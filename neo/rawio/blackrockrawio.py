@@ -7,6 +7,7 @@ This work is based on:
   * Samuel Garcia - third version
   * Lyuba Zehl, Michael Denker - fourth version
   * Samuel Garcia, Julia Srenger - fifth version
+  * Chadwick Boulay - FileSpec 3.0 and 3.0-PTP
 
 This IO supports reading only.
 This IO is able to read:
@@ -17,6 +18,8 @@ This IO can handle the following Blackrock file specifications:
   * 2.1
   * 2.2
   * 2.3
+  * 3.0
+  * 3.0 with PTP timestamps (Gemini systems)
 
 The neural data channels are 1 - 128.
 The analog inputs are 129 - 144. (129 - 137 AC coupled, 138 - 144 DC coupled)
@@ -73,6 +76,8 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+from neo.core import NeoReadWriteError
+
 
 class BlackrockRawIO(BaseRawIO):
     """
@@ -86,9 +91,9 @@ class BlackrockRawIO(BaseRawIO):
         Any .nsX or .nev, .sif, or .ccf extensions are ignored when parsing this parameter.
     nsx_override: str | None, default: None
         File name of the .nsX files (without extension). If None, filename is used.
-    nev_override str | None, default: None
+    nev_override: str | None, default: None
         File name of the .nev file (without extension). If None, filename is used.
-    nsx_to_load int | list | 'max' | 'all' | None, default None:
+    nsx_to_load: int | list | 'max' | 'all' | None, default: None
         IDs of nsX file from which to load data, e.g., if set to 5 only data from the ns5 file are loaded.
         If 'all', then all nsX will be loaded. Contrary to previous version of the IO  (<0.7), nsx_to_load
         must be set at the init before parse_header().
@@ -98,8 +103,8 @@ class BlackrockRawIO(BaseRawIO):
     Notes
     -----
     * Note: This routine will handle files according to specification 2.1, 2.2,
-    and 2.3. Recording pauses that may occur in file specifications 2.2 and
-    2.3 are automatically extracted and the data set is split into different
+    2.3, 3.0 and 3.0-ptp. Recording pauses that may occur in file specifications
+    2.2 and 2.3 are automatically extracted and the data set is split into different
     segments.
 
     * The Blackrock data format consists not of a single file, but a set of
@@ -189,12 +194,14 @@ class BlackrockRawIO(BaseRawIO):
             "2.2": self.__read_nsx_dataheader_variant_b,
             "2.3": self.__read_nsx_dataheader_variant_b,
             "3.0": self.__read_nsx_dataheader_variant_b,
+            "3.0-ptp": self.__read_nsx_dataheader_variant_c,
         }
         self.__nsx_data_reader = {
             "2.1": self.__read_nsx_data_variant_a,
             "2.2": self.__read_nsx_data_variant_b,
             "2.3": self.__read_nsx_data_variant_b,
             "3.0": self.__read_nsx_data_variant_b,
+            "3.0-ptp": self.__read_nsx_data_variant_c,
         }
         self.__nsx_params = {
             "2.1": self.__get_nsx_param_variant_a,
@@ -310,11 +317,19 @@ class BlackrockRawIO(BaseRawIO):
             # read nsx headers
             self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = self.__nsx_header_reader[spec](nsx_nb)
 
-            # Read nsx data header(s)
+            # The only way to know if it is the PTP-variant of file spec 3.0
+            # is to check for nanosecond timestamp resolution.
+            if (
+                "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names
+                and self.__nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000
+            ):
+                nsx_dataheader_reader = self.__nsx_dataheader_reader["3.0-ptp"]
+            else:
+                nsx_dataheader_reader = self.__nsx_dataheader_reader[spec]
             # for nsxdef get_analogsignal_shape(self, block_index, seg_index):
-            self.__nsx_data_header[nsx_nb] = self.__nsx_dataheader_reader[spec](nsx_nb)
+            self.__nsx_data_header[nsx_nb] = nsx_dataheader_reader(nsx_nb)
 
-        # nsx_to_load can be either int, list, 'max', all' (aka None)
+        # nsx_to_load can be either int, list, 'max', 'all' (aka None)
         # here make a list only
         if self.nsx_to_load is None or self.nsx_to_load == "all":
             self.nsx_to_load = list(self._avail_nsx)
@@ -330,15 +345,15 @@ class BlackrockRawIO(BaseRawIO):
         else:
             raise (ValueError("nsx_to_load is wrong"))
 
-        assert all(
-            nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load
-        ), "nsx_to_load do not match available nsx list"
+        if not all(nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load):
+            raise FileNotFoundError(f"nsx_to_load does not match available nsx list")
 
         # check that all files come from the same specification
         all_spec = [self.__nsx_spec[nsx_nb] for nsx_nb in self.nsx_to_load]
         if self._avail_files["nev"]:
             all_spec.append(self.__nev_spec)
-        assert all(all_spec[0] == spec for spec in all_spec), "Files don't have the same internal version"
+        if not all(all_spec[0] == spec for spec in all_spec):
+            raise NeoReadWriteError("Files don't have the same internal version")
 
         if len(self.nsx_to_load) > 0 and self.__nsx_spec[self.nsx_to_load[0]] == "2.1" and not self._avail_files["nev"]:
             pass
@@ -357,7 +372,16 @@ class BlackrockRawIO(BaseRawIO):
         if len(self.nsx_to_load) > 0:
             for nsx_nb in self.nsx_to_load:
                 spec = self.__nsx_spec[nsx_nb]
-                self.nsx_datas[nsx_nb] = self.__nsx_data_reader[spec](nsx_nb)
+                # The only way to know if it is the PTP-variant of file spec 3.0
+                # is to check for nanosecond timestamp resolution.
+                if (
+                    "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names
+                    and self.__nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000
+                ):
+                    _data_reader_fun = self.__nsx_data_reader["3.0-ptp"]
+                else:
+                    _data_reader_fun = self.__nsx_data_reader[spec]
+                self.nsx_datas[nsx_nb] = _data_reader_fun(nsx_nb)
 
                 sr = float(main_sampling_rate / self.__nsx_basic_header[nsx_nb]["period"])
                 self.sig_sampling_rates[nsx_nb] = sr
@@ -401,9 +425,8 @@ class BlackrockRawIO(BaseRawIO):
 
             # check nb segment per nsx
             nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]
-            assert all(
-                nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx
-            ), "Segment nb not consistent across nsX files"
+            if not all(nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx):
+                raise NeoReadWriteError("Segment nb not consistent across nsX files")
             self._nb_segment = nb_segments_for_nsx[0]
 
             self.__delete_empty_segments()
@@ -414,15 +437,28 @@ class BlackrockRawIO(BaseRawIO):
             for data_bl in range(self._nb_segment):
                 t_stop = 0.0
                 for nsx_nb in self.nsx_to_load:
+                    spec = self.__nsx_spec[nsx_nb]
+                    if "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names:
+                        ts_res = self.__nsx_basic_header[nsx_nb]["timestamp_resolution"]
+                    elif spec == "2.1":
+                        ts_res = self.__nsx_params[spec](nsx_nb)["timestamp_resolution"]
+                    else:
+                        ts_res = 30_000
+                    period = self.__nsx_basic_header[nsx_nb]["period"]
+                    sec_per_samp = period / 30_000  # Maybe 30_000 should be ['sample_resolution']
                     length = self.nsx_datas[nsx_nb][data_bl].shape[0]
                     if self.__nsx_data_header[nsx_nb] is None:
                         t_start = 0.0
+                        t_stop = max(t_stop, length / self.sig_sampling_rates[nsx_nb])
                     else:
-                        t_start = (
-                            self.__nsx_data_header[nsx_nb][data_bl]["timestamp"]
-                            / self.__nsx_basic_header[nsx_nb]["timestamp_resolution"]
-                        )
-                    t_stop = max(t_stop, t_start + length / self.sig_sampling_rates[nsx_nb])
+                        timestamps = self.__nsx_data_header[nsx_nb][data_bl]["timestamp"]
+                        if hasattr(timestamps, "size") and timestamps.size == length:
+                            # FileSpec 3.0 with PTP -- use the per-sample timestamps
+                            t_start = timestamps[0] / ts_res
+                            t_stop = max(t_stop, timestamps[-1] / ts_res + sec_per_samp)
+                        else:
+                            t_start = timestamps / ts_res
+                            t_stop = max(t_stop, t_start + length / self.sig_sampling_rates[nsx_nb])
                     self._sigs_t_starts[nsx_nb].append(t_start)
 
                 if self._avail_files["nev"]:
@@ -793,6 +829,8 @@ class BlackrockRawIO(BaseRawIO):
         ]
 
         nsx_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
+        # Note: it is not possible to use recfunctions to append_fields of 'timestamp_resolution',
+        #  because the size of this object is used as the header size in later read operations.
 
         # "extended" header (last field of file_id: NEURALCD)
         # (to facilitate compatibility with higher file specs)
@@ -900,7 +938,7 @@ class BlackrockRawIO(BaseRawIO):
     ):
         """
         Reads the nsx data header for each data block following the offset of
-        file spec 2.2 and 2.3.
+        file spec 2.2, 2.3, and 3.0.
         """
         filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
@@ -931,6 +969,63 @@ class BlackrockRawIO(BaseRawIO):
 
         return data_header
 
+    def __read_nsx_dataheader_variant_c(
+        self,
+        nsx_nb,
+        filesize=None,
+        offset=None,
+    ):
+        """
+        Reads the nsx data header for each data block for file spec 3.0 with PTP timestamps
+        """
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+
+        filesize = self.__get_file_size(filename)
+
+        data_header = {}
+        index = 0
+
+        if offset is None:
+            offset = self.__nsx_basic_header[nsx_nb]["bytes_in_headers"]
+
+        ptp_dt = [
+            ("reserved", "uint8"),
+            ("timestamps", "uint64"),
+            ("num_data_points", "uint32"),
+            ("samples", "int16", self.__nsx_basic_header[nsx_nb]["channel_count"]),
+        ]
+        npackets = int((filesize - offset) / np.dtype(ptp_dt).itemsize)
+        struct_arr = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=offset, mode="r")
+
+        if not np.all(struct_arr["num_data_points"] == 1):
+            # some packets have more than 1 sample. Not actually ptp. Revert to non-ptp variant.
+            return self.__read_nsx_dataheader_variant_b(nsx_nb, filesize=filesize, offset=offset)
+
+        # It is still possible there was a data break and the file has multiple segments.
+        # We can no longer rely on the presence of a header indicating a new segment,
+        # so we look for timestamp differences greater than double the expected interval.
+        _period = self.__nsx_basic_header[nsx_nb]["period"]  # 30_000 ^-1 s per sample
+        _nominal_rate = 30_000 / _period  # samples per sec;  maybe 30_000 should be ["sample_resolution"]
+        _clock_rate = self.__nsx_basic_header[nsx_nb]["timestamp_resolution"]  # clocks per sec
+        clk_per_samp = _clock_rate / _nominal_rate  # clk/sec / smp/sec = clk/smp
+        seg_thresh_clk = int(2 * clk_per_samp)
+        seg_starts = np.hstack((0, 1 + np.argwhere(np.diff(struct_arr["timestamps"]) > seg_thresh_clk).flatten()))
+        for seg_ix, seg_start_idx in enumerate(seg_starts):
+            if seg_ix < (len(seg_starts) - 1):
+                seg_stop_idx = seg_starts[seg_ix + 1]
+            else:
+                seg_stop_idx = len(struct_arr) - 1
+            seg_offset = offset + seg_start_idx * struct_arr.dtype.itemsize
+            num_data_pts = seg_stop_idx - seg_start_idx
+            seg_struct_arr = np.memmap(filename, dtype=ptp_dt, shape=num_data_pts, offset=seg_offset, mode="r")
+            data_header[seg_ix] = {
+                "header": None,
+                "timestamp": seg_struct_arr["timestamps"],  # Note, this is an array, not a scalar
+                "nb_data_points": num_data_pts,
+                "offset_to_data_block": seg_offset,
+            }
+        return data_header
+
     def __read_nsx_data_variant_a(self, nsx_nb):
         """
         Extract nsx data from a 2.1 .nsx file
@@ -949,8 +1044,8 @@ class BlackrockRawIO(BaseRawIO):
 
     def __read_nsx_data_variant_b(self, nsx_nb):
         """
-        Extract nsx data (blocks) from a 2.2 or 2.3 .nsx file. Blocks can arise
-        if the recording was paused by the user.
+        Extract nsx data (blocks) from a 2.2, 2.3, or 3.0 .nsx file.
+        Blocks can arise if the recording was paused by the user.
         """
         filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
@@ -965,6 +1060,37 @@ class BlackrockRawIO(BaseRawIO):
 
             # read data
             data[data_bl] = np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")
+
+        return data
+
+    def __read_nsx_data_variant_c(self, nsx_nb):
+        """
+        Extract nsx data (blocks) from a 3.0 .nsx file with PTP timestamps
+        yielding a timestamp per sample. Blocks can arise
+        if the recording was paused by the user.
+        """
+        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+
+        ptp_dt = [
+            ("reserved", "uint8"),
+            ("timestamps", "uint64"),
+            ("num_data_points", "uint32"),
+            ("samples", "int16", self.__nsx_basic_header[nsx_nb]["channel_count"]),
+        ]
+
+        data = {}
+        for bl_id, bl_header in self.__nsx_data_header[nsx_nb].items():
+            struct_arr = np.memmap(
+                filename,
+                dtype=ptp_dt,
+                shape=bl_header["nb_data_points"],
+                offset=bl_header["offset_to_data_block"],
+                mode="r",
+            )
+            # Does this concretize the data?
+            # If yes then investigate np.ndarray with buffer=file,
+            # offset=offset+13, and strides that skips 13-bytes per row.
+            data[bl_id] = struct_arr["samples"]
 
         return data
 
@@ -1263,11 +1389,12 @@ class BlackrockRawIO(BaseRawIO):
                         ev_ids[mask_after_seg] += 1
 
             # consistency check: same number of segments for nsx and nev data
-            assert nb_possible_nev_segments == len(nonempty_nsx_segments), (
-                f"Inconsistent ns{nsx_nb} and nev file. {nb_possible_nev_segments} "
-                f"segments present in .nev file, but {len(nonempty_nsx_segments)} in "
-                "ns{nsx_nb} file."
-            )
+            if nb_possible_nev_segments != len(nonempty_nsx_segments):
+                raise NeoReadWriteError(
+                    f"Inconsistent ns{nsx_nb} and nev file. {nb_possible_nev_segments} "
+                    f"segments present in .nev file, but {len(nonempty_nsx_segments)} in "
+                    f"ns{nsx_nb} file."
+                )
 
             new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments), sorted(list(nonempty_nsx_segments))))
 

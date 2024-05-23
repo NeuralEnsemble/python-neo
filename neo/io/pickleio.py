@@ -13,7 +13,7 @@ Authors: Andrew Davison
 import pickle
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal, SpikeTrain
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, NeoReadWriteError
 
 
 class PickleIO(BaseIO):
@@ -38,7 +38,8 @@ class PickleIO(BaseIO):
     extensions = ["pkl", "pickle"]
 
     def read_block(self, lazy=False):
-        assert not lazy, "Do not support lazy"
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy reading")
         with open(self.filename, "rb") as fp:
             block = pickle.load(fp)
         return block

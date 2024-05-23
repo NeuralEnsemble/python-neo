@@ -31,6 +31,8 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+from neo.core import NeoReadWriteError
+
 import numpy as np
 from collections import OrderedDict
 import datetime
@@ -194,7 +196,8 @@ class NeuroExplorerRawIO(BaseRawIO):
         entity_header = self._entity_headers[entity_index]
         if entity_header["type"] == 0:
             return None
-        assert entity_header["type"] == 3
+        if entity_header["type"] != 3:
+            raise NeoReadWriteError(f"Neo requires the entity_header['type'] to be 3 not {entity_header['type']}")
 
         n = entity_header["n"]
         width = entity_header["NPointsWave"]

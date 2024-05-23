@@ -42,6 +42,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from neo.core import NeoReadWriteError
 
 
 class AlphaOmegaRawIO(BaseRawIO):
@@ -268,12 +269,18 @@ class AlphaOmegaRawIO(BaseRawIO):
                             amplitude = 1250000 / 2**15
                         if mode == 0:
                             # continuous analog channel definition block
-                            assert channel_number not in channel_type
+                            if channel_number in channel_type:
+                                raise NeoReadWriteError(
+                                    f"channel_number {channel_number} must not be in channel_type {channel_type}"
+                                )
                             channel_type[channel_number] = "continuous_analog"
                             duration, total_gain_100 = SDefContinAnalog.unpack(f.read(SDefContinAnalog.size))
                             name_length = length - 38
                             name = get_name(f, name_length)
-                            assert channel_number not in continuous_analog_channels
+                            if channel_number in continuous_analog_channels:
+                                raise NeoReadWriteError(
+                                    f"`channel_number` {channel_number} must not be in continous_analog_channels {continuous_analog_channels}"
+                                )
                             continuous_analog_channels[channel_number] = {
                                 "spike_color": spike_color,
                                 "bit_resolution": amplitude,
@@ -287,7 +294,10 @@ class AlphaOmegaRawIO(BaseRawIO):
                             }
                         elif mode == 1:
                             # segmented analog channel definition block
-                            assert channel_number not in channel_type
+                            if channel_number in channel_type:
+                                raise NeoReadWriteError(
+                                    f"`channel_number` {channel_number} must not be in channel_type {channel_type}"
+                                )
                             channel_type[channel_number] = "segmented_analog"
                             (
                                 pre_trig_ms,
@@ -299,7 +309,10 @@ class AlphaOmegaRawIO(BaseRawIO):
                             ) = SDefLevelAnalog.unpack(f.read(SDefLevelAnalog.size))
                             name_length = length - 48
                             name = get_name(f, name_length)
-                            assert channel_number not in segmented_analog_channels
+                            if channel_number in segmented_analog_channels:
+                                raise NeoReadWriteError(
+                                    f"`channel_number` {channel_number} must be in segmented_analog_channels {segmented_analog_channels}"
+                                )
                             segmented_analog_channels[channel_number] = {
                                 "spike_color": spike_color,
                                 "bit_resolution": amplitude,
@@ -320,7 +333,10 @@ class AlphaOmegaRawIO(BaseRawIO):
                             continue
                     elif is_analog == 0 and is_input == 1:
                         # digital input channel definition
-                        assert channel_number not in channel_type
+                        if channel_number in channel_type:
+                            raise NeoReadWriteError(
+                                f"`channel_number` {channel_number} must not be in channel_type {channel_type}"
+                            )
                         channel_type[channel_number] = "digital"
                         (
                             sample_rate,
@@ -329,7 +345,10 @@ class AlphaOmegaRawIO(BaseRawIO):
                             prev_status,
                         ) = SDefDigitalInput.unpack(f.read(SDefDigitalInput.size))
                         metadata["max_sample_rate"] = max(metadata["max_sample_rate"], sample_rate * 1000)
-                        assert channel_number not in digital_channels
+                        if channel_number in digital_channels:
+                            raise NeoReadWriteError(
+                                f"`channel_number {channel_number} must not be in digital_channels {digital_channels}"
+                            )
                         name_length = length - 30
                         name = get_name(f, name_length)
                         digital_channels[channel_number] = {
@@ -348,7 +367,10 @@ class AlphaOmegaRawIO(BaseRawIO):
                     # stream data definition block
                     next_block, channel_number, sample_rate = SDefStream.unpack(f.read(SDefStream.size))
                     metadata["max_sample_rate"] = max(metadata["max_sample_rate"], sample_rate * 1000)
-                    assert channel_number not in channel_type
+                    if channel_number in channel_type:
+                        raise NeoReadWriteError(
+                            f"`channel_number` {channel_number} must not be in channel_type {channel_type}"
+                        )
                     channel_type[channel_number] = "stream_data"
                     name_length = length - 18
                     name = get_name(f, name_length)
@@ -360,7 +382,8 @@ class AlphaOmegaRawIO(BaseRawIO):
                     # digital input/output port definition block
                     board_number, port, sample_rate, prev_value = SDefPortX.unpack(f.read(SDefPortX.size))
                     metadata["max_sample_rate"] = max(metadata["max_sample_rate"], sample_rate * 1000)
-                    assert port not in channel_type
+                    if port in channel_type:
+                        raise NeoReadWriteError(f"`port` {port} must not be in channel_type {channel_type}")
                     channel_type[port] = "port"
                     name_length = length - 18
                     name = get_name(f, name_length)
@@ -374,16 +397,22 @@ class AlphaOmegaRawIO(BaseRawIO):
                 elif block_type == b"5":
                     # channel data block
                     unit_number, channel_number = SDataChannel.unpack(f.read(SDataChannel.size))
-                    assert channel_number in channel_type
+                    if channel_number not in channel_type:
+                        raise ValueError(f"`channel_number` must be in channel_type {channel_type}")
                     unit_number = int.from_bytes(unit_number, "little")
                     if "analog" in channel_type[channel_number]:
                         data_length = (length - 10) / 2
-                        assert int(data_length) == data_length
+                        # why do we even have this check?
+                        if int(data_length) != data_length:
+                            raise ValueError(f"The data length must be equal to the int of the data length")
                         data_length = int(data_length)
                         data_start = f.tell()
                         f.seek(2 * data_length, io.SEEK_CUR)
                         if channel_type[channel_number].startswith("continuous"):
-                            assert channel_number in continuous_analog_channels
+                            if channel_number not in continuous_analog_channels:
+                                raise NeoReadWriteError(
+                                    f"The `channel_number` must be in the continuous_analog_channels {continuous_analog_channels}"
+                                )
                             continuous_analog_channels[channel_number]["positions"][filename].append(
                                 (
                                     SDataChannel_sample_id.unpack(f.read(SDataChannel_sample_id.size))[0],
@@ -392,7 +421,10 @@ class AlphaOmegaRawIO(BaseRawIO):
                                 )
                             )
                         elif channel_type[channel_number].startswith("segmented"):
-                            assert channel_number in segmented_analog_channels
+                            if channel_number not in segmented_analog_channels:
+                                raise NeoReadWriteError(
+                                    f"The `channel_number` must be in the segmented_analog_channels {segmented_analog_channels}"
+                                )
                             if unit_number > 0 and unit_number <= 4:
                                 segmented_analog_channels[channel_number]["positions"][filename].append(
                                     (
@@ -413,7 +445,10 @@ class AlphaOmegaRawIO(BaseRawIO):
                                 self.logger.error(f"Unknown unit_number={unit_number} in channel data block")
                                 continue
                     elif channel_type[channel_number] == "digital":
-                        assert channel_number in digital_channels
+                        if channel_number not in digital_channels:
+                            raise NeoReadWriteError(
+                                f"The `channel_number` must be in the digital_channels {digital_channels}"
+                            )
                         sample_number, value = SDataChannelDigital.unpack(f.read(SDataChannelDigital.size))
                         digital_channels[channel_number]["samples"].append(
                             (
@@ -422,7 +457,8 @@ class AlphaOmegaRawIO(BaseRawIO):
                             )
                         )
                     elif channel_type[channel_number] == "port":
-                        assert channel_number in ports
+                        if channel_number not in ports:
+                            raise NeoReadWriteError(f"The `channel_number` must be in ports {ports}")
                         # specifications says that for ports it should be "<Lh"
                         # but the data shows clearly "<HL"
                         value, sample_number = SDataChannelPort.unpack(f.read(SDataChannelPort.size))
@@ -741,7 +777,8 @@ class AlphaOmegaRawIO(BaseRawIO):
             sum(sample[2] for sample_by_file in channel["positions"].values() for sample in sample_by_file)
             for channel in self._segments[seg_index]["streams"][stream_id].values()
         ]
-        assert all(s == sizes[0] for s in sizes)
+        if not all(s == sizes[0] for s in sizes):
+            raise NeoReadWriteError("The sizes of signals must be the same to get signal size")
         return sizes[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
@@ -849,7 +886,8 @@ class AlphaOmegaRawIO(BaseRawIO):
         nb_spikes = self._get_spike_timestamps(block_index, seg_index, spike_channel_index, t_start, t_stop).size
         spikes = self._segments[seg_index]["spikes"][spike_id]
         spike_length = {p[2] for f in spikes["positions"].values() for p in f}
-        assert len(spike_length) == 1
+        if len(spike_length) != 1:
+            raise ValueError(f"The len of `spike_length` must be 1 not {len(spike_length)}")
         spike_length = spike_length.pop()
         waveforms = np.ndarray((nb_spikes, spike_length), dtype=np.short)
         if t_start is None:

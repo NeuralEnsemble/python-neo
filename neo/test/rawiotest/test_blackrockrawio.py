@@ -28,6 +28,7 @@ class TestBlackrockRawIO(
         "blackrock/FileSpec2.3001",
         "blackrock/blackrock_2_1/l101210-001",
         "blackrock/blackrock_3_0/file_spec_3_0",
+        "blackrock/blackrock_3_0_ptp/20231027-125608-001",
     ]
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
@@ -183,6 +184,32 @@ class TestBlackrockRawIO(
                         python_digievents = all_timestamps[labels == label]
                         matlab_digievents = mts_ml[mid_ml == int(label)]
                         assert_equal(python_digievents, matlab_digievents)
+
+    def test_blackrockrawio_ptp_timestamps(self):
+        dirname = self.get_local_path("blackrock/blackrock_3_0_ptp/20231027-125608-001")
+        reader = BlackrockRawIO(filename=dirname)
+        reader.parse_header()
+
+        # 1 segment; no pauses or detectable packet drops. Was ~2.1 seconds long
+        self.assertEqual(1, reader.block_count())
+        self.assertEqual(1, reader.segment_count(0))
+        t_start = reader.segment_t_start(0, 0)
+        t_stop = reader.segment_t_stop(0, 0)
+        self.assertAlmostEqual(2.1, t_stop - t_start, places=1)
+
+        # 2 streams - ns2 and ns6; each with 65 channels
+        # 65 ns2 (1 kHz) channels, on the even channels -- every other from 2-130
+        # 65 ns6 (RAW; 30 kHz) channels, on the odd channels -- every other from 1-129
+        expected_rates = [1_000, 30_000]
+        n_streams = reader.signal_streams_count()
+        self.assertEqual(len(expected_rates), n_streams)
+        for strm_ix in range(n_streams):
+            reader.get_signal_sampling_rate(strm_ix)
+            self.assertEqual(65, reader.signal_channels_count(strm_ix))
+            self.assertAlmostEqual(expected_rates[strm_ix], reader.get_signal_sampling_rate(strm_ix), places=1)
+
+        # Spikes enabled on channels 1-129 but channel 129 had 0 events.
+        self.assertEqual(128, reader.spike_channels_count())
 
 
 if __name__ == "__main__":

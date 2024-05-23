@@ -588,7 +588,8 @@ def is_block_rawio_compatible(block, return_problems=False):
         Optional, depending on value of `return_problems`.
         A list that describe problems for rawio compatibility.
     """
-    assert len(block.segments) > 0, "This block doesn't have segments"
+    if len(block.segments) == 0:
+        raise neo.core.NeoReadWriteError("This block doesn't have segments")
 
     problems = []
 

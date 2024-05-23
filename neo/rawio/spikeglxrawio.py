@@ -128,7 +128,8 @@ class SpikeGLXRawIO(BaseRawIO):
         for info in self.signals_info_list:
             # key is (seg_index, stream_name)
             key = (info["seg_index"], info["stream_name"])
-            assert key not in self.signals_info_dict
+            if key in self.signals_info_dict:
+                raise KeyError(f"key {key} is already in the signals_info_dict")
             self.signals_info_dict[key] = info
 
             # create memmap
@@ -495,7 +496,7 @@ def extract_stream_info(meta_file, meta):
         if (
             "imDatPrb_type" not in meta
             or meta["imDatPrb_type"] == "0"
-            or meta["imDatPrb_type"] in ("1015", "1022", "1030", "1031", "1032", "1100", "1121", "1300")
+            or meta["imDatPrb_type"] in ("1015", "1016", "1022", "1030", "1031", "1032", "1100", "1121", "1300")
         ):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
@@ -565,10 +566,12 @@ def extract_stream_info(meta_file, meta):
         info["digital_channels"] = []
         info["analog_channels"] = [channel for channel in info["channel_names"] if not channel.startswith("XD")]
         # Digital/event channels are encoded within the digital word, so that will need more handling
-        for item in meta["niXDChans1"].split(","):
-            if ":" in item:
-                start, end = map(int, item.split(":"))
-                info["digital_channels"].extend([f"XD{i}" for i in range(start, end + 1)])
-            else:
-                info["digital_channels"].append(f"XD{int(item)}")
+        if meta.get("niXDChans1", "") != "":
+            nixd_chans1_items = meta["niXDChans1"].split(",")
+            for item in nixd_chans1_items:
+                if ":" in item:
+                    start, end = map(int, item.split(":"))
+                    info["digital_channels"].extend([f"XD{i}" for i in range(start, end + 1)])
+                else:
+                    info["digital_channels"].append(f"XD{int(item)}")
     return info

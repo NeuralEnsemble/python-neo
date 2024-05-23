@@ -15,7 +15,7 @@ from warnings import warn
 import pathlib
 import quantities as pq
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal
+from neo.core import Block, Segment, AnalogSignal, NeoReadWriteError
 
 
 class IgorIO(BaseIO):
@@ -59,14 +59,16 @@ class IgorIO(BaseIO):
         """
         BaseIO.__init__(self)
         filename = pathlib.Path(filename)
-        assert filename.suffix[1:] in self.extensions, f"Only the following extensions are supported: {self.extensions}"
+        if filename.suffix[1:] not in self.extensions:
+            raise NotImplementedError(f"Only the following extensions are supported: {self.extensions}")
         self.filename = filename
         self.extension = filename.suffix[1:]
         self.parse_notes = parse_notes
         self._filesystem = None
 
     def read_block(self, lazy=False):
-        assert not lazy, "This IO does not support lazy mode"
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy reading")
 
         block = Block(file_origin=str(self.filename))
         block.segments.append(self.read_segment(lazy=lazy))
@@ -76,7 +78,8 @@ class IgorIO(BaseIO):
         import igor2.packed as pxp
         from igor2.record.wave import WaveRecord
 
-        assert not lazy, "This IO does not support lazy mode"
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy mode")
         segment = Segment(file_origin=str(self.filename))
 
         if self.extension == "pxp":
@@ -97,7 +100,8 @@ class IgorIO(BaseIO):
         import igor2.binarywave as bw
         import igor2.packed as pxp
 
-        assert not lazy, "This IO does not support lazy mode"
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy mode")
 
         if self.extension == "ibw":
             data = bw.load(str(self.filename))
@@ -105,7 +109,8 @@ class IgorIO(BaseIO):
             if version > 5:
                 raise IOError(f"Igor binary wave file format version {version} " "is not supported.")
         elif self.extension == "pxp":
-            assert type(path) is str, "A colon-separated Igor-style path must be provided."
+            if type(path) is not str:
+                raise TypeError("A colon-separated Igor-style path must be provided.")
             if not self._filesystem:
                 _, self.filesystem = pxp.load(str(self.filename))
                 path = path.split(":")
@@ -119,16 +124,15 @@ class IgorIO(BaseIO):
 
     def _wave_to_analogsignal(self, content, dirpath):
         if "padding" in content:
-            assert content["padding"].size == 0, "Cannot handle non-empty padding"
+            if content["padding"].size != 0:
+                raise NeoReadWriteError("Cannot handle non-empty padding")
         signal = content["wData"]
         note = content["note"]
         header = content["wave_header"]
         name = str(header["bname"].decode("utf-8"))
         units = "".join([x.decode() for x in header["dataUnits"]])
-        try:
-            time_units = "".join([x.decode() for x in header["xUnits"]])
-            assert len(time_units)
-        except:
+        time_units = "".join([x.decode() for x in header["xUnits"]])
+        if len(time_units) == 0:
             time_units = "s"
         try:
             t_start = pq.Quantity(header["hsB"], time_units)
@@ -136,7 +140,7 @@ class IgorIO(BaseIO):
             t_start = pq.Quantity(header["sfB"][0], time_units)
         try:
             sampling_period = pq.Quantity(header["hsA"], time_units)
-        except:
+        except KeyError:
             sampling_period = pq.Quantity(header["sfA"][0], time_units)
         if self.parse_notes:
             try:
