@@ -185,7 +185,6 @@ class NlxHeader(OrderedDict):
         :param filename: name of ncs file, used for extracting channel number
         :param txt_header: header text
         """
-        print(txt_header)
         # find keys
         for k1, k2, type_ in NlxHeader.txt_header_keys:
             pattern = r"-(?P<name>" + k1 + r")\s+(?P<value>.+)"
