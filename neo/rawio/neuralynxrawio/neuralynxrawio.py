@@ -47,8 +47,8 @@ Author: Julia Sprenger, Carlos Canova, Samuel Garcia, Peter N. Steinmetz.
 
 from ..baserawio import (
     BaseRawIO,
-    _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_channel_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -131,6 +131,20 @@ class NeuralynxRawIO(BaseRawIO):
         ("samples", "int16", (NcsSection._RECORD_SIZE)),
     ]
 
+    _nvt_dtype = [
+        ("swstx", "uint16"),
+        ("system_id", "uint16"),
+        ("data_size", "uint16"),
+        ("timestamp", "uint64"),
+        ("bitfield_points", "uint32", (400,)),
+        ("unused", "int16"),
+        ("test", "int32", (3,)),
+        # ("x_location", "int32"),
+        # ("y_location", "int32"),
+        # ("head_angle", "int32"),
+        ("colored_tgts", "int32", (50,)),
+    ]
+
     def __init__(
         self, dirname="", filename="", exclude_filename=None, keep_original_times=False, strict_gap_mode=True, **kargs
     ):
@@ -156,6 +170,12 @@ class NeuralynxRawIO(BaseRawIO):
             return self.dirname
 
     def _parse_header(self):
+        _ncs_sample_dtype = [dtype[1] for dtype in NeuralynxRawIO._ncs_dtype if dtype[0] == "samples"][0]
+        # _nvt_sample_dtype = [dtype[1] for dtype in NeuralynxRawIO._nvt_dtype if dtype[0] == "x_location"][0]
+        _nvt_sample_dtype = "int32"
+
+        ncs_unit = "#packet"
+        nvt_unit = "#frame"
 
         stream_channels = []
         signal_channels = []
@@ -165,16 +185,20 @@ class NeuralynxRawIO(BaseRawIO):
         self.ncs_filenames = OrderedDict()  # (chan_name, chan_id): filename
         self.nse_ntt_filenames = OrderedDict()  # (chan_name, chan_id): filename
         self.nev_filenames = OrderedDict()  # chan_id: filename
+        self.nvt_filenames = OrderedDict()  # chan_id: filename
 
         self.file_headers = OrderedDict()  # filename: file header dict
 
         self._nev_memmap = {}
         self._spike_memmap = {}
+        self._nvt_memmaps = []
         self.internal_unit_ids = []  # channel_index > ((channel_name, channel_id), unit_id)
         self.internal_event_ids = []
+        self.tracker_system_ids = []
         self._empty_ncs = []  # this list contains filenames of empty files
         self._empty_nev = []
         self._empty_nse_ntt = []
+        self._empty_nvt = []
 
         # Explore the directory looking for ncs, nev, nse and ntt
         # and construct channels headers.
@@ -218,8 +242,11 @@ class NeuralynxRawIO(BaseRawIO):
 
             # Skip Ncs files with only header. Other empty file types
             # will have an empty dataset constructed later.
-            if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE) and ext in ["ncs"]:
-                self._empty_ncs.append(filename)
+            if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE) and ext in ["ncs", "nvt"]:
+                if ext == "ncs":
+                    self._empty_ncs.append(filename)
+                elif ext == "nvt":
+                    self._empty_nvt.append(filename)
                 continue
 
             # All file have more or less the same header structure
@@ -253,7 +280,7 @@ class NeuralynxRawIO(BaseRawIO):
                         gain *= -1
                     offset = 0.0
                     signal_channels.append(
-                        (chan_name, str(chan_id), info["sampling_rate"], "int16", units, gain, offset, stream_id)
+                        (chan_name, str(chan_id), info["sampling_rate"], _ncs_sample_dtype, units, gain, offset, stream_id)
                     )
                     self.ncs_filenames[chan_uid] = filename
                     keys = [
@@ -340,6 +367,50 @@ class NeuralynxRawIO(BaseRawIO):
 
                     self._nev_memmap[chan_id] = data
 
+                # nvt files are passed as signals bundled into signal streams
+                elif ext == "nvt":
+                    file_mmap = self._get_file_map(filename)
+
+                    system_id = np.unique(file_mmap["system_id"]).item()
+                    chan_uid = (chan_name, str(system_id))
+                    self.nvt_filenames[chan_uid] = filename
+
+                    n_frames = copy.copy(file_mmap.shape[0])
+                    if n_frames:
+                        t_start = copy.copy(file_mmap[0][3])
+                        if system_id not in self.tracker_system_ids:
+                            self.tracker_system_ids.append(system_id)
+                    else:
+                        t_start = 0
+
+                    stream_prop = (info["sampling_rate"], n_frames, t_start)
+
+                    if stream_prop not in stream_props:
+                        stream_props[stream_prop] = {"stream_id": len(stream_props), "filenames": [filename]}
+                    else:
+                        stream_props[stream_prop]["filenames"].append(filename)
+                    stream_id = stream_props[stream_prop]["stream_id"]
+
+                    units = "dimensionless"
+                    gain = 1.0
+                    offset = info["CameraDelay"] # NOTE: assuming that the offset means time offset
+                    signal_channels.append(
+                        (chan_name, str(system_id), info["sampling_rate"], _nvt_sample_dtype, units, gain, offset, stream_id)
+                    )
+
+                    # NOTE: only loading the selected features here. "bitfield_points" and "colored_tgts" are not loaded due to their dimensionality
+                    # self._nvt_memmap[chan_id] = file_mmap[["timestamp", "system_id", "x_location", "y_location", "head_angle"]]
+                    self._nvt_memmaps.append({chan_uid : file_mmap[["timestamp", "system_id", "test"]]})
+                    # print(self._nvt_memmap[chan_id][:5])
+
+                    keys = [
+                        "recording_opened",
+                        "VideoFormat",
+                        "Resolution",
+                    ]
+                    d = {k: info[k] for k in keys if k in info}
+                    signal_annotations.append(d)
+
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
@@ -347,7 +418,10 @@ class NeuralynxRawIO(BaseRawIO):
         if signal_channels.size > 0:
             # ordering streams according from high to low sampling rates
             stream_props = {k: stream_props[k] for k in sorted(stream_props, reverse=True)}
-            names = [f"Stream (rate,#packet,t0): {sp}" for sp in stream_props]
+            # assign different names to ncs stream and nvt stream
+            names = [f"Stream (rate,{ncs_unit},t0): {sp}" if pathlib.Path(stream_props[sp]["filenames"][0]).suffix.lower()[1:] == "ncs" else 
+                                f"Stream (rate,{nvt_unit},t0): {sp}" 
+                                for sp in stream_props]
             ids = [stream_prop["stream_id"] for stream_prop in stream_props.values()]
             signal_streams = list(zip(names, ids))
         else:
@@ -359,26 +433,39 @@ class NeuralynxRawIO(BaseRawIO):
         self._timestamp_limits = None
         self._nb_segment = 1
 
-        stream_infos = {}
+        ncs_stream_infos = {}
+        nvt_stream_infos = {}
 
         # Read ncs files of each stream for gap detection and nb_segment computation.
+        # Since nvt files are passed as signals, we need to filter them out.
         for stream_id in np.unique(signal_channels["stream_id"]):
             stream_channels = signal_channels[signal_channels["stream_id"] == stream_id]
             stream_chan_uids = zip(stream_channels["name"], stream_channels["id"])
-            stream_filenames = [self.ncs_filenames[chuid] for chuid in stream_chan_uids]
-            _sigs_memmaps, ncsSegTimestampLimits, section_structure = self.scan_stream_ncs_files(stream_filenames)
+            # ncs files have dtype int16 while nvt files have dtype int32, so we use this to filter out nvt files
+            if (stream_channels["dtype"] == _ncs_sample_dtype).all():
+                stream_filenames = [self.ncs_filenames[chuid] for chuid in stream_chan_uids]
+                _sigs_memmaps, ncsSegTimestampLimits, section_structure = self.scan_stream_ncs_files(stream_filenames)
 
-            stream_infos[stream_id] = {
-                "segment_sig_memmaps": _sigs_memmaps,
-                "ncs_segment_infos": ncsSegTimestampLimits,
-                "section_structure": section_structure,
-            }
+                ncs_stream_infos[stream_id] = {
+                    "segment_sig_memmaps": _sigs_memmaps,
+                    "ncs_segment_infos": ncsSegTimestampLimits,
+                    "section_structure": section_structure,
+                }
+
+            else:
+                stream_filenames = [self.nvt_filenames[chuid] for chuid in stream_chan_uids]
+
+                nvt_stream_infos[stream_id] = {
+                    "segment_sig_memmaps": self._nvt_memmaps,
+                    "nvt_segment_infos": self.generate_nvt_seg_infos(),
+                    "section_structure": None,
+                }
 
         # check if section structure across streams is compatible and merge infos
         ref_sec_structure = None
-        for stream_id, stream_info in stream_infos.items():
-            ref_stream_id = list(stream_infos.keys())[0]
-            ref_sec_structure = stream_infos[ref_stream_id]["section_structure"]
+        for stream_id, stream_info in ncs_stream_infos.items():
+            ref_stream_id = list(ncs_stream_infos.keys())[0]
+            ref_sec_structure = ncs_stream_infos[ref_stream_id]["section_structure"]
 
             sec_structure = stream_info["section_structure"]
 
@@ -395,8 +482,11 @@ class NeuralynxRawIO(BaseRawIO):
                     f"{stream_id}:{chan_ids}."
                 )
 
+        nvt_segments = 0
+        if nvt_stream_infos:
+            nvt_segments += sum(nvt_stream_info["nvt_segment_infos"].nb_segment for nvt_stream_info in nvt_stream_infos.values())
         if ref_sec_structure is not None:
-            self._nb_segment = len(ref_sec_structure.sects)
+            self._nb_segment = len(ref_sec_structure.sects) + nvt_segments
         else:
             # Use only a single segment if no ncs data is present
             self._nb_segment = 1
@@ -407,13 +497,13 @@ class NeuralynxRawIO(BaseRawIO):
             result = (min(m for m in mins if m is not None), max(m for m in maxs if m is not None))
             return result
 
-        # merge stream mmemmaps since streams are compatible
+        # merge stream memmaps since streams are compatible
         self._sigs_memmaps = [{} for seg_idx in range(self._nb_segment)]
         # time limits of integer timestamps in ncs files
         self._timestamp_limits = [(None, None) for seg_idx in range(self._nb_segment)]
         # time limits physical times in ncs files
         self._signal_limits = [(None, None) for seg_idx in range(self._nb_segment)]
-        for stream_id, stream_info in stream_infos.items():
+        for stream_id, stream_info in ncs_stream_infos.items():
             stream_mmaps = stream_info["segment_sig_memmaps"]
             for seg_idx, signal_dict in enumerate(stream_mmaps):
                 self._sigs_memmaps[seg_idx].update(signal_dict)
@@ -426,16 +516,32 @@ class NeuralynxRawIO(BaseRawIO):
                 t_start = ncs_segment_info.t_start[seg_idx]
                 t_stop = ncs_segment_info.t_stop[seg_idx]
                 self._signal_limits[seg_idx] = min_max_tuple(self._signal_limits[seg_idx], (t_start, t_stop))
+        
+        seg_offset = len(ref_sec_structure.sects)
+        for stream_id, stream_info in nvt_stream_infos.items():
+            stream_mmaps = stream_info["segment_sig_memmaps"]
+            for seg_idx, signal_dict in enumerate(stream_mmaps):
+                self._sigs_memmaps[seg_idx + seg_offset].update(signal_dict)
+
+            nvt_segment_info = stream_info["nvt_segment_infos"]
+            for seg_idx, (t_start, t_stop) in enumerate(nvt_segment_info.timestamp_limits):
+                self._timestamp_limits[seg_idx + seg_offset] = min_max_tuple(self._timestamp_limits[seg_idx], (t_start, t_stop))
+
+            for seg_idx in range(nvt_segment_info.nb_segment):
+                t_start = nvt_segment_info.t_start[seg_idx]
+                t_stop = nvt_segment_info.t_stop[seg_idx]
+                self._signal_limits[seg_idx + seg_offset] = min_max_tuple(self._signal_limits[seg_idx], (t_start, t_stop))
 
         # precompute signal lengths within segments
         self._sigs_length = []
         if self._sigs_memmaps:
             for seg_idx, sig_container in enumerate(self._sigs_memmaps):
                 self._sigs_length.append({})
+                print(seg_idx, type(sig_container))
                 for chan_uid, sig_infos in sig_container.items():
                     self._sigs_length[seg_idx][chan_uid] = int(sig_infos["nb_valid"].sum())
 
-        # Determine timestamp limits in nev, nse, ntt files by scanning them.
+        # Determine timestamp limits in nse, ntt, nev files by scanning them.
         ts0, ts1 = None, None
         for _data_memmap in (self._spike_memmap, self._nev_memmap):
             for _, data in _data_memmap.items():
@@ -472,7 +578,7 @@ class NeuralynxRawIO(BaseRawIO):
             self._seg_t_stops[-1] = self.global_t_stop
 
         else:
-            # case HAVE ncs but  NO nev or nse ->
+            # case HAVE ncs but NO nev or nse ->
             self._seg_t_starts = [limits[0] for limits in self._signal_limits]
             self._seg_t_stops = [limits[1] for limits in self._signal_limits]
             self.global_t_start = self._signal_limits[0][0]
@@ -495,23 +601,48 @@ class NeuralynxRawIO(BaseRawIO):
         self._generate_minimal_annotations()
         bl_annotations = self.raw_annotations["blocks"][0]
 
+        # generate key sets for ncs and nvt annotations
+        key_sets = np.unique([d.keys() for d in signal_annotations])
+        nvt_key_set = {}
+        ncs_key_set = {}
+        for key_set in key_sets:
+            if "Resolution" in key_set:
+                nvt_key_set = key_set
+            else:
+                ncs_key_set = key_set
+
         for seg_index in range(self._nb_segment):
             seg_annotations = bl_annotations["segments"][seg_index]
 
             for stream_id in range(signal_streams.size):
                 # one or no signal stream
                 stream_ann = seg_annotations["signals"][stream_id]
-                # handle array annotations
-                for key in signal_annotations[0].keys():
-                    values = []
-                    # only collect values from channels belonging to current stream
-                    for d in np.where(signal_channels["stream_id"] == f"{stream_id}")[0]:
-                        value = signal_annotations[d][key]
-                        values.append(value)
-                    values = np.array(values)
-                    if values.ndim == 1:
-                        # 'InputRange': is 2D and make bugs
-                        stream_ann["__array_annotations__"][key] = values
+
+                if ncs_unit in stream_ann["name"]:
+                    # handle array annotations
+                    for key in ncs_key_set:
+                        values = []
+                        # only collect values from channels belonging to current stream
+                        for d in np.where(signal_channels["stream_id"] == f"{stream_id}")[0]:
+                            value = signal_annotations[d][key]
+                            values.append(value)
+                        values = np.array(values)
+                        if values.ndim == 1:
+                            # 'InputRange': is 2D and make bugs
+                            stream_ann["__array_annotations__"][key] = values
+
+                elif nvt_unit in stream_ann["name"]:
+                    for key in nvt_key_set:
+                        values = []
+                        for d in np.where(signal_channels["stream_id"] == f"{stream_id}")[0]:
+                            value = signal_annotations[d][key]
+                            values.append(value)
+                        values = np.array(values)
+                        if values.ndim == 1:
+                            stream_ann["__array_annotations__"][key] = values
+
+                else:
+                    continue
 
             for c in range(spike_channels.size):
                 unit_ann = seg_annotations["spikes"][c]
@@ -554,6 +685,9 @@ class NeuralynxRawIO(BaseRawIO):
 
         elif suffix == "nev":
             return np.memmap(filename, dtype=nev_dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
+        
+        elif suffix == "nvt":
+            return np.memmap(filename, dtype=NeuralynxRawIO._nvt_dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
 
         else:
             raise ValueError(f"Unknown file suffix {suffix}")
@@ -572,6 +706,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         if len(signals):
             sig = signals[0]
+            print("test", self._sigs_length[seg_index])
             return self._sigs_length[seg_index][(sig["name"], sig["id"])]
         else:
             raise ValueError(
@@ -861,6 +996,34 @@ class NeuralynxRawIO(BaseRawIO):
         stream_section_structure = list(revSectMap.keys())[0]
 
         return memmaps, seg_time_limits, stream_section_structure
+    
+    def generate_nvt_seg_infos(self):
+        """
+        TODO: write this later.
+        """
+        # HACK: nb_segments assumed to be 1 for now
+        seg_time_limits = SegmentTimeLimits(
+            nb_segment=1, t_start=[], t_stop=[], length=[], timestamp_limits=[]
+        )
+
+        ts0, ts1 = None, None
+        for nvt_memmap in self._nvt_memmaps:
+            for _, data in nvt_memmap.items():
+                seg_time_limits.length.append(data.shape[0])
+                ts = data["timestamp"]
+
+                if ts.size == 0:
+                    continue
+                if ts0 is None:
+                    ts0 = ts[0]
+                    ts1 = ts[-1]
+
+                ts0, ts1 = min(ts0, ts[0]), max(ts1, ts[-1])
+                seg_time_limits.t_start.append(ts0 / 1e6)
+                seg_time_limits.t_stop.append(ts1 / 1e6)
+                seg_time_limits.timestamp_limits.append((ts0, ts1))
+
+        return seg_time_limits
 
 
 # time limits for set of segments

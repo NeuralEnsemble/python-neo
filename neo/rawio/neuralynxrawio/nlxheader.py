@@ -78,8 +78,8 @@ class NlxHeader(OrderedDict):
         ("Sharpness", "", int),
         ("DirectionOffset", "", int),
         ("Resolution", "", None),
-        ("CameraDelay", "", int),
-        ("EnableFieldEstimation", "field_estimation_enabled", _to_bool),
+        ("CameraDelay", "", float),
+        ("EnableFieldEstimation", "", _to_bool),
         ("TargetDist", "", None),
     ]
 
