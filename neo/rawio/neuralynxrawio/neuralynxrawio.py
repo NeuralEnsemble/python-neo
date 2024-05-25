@@ -54,6 +54,7 @@ from ..baserawio import (
 )
 from operator import itemgetter
 import numpy as np
+import pdb
 import os
 import pathlib
 import copy
@@ -138,10 +139,9 @@ class NeuralynxRawIO(BaseRawIO):
         ("timestamp", "uint64"),
         ("bitfield_points", "uint32", (400,)),
         ("unused", "int16"),
-        ("test", "int32", (3,)),
-        # ("x_location", "int32"),
-        # ("y_location", "int32"),
-        # ("head_angle", "int32"),
+        ("x_location", "int32"),
+        ("y_location", "int32"),
+        ("head_angle", "int32"),
         ("colored_tgts", "int32", (50,)),
     ]
 
@@ -171,11 +171,7 @@ class NeuralynxRawIO(BaseRawIO):
 
     def _parse_header(self):
         _ncs_sample_dtype = [dtype[1] for dtype in NeuralynxRawIO._ncs_dtype if dtype[0] == "samples"][0]
-        # _nvt_sample_dtype = [dtype[1] for dtype in NeuralynxRawIO._nvt_dtype if dtype[0] == "x_location"][0]
-        _nvt_sample_dtype = "int32"
-
-        ncs_unit = "#packet"
-        nvt_unit = "#frame"
+        _nvt_sample_dtype = [dtype[1] for dtype in NeuralynxRawIO._nvt_dtype if dtype[0] == "x_location"][0]
 
         stream_channels = []
         signal_channels = []
@@ -369,47 +365,47 @@ class NeuralynxRawIO(BaseRawIO):
 
                 # nvt files are passed as signals bundled into signal streams
                 elif ext == "nvt":
-                    file_mmap = self._get_file_map(filename)
-
-                    system_id = np.unique(file_mmap["system_id"]).item()
-                    chan_uid = (chan_name, str(system_id))
-                    self.nvt_filenames[chan_uid] = filename
-
-                    n_frames = copy.copy(file_mmap.shape[0])
-                    if n_frames:
-                        t_start = copy.copy(file_mmap[0][3])
-                        if system_id not in self.tracker_system_ids:
-                            self.tracker_system_ids.append(system_id)
-                    else:
-                        t_start = 0
-
-                    stream_prop = (info["sampling_rate"], n_frames, t_start)
-
-                    if stream_prop not in stream_props:
-                        stream_props[stream_prop] = {"stream_id": len(stream_props), "filenames": [filename]}
-                    else:
-                        stream_props[stream_prop]["filenames"].append(filename)
-                    stream_id = stream_props[stream_prop]["stream_id"]
 
                     units = "dimensionless"
                     gain = 1.0
                     offset = info["CameraDelay"] # NOTE: assuming that the offset means time offset
-                    signal_channels.append(
-                        (chan_name, str(system_id), info["sampling_rate"], _nvt_sample_dtype, units, gain, offset, stream_id)
-                    )
 
-                    # NOTE: only loading the selected features here. "bitfield_points" and "colored_tgts" are not loaded due to their dimensionality
-                    # self._nvt_memmap[chan_id] = file_mmap[["timestamp", "system_id", "x_location", "y_location", "head_angle"]]
-                    self._nvt_memmaps.append({chan_uid : file_mmap[["timestamp", "system_id", "test"]]})
-                    # print(self._nvt_memmap[chan_id][:5])
+                    # TODO: to support multiple files, we need to adjust range since i must be unique
+                    for i in range(len(nvt_selected_features)):
+                        file_mmap = self._get_file_map(filename)
 
-                    keys = [
-                        "recording_opened",
-                        "VideoFormat",
-                        "Resolution",
-                    ]
-                    d = {k: info[k] for k in keys if k in info}
-                    signal_annotations.append(d)
+                        chan_uid = (chan_name, str(i))
+                        self.nvt_filenames[chan_uid] = filename
+
+                        n_frames = copy.copy(file_mmap.shape[0])
+                        if n_frames:
+                            t_start = copy.copy(file_mmap[0][3])
+                            if i not in self.tracker_system_ids:
+                                self.tracker_system_ids.append(i)
+                        else:
+                            t_start = 0
+
+                        stream_prop = (info["sampling_rate"], n_frames, t_start)
+
+                        if stream_prop not in stream_props:
+                            stream_props[stream_prop] = {"stream_id": len(stream_props), "filenames": [filename]}
+                        else:
+                            stream_props[stream_prop]["filenames"].append(filename)
+                        stream_id = stream_props[stream_prop]["stream_id"]
+
+                        signal_channels.append((chan_name, str(i), info["sampling_rate"], _nvt_sample_dtype, units, gain, offset, stream_id))
+
+                        # NOTE: only loading the selected features here. "bitfield_points" and "colored_tgts" are not loaded due to their dimensionality
+                        # self._nvt_memmap[chan_id] = file_mmap[["timestamp", "system_id", "x_location", "y_location", "head_angle"]]
+                        self._nvt_memmaps.append({chan_uid : file_mmap[["timestamp", nvt_selected_features[i]]]})
+
+                        keys = [
+                            # "recording_opened",
+                            # "VideoFormat",
+                            # "Resolution",
+                        ]
+                        d = {k: info[k] for k in keys if k in info}
+                        signal_annotations.append(d)
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
@@ -451,13 +447,16 @@ class NeuralynxRawIO(BaseRawIO):
                     "ncs_segment_infos": ncsSegTimestampLimits,
                     "section_structure": section_structure,
                 }
+                # list with 1 element (a single dict), keys are chan_uids, values are memmaps
+                # print(ncs_stream_infos[stream_id]["segment_sig_memmaps"])
 
             else:
                 stream_filenames = [self.nvt_filenames[chuid] for chuid in stream_chan_uids]
+                nvt_memmaps, time_infos = self.generate_nvt_seg_infos()
 
                 nvt_stream_infos[stream_id] = {
-                    "segment_sig_memmaps": self._nvt_memmaps,
-                    "nvt_segment_infos": self.generate_nvt_seg_infos(),
+                    "segment_sig_memmaps": nvt_memmaps,
+                    "nvt_segment_infos": time_infos,
                     "section_structure": None,
                 }
 
@@ -482,11 +481,8 @@ class NeuralynxRawIO(BaseRawIO):
                     f"{stream_id}:{chan_ids}."
                 )
 
-        nvt_segments = 0
-        if nvt_stream_infos:
-            nvt_segments += sum(nvt_stream_info["nvt_segment_infos"].nb_segment for nvt_stream_info in nvt_stream_infos.values())
         if ref_sec_structure is not None:
-            self._nb_segment = len(ref_sec_structure.sects) + nvt_segments
+            self._nb_segment = len(ref_sec_structure.sects)
         else:
             # Use only a single segment if no ncs data is present
             self._nb_segment = 1
@@ -517,29 +513,30 @@ class NeuralynxRawIO(BaseRawIO):
                 t_stop = ncs_segment_info.t_stop[seg_idx]
                 self._signal_limits[seg_idx] = min_max_tuple(self._signal_limits[seg_idx], (t_start, t_stop))
         
-        seg_offset = len(ref_sec_structure.sects)
         for stream_id, stream_info in nvt_stream_infos.items():
             stream_mmaps = stream_info["segment_sig_memmaps"]
             for seg_idx, signal_dict in enumerate(stream_mmaps):
-                self._sigs_memmaps[seg_idx + seg_offset].update(signal_dict)
+                self._sigs_memmaps[seg_idx].update(signal_dict)
 
             nvt_segment_info = stream_info["nvt_segment_infos"]
             for seg_idx, (t_start, t_stop) in enumerate(nvt_segment_info.timestamp_limits):
-                self._timestamp_limits[seg_idx + seg_offset] = min_max_tuple(self._timestamp_limits[seg_idx], (t_start, t_stop))
+                self._timestamp_limits[seg_idx] = min_max_tuple(self._timestamp_limits[seg_idx], (t_start, t_stop))
 
             for seg_idx in range(nvt_segment_info.nb_segment):
                 t_start = nvt_segment_info.t_start[seg_idx]
                 t_stop = nvt_segment_info.t_stop[seg_idx]
-                self._signal_limits[seg_idx + seg_offset] = min_max_tuple(self._signal_limits[seg_idx], (t_start, t_stop))
+                self._signal_limits[seg_idx] = min_max_tuple(self._signal_limits[seg_idx], (t_start, t_stop))
 
         # precompute signal lengths within segments
         self._sigs_length = []
         if self._sigs_memmaps:
             for seg_idx, sig_container in enumerate(self._sigs_memmaps):
                 self._sigs_length.append({})
-                print(seg_idx, type(sig_container))
                 for chan_uid, sig_infos in sig_container.items():
-                    self._sigs_length[seg_idx][chan_uid] = int(sig_infos["nb_valid"].sum())
+                    if sig_infos[0].dtype == NeuralynxRawIO._ncs_dtype:
+                        self._sigs_length[seg_idx][chan_uid] = int(sig_infos["nb_valid"].sum())
+                    else:
+                        self._sigs_length[seg_idx][chan_uid] = sig_infos.shape[0]
 
         # Determine timestamp limits in nse, ntt, nev files by scanning them.
         ts0, ts1 = None, None
@@ -638,8 +635,7 @@ class NeuralynxRawIO(BaseRawIO):
                             value = signal_annotations[d][key]
                             values.append(value)
                         values = np.array(values)
-                        if values.ndim == 1:
-                            stream_ann["__array_annotations__"][key] = values
+                        stream_ann["__array_annotations__"][key] = values
 
                 else:
                     continue
@@ -706,7 +702,6 @@ class NeuralynxRawIO(BaseRawIO):
 
         if len(signals):
             sig = signals[0]
-            print("test", self._sigs_length[seg_index])
             return self._sigs_length[seg_index][(sig["name"], sig["id"])]
         else:
             raise ValueError(
@@ -720,7 +715,6 @@ class NeuralynxRawIO(BaseRawIO):
 
         # use first channel of stream as all channels in stream have a common t_start
         channel = self.header["signal_channels"][stream_mask][0]
-
         data = self._sigs_memmaps[seg_index][(channel["name"], channel["id"])]
         absolute_t_start = data["timestamp"][0]
 
@@ -747,34 +741,55 @@ class NeuralynxRawIO(BaseRawIO):
         -------
             array of samples, with each requested channel in a column
         """
-        if i_start is None:
-            i_start = 0
-        if i_stop is None:
-            i_stop = self.get_signal_size(block_index=block_index, seg_index=seg_index, stream_index=stream_index)
+        if ncs_unit in str(self.header["signal_streams"][stream_index]):
+            if i_start is None:
+                i_start = 0
+            if i_stop is None:
+                i_stop = self.get_signal_size(block_index=block_index, seg_index=seg_index, stream_index=stream_index)
 
-        block_start = i_start // NcsSection._RECORD_SIZE
-        block_stop = i_stop // NcsSection._RECORD_SIZE + 1
-        sl0 = i_start % 512
-        sl1 = sl0 + (i_stop - i_start)
+            block_start = i_start // NcsSection._RECORD_SIZE
+            block_stop = i_stop // NcsSection._RECORD_SIZE + 1
+            sl0 = i_start % 512
+            sl1 = sl0 + (i_stop - i_start)
 
-        if channel_indexes is None:
-            channel_indexes = slice(None)
+            if channel_indexes is None:
+                channel_indexes = slice(None)
 
-        stream_id = self.header["signal_streams"][stream_index]["id"]
-        stream_mask = self.header["signal_channels"]["stream_id"] == stream_id
+            stream_id = self.header["signal_streams"][stream_index]["id"]
+            stream_mask = self.header["signal_channels"]["stream_id"] == stream_id
 
-        channel_ids = self.header["signal_channels"][stream_mask][channel_indexes]["id"]
-        channel_names = self.header["signal_channels"][stream_mask][channel_indexes]["name"]
+            channel_ids = self.header["signal_channels"][stream_mask][channel_indexes]["id"]
+            channel_names = self.header["signal_channels"][stream_mask][channel_indexes]["name"]
 
-        # create buffer for samples
-        sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="int16")
+            # create buffer for samples
+            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="int16")
 
-        for i, chan_uid in enumerate(zip(channel_names, channel_ids)):
-            data = self._sigs_memmaps[seg_index][chan_uid]
-            sub = data[block_start:block_stop]
-            sigs_chunk[:, i] = sub["samples"].flatten()[sl0:sl1]
+            for i, chan_uid in enumerate(zip(channel_names, channel_ids)):
+                data = self._sigs_memmaps[seg_index][chan_uid]
+                sub = data[block_start:block_stop]
+                sigs_chunk[:, i] = sub["samples"].flatten()[sl0:sl1]
+            return sigs_chunk
 
-        return sigs_chunk
+        else:
+            if i_start is None:
+                i_start = 0
+            if i_stop is None:
+                i_stop = self.get_signal_size(block_index=block_index, seg_index=seg_index, stream_index=stream_index)
+
+            stream_id = self.header["signal_streams"][stream_index]["id"]
+            stream_mask = self.header["signal_channels"]["stream_id"] == stream_id
+
+            # HACK: for some reason channel_ids and channel_names have an extra dimension, adding [0] fixes it temporarily
+            channel_ids = self.header["signal_channels"][stream_mask][channel_indexes]["id"][0]
+            channel_names = self.header["signal_channels"][stream_mask][channel_indexes]["name"][0]
+
+            sig_chunk = np.zeros((i_stop - i_start, len(nvt_selected_features)), dtype="int32")
+
+            for i, chan_uid in enumerate(zip(channel_names, channel_ids)):
+                data = self._sigs_memmaps[seg_index][chan_uid]
+                sig_chunk[:, i] = data[nvt_selected_features[i]]
+
+            return sig_chunk
 
     def _spike_count(self, block_index, seg_index, unit_index):
         chan_uid, unit_id = self.internal_unit_ids[unit_index]
@@ -999,32 +1014,46 @@ class NeuralynxRawIO(BaseRawIO):
     
     def generate_nvt_seg_infos(self):
         """
+        NOTE: this will not work on multiple nvt files, this is just a temporary solution
+        maybe add a check for multiple nvt files and raise an error if there are more than one
         TODO: write this later.
         """
-        # HACK: nb_segments assumed to be 1 for now
+        # HACK: nb_segments assumed to be 1, it really doesn't matter for now
         seg_time_limits = SegmentTimeLimits(
             nb_segment=1, t_start=[], t_stop=[], length=[], timestamp_limits=[]
         )
 
+        memmaps ={}
+        prev_chan_name = None
         ts0, ts1 = None, None
         for nvt_memmap in self._nvt_memmaps:
-            for _, data in nvt_memmap.items():
-                seg_time_limits.length.append(data.shape[0])
-                ts = data["timestamp"]
+            for key, data in nvt_memmap.items():
+                chan_name = key[0]
+                if chan_name != prev_chan_name:
+                    prev_chan_name = chan_name
+                    seg_time_limits.length.append(data.shape[0])
+                    ts = data["timestamp"]
 
-                if ts.size == 0:
-                    continue
-                if ts0 is None:
                     ts0 = ts[0]
                     ts1 = ts[-1]
 
-                ts0, ts1 = min(ts0, ts[0]), max(ts1, ts[-1])
-                seg_time_limits.t_start.append(ts0 / 1e6)
-                seg_time_limits.t_stop.append(ts1 / 1e6)
-                seg_time_limits.timestamp_limits.append((ts0, ts1))
+                    ts0, ts1 = min(ts0, ts[0]), max(ts1, ts[-1])
+                    seg_time_limits.t_start.append(ts0 / 1e6)
+                    seg_time_limits.t_stop.append(ts1 / 1e6)
+                    seg_time_limits.timestamp_limits.append((ts0, ts1))
 
-        return seg_time_limits
+                if chan_name not in memmaps:
+                    memmaps[chan_name] = {}
+                memmaps[chan_name][key] = data
 
+
+        memmaps = list(memmaps.values())
+
+        return memmaps, seg_time_limits
+
+ncs_unit = "#packet"
+nvt_unit = "#frame"
+nvt_selected_features = ["x_location", "y_location", "head_angle"]
 
 # time limits for set of segments
 SegmentTimeLimits = namedtuple("SegmentTimeLimits", ["nb_segment", "t_start", "t_stop", "length", "timestamp_limits"])
