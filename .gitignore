@@ -81,4 +81,4 @@ doc/*.nwb
 *.smr
 B95.zip
 grouped_ephys
-test.py
+nvt_test.py
