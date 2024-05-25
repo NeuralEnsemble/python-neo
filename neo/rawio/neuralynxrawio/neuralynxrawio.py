@@ -54,7 +54,6 @@ from ..baserawio import (
 )
 from operator import itemgetter
 import numpy as np
-import pdb
 import os
 import pathlib
 import copy
@@ -172,6 +171,8 @@ class NeuralynxRawIO(BaseRawIO):
     def _parse_header(self):
         _ncs_sample_dtype = [dtype[1] for dtype in NeuralynxRawIO._ncs_dtype if dtype[0] == "samples"][0]
         _nvt_sample_dtype = [dtype[1] for dtype in NeuralynxRawIO._nvt_dtype if dtype[0] == "x_location"][0]
+
+        nvt_counter = 0
 
         stream_channels = []
         signal_channels = []
@@ -363,8 +364,11 @@ class NeuralynxRawIO(BaseRawIO):
 
                     self._nev_memmap[chan_id] = data
 
-                # nvt files are passed as signals bundled into signal streams
+                # nvt file is passed as signals bundled into a signal stream separate from the ncs stream
                 elif ext == "nvt":
+                    nvt_counter += 1
+                    if nvt_counter > 1:
+                        raise ValueError("Reading multiple nvt files in one session are not yet supported.")
 
                     units = "dimensionless"
                     gain = 1.0
@@ -399,10 +403,11 @@ class NeuralynxRawIO(BaseRawIO):
                         # self._nvt_memmap[chan_id] = file_mmap[["timestamp", "system_id", "x_location", "y_location", "head_angle"]]
                         self._nvt_memmaps.append({chan_uid : file_mmap[["timestamp", nvt_selected_features[i]]]})
 
+                        info["Resolution"] = str(info["Resolution"])
                         keys = [
-                            # "recording_opened",
-                            # "VideoFormat",
-                            # "Resolution",
+                            "recording_opened",
+                            "VideoFormat",
+                            "Resolution",
                         ]
                         d = {k: info[k] for k in keys if k in info}
                         signal_annotations.append(d)
@@ -635,7 +640,8 @@ class NeuralynxRawIO(BaseRawIO):
                             value = signal_annotations[d][key]
                             values.append(value)
                         values = np.array(values)
-                        stream_ann["__array_annotations__"][key] = values
+                        if values.ndim == 1:
+                            stream_ann["__array_annotations__"][key] = values
 
                 else:
                     continue
