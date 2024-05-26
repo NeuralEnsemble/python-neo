@@ -1,12 +1,12 @@
 """
 Class for reading data from Neuralynx files.
-This IO supports NCS, NEV, NSE and NTT file formats.
-
+This IO supports NCS, NEV, NSE, NTT and NVT file formats.
 
 NCS contains the sampled signal for one channel
 NEV contains events
 NSE contains spikes and waveforms for mono electrodes
 NTT contains spikes and waveforms for tetrodes
+NVT contains coordinates and head angles for video tracking
 
 All Neuralynx files contain a 16 kilobyte text header followed by 0 or more fixed length records.
 The format of the header has never been formally specified, however, the Neuralynx programs which
@@ -37,6 +37,17 @@ to one Segment.
 If .Ncs files are loaded these determine the Segments of data to be loaded. Events and spiking data
 outside of Segments defined by .Ncs files will be ignored. To access all time point data in a
 single Segment load a session excluding .Ncs files.
+
+This RawIO only partially support the NVT file format, limitations include:
+    * Only loads the dnextracted_x, dnextracted_y and dnextracted_angle data fields from NVT files. 
+      Other fields that could be potentially useful (dwPoints and dntargets) are not yet supported 
+      due to their format.
+    * Only a single NVT file can be loaded per session.
+    * The NVT is assumed to be in the same segment (sharing a common clock (time basis)) as the 
+      NCS files.
+
+The x and y pixel coordinates and animal head angle from the nvt file are treated as dimensionless 
+analog signals bundled into a signal stream separate from the NCS stream.
 
 Continuous data streams are ordered by descending sampling rate.
 
@@ -91,10 +102,15 @@ class NeuralynxRawIO(BaseRawIO):
             consecutive data packet is more than one sample interval.
           * strict_gap_mode = False then a gap has an increased tolerance. Some new system with different clock need this option
             otherwise, too many gaps are detected
+    ignore_nvt : bool
+        Ignore NVT files when loading data. This is only a temporary argument before
+        support for multiple NVT files are added. Turn it on if there are multiple NVT 
+        files in the directory.
+        Default: False
 
     Notes
     -----
-    * This IO supports NCS, NEV, NSE and NTT file formats (not NVT or NRD yet)
+    * This IO supports NCS, NEV, NSE and NTT file formats (not NRD yet)
 
     * These variations of header format and possible differences between the stated sampling frequency
       and actual sampling frequency can create apparent time discrepancies in .Ncs files. Additionally,
@@ -120,7 +136,7 @@ class NeuralynxRawIO(BaseRawIO):
      Display all information about signal channels, units, segment size....
     """
 
-    extensions = ["nse", "ncs", "nev", "ntt", "nvt", "nrd"]  # nvt and nrd are not yet supported
+    extensions = ["nse", "ncs", "nev", "ntt", "nvt", "nrd"]  # nrd is not yet supported
     rawmode = "one-dir"
 
     _ncs_dtype = [
@@ -131,21 +147,9 @@ class NeuralynxRawIO(BaseRawIO):
         ("samples", "int16", (NcsSection._RECORD_SIZE)),
     ]
 
-    _nvt_dtype = [
-        ("swstx", "uint16"),
-        ("system_id", "uint16"),
-        ("data_size", "uint16"),
-        ("timestamp", "uint64"),
-        ("bitfield_points", "uint32", (400,)),
-        ("unused", "int16"),
-        ("x_location", "int32"),
-        ("y_location", "int32"),
-        ("head_angle", "int32"),
-        ("colored_tgts", "int32", (50,)),
-    ]
 
     def __init__(
-        self, dirname="", filename="", exclude_filename=None, keep_original_times=False, strict_gap_mode=True, **kargs
+        self, dirname="", filename="", exclude_filename=None, keep_original_times=False, strict_gap_mode=True, ignore_nvt=False, **kargs
     ):
 
         if dirname != "":
@@ -160,6 +164,7 @@ class NeuralynxRawIO(BaseRawIO):
         self.keep_original_times = keep_original_times
         self.strict_gap_mode = strict_gap_mode
         self.exclude_filename = exclude_filename
+        self.ignore_nvt = ignore_nvt
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
@@ -170,7 +175,7 @@ class NeuralynxRawIO(BaseRawIO):
 
     def _parse_header(self):
         _ncs_sample_dtype = [dtype[1] for dtype in NeuralynxRawIO._ncs_dtype if dtype[0] == "samples"][0]
-        _nvt_sample_dtype = [dtype[1] for dtype in NeuralynxRawIO._nvt_dtype if dtype[0] == "x_location"][0]
+        _nvt_sample_dtype = [dtype[1] for dtype in _nvt_dtype if dtype[0] == "x_location"][0]
 
         nvt_counter = 0
 
@@ -182,7 +187,7 @@ class NeuralynxRawIO(BaseRawIO):
         self.ncs_filenames = OrderedDict()  # (chan_name, chan_id): filename
         self.nse_ntt_filenames = OrderedDict()  # (chan_name, chan_id): filename
         self.nev_filenames = OrderedDict()  # chan_id: filename
-        self.nvt_filenames = OrderedDict()  # chan_id: filename
+        self.nvt_filenames = OrderedDict()
 
         self.file_headers = OrderedDict()  # filename: file header dict
 
@@ -197,7 +202,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._empty_nse_ntt = []
         self._empty_nvt = []
 
-        # Explore the directory looking for ncs, nev, nse and ntt
+        # Explore the directory looking for ncs, nev, nse, ntt and nvt files
         # and construct channels headers.
         signal_annotations = []
         unit_annotations = []
@@ -237,7 +242,7 @@ class NeuralynxRawIO(BaseRawIO):
             if ext not in self.extensions:
                 continue
 
-            # Skip Ncs files with only header. Other empty file types
+            # Skip Ncs and nvt files with only header. Other empty file types
             # will have an empty dataset constructed later.
             if (os.path.getsize(filename) <= NlxHeader.HEADER_SIZE) and ext in ["ncs", "nvt"]:
                 if ext == "ncs":
@@ -365,16 +370,20 @@ class NeuralynxRawIO(BaseRawIO):
                     self._nev_memmap[chan_id] = data
 
                 # nvt file is passed as signals bundled into a signal stream separate from the ncs stream
-                elif ext == "nvt":
+                elif ext == "nvt" and not self.ignore_nvt:
                     nvt_counter += 1
                     if nvt_counter > 1:
-                        raise ValueError("Reading multiple nvt files in one session are not yet supported.")
+                        raise ValueError("""
+                                         Reading multiple nvt files in one session are not yet supported.
+                                         Try loading each nvt files separately or set ignore_nvt=True.
+                                         """)
 
                     units = "dimensionless"
                     gain = 1.0
                     offset = info["CameraDelay"] # NOTE: assuming that the offset means time offset
 
-                    # TODO: to support multiple files, we need to adjust range since i must be unique
+                    # treating each feature as a separate channel to emulate ncs channels
+                    # TODO: to support multiple files, we need to adjust range since i must be unique i's
                     for i in range(len(nvt_selected_features)):
                         file_mmap = self._get_file_map(filename)
 
@@ -400,7 +409,6 @@ class NeuralynxRawIO(BaseRawIO):
                         signal_channels.append((chan_name, str(i), info["sampling_rate"], _nvt_sample_dtype, units, gain, offset, stream_id))
 
                         # NOTE: only loading the selected features here. "bitfield_points" and "colored_tgts" are not loaded due to their dimensionality
-                        # self._nvt_memmap[chan_id] = file_mmap[["timestamp", "system_id", "x_location", "y_location", "head_angle"]]
                         self._nvt_memmaps.append({chan_uid : file_mmap[["timestamp", nvt_selected_features[i]]]})
 
                         info["Resolution"] = str(info["Resolution"])
@@ -438,7 +446,7 @@ class NeuralynxRawIO(BaseRawIO):
         nvt_stream_infos = {}
 
         # Read ncs files of each stream for gap detection and nb_segment computation.
-        # Since nvt files are passed as signals, we need to filter them out.
+        # HACK: filter out the nvt data for now since nvt files are passed as signals, and same segment is assumed.
         for stream_id in np.unique(signal_channels["stream_id"]):
             stream_channels = signal_channels[signal_channels["stream_id"] == stream_id]
             stream_chan_uids = zip(stream_channels["name"], stream_channels["id"])
@@ -452,8 +460,6 @@ class NeuralynxRawIO(BaseRawIO):
                     "ncs_segment_infos": ncsSegTimestampLimits,
                     "section_structure": section_structure,
                 }
-                # list with 1 element (a single dict), keys are chan_uids, values are memmaps
-                # print(ncs_stream_infos[stream_id]["segment_sig_memmaps"])
 
             else:
                 stream_filenames = [self.nvt_filenames[chuid] for chuid in stream_chan_uids]
@@ -689,7 +695,7 @@ class NeuralynxRawIO(BaseRawIO):
             return np.memmap(filename, dtype=nev_dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
         
         elif suffix == "nvt":
-            return np.memmap(filename, dtype=NeuralynxRawIO._nvt_dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
+            return np.memmap(filename, dtype=_nvt_dtype, mode="r", offset=NlxHeader.HEADER_SIZE)
 
         else:
             raise ValueError(f"Unknown file suffix {suffix}")
@@ -785,7 +791,7 @@ class NeuralynxRawIO(BaseRawIO):
             stream_id = self.header["signal_streams"][stream_index]["id"]
             stream_mask = self.header["signal_channels"]["stream_id"] == stream_id
 
-            # HACK: for some reason channel_ids and channel_names have an extra dimension, adding [0] fixes it temporarily
+            # HACK: for some reason channel_ids and channel_names have an extra dimension, adding [0] fixes it
             channel_ids = self.header["signal_channels"][stream_mask][channel_indexes]["id"][0]
             channel_names = self.header["signal_channels"][stream_mask][channel_indexes]["name"][0]
 
@@ -1020,9 +1026,9 @@ class NeuralynxRawIO(BaseRawIO):
     
     def generate_nvt_seg_infos(self):
         """
-        NOTE: this will not work on multiple nvt files, this is just a temporary solution
-        maybe add a check for multiple nvt files and raise an error if there are more than one
-        TODO: write this later.
+        Since NVT files are processed in a similar way to NCS files, this RawIO pass them in similar 
+        data structures internally. this function simply emulates the scan_stream_ncs_files function
+        for NVT files so that the data can be processed in the same way.
         """
         # HACK: nb_segments assumed to be 1, it really doesn't matter for now
         seg_time_limits = SegmentTimeLimits(
@@ -1052,9 +1058,7 @@ class NeuralynxRawIO(BaseRawIO):
                     memmaps[chan_name] = {}
                 memmaps[chan_name][key] = data
 
-
         memmaps = list(memmaps.values())
-
         return memmaps, seg_time_limits
 
 ncs_unit = "#packet"
@@ -1078,6 +1082,18 @@ nev_dtype = [
     ("event_string", "S128"),
 ]
 
+_nvt_dtype = [
+    ("swstx", "uint16"),
+    ("system_id", "uint16"),
+    ("data_size", "uint16"),
+    ("timestamp", "uint64"),
+    ("bitfield_points", "uint32", (400,)),
+    ("unused", "int16"),
+    ("x_location", "int32"),
+    ("y_location", "int32"),
+    ("head_angle", "int32"),
+    ("colored_tgts", "int32", (50,)),
+]
 
 def get_nse_or_ntt_dtype(info, ext):
     """
