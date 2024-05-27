@@ -150,7 +150,7 @@ class TestNeuralynxRawIO(
         self.assertEqual(len(rawio.ncs_filenames), 1)
         self.assertEqual(len(rawio.nev_filenames), 1)
         sigHdrs = rawio.header["signal_channels"]
-        self.assertEqual(sigHdrs.size, 1)
+        self.assertEqual(sigHdrs.size, 4)
         self.assertEqual(sigHdrs[0][0], "CSC1")
         self.assertEqual(sigHdrs[0][1], "58")
         self.assertEqual(len(rawio.header["spike_channels"]), 8)
