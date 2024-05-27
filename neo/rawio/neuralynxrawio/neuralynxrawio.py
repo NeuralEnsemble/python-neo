@@ -68,6 +68,7 @@ import numpy as np
 import os
 import pathlib
 import copy
+import warnings
 from collections import namedtuple, OrderedDict
 
 from neo.rawio.neuralynxrawio.ncssections import NcsSection, NcsSectionsFactory
@@ -446,8 +447,9 @@ class NeuralynxRawIO(BaseRawIO):
         nvt_stream_infos = {}
 
         # Read ncs files of each stream for gap detection and nb_segment computation.
-        # HACK: filter out the nvt data for now since nvt files are passed as signals, and same segment is assumed.
-        for stream_id in np.unique(signal_channels["stream_id"]):
+        # signal channels are sorted by dtype so that ncs files are read first
+        sorted_signal_channels = np.sort(signal_channels, order=["dtype"])
+        for stream_id in np.unique(sorted_signal_channels["stream_id"]):
             stream_channels = signal_channels[signal_channels["stream_id"] == stream_id]
             stream_chan_uids = zip(stream_channels["name"], stream_channels["id"])
             # ncs files have dtype int16 while nvt files have dtype int32, so we use this to filter out nvt files
@@ -462,8 +464,12 @@ class NeuralynxRawIO(BaseRawIO):
                 }
 
             else:
+                # TODO: this way of dealing with segments is not ideal, but it is a temporary solution
+                ref_stream_id = list(ncs_stream_infos.keys())[0]
+                nb_segment = len(ncs_stream_infos[ref_stream_id]["section_structure"].sects)
+
                 stream_filenames = [self.nvt_filenames[chuid] for chuid in stream_chan_uids]
-                nvt_memmaps, time_infos = self.generate_nvt_seg_infos()
+                nvt_memmaps, time_infos = self.generate_nvt_seg_infos(nb_segment)
 
                 nvt_stream_infos[stream_id] = {
                     "segment_sig_memmaps": nvt_memmaps,
@@ -668,6 +674,13 @@ class NeuralynxRawIO(BaseRawIO):
                 # ~ ev_ann['nttl'] =
                 # ~ ev_ann['digital_marker'] =
                 # ~ ev_ann['analog_marker'] =
+        
+        if self._nb_segment > 1 and self._nvt_memmaps != []:
+            warnings.warn(
+                "\nMultiple segments detected, data from nvt file is duplicated to each segment. "
+                "Loading nvt files along with multi-segmental ncs data are currently not well supported, "
+                "try setting ignore_nvt=True or load nvt files separately.",
+                UserWarning)
 
     @staticmethod
     def _get_file_map(filename):
@@ -1024,15 +1037,18 @@ class NeuralynxRawIO(BaseRawIO):
 
         return memmaps, seg_time_limits, stream_section_structure
     
-    def generate_nvt_seg_infos(self):
+    def generate_nvt_seg_infos(self, nb_segment):
         """
         Since NVT files are processed in a similar way to NCS files, this RawIO pass them in similar 
         data structures internally. this function simply emulates the scan_stream_ncs_files function
         for NVT files so that the data can be processed in the same way.
+        TODO: data from the nvt file is put in segment[0] by default without any segmenting. This is
+        causing KeyError when ncs data contains multiple segments. So we are populating all other
+        segments other than the first with copies. This is only a temporary solution.
         """
         # HACK: nb_segments assumed to be 1, it really doesn't matter for now
         seg_time_limits = SegmentTimeLimits(
-            nb_segment=1, t_start=[], t_stop=[], length=[], timestamp_limits=[]
+            nb_segment=nb_segment, t_start=[], t_stop=[], length=[], timestamp_limits=[]
         )
 
         memmaps ={}
@@ -1043,22 +1059,24 @@ class NeuralynxRawIO(BaseRawIO):
                 chan_name = key[0]
                 if chan_name != prev_chan_name:
                     prev_chan_name = chan_name
-                    seg_time_limits.length.append(data.shape[0])
                     ts = data["timestamp"]
 
                     ts0 = ts[0]
                     ts1 = ts[-1]
 
                     ts0, ts1 = min(ts0, ts[0]), max(ts1, ts[-1])
-                    seg_time_limits.t_start.append(ts0 / 1e6)
-                    seg_time_limits.t_stop.append(ts1 / 1e6)
-                    seg_time_limits.timestamp_limits.append((ts0, ts1))
+                    for i in range(nb_segment):
+                        seg_time_limits.length.append(data.shape[0])
+                        seg_time_limits.t_start.append(ts0 / 1e6)
+                        seg_time_limits.t_stop.append(ts1 / 1e6)
+                        seg_time_limits.timestamp_limits.append((ts0, ts1))
 
                 if chan_name not in memmaps:
                     memmaps[chan_name] = {}
                 memmaps[chan_name][key] = data
 
         memmaps = list(memmaps.values())
+        memmaps = [data for data in memmaps for _ in range(nb_segment)]
         return memmaps, seg_time_limits
 
 ncs_unit = "#packet"
