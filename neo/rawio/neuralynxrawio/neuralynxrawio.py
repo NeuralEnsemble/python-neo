@@ -804,15 +804,15 @@ class NeuralynxRawIO(BaseRawIO):
             stream_id = self.header["signal_streams"][stream_index]["id"]
             stream_mask = self.header["signal_channels"]["stream_id"] == stream_id
 
-            # HACK: for some reason channel_ids and channel_names have an extra dimension, adding [0] fixes it
-            channel_ids = self.header["signal_channels"][stream_mask][channel_indexes]["id"][0]
-            channel_names = self.header["signal_channels"][stream_mask][channel_indexes]["name"][0]
+            # HACK: for some reason channel_ids and channel_names have an extra dimension, adding .flatten() fixes it
+            channel_ids = self.header["signal_channels"][stream_mask][channel_indexes]["id"].flatten()
+            channel_names = self.header["signal_channels"][stream_mask][channel_indexes]["name"].flatten()
 
-            sig_chunk = np.zeros((i_stop - i_start, len(nvt_selected_features)), dtype="int32")
+            sig_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype="int32")
 
             for i, chan_uid in enumerate(zip(channel_names, channel_ids)):
                 data = self._sigs_memmaps[seg_index][chan_uid]
-                sig_chunk[:, i] = data[nvt_selected_features[i]]
+                sig_chunk[:, i] = data[nvt_selected_features[int(chan_uid[1])]][i_start:i_stop]
 
             return sig_chunk
 
