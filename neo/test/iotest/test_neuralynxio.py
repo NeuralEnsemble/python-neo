@@ -108,7 +108,7 @@ class TestCheetah_v563(CommonNeuralynxIOTest, unittest.TestCase):
         # There are two segments due to gap in recording
         self.assertEqual(len(block.segments), 2)
         for seg in block.segments:
-            self.assertEqual(len(seg.analogsignals), 1)
+            self.assertEqual(len(seg.analogsignals), 2)
             self.assertEqual(seg.analogsignals[0].shape[-1], 2)
             self.assertEqual(seg.analogsignals[0].sampling_rate, 2.0 * pq.kHz)
             self.assertEqual(len(seg.spiketrains), 8)
@@ -271,7 +271,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
             block = nio.read_block()
 
             # check that data agrees in first segment first channel only
-            for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
+            for anasig_id, anasig in enumerate(block.segments[0].analogsignals[0]):
                 chid = anasig.array_annotations["channel_ids"][0]
 
                 chname = str(anasig.array_annotations["channel_names"][0])
