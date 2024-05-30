@@ -20,8 +20,6 @@ Author: Samuel Garcia (Initial), Zach McKenzie & Heberto Mayorquin (Updates)
 """
 
 from pathlib import Path
-import os
-from collections import OrderedDict
 from packaging.version import Version
 import warnings
 
@@ -44,8 +42,12 @@ class IntanRawIO(BaseRawIO):
     Parameters
     ----------
     filename: str, default: ''
-        name of the 'rhd' or 'rhs' data/header file
-
+         name of the 'rhd' or 'rhs' data/header file
+    ignore_integrity_checks: bool, default: False
+        If True, data that violates integrity assumptions will be loaded. At the moment the only integrity
+        check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
+        the attribute `discontinuous_timestamps` to True if the timestamps are not continous. This attribute can be checked 
+        after parsing the header to see if the timestamps are continuous or not.
     Notes
     -----
     * The Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
@@ -99,10 +101,13 @@ class IntanRawIO(BaseRawIO):
     extensions = ["rhd", "rhs", "dat"]
     rawmode = "one-file"
 
-    def __init__(self, filename=""):
+    def __init__(self, filename="", ignore_integrity_checks=False):
 
         BaseRawIO.__init__(self)
         self.filename = filename
+        self.ignore_integrity_checks = ignore_integrity_checks
+        self.discontinuous_timestamps = False
+
 
     def _source_name(self):
         return self.filename
@@ -202,11 +207,18 @@ class IntanRawIO(BaseRawIO):
         elif self.file_format == "one-file-per-channel":
             time_stream_index = max(self._raw_data.keys())
             timestamp = self._raw_data[time_stream_index][0]
-
-        if not np.all(np.diff(timestamp) == 1):
-            raise NeoReadWriteError(
-                f"Timestamp have gaps, this could be due to a corrupted file or an inappropriate file merge"
-            )
+        
+        discontinuous_timestamps = np.diff(timestamp) != 1
+        timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
+        if timestamps_are_not_contiguous:
+            self.discontinuous_timestamps = True
+            if not self.ignore_integrity_checks:
+                error_msg = (
+                    "Timestamps are not continuous, this could be due to a corrupted file or an inappropriate file merge. "
+                    "Initialize the reader with `ignore_integrity_checks=True` to ignore this error and open the file. \n"
+                    f"Timestamps around discontinuities: {timestamp[discontinuous_timestamps]}"
+                )
+                raise NeoReadWriteError(error_msg)
 
         # signals
         signal_channels = []
