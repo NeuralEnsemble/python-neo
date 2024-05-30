@@ -695,7 +695,7 @@ def read_rhs(filename, file_format: str):
                 chan_info["gain"] = 1.0
                 chan_info["offset"] = 0.0
                 chan_info["dtype"] = "uint16"
-                ordered_channels_info.append(chan_info)
+                ordered_channel_info.append(chan_info)
                 data_dtype[sig_type] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
@@ -982,7 +982,7 @@ def read_rhd(filename, file_format: str):
                 chan_info["gain"] = 1.0
                 chan_info["offset"] = 0.0
                 chan_info["dtype"] = "uint16"
-                ordered_channels_info.append(chan_info)
+                ordered_channel_info.append(chan_info)
                 data_dtype[sig_type] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
