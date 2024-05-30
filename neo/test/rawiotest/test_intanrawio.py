@@ -12,12 +12,14 @@ class TestIntanRawIO(
     rawioclass = IntanRawIO
     entities_to_download = ["intan"]
     entities_to_test = [
-        "intan/intan_rhs_test_1.rhs",
-        "intan/intan_rhd_test_1.rhd",
-        "intan/intan_fpc_test_231117_052630/info.rhd",
-        "intan/intan_fps_test_231117_052500/info.rhd",
-        "intan/intan_fpc_rhs_test_240329_091637/info.rhs",
-        "intan/intan_fps_rhs_test_240329_091536/info.rhs",
+        "intan/intan_rhs_test_1.rhs",  # Format header-attached 
+        "intan/intan_rhd_test_1.rhd",  # Format header-attached
+        "intan/rhs_fpc_multistim_240514_082243/rhs_fpc_multistim_240514_082243.rhs",  # Format header-attached newer version
+        "intan/intan_fpc_test_231117_052630/info.rhd",  # Format one-file-per-channel
+        "intan/intan_fps_test_231117_052500/info.rhd",  # Format one file per signal
+        "intan/intan_fpc_rhs_test_240329_091637/info.rhs",  # Format one-file-per-channel
+        "intan/intan_fps_rhs_test_240329_091536/info.rhs",   # Format one-file-per-signal
+        "intan/rhd_fpc_multistim_240514_082044/info.rhd",  # Multiple digital channels one-file-per-channel rhd
     ]
 
 
@@ -47,5 +49,6 @@ class TestIntanRawIO(
         np.testing.assert_array_equal(signal_array_annotations["native_order"][:10], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         np.testing.assert_array_equal(signal_array_annotations["spike_scope_digital_edge_polarity"][:10], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
         np.testing.assert_array_equal(signal_array_annotations["board_stream_num"][:10], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
 if __name__ == "__main__":
     unittest.main()

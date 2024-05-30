@@ -566,10 +566,12 @@ def extract_stream_info(meta_file, meta):
         info["digital_channels"] = []
         info["analog_channels"] = [channel for channel in info["channel_names"] if not channel.startswith("XD")]
         # Digital/event channels are encoded within the digital word, so that will need more handling
-        for item in meta["niXDChans1"].split(","):
-            if ":" in item:
-                start, end = map(int, item.split(":"))
-                info["digital_channels"].extend([f"XD{i}" for i in range(start, end + 1)])
-            else:
-                info["digital_channels"].append(f"XD{int(item)}")
+        if meta.get("niXDChans1", "") != "":
+            nixd_chans1_items = meta["niXDChans1"].split(",")
+            for item in nixd_chans1_items:
+                if ":" in item:
+                    start, end = map(int, item.split(":"))
+                    info["digital_channels"].extend([f"XD{i}" for i in range(start, end + 1)])
+                else:
+                    info["digital_channels"].append(f"XD{int(item)}")
     return info

@@ -34,7 +34,6 @@ from .baserawio import (
     _signal_stream_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
-    _common_sig_characteristics,
 )
 
 
@@ -58,11 +57,13 @@ class IntanRawIO(BaseRawIO):
     'one-file-per-channel' which have a header file called 'info.rhd' or 'info.rhs' and a series
     of binary files with the '.dat' suffix
 
+    * The reader can handle three file formats 'header-attached', 'one-file-per-signal' and
+    'one-file-per-channel'.
+
     * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
     depending on the port in which they were recorded along with the following
-    additional channels for RHD:
-
-    0: 'RHD2000 amplifier channel'
+    additional streams.
+    0: 'RHD2000' amplifier channel
     1: 'RHD2000 auxiliary input channel',
     2: 'RHD2000 supply voltage channel',
     3: 'USB board ADC input channel',
@@ -79,9 +80,9 @@ class IntanRawIO(BaseRawIO):
     10: 'DC Amplifier channel',
     11: 'Stim channel',
 
-    * Due to the structure of the digital input and output channels these can be accessed
-    as one long vector, which must be post-processed in the case of 'header-attached' or
-    'one-file-per-stream' formats.
+    * For the "header-attached" and "one-file-per-signal" formats, the structure of the digital input and output channels is
+    one long vector, which must be post-processed to extract individual digital channel information. 
+    See the intantech website for more information on performing this post-processing.
 
     Examples
     --------
@@ -585,7 +586,6 @@ def read_rhs(filename, file_format: str):
 
     # 0: RHS2000 amplifier channel.
     for chan_info in channels_by_type[0]:
-        name = chan_info["native_channel_name"]
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
@@ -599,6 +599,7 @@ def read_rhs(filename, file_format: str):
             chan_info["dtype"] = "int16"
         ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
+            name = chan_info["native_channel_name"]
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
             data_dtype[0] = "int16"
@@ -607,8 +608,8 @@ def read_rhs(filename, file_format: str):
         # if we have dc amp we need to grab the correct number of channels
         channel_number_dict[10] = channel_number_dict[0]
         for chan_info in channels_by_type[0]:
-            name = chan_info["native_channel_name"]
             chan_info_dc = dict(chan_info)
+            name = chan_info["native_channel_name"]
             chan_info_dc["native_channel_name"] = name + "_DC"
             chan_info_dc["sampling_rate"] = sr
             chan_info_dc["units"] = "mV"
@@ -627,8 +628,8 @@ def read_rhs(filename, file_format: str):
     if file_format != "one-file-per-channel":
         channel_number_dict[11] = channel_number_dict[0]  # should be one stim / amplifier channel
         for chan_info in channels_by_type[0]:
-            name = chan_info["native_channel_name"]
             chan_info_stim = dict(chan_info)
+            name = chan_info["native_channel_name"]
             chan_info_stim["native_channel_name"] = name + "_STIM"
             chan_info_stim["sampling_rate"] = sr
             # stim channel are complicated because they are coded
@@ -650,12 +651,8 @@ def read_rhs(filename, file_format: str):
 
     # 3: Analog input channel.
     # 4: Analog output channel.
-    for sig_type in [
-        3,
-        4,
-    ]:
+    for sig_type in [3, 4]:
         for chan_info in channels_by_type[sig_type]:
-            name = chan_info["native_channel_name"]
             chan_info["sampling_rate"] = sr
             chan_info["units"] = "V"
             chan_info["gain"] = 0.0003125
@@ -663,6 +660,7 @@ def read_rhs(filename, file_format: str):
             chan_info["dtype"] = "uint16"
             ordered_channel_info.append(chan_info)
             if file_format == "header-attached":
+                name = chan_info["native_channel_name"]
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
             else:
                 data_dtype[sig_type] = "uint16"
@@ -670,23 +668,34 @@ def read_rhs(filename, file_format: str):
     # 5: Digital input channel.
     # 6: Digital output channel.
     for sig_type in [5, 6]:
-        if len(channels_by_type[sig_type]) > 0:
-            name = {5: "DIGITAL-IN", 6: "DIGITAL-OUT"}[sig_type]
-            chan_info = channels_by_type[sig_type][0]
-            # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
-            # make this memory map work correctly. So since our digital data is not organized
-            # by channel like analog/ADC are we have to overwrite the native name to create
-            # a single permanent name that we can find with channel id
-            chan_info["native_channel_name"] = name  # overwite to allow memmap to work
-            chan_info["sampling_rate"] = sr
-            chan_info["units"] = "TTL"  # arbitrary units TTL for logic
-            chan_info["gain"] = 1.0
-            chan_info["offset"] = 0.0
-            chan_info["dtype"] = "uint16"
-            ordered_channel_info.append(chan_info)
-            if file_format == "header-attached":
-                data_dtype += [(name, "uint16", BLOCK_SIZE)]
-            else:
+        if file_format in ["header-attached", "one-file-per-signal"]:
+            if len(channels_by_type[sig_type]) > 0:
+                name = {5: "DIGITAL-IN", 6: "DIGITAL-OUT"}[sig_type]
+                chan_info = channels_by_type[sig_type][0]
+                # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
+                # make this memory map work correctly. So since our digital data is not organized
+                # by channel like analog/ADC are we have to overwrite the native name to create
+                # a single permanent name that we can find with channel id
+                chan_info["native_channel_name"] = name
+                chan_info["sampling_rate"] = sr
+                chan_info["units"] = "TTL"  # arbitrary units TTL for logic
+                chan_info["gain"] = 1.0
+                chan_info["offset"] = 0.0
+                chan_info["dtype"] = "uint16"
+                ordered_channel_info.append(chan_info)
+                if file_format == "header-attached":
+                    data_dtype += [(name, "uint16", BLOCK_SIZE)]
+                else:
+                    data_dtype[sig_type] = "uint16"
+        # This case behaves as a binary with 0 and 1 coded as uint16
+        elif file_format == "one-file-per-channel":
+            for chan_info in channels_by_type[sig_type]:
+                chan_info["sampling_rate"] = sr
+                chan_info["units"] = "TTL"
+                chan_info["gain"] = 1.0
+                chan_info["offset"] = 0.0
+                chan_info["dtype"] = "uint16"
+                ordered_channels_info.append(chan_info)
                 data_dtype[sig_type] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
@@ -866,7 +875,6 @@ def read_rhd(filename, file_format: str):
 
     # 0: RHD2000 amplifier channel
     for chan_info in channels_by_type[0]:
-        name = chan_info["native_channel_name"]
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
@@ -879,13 +887,13 @@ def read_rhd(filename, file_format: str):
         ordered_channel_info.append(chan_info)
 
         if file_format == "header-attached":
+            name = chan_info["native_channel_name"]
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
             data_dtype[0] = "int16"
 
     # 1: RHD2000 auxiliary input channel
     for chan_info in channels_by_type[1]:
-        name = chan_info["native_channel_name"]
         chan_info["sampling_rate"] = sr / 4.0
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000374
@@ -893,13 +901,13 @@ def read_rhd(filename, file_format: str):
         chan_info["dtype"] = "uint16"
         ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
+            name = chan_info["native_channel_name"]
             data_dtype += [(name, "uint16", BLOCK_SIZE // 4)]
         else:
             data_dtype[1] = "uint16"
 
     # 2: RHD2000 supply voltage channel
     for chan_info in channels_by_type[2]:
-        name = chan_info["native_channel_name"]
         chan_info["sampling_rate"] = sr / BLOCK_SIZE
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000748
@@ -907,6 +915,7 @@ def read_rhd(filename, file_format: str):
         chan_info["dtype"] = "uint16"
         ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
+            name = chan_info["native_channel_name"]
             data_dtype += [(name, "uint16")]
         else:
             data_dtype[2] = "uint16"
@@ -925,7 +934,6 @@ def read_rhd(filename, file_format: str):
 
     # 3: USB board ADC input channel
     for chan_info in channels_by_type[3]:
-        name = chan_info["native_channel_name"]
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "V"
         if global_info["eval_board_mode"] == 0:
@@ -940,6 +948,7 @@ def read_rhd(filename, file_format: str):
         chan_info["dtype"] = "uint16"
         ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
+            name = chan_info["native_channel_name"]
             data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
             data_dtype[3] = "uint16"
@@ -947,25 +956,33 @@ def read_rhd(filename, file_format: str):
     # 4: USB board digital input channel
     # 5: USB board digital output channel
     for sig_type in [4, 5]:
-        # Now these are included so that user can obtain the
-        # dig signals and process them at the same time
-        if len(channels_by_type[sig_type]) > 0:
-            name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
-            chan_info = channels_by_type[sig_type][0]
-            # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
-            # make this memory map work correctly. So since our digital data is not organized
-            # by channel like analog/ADC are we have to overwrite the native name to create
-            # a single permanent name that we can find with channel id
-            chan_info["native_channel_name"] = name  # overwite to allow memmap to work
-            chan_info["sampling_rate"] = sr
-            chan_info["units"] = "TTL"  # arbitrary units TTL for logic
-            chan_info["gain"] = 1.0
-            chan_info["offset"] = 0.0
-            chan_info["dtype"] = "uint16"
-            ordered_channel_info.append(chan_info)
-            if file_format == "header-attached":
-                data_dtype += [(name, "uint16", BLOCK_SIZE)]
-            else:
+        if file_format in ["header-attached", "one-file-per-signal"]:
+            if len(channels_by_type[sig_type]) > 0:
+                name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
+                chan_info = channels_by_type[sig_type][0]
+                # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
+                # make this memory map work correctly. So since our digital data is not organized
+                # by channel like analog/ADC are we have to overwrite the native name to create
+                # a single permanent name that we can find with channel id
+                chan_info["native_channel_name"] = name
+                chan_info["sampling_rate"] = sr
+                chan_info["units"] = "TTL"  # arbitrary units TTL for logic
+                chan_info["gain"] = 1.0
+                chan_info["offset"] = 0.0
+                chan_info["dtype"] = "uint16"
+                ordered_channel_info.append(chan_info)
+                if file_format == "header-attached":
+                    data_dtype += [(name, "uint16", BLOCK_SIZE)]
+                else:
+                    data_dtype[sig_type] = "uint16"
+        elif file_format == "one-file-per-channel":
+            for chan_info in channels_by_type[sig_type]:
+                chan_info["sampling_rate"] = sr
+                chan_info["units"] = "TTL"
+                chan_info["gain"] = 1.0
+                chan_info["offset"] = 0.0
+                chan_info["dtype"] = "uint16"
+                ordered_channels_info.append(chan_info)
                 data_dtype[sig_type] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
