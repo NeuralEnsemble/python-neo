@@ -46,7 +46,7 @@ class IntanRawIO(BaseRawIO):
     ignore_integrity_checks: bool, default: False
         If True, data that violates integrity assumptions will be loaded. At the moment the only integrity
         check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
-        the attribute `discontinous_timestamps` to True if the timestamps are not continous. This attribute can be checked 
+        the attribute `discontinuous_timestamps` to True if the timestamps are not continous. This attribute can be checked 
         after parsing the header to see if the timestamps are continuous or not.
     Notes
     -----
@@ -88,7 +88,7 @@ class IntanRawIO(BaseRawIO):
         BaseRawIO.__init__(self)
         self.filename = filename
         self.ignore_integrity_checks = ignore_integrity_checks
-        self.discontinous_timestamps = False
+        self.discontinuous_timestamps = False
 
 
     def _source_name(self):
@@ -192,7 +192,7 @@ class IntanRawIO(BaseRawIO):
         discontinuous_timestamps = np.diff(timestamp) != 1
         timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
         if timestamps_are_not_contiguous:
-            self.discontinous_timestamps = True
+            self.discontinuous_timestamps = True
             if not self.ignore_integrity_checks:
                 error_msg = (
                     "Timestamps are not continuous, this could be due to a corrupted file or an inappropriate file merge. "
