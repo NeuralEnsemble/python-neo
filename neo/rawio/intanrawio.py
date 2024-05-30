@@ -43,10 +43,10 @@ class IntanRawIO(BaseRawIO):
     ----------
     filename: str, default: ''
         name of the 'rhd' or 'rhs' data file
-    load_data_unsafely: bool, default: False
+    ignore_integrity_checks: bool, default: False
         If True, data that violates integrity assumptions will be loaded. At the moment the only integrity
         check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
-        the attribute `unsafe_timestamps` to True if the timestamps are not continous. This attribute can be checked 
+        the attribute `discontinous_timestamps` to True if the timestamps are not continous. This attribute can be checked 
         after parsing the header to see if the timestamps are continuous or not.
     Notes
     -----
@@ -83,12 +83,12 @@ class IntanRawIO(BaseRawIO):
     extensions = ["rhd", "rhs", "dat"]
     rawmode = "one-file"
 
-    def __init__(self, filename="", load_data_unsafely=False):
+    def __init__(self, filename="", ignore_integrity_checks=False):
 
         BaseRawIO.__init__(self)
         self.filename = filename
-        self.load_data_unsafely = load_data_unsafely
-        self.unsafe_timestamps = False
+        self.ignore_integrity_checks = ignore_integrity_checks
+        self.discontinous_timestamps = False
 
 
     def _source_name(self):
@@ -192,11 +192,11 @@ class IntanRawIO(BaseRawIO):
         discontinuous_timestamps = np.diff(timestamp) != 1
         timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
         if timestamps_are_not_contiguous:
-            self.unsafe_timestamps = True
-            if not self.load_data_unsafely:
+            self.discontinous_timestamps = True
+            if not self.ignore_integrity_checks:
                 error_msg = (
                     "Timestamps are not continuous, this could be due to a corrupted file or an inappropriate file merge. "
-                    "Initialize the reader with `load_data_unsafely=True` to ignore this error and open the file. \n"
+                    "Initialize the reader with `ignore_integrity_checks=True` to ignore this error and open the file. \n"
                     f"Timestamps around discontinuities: {timestamp[discontinuous_timestamps]}"
                 )
                 raise NeoReadWriteError(error_msg)
