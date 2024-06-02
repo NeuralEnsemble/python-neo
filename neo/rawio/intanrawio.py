@@ -46,7 +46,7 @@ class IntanRawIO(BaseRawIO):
     ignore_integrity_checks: bool, default: False
         If True, data that violates integrity assumptions will be loaded. At the moment the only integrity
         check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
-        the attribute `discontinuous_timestamps` to True if the timestamps are not continous. This attribute can be checked 
+        the attribute `discontinuous_timestamps` to True if the timestamps are not continous. This attribute can be checked
         after parsing the header to see if the timestamps are continuous or not.
     Notes
     -----
@@ -83,7 +83,7 @@ class IntanRawIO(BaseRawIO):
     11: 'Stim channel',
 
     * For the "header-attached" and "one-file-per-signal" formats, the structure of the digital input and output channels is
-    one long vector, which must be post-processed to extract individual digital channel information. 
+    one long vector, which must be post-processed to extract individual digital channel information.
     See the intantech website for more information on performing this post-processing.
 
     Examples
@@ -107,7 +107,6 @@ class IntanRawIO(BaseRawIO):
         self.filename = filename
         self.ignore_integrity_checks = ignore_integrity_checks
         self.discontinuous_timestamps = False
-
 
     def _source_name(self):
         return self.filename
@@ -207,7 +206,7 @@ class IntanRawIO(BaseRawIO):
         elif self.file_format == "one-file-per-channel":
             time_stream_index = max(self._raw_data.keys())
             timestamp = self._raw_data[time_stream_index][0]
-        
+
         discontinuous_timestamps = np.diff(timestamp) != 1
         timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
         if timestamps_are_not_contiguous:
@@ -267,7 +266,7 @@ class IntanRawIO(BaseRawIO):
         # are in a list we just take the first channel in each list of channels
         else:
             self._max_sigs_length = max([raw_data[0].size for raw_data in self._raw_data.values()])
-            
+
         # No events
         event_channels = []
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
