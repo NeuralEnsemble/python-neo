@@ -210,15 +210,30 @@ class IntanRawIO(BaseRawIO):
         discontinuous_timestamps = np.diff(timestamp) != 1
         timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
         if timestamps_are_not_contiguous:
+            # Mark a flag that can be checked after parsing the header to see if the timestamps are continuous or not
             self.discontinuous_timestamps = True
             if not self.ignore_integrity_checks:
                 error_msg = (
-                    "Timestamps are not continuous, this could be due to a corrupted file or an inappropriate file merge. "
-                    "Initialize the reader with `ignore_integrity_checks=True` to ignore this error and open the file. \n"
-                    f"Timestamps around discontinuities: {timestamp[discontinuous_timestamps]}"
+                    "Timestamps are not continuous, likely due to a corrupted file or inappropriate file merge.\n"
+                    "To open the file anyway, initialize the reader with `ignore_integrity_checks=True`.\n\n"
+                    "Discontinuities Found:\n"
+                    "+-----------------+-----------------+-----------------+-----------------------+\n"  
+                    "| Discontinuity   | Previous        | Next            | Time Difference       |\n"
+                    "| Index           | (Frames)        | (Frames)        | (Seconds)             |\n"
+                    "+-----------------+-----------------+-----------------+-----------------------+\n"
                 )
-                raise NeoReadWriteError(error_msg)
 
+                amplifier_sampling_rate = self._global_info["sampling_rate"]
+                for idx in np.where(discontinuous_timestamps)[0]:
+                    prev_ts = timestamp[idx]
+                    next_ts = timestamp[idx + 1]
+                    time_diff = (next_ts - prev_ts) / amplifier_sampling_rate
+
+                    error_msg += f"| {idx + 1:>15,} | {prev_ts:>15,} | {next_ts:>15,} | {time_diff:>21.6f} |\n" 
+
+                error_msg += "+-----------------+-----------------+-----------------+-----------------------+\n"
+
+        raise NeoReadWriteError(error_msg)
         # signals
         signal_channels = []
         for c, chan_info in enumerate(self._ordered_channel_info):
