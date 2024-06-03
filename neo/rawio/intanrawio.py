@@ -233,7 +233,7 @@ class IntanRawIO(BaseRawIO):
 
                 error_msg += "+-----------------+-----------------+-----------------+-----------------------+\n"
 
-        raise NeoReadWriteError(error_msg)
+            raise NeoReadWriteError(error_msg)
         # signals
         signal_channels = []
         for c, chan_info in enumerate(self._ordered_channel_info):
