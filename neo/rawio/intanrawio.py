@@ -487,7 +487,7 @@ class IntanRawIO(BaseRawIO):
             self.discontinuous_timestamps = True
             if not self.ignore_integrity_checks:
                 error_msg = (
-                    "\n Timestamps are not continuous, likely due to a corrupted file or inappropriate file merge.\n"
+                    "\nTimestamps are not continuous, likely due to a corrupted file or inappropriate file merge.\n"
                     "To open the file anyway, initialize the reader with `ignore_integrity_checks=True`.\n\n"
                     "Discontinuities Found:\n"
                     "+-----------------+-----------------+-----------------+-----------------------+\n"  
