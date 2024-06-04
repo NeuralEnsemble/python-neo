@@ -196,7 +196,7 @@ class IntanRawIO(BaseRawIO):
                     self._raw_data[stream_index].append(channel_memmap)
 
         # Data Integrity checks
-        self.asert_timestamp_continuity()
+        self._assert_timestamp_continuity()
         
         # signals
         signal_channels = []
@@ -445,7 +445,7 @@ class IntanRawIO(BaseRawIO):
 
         return signal_data_memmap[i_start:i_stop, channel_indexes]
     
-    def assert_timestamp_continuity(self):
+    def _assert_timestamp_continuity(self):
         """
         Asserts the continuity of timestamps in the data.
 
