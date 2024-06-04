@@ -106,7 +106,7 @@ class IntanRawIO(BaseRawIO):
         BaseRawIO.__init__(self)
         self.filename = filename
         self.ignore_integrity_checks = ignore_integrity_checks
-        self.discontinuous_timestamps = False   
+        self.discontinuous_timestamps = False
 
     def _source_name(self):
         return self.filename
