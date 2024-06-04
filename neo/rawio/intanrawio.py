@@ -106,7 +106,7 @@ class IntanRawIO(BaseRawIO):
         BaseRawIO.__init__(self)
         self.filename = filename
         self.ignore_integrity_checks = ignore_integrity_checks
-        self.discontinuous_timestamps = False
+        self.discontinuous_timestamps = False   
 
     def _source_name(self):
         return self.filename
@@ -195,45 +195,8 @@ class IntanRawIO(BaseRawIO):
                     channel_memmap = np.memmap(file_path, dtype=stream_datatype, mode="r")
                     self._raw_data[stream_index].append(channel_memmap)
 
-        # check timestamp continuity
-        if self.file_format == "header-attached":
-            timestamp = self._raw_data["timestamp"].flatten()
-
-        # timestamps are always last stream for headerless binary files
-        elif self.file_format == "one-file-per-signal":
-            time_stream_index = max(self._raw_data.keys())
-            timestamp = self._raw_data[time_stream_index]
-        elif self.file_format == "one-file-per-channel":
-            time_stream_index = max(self._raw_data.keys())
-            timestamp = self._raw_data[time_stream_index][0]
-
-        discontinuous_timestamps = np.diff(timestamp) != 1
-        timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
-        if timestamps_are_not_contiguous:
-            # Mark a flag that can be checked after parsing the header to see if the timestamps are continuous or not
-            self.discontinuous_timestamps = True
-            if not self.ignore_integrity_checks:
-                error_msg = (
-                    "Timestamps are not continuous, likely due to a corrupted file or inappropriate file merge.\n"
-                    "To open the file anyway, initialize the reader with `ignore_integrity_checks=True`.\n\n"
-                    "Discontinuities Found:\n"
-                    "+-----------------+-----------------+-----------------+-----------------------+\n"  
-                    "| Discontinuity   | Previous        | Next            | Time Difference       |\n"
-                    "| Index           | (Frames)        | (Frames)        | (Seconds)             |\n"
-                    "+-----------------+-----------------+-----------------+-----------------------+\n"
-                )
-
-                amplifier_sampling_rate = self._global_info["sampling_rate"]
-                for idx in np.where(discontinuous_timestamps)[0]:
-                    prev_ts = timestamp[idx]
-                    next_ts = timestamp[idx + 1]
-                    time_diff = (next_ts - prev_ts) / amplifier_sampling_rate
-
-                    error_msg += f"| {idx + 1:>15,} | {prev_ts:>15,} | {next_ts:>15,} | {time_diff:>21.6f} |\n" 
-
-                error_msg += "+-----------------+-----------------+-----------------+-----------------------+\n"
-
-                raise NeoReadWriteError(error_msg)
+        # Data Integrity checks
+        self.asert_timestamp_continuity()
         
         # signals
         signal_channels = []
@@ -259,7 +222,7 @@ class IntanRawIO(BaseRawIO):
         stream_ids = np.unique(signal_channels["stream_id"])
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
 
-        # we need to sort the data because the string of 10 is mis-sorted.
+        # we need to sort the data because the string of stream_index 10 is mis-sorted.
         stream_ids_sorted = sorted([int(stream_id) for stream_id in stream_ids])
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids_sorted]
 
@@ -300,8 +263,8 @@ class IntanRawIO(BaseRawIO):
         self.header["spike_channels"] = spike_channels
         self.header["event_channels"] = event_channels
 
+        # Extract annotations from the format
         self._generate_minimal_annotations()
-
         bl_annotations = self.raw_annotations["blocks"][0]
         seg_annotations = bl_annotations["segments"][0]
 
@@ -481,7 +444,70 @@ class IntanRawIO(BaseRawIO):
         signal_data_memmap = self._raw_data[stream_index]
 
         return signal_data_memmap[i_start:i_stop, channel_indexes]
+    
+    def assert_timestamp_continuity(self):
+        """
+        Asserts the continuity of timestamps in the data.
 
+        This method verifies that the timestamps in the raw data are sequential, 
+        indicating a continuous recording. If discontinuities are found, a flag 
+        is set to indicate potential data integrity issues, and an error is raised
+        unless `ignore_integrity_checks` is True.
+
+        Raises
+        ------
+        NeoReadWriteError
+            If timestamps are not continuous and `ignore_integrity_checks` is False.
+            The error message includes a table detailing the discontinuities found.
+
+        Notes
+        -----
+        The method extracts timestamps from the raw data based on the file format:
+
+        * **header-attached:** Timestamps are extracted from a 'timestamp' field in the raw data.
+        * **one-file-per-signal:** Timestamps are taken from the last stream.
+        * **one-file-per-channel:** Timestamps are retrieved from the first channel of the last stream.
+        """
+        # check timestamp continuity
+        if self.file_format == "header-attached":
+            timestamp = self._raw_data["timestamp"].flatten()
+
+        # timestamps are always last stream for headerless binary files
+        elif self.file_format == "one-file-per-signal":
+            time_stream_index = max(self._raw_data.keys())
+            timestamp = self._raw_data[time_stream_index]
+        elif self.file_format == "one-file-per-channel":
+            time_stream_index = max(self._raw_data.keys())
+            timestamp = self._raw_data[time_stream_index][0]
+
+        discontinuous_timestamps = np.diff(timestamp) != 1
+        timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
+        if timestamps_are_not_contiguous:
+            # Mark a flag that can be checked after parsing the header to see if the timestamps are continuous or not
+            self.discontinuous_timestamps = True
+            if not self.ignore_integrity_checks:
+                error_msg = (
+                    "\n Timestamps are not continuous, likely due to a corrupted file or inappropriate file merge.\n"
+                    "To open the file anyway, initialize the reader with `ignore_integrity_checks=True`.\n\n"
+                    "Discontinuities Found:\n"
+                    "+-----------------+-----------------+-----------------+-----------------------+\n"  
+                    "| Discontinuity   | Previous        | Next            | Time Difference       |\n"
+                    "| Index           | (Frames)        | (Frames)        | (Seconds)             |\n"
+                    "+-----------------+-----------------+-----------------+-----------------------+\n"
+                )
+
+                amplifier_sampling_rate = self._global_info["sampling_rate"]
+                for discontinuity_index in np.where(discontinuous_timestamps)[0]:
+                    prev_ts = timestamp[discontinuity_index]
+                    next_ts = timestamp[discontinuity_index + 1]
+                    time_diff = (next_ts - prev_ts) / amplifier_sampling_rate
+
+                    error_msg += f"| {discontinuity_index + 1:>15,} | {prev_ts:>15,} | {next_ts:>15,} | {time_diff:>21.6f} |\n" 
+
+                error_msg += "+-----------------+-----------------+-----------------+-----------------------+\n"
+
+                raise NeoReadWriteError(error_msg)
+        
 
 def read_qstring(f):
     length = np.fromfile(f, dtype="uint32", count=1)[0]
