@@ -755,9 +755,9 @@ def read_rhs(filename, file_format: str):
     # was a request for postprocessing to be done in one of their scripts. From version 3+ the notch
     # filter is now applied to the data in realtime and only the post notched amplifier data is
     # saved.
-    if global_info["notch_filter_mode"] == 2 and global_info["major_version"] >= Version("3.0"):
+    if global_info["notch_filter_mode"] == 2 and global_info["major_version"] >= 3:
         global_info["notch_filter"] = "60Hz"
-    elif global_info["notch_filter_mode"] == 1 and global_info["major_version"] >= Version("3.0"):
+    elif global_info["notch_filter_mode"] == 1 and global_info["major_version"] >= 3:
         global_info["notch_filter"] = "50Hz"
     else:
         global_info["notch_filter"] = False
