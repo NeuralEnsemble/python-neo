@@ -46,6 +46,12 @@ reads abf files - would be good to cross-check
 
 """
 
+import struct
+import datetime
+from io import open, BufferedReader
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -54,16 +60,6 @@ from .baserawio import (
     _event_channel_dtype,
 )
 from neo.core import NeoReadWriteError
-
-import numpy as np
-
-import struct
-import datetime
-import os
-from io import open, BufferedReader
-
-import numpy as np
-
 
 class AxonRawIO(BaseRawIO):
     """

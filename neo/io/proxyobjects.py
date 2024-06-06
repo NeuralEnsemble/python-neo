@@ -9,13 +9,13 @@ ineherits neo.rawio.
 
 """
 
-import numpy as np
-import quantities as pq
 import logging
 
+import numpy as np
+import quantities as pq
+
+
 from neo.core.baseneo import BaseNeo
-
-
 from neo.core import AnalogSignal, Epoch, Event, SpikeTrain
 from neo.core.dataobject import ArrayDict
 

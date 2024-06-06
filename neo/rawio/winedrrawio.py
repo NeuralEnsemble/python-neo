@@ -9,6 +9,9 @@ Author: Samuel Garcia
 
 """
 
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -17,11 +20,6 @@ from .baserawio import (
     _event_channel_dtype,
     _common_sig_characteristics,
 )
-
-import numpy as np
-
-import os
-import sys
 
 
 class WinEdrRawIO(BaseRawIO):

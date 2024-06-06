@@ -10,12 +10,8 @@ Author: sgarcia
 
 """
 
-import os
-
 import numpy as np
-import quantities as pq
 
-from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, NeoReadWriteError
 
 from neo.io.basefromrawio import BaseFromRaw

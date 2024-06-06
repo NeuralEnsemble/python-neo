@@ -7,8 +7,10 @@ neuron/channel the spike is from).
 """
 
 import warnings
+
 import numpy as np
 import quantities as pq
+
 from .spiketrain import SpikeTrain, normalize_times_array
 from .objectlist import ObjectList
 

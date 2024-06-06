@@ -3,14 +3,6 @@ BCI2000RawIO is a class to read BCI2000 .dat files.
 https://www.bci2000.org/mediawiki/index.php/Technical_Reference:BCI2000_File_Format
 """
 
-from .baserawio import (
-    BaseRawIO,
-    _signal_channel_dtype,
-    _signal_stream_dtype,
-    _spike_channel_dtype,
-    _event_channel_dtype,
-)
-from neo.core import NeoReadWriteError
 
 import numpy as np
 import re
@@ -20,6 +12,14 @@ try:
 except ImportError:
     from urllib import url2pathname as unquote
 
+from .baserawio import (
+    BaseRawIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
+)
+from neo.core import NeoReadWriteError
 
 class BCI2000RawIO(BaseRawIO):
     """

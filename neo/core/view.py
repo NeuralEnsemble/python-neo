@@ -6,6 +6,7 @@ It replaces the indexing function of the former :class:`ChannelIndex`.
 """
 
 import numpy as np
+
 from .baseneo import BaseNeo
 from .basesignal import BaseSignal
 from .dataobject import ArrayDict

@@ -1,6 +1,7 @@
+import numpy as np
+
 from .baseio import BaseIO
 from neo.core import ImageSequence, Segment, Block
-import numpy as np
 
 
 class AsciiImageIO(BaseIO):

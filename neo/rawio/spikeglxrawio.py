@@ -50,6 +50,12 @@ Author : Samuel Garcia
 Some functions are copied from Graham Findlay
 """
 
+from pathlib import Path
+import os
+import re
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -57,13 +63,6 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-from pathlib import Path
-import os
-import re
-
-import numpy as np
-
 
 class SpikeGLXRawIO(BaseRawIO):
     """

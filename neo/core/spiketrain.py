@@ -17,16 +17,14 @@ created by slicing. This is where attributes are copied over from
 the old object.
 """
 
-import neo
-import sys
-
-from copy import deepcopy, copy
+from copy import deepcopy
 import warnings
 
 import numpy as np
 import quantities as pq
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
+from neo.io.proxyobjects import SpikeTrainProxy
 
 
 def check_has_dimensions_time(*values) -> None:
@@ -819,7 +817,7 @@ class SpikeTrain(DataObject):
         compatible, an Exception is raised.
         """
         for other in others:
-            if isinstance(other, neo.io.proxyobjects.SpikeTrainProxy):
+            if isinstance(other, SpikeTrainProxy):
                 raise MergeError(
                     "Cannot merge, SpikeTrainProxy objects cannot be merged"
                     "into regular SpikeTrain objects, please load them first."

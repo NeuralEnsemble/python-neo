@@ -24,6 +24,7 @@ from json.decoder import JSONDecodeError
 
 import numpy as np
 import quantities as pq
+
 from neo.core import Segment, SpikeTrain, Epoch, Event, AnalogSignal, IrregularlySampledSignal, Block, ImageSequence
 from neo.io.baseio import BaseIO
 from neo.io.proxyobjects import (

@@ -10,14 +10,6 @@ EDF Format Specifications: https://www.edfplus.info/
 Author: Julia Sprenger
 """
 
-from .baserawio import (
-    BaseRawIO,
-    _signal_channel_dtype,
-    _signal_stream_dtype,
-    _spike_channel_dtype,
-    _event_channel_dtype,
-)
-
 import numpy as np
 
 try:
@@ -27,6 +19,13 @@ try:
 except ImportError:
     HAS_PYEDF = False
 
+from .baserawio import (
+    BaseRawIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
+)
 
 class EDFRawIO(BaseRawIO):
     """

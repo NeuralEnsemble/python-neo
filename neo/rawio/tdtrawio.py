@@ -25,6 +25,13 @@ Alternative package for loading the tdt format:
 https://pypi.org/project/tdt
 """
 
+import numpy as np
+import os
+import re
+import warnings
+from collections import OrderedDict
+from pathlib import Path
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -34,14 +41,6 @@ from .baserawio import (
 )
 
 from neo.core import NeoReadWriteError
-
-import numpy as np
-import os
-import re
-import warnings
-from collections import OrderedDict
-from pathlib import Path
-
 
 class TdtRawIO(BaseRawIO):
     extensions = ["tbk", "tdx", "tev", "tin", "tnt", "tsq", "sev", "txt"]

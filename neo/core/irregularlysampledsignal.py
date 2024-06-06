@@ -19,14 +19,8 @@ created by slicing. This is where attributes are copied over from
 the old object.
 """
 
-from copy import deepcopy, copy
+from copy import deepcopy
 
-try:
-    import scipy.signal
-except ImportError as err:
-    HAVE_SCIPY = False
-else:
-    HAVE_SCIPY = True
 
 import numpy as np
 import quantities as pq
@@ -457,7 +451,9 @@ class IrregularlySampledSignal(BaseSignal):
             The original :class:`AnalogSignal` is not modified.
         """
 
-        if not HAVE_SCIPY:
+        try:
+            import scipy.signal
+        except ImportError:
             raise ImportError("Resampling requires availability of scipy.signal")
 
         # Resampling is only permitted along the time axis (axis=0)

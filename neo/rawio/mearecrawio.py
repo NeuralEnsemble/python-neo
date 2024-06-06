@@ -9,6 +9,10 @@ https://link.springer.com/article/10.1007/s12021-020-09467-7
 Author : Alessio Buccino
 """
 
+from copy import deepcopy
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -16,10 +20,6 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-from copy import deepcopy
-
 
 class MEArecRawIO(BaseRawIO):
     """

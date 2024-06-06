@@ -7,6 +7,11 @@ S. More.
 Author: Samuel Garcia
 """
 
+import os
+import re
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -16,13 +21,6 @@ from .baserawio import (
 )
 
 from neo.core import NeoReadWriteError
-
-import numpy as np
-
-import datetime
-import os
-import re
-
 
 class BrainVisionRawIO(BaseRawIO):
     """Class for reading BrainVision files

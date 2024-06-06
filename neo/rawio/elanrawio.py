@@ -16,6 +16,12 @@ Author: Samuel Garcia
 
 """
 
+import datetime
+import re
+import pathlib
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -25,13 +31,6 @@ from .baserawio import (
 )
 
 from neo.core import NeoReadWriteError
-
-import numpy as np
-
-import datetime
-import re
-import pathlib
-
 
 class ElanRawIO(BaseRawIO):
     """

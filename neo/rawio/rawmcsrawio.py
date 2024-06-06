@@ -14,6 +14,8 @@ could be written instead of this ersatz.
 Author: Samuel Garcia
 """
 
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -21,12 +23,6 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-
-import os
-import sys
-
 
 class RawMCSRawIO(BaseRawIO):
     """

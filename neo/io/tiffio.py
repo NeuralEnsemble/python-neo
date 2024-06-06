@@ -2,13 +2,13 @@
 Neo IO module for optical imaging data stored as a folder of TIFF images.
 """
 
-import os
-
-import numpy as np
-from neo.core import ImageSequence, Segment, Block
-from .baseio import BaseIO
 import glob
 import re
+
+import numpy as np
+
+from neo.core import ImageSequence, Segment, Block
+from .baseio import BaseIO
 
 
 class TiffIO(BaseIO):

@@ -4,6 +4,7 @@ and handle relationships within the Neo Block-Segment-Data hierarchy.
 """
 
 import sys
+
 from neo.core.baseneo import BaseNeo
 
 

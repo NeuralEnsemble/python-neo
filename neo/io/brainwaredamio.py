@@ -35,7 +35,6 @@ import quantities as pq
 
 # needed core neo modules
 from neo.core import AnalogSignal, Block, Group, Segment
-
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
