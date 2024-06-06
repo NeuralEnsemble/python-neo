@@ -25,7 +25,7 @@ import quantities as pq
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
 # need this to avoid circular import issue
-import neo.io
+import neo
 
 
 def check_has_dimensions_time(*values) -> None:
@@ -818,7 +818,7 @@ class SpikeTrain(DataObject):
         compatible, an Exception is raised.
         """
         for other in others:
-            if isinstance(other, neo.io.SpikeTrainProxy):
+            if isinstance(other, neo.io.proxyobjects.SpikeTrainProxy):
                 raise MergeError(
                     "Cannot merge, SpikeTrainProxy objects cannot be merged"
                     "into regular SpikeTrain objects, please load them first."
