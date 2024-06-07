@@ -99,6 +99,9 @@ class TiffIO(BaseIO):
             import PIL
         except ImportError:
             raise ImportError("To use TiffIO you must first `pip install pillow`")
+        
+        if origin != 'top-left' and origin != 'bottom-left':
+            raise ValueError("`origin` must be either `top-left` or `bottom-left`")
 
         BaseIO.__init__(self, directory_path, **kwargs)
         self.units = units

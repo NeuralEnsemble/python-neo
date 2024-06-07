@@ -17,10 +17,10 @@ class TestTiffIO(unittest.TestCase):
         img = []
         for picture in range(10):
             img.append([])
-            for y in range(50):
+            for x in range(50):
                 img[picture].append([])
-                for x in range(50):
-                    img[picture][y].append(x)
+                for y in range(50):
+                    img[picture][x].append(y)
         img = np.array(img, dtype=float)
         for image in range(10):
             # rotate image by 90 deg so that shifting the origin is meaningful in later test
@@ -47,7 +47,7 @@ class TestTiffIO(unittest.TestCase):
 
         self.assertAlmostEqual(
             blck.segments[0].imagesequences[0][0][0,0].magnitude,
-            blck_bl_origin.segments[0].imagesequences[0][0][0,49].magnitude, # since flipped over y, [0,0] == [0,49]
+            blck_bl_origin.segments[0].imagesequences[0][0][49,0].magnitude, # since flipped over y, [0,0] == [49,0]
             places=3, 
         )
 
