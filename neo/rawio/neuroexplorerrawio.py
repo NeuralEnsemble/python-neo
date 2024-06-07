@@ -22,6 +22,9 @@ http://www.neuroexplorer.com/downloadspage/
 Author: Samuel Garcia, luc estebanez, mark hollenbeck
 
 """
+from collections import OrderedDict
+
+import numpy as np
 
 from .baserawio import (
     BaseRawIO,
@@ -32,10 +35,6 @@ from .baserawio import (
 )
 
 from neo.core import NeoReadWriteError
-
-import numpy as np
-from collections import OrderedDict
-import datetime
 
 
 class NeuroExplorerRawIO(BaseRawIO):

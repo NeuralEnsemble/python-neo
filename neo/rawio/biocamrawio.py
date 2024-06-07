@@ -7,6 +7,10 @@ https://www.3brain.com/products/single-well/biocam-x
 Authors: Alessio Buccino, Robert Wolff
 """
 
+
+import json
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -14,9 +18,6 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-import json
 
 
 class BiocamRawIO(BaseRawIO):

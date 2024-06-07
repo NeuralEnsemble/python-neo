@@ -47,7 +47,6 @@ import quantities as pq
 
 # needed core neo modules
 from neo.core import Block, Event, Group, Segment, SpikeTrain
-
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
 

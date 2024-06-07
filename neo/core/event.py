@@ -5,7 +5,7 @@ This module defines :class:`Event`, an array of events.
 :module:`neo.core.baseneo`.
 """
 
-from copy import deepcopy, copy
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq

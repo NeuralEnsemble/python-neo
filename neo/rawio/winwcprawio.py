@@ -8,6 +8,10 @@ http://spider.science.strath.ac.uk/sipbs/software.htm
 Author: Samuel Garcia
 """
 
+import struct
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -16,11 +20,6 @@ from .baserawio import (
     _event_channel_dtype,
     _common_sig_characteristics,
 )
-
-import numpy as np
-
-import struct
-
 
 class WinWcpRawIO(BaseRawIO):
     """

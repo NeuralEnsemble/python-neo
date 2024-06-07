@@ -9,8 +9,6 @@ from :module:`neo.core.container`.
 from datetime import datetime
 from copy import deepcopy
 
-import numpy as np
-
 
 from neo.core.analogsignal import AnalogSignal
 from neo.core.container import Container

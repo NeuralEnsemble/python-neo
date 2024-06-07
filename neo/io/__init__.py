@@ -281,7 +281,7 @@ from collections import Counter
 # if it is not present, use the neurosharectypesio to load files
 try:
     import neuroshare as ns
-except ImportError as err:
+except ModuleNotFoundError as err:
     from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
 
     # print("\n neuroshare library not found, loading data with ctypes" )

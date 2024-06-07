@@ -17,16 +17,15 @@ created by slicing. This is where attributes are copied over from
 the old object.
 """
 
-import neo
-import sys
-
-from copy import deepcopy, copy
+from copy import deepcopy
 import warnings
 
 import numpy as np
 import quantities as pq
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
+# need this to avoid circular import issue
+import neo
 
 
 def check_has_dimensions_time(*values) -> None:

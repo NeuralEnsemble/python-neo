@@ -23,14 +23,12 @@ Author: Thomas Perret <thomas.perret@isc.cnrs.fr>
 """
 
 import io
-import logging
 import mmap
-import os
 import struct
 
 from collections import defaultdict
 from datetime import datetime
-from itertools import chain
+
 from pathlib import Path, PureWindowsPath
 
 import numpy as np

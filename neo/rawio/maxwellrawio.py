@@ -23,6 +23,8 @@ from pathlib import Path
 import platform
 from urllib.request import urlopen
 
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -32,8 +34,6 @@ from .baserawio import (
 )
 
 from neo.core import NeoReadWriteError
-
-import numpy as np
 
 
 class MaxwellRawIO(BaseRawIO):

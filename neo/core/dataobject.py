@@ -10,6 +10,7 @@ import warnings
 
 import quantities as pq
 import numpy as np
+
 from neo.core.baseneo import BaseNeo, _check_annotations
 
 

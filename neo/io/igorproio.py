@@ -13,7 +13,9 @@ Also contributing: Rick Gerkin
 
 from warnings import warn
 import pathlib
+
 import quantities as pq
+
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, NeoReadWriteError
 

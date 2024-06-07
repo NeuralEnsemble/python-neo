@@ -4,12 +4,8 @@ Tools for IO coder:
     SPikeTrains
 """
 
-try:
-    from collections.abc import MutableSequence
-except ImportError:
-    from collections import MutableSequence
 
-import numpy as np
+from collections.abc import MutableSequence
 
 from neo.core import (
     AnalogSignal,

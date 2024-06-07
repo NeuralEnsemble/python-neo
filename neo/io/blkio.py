@@ -1,10 +1,14 @@
-from .baseio import BaseIO
-from neo.core import ImageSequence, Segment, Block
-import numpy as np
 import struct
 import os
 import math
-import quantities as pq
+
+import numpy as np
+
+from .baseio import BaseIO
+from neo.core import ImageSequence, Segment, Block
+
+
+
 
 
 class BlkIO(BaseIO):

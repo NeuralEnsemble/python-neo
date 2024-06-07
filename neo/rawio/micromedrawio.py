@@ -7,6 +7,12 @@ Completed with matlab Guillaume BECQ code.
 Author: Samuel Garcia
 """
 
+import datetime
+import struct
+import io
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -16,14 +22,6 @@ from .baserawio import (
 )
 
 from neo.core import NeoReadWriteError
-
-import numpy as np
-
-import datetime
-import os
-import struct
-import io
-
 
 class StructFile(io.BufferedReader):
     def read_f(self, fmt, offset=None):

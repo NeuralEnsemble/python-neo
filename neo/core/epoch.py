@@ -5,7 +5,7 @@ This module defines :class:`Epoch`, an array of epochs.
 :module:`neo.core.baseneo`.
 """
 
-from copy import deepcopy, copy
+from copy import deepcopy
 from numbers import Number
 
 import numpy as np

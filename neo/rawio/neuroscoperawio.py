@@ -18,6 +18,9 @@ Author: Samuel Garcia
 
 from pathlib import Path
 
+import numpy as np
+from xml.etree import ElementTree
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -25,9 +28,6 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-from xml.etree import ElementTree
 
 
 class NeuroScopeRawIO(BaseRawIO):

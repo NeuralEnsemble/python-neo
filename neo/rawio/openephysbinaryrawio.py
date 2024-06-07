@@ -10,9 +10,7 @@ Author: Julia Sprenger, Samuel Garcia, and Alessio Buccino
 """
 
 import os
-import re
 import json
-
 from pathlib import Path
 
 import numpy as np

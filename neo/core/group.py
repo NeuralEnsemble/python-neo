@@ -6,7 +6,6 @@ It replaces and extends the grouping function of the former :class:`ChannelIndex
 and :class:`Unit`.
 """
 
-from os import close
 from neo.core.container import Container
 from neo.core.analogsignal import AnalogSignal
 from neo.core.container import Container
