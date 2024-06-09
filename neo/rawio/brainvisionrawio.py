@@ -22,6 +22,7 @@ from .baserawio import (
 
 from neo.core import NeoReadWriteError
 
+
 class BrainVisionRawIO(BaseRawIO):
     """Class for reading BrainVision files
 

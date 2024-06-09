@@ -3,7 +3,6 @@ BCI2000RawIO is a class to read BCI2000 .dat files.
 https://www.bci2000.org/mediawiki/index.php/Technical_Reference:BCI2000_File_Format
 """
 
-
 import numpy as np
 import re
 
@@ -20,6 +19,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 from neo.core import NeoReadWriteError
+
 
 class BCI2000RawIO(BaseRawIO):
     """

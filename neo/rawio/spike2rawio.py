@@ -17,6 +17,7 @@ This IO support old (<v6) and new files (>v7) of spike2
 Author: Samuel Garcia
 
 """
+
 from collections import OrderedDict
 
 import numpy as np
@@ -29,6 +30,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 from neo.core import NeoReadWriteError
+
 
 class Spike2RawIO(BaseRawIO):
     """

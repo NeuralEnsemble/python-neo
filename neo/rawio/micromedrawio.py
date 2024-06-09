@@ -23,6 +23,7 @@ from .baserawio import (
 
 from neo.core import NeoReadWriteError
 
+
 class StructFile(io.BufferedReader):
     def read_f(self, fmt, offset=None):
         if offset is not None:

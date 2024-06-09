@@ -24,6 +24,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+
 class RawMCSRawIO(BaseRawIO):
     """
     Class for reading an mcs file converted by the MC_DataToo binary converter
