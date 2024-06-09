@@ -6,8 +6,6 @@ Uses the dhn-med-py python package, created by Dark Horse Neuro, Inc.
 Authors: Dan Crepeau, Matt Stead
 """
 
-
-
 import numpy as np
 
 from .baserawio import (
@@ -17,6 +15,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+
 
 class MedRawIO(BaseRawIO):
     """

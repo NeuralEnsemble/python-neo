@@ -64,6 +64,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+
 class SpikeGLXRawIO(BaseRawIO):
     """
     Class for reading data from a SpikeGLX system

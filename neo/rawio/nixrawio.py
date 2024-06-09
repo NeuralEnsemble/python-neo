@@ -7,7 +7,6 @@ It supports all kinds of NEO objects.
 Author: Chek Yin Choi, Julia Sprenger
 """
 
-
 import numpy as np
 
 from .baserawio import (

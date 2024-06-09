@@ -4,7 +4,6 @@ Tools for IO coder:
     SPikeTrains
 """
 
-
 from collections.abc import MutableSequence
 
 from neo.core import (

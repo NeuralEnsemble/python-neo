@@ -198,7 +198,7 @@ class IntanRawIO(BaseRawIO):
 
         # Data Integrity checks
         self._assert_timestamp_continuity()
-        
+
         # signals
         signal_channels = []
         for c, chan_info in enumerate(self._ordered_channel_info):
@@ -445,13 +445,13 @@ class IntanRawIO(BaseRawIO):
         signal_data_memmap = self._raw_data[stream_index]
 
         return signal_data_memmap[i_start:i_stop, channel_indexes]
-    
+
     def _assert_timestamp_continuity(self):
         """
         Asserts the continuity of timestamps in the data.
 
-        This method verifies that the timestamps in the raw data are sequential, 
-        indicating a continuous recording. If discontinuities are found, a flag 
+        This method verifies that the timestamps in the raw data are sequential,
+        indicating a continuous recording. If discontinuities are found, a flag
         is set to indicate potential data integrity issues, and an error is raised
         unless `ignore_integrity_checks` is True.
 
@@ -491,7 +491,7 @@ class IntanRawIO(BaseRawIO):
                     "\nTimestamps are not continuous, likely due to a corrupted file or inappropriate file merge.\n"
                     "To open the file anyway, initialize the reader with `ignore_integrity_checks=True`.\n\n"
                     "Discontinuities Found:\n"
-                    "+-----------------+-----------------+-----------------+-----------------------+\n"  
+                    "+-----------------+-----------------+-----------------+-----------------------+\n"
                     "| Discontinuity   | Previous        | Next            | Time Difference       |\n"
                     "| Index           | (Frames)        | (Frames)        | (Seconds)             |\n"
                     "+-----------------+-----------------+-----------------+-----------------------+\n"
@@ -503,12 +503,14 @@ class IntanRawIO(BaseRawIO):
                     next_ts = timestamp[discontinuity_index + 1]
                     time_diff = (next_ts - prev_ts) / amplifier_sampling_rate
 
-                    error_msg += f"| {discontinuity_index + 1:>15,} | {prev_ts:>15,} | {next_ts:>15,} | {time_diff:>21.6f} |\n" 
+                    error_msg += (
+                        f"| {discontinuity_index + 1:>15,} | {prev_ts:>15,} | {next_ts:>15,} | {time_diff:>21.6f} |\n"
+                    )
 
                 error_msg += "+-----------------+-----------------+-----------------+-----------------------+\n"
 
                 raise NeoReadWriteError(error_msg)
-        
+
 
 def read_qstring(f):
     length = np.fromfile(f, dtype="uint32", count=1)[0]

@@ -22,6 +22,7 @@ http://www.neuroexplorer.com/downloadspage/
 Author: Samuel Garcia, luc estebanez, mark hollenbeck
 
 """
+
 from collections import OrderedDict
 
 import numpy as np
