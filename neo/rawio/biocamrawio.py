@@ -17,6 +17,7 @@ from .baserawio import (
 
 import numpy as np
 import json
+import warnings
 
 
 class BiocamRawIO(BaseRawIO):
@@ -47,9 +48,15 @@ class BiocamRawIO(BaseRawIO):
     extensions = ["h5", "brw"]
     rawmode = "one-file"
 
-    def __init__(self, filename=""):
+    def __init__(self, filename="", true_zeroes=False, use_synthetic_noise=False):
         BaseRawIO.__init__(self)
         self.filename = filename
+        self.true_zeroes = true_zeroes
+        self.use_synthetic_noise = use_synthetic_noise
+
+        if self.use_synthetic_noise:
+            warnings.warn("Event-based compression : gaps will be filled with synthetic noise."
+                          "Traces won't be raw.")
 
     def _source_name(self):
         return self.filename
@@ -122,7 +129,10 @@ class BiocamRawIO(BaseRawIO):
             i_stop = self._num_frames
         if channel_indexes is None:
             channel_indexes = slice(None)
-        data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
+        if self._read_function is readHDF5t_brw4_sparse:
+            data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels, self.true_zeroes, self.use_synthetic_noise)
+        else:
+            data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
         return data[:, channel_indexes]
 
 
@@ -201,7 +211,7 @@ def open_biocam_file_header(filename):
 
         wellID = None
         for key in rf:
-            if key[:5] == "Well_":
+            if key.startswith("Well_"):
                 wellID = key
                 num_channels = len(rf[key]["StoredChIdxs"])
                 if "Raw" in rf[key]:
@@ -258,26 +268,29 @@ def readHDF5t_brw4(rf, t0, t1, nch):
             return rf[key]["Raw"][nch * t0 : nch * t1].reshape((t1 - t0, nch), order="C")
 
 
-def readHDF5t_brw4_sparse(rf, t0, t1, nch):
-    useSyntheticNoise = True
+def readHDF5t_brw4_sparse(rf, t0, t1, nch, true_zeroes=False, use_synthetic_noise=False):
+
     noiseStdDev = None
     startFrame = t0
     numFrames = t1 - t0
     for key in rf:
-        if key[:5] == "Well_":
+        if key.startswith("Well_"):
             wellID = key
             break
     # initialize an empty (fill with zeros) data collection
     data = np.zeros((nch, numFrames), dtype=np.int16)
+    if not true_zeroes:
+        # Will read as 0s after 12 bits signed conversion
+        data.fill(2048)
     # fill the data collection with Gaussian noise if requested
-    if useSyntheticNoise:
-        generateSyntheticNoise(rf, data, wellID, startFrame, numFrames, stdDev=noiseStdDev)
+    if use_synthetic_noise:
+        data = generate_synthetic_noise(rf, data, wellID, startFrame, numFrames, stdDev=noiseStdDev)
     # fill the data collection with the decoded event based sparse raw data
-    decodeEventBasedRawData(rf, data, wellID, startFrame, numFrames)
+    data = decode_event_based_raw_data(rf, data, wellID, startFrame, numFrames)
     return data.T
 
 
-def decodeEventBasedRawData(rf, data, wellID, startFrame, numFrames):
+def decode_event_based_raw_data(rf, data, wellID, startFrame, numFrames):
     # Source: Documentation by 3Brain
     # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/biocam/documentation_brw_4.x_bxr_3.x_bcmp_1.x_in_brainwave_5.x_v1.1.3.pdf
     # collect the TOCs
@@ -316,8 +329,9 @@ def decodeEventBasedRawData(rf, data, wellID, startFrame, numFrames):
                 rangeDataPos += 2
             pos += (toExclusive - fromInclusive) * 2
 
+    return data
 
-def generateSyntheticNoise(rf, data, wellID, startFrame, numFrames, stdDev=None):
+def generate_synthetic_noise(rf, data, wellID, startFrame, numFrames, stdDev=None):
     # Source: Documentation by 3Brain
     # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/biocam/documentation_brw_4.x_bxr_3.x_bcmp_1.x_in_brainwave_5.x_v1.1.3.pdf
     # collect the TOCs
@@ -368,3 +382,4 @@ def generateSyntheticNoise(rf, data, wellID, startFrame, numFrames, stdDev=None)
             data[chIdx] = np.array(np.random.normal(dataMean, dataStdDev, numFrames),
                     dtype=np.int16)
 
+    return data
