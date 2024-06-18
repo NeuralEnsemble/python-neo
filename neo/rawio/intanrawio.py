@@ -205,7 +205,7 @@ class IntanRawIO(BaseRawIO):
 
         # signals
         signal_channels = []
-        self.native_channel_order = dict()
+        self.native_channel_order = {}
         for c, chan_info in enumerate(self._ordered_channel_info):
             name = chan_info["custom_channel_name"]
             channel_id = chan_info["native_channel_name"]
@@ -235,9 +235,9 @@ class IntanRawIO(BaseRawIO):
 
         for stream_index, stream_id in enumerate(stream_ids_sorted):
             if self.filename.endswith(".rhd"):
-                name = stream_id_to_name_rhd.get(int(stream_id), "")
+                name = stream_id_to_stream_name_rhd.get(int(stream_id), "")
             else:
-                name = stream_id_to_name_rhs.get(int(stream_id), "")
+                name = stream_id_to_stream_name_rhs.get(int(stream_id), "")
 
             signal_streams["name"][stream_index] = name
 
@@ -346,10 +346,7 @@ class IntanRawIO(BaseRawIO):
 
             stream_name = self.header["signal_streams"][stream_index]["name"][:]
             stream_is_digital = stream_name in digital_stream_names
-            if stream_is_digital:
-                field_name = name_to_field_name_digital[stream_name]
-            else:
-                field_name = channel_ids[0]
+            field_name = stream_name if stream_is_digital else channel_ids[0]
 
             size = self._raw_data[field_name].size
 
@@ -409,10 +406,8 @@ class IntanRawIO(BaseRawIO):
 
         stream_name = self.header["signal_streams"][stream_index]["name"][:]
         stream_is_digital = stream_name in digital_stream_names
-        if stream_is_digital:
-            field_name = name_to_field_name_digital[stream_name]
-        else:
-            field_name = channel_ids[0]
+
+        field_name = stream_name if stream_is_digital else channel_ids[0]
 
         shape = self._raw_data[field_name].shape
         dtype = self._raw_data[field_name].dtype
@@ -439,15 +434,9 @@ class IntanRawIO(BaseRawIO):
                     sigs_chunk[:, chunk_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
                 else:
                     sigs_chunk[:, chunk_index] = data_chan[i_start:i_stop]
-        else:  # For digital data the channels come interleaved in a single field
-            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=np.uint8)
-            data_chan = self._raw_data[field_name].flatten()
-            for channel_index, channel_id in enumerate(channel_ids):
-                native_order = self.native_channel_order[channel_id]
-                mask = 1 << native_order
-                demultiplex_data = np.bitwise_and(data_chan, mask) > 0
-                sigs_chunk[:, channel_index] = demultiplex_data[i_start:i_stop]
-
+        else:  # For digital data the channels come interleaved in a single field so we need to demultiplex
+            digital_raw_data = self._raw_data[field_name].flatten()
+            sigs_chunk = self._demultiplex_digital_data(digital_raw_data, channel_ids, i_start, i_stop)
         return sigs_chunk
 
     def _get_analogsignal_chunk_one_file_per_channel(self, i_start, i_stop, stream_index, channel_indexes):
@@ -475,31 +464,31 @@ class IntanRawIO(BaseRawIO):
     def _get_analogsignal_chunk_one_file_per_signal(self, i_start, i_stop, stream_index, channel_indexes):
 
         stream_name = self.header["signal_streams"][stream_index]["name"][:]
+        raw_data = self._raw_data[stream_index]
+
         stream_is_digital = stream_name in digital_stream_names
         if stream_is_digital:
             stream_id = self.header["signal_streams"][stream_index]["id"]
             mask = self.header["signal_channels"]["stream_id"] == stream_id
             signal_channels = self.header["signal_channels"][mask]
             channel_ids = signal_channels["id"][channel_indexes]
-            channel_indexes_are_slice = isinstance(channel_indexes, slice)
 
-            if channel_indexes_are_slice:
-                num_channels = len(signal_channels)
-                start = channel_indexes.start or 0
-                stop = channel_indexes.stop or num_channels
-                step = channel_indexes.step or 1
-                channel_indexes = range(start, stop, step)
+            output = self._demultiplex_digital_data(raw_data, channel_ids, i_start, i_stop)
 
-            output = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=np.uint8)
-            raw_data = self._raw_data[stream_index]
-            for channel_index, channel_id in enumerate(channel_ids):
-                native_order = self.native_channel_order[channel_id]
-                mask = 1 << native_order
-                demultiplex_data = np.bitwise_and(raw_data, mask) > 0
-                output[:, channel_index] = demultiplex_data[i_start:i_stop].flatten()
         else:
-            signal_data_memmap = self._raw_data[stream_index]
-            output = signal_data_memmap[i_start:i_stop, channel_indexes]
+            output = raw_data[i_start:i_stop, channel_indexes]
+
+        return output
+
+    def _demultiplex_digital_data(self, raw_digital_data, channel_ids, i_start, i_stop):
+
+        output = np.zeros((i_stop - i_start, len(channel_ids)), dtype=np.uint8)
+
+        for channel_index, channel_id in enumerate(channel_ids):
+            native_order = self.native_channel_order[channel_id]
+            mask = 1 << native_order
+            demultiplex_data = np.bitwise_and(raw_digital_data, mask) > 0
+            output[:, channel_index] = demultiplex_data[i_start:i_stop].flatten()
 
         return output
 
@@ -648,7 +637,7 @@ rhs_signal_channel_header = [
     ("electrode_impedance_phase", "float32"),
 ]
 
-stream_id_to_name_rhs = {
+stream_id_to_stream_name_rhs = {
     0: "RHS2000 amplifier channel",
     3: "USB board ADC input channel",
     4: "USB board ADC output channel",
@@ -665,8 +654,8 @@ def read_rhs(filename, file_format: str):
     with open(filename, mode="rb") as f:
         global_info = read_variable_header(f, rhs_global_header)
 
-        # channels_by_type is simpler than data_dtype because 0 contains 0, 10 and 11 internally
-        channels_by_type = {k: [] for k in [0, 3, 4, 5, 6]}
+        # We use signal_type in the header as stream_id in neo
+        stream_id_to_channel_info_list = {k: [] for k in [0, 3, 4, 5, 6]}
         if not file_format == "header-attached":
             # data_dtype for rhs is complicated. There is not 1, 2 (supply and aux),
             # but there are dc-amp (10) and stim (11). we make timestamps (15)
@@ -680,10 +669,10 @@ def read_rhs(filename, file_format: str):
                     if chan_info["signal_type"] in (1, 2):
                         raise NeoReadWriteError("signal_type of 1 or 2 is not yet implemented in Neo")
                     if bool(chan_info["channel_enabled"]):
-                        channels_by_type[chan_info["signal_type"]].append(chan_info)
+                        stream_id_to_channel_info_list[chan_info["signal_type"]].append(chan_info)
 
         # useful dictionary for knowing the number of channels for non-header attached formats
-        channel_number_dict = {i: len(channels_by_type[i]) for i in [0, 3, 4, 5, 6]}
+        channel_number_dict = {i: len(stream_id_to_channel_info_list[i]) for i in [0, 3, 4, 5, 6]}
 
         header_size = f.tell()
 
@@ -698,7 +687,7 @@ def read_rhs(filename, file_format: str):
         channel_number_dict[15] = 1
 
     # 0: RHS2000 amplifier channel.
-    for chan_info in channels_by_type[0]:
+    for chan_info in stream_id_to_channel_info_list[0]:
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
@@ -720,7 +709,7 @@ def read_rhs(filename, file_format: str):
     if bool(global_info["dc_amplifier_data_saved"]):
         # if we have dc amp we need to grab the correct number of channels
         channel_number_dict[10] = channel_number_dict[0]
-        for chan_info in channels_by_type[0]:
+        for chan_info in stream_id_to_channel_info_list[0]:
             chan_info_dc = dict(chan_info)
             name = chan_info["native_channel_name"]
             chan_info_dc["native_channel_name"] = name + "_DC"
@@ -740,7 +729,7 @@ def read_rhs(filename, file_format: str):
 
     if file_format != "one-file-per-channel":
         channel_number_dict[11] = channel_number_dict[0]  # should be one stim / amplifier channel
-        for chan_info in channels_by_type[0]:
+        for chan_info in stream_id_to_channel_info_list[0]:
             chan_info_stim = dict(chan_info)
             name = chan_info["native_channel_name"]
             chan_info_stim["native_channel_name"] = name + "_STIM"
@@ -764,8 +753,8 @@ def read_rhs(filename, file_format: str):
 
     # 3: Analog input channel.
     # 4: Analog output channel.
-    for sig_type in [3, 4]:
-        for chan_info in channels_by_type[sig_type]:
+    for stream_id in [3, 4]:
+        for chan_info in stream_id_to_channel_info_list[stream_id]:
             chan_info["sampling_rate"] = sr
             chan_info["units"] = "V"
             chan_info["gain"] = 0.0003125
@@ -776,41 +765,25 @@ def read_rhs(filename, file_format: str):
                 name = chan_info["native_channel_name"]
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
             else:
-                data_dtype[sig_type] = "uint16"
+                data_dtype[stream_id] = "uint16"
 
     # 5: Digital input channel.
     # 6: Digital output channel.
-    for sig_type in [5, 6]:
-        if file_format in ["header-attached", "one-file-per-signal"]:
-            for chan_info in channels_by_type[sig_type]:
-                # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
-                # make this memory map work correctly. So since our digital data is not organized
-                # by channel like analog/ADC are we have to overwrite the native name to create
-                # a single permanent name that we can find with channel id
-                chan_info["sampling_rate"] = sr
-                chan_info["units"] = "TTL"  # arbitrary units TTL for logic
-                chan_info["gain"] = 1.0
-                chan_info["offset"] = 0.0
-                chan_info["dtype"] = "uint16"
-                ordered_channel_info.append(chan_info)
+    for stream_id in [5, 6]:
+        for chan_info in stream_id_to_channel_info_list[stream_id]:
+            chan_info["sampling_rate"] = sr
+            chan_info["units"] = "TTL"  # arbitrary units TTL for logic
+            chan_info["gain"] = 1.0
+            chan_info["offset"] = 0.0
+            chan_info["dtype"] = "uint16"
+            ordered_channel_info.append(chan_info)
 
-            # Note that the file format is packed so we only add it once
-            if len(channels_by_type[sig_type]) > 0:
-                name = {5: "DIGITAL-IN", 6: "DIGITAL-OUT"}[sig_type]
-                if file_format == "header-attached":
-                    data_dtype += [(name, "uint16", BLOCK_SIZE)]
-                else:
-                    data_dtype[sig_type] = "uint16"
-        # This case behaves as a binary with 0 and 1 coded as uint16
-        elif file_format == "one-file-per-channel":
-            for chan_info in channels_by_type[sig_type]:
-                chan_info["sampling_rate"] = sr
-                chan_info["units"] = "TTL"
-                chan_info["gain"] = 1.0
-                chan_info["offset"] = 0.0
-                chan_info["dtype"] = "uint16"
-                ordered_channel_info.append(chan_info)
-                data_dtype[sig_type] = "uint16"
+        if len(stream_id_to_channel_info_list[stream_id]) > 0:
+            if file_format == "header-attached":
+                name = stream_id_to_stream_name_rhs[stream_id]
+                data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            elif file_format in ["one-file-per-signal", "one-file-per-channel"]:
+                data_dtype[stream_id] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
     # was a request for postprocessing to be done in one of their scripts. From version 3+ the notch
@@ -898,7 +871,7 @@ rhd_signal_channel_header = [
     ("electrode_impedance_phase", "float32"),
 ]
 
-stream_id_to_name_rhd = {
+stream_id_to_stream_name_rhd = {
     0: "RHD2000 amplifier channel",
     1: "RHD2000 auxiliary input channel",
     2: "RHD2000 supply voltage channel",
@@ -948,7 +921,7 @@ def read_rhd(filename, file_format: str):
         global_info.update(read_variable_header(f, header))
 
         # read channel group and channel header
-        channels_by_type = {k: [] for k in [0, 1, 2, 3, 4, 5]}
+        stream_id_to_channel_info_list = {k: [] for k in [0, 1, 2, 3, 4, 5]}
         if not file_format == "header-attached":
             data_dtype = {k: [] for k in range(7)}  # 5 streams + 6 for timestamps for not header attached
         for g in range(global_info["nb_signal_group"]):
@@ -958,9 +931,9 @@ def read_rhd(filename, file_format: str):
                 for c in range(group_info["channel_num"]):
                     chan_info = read_variable_header(f, rhd_signal_channel_header)
                     if bool(chan_info["channel_enabled"]):
-                        channels_by_type[chan_info["signal_type"]].append(chan_info)
+                        stream_id_to_channel_info_list[chan_info["signal_type"]].append(chan_info)
 
-            channel_number_dict = {i: len(channels_by_type[i]) for i in range(6)}
+            channel_number_dict = {i: len(stream_id_to_channel_info_list[i]) for i in range(6)}
 
         header_size = f.tell()
 
@@ -988,7 +961,7 @@ def read_rhd(filename, file_format: str):
             channel_number_dict[6] = 1
 
     # 0: RHD2000 amplifier channel
-    for chan_info in channels_by_type[0]:
+    for chan_info in stream_id_to_channel_info_list[0]:
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
@@ -1007,7 +980,7 @@ def read_rhd(filename, file_format: str):
             data_dtype[0] = "int16"
 
     # 1: RHD2000 auxiliary input channel
-    for chan_info in channels_by_type[1]:
+    for chan_info in stream_id_to_channel_info_list[1]:
         chan_info["sampling_rate"] = sr / 4.0
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000374
@@ -1021,7 +994,7 @@ def read_rhd(filename, file_format: str):
             data_dtype[1] = "uint16"
 
     # 2: RHD2000 supply voltage channel
-    for chan_info in channels_by_type[2]:
+    for chan_info in stream_id_to_channel_info_list[2]:
         chan_info["sampling_rate"] = sr / BLOCK_SIZE
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000748
@@ -1047,7 +1020,7 @@ def read_rhd(filename, file_format: str):
         data_dtype += [(name, "int16")]
 
     # 3: USB board ADC input channel
-    for chan_info in channels_by_type[3]:
+    for chan_info in stream_id_to_channel_info_list[3]:
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "V"
         if global_info["eval_board_mode"] == 0:
@@ -1069,32 +1042,22 @@ def read_rhd(filename, file_format: str):
 
     # 4: USB board digital input channel
     # 5: USB board digital output channel
-    for sig_type in [4, 5]:
-        if file_format in ["header-attached", "one-file-per-signal"]:
-            for chan_info in channels_by_type[sig_type]:
-                chan_info["sampling_rate"] = sr
-                chan_info["units"] = "TTL"  # arbitrary units TTL for logic
-                chan_info["gain"] = 1.0
-                chan_info["offset"] = 0.0
-                chan_info["dtype"] = "uint16"
-                ordered_channel_info.append(chan_info)
+    for stream_id in [4, 5]:
+        for chan_info in stream_id_to_channel_info_list[stream_id]:
+            chan_info["sampling_rate"] = sr
+            chan_info["units"] = "TTL"  # arbitrary units TTL for logic
+            chan_info["gain"] = 1.0
+            chan_info["offset"] = 0.0
+            chan_info["dtype"] = "uint16"
+            ordered_channel_info.append(chan_info)
 
-            # Note that the all the channels are packed in one buffer, so the data type only needs to be added once
-            if len(channels_by_type[sig_type]) > 0:
-                name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
-                if file_format == "header-attached":
-                    data_dtype += [(name, "uint16", BLOCK_SIZE)]
-                else:
-                    data_dtype[sig_type] = "uint16"
-        elif file_format == "one-file-per-channel":
-            for chan_info in channels_by_type[sig_type]:
-                chan_info["sampling_rate"] = sr
-                chan_info["units"] = "TTL"
-                chan_info["gain"] = 1.0
-                chan_info["offset"] = 0.0
-                chan_info["dtype"] = "uint16"
-                ordered_channel_info.append(chan_info)
-                data_dtype[sig_type] = "uint16"
+        # Note that all the channels are packed in one buffer, so the data type only needs to be added once
+        if len(stream_id_to_channel_info_list[stream_id]) > 0:
+            if file_format == "header-attached":
+                name = stream_id_to_stream_name_rhd[stream_id]
+                data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            elif file_format in ["one-file-per-signal", "one-file-per-channel"]:
+                data_dtype[stream_id] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
     # was a request for postprocessing to be done in one of their scripts. From version 3+ the notch
@@ -1121,10 +1084,7 @@ def read_rhd(filename, file_format: str):
 # formats.
 
 digital_stream_names = ["USB board digital input channel", "USB board digital output channel"]
-name_to_field_name_digital = {
-    "USB board digital input channel": "DIGITAL-IN",
-    "USB board digital output channel": "DIGITAL-OUT",
-}
+
 
 # RHD Binary Files for One File Per Signal
 one_file_per_signal_filenames_rhd = [
