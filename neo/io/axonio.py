@@ -5,7 +5,6 @@ from neo.rawio.axonrawio import AxonRawIO
 from neo.core import Segment, AnalogSignal
 
 
-
 class AxonIO(AxonRawIO, BaseFromRaw):
     """
     Class for reading data from pCLAMP and AxoScope

@@ -85,6 +85,7 @@ import quantities as pq
 
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
+
 # to import from core
 from neo.core import Block, Segment, AnalogSignal, Event, SpikeTrain, NeoReadWriteError
 

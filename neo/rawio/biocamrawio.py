@@ -7,7 +7,6 @@ https://www.3brain.com/products/single-well/biocam-x
 Authors: Alessio Buccino, Robert Wolff
 """
 
-
 import json
 import numpy as np
 

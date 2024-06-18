@@ -21,6 +21,7 @@ from .baserawio import (
     _common_sig_characteristics,
 )
 
+
 class WinWcpRawIO(BaseRawIO):
     """
     Class for reading WinWCP data
