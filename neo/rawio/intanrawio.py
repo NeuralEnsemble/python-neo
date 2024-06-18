@@ -119,11 +119,9 @@ class IntanRawIO(BaseRawIO):
         # Input checks
         if not filename.exists() or not filename.is_file():
             raise FileNotFoundError(f"{filename} does not exist")
-        
-        
+
         if not (self.filename.endswith(".rhd") or self.filename.endswith(".rhs")):
             raise ValueError(f"{self.filename} is not a valid Intan file. Expected .rhd or .rhs extension")
-
 
         # see comment below for RHD which explains the division between file types
         if self.filename.endswith(".rhs"):
@@ -235,13 +233,12 @@ class IntanRawIO(BaseRawIO):
         stream_ids_sorted = sorted([int(stream_id) for stream_id in stream_ids])
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids_sorted]
 
-
         for stream_index, stream_id in enumerate(stream_ids_sorted):
             if self.filename.endswith(".rhd"):
                 name = stream_id_to_name_rhd.get(int(stream_id), "")
             else:
                 name = stream_id_to_name_rhs.get(int(stream_id), "")
-            
+
             signal_streams["name"][stream_index] = name
 
         self._max_sampling_rate = np.max(signal_channels["sampling_rate"])
@@ -344,23 +341,23 @@ class IntanRawIO(BaseRawIO):
         if self.file_format == "header-attached":
             stream_id = self.header["signal_streams"][stream_index]["id"]
             mask = self.header["signal_channels"]["stream_id"] == stream_id
-            signal_channels = self.header["signal_channels"][mask]        
+            signal_channels = self.header["signal_channels"][mask]
             channel_ids = signal_channels["id"]
-            
+
             stream_name = self.header["signal_streams"][stream_index]["name"][:]
             stream_is_digital = stream_name in digital_stream_names
             if stream_is_digital:
                 field_name = name_to_field_name_digital[stream_name]
             else:
                 field_name = channel_ids[0]
-            
+
             size = self._raw_data[field_name].size
-        
+
         # one-file-per-signal is (n_samples, n_channels)
         elif self.file_format == "one-file-per-signal":
             size = self._raw_data[stream_index].shape[0]
         # one-file-per-channel is (n_samples) so pull from list
-        
+
         else:
             size = self._raw_data[stream_index][0].size
 
@@ -409,14 +406,14 @@ class IntanRawIO(BaseRawIO):
         mask = self.header["signal_channels"]["stream_id"] == stream_id
         signal_channels = self.header["signal_channels"][mask]
         channel_ids = signal_channels["id"][channel_indexes]
-        
+
         stream_name = self.header["signal_streams"][stream_index]["name"][:]
         stream_is_digital = stream_name in digital_stream_names
         if stream_is_digital:
             field_name = name_to_field_name_digital[stream_name]
         else:
             field_name = channel_ids[0]
-            
+
         shape = self._raw_data[field_name].shape
         dtype = self._raw_data[field_name].dtype
 
@@ -431,9 +428,7 @@ class IntanRawIO(BaseRawIO):
             block_stop = i_stop // block_size + 1
             sl0 = i_start % block_size
             sl1 = sl0 + (i_stop - i_start)
-        
-        
-        
+
         # For all streams raw_data is a structured memmap with a field for each channel_id
         if not stream_is_digital:
             sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
@@ -445,14 +440,14 @@ class IntanRawIO(BaseRawIO):
                 else:
                     sigs_chunk[:, chunk_index] = data_chan[i_start:i_stop]
         else:  # For digital data the channels come interleaved in a single field
-            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=np.uint8) 
+            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=np.uint8)
             data_chan = self._raw_data[field_name].flatten()
             for channel_index, channel_id in enumerate(channel_ids):
                 native_order = self.native_channel_order[channel_id]
                 mask = 1 << native_order
                 demultiplex_data = np.bitwise_and(data_chan, mask) > 0
                 sigs_chunk[:, channel_index] = demultiplex_data[i_start:i_stop]
-            
+
         return sigs_chunk
 
     def _get_analogsignal_chunk_one_file_per_channel(self, i_start, i_stop, stream_index, channel_indexes):
@@ -485,9 +480,9 @@ class IntanRawIO(BaseRawIO):
             stream_id = self.header["signal_streams"][stream_index]["id"]
             mask = self.header["signal_channels"]["stream_id"] == stream_id
             signal_channels = self.header["signal_channels"][mask]
-            channel_ids = signal_channels["id"][channel_indexes]        
+            channel_ids = signal_channels["id"][channel_indexes]
             channel_indexes_are_slice = isinstance(channel_indexes, slice)
-            
+
             if channel_indexes_are_slice:
                 num_channels = len(signal_channels)
                 start = channel_indexes.start or 0
@@ -505,9 +500,9 @@ class IntanRawIO(BaseRawIO):
         else:
             signal_data_memmap = self._raw_data[stream_index]
             output = signal_data_memmap[i_start:i_stop, channel_indexes]
-        
+
         return output
-    
+
     def _assert_timestamp_continuity(self):
         """
         Asserts the continuity of timestamps in the data.
@@ -798,7 +793,7 @@ def read_rhs(filename, file_format: str):
                 chan_info["offset"] = 0.0
                 chan_info["dtype"] = "uint16"
                 ordered_channel_info.append(chan_info)
-            
+
             # Note that the file format is packed so we only add it once
             if len(channels_by_type[sig_type]) > 0:
                 name = {5: "DIGITAL-IN", 6: "DIGITAL-OUT"}[sig_type]
@@ -1083,7 +1078,7 @@ def read_rhd(filename, file_format: str):
                 chan_info["offset"] = 0.0
                 chan_info["dtype"] = "uint16"
                 ordered_channel_info.append(chan_info)
-            
+
             # Note that the all the channels are packed in one buffer, so the data type only needs to be added once
             if len(channels_by_type[sig_type]) > 0:
                 name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
@@ -1126,8 +1121,10 @@ def read_rhd(filename, file_format: str):
 # formats.
 
 digital_stream_names = ["USB board digital input channel", "USB board digital output channel"]
-name_to_field_name_digital = {"USB board digital input channel": "DIGITAL-IN",
-                              "USB board digital output channel": "DIGITAL-OUT"}
+name_to_field_name_digital = {
+    "USB board digital input channel": "DIGITAL-IN",
+    "USB board digital output channel": "DIGITAL-OUT",
+}
 
 # RHD Binary Files for One File Per Signal
 one_file_per_signal_filenames_rhd = [
