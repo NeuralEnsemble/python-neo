@@ -626,11 +626,12 @@ class PyPL2FileReader:
 
         
         pl2_spike_channel_info = PL2SpikeChannelInfo()
+        print("---------------------")
         print(type(channel_name) ,channel_name, )
         result = self.pl2_dll.PL2_GetSpikeChannelInfoByName(
             self._file_handle, channel_name, ctypes.byref(pl2_spike_channel_info)
         )
-
+        print("----------------------------------")
         if not result:
             self._print_error()
             return None
