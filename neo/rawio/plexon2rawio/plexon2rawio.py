@@ -128,14 +128,19 @@ class Plexon2RawIO(BaseRawIO):
 
         self.pl2reader = PyPL2FileReader(pl2_dll_file_path=pl2_dll_file_path)
 
-        # Open the file.
-        self.pl2reader.pl2_open_file(self.filename)
-
-        if not (platform.system() == "Linux"):
+        reading_attempts = 3
+        for attempt in range(reading_attempts):
+            self.pl2reader.pl2_open_file(self.filename)
+            
             # Verify the file handle is valid.
-            if self.pl2reader._file_handle.value == 0:
-                self.pl2reader._print_error()
-                raise Exception(f"Opening {self.filename} failed.")
+            if self.pl2reader._file_handle.value != 0:
+                # File handle is valid, exit the loop early
+                break
+            else:
+                if attempt == reading_attempts - 1:
+                    self.pl2reader._print_error()
+                    raise IOError(f"Opening {self.filename} failed after {reading_attempts} attempts.")
+
 
     def _source_name(self):
         return self.filename
