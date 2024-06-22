@@ -120,7 +120,7 @@ class Plexon2RawIO(BaseRawIO):
                 dist = urlopen(url=url)
 
                 with open(pl2_dll_file_path, "wb") as f:
-                    print(f"Downloading plexon dll to {pl2_dll_file_path}")
+                    warnings.warn(f"dll file does not exist, downloading plexon dll to {pl2_dll_file_path}")
                     f.write(dist.read())
 
         # Instantiate wrapper for Windows DLL
