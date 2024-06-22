@@ -132,10 +132,10 @@ class Plexon2RawIO(BaseRawIO):
         self.pl2reader.pl2_open_file(self.filename)
 
 
-        # Verify the file handle is valid.
-        if self.pl2reader._file_handle.value == 0:
-            self.pl2reader._print_error()
-            raise Exception(f"Opening {self.filename} failed.")
+        # # Verify the file handle is valid.
+        # if self.pl2reader._file_handle.value == 0:
+        #     self.pl2reader._print_error()
+        #     raise Exception(f"Opening {self.filename} failed.")
 
     def _source_name(self):
         return self.filename
