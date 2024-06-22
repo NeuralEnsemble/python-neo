@@ -25,7 +25,6 @@ else:
 
     from zugbruecke import CtypesSession
     if platform.system() == "Darwin":
-        # On MacOS, the default log level of zugbruecke is too high
         ctypes = CtypesSession(log_level=100, arch = 'win64')
     else:
         ctypes = CtypesSession(log_level=100)
