@@ -635,7 +635,6 @@ class PyPL2FileReader:
         if not result:
             self._print_error()
             return None
-
         return pl2_spike_channel_info
 
     def pl2_get_spike_channel_info_by_source(self, source_id, one_based_channel_index_in_source):
