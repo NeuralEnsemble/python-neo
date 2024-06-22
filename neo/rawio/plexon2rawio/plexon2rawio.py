@@ -157,7 +157,6 @@ class Plexon2RawIO(BaseRawIO):
         Source = namedtuple("Source", "id name sampling_rate n_samples")
         for c in range(self.pl2reader.pl2_file_info.m_TotalNumberOfAnalogChannels):
             achannel_info = self.pl2reader.pl2_get_analog_channel_info(c)
-
             # only consider active channels
             if not achannel_info.m_ChannelEnabled:
                 continue
@@ -273,8 +272,10 @@ class Plexon2RawIO(BaseRawIO):
                     # python is 1..12 https://docs.python.org/3/library/datetime.html#datetime.datetime
                     # so month needs to be tm_mon+1; also tm_sec could cause problems in the case of leap
                     # seconds, but this is harder to defend against.
+                    year = tmo.tm_year  # This has base 1900 in the c++ struct specification so we need to add 1900
+                    year += 1900
                     dt = datetime(
-                        year=tmo.tm_year,
+                        year=year,
                         month=tmo.tm_mon + 1,
                         day=tmo.tm_mday,
                         hour=tmo.tm_hour,
@@ -328,7 +329,6 @@ class Plexon2RawIO(BaseRawIO):
                 "m_OneBasedChannelInTrode",
                 "m_Source",
                 "m_Channel",
-                "m_Name",
                 "m_MaximumNumberOfFragments",
             ]
 
