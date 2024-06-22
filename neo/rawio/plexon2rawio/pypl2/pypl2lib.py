@@ -24,8 +24,11 @@ else:
         raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
 
     from zugbruecke import CtypesSession
-
-    ctypes = CtypesSession(log_level=100)
+    if platform.system() == "Darwin":
+        # On MacOS, the default log level of zugbruecke is too high
+        ctypes = CtypesSession(log_level=100, arch = 'win64')
+    else:
+        ctypes = CtypesSession(log_level=100)
 
 
 class tm(ctypes.Structure):
@@ -610,7 +613,7 @@ class PyPL2FileReader:
 
         self.pl2_dll.PL2_GetSpikeChannelInfoByName.argtypes = (
             ctypes.c_int,
-            ctypes.c_char * len(channel_name),
+            ctypes.POINTER(ctypes.c_char),
             ctypes.POINTER(PL2SpikeChannelInfo),
         )
 
@@ -624,14 +627,11 @@ class PyPL2FileReader:
             }
         ]
 
-        
         pl2_spike_channel_info = PL2SpikeChannelInfo()
-        print("---------------------")
-        print(type(channel_name) ,channel_name, )
+
         result = self.pl2_dll.PL2_GetSpikeChannelInfoByName(
             self._file_handle, channel_name, ctypes.byref(pl2_spike_channel_info)
         )
-        print("----------------------------------")
         if not result:
             self._print_error()
             return None
@@ -745,7 +745,7 @@ class PyPL2FileReader:
 
         self.pl2_dll.PL2_GetSpikeChannelDataByName.argtypes = (
             ctypes.c_int,
-            ctypes.c_char,
+            ctypes.POINTER(ctypes.c_char),
             ctypes.POINTER(ctypes.c_ulonglong),
             ctypes.POINTER(ctypes.c_ulonglong),
             ctypes.POINTER(ctypes.c_ushort),
