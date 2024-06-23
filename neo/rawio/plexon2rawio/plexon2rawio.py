@@ -128,7 +128,7 @@ class Plexon2RawIO(BaseRawIO):
 
         self.pl2reader = PyPL2FileReader(pl2_dll_file_path=pl2_dll_file_path)
 
-        reading_attempts = 3
+        reading_attempts = 10
         for attempt in range(reading_attempts):
             self.pl2reader.pl2_open_file(self.filename)
             
