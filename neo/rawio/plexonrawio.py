@@ -95,14 +95,14 @@ class PlexonRawIO(BaseRawIO):
         )
 
         # dsp channels header = spikes and waveforms
-        nb_unit_chan = global_header["NumDSPChannels"]
+        nb_unit_chan = int(global_header["NumDSPChannels"])
         offset1 = np.dtype(GlobalHeader).itemsize
         dspChannelHeaders = np.memmap(
             self.filename, dtype=DspChannelHeader, mode="r", offset=offset1, shape=(nb_unit_chan,)
         )
 
         # event channel header
-        nb_event_chan = global_header["NumEventChannels"]
+        nb_event_chan = int(global_header["NumEventChannels"])
         offset2 = offset1 + np.dtype(DspChannelHeader).itemsize * nb_unit_chan
         eventHeaders = np.memmap(
             self.filename,
@@ -113,7 +113,7 @@ class PlexonRawIO(BaseRawIO):
         )
 
         # slow channel header = signal
-        nb_sig_chan = global_header["NumSlowChannels"]
+        nb_sig_chan = int(global_header["NumSlowChannels"])
         offset3 = offset2 + np.dtype(EventChannelHeader).itemsize * nb_event_chan
         slowChannelHeaders = np.memmap(
             self.filename, dtype=SlowChannelHeader, mode="r", offset=offset3, shape=(nb_sig_chan,)
@@ -136,7 +136,9 @@ class PlexonRawIO(BaseRawIO):
 
         while pos < data.size:
             bl_header = data[pos : pos + 16].view(DataBlockHeader)[0]
-            length = bl_header["NumberOfWaveforms"] * bl_header["NumberOfWordsInWaveform"] * 2 + 16
+            number_of_waveforms = int(bl_header["NumberOfWaveforms"])
+            number_of_words_in_waveform = int(bl_header["NumberOfWordsInWaveform"])
+            length =number_of_waveforms * number_of_words_in_waveform * 2 + 16
             bl_type = int(bl_header["Type"])
             chan_id = int(bl_header["Channel"])
             block_pos[bl_type][chan_id].append(pos)
