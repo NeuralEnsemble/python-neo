@@ -123,14 +123,14 @@ class IntanRawIO(BaseRawIO):
             raise ValueError(f"{self.filename} is not a valid Intan file. Expected .rhd or .rhs extension")
 
         # see comment below for RHD which explains the division between file types
-        if self.self.filename.suffix == ".rhs":
+        if self.filename.suffix == ".rhs":
             if self.filename.name == "info.rhs":
                 if any((self.filename.parent / file).exists() for file in one_file_per_signal_filenames_rhs):
                     self.file_format = "one-file-per-signal"
-                    raw_file_paths_dict = create_one_file_per_signal_dict_rhs(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_signal_dict_rhs(dirname=self.filename.parent)
                 else:
                     self.file_format = "one-file-per-channel"
-                    raw_file_paths_dict = create_one_file_per_channel_dict_rhs(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_channel_dict_rhs(dirname=self.filename.parent)
             else:
                 self.file_format = "header-attached"
 
