@@ -105,7 +105,7 @@ class IntanRawIO(BaseRawIO):
     def __init__(self, filename="", ignore_integrity_checks=False):
 
         BaseRawIO.__init__(self)
-        self.filename = filename
+        self.filename = Path(filename)
         self.ignore_integrity_checks = ignore_integrity_checks
         self.discontinuous_timestamps = False
 
@@ -114,19 +114,18 @@ class IntanRawIO(BaseRawIO):
 
     def _parse_header(self):
 
-        filename = Path(self.filename)
 
         # Input checks
-        if not filename.exists() or not filename.is_file():
-            raise FileNotFoundError(f"{filename} does not exist")
+        if not self.filename.is_file():
+            raise FileNotFoundError(f"{self.filename} does not exist")
 
-        if not (self.filename.endswith(".rhd") or self.filename.endswith(".rhs")):
+        if not self.filename.suffix in [".rhd", ".rhs"]:
             raise ValueError(f"{self.filename} is not a valid Intan file. Expected .rhd or .rhs extension")
 
         # see comment below for RHD which explains the division between file types
-        if self.filename.endswith(".rhs"):
-            if filename.name == "info.rhs":
-                if any((filename.parent / file).exists() for file in one_file_per_signal_filenames_rhs):
+        if self.self.filename.suffix == ".rhs":
+            if self.filename.name == "info.rhs":
+                if any((self.filename.parent / file).exists() for file in one_file_per_signal_filenames_rhs):
                     self.file_format = "one-file-per-signal"
                     raw_file_paths_dict = create_one_file_per_signal_dict_rhs(dirname=filename.parent)
                 else:
@@ -147,16 +146,16 @@ class IntanRawIO(BaseRawIO):
         # 3 possibilities for rhd files, one combines the header and the data in the same file with suffix `rhd` while
         # the other two separates the data from the header which is always called `info.rhd`
         # attached to the actual binary file with data
-        elif self.filename.endswith(".rhd"):
-            if filename.name == "info.rhd":
+        elif self.filename.suffix == ".rhd":
+            if self.filename.name == "info.rhd":
                 # first we have one-file-per-signal which is where one neo stream/file is saved as .dat files
-                if any((filename.parent / file).exists() for file in one_file_per_signal_filenames_rhd):
+                if any((self.filename.parent / file).exists() for file in one_file_per_signal_filenames_rhd):
                     self.file_format = "one-file-per-signal"
-                    raw_file_paths_dict = create_one_file_per_signal_dict_rhd(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_signal_dict_rhd(dirname=self.filename.parent)
                 # then there is one-file-per-channel where each channel in a neo stream is in its own .dat file
                 else:
                     self.file_format = "one-file-per-channel"
-                    raw_file_paths_dict = create_one_file_per_channel_dict_rhd(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_channel_dict_rhd(dirname=self.filename.parent)
             # finally the format with the header-attached to the binary file as one giant file
             else:
                 self.file_format = "header-attached"
@@ -234,7 +233,7 @@ class IntanRawIO(BaseRawIO):
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids_sorted]
 
         for stream_index, stream_id in enumerate(stream_ids_sorted):
-            if self.filename.endswith(".rhd"):
+            if self.filename.suffix == ".rhd":
                 name = stream_id_to_stream_name_rhd.get(int(stream_id), "")
             else:
                 name = stream_id_to_stream_name_rhs.get(int(stream_id), "")
@@ -772,7 +771,7 @@ def read_rhs(filename, file_format: str):
     for stream_id in [5, 6]:
         for chan_info in stream_id_to_channel_info_list[stream_id]:
             chan_info["sampling_rate"] = sr
-            chan_info["units"] = "TTL"  # arbitrary units TTL for logic
+            chan_info["units"] = "a.u."  # arbitrary units TTL for logic
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "uint16"
@@ -1045,7 +1044,7 @@ def read_rhd(filename, file_format: str):
     for stream_id in [4, 5]:
         for chan_info in stream_id_to_channel_info_list[stream_id]:
             chan_info["sampling_rate"] = sr
-            chan_info["units"] = "TTL"  # arbitrary units TTL for logic
+            chan_info["units"] = "a.u."  # arbitrary units TTL for logic
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "uint16"
