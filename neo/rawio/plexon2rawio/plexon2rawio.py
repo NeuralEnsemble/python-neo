@@ -128,6 +128,7 @@ class Plexon2RawIO(BaseRawIO):
 
         self.pl2reader = PyPL2FileReader(pl2_dll_file_path=pl2_dll_file_path)
 
+
         reading_attempts = 10
         for attempt in range(reading_attempts):
             self.pl2reader.pl2_open_file(self.filename)
@@ -140,7 +141,6 @@ class Plexon2RawIO(BaseRawIO):
                 if attempt == reading_attempts - 1:
                     self.pl2reader._print_error()
                     raise IOError(f"Opening {self.filename} failed after {reading_attempts} attempts.")
-
 
     def _source_name(self):
         return self.filename
