@@ -610,7 +610,7 @@ class PyPL2FileReader:
 
         self.pl2_dll.PL2_GetSpikeChannelInfoByName.argtypes = (
             ctypes.c_int,
-            ctypes.c_char * len(channel_name),
+            ctypes.POINTER(ctypes.c_char),
             ctypes.POINTER(PL2SpikeChannelInfo),
         )
 
@@ -744,7 +744,7 @@ class PyPL2FileReader:
 
         self.pl2_dll.PL2_GetSpikeChannelDataByName.argtypes = (
             ctypes.c_int,
-            ctypes.c_char,
+            ctypes.POINTER(ctypes.c_char),
             ctypes.POINTER(ctypes.c_ulonglong),
             ctypes.POINTER(ctypes.c_ulonglong),
             ctypes.POINTER(ctypes.c_ushort),
