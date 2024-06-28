@@ -113,7 +113,8 @@ class IntanRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-
+        
+        self.filename  = Path(self.filename)
 
         # Input checks
         if not self.filename.is_file():
