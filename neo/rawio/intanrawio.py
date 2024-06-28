@@ -90,7 +90,10 @@ class IntanRawIO(BaseRawIO):
     Examples
     --------
     >>> import neo.rawio
+    >>> # for a header-attached file
     >>> reader = neo.rawio.IntanRawIO(filename='data.rhd')
+    >>> # for the other formats we point to the info.rhd
+    >>> reader = neo.rawioIntanRawIO(filename='info.rhd')
     >>> reader.parse_header()
     >>> raw_chunk = reader.get_analogsignal_chunk(block_index=0,
                                                   seg_index=0
@@ -113,8 +116,8 @@ class IntanRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        
-        self.filename  = Path(self.filename)
+
+        self.filename = Path(self.filename)
 
         # Input checks
         if not self.filename.is_file():
@@ -201,12 +204,14 @@ class IntanRawIO(BaseRawIO):
                     self._raw_data[stream_index].append(channel_memmap)
 
         # Data Integrity checks
+        # strictness of check is controlled by ignore_integrity_checks
+        # which is set at __init__
         self._assert_timestamp_continuity()
 
         # signals
         signal_channels = []
         self.native_channel_order = {}
-        for c, chan_info in enumerate(self._ordered_channel_info):
+        for chan_info in self._ordered_channel_info:
             name = chan_info["custom_channel_name"]
             channel_id = chan_info["native_channel_name"]
             sig_dtype = chan_info["dtype"]
@@ -558,7 +563,24 @@ class IntanRawIO(BaseRawIO):
                 raise NeoReadWriteError(error_msg)
 
 
+###################################
+# Header reading helper functions
+
+
 def read_qstring(f):
+    """
+    Reads the optional notes included in the Intan RHX software
+
+    Parameters
+    ----------
+    f: BinaryIO
+        The file object
+
+    Returns
+    -------
+    txt: str
+        The string
+    """
     length = np.fromfile(f, dtype="uint32", count=1)[0]
     if length == 0xFFFFFFFF or length == 0:
         return ""
@@ -566,7 +588,22 @@ def read_qstring(f):
     return txt
 
 
-def read_variable_header(f, header):
+def read_variable_header(f, header: list):
+    """
+    Reads the information from the binary file for the header info dict
+
+    Parameters
+    ----------
+    f: BinaryIO
+        The file object
+    header: list[tuple]
+        The list of header sections along with their associated dtype
+
+    Returns
+    -------
+    info: dict
+        The dictionary containing the information contained in the header
+    """
     info = {}
     for field_name, field_type in header:
         if field_type == "QString":
@@ -654,7 +691,11 @@ def read_rhs(filename, file_format: str):
     with open(filename, mode="rb") as f:
         global_info = read_variable_header(f, rhs_global_header)
 
-        # We use signal_type in the header as stream_id in neo
+        # We use signal_type in the header as stream_id in neo with the following
+        # complications: for rhs files in the header-attaached stream_id 0 also
+        # contains information for stream_id 10 and stream_id 11 so we need to
+        # break these up. See notes throughout code base; for timestamps we always
+        # force them to be the last stream_id.
         stream_id_to_channel_info_list = {k: [] for k in [0, 3, 4, 5, 6]}
         if not file_format == "header-attached":
             # data_dtype for rhs is complicated. There is not 1, 2 (supply and aux),
@@ -667,7 +708,11 @@ def read_rhs(filename, file_format: str):
                 for c in range(group_info["channel_num"]):
                     chan_info = read_variable_header(f, rhs_signal_channel_header)
                     if chan_info["signal_type"] in (1, 2):
-                        raise NeoReadWriteError("signal_type of 1 or 2 is not yet implemented in Neo")
+                        error_msg = (
+                            "signal_type of 1 or 2 does not exist for rhs files. If you have an rhs file "
+                            "with these formats open an issue on the python-neo github page"
+                        )
+                        raise NeoReadWriteError(error_msg)
                     if bool(chan_info["channel_enabled"]):
                         stream_id_to_channel_info_list[chan_info["signal_type"]].append(chan_info)
 
@@ -708,6 +753,7 @@ def read_rhs(filename, file_format: str):
 
     if bool(global_info["dc_amplifier_data_saved"]):
         # if we have dc amp we need to grab the correct number of channels
+        # the channel number is the same as the count for amplifier data
         channel_number_dict[10] = channel_number_dict[0]
         for chan_info in stream_id_to_channel_info_list[0]:
             chan_info_dc = dict(chan_info)
@@ -724,6 +770,7 @@ def read_rhs(filename, file_format: str):
                 data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
             else:
                 data_dtype[10] = "uint16"
+
     # I can't seem to get stim files to generate for one-file-per-channel
     # so let's skip for now and can be given on request
 
@@ -749,7 +796,9 @@ def read_rhs(filename, file_format: str):
     else:
         warnings.warn("Stim not implemented for `one-file-per-channel` due to lack of test files")
 
-    # No supply or aux for rhs files (ie no stream 1 and 2)
+    # No supply or aux for rhs files (ie no stream_id 1 and 2)
+    # We have an error above that requests test files to help if the spec is changed
+    # in the future.
 
     # 3: Analog input channel.
     # 4: Analog output channel.
@@ -772,7 +821,9 @@ def read_rhs(filename, file_format: str):
     for stream_id in [5, 6]:
         for chan_info in stream_id_to_channel_info_list[stream_id]:
             chan_info["sampling_rate"] = sr
-            chan_info["units"] = "a.u."  # arbitrary units TTL for logic
+            # arbitrary units are used to indicate that Intan does not
+            # store raw voltages but only the boolean TTL state
+            chan_info["units"] = "a.u." 
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "uint16"
@@ -1045,7 +1096,9 @@ def read_rhd(filename, file_format: str):
     for stream_id in [4, 5]:
         for chan_info in stream_id_to_channel_info_list[stream_id]:
             chan_info["sampling_rate"] = sr
-            chan_info["units"] = "a.u."  # arbitrary units TTL for logic
+            # arbitrary units are used to indicate that Intan does not
+            # store raw voltages but only the boolean TTL state
+            chan_info["units"] = "a.u." 
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "uint16"
@@ -1079,7 +1132,7 @@ def read_rhd(filename, file_format: str):
 
 
 ##########################################################################
-# RHX Zone for Binary Files
+# RHX Zone for Binary Files (note this is for version 3+ of Intan software)
 # This section provides all possible headerless binary files in both the rhs and rhd
 # formats.
 
