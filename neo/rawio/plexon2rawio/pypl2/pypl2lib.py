@@ -24,8 +24,10 @@ else:
         raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
 
     from zugbruecke import CtypesSession
-
-    ctypes = CtypesSession(log_level=100)
+    if platform.system() == "Darwin":
+        ctypes = CtypesSession(log_level=100, arch = 'win64')
+    else:
+        ctypes = CtypesSession(log_level=100)
 
 
 class tm(ctypes.Structure):
@@ -629,11 +631,9 @@ class PyPL2FileReader:
         result = self.pl2_dll.PL2_GetSpikeChannelInfoByName(
             self._file_handle, channel_name, ctypes.byref(pl2_spike_channel_info)
         )
-
         if not result:
             self._print_error()
             return None
-
         return pl2_spike_channel_info
 
     def pl2_get_spike_channel_info_by_source(self, source_id, one_based_channel_index_in_source):
