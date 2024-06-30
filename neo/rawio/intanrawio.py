@@ -90,7 +90,10 @@ class IntanRawIO(BaseRawIO):
     Examples
     --------
     >>> import neo.rawio
+    >>> # for a header-attached file
     >>> reader = neo.rawio.IntanRawIO(filename='data.rhd')
+    >>> # for the other formats we point to the info.rhd
+    >>> reader = neo.rawioIntanRawIO(filename='info.rhd')
     >>> reader.parse_header()
     >>> raw_chunk = reader.get_analogsignal_chunk(block_index=0,
                                                   seg_index=0
@@ -105,7 +108,7 @@ class IntanRawIO(BaseRawIO):
     def __init__(self, filename="", ignore_integrity_checks=False):
 
         BaseRawIO.__init__(self)
-        self.filename = filename
+        self.filename = Path(filename)
         self.ignore_integrity_checks = ignore_integrity_checks
         self.discontinuous_timestamps = False
 
@@ -114,20 +117,24 @@ class IntanRawIO(BaseRawIO):
 
     def _parse_header(self):
 
-        filename = Path(self.filename)
+        self.filename = Path(self.filename)
 
-        if not filename.exists() or not filename.is_file():
-            raise FileNotFoundError(f"{filename} does not exist")
+        # Input checks
+        if not self.filename.is_file():
+            raise FileNotFoundError(f"{self.filename} does not exist")
+
+        if not self.filename.suffix in [".rhd", ".rhs"]:
+            raise ValueError(f"{self.filename} is not a valid Intan file. Expected .rhd or .rhs extension")
 
         # see comment below for RHD which explains the division between file types
-        if self.filename.endswith(".rhs"):
-            if filename.name == "info.rhs":
-                if any((filename.parent / file).exists() for file in one_file_per_signal_filenames_rhs):
+        if self.filename.suffix == ".rhs":
+            if self.filename.name == "info.rhs":
+                if any((self.filename.parent / file).exists() for file in one_file_per_signal_filenames_rhs):
                     self.file_format = "one-file-per-signal"
-                    raw_file_paths_dict = create_one_file_per_signal_dict_rhs(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_signal_dict_rhs(dirname=self.filename.parent)
                 else:
                     self.file_format = "one-file-per-channel"
-                    raw_file_paths_dict = create_one_file_per_channel_dict_rhs(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_channel_dict_rhs(dirname=self.filename.parent)
             else:
                 self.file_format = "header-attached"
 
@@ -143,16 +150,16 @@ class IntanRawIO(BaseRawIO):
         # 3 possibilities for rhd files, one combines the header and the data in the same file with suffix `rhd` while
         # the other two separates the data from the header which is always called `info.rhd`
         # attached to the actual binary file with data
-        elif self.filename.endswith(".rhd"):
-            if filename.name == "info.rhd":
+        elif self.filename.suffix == ".rhd":
+            if self.filename.name == "info.rhd":
                 # first we have one-file-per-signal which is where one neo stream/file is saved as .dat files
-                if any((filename.parent / file).exists() for file in one_file_per_signal_filenames_rhd):
+                if any((self.filename.parent / file).exists() for file in one_file_per_signal_filenames_rhd):
                     self.file_format = "one-file-per-signal"
-                    raw_file_paths_dict = create_one_file_per_signal_dict_rhd(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_signal_dict_rhd(dirname=self.filename.parent)
                 # then there is one-file-per-channel where each channel in a neo stream is in its own .dat file
                 else:
                     self.file_format = "one-file-per-channel"
-                    raw_file_paths_dict = create_one_file_per_channel_dict_rhd(dirname=filename.parent)
+                    raw_file_paths_dict = create_one_file_per_channel_dict_rhd(dirname=self.filename.parent)
             # finally the format with the header-attached to the binary file as one giant file
             else:
                 self.file_format = "header-attached"
@@ -197,11 +204,14 @@ class IntanRawIO(BaseRawIO):
                     self._raw_data[stream_index].append(channel_memmap)
 
         # Data Integrity checks
+        # strictness of check is controlled by ignore_integrity_checks
+        # which is set at __init__
         self._assert_timestamp_continuity()
 
         # signals
         signal_channels = []
-        for c, chan_info in enumerate(self._ordered_channel_info):
+        self.native_channel_order = {}
+        for chan_info in self._ordered_channel_info:
             name = chan_info["custom_channel_name"]
             channel_id = chan_info["native_channel_name"]
             sig_dtype = chan_info["dtype"]
@@ -218,6 +228,7 @@ class IntanRawIO(BaseRawIO):
                     stream_id,
                 )
             )
+            self.native_channel_order[channel_id] = chan_info["native_order"]
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         stream_ids = np.unique(signal_channels["stream_id"])
@@ -228,10 +239,12 @@ class IntanRawIO(BaseRawIO):
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids_sorted]
 
         for stream_index, stream_id in enumerate(stream_ids_sorted):
-            if self.filename.endswith(".rhd"):
-                signal_streams["name"][stream_index] = stream_type_to_name_rhd.get(int(stream_id), "")
+            if self.filename.suffix == ".rhd":
+                name = stream_id_to_stream_name_rhd.get(int(stream_id), "")
             else:
-                signal_streams["name"][stream_index] = stream_type_to_name_rhs.get(int(stream_id), "")
+                name = stream_id_to_stream_name_rhs.get(int(stream_id), "")
+
+            signal_streams["name"][stream_index] = name
 
         self._max_sampling_rate = np.max(signal_channels["sampling_rate"])
 
@@ -335,12 +348,18 @@ class IntanRawIO(BaseRawIO):
             mask = self.header["signal_channels"]["stream_id"] == stream_id
             signal_channels = self.header["signal_channels"][mask]
             channel_ids = signal_channels["id"]
-            channel_id_0 = channel_ids[0]
-            size = self._raw_data[channel_id_0].size
+
+            stream_name = self.header["signal_streams"][stream_index]["name"][:]
+            stream_is_digital = stream_name in digital_stream_names
+            field_name = stream_name if stream_is_digital else channel_ids[0]
+
+            size = self._raw_data[field_name].size
+
         # one-file-per-signal is (n_samples, n_channels)
         elif self.file_format == "one-file-per-signal":
             size = self._raw_data[stream_index].shape[0]
         # one-file-per-channel is (n_samples) so pull from list
+
         else:
             size = self._raw_data[stream_index][0].size
 
@@ -388,12 +407,15 @@ class IntanRawIO(BaseRawIO):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         mask = self.header["signal_channels"]["stream_id"] == stream_id
         signal_channels = self.header["signal_channels"][mask]
-
         channel_ids = signal_channels["id"][channel_indexes]
-        channel_id_0 = channel_ids[0]
-        shape = self._raw_data[channel_id_0].shape
-        dtype = self._raw_data[channel_id_0].dtype
-        sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
+
+        stream_name = self.header["signal_streams"][stream_index]["name"][:]
+        stream_is_digital = stream_name in digital_stream_names
+
+        field_name = stream_name if stream_is_digital else channel_ids[0]
+
+        shape = self._raw_data[field_name].shape
+        dtype = self._raw_data[field_name].dtype
 
         # This is False for Temperature and timestamps
         multiple_samples_per_block = len(shape) == 2
@@ -407,14 +429,19 @@ class IntanRawIO(BaseRawIO):
             sl0 = i_start % block_size
             sl1 = sl0 + (i_stop - i_start)
 
-        # raw_data is a structured memmap with a field for each channel_id
-        for chunk_index, channel_id in enumerate(channel_ids):
-            data_chan = self._raw_data[channel_id]
-            if multiple_samples_per_block:
-                sigs_chunk[:, chunk_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
-            else:
-                sigs_chunk[:, chunk_index] = data_chan[i_start:i_stop]
+        # For all streams raw_data is a structured memmap with a field for each channel_id
+        if not stream_is_digital:
+            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
 
+            for chunk_index, channel_id in enumerate(channel_ids):
+                data_chan = self._raw_data[channel_id]
+                if multiple_samples_per_block:
+                    sigs_chunk[:, chunk_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
+                else:
+                    sigs_chunk[:, chunk_index] = data_chan[i_start:i_stop]
+        else:  # For digital data the channels come interleaved in a single field so we need to demultiplex
+            digital_raw_data = self._raw_data[field_name].flatten()
+            sigs_chunk = self._demultiplex_digital_data(digital_raw_data, channel_ids, i_start, i_stop)
         return sigs_chunk
 
     def _get_analogsignal_chunk_one_file_per_channel(self, i_start, i_stop, stream_index, channel_indexes):
@@ -441,10 +468,34 @@ class IntanRawIO(BaseRawIO):
 
     def _get_analogsignal_chunk_one_file_per_signal(self, i_start, i_stop, stream_index, channel_indexes):
 
-        # One memmap per stream case
-        signal_data_memmap = self._raw_data[stream_index]
+        stream_name = self.header["signal_streams"][stream_index]["name"][:]
+        raw_data = self._raw_data[stream_index]
 
-        return signal_data_memmap[i_start:i_stop, channel_indexes]
+        stream_is_digital = stream_name in digital_stream_names
+        if stream_is_digital:
+            stream_id = self.header["signal_streams"][stream_index]["id"]
+            mask = self.header["signal_channels"]["stream_id"] == stream_id
+            signal_channels = self.header["signal_channels"][mask]
+            channel_ids = signal_channels["id"][channel_indexes]
+
+            output = self._demultiplex_digital_data(raw_data, channel_ids, i_start, i_stop)
+
+        else:
+            output = raw_data[i_start:i_stop, channel_indexes]
+
+        return output
+
+    def _demultiplex_digital_data(self, raw_digital_data, channel_ids, i_start, i_stop):
+
+        output = np.zeros((i_stop - i_start, len(channel_ids)), dtype=np.uint8)
+
+        for channel_index, channel_id in enumerate(channel_ids):
+            native_order = self.native_channel_order[channel_id]
+            mask = 1 << native_order
+            demultiplex_data = np.bitwise_and(raw_digital_data, mask) > 0
+            output[:, channel_index] = demultiplex_data[i_start:i_stop].flatten()
+
+        return output
 
     def _assert_timestamp_continuity(self):
         """
@@ -512,7 +563,24 @@ class IntanRawIO(BaseRawIO):
                 raise NeoReadWriteError(error_msg)
 
 
+###################################
+# Header reading helper functions
+
+
 def read_qstring(f):
+    """
+    Reads the optional notes included in the Intan RHX software
+
+    Parameters
+    ----------
+    f: BinaryIO
+        The file object
+
+    Returns
+    -------
+    txt: str
+        The string
+    """
     length = np.fromfile(f, dtype="uint32", count=1)[0]
     if length == 0xFFFFFFFF or length == 0:
         return ""
@@ -520,7 +588,22 @@ def read_qstring(f):
     return txt
 
 
-def read_variable_header(f, header):
+def read_variable_header(f, header: list):
+    """
+    Reads the information from the binary file for the header info dict
+
+    Parameters
+    ----------
+    f: BinaryIO
+        The file object
+    header: list[tuple]
+        The list of header sections along with their associated dtype
+
+    Returns
+    -------
+    info: dict
+        The dictionary containing the information contained in the header
+    """
     info = {}
     for field_name, field_type in header:
         if field_type == "QString":
@@ -591,7 +674,7 @@ rhs_signal_channel_header = [
     ("electrode_impedance_phase", "float32"),
 ]
 
-stream_type_to_name_rhs = {
+stream_id_to_stream_name_rhs = {
     0: "RHS2000 amplifier channel",
     3: "USB board ADC input channel",
     4: "USB board ADC output channel",
@@ -608,8 +691,12 @@ def read_rhs(filename, file_format: str):
     with open(filename, mode="rb") as f:
         global_info = read_variable_header(f, rhs_global_header)
 
-        # channels_by_type is simpler than data_dtype because 0 contains 0, 10 and 11 internally
-        channels_by_type = {k: [] for k in [0, 3, 4, 5, 6]}
+        # We use signal_type in the header as stream_id in neo with the following
+        # complications: for rhs files in the header-attaached stream_id 0 also
+        # contains information for stream_id 10 and stream_id 11 so we need to
+        # break these up. See notes throughout code base; for timestamps we always
+        # force them to be the last stream_id.
+        stream_id_to_channel_info_list = {k: [] for k in [0, 3, 4, 5, 6]}
         if not file_format == "header-attached":
             # data_dtype for rhs is complicated. There is not 1, 2 (supply and aux),
             # but there are dc-amp (10) and stim (11). we make timestamps (15)
@@ -621,12 +708,16 @@ def read_rhs(filename, file_format: str):
                 for c in range(group_info["channel_num"]):
                     chan_info = read_variable_header(f, rhs_signal_channel_header)
                     if chan_info["signal_type"] in (1, 2):
-                        raise NeoReadWriteError("signal_type of 1 or 2 is not yet implemented in Neo")
+                        error_msg = (
+                            "signal_type of 1 or 2 does not exist for rhs files. If you have an rhs file "
+                            "with these formats open an issue on the python-neo github page"
+                        )
+                        raise NeoReadWriteError(error_msg)
                     if bool(chan_info["channel_enabled"]):
-                        channels_by_type[chan_info["signal_type"]].append(chan_info)
+                        stream_id_to_channel_info_list[chan_info["signal_type"]].append(chan_info)
 
         # useful dictionary for knowing the number of channels for non-header attached formats
-        channel_number_dict = {i: len(channels_by_type[i]) for i in [0, 3, 4, 5, 6]}
+        channel_number_dict = {i: len(stream_id_to_channel_info_list[i]) for i in [0, 3, 4, 5, 6]}
 
         header_size = f.tell()
 
@@ -641,7 +732,7 @@ def read_rhs(filename, file_format: str):
         channel_number_dict[15] = 1
 
     # 0: RHS2000 amplifier channel.
-    for chan_info in channels_by_type[0]:
+    for chan_info in stream_id_to_channel_info_list[0]:
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
@@ -662,8 +753,9 @@ def read_rhs(filename, file_format: str):
 
     if bool(global_info["dc_amplifier_data_saved"]):
         # if we have dc amp we need to grab the correct number of channels
+        # the channel number is the same as the count for amplifier data
         channel_number_dict[10] = channel_number_dict[0]
-        for chan_info in channels_by_type[0]:
+        for chan_info in stream_id_to_channel_info_list[0]:
             chan_info_dc = dict(chan_info)
             name = chan_info["native_channel_name"]
             chan_info_dc["native_channel_name"] = name + "_DC"
@@ -678,12 +770,13 @@ def read_rhs(filename, file_format: str):
                 data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
             else:
                 data_dtype[10] = "uint16"
+
     # I can't seem to get stim files to generate for one-file-per-channel
     # so let's skip for now and can be given on request
 
     if file_format != "one-file-per-channel":
         channel_number_dict[11] = channel_number_dict[0]  # should be one stim / amplifier channel
-        for chan_info in channels_by_type[0]:
+        for chan_info in stream_id_to_channel_info_list[0]:
             chan_info_stim = dict(chan_info)
             name = chan_info["native_channel_name"]
             chan_info_stim["native_channel_name"] = name + "_STIM"
@@ -703,12 +796,14 @@ def read_rhs(filename, file_format: str):
     else:
         warnings.warn("Stim not implemented for `one-file-per-channel` due to lack of test files")
 
-    # No supply or aux for rhs files (ie no stream 1 and 2)
+    # No supply or aux for rhs files (ie no stream_id 1 and 2)
+    # We have an error above that requests test files to help if the spec is changed
+    # in the future.
 
     # 3: Analog input channel.
     # 4: Analog output channel.
-    for sig_type in [3, 4]:
-        for chan_info in channels_by_type[sig_type]:
+    for stream_id in [3, 4]:
+        for chan_info in stream_id_to_channel_info_list[stream_id]:
             chan_info["sampling_rate"] = sr
             chan_info["units"] = "V"
             chan_info["gain"] = 0.0003125
@@ -719,40 +814,27 @@ def read_rhs(filename, file_format: str):
                 name = chan_info["native_channel_name"]
                 data_dtype += [(name, "uint16", BLOCK_SIZE)]
             else:
-                data_dtype[sig_type] = "uint16"
+                data_dtype[stream_id] = "uint16"
 
     # 5: Digital input channel.
     # 6: Digital output channel.
-    for sig_type in [5, 6]:
-        if file_format in ["header-attached", "one-file-per-signal"]:
-            if len(channels_by_type[sig_type]) > 0:
-                name = {5: "DIGITAL-IN", 6: "DIGITAL-OUT"}[sig_type]
-                chan_info = channels_by_type[sig_type][0]
-                # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
-                # make this memory map work correctly. So since our digital data is not organized
-                # by channel like analog/ADC are we have to overwrite the native name to create
-                # a single permanent name that we can find with channel id
-                chan_info["native_channel_name"] = name
-                chan_info["sampling_rate"] = sr
-                chan_info["units"] = "TTL"  # arbitrary units TTL for logic
-                chan_info["gain"] = 1.0
-                chan_info["offset"] = 0.0
-                chan_info["dtype"] = "uint16"
-                ordered_channel_info.append(chan_info)
-                if file_format == "header-attached":
-                    data_dtype += [(name, "uint16", BLOCK_SIZE)]
-                else:
-                    data_dtype[sig_type] = "uint16"
-        # This case behaves as a binary with 0 and 1 coded as uint16
-        elif file_format == "one-file-per-channel":
-            for chan_info in channels_by_type[sig_type]:
-                chan_info["sampling_rate"] = sr
-                chan_info["units"] = "TTL"
-                chan_info["gain"] = 1.0
-                chan_info["offset"] = 0.0
-                chan_info["dtype"] = "uint16"
-                ordered_channel_info.append(chan_info)
-                data_dtype[sig_type] = "uint16"
+    for stream_id in [5, 6]:
+        for chan_info in stream_id_to_channel_info_list[stream_id]:
+            chan_info["sampling_rate"] = sr
+            # arbitrary units are used to indicate that Intan does not
+            # store raw voltages but only the boolean TTL state
+            chan_info["units"] = "a.u." 
+            chan_info["gain"] = 1.0
+            chan_info["offset"] = 0.0
+            chan_info["dtype"] = "uint16"
+            ordered_channel_info.append(chan_info)
+
+        if len(stream_id_to_channel_info_list[stream_id]) > 0:
+            if file_format == "header-attached":
+                name = stream_id_to_stream_name_rhs[stream_id]
+                data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            elif file_format in ["one-file-per-signal", "one-file-per-channel"]:
+                data_dtype[stream_id] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
     # was a request for postprocessing to be done in one of their scripts. From version 3+ the notch
@@ -840,7 +922,7 @@ rhd_signal_channel_header = [
     ("electrode_impedance_phase", "float32"),
 ]
 
-stream_type_to_name_rhd = {
+stream_id_to_stream_name_rhd = {
     0: "RHD2000 amplifier channel",
     1: "RHD2000 auxiliary input channel",
     2: "RHD2000 supply voltage channel",
@@ -890,7 +972,7 @@ def read_rhd(filename, file_format: str):
         global_info.update(read_variable_header(f, header))
 
         # read channel group and channel header
-        channels_by_type = {k: [] for k in [0, 1, 2, 3, 4, 5]}
+        stream_id_to_channel_info_list = {k: [] for k in [0, 1, 2, 3, 4, 5]}
         if not file_format == "header-attached":
             data_dtype = {k: [] for k in range(7)}  # 5 streams + 6 for timestamps for not header attached
         for g in range(global_info["nb_signal_group"]):
@@ -900,9 +982,9 @@ def read_rhd(filename, file_format: str):
                 for c in range(group_info["channel_num"]):
                     chan_info = read_variable_header(f, rhd_signal_channel_header)
                     if bool(chan_info["channel_enabled"]):
-                        channels_by_type[chan_info["signal_type"]].append(chan_info)
+                        stream_id_to_channel_info_list[chan_info["signal_type"]].append(chan_info)
 
-            channel_number_dict = {i: len(channels_by_type[i]) for i in range(6)}
+            channel_number_dict = {i: len(stream_id_to_channel_info_list[i]) for i in range(6)}
 
         header_size = f.tell()
 
@@ -930,7 +1012,7 @@ def read_rhd(filename, file_format: str):
             channel_number_dict[6] = 1
 
     # 0: RHD2000 amplifier channel
-    for chan_info in channels_by_type[0]:
+    for chan_info in stream_id_to_channel_info_list[0]:
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "uV"
         chan_info["gain"] = 0.195
@@ -949,7 +1031,7 @@ def read_rhd(filename, file_format: str):
             data_dtype[0] = "int16"
 
     # 1: RHD2000 auxiliary input channel
-    for chan_info in channels_by_type[1]:
+    for chan_info in stream_id_to_channel_info_list[1]:
         chan_info["sampling_rate"] = sr / 4.0
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000374
@@ -963,7 +1045,7 @@ def read_rhd(filename, file_format: str):
             data_dtype[1] = "uint16"
 
     # 2: RHD2000 supply voltage channel
-    for chan_info in channels_by_type[2]:
+    for chan_info in stream_id_to_channel_info_list[2]:
         chan_info["sampling_rate"] = sr / BLOCK_SIZE
         chan_info["units"] = "V"
         chan_info["gain"] = 0.0000748
@@ -989,7 +1071,7 @@ def read_rhd(filename, file_format: str):
         data_dtype += [(name, "int16")]
 
     # 3: USB board ADC input channel
-    for chan_info in channels_by_type[3]:
+    for chan_info in stream_id_to_channel_info_list[3]:
         chan_info["sampling_rate"] = sr
         chan_info["units"] = "V"
         if global_info["eval_board_mode"] == 0:
@@ -1011,35 +1093,24 @@ def read_rhd(filename, file_format: str):
 
     # 4: USB board digital input channel
     # 5: USB board digital output channel
-    for sig_type in [4, 5]:
-        if file_format in ["header-attached", "one-file-per-signal"]:
-            if len(channels_by_type[sig_type]) > 0:
-                name = {4: "DIGITAL-IN", 5: "DIGITAL-OUT"}[sig_type]
-                chan_info = channels_by_type[sig_type][0]
-                # So currently until we have get_digitalsignal_chunk we need to do a tiny hack to
-                # make this memory map work correctly. So since our digital data is not organized
-                # by channel like analog/ADC are we have to overwrite the native name to create
-                # a single permanent name that we can find with channel id
-                chan_info["native_channel_name"] = name
-                chan_info["sampling_rate"] = sr
-                chan_info["units"] = "TTL"  # arbitrary units TTL for logic
-                chan_info["gain"] = 1.0
-                chan_info["offset"] = 0.0
-                chan_info["dtype"] = "uint16"
-                ordered_channel_info.append(chan_info)
-                if file_format == "header-attached":
-                    data_dtype += [(name, "uint16", BLOCK_SIZE)]
-                else:
-                    data_dtype[sig_type] = "uint16"
-        elif file_format == "one-file-per-channel":
-            for chan_info in channels_by_type[sig_type]:
-                chan_info["sampling_rate"] = sr
-                chan_info["units"] = "TTL"
-                chan_info["gain"] = 1.0
-                chan_info["offset"] = 0.0
-                chan_info["dtype"] = "uint16"
-                ordered_channel_info.append(chan_info)
-                data_dtype[sig_type] = "uint16"
+    for stream_id in [4, 5]:
+        for chan_info in stream_id_to_channel_info_list[stream_id]:
+            chan_info["sampling_rate"] = sr
+            # arbitrary units are used to indicate that Intan does not
+            # store raw voltages but only the boolean TTL state
+            chan_info["units"] = "a.u." 
+            chan_info["gain"] = 1.0
+            chan_info["offset"] = 0.0
+            chan_info["dtype"] = "uint16"
+            ordered_channel_info.append(chan_info)
+
+        # Note that all the channels are packed in one buffer, so the data type only needs to be added once
+        if len(stream_id_to_channel_info_list[stream_id]) > 0:
+            if file_format == "header-attached":
+                name = stream_id_to_stream_name_rhd[stream_id]
+                data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            elif file_format in ["one-file-per-signal", "one-file-per-channel"]:
+                data_dtype[stream_id] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
     # was a request for postprocessing to be done in one of their scripts. From version 3+ the notch
@@ -1061,9 +1132,12 @@ def read_rhd(filename, file_format: str):
 
 
 ##########################################################################
-# RHX Zone for Binary Files
+# RHX Zone for Binary Files (note this is for version 3+ of Intan software)
 # This section provides all possible headerless binary files in both the rhs and rhd
 # formats.
+
+digital_stream_names = ["USB board digital input channel", "USB board digital output channel"]
+
 
 # RHD Binary Files for One File Per Signal
 one_file_per_signal_filenames_rhd = [
