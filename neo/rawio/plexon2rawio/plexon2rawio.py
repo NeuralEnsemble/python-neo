@@ -107,7 +107,7 @@ class Plexon2RawIO(BaseRawIO):
         # download default PL2 dll once if not yet available
         if pl2_dll_file_path is None:
             architecture = platform.architecture()[0]
-            if architecture == "64bit" and platform.system() in ["Windows", "Darwin"]: 
+            if architecture == "64bit" and platform.system() in ["Windows", "Darwin"]:
                 file_name = "PL2FileReader64.dll"
             else:  # Apparently wine uses the 32 bit version in linux
                 file_name = "PL2FileReader.dll"
@@ -128,11 +128,10 @@ class Plexon2RawIO(BaseRawIO):
 
         self.pl2reader = PyPL2FileReader(pl2_dll_file_path=pl2_dll_file_path)
 
-
         reading_attempts = 10
         for attempt in range(reading_attempts):
             self.pl2reader.pl2_open_file(self.filename)
-            
+
             # Verify the file handle is valid.
             if self.pl2reader._file_handle.value != 0:
                 # File handle is valid, exit the loop early

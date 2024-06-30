@@ -138,7 +138,7 @@ class PlexonRawIO(BaseRawIO):
             bl_header = data[pos : pos + 16].view(DataBlockHeader)[0]
             number_of_waveforms = int(bl_header["NumberOfWaveforms"])
             number_of_words_in_waveform = int(bl_header["NumberOfWordsInWaveform"])
-            length = (number_of_waveforms * number_of_words_in_waveform * 2 ) + 16
+            length = (number_of_waveforms * number_of_words_in_waveform * 2) + 16
             bl_type = int(bl_header["Type"])
             chan_id = int(bl_header["Channel"])
             block_pos[bl_type][chan_id].append(pos)
