@@ -24,8 +24,9 @@ else:
         raise ImportError("Wine is not installed. Please install wine to use the PL2FileReader.dll")
 
     from zugbruecke import CtypesSession
+
     if platform.system() == "Darwin":
-        ctypes = CtypesSession(log_level=100, arch = 'win64')
+        ctypes = CtypesSession(log_level=100, arch="win64")
     else:
         ctypes = CtypesSession(log_level=100)
 
