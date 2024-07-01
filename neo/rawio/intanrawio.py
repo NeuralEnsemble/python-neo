@@ -141,7 +141,7 @@ class IntanRawIO(BaseRawIO):
             (
                 self._global_info,
                 self._ordered_channel_info,
-                data_dtype,
+                memmap_data_dtype,
                 header_size,
                 self._block_size,
                 channel_number_dict,
@@ -167,7 +167,7 @@ class IntanRawIO(BaseRawIO):
             (
                 self._global_info,
                 self._ordered_channel_info,
-                data_dtype,
+                memmap_data_dtype,
                 header_size,
                 self._block_size,
                 channel_number_dict,
@@ -176,12 +176,12 @@ class IntanRawIO(BaseRawIO):
         # memmap the raw data for each format type
         # if header-attached there is one giant memory-map
         if self.file_format == "header-attached":
-            self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode="r", offset=header_size)
+            self._raw_data = np.memmap(self.filename, dtype=memmap_data_dtype, mode="r", offset=header_size)
 
         # for 'one-file-per-signal' we have one memory map / neo stream
         elif self.file_format == "one-file-per-signal":
             self._raw_data = {}
-            for stream_index, (stream_index_key, stream_datatype) in enumerate(data_dtype.items()):
+            for stream_index, (stream_index_key, stream_datatype) in enumerate(memmap_data_dtype.items()):
                 num_channels = channel_number_dict[stream_index_key]
                 file_path = raw_file_paths_dict[stream_index_key]
                 size_in_bytes = file_path.stat().st_size
@@ -195,7 +195,7 @@ class IntanRawIO(BaseRawIO):
         # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
         elif self.file_format == "one-file-per-channel":
             self._raw_data = {}
-            for stream_index, (stream_index_key, stream_datatype) in enumerate(data_dtype.items()):
+            for stream_index, (stream_index_key, stream_datatype) in enumerate(memmap_data_dtype.items()):
                 self._raw_data[stream_index] = []
                 num_channels = channel_number_dict[stream_index_key]
                 for channel_index in range(num_channels):
@@ -487,7 +487,8 @@ class IntanRawIO(BaseRawIO):
 
     def _demultiplex_digital_data(self, raw_digital_data, channel_ids, i_start, i_stop):
 
-        output = np.zeros((i_stop - i_start, len(channel_ids)), dtype=np.uint8)
+        dtype = np.uint16 # We fix this to match the memmap dtype
+        output = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
 
         for channel_index, channel_id in enumerate(channel_ids):
             native_order = self.native_channel_order[channel_id]
@@ -698,9 +699,9 @@ def read_rhs(filename, file_format: str):
         # force them to be the last stream_id.
         stream_id_to_channel_info_list = {k: [] for k in [0, 3, 4, 5, 6]}
         if not file_format == "header-attached":
-            # data_dtype for rhs is complicated. There is not 1, 2 (supply and aux),
+            # memmap_data_dtype for rhs is complicated. There is not 1, 2 (supply and aux),
             # but there are dc-amp (10) and stim (11). we make timestamps (15)
-            data_dtype = {k: [] for k in [0, 3, 4, 5, 6, 10, 11, 15]}
+            memmap_data_dtype = {k: [] for k in [0, 3, 4, 5, 6, 10, 11, 15]}
         for g in range(global_info["nb_signal_group"]):
             group_info = read_variable_header(f, rhs_signal_group_header)
 
@@ -726,9 +727,9 @@ def read_rhs(filename, file_format: str):
     # construct dtype by re-ordering channels by types
     ordered_channel_info = []
     if file_format == "header-attached":
-        data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
+        memmap_data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
     else:
-        data_dtype[15] = "int32"
+        memmap_data_dtype[15] = "int32"
         channel_number_dict[15] = 1
 
     # 0: RHS2000 amplifier channel.
@@ -747,9 +748,9 @@ def read_rhs(filename, file_format: str):
         ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
             name = chan_info["native_channel_name"]
-            data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            memmap_data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
-            data_dtype[0] = "int16"
+            memmap_data_dtype[0] = "int16"
 
     if bool(global_info["dc_amplifier_data_saved"]):
         # if we have dc amp we need to grab the correct number of channels
@@ -767,9 +768,9 @@ def read_rhs(filename, file_format: str):
             chan_info_dc["dtype"] = "uint16"
             ordered_channel_info.append(chan_info_dc)
             if file_format == "header-attached":
-                data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
+                memmap_data_dtype += [(name + "_DC", "uint16", BLOCK_SIZE)]
             else:
-                data_dtype[10] = "uint16"
+                memmap_data_dtype[10] = "uint16"
 
     # I can't seem to get stim files to generate for one-file-per-channel
     # so let's skip for now and can be given on request
@@ -790,9 +791,9 @@ def read_rhs(filename, file_format: str):
             chan_info_stim["dtype"] = "uint16"
             ordered_channel_info.append(chan_info_stim)
             if file_format == "header-attached":
-                data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
+                memmap_data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
             else:
-                data_dtype[11] = "uint16"
+                memmap_data_dtype[11] = "uint16"
     else:
         warnings.warn("Stim not implemented for `one-file-per-channel` due to lack of test files")
 
@@ -812,9 +813,9 @@ def read_rhs(filename, file_format: str):
             ordered_channel_info.append(chan_info)
             if file_format == "header-attached":
                 name = chan_info["native_channel_name"]
-                data_dtype += [(name, "uint16", BLOCK_SIZE)]
+                memmap_data_dtype += [(name, "uint16", BLOCK_SIZE)]
             else:
-                data_dtype[stream_id] = "uint16"
+                memmap_data_dtype[stream_id] = "uint16"
 
     # 5: Digital input channel.
     # 6: Digital output channel.
@@ -828,13 +829,16 @@ def read_rhs(filename, file_format: str):
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "uint16"
             ordered_channel_info.append(chan_info)
-
+        
+        # Note that all the channels are packed in one buffer, so the data type only needs to be added once
         if len(stream_id_to_channel_info_list[stream_id]) > 0:
             if file_format == "header-attached":
                 name = stream_id_to_stream_name_rhs[stream_id]
-                data_dtype += [(name, "uint16", BLOCK_SIZE)]
-            elif file_format in ["one-file-per-signal", "one-file-per-channel"]:
-                data_dtype[stream_id] = "uint16"
+                memmap_data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            elif file_format == "one-file-per-channel":
+                memmap_data_dtype[stream_id] = "uint16"
+            elif file_format == "one-file-per-signal":
+                memmap_data_dtype[stream_id] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
     # was a request for postprocessing to be done in one of their scripts. From version 3+ the notch
@@ -849,10 +853,10 @@ def read_rhs(filename, file_format: str):
 
     if not file_format == "header-attached":
         # filter out dtypes without any values
-        data_dtype = {k: v for (k, v) in data_dtype.items() if len(v) > 0}
+        memmap_data_dtype = {k: v for (k, v) in memmap_data_dtype.items() if len(v) > 0}
         channel_number_dict = {k: v for (k, v) in channel_number_dict.items() if v > 0}
 
-    return global_info, ordered_channel_info, data_dtype, header_size, BLOCK_SIZE, channel_number_dict
+    return global_info, ordered_channel_info, memmap_data_dtype, header_size, BLOCK_SIZE, channel_number_dict
 
 
 ###############
@@ -974,7 +978,7 @@ def read_rhd(filename, file_format: str):
         # read channel group and channel header
         stream_id_to_channel_info_list = {k: [] for k in [0, 1, 2, 3, 4, 5]}
         if not file_format == "header-attached":
-            data_dtype = {k: [] for k in range(7)}  # 5 streams + 6 for timestamps for not header attached
+            memmap_data_dtype = {k: [] for k in range(7)}  # 5 streams + 6 for timestamps for not header attached
         for g in range(global_info["nb_signal_group"]):
             group_info = read_variable_header(f, rhd_signal_group_header)
 
@@ -1000,15 +1004,15 @@ def read_rhd(filename, file_format: str):
 
     if version >= Version("1.2"):
         if file_format == "header-attached":
-            data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
+            memmap_data_dtype = [("timestamp", "int32", BLOCK_SIZE)]
         else:
-            data_dtype[6] = "int32"
+            memmap_data_dtype[6] = "int32"
             channel_number_dict[6] = 1
     else:
         if file_format == "header-attached":
-            data_dtype = [("timestamp", "uint32", BLOCK_SIZE)]
+            memmap_data_dtype = [("timestamp", "uint32", BLOCK_SIZE)]
         else:
-            data_dtype[6] = "uint32"
+            memmap_data_dtype[6] = "uint32"
             channel_number_dict[6] = 1
 
     # 0: RHD2000 amplifier channel
@@ -1026,9 +1030,9 @@ def read_rhd(filename, file_format: str):
 
         if file_format == "header-attached":
             name = chan_info["native_channel_name"]
-            data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            memmap_data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
-            data_dtype[0] = "int16"
+            memmap_data_dtype[0] = "int16"
 
     # 1: RHD2000 auxiliary input channel
     for chan_info in stream_id_to_channel_info_list[1]:
@@ -1040,9 +1044,9 @@ def read_rhd(filename, file_format: str):
         ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
             name = chan_info["native_channel_name"]
-            data_dtype += [(name, "uint16", BLOCK_SIZE // 4)]
+            memmap_data_dtype += [(name, "uint16", BLOCK_SIZE // 4)]
         else:
-            data_dtype[1] = "uint16"
+            memmap_data_dtype[1] = "uint16"
 
     # 2: RHD2000 supply voltage channel
     for chan_info in stream_id_to_channel_info_list[2]:
@@ -1054,9 +1058,9 @@ def read_rhd(filename, file_format: str):
         ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
             name = chan_info["native_channel_name"]
-            data_dtype += [(name, "uint16")]
+            memmap_data_dtype += [(name, "uint16")]
         else:
-            data_dtype[2] = "uint16"
+            memmap_data_dtype[2] = "uint16"
 
     # temperature is not an official channel in the header
     for i in range(global_info["num_temp_sensor_channels"]):
@@ -1068,7 +1072,7 @@ def read_rhd(filename, file_format: str):
         chan_info["offset"] = 0.0
         chan_info["dtype"] = "int16"
         ordered_channel_info.append(chan_info)
-        data_dtype += [(name, "int16")]
+        memmap_data_dtype += [(name, "int16")]
 
     # 3: USB board ADC input channel
     for chan_info in stream_id_to_channel_info_list[3]:
@@ -1087,9 +1091,9 @@ def read_rhd(filename, file_format: str):
         ordered_channel_info.append(chan_info)
         if file_format == "header-attached":
             name = chan_info["native_channel_name"]
-            data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            memmap_data_dtype += [(name, "uint16", BLOCK_SIZE)]
         else:
-            data_dtype[3] = "uint16"
+            memmap_data_dtype[3] = "uint16"
 
     # 4: USB board digital input channel
     # 5: USB board digital output channel
@@ -1108,9 +1112,11 @@ def read_rhd(filename, file_format: str):
         if len(stream_id_to_channel_info_list[stream_id]) > 0:
             if file_format == "header-attached":
                 name = stream_id_to_stream_name_rhd[stream_id]
-                data_dtype += [(name, "uint16", BLOCK_SIZE)]
-            elif file_format in ["one-file-per-signal", "one-file-per-channel"]:
-                data_dtype[stream_id] = "uint16"
+                memmap_data_dtype += [(name, "uint16", BLOCK_SIZE)]
+            elif file_format == "one-file-per-channel":
+                memmap_data_dtype[stream_id] = "uint16"
+            elif file_format == "one-file-per-signal":
+                memmap_data_dtype[stream_id] = "uint16"
 
     # per discussion with Intan developers before version 3 of their software the 'notch_filter_mode'
     # was a request for postprocessing to be done in one of their scripts. From version 3+ the notch
@@ -1125,10 +1131,10 @@ def read_rhd(filename, file_format: str):
 
     if not file_format == "header-attached":
         # filter out dtypes without any values
-        data_dtype = {k: v for (k, v) in data_dtype.items() if len(v) > 0}
+        memmap_data_dtype = {k: v for (k, v) in memmap_data_dtype.items() if len(v) > 0}
         channel_number_dict = {k: v for (k, v) in channel_number_dict.items() if v > 0}
 
-    return global_info, ordered_channel_info, data_dtype, header_size, BLOCK_SIZE, channel_number_dict
+    return global_info, ordered_channel_info, memmap_data_dtype, header_size, BLOCK_SIZE, channel_number_dict
 
 
 ##########################################################################
