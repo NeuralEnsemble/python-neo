@@ -108,14 +108,14 @@ class TestCheetah_v563(CommonNeuralynxIOTest, unittest.TestCase):
         # There are two segments due to gap in recording
         self.assertEqual(len(block.segments), 2)
         for seg in block.segments:
-            self.assertEqual(len(seg.analogsignals), 1)
+            self.assertEqual(len(seg.analogsignals), 2)
             self.assertEqual(seg.analogsignals[0].shape[-1], 2)
             self.assertEqual(seg.analogsignals[0].sampling_rate, 2.0 * pq.kHz)
             self.assertEqual(len(seg.spiketrains), 8)
 
         # Testing different parameter combinations
         block = nio.read_block(load_waveforms=True)
-        self.assertEqual(len(block.segments[0].analogsignals), 1)
+        self.assertEqual(len(block.segments[0].analogsignals), 2)
         self.assertEqual(len(block.segments[0].spiketrains), 8)
         self.assertEqual(block.segments[0].spiketrains[0].waveforms.shape[0], block.segments[0].spiketrains[0].shape[0])
         # this is tetrode data, containing 32 samples per waveform
@@ -272,27 +272,28 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 
             # check that data agrees in first segment first channel only
             for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
-                chid = anasig.array_annotations["channel_ids"][0]
+                if "VideoFormat" not in anasig.array_annotations:
+                    chid = anasig.array_annotations["channel_ids"][0]
 
-                chname = str(anasig.array_annotations["channel_names"][0])
-                chuid = (chname, chid)
-                filename = nio.ncs_filenames[chuid][:-3] + "txt"
-                filename = filename.replace("original_data", "plain_data")
-                overlap = 512 * 500
-                if os.path.isfile(filename):
-                    plain_data = self._load_plaindata(filename, overlap)
-                    gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
-                    numToTest = min(len(plain_data), len(anasig.magnitude[:, 0]))
-                    np.testing.assert_allclose(
-                        plain_data[:numToTest],
-                        anasig.magnitude[:numToTest, 0] * gain_factor_0,
-                        rtol=0.01,
-                        err_msg=" for file " + filename,
-                    )
-                else:
-                    warnings.warn(f"Could not find corresponding test file {filename}")
-                    # TODO: Create missing plain data file using NeuraView
-                    # https://neuralynx.com/software/category/data-analysis
+                    chname = str(anasig.array_annotations["channel_names"][0])
+                    chuid = (chname, chid)
+                    filename = nio.ncs_filenames[chuid][:-3] + "txt"
+                    filename = filename.replace("original_data", "plain_data")
+                    overlap = 512 * 500
+                    if os.path.isfile(filename):
+                        plain_data = self._load_plaindata(filename, overlap)
+                        gain_factor_0 = plain_data[0] / anasig.magnitude[0, 0]
+                        numToTest = min(len(plain_data), len(anasig.magnitude[:, 0]))
+                        np.testing.assert_allclose(
+                            plain_data[:numToTest],
+                            anasig.magnitude[:numToTest, 0] * gain_factor_0,
+                            rtol=0.01,
+                            err_msg=" for file " + filename,
+                        )
+                    else:
+                        warnings.warn(f"Could not find corresponding test file {filename}")
+                        # TODO: Create missing plain data file using NeuraView
+                        # https://neuralynx.com/software/category/data-analysis
 
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
