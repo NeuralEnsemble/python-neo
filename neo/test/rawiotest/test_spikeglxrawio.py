@@ -32,6 +32,13 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/NP2_subset_with_sync",
         # NP-ultra
         "spikeglx/np_ultra_stub",
+        # CatGT
+        "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-A/catgt_5-19-2022-CI0_g0",
+        "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-B/catgt_5-19-2022-CI0_g0",
+        "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-C/catgt_5-19-2022-CI0_g0",
+        "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-D/catgt_5-19-2022-CI0_g0",
+        "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-E/catgt_5-19-2022-CI0_g0",
+        "spikeglx/multi_trigger_multi_gate/CatGT/SupercatA/supercat_5-19-2022-CI0_g0",
     ]
 
     def test_with_location(self):

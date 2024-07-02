@@ -396,52 +396,60 @@ def parse_spikeglx_fname(fname):
     This function is copied/modified from Graham Findlay.
 
     Notes:
-       * Sometimes the original file name is modified by the user and "_gt0_" or "_t0_"
+        * Sometimes the original file name is modified by the user and "_gt0_" or "_t0_"
           are manually removed. In that case gate_name and trigger_num will be None.
+        * If tcat is used, then the trigger_num will be set to "cat".
 
     Parameters
     ---------
     fname: str
         The filename to parse without the extension, e.g. "my-run-name_g0_t1.imec2.lf"
+
     Returns
     -------
     run_name: str
         The run name, e.g. "my-run-name".
     gate_num: int or None
         The gate identifier, e.g. 0.
-    trigger_num: int or None
-        The trigger identifier, e.g. 1.
+    trigger_num: int | str or None
+        The trigger identifier, e.g. 1. If tcat is used, then the trigger_num will be set to "cat".
     device: str
         The probe identifier, e.g. "imec2"
     stream_kind: str or None
         The data type identifier, "lf" or "ap" or None
     """
-    r = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*).(ap|lf)", fname)
-    if len(r) == 1:
+    re_standard = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*).(ap|lf)", fname)
+    re_tcat = re.findall(r"(\S*)_g(\d*)_tcat.(\S*).(ap|lf)", fname)
+    re_nidq = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*)", fname)
+    if len(re_standard) == 1:
         # standard case with probe
-        run_name, gate_num, trigger_num, device, stream_kind = r[0]
+        run_name, gate_num, trigger_num, device, stream_kind = re_standard[0]
+    elif len(re_tcat) == 1:
+        # tcat case
+        run_name, gate_num, device, stream_kind = re_tcat[0]
+        trigger_num = "cat"
+    elif len(re_nidq) == 1:
+        # case for nidaq
+        run_name, gate_num, trigger_num, device = re_nidq[0]
+        stream_kind = None
     else:
-        r = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*)", fname)
-        if len(r) == 1:
-            # case for nidaq
-            run_name, gate_num, trigger_num, device = r[0]
-            stream_kind = None
+        # the naming do not correspond lets try something more easy
+        # example: sglx_xxx.imec0.ap
+        re_else = re.findall(r"(\S*)\.(\S*).(ap|lf)", fname)
+        re_else_nidq = re.findall(r"(\S*)\.(\S*)", fname)
+        if len(re_else) == 1:
+            run_name, device, stream_kind = re_else_nidq[0]
+            gate_num, trigger_num = None, None
+        elif len(re_else_nidq) == 1:
+            # easy case for nidaq, example: sglx_xxx.nidq
+            run_name, device = re_else_nidq[0]
+            gate_num, trigger_num, stream_kind = None, None, None
         else:
-            # the naming do not correspond lets try something more easy
-            # example: sglx_xxx.imec0.ap
-            r = re.findall(r"(\S*)\.(\S*).(ap|lf)", fname)
-            if len(r) == 1:
-                run_name, device, stream_kind = r[0]
-                gate_num, trigger_num = None, None
-            else:
-                # easy case for nidaq, example: sglx_xxx.nidq
-                r = re.findall(r"(\S*)\.(\S*)", fname)
-                run_name, device = r[0]
-                gate_num, trigger_num, stream_kind = None, None, None
+            raise ValueError(f"Cannot parse filename {fname}")
 
     if gate_num is not None:
         gate_num = int(gate_num)
-    if trigger_num is not None:
+    if trigger_num is not None and trigger_num != "cat":
         trigger_num = int(trigger_num)
 
     return (run_name, gate_num, trigger_num, device, stream_kind)
