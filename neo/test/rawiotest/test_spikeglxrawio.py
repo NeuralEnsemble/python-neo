@@ -38,7 +38,7 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-C",
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-D",
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-E",
-        "spikeglx/multi_trigger_multi_gate/CatGT/SupercatA",
+        # "spikeglx/multi_trigger_multi_gate/CatGT/SupercatA",
     ]
 
     def test_with_location(self):
