@@ -387,18 +387,20 @@ def parse_spikeglx_fname(fname):
     Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
     The filenames consist of 3 or 4 parts separated by `.`
     1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user at recording time.
-    2. "_g0_" is the "gate_num"
-    3. "_t0_" is the "trigger_num"
+    2. "g0" is the "gate_num"
+    3. "t0" is the "trigger_num"
     4. "nidq" or "imec0" will give the `device`
     5. "lf" or "ap" will be the `stream_kind`
-        `stream_name` variable is the concatenation of `device.stream_kind`
+       `stream_name` variable is the concatenation of `device.stream_kind`
+
+    If CatGT is used, then the trigger numbers in the file names ("t0"/"t1"/etc.)
+    will be renamed to "tcat". In this case, the parsed "trigger_num" will be set to "cat".
 
     This function is copied/modified from Graham Findlay.
 
     Notes:
-        * Sometimes the original file name is modified by the user and "_gt0_" or "_t0_"
+        * Sometimes the original file name is modified by the user and "_g0_" or "_t0_"
           are manually removed. In that case gate_name and trigger_num will be None.
-        * If tcat is used, then the trigger_num will be set to "cat".
 
     Parameters
     ---------
@@ -412,7 +414,7 @@ def parse_spikeglx_fname(fname):
     gate_num: int or None
         The gate identifier, e.g. 0.
     trigger_num: int | str or None
-        The trigger identifier, e.g. 1. If tcat is used, then the trigger_num will be set to "cat".
+        The trigger identifier, e.g. 1. If CatGT is used, then the trigger_num will be set to "cat".
     device: str
         The probe identifier, e.g. "imec2"
     stream_kind: str or None
