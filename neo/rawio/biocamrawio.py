@@ -56,7 +56,7 @@ class BiocamRawIO(BaseRawIO):
 
         if self.use_synthetic_noise:
             warnings.warn("Event-based compression : gaps will be filled with synthetic noise."
-                          "Traces won't be raw.")
+                          " Set use_synthetic_noise to False for raw traces.")
 
     def _source_name(self):
         return self.filename
@@ -264,7 +264,7 @@ def readHDF5t_101_i(rf, t0, t1, nch):
 
 def readHDF5t_brw4(rf, t0, t1, nch):
     for key in rf:
-        if key[:5] == "Well_":
+        if key.startswith("Well_"):
             return rf[key]["Raw"][nch * t0 : nch * t1].reshape((t1 - t0, nch), order="C")
 
 
