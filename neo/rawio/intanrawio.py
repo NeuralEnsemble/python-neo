@@ -487,7 +487,7 @@ class IntanRawIO(BaseRawIO):
 
     def _demultiplex_digital_data(self, raw_digital_data, channel_ids, i_start, i_stop):
 
-        dtype = np.uint16 # We fix this to match the memmap dtype
+        dtype = np.uint16  # We fix this to match the memmap dtype
         output = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
 
         for channel_index, channel_id in enumerate(channel_ids):
@@ -824,12 +824,12 @@ def read_rhs(filename, file_format: str):
             chan_info["sampling_rate"] = sr
             # arbitrary units are used to indicate that Intan does not
             # store raw voltages but only the boolean TTL state
-            chan_info["units"] = "a.u." 
+            chan_info["units"] = "a.u."
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "uint16"
             ordered_channel_info.append(chan_info)
-        
+
         # Note that all the channels are packed in one buffer, so the data type only needs to be added once
         if len(stream_id_to_channel_info_list[stream_id]) > 0:
             if file_format == "header-attached":
@@ -1102,7 +1102,7 @@ def read_rhd(filename, file_format: str):
             chan_info["sampling_rate"] = sr
             # arbitrary units are used to indicate that Intan does not
             # store raw voltages but only the boolean TTL state
-            chan_info["units"] = "a.u." 
+            chan_info["units"] = "a.u."
             chan_info["gain"] = 1.0
             chan_info["offset"] = 0.0
             chan_info["dtype"] = "uint16"
