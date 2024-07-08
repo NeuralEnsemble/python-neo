@@ -74,9 +74,8 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         block = io.read_block()
         signal = block.segments[0].analogsignals[0]
-        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols
-        # and timecolumn applied
-        assert_array_almost_equal(signal[:, 1].reshape(-1).magnitude, np.array(sample_data)[:, 1], decimal=5)
+        self.assertEqual(signal.shape, (4, 1))  
+        assert_array_almost_equal(signal[:, 0].reshape(-1).magnitude, np.array(sample_data)[:, 0], decimal=5)
         self.assertAlmostEqual(signal.sampling_period, 0.1 * pq.ms)
 
         expected_channel_index = list(usecols)
@@ -116,9 +115,8 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         block = io.read_block()
         signal = block.segments[0].analogsignals[0]
-        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols
-        # and timecolumn applied
-        assert_array_almost_equal(signal[:, 1].reshape(-1).magnitude, np.array(sample_data)[:, 1], decimal=5)
+        self.assertEqual(signal.shape, (4, 1))  
+        assert_array_almost_equal(signal[:, 0].reshape(-1).magnitude, np.array(sample_data)[:, 0], decimal=5)
         self.assertAlmostEqual(signal.sampling_period, 0.1 * pq.ms)
 
         os.remove(filename)
@@ -290,12 +288,14 @@ class TestAsciiSignalIO(unittest.TestCase):
             delimiter=" ",
             units="mV",
             method="genfromtxt",
-            signal_group_mode="all-in-one",
+            signal_group_mode="split-all",
         )
         block = io.read_block()
 
         signal = block.segments[0].analogsignals[0]
-        assert_array_almost_equal(signal.magnitude, sample_data, decimal=6)
+        assert_array_almost_equal(signal.magnitude, sample_data[:, 0], decimal=6)
+        signal1 = block.segments[1].analogsignals[1]
+        assert_array_almost_equal(signal1.magnitude, sample_data[:, 1], decimal=6)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(signal.t_stop, sample_data.shape[0] / sampling_rate)
         self.assertEqual(signal.units, pq.mV)
@@ -316,12 +316,14 @@ class TestAsciiSignalIO(unittest.TestCase):
             method="genfromtxt",
             timecolumn=0,
             time_units="ms",
-            signal_group_mode="all-in-one",
+            signal_group_mode="split-all",
         )
         block = io.read_block()
 
         signal = block.segments[0].analogsignals[0]
-        assert_array_almost_equal(signal.magnitude, sample_data, decimal=6)
+        assert_array_almost_equal(signal.magnitude, sample_data[:,0], decimal=6)
+        signal1 = block.segments[1].analogsignals[0]
+        assert_array_almost_equal(signal1.magnitude, sample_data[:,1], decimal=6)
         self.assertEqual(signal.sampling_period, sampling_period * pq.ms)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(signal.t_stop, sample_data.shape[0] * sampling_period * pq.ms)
@@ -343,12 +345,14 @@ class TestAsciiSignalIO(unittest.TestCase):
             method="genfromtxt",
             timecolumn=-1,
             time_units="ms",
-            signal_group_mode="all-in-one",
+            signal_group_mode="split-all",
         )
         block = io.read_block()
 
         signal = block.segments[0].analogsignals[0]
-        assert_array_almost_equal(signal.magnitude, sample_data, decimal=6)
+        assert_array_almost_equal(signal.magnitude, sample_data[:,0], decimal=6)
+        signal1 = block.segments[1].analogsignals[0]
+        assert_array_almost_equal(signal1.magnitude, sample_data[:,1], decimal=6)
         self.assertEqual(signal.sampling_period, sampling_period * pq.ms)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(signal.t_stop, sample_data.shape[0] * sampling_period * pq.ms)
@@ -371,7 +375,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         seg1.analogsignals.append(signal1)
         block1.segments.append(seg1)
 
-        iow = AsciiSignalIO(filename, method="genfromtxt", time_units="ms", signal_group_mode="all-in-one")
+        iow = AsciiSignalIO(filename, method="genfromtxt", time_units="ms", signal_group_mode="split-all")
         iow.write_block(block1)
 
         ior = AsciiSignalIO(filename)
@@ -410,7 +414,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         block1.segments.append(seg1)
 
         iow = AsciiSignalIO(
-            filename, method="genfromtxt", timecolumn=0, time_units="ms", signal_group_mode="all-in-one"
+            filename, method="genfromtxt", timecolumn=0, time_units="ms", signal_group_mode="split-all"
         )
         iow.write_block(block1)
 
@@ -448,7 +452,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         block1.segments.append(seg1)
 
         iow = AsciiSignalIO(
-            filename, method="genfromtxt", timecolumn=0, units="mV", time_units="ms", signal_group_mode="all-in-one"
+            filename, method="genfromtxt", timecolumn=0, units="mV", time_units="ms", signal_group_mode="split-all"
         )
         def_units = iow.units
         def_time_units = iow.time_units
@@ -560,7 +564,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         np.savetxt(filename, sample_data, delimiter=" ")
 
         io = AsciiSignalIO(
-            filename, delimiter=" ", timecolumn=0, units="mV", method="genfromtxt", signal_group_mode="all-in-one"
+            filename, delimiter=" ", timecolumn=0, units="mV", method="genfromtxt", signal_group_mode="split-all"
         )
         block = io.read_block()
 
