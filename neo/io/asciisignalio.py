@@ -58,8 +58,7 @@ class AsciiSignalIO(BaseIO):
         t_start:
             time of the first sample (Quantity). Ignored if timecolumn is not None
         signal_group_mode:
-            if 'all-in-one', load data as a single, multi-channel AnalogSignal, if 'split-all'
-            (default for backwards compatibility) load data as separate, single-channel
+            'split-all' (default for backwards compatibility) load data as separate, single-channel
             AnalogSignals
         method:
             'genfromtxt', 'csv', 'homemade' or a user-defined function which takes a filename and
@@ -94,7 +93,7 @@ class AsciiSignalIO(BaseIO):
                 "units": "kHz"
             },
             "method": "genfromtxt",
-            "signal_group_mode": 'all-in-one'
+            "signal_group_mode": 'split-all'
         }
     """
 
@@ -285,53 +284,28 @@ class AsciiSignalIO(BaseIO):
                 sampling_rate = None
             t_start = sig[0, self.timecolumn] * self.time_units
 
-        if self.signal_group_mode == "all-in-one":
-            channel_index_annotation = self.usecols or np.arange(sig.shape[1])
-            channel_index_annotation = np.asarray(channel_index_annotation)
-            if self.timecolumn is not None:
-                mask = list(range(sig.shape[1]))
-                if self.timecolumn >= 0:
-                    mask.remove(self.timecolumn)
-                else:  # allow negative column index
-                    mask.remove(sig.shape[1] + self.timecolumn)
-                signal = sig[:, mask]
-                channel_index_annotation = channel_index_annotation[mask]
-            else:
-                signal = sig
+        if self.timecolumn is not None and self.timecolumn < 0:
+            time_col = sig.shape[1] + self.timecolumn
+        else:
+            time_col = self.timecolumn
+        for i in range(sig.shape[1]):
+            if time_col == i:
+                continue
+            signal = sig[:, i] * self.units
             if sampling_rate is None:
                 irr_sig = IrregularlySampledSignal(
-                    signal[:, self.timecolumn] * self.time_units, signal * self.units, name="multichannel"
+                    sig[:, time_col] * self.time_units,
+                    signal,
+                    t_start=t_start,
+                    channel_index=i,
+                    name="Column %d" % i,
                 )
                 seg.irregularlysampledsignals.append(irr_sig)
             else:
                 ana_sig = AnalogSignal(
-                    signal * self.units, sampling_rate=sampling_rate, t_start=t_start, name="multichannel"
+                    signal, sampling_rate=sampling_rate, t_start=t_start, channel_index=i, name="Column %d" % i
                 )
-                ana_sig.array_annotate(channel_index=channel_index_annotation)
                 seg.analogsignals.append(ana_sig)
-        else:
-            if self.timecolumn is not None and self.timecolumn < 0:
-                time_col = sig.shape[1] + self.timecolumn
-            else:
-                time_col = self.timecolumn
-            for i in range(sig.shape[1]):
-                if time_col == i:
-                    continue
-                signal = sig[:, i] * self.units
-                if sampling_rate is None:
-                    irr_sig = IrregularlySampledSignal(
-                        sig[:, time_col] * self.time_units,
-                        signal,
-                        t_start=t_start,
-                        channel_index=i,
-                        name="Column %d" % i,
-                    )
-                    seg.irregularlysampledsignals.append(irr_sig)
-                else:
-                    ana_sig = AnalogSignal(
-                        signal, sampling_rate=sampling_rate, t_start=t_start, channel_index=i, name="Column %d" % i
-                    )
-                    seg.analogsignals.append(ana_sig)
 
         seg.check_relationships()
         return seg

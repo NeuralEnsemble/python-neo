@@ -68,7 +68,7 @@ class TestAsciiSignalIO(unittest.TestCase):
             delimiter=",",
             units="mV",
             method="csv",
-            signal_group_mode="all-in-one",
+            signal_group_mode="split-all",
             t_start=0.5,
         )
 
@@ -110,7 +110,7 @@ class TestAsciiSignalIO(unittest.TestCase):
             delimiter="\t",
             units="mV",
             method="homemade",
-            signal_group_mode="all-in-one",
+            signal_group_mode="split-all",
             t_start=0.5,
         )
 

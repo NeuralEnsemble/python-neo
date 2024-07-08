@@ -69,9 +69,6 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
 
         # self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), 2)  # 2 segment
 
-        # block = nio.read_block(load_waveforms=True, units_group_mode='all-in-one')
-        # self.assertEqual(len(block.channel_indexes[-1].units), 2)  # 2 units
-
         # block = nio.read_block(load_waveforms=True, units_group_mode='split-all')
         # self.assertEqual(len(block.channel_indexes[-1].units), 1)  # 1 units by ChannelIndex
 
@@ -124,9 +121,6 @@ class TestCheetah_v563(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertGreater(len(block.segments[0].events), 0)
 
         # self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), 2)
-
-        # block = nio.read_block(load_waveforms=True, units_group_mode='all-in-one')
-        # self.assertEqual(len(block.channel_indexes[-1].units), 8)
 
         # block = nio.read_block(load_waveforms=True, units_group_mode='split-all')
         # self.assertEqual(len(block.channel_indexes[-1].units), 1)  # 1 units by ChannelIndex
