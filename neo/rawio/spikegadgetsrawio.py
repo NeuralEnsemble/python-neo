@@ -20,6 +20,10 @@ The ".rec" file format contains:
 Author: Samuel Garcia
 """
 
+import numpy as np
+
+from xml.etree import ElementTree
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -27,10 +31,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-
-from xml.etree import ElementTree
+from neo.core import NeoReadWriteError
 
 
 class SpikeGadgetsRawIO(BaseRawIO):
@@ -89,15 +90,13 @@ class SpikeGadgetsRawIO(BaseRawIO):
         0, 32, 64, 96, 1, 33, 65, 97, ..., 128
         See also: https://github.com/NeuralEnsemble/python-neo/issues/1215
         """
-        x = []
-        for k in range(n_channels_per_chip):
-            x.append(
-                [
-                    k + i * n_channels_per_chip
-                    for i in range(int(n_total_channels / n_channels_per_chip))
-                ]
-            )
-        return [item for sublist in x for item in sublist]
+        ephys_channel_ids_list = []
+        for hw_channel in range(n_channels_per_chip):
+            hw_channel_list = [
+                hw_channel + chip * n_channels_per_chip for chip in range(int(n_total_channels / n_channels_per_chip))
+            ]
+            ephys_channel_ids_list.append(hw_channel_list)
+        return [channel for channel_list in ephys_channel_ids_list for channel in channel_list]
 
     def _parse_header(self):
         # parse file until "</Configuration>"
@@ -123,13 +122,13 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
         self._sampling_rate = float(hconf.attrib["samplingRate"])
         num_ephy_channels = int(hconf.attrib["numChannels"])
-        
+
         # check for agreement with number of channels in xml
         sconf_channels = np.sum([len(x) for x in sconf])
         if sconf_channels < num_ephy_channels:
             num_ephy_channels = sconf_channels
         if sconf_channels > num_ephy_channels:
-            raise ValueError(
+            raise NeoReadWriteError(
                 "SpikeGadgets: the number of channels in the spike configuration is larger than the number of channels in the hardware configuration"
             )
 
@@ -137,7 +136,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
             num_chan_per_chip = int(sconf.attrib["chanPerChip"])
         except KeyError:
             num_chan_per_chip = 32  # default value for Intan chips
-            
+
         # explore sub stream and count packet size
         # first bytes is 0x55
         packet_size = 1
@@ -208,9 +207,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
             signal_streams.append((stream_name, stream_id))
             self._mask_channels_bytes[stream_id] = []
 
-            channel_ids = self._produce_ephys_channel_ids(
-                num_ephy_channels, num_chan_per_chip
-            )
+            channel_ids = self._produce_ephys_channel_ids(num_ephy_channels, num_chan_per_chip)
             chan_ind = 0
             self.is_scaleable = "spikeScalingToUv" in sconf[0].attrib
             if not self.is_scaleable:
