@@ -16,12 +16,13 @@ from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
 class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
     """
     Class for reading data from Neuralynx files.
-    This IO supports NCS, NEV, NSE and NTT file formats.
+    This IO supports NCS, NEV, NSE, NTT and NVT file formats.
 
     NCS contains signals for one channel
     NEV contains events
     NSE contains spikes and waveforms for mono electrodes
     NTT contains spikes and waveforms for tetrodes
+    NVT contains coordinates and head angles for video tracking
     """
 
     _prefered_signal_group_mode = "group-by-same-units"
@@ -35,6 +36,7 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         cache_path="same_as_resource",
         exclude_filename=None,
         keep_original_times=False,
+        ignore_nvt=False,
     ):
         """
         Initialise IO instance
@@ -59,6 +61,11 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             Preserve original time stamps as in data files. By default datasets are
             shifted to begin at t_start = 0*pq.second.
             Default: False
+        ignore_nvt : bool
+            Ignore NVT files when loading data. This is only a temporary argument before
+            support for multiple NVT files are added. Turn it on if there are multiple NVT 
+            files in the directory.
+            Default: False
         """
         NeuralynxRawIO.__init__(
             self,
@@ -68,6 +75,7 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             cache_path=cache_path,
             exclude_filename=exclude_filename,
             keep_original_times=keep_original_times,
+            ignore_nvt=ignore_nvt,
         )
         if self.rawmode == "one-file":
             BaseFromRaw.__init__(self, filename)
