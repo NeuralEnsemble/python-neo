@@ -1,11 +1,41 @@
+"""
+Neuronexus has their own file format based on their Allego Recording System
+https://www.neuronexus.com/webinar/allego-software-updates/
+
+The format involves 3 files:
+  * The *.xdat.json metadata file
+  * The *_data.xdat binary file of all raw data
+  * The *_timestamps.xdat binary file of the timeestamp data
+  
+Based on sample data is appears that the binary file is always a float32 format
+Other information can be found within the metadata json file
+
+
+The metadata file has a pretty complicated structure as far as I can tell
+a lot of which is dedicated to probe information, which won't be handle at the 
+the Neo level.
+
+It appears that the metadata['status'] provides most of the information necessary
+for generating the initial memory map (global sampling frequency), n_channels,
+n_samples.
+
+metadata['sapiens_base']['biointerface_map'] provides all the channel specific information
+like channel_names, channel_ids, channel_types.
+
+An additional note on channels. It appears that analog channels are called `pri` or
+`ai0` within the metadata where as digital channels are called `din0` or `dout0`.
+In this first implementation it is up to the user to do the appropriate channel slice
+to only get the data they want. 
+
+Zach McKenzie
+
+"""
+
+from __future__ import annotations
 from pathlib import Path
-from packaging.version import Version
-import warnings
 import json
 
 import numpy as np
-
-from neo.core import NeoReadWriteError
 
 from .baserawio import (
     BaseRawIO,
@@ -14,81 +44,140 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from neo.core import NeoReadWriteError
+
 
 class NeuronexusRawIO(BaseRawIO):
 
-    extensions = ['xdat']
-    rawmode = 'one-file'
+    extensions = ["xdat"]
+    rawmode = "one-file"
 
     def __init__(self, filename: str | Path = ""):
+        """
+        The Allego Neuronexus reader for the `xdat` file format
+
+        Parameters
+        ----------
+        filename: str | Path, default: ''
+            The filename of the metadata file should end in .xdat.json
+
+        Notes
+        -----
+        * The format involves 3 files:
+            * The *.xdat.json metadata file
+            * The *_data.xdat binary file of all raw data
+            * The *_timestamps.xdat binary file of the timeestamp data
+        From the metadata the other two files are located within the same directory
+        And loaded.
+
+        * The metadata is stored as the metadata attribute for individuals hoping
+        to extract probe information
+
+        Examples
+        --------
+        >>> from neo.rawio import NeuronexusRawIO
+        >>> reader = NeuronexusRawIO(filename='abc.xdat.json')
+        >>> reader.parse_header()
+
+        """
 
         if not Path(filename).is_file():
             raise FileNotFoundError(f"The metadata file {filename} was not found")
-        if not Path(filename).suffix != ".json":
-            raise NeoReadWriteError("The json metadata should be given")
-        
+        if Path(filename).suffix != ".json":
+            raise NeoReadWriteError(
+                f"The json metadata file should be given, filename entered is {Path(filename).stem}"
+            )
+        filename = Path(self.filename)
+        binary_file = filename.parent / (filename.stem.split(".")[0] + "_data.xdat")
+
+        if not binary_file.exists() and not binary_file.is_file():
+            raise FileNotFoundError(f"The data.xdat file {binary_file} was not found. Is it in the same directory?")
+        timestamp_file = filename.parent / (filename.stem.split(".")[0] + "_timestamp.xdat")
+        if not timestamp_file.exists() and not timestamp_file.is_file():
+            raise FileNotFoundError(
+                f"The timestamps.xdat file {timestamp_file} was not found. Is it in the same directory?"
+            )
+
         self.filename = filename
+        self.binary_file = binary_file
+        self.timestamp_file = timestamp_file
 
     def _source_name(self):
 
         return self.filename
-    
+
     def _parse_header(self):
 
-        self.metadata = self._read_metadata(self.filename)
-        self.sampling_frequency = self.metadata["status"]['samp_freq']
+        # read metadata
+        self.metadata = self.read_metadata(self.filename)
 
-        n_samples, n_channels = self.metadata["status"]["shape"]
+        # Collect information necessary for memory map
+        self._sampling_frequency = self.metadata["status"]["samp_freq"]
+        self._n_samples, self._n_channels = self.metadata["status"]["shape"]
         # Stored as a simple float32 binary file
-        dtype = "float32"
+        DTYPE = "float32"
+        binary_file = self.binary_file
+        timestamp_file = self.timestamp_file
 
-        filename = Path(self.filename)
-        binary_file = filename.parent / filename.stem.split('.')[0] + '_data.xdat'
-        timestamp_file = filename.parent / filename.stem.split('.')[0] + '_timestamp.xdat'
+        # Make the two memory maps
+        self._raw_data = np.memmap(
+            binary_file,
+            dtype=DTYPE,
+            mode="r",
+            shape=(self._n_samples, self._n_channels),
+            offset=0, # headerless binary file
+        )
+        self._timestamps = np.memmap(
+            timestamp_file,
+            dtype=np.int64,  # this is from the allego sample reader timestamps are np.int64
+            mode="r",
+            offset=0, # headerless binary file
+        )
 
-        self._raw_data = np.memmap(binary_file, dtype=dtype, mode='r', shape = (n_channels, n_samples), offset = 0).T
+        # We can do a quick timestamp check to make sure it is the correct timestamp data for the
+        # given metadata
+        if self._timestamps[0] != self.metadata["status"]["timestamp_range"][0]:
+            raise NeoReadWriteError(f"The metadata indicates a different starting timestamp")
 
-        self._timestamps = np.memmep(timestamp_file, dtype-dtype, mode='r', )
-
-
-
-
+        # organize the channels
         signal_channels = []
-        channel_info = self.metdata['sapiens_base']['biointerface_map']
+        channel_info = self.metadata["sapiens_base"]["biointerface_map"]
 
-        for channel_index, channel_name in channel_info['chan_name']:
-            channel_id = channel_info['ntv_chan_name'][channel_index]
-            sampling_rate = channel_info['samp_freq'][channel_index]
-            if channel_info['chan_type'][channel_index] == "ai0":
-                stream_id = 0
-                units = 'uV'
-            elif channel_info['chan_type'][channel_index][0] == 'd':
-                units = 'a.u.'
-                if channel_info['chan_type'][channel_index] == 'din0':
-                    stream_id = 1
-                else: 
-                    stream_id = 2
+        # as per dicussion with the Neo/SpikeInterface teams stream_id will become buffer_id
+        # and because all data is stored in the same buffer stream for the moment all channels
+        # will be in stream_id = 0. In the future this will be split into sub_streams based on
+        # type but for now it will be the end-users responsability for this.
+        stream_id = 0  # hard-coded see note above
+        for channel_index, channel_name in enumerate(channel_info["chan_name"]):
+            channel_id = channel_info["ntv_chan_name"][channel_index]
+            # 'ai0' indicates analog data which is stored as microvolts
+            if channel_info["chan_type"][channel_index] == "ai0":
+                units = "uV"
+            # 'd' means digital. Per discussion with neuroconv users the use of
+            # 'a.u.' makes the units clearer
+            elif channel_info["chan_type"][channel_index][0] == "d":
+                units = "a.u."
+            # aux channel
             else:
-                # aux channel
-                units = 'V'
-                stream_id = 3
-            
-            signal_channels.append(
+                units = "V"
 
+            signal_channels.append(
+                (
                     channel_name,
                     channel_id,
-                    sampling_rate,
-                    "float32",
+                    self._sampling_frequency,
+                    DTYPE,
                     units,
-                    1, #need to confirm
-                    0, # need to confirm
+                    1,
+                    0,
                     stream_id,
+                )
             )
+
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         stream_ids = np.unique(signal_channels["stream_id"])
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
-
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids]
         for stream_index, stream_id in enumerate(stream_ids):
             name = stream_id_to_stream_name.get(int(stream_id), "")
@@ -102,6 +191,7 @@ class NeuronexusRawIO(BaseRawIO):
         spike_channels = []
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
+        # Put all the necessary info in the header
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
@@ -109,24 +199,67 @@ class NeuronexusRawIO(BaseRawIO):
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
         self.header["event_channels"] = event_channels
-        
+
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+
+        # All streams have the same size so just return the raw_data size
+        return self._raw_data.size
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        pass
+
+        if i_start is None:
+            i_start = 0
+        if i_stop is None:
+            i_stop = self._get_signal_size(block_index, seg_index, stream_index)
+
+        if channel_indexes is None:
+            channel_indexes = slice(None)
+
+        raw_data = self._raw_data
+        return raw_data[i_start:i_stop, channel_indexes]
+
+    def _segment_t_stop(self, block_index, seg_index):
+
+        t_stop = self.metadata["status"]["t_range"][1]
+        return t_stop
+
+    def _segment_t_start(self, block_index, seg_index):
+
+        t_start = self.metadata["status"]["t_range"][0]
+        return t_start
+
+    def _get_signal_t_start(self, block_index, seg_index, stream_index):
+
+        t_start = self.metadata["status"]["t_range"][0]
+        return t_start
 
 
-    def _read_metadata(self, fname_metadata):
+#######################################
+# Helper Functions
+
+
+    def read_metadata(self, fname_metadata):
+        """
+        Metadata is just a heavily nested json file
+
+        Parameters
+        ----------
+        fname_metada: str | Path
+            The *.xdat.json file for the current recording
+
+        Returns
+        -------
+        metadata: dict
+            Returns the metadata as a dictionary"""
 
         fname_metadata = Path(fname_metadata)
-
-        with open(fname_metadata, 'rb') as read_file:
+        with open(fname_metadata, "rb") as read_file:
             metadata = json.load(read_file)
-        
+
         return metadata
 
 
-
-stream_id_to_stream_name = {0: "Amplifier Data",
-                     1: "Digital-In",
-                     2: "Digital-Out",
-                     3: "Auxiliary"}
+# this is pretty useless right now, but I think after a
+# refactor with sub streams we could adapt this for the sub-streams
+# so let's leave this here for now :)
+stream_id_to_stream_name = {0: "Neuronexus Allego Data"}
