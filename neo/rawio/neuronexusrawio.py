@@ -49,7 +49,7 @@ from neo.core import NeoReadWriteError
 
 class NeuronexusRawIO(BaseRawIO):
 
-    extensions = ["xdat"]
+    extensions = ["xdat", "json"]
     rawmode = "one-file"
 
     def __init__(self, filename: str | Path = ""):
