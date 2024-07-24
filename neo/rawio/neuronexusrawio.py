@@ -87,7 +87,7 @@ class NeuronexusRawIO(BaseRawIO):
         >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, stream_index=0)
 
         """
-        
+
         BaseRawIO.__init__(self)
 
         if not Path(filename).is_file():
@@ -177,8 +177,8 @@ class NeuronexusRawIO(BaseRawIO):
                     self._sampling_frequency,
                     BINARY_DTYPE,
                     units,
-                    1, # no gain
-                    0, # no offset
+                    1,  # no gain
+                    0,  # no offset
                     stream_id,
                 )
             )
@@ -208,6 +208,9 @@ class NeuronexusRawIO(BaseRawIO):
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
         self.header["event_channels"] = event_channels
+
+        # Add the minimum annotations
+        self._generate_minimal_annotations()
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
 
