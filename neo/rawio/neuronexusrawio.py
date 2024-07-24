@@ -87,6 +87,8 @@ class NeuronexusRawIO(BaseRawIO):
         >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, stream_index=0)
 
         """
+        
+        BaseRawIO.__init__(self)
 
         if not Path(filename).is_file():
             raise FileNotFoundError(f"The metadata file {filename} was not found")
