@@ -68,16 +68,23 @@ class NeuronexusRawIO(BaseRawIO):
             * The *_data.xdat binary file of all raw data
             * The *_timestamps.xdat binary file of the timeestamp data
         From the metadata the other two files are located within the same directory
-        And loaded.
+        and loaded.
 
         * The metadata is stored as the metadata attribute for individuals hoping
-        to extract probe information
+        to extract probe information, but neo itself does not load any of the probe
+        information
 
         Examples
         --------
         >>> from neo.rawio import NeuronexusRawIO
         >>> reader = NeuronexusRawIO(filename='abc.xdat.json')
         >>> reader.parse_header()
+        >>> raw_chunk = reader.get_analogsignal_chunk(block_index=0
+                seg_index=0,
+                stream_index=0)
+        # this isn't necessary for this reader since data is stored as float uV, but
+        # this is included in case there is a future change to the format
+        >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, stream_index=0)
 
         """
 
@@ -87,12 +94,12 @@ class NeuronexusRawIO(BaseRawIO):
             raise NeoReadWriteError(
                 f"The json metadata file should be given, filename entered is {Path(filename).stem}"
             )
-        filename = Path(self.filename)
-        binary_file = filename.parent / (filename.stem.split(".")[0] + "_data.xdat")
+        meta_filename = Path(filename)
+        binary_file = meta_filename.parent / (meta_filename.stem.split(".")[0] + "_data.xdat")
 
         if not binary_file.exists() and not binary_file.is_file():
             raise FileNotFoundError(f"The data.xdat file {binary_file} was not found. Is it in the same directory?")
-        timestamp_file = filename.parent / (filename.stem.split(".")[0] + "_timestamp.xdat")
+        timestamp_file = meta_filename.parent / (meta_filename.stem.split(".")[0] + "_timestamp.xdat")
         if not timestamp_file.exists() and not timestamp_file.is_file():
             raise FileNotFoundError(
                 f"The timestamps.xdat file {timestamp_file} was not found. Is it in the same directory?"
@@ -103,7 +110,7 @@ class NeuronexusRawIO(BaseRawIO):
         self.timestamp_file = timestamp_file
 
     def _source_name(self):
-
+        # return the metadata filename only
         return self.filename
 
     def _parse_header(self):
@@ -115,23 +122,23 @@ class NeuronexusRawIO(BaseRawIO):
         self._sampling_frequency = self.metadata["status"]["samp_freq"]
         self._n_samples, self._n_channels = self.metadata["status"]["shape"]
         # Stored as a simple float32 binary file
-        DTYPE = "float32"
+        BINARY_DTYPE = "float32"
         binary_file = self.binary_file
         timestamp_file = self.timestamp_file
 
         # Make the two memory maps
         self._raw_data = np.memmap(
             binary_file,
-            dtype=DTYPE,
+            dtype=BINARY_DTYPE,
             mode="r",
             shape=(self._n_samples, self._n_channels),
-            offset=0, # headerless binary file
+            offset=0,  # headerless binary file
         )
         self._timestamps = np.memmap(
             timestamp_file,
             dtype=np.int64,  # this is from the allego sample reader timestamps are np.int64
             mode="r",
-            offset=0, # headerless binary file
+            offset=0,  # headerless binary file
         )
 
         # We can do a quick timestamp check to make sure it is the correct timestamp data for the
@@ -166,10 +173,10 @@ class NeuronexusRawIO(BaseRawIO):
                     channel_name,
                     channel_id,
                     self._sampling_frequency,
-                    DTYPE,
+                    BINARY_DTYPE,
                     units,
-                    1,
-                    0,
+                    1, # no gain
+                    0, # no offset
                     stream_id,
                 )
             )
@@ -233,10 +240,8 @@ class NeuronexusRawIO(BaseRawIO):
         t_start = self.metadata["status"]["t_range"][0]
         return t_start
 
-
-#######################################
-# Helper Functions
-
+    #######################################
+    # Helper Functions
 
     def read_metadata(self, fname_metadata):
         """
