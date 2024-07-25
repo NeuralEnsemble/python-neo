@@ -213,7 +213,7 @@ class NeuralynxRawIO(BaseRawIO):
         event_annotations = []
 
         if self.rawmode == "one-dir":
-            filenames = os.listdir(self.dirname)
+            filenames = sorted(os.listdir(self.dirname))
         else:
             filenames = self.include_filenames
 
