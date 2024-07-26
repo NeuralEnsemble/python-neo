@@ -63,6 +63,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from .utils import get_memmap_shape, get_memmap_chunk_from_open_file
 
 
 class SpikeGLXRawIO(BaseRawIO):
@@ -106,6 +107,8 @@ class SpikeGLXRawIO(BaseRawIO):
     extensions = ["meta", "bin"]
     rawmode = "one-dir"
 
+    has_buffer_description_api = True
+
     def __init__(self, dirname="", load_sync_channel=False, load_channel_location=False):
         BaseRawIO.__init__(self)
         self.dirname = dirname
@@ -123,11 +126,14 @@ class SpikeGLXRawIO(BaseRawIO):
         stream_names = sorted(list(srates.keys()), key=lambda e: srates[e])[::-1]
         nb_segment = np.unique([info["seg_index"] for info in self.signals_info_list]).size
 
+        
         self._memmaps = {}
         self.signals_info_dict = {}
+        # on block
+        self._buffer_descriptions = {0 :{}}
         for info in self.signals_info_list:
-            # key is (seg_index, stream_name)
-            key = (info["seg_index"], info["stream_name"])
+            seg_index, stream_name = info["seg_index"], info["stream_name"]
+            key = (seg_index, stream_name)
             if key in self.signals_info_dict:
                 raise KeyError(f"key {key} is already in the signals_info_dict")
             self.signals_info_dict[key] = info
@@ -139,7 +145,22 @@ class SpikeGLXRawIO(BaseRawIO):
             data = data.reshape(-1, info["num_chan"])
             self._memmaps[key] = data
 
+            stream_index = stream_names.index(info["stream_name"])
+            if seg_index not in self._buffer_descriptions[0]:
+                self._buffer_descriptions[0][seg_index] = {}
+            
+            self._buffer_descriptions[0][seg_index][stream_index] = {
+                "type" : "binary",
+                "file_path" : info["bin_file"],
+                "dtype" : "int16",
+                "order": "C",
+                "file_offset" : 0,
+                "shape" : get_memmap_shape(info["bin_file"], "int16", num_channels=info["num_chan"], offset=0),
+            }
+
+
         # create channel header
+        
         signal_streams = []
         signal_channels = []
         for stream_name in stream_names:
@@ -326,6 +347,11 @@ class SpikeGLXRawIO(BaseRawIO):
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         return None
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, stream_index):
+        return self._buffer_descriptions[block_index][seg_index][stream_index]
+        
+
 
 
 def scan_files(dirname):
