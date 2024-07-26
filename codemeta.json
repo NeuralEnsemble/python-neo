@@ -107,6 +107,11 @@
     { "@type": "Person", "givenName": "Matthias", "familyName": "Klumpp" },
     { "@type": "Person", "givenName": "Greg", "familyName": "Knoll" },
     { "@type": "Person", "givenName": "Chris", "familyName": "Halcrow" },
-    { "@type": "Person", "givenName": "Szonja", "familyName": "Weigl" }
+    { "@type": "Person", "givenName": "Szonja", "familyName": "Weigl" },
+    { "@type": "Person", "givenName": "Teo", "familyName": "Lohrer"},
+    { "@type": "Person", "givenName": "Kyu Hun", "familyName": "Lee"},
+    { "@type": "Person", "givenName": "Xin", "familyName": "Niu"},
+    { "@type": "Person", "givenName": "Anthony", "familyName": "Pinto"},
+    { "@type": "Person", "givenName": "Chris", "familyName": "Heydrick"}
   ]
 }
