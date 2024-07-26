@@ -149,7 +149,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         block = reader.read_block(
             load_waveforms=True,
             signal_group_mode="split-all",
-        )  # units_group_mode='all-in-one')
+        )
 
         self.assertEqual(len(block.segments[0].analogsignals), 96)
         # self.assertEqual(len(block.channel_indexes[-1].units), 218)
