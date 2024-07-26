@@ -281,7 +281,7 @@ from collections import Counter
 # if it is not present, use the neurosharectypesio to load files
 try:
     import neuroshare as ns
-except ImportError as err:
+except ModuleNotFoundError as err:
     from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
 
     # print("\n neuroshare library not found, loading data with ctypes" )
@@ -453,7 +453,7 @@ def list_candidate_ios(file_or_folder, ignore_patterns=["*.ini", "README.txt", "
 
     elif file_or_folder.is_dir():
         # scan files in folder to determine io type
-        filenames = [f for f in file_or_folder.glob("*") if f.is_file()]
+        filenames = [f for f in file_or_folder.glob("**/*") if f.is_file()]
         # keep only relevant filenames
         filenames = [f for f in filenames if f.suffix and not any([f.match(p) for p in ignore_patterns])]
 

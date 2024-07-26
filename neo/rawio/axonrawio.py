@@ -46,6 +46,12 @@ reads abf files - would be good to cross-check
 
 """
 
+import struct
+import datetime
+from io import open, BufferedReader
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -53,15 +59,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-
-import struct
-import datetime
-import os
-from io import open, BufferedReader
-
-import numpy as np
+from neo.core import NeoReadWriteError
 
 
 class AxonRawIO(BaseRawIO):
@@ -124,7 +122,8 @@ class AxonRawIO(BaseRawIO):
         elif version >= 2.0:
             mode = info["protocol"]["nOperationMode"]
 
-        assert mode in [1, 2, 3, 5], f"Mode {mode} is not supported"
+        if mode not in [1, 2, 3, 5]:
+            raise NeoReadWriteError(f"Mode {mode} is not currently supported in Neo")
         # event-driven variable-length mode (mode 1)
         # event-driven fixed-length mode (mode 2 or 5)
         # gap free mode (mode 3) can be in several episodes
@@ -481,12 +480,12 @@ def parse_axon_soup(filename):
             # brittle. pyABF believes that looking for the \x00\x00 is more
             # robust. We find these values, replace mu->u, then split into
             # a set of strings
-            indexed_string = big_string[big_string.rfind(b'\x00\x00'):]
+            indexed_string = big_string[big_string.rfind(b"\x00\x00") :]
             # replace mu -> u for easy display
-            indexed_string = indexed_string.replace(b'\xb5', b'\x75')
+            indexed_string = indexed_string.replace(b"\xb5", b"\x75")
             # we need to remove one of the \x00 to have the indices be
             # the correct order
-            indexed_string = indexed_string.split(b'\x00')[1:]
+            indexed_string = indexed_string.split(b"\x00")[1:]
             strings = indexed_string
 
             # ADC sections

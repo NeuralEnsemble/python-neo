@@ -16,6 +16,12 @@ Author: Samuel Garcia
 
 """
 
+import datetime
+import re
+import pathlib
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -24,11 +30,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
-import numpy as np
-
-import datetime
-import re
-import pathlib
+from neo.core import NeoReadWriteError
 
 
 class ElanRawIO(BaseRawIO):
@@ -75,7 +77,8 @@ class ElanRawIO(BaseRawIO):
 
             # version
             version = f.readline()[:-1]
-            assert version in ["V2", "V3"], f"Read only V2 or V3 .eeg.ent files. {version} given"
+            if version not in ["V2", "V3"]:
+                raise NeoReadWriteError(f"Reading is only possible for V2 or V3 .eeg.ent files. But {version=}")
 
             # info
             info1 = f.readline()[:-1]
@@ -232,11 +235,13 @@ class ElanRawIO(BaseRawIO):
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):

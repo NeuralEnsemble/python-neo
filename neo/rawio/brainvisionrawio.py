@@ -7,6 +7,11 @@ S. More.
 Author: Samuel Garcia
 """
 
+import os
+import re
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -15,11 +20,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
-import numpy as np
-
-import datetime
-import os
-import re
+from neo.core import NeoReadWriteError
 
 
 class BrainVisionRawIO(BaseRawIO):
@@ -51,8 +52,14 @@ class BrainVisionRawIO(BaseRawIO):
         marker_filename = self.filename.replace(bname, vhdr_header["Common Infos"]["MarkerFile"])
         binary_filename = self.filename.replace(bname, vhdr_header["Common Infos"]["DataFile"])
 
-        assert vhdr_header["Common Infos"]["DataFormat"] == "BINARY", NotImplementedError
-        assert vhdr_header["Common Infos"]["DataOrientation"] == "MULTIPLEXED", NotImplementedError
+        if vhdr_header["Common Infos"]["DataFormat"] != "BINARY":
+            raise NeoReadWriteError(
+                f"Only `BINARY` format has been implemented. Current Data Format is {vhdr_header['Common Infos']['DataFormat']}"
+            )
+        if vhdr_header["Common Infos"]["DataOrientation"] != "MULTIPLEXED":
+            raise NeoReadWriteError(
+                f"Only `MULTIPLEXED` is implemented. Current Orientation is {vhdr_header['Common Infos']['DataOrientation']}"
+            )
 
         nb_channel = int(vhdr_header["Common Infos"]["NumberOfChannels"])
         sr = 1.0e6 / float(vhdr_header["Common Infos"]["SamplingInterval"])
@@ -65,7 +72,9 @@ class BrainVisionRawIO(BaseRawIO):
             "IEEE_FLOAT_32": np.float32,
         }
 
-        assert fmt in fmts, NotImplementedError
+        if fmt not in fmts:
+            raise NeoReadWriteError(f"the fmt {fmt} is not implmented. Must be one of {fmts}")
+
         sig_dtype = fmts[fmt]
 
         # raw signals memmap
@@ -157,7 +166,8 @@ class BrainVisionRawIO(BaseRawIO):
 
     ###
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):

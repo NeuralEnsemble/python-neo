@@ -7,6 +7,12 @@ Completed with matlab Guillaume BECQ code.
 Author: Samuel Garcia
 """
 
+import datetime
+import struct
+import io
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -15,12 +21,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
-import numpy as np
-
-import datetime
-import os
-import struct
-import io
+from neo.core import NeoReadWriteError
 
 
 class StructFile(io.BufferedReader):
@@ -64,7 +65,8 @@ class MicromedRawIO(BaseRawIO):
 
             # header version
             (header_version,) = f.read_f("b", offset=175)
-            assert header_version == 4
+            if header_version != 4:
+                raise NotImplementedError(f"`header_version {header_version} is not implemented in neo yet")
 
             # area
             f.seek(176)
@@ -89,7 +91,8 @@ class MicromedRawIO(BaseRawIO):
             for zname in zone_names:
                 zname2, pos, length = f.read_f("8sII")
                 zones[zname] = zname2, pos, length
-                assert zname == zname2.decode("ascii").strip(" ")
+                if zname != zname2.decode("ascii").strip(" "):
+                    raise NeoReadWriteError("expected the zone name to match")
 
             # raw signals memmap
             sig_dtype = "u" + str(Bytes)
@@ -131,7 +134,8 @@ class MicromedRawIO(BaseRawIO):
 
             signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
 
-            assert np.unique(signal_channels["sampling_rate"]).size == 1
+            if np.unique(signal_channels["sampling_rate"]).size != 1:
+                raise NeoReadWriteError("The sampling rates must be the same across signal channels")
             self._sampling_rate = float(np.unique(signal_channels["sampling_rate"])[0])
 
             # Event channels
@@ -201,11 +205,13 @@ class MicromedRawIO(BaseRawIO):
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):

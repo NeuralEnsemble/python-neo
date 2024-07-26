@@ -18,6 +18,10 @@ Author: Samuel Garcia
 
 """
 
+from collections import OrderedDict
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -25,9 +29,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-from collections import OrderedDict
+from neo.core import NeoReadWriteError
 
 
 class Spike2RawIO(BaseRawIO):
@@ -186,7 +188,8 @@ class Spike2RawIO(BaseRawIO):
             self._seg_t_stops = [t_stop]
         else:
             all_nb_seg = np.array([v.size + 1 for v in all_gaps_block_ind.values()])
-            assert np.all(all_nb_seg[0] == all_nb_seg), "Signal channel have different pause so different nb_segment"
+            if np.all(all_nb_seg[0] != all_nb_seg):
+                raise NeoReadWriteError("Signal channels have different pauses so different nb_segment")
             nb_segment = int(all_nb_seg[0])
 
             for chan_id, gaps_block_ind in all_gaps_block_ind.items():
@@ -316,9 +319,10 @@ class Spike2RawIO(BaseRawIO):
                             sig_size = np.sum(self._by_seg_data_blocks[chan_id][seg_index]["size"])
                             sig_sizes.append(sig_size)
                         sig_sizes = np.array(sig_sizes)
-                        assert np.all(sig_sizes == sig_sizes[0]), (
-                            "Signal channel in groups do not have same size," "use try_signal_grouping=False"
-                        )
+                        if np.all(sig_sizes != sig_sizes[0]):
+                            raise NeoReadWriteError(
+                                "Signal channel in groups do not have same size, use try_signal_grouping=False"
+                            )
                     self._sig_dtypes[stream_id] = np.dtype(charact["dtype"])
                     signal_streams.append((f"Signal stream {stream_id}", stream_id))
                 signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)

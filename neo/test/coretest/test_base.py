@@ -454,7 +454,7 @@ class Test_BaseNeo_merge_annotations_merge(unittest.TestCase):
         res = merge_annotation(ann1, ann2)
 
         self.assertEqual(res, targ)
-        self.assertRaises(AssertionError, merge_annotation, ann1, ann3)
+        self.assertRaises(ValueError, merge_annotation, ann1, ann3)
 
     def test_merge_annotation__func__float(self):
         ann1 = 1.1
@@ -466,7 +466,7 @@ class Test_BaseNeo_merge_annotations_merge(unittest.TestCase):
         res = merge_annotation(ann1, ann2)
 
         self.assertEqual(res, targ)
-        self.assertRaises(AssertionError, merge_annotation, ann1, ann3)
+        self.assertRaises(ValueError, merge_annotation, ann1, ann3)
 
     def test_merge_annotation__func__bool(self):
         ann1 = False
@@ -482,8 +482,8 @@ class Test_BaseNeo_merge_annotations_merge(unittest.TestCase):
 
         self.assertEqual(res1, targ1)
         self.assertEqual(res2, targ2)
-        self.assertRaises(AssertionError, merge_annotation, ann1, ann3)
-        self.assertRaises(AssertionError, merge_annotation, ann2, ann4)
+        self.assertRaises(ValueError, merge_annotation, ann1, ann3)
+        self.assertRaises(ValueError, merge_annotation, ann2, ann4)
 
     def test_merge__dict(self):
         self.base1.annotations = {"val0": "val0", "val1": 1, "val2": 2.2, "val3": "test1"}

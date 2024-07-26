@@ -3,6 +3,7 @@ IgorProIO Demo
 ===========================
 
 """
+
 ###########################################################
 # Import our packages
 import os
@@ -28,7 +29,7 @@ zip_ref.extract(path=".", member=filename)  # extract file to dir
 zip_ref.close()
 
 ######################################################
-# Once we have our data we can use `get_io` to find an 
+# Once we have our data we can use `get_io` to find an
 # io (Igor in this case). Then we read the analogsignals
 # Finally we will make some nice plots
 reader = get_io(filename)

@@ -17,9 +17,10 @@ created by slicing. This is where attributes are copied over from
 the old object.
 """
 
-from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
 import quantities as pq
 import numpy as np
+
+from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
 from neo.core.baseneo import BaseNeo
 from neo.core.basesignal import BaseSignal
 from neo.core.dataobject import DataObject

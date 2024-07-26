@@ -10,13 +10,9 @@ Author: sgarcia
 
 """
 
-import os
-
 import numpy as np
-import quantities as pq
 
-from neo.io.baseio import BaseIO
-from neo.core import Segment, AnalogSignal
+from neo.core import Segment, AnalogSignal, NeoReadWriteError
 
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
@@ -88,19 +84,24 @@ class RawBinarySignalIO(RawBinarySignalRawIO, BaseFromRaw):
             raise NotImplementedError("bytesoffset values other than 0 " + "not supported")
 
         anasigs = segment.analogsignals
-        assert len(anasigs) > 0, "No AnalogSignal"
+        if len(anasigs) == 0:
+            raise NeoReadWriteError("No AnalogSignal to write")
 
         anasig0 = anasigs[0]
         if len(anasigs) == 1 and anasig0.ndim == 2:
             numpy_sigs = anasig0.magnitude
         else:
 
-            assert anasig0.ndim == 1 or (anasig0.ndim == 2 and anasig0.shape[1] == 1)
+            if anasig0.ndim != 1 and (anasig0.ndim == 2 and anasig0.shape[1] != 1):
+                raise NeoReadWriteError("Incorrect analogsignal shaping for write")
             # all AnaologSignal from Segment must have the same length/sampling_rate/dtype
             for anasig in anasigs[1:]:
-                assert anasig.shape == anasig0.shape
-                assert anasig.sampling_rate == anasig0.sampling_rate
-                assert anasig.dtype == anasig0.dtype
+                if anasig.shape != anasig0.shape:
+                    raise ValueError("The shape of one of the analog signals does not match")
+                if anasig.sampling_rate != anasig0.sampling_rate:
+                    raise ValueError("The sampling_rate of one of the analog signals does not match")
+                if anasig.dtype != anasig0.dtype:
+                    raise ValueError("The dtype of one the analog signals does not match")
 
             numpy_sigs = np.empty((anasig0.size, len(anasigs)))
             for i, anasig in enumerate(anasigs):

@@ -9,13 +9,13 @@ ineherits neo.rawio.
 
 """
 
-import numpy as np
-import quantities as pq
 import logging
 
+import numpy as np
+import quantities as pq
+
+
 from neo.core.baseneo import BaseNeo
-
-
 from neo.core import AnalogSignal, Epoch, Event, SpikeTrain
 from neo.core.dataobject import ArrayDict
 
@@ -119,9 +119,12 @@ class AnalogSignalProxy(BaseProxy):
 
         sig_chans = signal_channels[self._global_channel_indexes]
 
-        assert np.unique(sig_chans["units"]).size == 1, "Channel do not have same units"
-        assert np.unique(sig_chans["dtype"]).size == 1, "Channel do not have same dtype"
-        assert np.unique(sig_chans["sampling_rate"]).size == 1, "Channel do not have same sampling_rate"
+        if np.unique(sig_chans["units"]).size != 1:
+            raise ValueError("Channel do not have same units")
+        if np.unique(sig_chans["dtype"]).size != 1:
+            raise TypeError("Channel do not have same dtype")
+        if np.unique(sig_chans["sampling_rate"]).size != 1:
+            raise ValueError("Channel do not have same sampling_rate")
 
         self.units = ensure_signal_units(sig_chans["units"][0])
         self.dtype = sig_chans["dtype"][0]
@@ -178,7 +181,8 @@ class AnalogSignalProxy(BaseProxy):
             else:
                 t_start = ensure_second(t_start)
                 if strict_slicing:
-                    assert self.t_start <= t_start <= self.t_stop, "t_start is outside"
+                    if t_start < self.t_start or t_start > self.t_stop:
+                        raise ValueError("`t_start` is outside of the time range")
                 else:
                     t_start = max(t_start, self.t_start)
                 # the i_start is rounded to the nearest sample
@@ -192,7 +196,8 @@ class AnalogSignalProxy(BaseProxy):
             else:
                 t_stop = ensure_second(t_stop)
                 if strict_slicing:
-                    assert self.t_start <= t_stop <= self.t_stop, "t_stop is outside possible time range"
+                    if t_stop < self.t_start or t_stop > self.t_stop:
+                        raise ValueError("`t_stop` is outside of the time range")
                 else:
                     t_stop = min(t_stop, self.t_stop)
                 # calculate duration demanded then round it to nearest sample number
@@ -268,9 +273,10 @@ class AnalogSignalProxy(BaseProxy):
             array_annotations = self.array_annotations
 
         if magnitude_mode == "raw":
-            assert (
-                self._raw_units is not None
-            ), "raw magnitude is not support gain are not the same for all channel or offset is not 0"
+            if self._raw_units is None:
+                raise ValueError(
+                    "raw magnitude is not supported if the gain are not the same for all channels or offset is not 0"
+                )
             sig = raw_signal
             units = self._raw_units
         elif magnitude_mode == "rescaled":
@@ -400,8 +406,8 @@ class SpikeTrainProxy(BaseProxy):
             units = "s"
 
         if load_waveforms:
-            assert self.sampling_rate is not None, "Do not have waveforms"
-
+            if self.sampling_rate is None:
+                raise ValueError("There are no waveforms")
             raw_wfs = self._rawio.get_spike_raw_waveforms(
                 block_index=self._block_index,
                 seg_index=self._seg_index,
@@ -684,7 +690,8 @@ def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop, strict_slicing):
         t_start = seg_t_start
     else:
         if strict_slicing:
-            assert seg_t_start <= t_start <= seg_t_stop, "t_start is outside"
+            if t_start < seg_t_start or t_start > seg_t_stop:
+                raise ValueError("`t_start` is outside of the time range")
         else:
             t_start = max(t_start, seg_t_start)
     t_start = ensure_second(t_start)
@@ -693,7 +700,8 @@ def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop, strict_slicing):
         t_stop = seg_t_stop
     else:
         if strict_slicing:
-            assert seg_t_start <= t_stop <= seg_t_stop, "t_stop is outside"
+            if t_stop < seg_t_start or t_stop > seg_t_stop:
+                raise ValueError("`t_stop` is outside of the time range")
         else:
             t_stop = min(t_stop, seg_t_stop)
     t_stop = ensure_second(t_stop)

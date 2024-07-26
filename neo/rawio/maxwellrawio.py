@@ -23,6 +23,8 @@ from pathlib import Path
 import platform
 from urllib.request import urlopen
 
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -31,7 +33,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
-import numpy as np
+from neo.core import NeoReadWriteError
 
 
 class MaxwellRawIO(BaseRawIO):
@@ -94,7 +96,8 @@ class MaxwellRawIO(BaseRawIO):
                         f"Possible rec_names: {unique_rec_names}"
                     )
                 else:
-                    assert self.rec_name in unique_rec_names, f"rec_name {self.rec_name} not found"
+                    if self.rec_name not in unique_rec_names:
+                        raise NeoReadWriteError(f"rec_name {self.rec_name} not found")
             else:
                 self.rec_name = unique_rec_names[0]
             # add streams that contain the selected rec_name

@@ -2,6 +2,7 @@
 Analyzing and Plotting Data with Neo Structures
 ===============================================
 """
+
 ######################################################
 # First we import some packages. Since we are making simulated
 # data we will import quite a few neo features as well as use
@@ -31,7 +32,7 @@ n_units = {"Tetrode #1": 2, "Tetrode #2": 5}
 
 ##################################################################################
 # Neo can also have groups. Groups are structures within a block that can cross segments
-# for example we could group a neuron across trials or across probes. 
+# for example we could group a neuron across trials or across probes.
 
 # Create a group for each neuron, annotate each group with the tetrode from which it was recorded
 groups = []
@@ -86,7 +87,7 @@ for segment in block.segments:
 # since its data can be treated like numpy arrays
 # it is easy to use standard packages like matplotlib
 # for all your plotting needs
-# We do a classic in neuroscience and show various ways 
+# We do a classic in neuroscience and show various ways
 # to plot a PSTH (Peristimulus histogram)
 
 ###################################################

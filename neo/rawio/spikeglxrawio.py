@@ -50,6 +50,12 @@ Author : Samuel Garcia
 Some functions are copied from Graham Findlay
 """
 
+from pathlib import Path
+import os
+import re
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -57,12 +63,6 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-from pathlib import Path
-import os
-import re
-
-import numpy as np
 
 
 class SpikeGLXRawIO(BaseRawIO):
@@ -128,7 +128,8 @@ class SpikeGLXRawIO(BaseRawIO):
         for info in self.signals_info_list:
             # key is (seg_index, stream_name)
             key = (info["seg_index"], info["stream_name"])
-            assert key not in self.signals_info_dict
+            if key in self.signals_info_dict:
+                raise KeyError(f"key {key} is already in the signals_info_dict")
             self.signals_info_dict[key] = info
 
             # create memmap
@@ -177,6 +178,22 @@ class SpikeGLXRawIO(BaseRawIO):
 
         # No events
         event_channels = []
+        # This is true only in case of 'nidq' stream
+        for stream_name in stream_names:
+            if "nidq" in stream_name:
+                info = self.signals_info_dict[0, stream_name]
+                if len(info["digital_channels"]) > 0:
+                    # add event channels
+                    for local_chan in info["digital_channels"]:
+                        chan_name = local_chan
+                        chan_id = f"{stream_name}#{chan_name}"
+                        event_channels.append((chan_name, chan_id, "event"))
+                    # add events_memmap
+                    data = np.memmap(info["bin_file"], dtype="int16", mode="r", offset=0, order="C")
+                    data = data.reshape(-1, info["num_chan"])
+                    # The digital word is usually the last channel, after all the individual analog channels
+                    extracted_word = data[:, len(info["analog_channels"])]
+                    self._events_memmap = np.unpackbits(extracted_word.astype(np.uint8)[:, None], axis=1)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
@@ -272,6 +289,44 @@ class SpikeGLXRawIO(BaseRawIO):
 
         return raw_signals
 
+    def _event_count(self, event_channel_idx, block_index=None, seg_index=None):
+        timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_idx, None, None)
+        return timestamps.size
+
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start=None, t_stop=None):
+        timestamps, durations, labels = [], None, []
+        info = self.signals_info_dict[0, "nidq"]  # There are no events that are not in the nidq stream
+        dig_ch = info["digital_channels"]
+        if len(dig_ch) > 0:
+            event_data = self._events_memmap
+            channel = dig_ch[event_channel_index]
+            ch_idx = 7 - int(channel[2:])  # They are in the reverse order
+            this_stream = event_data[:, ch_idx]
+            this_rising = np.where(np.diff(this_stream) == 1)[0] + 1
+            this_falling = (
+                np.where(np.diff(this_stream) == 255)[0] + 1
+            )  # because the data is in unsigned 8 bit, -1 = 255!
+            if len(this_rising) > 0:
+                timestamps.extend(this_rising)
+                labels.extend([f"{channel} ON"] * len(this_rising))
+            if len(this_falling) > 0:
+                timestamps.extend(this_falling)
+                labels.extend([f"{channel} OFF"] * len(this_falling))
+        timestamps = np.asarray(timestamps)
+        if len(labels) == 0:
+            labels = np.asarray(labels, dtype="U1")
+        else:
+            labels = np.asarray(labels)
+        return timestamps, durations, labels
+
+    def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
+        info = self.signals_info_dict[0, "nidq"]  # There are no events that are not in the nidq stream
+        event_times = event_timestamps.astype(dtype) / float(info["sampling_rate"])
+        return event_times
+
+    def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
+        return None
+
 
 def scan_files(dirname):
     """
@@ -332,61 +387,71 @@ def parse_spikeglx_fname(fname):
     Consider the filenames: `Noise4Sam_g0_t0.nidq.bin` or `Noise4Sam_g0_t0.imec0.lf.bin`
     The filenames consist of 3 or 4 parts separated by `.`
     1. "Noise4Sam_g0_t0" will be the `name` variable. This choosen by the user at recording time.
-    2. "_g0_" is the "gate_num"
-    3. "_t0_" is the "trigger_num"
+    2. "g0" is the "gate_num"
+    3. "t0" is the "trigger_num"
     4. "nidq" or "imec0" will give the `device`
     5. "lf" or "ap" will be the `stream_kind`
-        `stream_name` variable is the concatenation of `device.stream_kind`
+       `stream_name` variable is the concatenation of `device.stream_kind`
+
+    If CatGT is used, then the trigger numbers in the file names ("t0"/"t1"/etc.)
+    will be renamed to "tcat". In this case, the parsed "trigger_num" will be set to "cat".
 
     This function is copied/modified from Graham Findlay.
 
     Notes:
-       * Sometimes the original file name is modified by the user and "_gt0_" or "_t0_"
+        * Sometimes the original file name is modified by the user and "_g0_" or "_t0_"
           are manually removed. In that case gate_name and trigger_num will be None.
 
     Parameters
     ---------
     fname: str
         The filename to parse without the extension, e.g. "my-run-name_g0_t1.imec2.lf"
+
     Returns
     -------
     run_name: str
         The run name, e.g. "my-run-name".
     gate_num: int or None
         The gate identifier, e.g. 0.
-    trigger_num: int or None
-        The trigger identifier, e.g. 1.
+    trigger_num: int | str or None
+        The trigger identifier, e.g. 1. If CatGT is used, then the trigger_num will be set to "cat".
     device: str
         The probe identifier, e.g. "imec2"
     stream_kind: str or None
         The data type identifier, "lf" or "ap" or None
     """
-    r = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*).(ap|lf)", fname)
-    if len(r) == 1:
+    re_standard = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*).(ap|lf)", fname)
+    re_tcat = re.findall(r"(\S*)_g(\d*)_tcat.(\S*).(ap|lf)", fname)
+    re_nidq = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*)", fname)
+    if len(re_standard) == 1:
         # standard case with probe
-        run_name, gate_num, trigger_num, device, stream_kind = r[0]
+        run_name, gate_num, trigger_num, device, stream_kind = re_standard[0]
+    elif len(re_tcat) == 1:
+        # tcat case
+        run_name, gate_num, device, stream_kind = re_tcat[0]
+        trigger_num = "cat"
+    elif len(re_nidq) == 1:
+        # case for nidaq
+        run_name, gate_num, trigger_num, device = re_nidq[0]
+        stream_kind = None
     else:
-        r = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*)", fname)
-        if len(r) == 1:
-            # case for nidaq
-            run_name, gate_num, trigger_num, device = r[0]
-            stream_kind = None
+        # the naming do not correspond lets try something more easy
+        # example: sglx_xxx.imec0.ap
+        re_else = re.findall(r"(\S*)\.(\S*).(ap|lf)", fname)
+        re_else_nidq = re.findall(r"(\S*)\.(\S*)", fname)
+        if len(re_else) == 1:
+            run_name, device, stream_kind = re_else_nidq[0]
+            gate_num, trigger_num = None, None
+        elif len(re_else_nidq) == 1:
+            # easy case for nidaq, example: sglx_xxx.nidq
+            run_name, device = re_else_nidq[0]
+            gate_num, trigger_num, stream_kind = None, None, None
         else:
-            # the naming do not correspond lets try something more easy
-            # example: sglx_xxx.imec0.ap
-            r = re.findall(r"(\S*)\.(\S*).(ap|lf)", fname)
-            if len(r) == 1:
-                run_name, device, stream_kind = r[0]
-                gate_num, trigger_num = None, None
-            else:
-                # easy case for nidaq, example: sglx_xxx.nidq
-                r = re.findall(r"(\S*)\.(\S*)", fname)
-                run_name, device = r[0]
-                gate_num, trigger_num, stream_kind = None, None, None
+            raise ValueError(f"Cannot parse filename {fname}")
 
     if gate_num is not None:
         gate_num = int(gate_num)
-    if trigger_num is not None:
+    if trigger_num is not None and trigger_num != "cat":
         trigger_num = int(trigger_num)
 
     return (run_name, gate_num, trigger_num, device, stream_kind)
@@ -441,7 +506,7 @@ def extract_stream_info(meta_file, meta):
         if (
             "imDatPrb_type" not in meta
             or meta["imDatPrb_type"] == "0"
-            or meta["imDatPrb_type"] in ("1015", "1022", "1030", "1031", "1032")
+            or meta["imDatPrb_type"] in ("1015", "1016", "1022", "1030", "1031", "1032", "1100", "1121", "1300")
         ):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
@@ -507,4 +572,16 @@ def extract_stream_info(meta_file, meta):
     info["channel_offsets"] = np.zeros(info["num_chan"])
     info["has_sync_trace"] = has_sync_trace
 
+    if "nidq" in device:
+        info["digital_channels"] = []
+        info["analog_channels"] = [channel for channel in info["channel_names"] if not channel.startswith("XD")]
+        # Digital/event channels are encoded within the digital word, so that will need more handling
+        if meta.get("niXDChans1", "") != "":
+            nixd_chans1_items = meta["niXDChans1"].split(",")
+            for item in nixd_chans1_items:
+                if ":" in item:
+                    start, end = map(int, item.split(":"))
+                    info["digital_channels"].extend([f"XD{i}" for i in range(start, end + 1)])
+                else:
+                    info["digital_channels"].append(f"XD{int(item)}")
     return info

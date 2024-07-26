@@ -18,6 +18,9 @@ Author: Samuel Garcia
 
 from pathlib import Path
 
+import numpy as np
+from xml.etree import ElementTree
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -25,9 +28,6 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-from xml.etree import ElementTree
 
 
 class NeuroScopeRawIO(BaseRawIO):
@@ -92,9 +92,11 @@ class NeuroScopeRawIO(BaseRawIO):
             for xml_rc in xml_chx:
                 channel_group[int(xml_rc.text)] = grp_index
 
+        sig_dtype = "int16"
+        # scale to convert sample values to voltage in mV = range of recording in volts *
+        #  1000 mV/V /(number of bits * amplification)
         if nbits == 16:
-            sig_dtype = "int16"
-            gain = voltage_range / (2**16) / amplification / 1000.0
+            gain = voltage_range * 1000 / (2**nbits) / amplification
             # ~ elif nbits==32:
             # Not sure if it is int or float
             # ~ dt = 'int32'
@@ -146,11 +148,13 @@ class NeuroScopeRawIO(BaseRawIO):
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
@@ -195,8 +199,10 @@ class NeuroScopeRawIO(BaseRawIO):
                     f"data binary not found for file {xml_file_path.stem} with supported extensions: {supported_extensions}"
                 )
 
-        assert xml_file_path.is_file(), f"xml file not found at the expected location {xml_file_path}"
-        assert data_file_path.is_file(), f"binary file not found at the expected location {data_file_path}"
+        if not xml_file_path.is_file():
+            raise FileNotFoundError(f"XML file not found at the expected location {xml_file_path}")
+        if not data_file_path.is_file():
+            raise FileNotFoundError(f"Binary file not found at the expected location {data_file_path}")
 
         self.xml_file_path = xml_file_path
         self.data_file_path = data_file_path

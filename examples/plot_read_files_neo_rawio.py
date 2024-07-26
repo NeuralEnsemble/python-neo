@@ -4,6 +4,7 @@ Reading files with neo.rawio
 
 compare with read_files_neo_io.py
 """
+
 ###########################################################
 # First we import a RawIO from neo.rawio
 # For this example we will use PlexonRawIO
@@ -42,9 +43,9 @@ print(reader.header)
 ###############################################################
 # Read signal chunks
 # This is how we read raw data. We choose indices that we want or
-# we can use None to mean look at all channels. We also need to 
+# we can use None to mean look at all channels. We also need to
 # specify the block of data (block_index) as well as the segment
-# (seg_index). Then we give the index start and stop. Since we 
+# (seg_index). Then we give the index start and stop. Since we
 # often think in time: to go from time to index would just require
 # the sample rate (so index = time / sampling_rate)
 
@@ -82,7 +83,7 @@ print(f"{sampling_rate=}, {t_start=}, {units=}")
 
 # Count units and spikes per unit
 nb_unit = reader.spike_channels_count()
-print(f"nb_unit: {nb_unit}\n") # nb_unit stands for number of units
+print(f"nb_unit: {nb_unit}\n")  # nb_unit stands for number of units
 print("spike_channel_index     nb_spike")
 for spike_channel_index in range(nb_unit):
     nb_spike = reader.spike_count(block_index=0, seg_index=0, spike_channel_index=spike_channel_index)
@@ -99,7 +100,7 @@ print(f"{spike_times.shape=}\n{spike_times.dtype=}\n{spike_times[:5]}\n")
 
 #######################################################################
 # Some file formats can also give waveform information. We are lucky
-# again our file has waveform data!! We forms are a 3d dataset of 
+# again our file has waveform data!! We forms are a 3d dataset of
 # (nb_spike, nb_channel, nb_sample)
 
 # Read spike waveforms
@@ -134,7 +135,7 @@ print(reader.header)
 
 nb_event_channel = reader.event_channels_count()
 print(f"nb_event_channel: {nb_event_channel}")
-# now iterate through the channels 
+# now iterate through the channels
 for chan_index in range(nb_event_channel):
     nb_event = reader.event_count(block_index=0, seg_index=0, event_channel_index=chan_index)
     print(f"chan_index: {chan_index} nb_event: {nb_event}\n")

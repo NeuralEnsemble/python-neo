@@ -25,6 +25,13 @@ Alternative package for loading the tdt format:
 https://pypi.org/project/tdt
 """
 
+import numpy as np
+import os
+import re
+import warnings
+from collections import OrderedDict
+from pathlib import Path
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -33,12 +40,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
-import numpy as np
-import os
-import re
-import warnings
-from collections import OrderedDict
-from pathlib import Path
+from neo.core import NeoReadWriteError
 
 
 class TdtRawIO(BaseRawIO):
@@ -125,7 +127,8 @@ class TdtRawIO(BaseRawIO):
             if info_channel_groups is None:
                 info_channel_groups = _info_channel_groups
             else:
-                assert np.array_equal(info_channel_groups, _info_channel_groups), "Channels differ across segments"
+                if not np.array_equal(info_channel_groups, _info_channel_groups):
+                    raise NeoReadWriteError("Channels differ across segments")
 
         # TEV (mixed data)
         self._tev_datas = []
@@ -229,7 +232,8 @@ class TdtRawIO(BaseRawIO):
                     if stream_index not in self._sigs_lengths[seg_index]:
                         self._sigs_lengths[seg_index][stream_index] = size
                     else:
-                        assert self._sigs_lengths[seg_index][stream_index] == size
+                        if self._sigs_lengths[seg_index][stream_index] != size:
+                            raise ValueError(f"The sig lengths for {seg_index=}, {stream_index=} is not of size {size}")
 
                     # signal start time, relative to start of segment
                     if len(data_index["timestamp"]):
@@ -240,7 +244,8 @@ class TdtRawIO(BaseRawIO):
                     if stream_index not in self._sigs_t_start[seg_index]:
                         self._sigs_t_start[seg_index][stream_index] = t_start
                     else:
-                        assert self._sigs_t_start[seg_index][stream_index] == t_start
+                        if self._sigs_t_start[seg_index][stream_index] != t_start:
+                            raise ValueError(f"The t_start for {seg_index=}, {stream_index=} is not of time {t_start}")
 
                     # sampling_rate and dtype
                     if len(data_index):
@@ -256,10 +261,15 @@ class TdtRawIO(BaseRawIO):
                         if stream_index not in self._sig_dtype_by_group:
                             self._sig_dtype_by_group[stream_index] = np.dtype(dtype)
                         else:
-                            assert self._sig_dtype_by_group[stream_index] == dtype
+                            if self._sig_dtype_by_group[stream_index] != dtype:
+                                raise TypeError(
+                                    f"The dtype for the signal in {stream_index=} is not the correct dtype of {dtype}"
+                                )
                     else:
-                        assert sampling_rate == _sampling_rate, "sampling is changing!!!"
-                        assert dtype == _dtype, "sampling is changing!!!"
+                        if sampling_rate != _sampling_rate:
+                            raise ValueError("sampling is changing!!!")
+                        if dtype != _dtype:
+                            raise ValueError("Dtype is changing!!")
 
                     # data buffer test if SEV file exists otherwise TEV
                     # path = self.dirname / segment_name
@@ -289,7 +299,8 @@ class TdtRawIO(BaseRawIO):
                         data = np.memmap(sev_filename, mode="r", offset=0, dtype="uint8")
                     else:
                         data = self._tev_datas[seg_index]
-                    assert data is not None, "no TEV nor SEV"
+                    if data is None:
+                        raise NeoReadWriteError("no TEV nor SEV data to read")
                     self._sigs_data_buf[seg_index][global_chan_index] = data
 
                 chan_name = f"{info['StoreName']} {c + 1}"

@@ -7,6 +7,9 @@ https://www.3brain.com/products/single-well/biocam-x
 Authors: Alessio Buccino, Robert Wolff
 """
 
+import json
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -14,9 +17,6 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-import json
 
 
 class BiocamRawIO(BaseRawIO):
@@ -108,11 +108,13 @@ class BiocamRawIO(BaseRawIO):
         return all_stops[block_index][seg_index]
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return self._num_frames
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index must be 0")
         return self._segment_t_start(block_index, seg_index)
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):

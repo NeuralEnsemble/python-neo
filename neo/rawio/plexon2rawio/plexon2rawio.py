@@ -107,7 +107,7 @@ class Plexon2RawIO(BaseRawIO):
         # download default PL2 dll once if not yet available
         if pl2_dll_file_path is None:
             architecture = platform.architecture()[0]
-            if architecture == "64bit" and platform.system() == "Windows":
+            if architecture == "64bit" and platform.system() in ["Windows", "Darwin"]:
                 file_name = "PL2FileReader64.dll"
             else:  # Apparently wine uses the 32 bit version in linux
                 file_name = "PL2FileReader.dll"
@@ -120,7 +120,7 @@ class Plexon2RawIO(BaseRawIO):
                 dist = urlopen(url=url)
 
                 with open(pl2_dll_file_path, "wb") as f:
-                    print(f"Downloading plexon dll to {pl2_dll_file_path}")
+                    warnings.warn(f"dll file does not exist, downloading plexon dll to {pl2_dll_file_path}")
                     f.write(dist.read())
 
         # Instantiate wrapper for Windows DLL
@@ -128,8 +128,18 @@ class Plexon2RawIO(BaseRawIO):
 
         self.pl2reader = PyPL2FileReader(pl2_dll_file_path=pl2_dll_file_path)
 
-        # Open the file.
-        self.pl2reader.pl2_open_file(self.filename)
+        reading_attempts = 10
+        for attempt in range(reading_attempts):
+            self.pl2reader.pl2_open_file(self.filename)
+
+            # Verify the file handle is valid.
+            if self.pl2reader._file_handle.value != 0:
+                # File handle is valid, exit the loop early
+                break
+            else:
+                if attempt == reading_attempts - 1:
+                    self.pl2reader._print_error()
+                    raise IOError(f"Opening {self.filename} failed after {reading_attempts} attempts.")
 
     def _source_name(self):
         return self.filename
@@ -146,7 +156,6 @@ class Plexon2RawIO(BaseRawIO):
         Source = namedtuple("Source", "id name sampling_rate n_samples")
         for c in range(self.pl2reader.pl2_file_info.m_TotalNumberOfAnalogChannels):
             achannel_info = self.pl2reader.pl2_get_analog_channel_info(c)
-
             # only consider active channels
             if not achannel_info.m_ChannelEnabled:
                 continue
@@ -160,7 +169,10 @@ class Plexon2RawIO(BaseRawIO):
             existing_source = source_characteristics.setdefault(source_id, channel_source)
 
             # ensure that stream of this channel and existing stream have same properties
-            assert channel_source == existing_source
+            if channel_source != existing_source:
+                raise ValueError(
+                    f"The channel source {channel_source} must be the same as the existing source {existing_source}"
+                )
 
             ch_name = achannel_info.m_Name.decode()
             chan_id = f"source{achannel_info.m_Source}.{achannel_info.m_Channel}"
@@ -259,8 +271,10 @@ class Plexon2RawIO(BaseRawIO):
                     # python is 1..12 https://docs.python.org/3/library/datetime.html#datetime.datetime
                     # so month needs to be tm_mon+1; also tm_sec could cause problems in the case of leap
                     # seconds, but this is harder to defend against.
+                    year = tmo.tm_year  # This has base 1900 in the c++ struct specification so we need to add 1900
+                    year += 1900
                     dt = datetime(
-                        year=tmo.tm_year,
+                        year=year,
                         month=tmo.tm_mon + 1,
                         day=tmo.tm_mday,
                         hour=tmo.tm_hour,
@@ -314,7 +328,6 @@ class Plexon2RawIO(BaseRawIO):
                 "m_OneBasedChannelInTrode",
                 "m_Source",
                 "m_Channel",
-                "m_Name",
                 "m_MaximumNumberOfFragments",
             ]
 
@@ -348,7 +361,8 @@ class Plexon2RawIO(BaseRawIO):
 
         stream_id = self.header["signal_streams"][stream_index]["id"]
         stream_characteristic = list(self.signal_stream_characteristics.values())[stream_index]
-        assert stream_id == stream_characteristic.id
+        if stream_id != stream_characteristic.id:
+            raise ValueError(f"The `stream_id` must be {stream_characteristic.id}")
         return int(stream_characteristic.n_samples)  # Avoids returning a numpy.int64 scalar
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):

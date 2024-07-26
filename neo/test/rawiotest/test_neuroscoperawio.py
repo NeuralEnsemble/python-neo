@@ -1,6 +1,7 @@
-import unittest
 import logging
+import os
 from pathlib import Path
+import unittest
 
 from neo.rawio.neuroscoperawio import NeuroScopeRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -16,6 +17,17 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         "neuroscope/test1/test1.dat",
         "neuroscope/dataset_1/YutaMouse42-151117.eeg",
     ]
+
+    def test_signal_scale(self):
+        local_test_dir = get_local_testing_data_folder()
+        fname = os.path.join(local_test_dir, "neuroscope/test1/test1.xml")
+        reader = NeuroScopeRawIO(filename=fname)
+        reader.parse_header()
+
+        gain = reader.header["signal_channels"][0]["gain"]
+
+        # scale is in mV = range of recording in volts * 1000 mV/V /(number of bits * ampification)
+        self.assertAlmostEqual(20.0 * 1000 / (2**16 * 1000), gain)
 
     def test_binary_argument_with_non_canonical_xml_file(self):
 

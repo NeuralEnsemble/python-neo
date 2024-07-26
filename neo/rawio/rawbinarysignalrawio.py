@@ -17,6 +17,10 @@ Important release note:
 Author: Samuel Garcia
 """
 
+import numpy as np
+
+import os
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -25,11 +29,6 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
-import numpy as np
-
-import os
-import sys
-
 
 class RawBinarySignalRawIO(BaseRawIO):
     """
@@ -37,7 +36,7 @@ class RawBinarySignalRawIO(BaseRawIO):
     Parameters
     ----------
     filename: str, default: ''
-        The *.raw or *.bin binary file to load
+        The *.raw, *.bin, or *.dat binary file to load
     dtype: np.dtype, default: 'int16'
         The dtype that the data is stored with. Must be acceptable by the numpy.dtype constructor
     sampling_rate: float, default: 10000.0
@@ -52,7 +51,7 @@ class RawBinarySignalRawIO(BaseRawIO):
         The offset for the bytes
     """
 
-    extensions = ["raw", "bin"]
+    extensions = ["raw", "bin", "dat"]
     rawmode = "one-file"
 
     def __init__(
@@ -143,11 +142,13 @@ class RawBinarySignalRawIO(BaseRawIO):
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("stream_index must be 0")
         return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("stream_index must be 0")
         return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):

@@ -18,21 +18,13 @@ the old object.
 """
 
 import logging
-
-try:
-    import scipy.signal
-except ImportError as err:
-    HAVE_SCIPY = False
-else:
-    HAVE_SCIPY = True
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations, intersect_annotations
 from neo.core.dataobject import DataObject
-from copy import copy, deepcopy
-
 from neo.core.basesignal import BaseSignal
 
 logger = logging.getLogger("Neo")
@@ -612,8 +604,9 @@ class AnalogSignal(BaseSignal):
         -----
         For resampling the signal with a fixed number of samples, see `resample` method.
         """
-
-        if not HAVE_SCIPY:
+        try:
+            import scipy.signal
+        except ImportError as err:
             raise ImportError("Decimating requires availability of scipy.signal")
 
         # Resampling is only permitted along the time axis (axis=0)
@@ -655,8 +648,10 @@ class AnalogSignal(BaseSignal):
         For reducing the number of samples to a fraction of the original, see `downsample` method
         """
 
-        if not HAVE_SCIPY:
-            raise ImportError("Resampling requires availability of scipy.signal")
+        try:
+            import scipy.signal
+        except ImportError as err:
+            raise ImportError("Decimating requires availability of scipy.signal")
 
         # Resampling is only permitted along the time axis (axis=0)
         if "axis" in kwargs:

@@ -23,6 +23,10 @@ Author: Samuel Garcia, luc estebanez, mark hollenbeck
 
 """
 
+from collections import OrderedDict
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
@@ -31,9 +35,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
-import numpy as np
-from collections import OrderedDict
-import datetime
+from neo.core import NeoReadWriteError
 
 
 class NeuroExplorerRawIO(BaseRawIO):
@@ -194,7 +196,8 @@ class NeuroExplorerRawIO(BaseRawIO):
         entity_header = self._entity_headers[entity_index]
         if entity_header["type"] == 0:
             return None
-        assert entity_header["type"] == 3
+        if entity_header["type"] != 3:
+            raise NeoReadWriteError(f"Neo requires the entity_header['type'] to be 3 not {entity_header['type']}")
 
         n = entity_header["n"]
         width = entity_header["NPointsWave"]
