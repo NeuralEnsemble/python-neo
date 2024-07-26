@@ -28,4 +28,4 @@ Relationships:
 .. testsetup:: *
 
     from neo import SpikeTrain
-    import quantities as pq
+    import neo.units

@@ -28,8 +28,8 @@ for seg in bl.segments:
     ax2 = fig.add_subplot(2, 1, 2)
     ax1.set_title(seg.file_origin)
     ax1.set_ylabel("arbitrary units")
-    mint = 0 * pq.s
-    maxt = np.inf * pq.s
+    mint = 0 * neo.units.s
+    maxt = np.inf * neo.units.s
     for i, asig in enumerate(seg.analogsignals):
         times = asig.times.rescale("s").magnitude
         asig = asig.magnitude

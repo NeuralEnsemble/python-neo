@@ -83,7 +83,7 @@ class AnalogSignalProxy(BaseProxy):
                                          block_index=0,
                                          seg_index=0)
     >>> anasig = proxy_anasig.load()
-    >>> slice_of_anasig = proxy_anasig.load(time_slice=(1.*pq.s, 2.*pq.s))
+    >>> slice_of_anasig = proxy_anasig.load(time_slice=(1.*neo.units.s, 2.*neo.units.s))
     >>> some_channel_of_anasig = proxy_anasig.load(channel_indexes=[0,5,10])
 
     """
