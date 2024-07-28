@@ -135,15 +135,15 @@ class NeuralynxRawIO(BaseRawIO):
     ]
 
     def __init__(
-            self,
-            dirname="",
-            include_filenames=None,
-            exclude_filenames=None,
-            keep_original_times=False,
-            strict_gap_mode=True,
-            filename=None,
-            exclude_filename=None,
-            **kargs
+        self,
+        dirname="",
+        include_filenames=None,
+        exclude_filenames=None,
+        keep_original_times=False,
+        strict_gap_mode=True,
+        filename=None,
+        exclude_filename=None,
+        **kargs,
     ):
 
         if not dirname:
@@ -158,7 +158,9 @@ class NeuralynxRawIO(BaseRawIO):
                 exclude_filenames = [exclude_filename]
             else:
                 exclude_filenames = exclude_filename
-            warnings.warn("`exclude_filename` is deprecated and will be removed. Please use `exclude_filenames` instead")
+            warnings.warn(
+                "`exclude_filename` is deprecated and will be removed. Please use `exclude_filenames` instead"
+            )
 
         if include_filenames is None:
             include_filenames = []
@@ -171,7 +173,7 @@ class NeuralynxRawIO(BaseRawIO):
             exclude_filenames = [exclude_filenames]
 
         if include_filenames:
-            self.rawmode = 'multiple-files'
+            self.rawmode = "multiple-files"
         else:
             self.rawmode = "one-dir"
 
