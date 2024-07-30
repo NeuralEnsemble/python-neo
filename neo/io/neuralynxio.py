@@ -70,11 +70,11 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         """
 
         if filename is not None:
-            warnings.warn('Deprecated and will be removed. Please use `include_filenames` instead')
+            warnings.warn("Deprecated and will be removed. Please use `include_filenames` instead")
             include_filenames = [filename]
 
         if exclude_filename is not None:
-            warnings.warn('Deprecated and will be removed. Please use `exclude_filenames` instead')
+            warnings.warn("Deprecated and will be removed. Please use `exclude_filenames` instead")
             exclude_filenames = exclude_filename
 
         NeuralynxRawIO.__init__(
@@ -84,11 +84,10 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             exclude_filenames=exclude_filenames,
             keep_original_times=keep_original_times,
             use_cache=use_cache,
-            cache_path=cache_path
+            cache_path=cache_path,
         )
 
         if self.rawmode == "one-dir":
             BaseFromRaw.__init__(self, dirname)
         elif self.rawmode == "multiple-files":
             BaseFromRaw.__init__(self, include_filenames=include_filenames)
-
