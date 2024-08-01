@@ -42,6 +42,7 @@ Classes:
 * :attr:`SpikeGadgetsRawIO`
 * :attr:`SpikeGLXRawIO`
 * :attr:`TdtRawIO`
+* :attr:`WaveSurferRawIO`
 * :attr:`WinEdrRawIO`
 * :attr:`WinWcpRawIO`
 
@@ -166,6 +167,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.WaveSurferRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.WinEdrRawIO
 
     .. autoattribute:: extensions
@@ -210,6 +215,7 @@ from neo.rawio.spike2rawio import Spike2RawIO
 from neo.rawio.spikegadgetsrawio import SpikeGadgetsRawIO
 from neo.rawio.spikeglxrawio import SpikeGLXRawIO
 from neo.rawio.tdtrawio import TdtRawIO
+from neo.rawio.wavesurferrawio import WaveSurferRawIO
 from neo.rawio.winedrrawio import WinEdrRawIO
 from neo.rawio.winwcprawio import WinWcpRawIO
 
@@ -244,6 +250,7 @@ rawiolist = [
     SpikeGadgetsRawIO,
     SpikeGLXRawIO,
     TdtRawIO,
+    WaveSurferRawIO,
     WinEdrRawIO,
     WinWcpRawIO,
 ]
