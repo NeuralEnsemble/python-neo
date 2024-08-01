@@ -2,7 +2,7 @@
 Neo 0.13.2 release notes
 ========================
 
-30th July 2024
+1st August 2024
 
 This release of Neo contains bug fixes, still with a focus on the planned 1.0 release,
 along with some performance improvements in IO modules and updates to the CI.
