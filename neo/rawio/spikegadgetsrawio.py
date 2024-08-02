@@ -125,7 +125,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
         sconf = root.find("SpikeConfiguration")
 
         # store trode version in case there are version changes in the future
-        self._trode_version = gconf["trodesVersion"]
+        self._trode_version = gconf.attrib["trodesVersion"]
         self._sampling_rate = float(hconf.attrib["samplingRate"])
         num_ephy_channels = int(hconf.attrib["numChannels"])
 
