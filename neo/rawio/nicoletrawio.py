@@ -428,7 +428,60 @@ class NicoletRawIO(BaseRawIO):
             
         self.channel_structure = channel_structure
         self.channel_properties = channel_properties
+        
+    def _get_ts_properties_all(self):
+        ts_packets_properties = []
+        
+        ts_packets = [packet for packet in self.dynamic_packets if packet['id_str'] == 'TSGUID']
+        l_ts_packets = len(ts_packets)
+        
+        for ts_packet in ts_packets:
+            ts_properties = []
+            #TODO: Add support for multiple TS-Info packages
+            elems = _typecast(ts_packet['data'][752:756])[0]
+            alloc = _typecast(ts_packet['data'][756:760])[0]
+            offset = 760
+            
+            for i in range(elems):
+                internal_offset = 0                
+                top_range = (offset + self.TSLABELSIZE)
+                
+                label = _transform_ts_properties(ts_packet['data'][offset:top_range], np.uint16)
+                
+                
+                internal_offset += 2*self.TSLABELSIZE
+                top_range = offset + internal_offset + self.LABELSIZE
+                active_sensor = _transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
+                internal_offset = internal_offset + self.TSLABELSIZE;
+                top_range = offset + internal_offset + 8
+                ref_sensor = _transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
+                internal_offset += 64;
 
+                low_cut, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                high_cut, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                sampling_rate, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                resolution, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                mark, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
+                notch, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
+                eeg_offset, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                offset += 552
+                ts_properties.append({
+                    'label' : label,
+                    'active_sensor' : active_sensor,
+                    'ref_sensor' : ref_sensor,
+                    'low_cut' : low_cut,
+                    'high_cut' : high_cut,
+                    'sampling_rate' : sampling_rate,
+                    'resolution' : resolution,
+                    'notch' : notch,
+                    'mark' : mark,
+                    'eeg_offset' : eeg_offset})
+                
+            ts_packets_properties.append(ts_properties)
+        self.ts_packets = ts_packets    
+        self.ts_packets_properties = ts_packets_properties
+        pass
+    
     def _get_ts_properties(self, ts_packet_index = 0):
         ts_properties = []
         
@@ -1079,8 +1132,11 @@ if __name__ == '__main__':
     #file = NicoletRawIO(r'\\fsnph01\NPH_Research\xxx_PythonShare\nicolet_parser\data\Routine6t1.e')
     #file = NicoletRawIO(r'\\fsnph01\NPH_Archiv\LTM\Band0299\58795\9140.e')
     #file = NicoletRawIO(r'C:\temp\3407_2.e')
-    file = NicoletRawIO(r'C:\temp\3407_2.e')
-    #file = NicoletRawIO(r'C:\temp\Patient20_ABLEIT53_t1.e')
+    #file = NicoletRawIO(r'C:\temp\7280.e')
+    
+    
+    
+    file = NicoletRawIO(r'C:\temp\Patient20_ABLEIT53_t1.e')
     file._parse_header()
     tags = file.tags
     qi = file.qi
@@ -1105,7 +1161,7 @@ if __name__ == '__main__':
     
     raw_signal = file.raw_signal
     print('reading data')
-    data = file._get_analogsignal_chunk()
+    #data = file._get_analogsignal_chunk()
     
     header = file.header
     
@@ -1114,6 +1170,17 @@ if __name__ == '__main__':
 
     #Construct an mne object
     
+    #Compare ts packages
+    #TODO: Find differences in TS_Packets, and make the use of all the ts_packages in case there are any differences
+    
+    file._get_ts_properties_all()
+    for i, ts1 in enumerate(file.ts_packets_properties):
+        for j, ts2 in enumerate(file.ts_packets_properties):
+            pairs = zip(ts1, ts2)
+            print(f'Comparing ts{i} to ts{j}:')
+            print(f'Any mismatches: {any(x != y for x, y in pairs)}')
+            
+    [datetime.fromtimestamp(entry['date']*file.SEC_PER_DAY - file.UNIX_TIME_CONVERSION) for entry in file.ts_packets]
+    
 #%%
-
 
