@@ -88,6 +88,7 @@ and may not be the current affiliation of a contributor.
 * Téo Lohrer
 * Anthony Pinto [41]
 * Xin Niu
+* Letizia Signorelli [42]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -130,6 +131,7 @@ and may not be the current affiliation of a contributor.
 39. Massachusetts General Hospital, Department of Molecular Biology
 40. Plexon Inc.
 41. Paris Brain Institute
+42. Centre for Molecular Medicine Norway (NCMM), University of Oslo, Norway
 
 
 
