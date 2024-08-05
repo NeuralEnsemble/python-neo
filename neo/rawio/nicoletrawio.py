@@ -12,6 +12,7 @@ CHECK IF THIS CHANGE IS ALSO ON THE MAIN BRANCH AND DEV BRANCH
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -553,7 +554,6 @@ class NicoletRawIO(BaseRawIO):
                 fid.seek(8,1)
                 segment_info['duration'] = read_as_list(fid,
                                                         [('duration', 'float64')])
-                print(segment_info['duration'])
                 fid.seek(128, 1)
                 segment_info['ch_names'] = [info['label'] for info in self.ts_properties]
                 segment_info['ref_names'] = [info['ref_sensor'] for info in self.ts_properties]
@@ -1123,7 +1123,38 @@ def _get_relevant_section(lengths_list, to_compare):
         segment = len(lengths_list)
     return(segment)
 
+
+
+def get_ts_info_mismatches():
+    nic_filepaths = get_file_list()
+    mismatch_list = [[filepath, compare_ts_info(NicoletRawIO(filepath))] for filepath in nic_filepaths]
     
+    return pd.DataFrame(mismatch_list, columns = ['filename', 'status'])
+
+def compare_ts_info(file):
+    mismatch = 'no_mismatch'
+    print(f'Comparing file {file.filepath}')
+    try:
+        file._parse_header()
+        file._get_ts_properties_all()
+    except:
+        return 'not_readable'
+    
+    for i, ts1 in enumerate(file.ts_packets_properties):
+        for j, ts2 in enumerate(file.ts_packets_properties):
+            pairs = zip(ts1, ts2)
+            if any(x != y for x, y in pairs):
+                mismatch = 'mismatch'
+                
+    return mismatch
+                
+
+
+def get_file_list():
+    from glob import glob
+    root = r'\\fsnph01\NPH_Archiv\LTM'
+    
+    return glob('\\'.join([root, '**', '**' , '*.e']))
 
     
 if __name__ == '__main__':
@@ -1132,55 +1163,27 @@ if __name__ == '__main__':
     #file = NicoletRawIO(r'\\fsnph01\NPH_Research\xxx_PythonShare\nicolet_parser\data\Routine6t1.e')
     #file = NicoletRawIO(r'\\fsnph01\NPH_Archiv\LTM\Band0299\58795\9140.e')
     #file = NicoletRawIO(r'C:\temp\3407_2.e')
-    #file = NicoletRawIO(r'C:\temp\7280.e')
     
-    
-    
-    file = NicoletRawIO(r'C:\temp\Patient20_ABLEIT53_t1.e')
+    file = NicoletRawIO(r'\\fsnph01\NPH_Archiv\LTM\Band0193\20568\Patient3_ABLEIT25_t2.e')
+    '''
     file._parse_header()
-    tags = file.tags
-    qi = file.qi
-    main_index = file.main_index
-    dynamic_packets = file.dynamic_packets
-    
-    pat_info = file.patient_info
-    signal_structure = file.signal_structure
-    signal_properties = file.signal_properties
-    
-    channel_structure = file.channel_structure
-    channel_properties = file.channel_properties
-    
-    ts_properties = file.ts_properties
-    ts_packets = file.ts_packets
-    
-    segments_properties = file.segments_properties
-    
-    events = file.events
-    
-    montages = file.montages
-    
-    raw_signal = file.raw_signal
-    print('reading data')
-    #data = file._get_analogsignal_chunk()
-    
-    header = file.header
-    
-    raw_annotations = file.raw_annotations
-    
-
-    #Construct an mne object
-    
-    #Compare ts packages
-    #TODO: Find differences in TS_Packets, and make the use of all the ts_packages in case there are any differences
-    
     file._get_ts_properties_all()
+    ts_packets = file.ts_packets_properties
     for i, ts1 in enumerate(file.ts_packets_properties):
         for j, ts2 in enumerate(file.ts_packets_properties):
             pairs = zip(ts1, ts2)
-            print(f'Comparing ts{i} to ts{j}:')
-            print(f'Any mismatches: {any(x != y for x, y in pairs)}')
-            
-    [datetime.fromtimestamp(entry['date']*file.SEC_PER_DAY - file.UNIX_TIME_CONVERSION) for entry in file.ts_packets]
+            if any(x != y for x, y in pairs):
+                print(f'Mismatch between {i} and {j}')
+    '''
+    
+    mismatch_df = get_ts_info_mismatches()
+    mismatch_df.columns = ['filename', 'status']
+    mismatched_ts_info = mismatch_df[mismatch_df.status == True]
+    not_read = mismatch_df[mismatch_df.status == 'not_readable']
+    mismatch_df.to_csv(r'C:\temp\tsinfo_mismatches_lzm193.csv')
+    #TODO: Find differences in TS_Packets, and categorise them
+    #Then, check if they make a difference
+    #temp = glob('\\'.join([root, '**', '**' , '*.e'])) ca 55k files
     
 #%%
 
