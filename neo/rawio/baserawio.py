@@ -139,6 +139,9 @@ class BaseRawIO:
 
     rawmode = None  # one key from possible_raw_modes
 
+    # If true then 
+    has_buffer_description_api = False
+
     #   TODO Why multi-file would have a single filename is confusing here - shouldn't
     #   the name of this argument be filenames_list or filenames_base or similar?
     #
@@ -1339,6 +1342,20 @@ class BaseRawIO:
 
     def _rescale_epoch_duration(self, raw_duration: np.ndarray, dtype: np.dtype):
         raise (NotImplementedError)
+
+    ###
+    # json buffer api zone
+    # must be implemented if has_buffer_description_api=True
+    def get_analogsignal_buffer_description(self, block_index: int = 0, seg_index: int = 0, stream_index: int = 0):
+        if not self.has_buffer_description_api:
+            raise ValueError("This reader do not support buffer_description API")
+        descr = self._get_analogsignal_buffer_description(block_index, seg_index, stream_index)
+        return descr
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, stream_index):
+        raise (NotImplementedError)
+
+
 
 
 def pprint_vector(vector, lim: int = 8):
