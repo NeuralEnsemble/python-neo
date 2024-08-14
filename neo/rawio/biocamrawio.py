@@ -140,7 +140,7 @@ class BiocamRawIO(BaseRawIO):
             # iterate through channels to prevent loading all channels into memory which can cause
             # memory exhaustion. See https://github.com/SpikeInterface/spikeinterface/issues/3303
             for index, channel_index in enumerate(channel_indexes):
-                sig_chunk[:, index] = data[i_start+channel_index:i_stop+channel_index:self._num_channels]
+                sig_chunk[:, index] = data[channel_index::self._num_channels]
 
         return sig_chunk
 
