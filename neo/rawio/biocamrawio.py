@@ -127,7 +127,7 @@ class BiocamRawIO(BaseRawIO):
         data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
 
         # older style data return everything
-        if data.shape[1] != 1:
+        if len(data.shape) > 1:
             if channel_indexes is None:
                 channel_indexes = slice(None)
             sig_chunk = data[:, channel_indexes]
