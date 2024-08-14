@@ -122,10 +122,27 @@ class BiocamRawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = self._num_frames
-        if channel_indexes is None:
-            channel_indexes = slice(None)
+
+
         data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
-        return data[:, channel_indexes]
+
+        # older style data return everything
+        if data.shape[1] != 1:
+            if channel_indexes is None:
+                channel_indexes = slice(None)
+            sig_chunk = data[:, channel_indexes]
+        # newer style data returns an initial flat array
+        else:
+            if channel_indexes is None:
+                channel_indexes = [ch for ch in range(self._num_channels)]
+
+            sig_chunk = np.zeros((i_stop-i_start, len(channel_indexes)))
+            # iterate through channels to prevent loading all channels into memory which can cause
+            # memory exhaustion. See https://github.com/SpikeInterface/spikeinterface/issues/3303
+            for index, channel_index in enumerate(channel_indexes):
+                sig_chunk[:, index] = data[i_start+channel_index:i_stop+channel_index:self._num_channels]
+
+        return sig_chunk
 
 
 def open_biocam_file_header(filename):
@@ -230,7 +247,7 @@ def open_biocam_file_header(filename):
             offset=offset,
         )
 
-
+# return the full array for the old datasets
 def readHDF5t_100(rf, t0, t1, nch):
     return rf["3BData/Raw"][t0:t1]
 
@@ -239,15 +256,16 @@ def readHDF5t_100_i(rf, t0, t1, nch):
     return 4096 - rf["3BData/Raw"][t0:t1]
 
 
+# return flat array that we will iterate through
 def readHDF5t_101(rf, t0, t1, nch):
-    return rf["3BData/Raw"][nch * t0 : nch * t1].reshape((t1 - t0, nch), order="C")
+    return rf["3BData/Raw"][nch * t0 : nch * t1]
 
 
 def readHDF5t_101_i(rf, t0, t1, nch):
-    return 4096 - rf["3BData/Raw"][nch * t0 : nch * t1].reshape((t1 - t0, nch), order="C")
+    return 4096 - rf["3BData/Raw"][nch * t0 : nch * t1]
 
 
 def readHDF5t_brw4(rf, t0, t1, nch):
     for key in rf:
         if key[:5] == "Well_":
-            return rf[key]["Raw"][nch * t0 : nch * t1].reshape((t1 - t0, nch), order="C")
+            return rf[key]["Raw"][nch * t0 : nch * t1]
