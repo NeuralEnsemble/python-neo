@@ -255,7 +255,7 @@ class PlexonRawIO(BaseRawIO):
                     0.5 * (2 ** global_header["BitsPerSpikeSample"]) * h["Gain"] * h["PreampGain"]
                 )
             offset = 0.0
-            s   tream_id = "0"
+            stream_id = "0"  # This is overwritten later
             sig_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
