@@ -231,7 +231,10 @@ class PlexonRawIO(BaseRawIO):
         # signals channels
         sig_channels = []
         all_sig_length = []
-        chan_loop = trange(nb_sig_chan, desc="Parsing signal channels", leave=True, disable=not self.progress_bar)
+        if self.progress_bar:
+            chan_loop = trange(nb_sig_chan, desc="Parsing signal channels", leave=True)
+        else:
+            chan_loop = range(nb_sig_chan)
         for chan_index in chan_loop:
             h = slowChannelHeaders[chan_index]
             name = h["Name"].decode("utf8")
@@ -252,7 +255,7 @@ class PlexonRawIO(BaseRawIO):
                     0.5 * (2 ** global_header["BitsPerSpikeSample"]) * h["Gain"] * h["PreampGain"]
                 )
             offset = 0.0
-            stream_id = "0"
+            s   tream_id = "0"
             sig_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
