@@ -261,7 +261,7 @@ class PlexonRawIO(BaseRawIO):
             signal_streams = np.array([], dtype=_signal_stream_dtype)
 
         else:
-            # detect groups (aka streams)
+            # Detect streams
             all_sig_length = np.asarray(all_sig_length)
 
             # names are WBX, FPX, SPKCX, AI, etc
@@ -387,7 +387,7 @@ class PlexonRawIO(BaseRawIO):
         t_stop = float(self._last_timestamps) / self._global_ssampling_rate
         if hasattr(self, "_signal_length"):
             for stream_index in self._signal_length:
-                t_stop_sig = self._signal_length[stream_index] / self._sig_sampling_rate[stream_id]
+                t_stop_sig = self._signal_length[stream_index] / self._sig_sampling_rate[stream_index]
                 t_stop = max(t_stop, t_stop_sig)
         return t_stop
 
