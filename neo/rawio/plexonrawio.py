@@ -146,7 +146,7 @@ class PlexonRawIO(BaseRawIO):
 
             # Update tqdm with the number of bytes processed in this iteration
             if self.progress_bar:
-                progress_bar.update(length)
+                progress_bar.update(length)  # This was clever, Sam : )
 
         if self.progress_bar:
             progress_bar.close()
@@ -231,10 +231,7 @@ class PlexonRawIO(BaseRawIO):
         # signals channels
         sig_channels = []
         all_sig_length = []
-        if self.progress_bar:
-            chan_loop = trange(nb_sig_chan, desc="Parsing signal channels", leave=True)
-        else:
-            chan_loop = range(nb_sig_chan)
+        chan_loop = trange(nb_sig_chan, desc="Parsing signal channels", leave=True, disable=not self.progress_bar)
         for chan_index in chan_loop:
             h = slowChannelHeaders[chan_index]
             name = h["Name"].decode("utf8")
@@ -265,21 +262,46 @@ class PlexonRawIO(BaseRawIO):
 
         else:
             # detect groups (aka streams)
-            all_sig_length = all_sig_length = np.array(all_sig_length)
-            groups = set(zip(sig_channels["sampling_rate"], all_sig_length))
+            all_sig_length = np.asarray(all_sig_length)
+            
+            # names are WBX, FPX, SPKCX, AI, etc
+            channels_prefixes = np.asarray([x[:2] for x in sig_channels["name"]])
+            buffer_stream_groups = set(zip(channels_prefixes, sig_channels["sampling_rate"], all_sig_length))
 
+            # There are explanations of the streams bassed on channel names
+            # provided by a Plexon Engineer, see here:
+            # https://github.com/NeuralEnsemble/python-neo/pull/1495#issuecomment-2184256894
+            channel_prefix_to_stream_name = {
+                "WB": "WB-Wideband",
+                "FP": "FPl-Low Pass Filtered ",
+                "SP": "SPKC-High Pass Filtered",
+                "AI": "AI-Auxiliary Input",
+            }
+
+            # Using a mapping to ensure consistent order of stream_index
+            channel_prefix_to_stream_id = {
+                "WB": "0",
+                "FP": "1",
+                "SP": "2",
+                "AI": "3",
+            }
+            
             signal_streams = []
             self._signal_length = {}
             self._sig_sampling_rate = {}
-            for stream_index, (sr, length) in enumerate(groups):
-                stream_id = str(stream_index)
+            
+            
+            for stream_index, (channel_prefix, sr, length) in enumerate(buffer_stream_groups):
+                stream_name = channel_prefix_to_stream_name[channel_prefix]
+                stream_id = channel_prefix_to_stream_id[channel_prefix]
+                
                 mask = (sig_channels["sampling_rate"] == sr) & (all_sig_length == length)
                 sig_channels["stream_id"][mask] = stream_id
 
                 self._sig_sampling_rate[stream_index] = sr
                 self._signal_length[stream_index] = length
 
-                signal_streams.append(("Signals " + stream_id, stream_id))
+                signal_streams.append((stream_name, stream_id))
 
             signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
@@ -363,8 +385,8 @@ class PlexonRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = float(self._last_timestamps) / self._global_ssampling_rate
         if hasattr(self, "_signal_length"):
-            for stream_id in self._signal_length:
-                t_stop_sig = self._signal_length[stream_id] / self._sig_sampling_rate[stream_id]
+            for stream_index in self._signal_length:
+                t_stop_sig = self._signal_length[stream_index] / self._sig_sampling_rate[stream_id]
                 t_stop = max(t_stop, t_stop_sig)
         return t_stop
 
