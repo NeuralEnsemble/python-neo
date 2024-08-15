@@ -263,7 +263,7 @@ class PlexonRawIO(BaseRawIO):
         else:
             # detect groups (aka streams)
             all_sig_length = np.asarray(all_sig_length)
-            
+
             # names are WBX, FPX, SPKCX, AI, etc
             channels_prefixes = np.asarray([x[:2] for x in sig_channels["name"]])
             buffer_stream_groups = set(zip(channels_prefixes, sig_channels["sampling_rate"], all_sig_length))
@@ -276,6 +276,7 @@ class PlexonRawIO(BaseRawIO):
                 "FP": "FPl-Low Pass Filtered ",
                 "SP": "SPKC-High Pass Filtered",
                 "AI": "AI-Auxiliary Input",
+                "V1": "V1",  # TODO determine, possible video
             }
 
             # Using a mapping to ensure consistent order of stream_index
@@ -284,17 +285,17 @@ class PlexonRawIO(BaseRawIO):
                 "FP": "1",
                 "SP": "2",
                 "AI": "3",
+                "V1": "4",
             }
-            
+
             signal_streams = []
             self._signal_length = {}
             self._sig_sampling_rate = {}
-            
-            
+
             for stream_index, (channel_prefix, sr, length) in enumerate(buffer_stream_groups):
                 stream_name = channel_prefix_to_stream_name[channel_prefix]
                 stream_id = channel_prefix_to_stream_id[channel_prefix]
-                
+
                 mask = (sig_channels["sampling_rate"] == sr) & (all_sig_length == length)
                 sig_channels["stream_id"][mask] = stream_id
 
