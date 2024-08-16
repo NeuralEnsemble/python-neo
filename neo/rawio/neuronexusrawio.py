@@ -1,11 +1,11 @@
 """
-Neuronexus has their own file format based on their Allego Recording System
+NeuroNexus has their own file format based on their Allego Recording System
 https://www.neuronexus.com/webinar/allego-software-updates/
 
 The format involves 3 files:
   * The *.xdat.json metadata file
   * The *_data.xdat binary file of all raw data
-  * The *_timestamps.xdat binary file of the timeestamp data
+  * The *_timestamps.xdat binary file of the timestamp data
   
 Based on sample data is appears that the binary file is always a float32 format
 Other information can be found within the metadata json file
@@ -23,9 +23,11 @@ metadata['sapiens_base']['biointerface_map'] provides all the channel specific i
 like channel_names, channel_ids, channel_types.
 
 An additional note on channels. It appears that analog channels are called `pri` or
-`ai0` within the metadata where as digital channels are called `din0` or `dout0`.
+`ai0` within the metadata whereas digital channels are called `din0` or `dout0`.
 In this first implementation it is up to the user to do the appropriate channel slice
-to only get the data they want. 
+to only get the data they want. This is a buffer-based approach that Sam likes.
+Eventually we will try to divide these channels into streams (analog vs digital) or
+we can come up with a work around if users open an issue requesting this.
 
 Zach McKenzie
 
@@ -47,14 +49,14 @@ from .baserawio import (
 from neo.core import NeoReadWriteError
 
 
-class NeuronexusRawIO(BaseRawIO):
+class NeuroNexusRawIO(BaseRawIO):
 
     extensions = ["xdat", "json"]
     rawmode = "one-file"
 
     def __init__(self, filename: str | Path = ""):
         """
-        The Allego Neuronexus reader for the `xdat` file format
+        The Allego NeuroNexus reader for the `xdat` file format
 
         Parameters
         ----------
@@ -66,12 +68,12 @@ class NeuronexusRawIO(BaseRawIO):
         * The format involves 3 files:
             * The *.xdat.json metadata file
             * The *_data.xdat binary file of all raw data
-            * The *_timestamps.xdat binary file of the timeestamp data
+            * The *_timestamps.xdat binary file of the timestamp data
         From the metadata the other two files are located within the same directory
         and loaded.
 
         * The metadata is stored as the metadata attribute for individuals hoping
-        to extract probe information, but neo itself does not load any of the probe
+        to extract probe information, but Neo itself does not load any of the probe
         information
 
         Examples
@@ -146,7 +148,11 @@ class NeuronexusRawIO(BaseRawIO):
         # We can do a quick timestamp check to make sure it is the correct timestamp data for the
         # given metadata
         if self._timestamps[0] != self.metadata["status"]["timestamp_range"][0]:
-            raise NeoReadWriteError(f"The metadata indicates a different starting timestamp")
+            metadata_start = self.metadata["status"]["timestamp_range"][0]
+            data_start = self._teimstamps[0]
+            raise NeoReadWriteError(
+                f"The metadata indicates a different starting timestamp {metadata_start} than the data starting timestamp {data_start}"
+            )
 
         # organize the channels
         signal_channels = []
@@ -156,7 +162,7 @@ class NeuronexusRawIO(BaseRawIO):
         # and because all data is stored in the same buffer stream for the moment all channels
         # will be in stream_id = 0. In the future this will be split into sub_streams based on
         # type but for now it will be the end-users responsability for this.
-        stream_id = 0  # hard-coded see note above
+        stream_id = '0'  # hard-coded see note above
         for channel_index, channel_name in enumerate(channel_info["chan_name"]):
             channel_id = channel_info["ntv_chan_name"][channel_index]
             # 'ai0' indicates analog data which is stored as microvolts
@@ -272,4 +278,4 @@ class NeuronexusRawIO(BaseRawIO):
 # this is pretty useless right now, but I think after a
 # refactor with sub streams we could adapt this for the sub-streams
 # so let's leave this here for now :)
-stream_id_to_stream_name = {0: "Neuronexus Allego Data"}
+stream_id_to_stream_name = {'0': "Neuronexus Allego Data"}
