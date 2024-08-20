@@ -24,6 +24,7 @@ Author: Samuel Garcia
 
 import datetime
 from collections import OrderedDict
+import re
 
 import numpy as np
 
@@ -231,6 +232,7 @@ class PlexonRawIO(BaseRawIO):
         # signals channels
         sig_channels = []
         all_sig_length = []
+        source_id = []
         if self.progress_bar:
             chan_loop = trange(nb_sig_chan, desc="Parsing signal channels", leave=True)
         else:
@@ -242,6 +244,7 @@ class PlexonRawIO(BaseRawIO):
             length = self._data_blocks[5][chan_id]["size"].sum() // 2
             if length == 0:
                 continue  # channel not added
+            source_id.append(h["SrcId"])
             all_sig_length.append(length)
             sampling_rate = float(h["ADFreq"])
             sig_dtype = "int16"
@@ -267,8 +270,9 @@ class PlexonRawIO(BaseRawIO):
             # Detect streams
             all_sig_length = np.asarray(all_sig_length)
 
-            # names are WBX, FPX, SPKCX, AI, etc
-            channels_prefixes = np.asarray([x[:2] for x in sig_channels["name"]])
+            # names are WB{number}, FPX{number}, SPKCX{number}, AI{number}, etc
+            pattern = r"^\D+"  # Match any non-digit character at the beginning of the string
+            channels_prefixes = np.asarray([re.match(pattern, name).group(0) for name in sig_channels["name"]])
             buffer_stream_groups = set(zip(channels_prefixes, sig_channels["sampling_rate"], all_sig_length))
 
             # There are explanations of the streams bassed on channel names
@@ -279,7 +283,6 @@ class PlexonRawIO(BaseRawIO):
                 "FP": "FPl-Low Pass Filtered ",
                 "SP": "SPKC-High Pass Filtered",
                 "AI": "AI-Auxiliary Input",
-                "V1": "V1",  # TODO determine, possible video
             }
 
             # Using a mapping to ensure consistent order of stream_index
@@ -288,7 +291,6 @@ class PlexonRawIO(BaseRawIO):
                 "FP": "1",
                 "SP": "2",
                 "AI": "3",
-                "V1": "4",
             }
 
             signal_streams = []
@@ -296,7 +298,7 @@ class PlexonRawIO(BaseRawIO):
             self._sig_sampling_rate = {}
 
             for stream_index, (channel_prefix, sr, length) in enumerate(buffer_stream_groups):
-                stream_name = channel_prefix_to_stream_name[channel_prefix]
+                stream_name = channel_prefix_to_stream_name.get(channel_prefix, channel_prefix)
                 stream_id = channel_prefix_to_stream_id[channel_prefix]
 
                 mask = (sig_channels["sampling_rate"] == sr) & (all_sig_length == length)
@@ -389,7 +391,7 @@ class PlexonRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = float(self._last_timestamps) / self._global_ssampling_rate
         if hasattr(self, "_signal_length"):
-            for stream_index in self._signal_length:
+            for stream_index in self._signal_length.keys():
                 t_stop_sig = self._signal_length[stream_index] / self._sig_sampling_rate[stream_index]
                 t_stop = max(t_stop, t_stop_sig)
         return t_stop
