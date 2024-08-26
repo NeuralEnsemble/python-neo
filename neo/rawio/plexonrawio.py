@@ -275,7 +275,7 @@ class PlexonRawIO(BaseRawIO):
             channels_prefixes = np.asarray([re.match(pattern, name).group(0) for name in sig_channels["name"]])
             buffer_stream_groups = set(zip(channels_prefixes, sig_channels["sampling_rate"], all_sig_length))
 
-            # There are explanations of the streams bassed on channel names
+            # There are explanations of the streams based on channel names
             # provided by a Plexon Engineer, see here:
             # https://github.com/NeuralEnsemble/python-neo/pull/1495#issuecomment-2184256894
             channel_prefix_to_stream_name = {
