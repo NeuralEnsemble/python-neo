@@ -440,7 +440,7 @@ def parse_spikeglx_fname(fname):
         re_else = re.findall(r"(\S*)\.(\S*).(ap|lf)", fname)
         re_else_nidq = re.findall(r"(\S*)\.(\S*)", fname)
         if len(re_else) == 1:
-            run_name, device, stream_kind = re_else_nidq[0]
+            run_name, device, stream_kind = re_else[0]
             gate_num, trigger_num = None, None
         elif len(re_else_nidq) == 1:
             # easy case for nidaq, example: sglx_xxx.nidq
