@@ -148,7 +148,7 @@ class BiocamRawIO(BaseRawIO):
                 step = channel_indexes.step or 1
                 channel_indexes = [ch for ch in range(start, stop, step)]
 
-            sig_chunk = np.zeros((i_stop - i_start, len(channel_indexes)))
+            sig_chunk = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=data.dtype)
             # iterate through channels to prevent loading all channels into memory which can cause
             # memory exhaustion. See https://github.com/SpikeInterface/spikeinterface/issues/3303
             for index, channel_index in enumerate(channel_indexes):
