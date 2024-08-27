@@ -61,6 +61,7 @@ from .baserawio import (
 )
 from neo.core import NeoReadWriteError
 
+
 class AxonRawIO(BaseRawIO):
     """
     Class for Class for reading data from pCLAMP and AxoScope files (.abf version 1 and 2)

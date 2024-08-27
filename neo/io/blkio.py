@@ -8,9 +8,6 @@ from .baseio import BaseIO
 from neo.core import ImageSequence, Segment, Block
 
 
-
-
-
 class BlkIO(BaseIO):
     """
     Neo IO module for optical imaging data stored as BLK file

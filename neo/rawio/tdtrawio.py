@@ -42,6 +42,7 @@ from .baserawio import (
 
 from neo.core import NeoReadWriteError
 
+
 class TdtRawIO(BaseRawIO):
     extensions = ["tbk", "tdx", "tev", "tin", "tnt", "tsq", "sev", "txt"]
     rawmode = "one-dir"

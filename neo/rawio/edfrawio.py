@@ -27,6 +27,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+
 class EDFRawIO(BaseRawIO):
     """
     Class for reading European Data Format files (EDF and EDF+).

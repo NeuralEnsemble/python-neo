@@ -9,7 +9,6 @@ Author: Samuel Garcia
 
 """
 
-
 import numpy as np
 
 from .baserawio import (

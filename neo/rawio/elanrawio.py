@@ -32,6 +32,7 @@ from .baserawio import (
 
 from neo.core import NeoReadWriteError
 
+
 class ElanRawIO(BaseRawIO):
     """
     Class for reading time-frequency EEG data maps from the Elan software

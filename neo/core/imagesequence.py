@@ -17,7 +17,6 @@ created by slicing. This is where attributes are copied over from
 the old object.
 """
 
-
 import quantities as pq
 import numpy as np
 

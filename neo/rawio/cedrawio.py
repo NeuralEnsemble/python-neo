@@ -20,8 +20,6 @@ Please note that the SONPY package:
 Author : Samuel Garcia
 """
 
-
-
 import numpy as np
 
 from .baserawio import (
@@ -31,6 +29,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+
 
 class CedRawIO(BaseRawIO):
     """

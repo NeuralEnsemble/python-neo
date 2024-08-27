@@ -21,6 +21,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+
 class MEArecRawIO(BaseRawIO):
     """
     Class for "reading" simulated data from a MEArec file.
