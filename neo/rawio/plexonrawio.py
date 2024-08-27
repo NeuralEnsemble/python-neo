@@ -298,7 +298,7 @@ class PlexonRawIO(BaseRawIO):
             self._sig_sampling_rate = {}
 
             for stream_index, (channel_prefix, sr, length) in enumerate(buffer_stream_groups):
-                # The users of plexon can modify the channel names, is not common but in that case
+                # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`). This is not common but in that case
                 # We assign the channel_prefix both as stream_name and stream_id
                 stream_name = channel_prefix_to_stream_name.get(channel_prefix, channel_prefix)
                 stream_id = channel_prefix_to_stream_id.get(channel_prefix, channel_prefix)
