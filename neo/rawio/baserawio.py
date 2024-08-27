@@ -77,6 +77,8 @@ import sys
 
 from neo import logging_handler
 
+from .utils import get_memmap_chunk_from_opened_file
+
 
 possible_raw_modes = [
     "one-file",
@@ -656,7 +658,12 @@ class BaseRawIO:
 
         """
         stream_index = self._get_stream_index_from_arg(stream_index)
-        return self._get_signal_size(block_index, seg_index, stream_index)
+
+        if not self.has_buffer_description_api:
+            return self._get_signal_size(block_index, seg_index, stream_index)
+        else:
+            # use the buffer description
+            return self._get_signal_size_generic(block_index, seg_index, stream_index)
 
     def get_signal_t_start(self, block_index: int, seg_index: int, stream_index: int | None = None):
         """
@@ -805,7 +812,11 @@ class BaseRawIO:
             if np.all(np.diff(channel_indexes) == 1):
                 channel_indexes = slice(channel_indexes[0], channel_indexes[-1] + 1)
 
-        raw_chunk = self._get_analogsignal_chunk(block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
+        if not self.has_buffer_description_api:
+            raw_chunk = self._get_analogsignal_chunk(block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
+        else:
+            # use the buffer description
+            raw_chunk = self._get_analogsignal_chunk_generic(block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
 
         return raw_chunk
 
@@ -1277,6 +1288,7 @@ class BaseRawIO:
 
         All channels indexed must have the same size and t_start.
         """
+        # must NOT be implemented if has_buffer_description_api=True
         raise (NotImplementedError)
 
     def _get_signal_t_start(self, block_index: int, seg_index: int, stream_index: int):
@@ -1304,7 +1316,7 @@ class BaseRawIO:
         -------
             array of samples, with each requested channel in a column
         """
-
+        # must NOT be implemented if has_buffer_description_api=True
         raise (NotImplementedError)
 
     ###
@@ -1355,6 +1367,59 @@ class BaseRawIO:
     def _get_analogsignal_buffer_description(self, block_index, seg_index, stream_index):
         raise (NotImplementedError)
 
+    def _get_signal_size_generic(self, block_index, seg_index, stream_index):
+        # When has_buffer_description_api=True this used to avoid to write _get_analogsignal_chunk())
+
+        buffer_desc = self._get_signal_size(block_index, seg_index, stream_index)
+        return buffer_desc['shape'][0]
+
+    def _get_analogsignal_chunk_generic(
+        self,
+        block_index: int,
+        seg_index: int,
+        i_start: int | None,
+        i_stop: int | None,
+        stream_index: int,
+        channel_indexes: list[int] | None,
+    ):
+        # When has_buffer_description_api=True this used to avoid to write _get_analogsignal_chunk())
+        buffer_desc = self._get_analogsignal_buffer_description( block_index, seg_index, stream_index)
+
+        if buffer_desc['type'] == 'binary':
+
+            # open files on demand and keep reference to opened file 
+            if not hasattr(self, '_memmap_analogsignal_streams'):
+                self._memmap_analogsignal_streams = {}
+            if block_index not in self._memmap_analogsignal_streams:
+                self._memmap_analogsignal_streams[block_index] = {}
+            if seg_index not in self._memmap_analogsignal_streams[block_index]:
+                self._memmap_analogsignal_streams[block_index][seg_index] = {}
+            if stream_index not in self._memmap_analogsignal_streams[block_index][seg_index]:
+                fid = open(buffer_desc['file_path'], mode='rb')
+                self._memmap_analogsignal_streams[block_index][seg_index] = fid
+            else:
+                fid = self._memmap_analogsignal_streams[block_index][seg_index]
+
+            
+            i_start = i_start or 0
+            i_stop = i_stop or  buffer_desc['shape'][0]
+
+            num_channels = buffer_desc['shape'][1]
+            
+            raw_sigs = get_memmap_chunk_from_opened_file(fid, num_channels,  i_start, i_stop, np.dtype(buffer_desc['dtype']), file_offset=buffer_desc['file_offset'])
+
+            # this is a pre slicing when the stream do not contain all channels (for instance spikeglx when load_sync_channel=False)
+            channel_slice = buffer_desc.get('channel_slice', None)
+            if channel_slice is not None:
+                raw_sigs = raw_sigs[:, channel_slice]
+
+            # channel slice requested
+            if channel_indexes is not None:
+                raw_sigs = raw_sigs[:, channel_indexes]
+        else:
+            raise NotImplementedError()
+
+        return raw_sigs
 
 
 
