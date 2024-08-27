@@ -17,7 +17,7 @@ def get_memmap_shape(filename, dtype, num_channels=None, offset=0):
         return shape
 
 
-def get_memmap_chunk_from_open_file(fid, num_channels,  start, stop, dtype, file_offset=0):
+def get_memmap_chunk_from_opened_file(fid, num_channels,  start, stop, dtype, file_offset=0):
     """
     Utility fonction to get a chunk as a memmap array directly from an opened file.
     Using this instead memmap can avoid memmory consumption when multiprocessing.
