@@ -140,8 +140,13 @@ class BiocamRawIO(BaseRawIO):
         # some careful checks around slicing of None in the case we need to iterate through
         # channels. First check if None. Then check if slice and only if slice check that it is slice(None)
         else:
-            if (channel_indexes is None) or (isinstance(channel_indexes, slice) and channel_indexes == slice(None)):
+            if channel_indexes is None:
                 channel_indexes = [ch for ch in range(self._num_channels)]
+            elif isinstance(channel_indexes, slice):
+                start = channel_indexes.start or 0
+                stop = channel_indexes.stop or self._num_channels
+                step = channel_indexes.step or 1
+                channel_indexes = [ch for ch in range(start, stop, step)]
 
             sig_chunk = np.zeros((i_stop - i_start, len(channel_indexes)))
             # iterate through channels to prevent loading all channels into memory which can cause
