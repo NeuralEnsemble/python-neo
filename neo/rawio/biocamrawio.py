@@ -136,28 +136,31 @@ class BiocamRawIO(BaseRawIO):
 
         # newer style data returns an initial flat array (n_samples * n_channels)
         # we iterate through channels rather than slicing
+        # Due to the fact that Neo and SpikeInterface tend to prefer slices we need to add
+        # some careful checks around slicing of None in the case we need to iterate through
+        # channels. First check if None. Then check if slice and only if slice check that it is slice(None)
         else:
-            if (channel_indexes is None) or (channel_indexes == slice(None)):
+            if (channel_indexes is None) or (isinstance(channel_indexes, slice) and channel_indexes == slice(None)):
                 channel_indexes = [ch for ch in range(self._num_channels)]
 
-            sig_chunk = np.zeros((i_stop-i_start, len(channel_indexes)))
+            sig_chunk = np.zeros((i_stop - i_start, len(channel_indexes)))
             # iterate through channels to prevent loading all channels into memory which can cause
             # memory exhaustion. See https://github.com/SpikeInterface/spikeinterface/issues/3303
             for index, channel_index in enumerate(channel_indexes):
-                sig_chunk[:, index] = data[channel_index::self._num_channels]
+                sig_chunk[:, index] = data[channel_index :: self._num_channels]
 
         return sig_chunk
 
 
-def open_biocam_file_header(filename)-> dict:
+def open_biocam_file_header(filename) -> dict:
     """Open a Biocam hdf5 file, read and return the recording info, pick the correct method to access raw data,
     and return this to the caller
-    
+
     Parameters
     ----------
     filename: str
         The file to be parsed
-    
+
     Returns
     -------
     dict
@@ -244,7 +247,7 @@ def open_biocam_file_header(filename)-> dict:
             num_channels_x = num_channels_y = int(np.sqrt(num_channels))
         else:
             raise NeoReadWriteError("No Well found in the file")
-        
+
         if num_channels_x * num_channels_y != num_channels:
             raise NeoReadWriteError(f"Cannot determine structure of the MEA plate with {num_channels} channels")
         channels = 1 + np.concatenate(np.transpose(np.meshgrid(range(num_channels_x), range(num_channels_y))))
@@ -267,6 +270,7 @@ def open_biocam_file_header(filename)-> dict:
 
 ######################################################################
 # Helper functions to obtain the raw data split by Biocam version.
+
 
 # return the full array for the old datasets
 def readHDF5t_100(rf, t0, t1, nch):
