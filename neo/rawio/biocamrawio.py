@@ -137,7 +137,7 @@ class BiocamRawIO(BaseRawIO):
         # newer style data returns an initial flat array (n_samples * n_channels)
         # we iterate through channels rather than slicing
         else:
-            if channel_indexes is None:
+            if (channel_indexes is None) or (channel_indexes == slice(None)):
                 channel_indexes = [ch for ch in range(self._num_channels)]
 
             sig_chunk = np.zeros((i_stop-i_start, len(channel_indexes)))
