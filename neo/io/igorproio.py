@@ -133,7 +133,12 @@ class IgorIO(BaseIO):
         header = content["wave_header"]
         name = str(header["bname"].decode("utf-8"))
         units = "".join([x.decode() for x in header["dataUnits"]])
-        time_units = "".join([x.decode() for x in header["xUnits"]])
+        if "xUnits" in header:
+            time_units = "".join([x.decode() for x in header["xUnits"]])
+        elif "dimUnits" in header:
+            time_units = header["dimUnits"].ravel()[0].decode()
+        else:
+            time_units = ""
         if len(time_units) == 0:
             time_units = "s"
         try:
