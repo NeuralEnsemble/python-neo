@@ -270,21 +270,21 @@ def get_rawio(filename_or_dirname, exclusive_rawio: bool = True):
     Parameters
     ----------
     filename_or_dirname : str | Path
-        The filename or directory name to check for file suffixes that 
-        can be read by Neo. This can also be used to check whether a 
+        The filename or directory name to check for file suffixes that
+        can be read by Neo. This can also be used to check whether a
         rawio could read a not-yet written file
     exclusive_rawio: bool, default: True
         Whether to return a rawio if there is only one rawio capable of
         reading the file. If this doesn't exist will return None.
         If set to False it will return all possible rawios organized
         by the most likely rawio.
-    
+
     Returns
     -------
     possibles: neo.RawIO | None | list[neo.RawIO]
-        If exclusive_rawio is True, returns the single RawIO that 
+        If exclusive_rawio is True, returns the single RawIO that
         can read a file/set of files or None. If exclusive_rawio is
-        False it will return all possible RawIOs (organized by most likely) 
+        False it will return all possible RawIOs (organized by most likely)
         that could read the file or files.
     """
     filename_or_dirname = Path(filename_or_dirname)
@@ -295,8 +295,8 @@ def get_rawio(filename_or_dirname, exclusive_rawio: bool = True):
         ext = Path(filename_or_dirname).suffix
         ext_list = [ext[1:]]
     else:
-        ext_list = list({filename.suffix[1:] for filename in filename_or_dirname.glob('*') if filename.is_file()})
-    
+        ext_list = list({filename.suffix[1:] for filename in filename_or_dirname.glob("*") if filename.is_file()})
+
     possibles = []
     for ext in ext_list:
         for rawio in rawiolist:
@@ -310,4 +310,3 @@ def get_rawio(filename_or_dirname, exclusive_rawio: bool = True):
     else:
         possibles = [io[0] for io in Counter(possibles).most_common()]
         return possibles
-
