@@ -17,6 +17,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from neo.core import NeoReadWriteError
 
 
 class BiocamRawIO(BaseRawIO):
@@ -122,15 +123,45 @@ class BiocamRawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = self._num_frames
-        if channel_indexes is None:
-            channel_indexes = slice(None)
+
+        # read functions are different based on the version of biocam
         data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
-        return data[:, channel_indexes]
+
+        # older style data returns array of (n_samples, n_channels), should be a view
+        # but if memory issues come up we should doublecheck out how the file is being stored
+        if data.ndim > 1:
+            if channel_indexes is None:
+                channel_indexes = slice(None)
+            sig_chunk = data[:, channel_indexes]
+
+        # newer style data returns an initial flat array (n_samples * n_channels)
+        # we iterate through channels rather than slicing
+        else:
+            if channel_indexes is None:
+                channel_indexes = [ch for ch in range(self._num_channels)]
+
+            sig_chunk = np.zeros((i_stop-i_start, len(channel_indexes)))
+            # iterate through channels to prevent loading all channels into memory which can cause
+            # memory exhaustion. See https://github.com/SpikeInterface/spikeinterface/issues/3303
+            for index, channel_index in enumerate(channel_indexes):
+                sig_chunk[:, index] = data[channel_index::self._num_channels]
+
+        return sig_chunk
 
 
-def open_biocam_file_header(filename):
+def open_biocam_file_header(filename)-> dict:
     """Open a Biocam hdf5 file, read and return the recording info, pick the correct method to access raw data,
-    and return this to the caller."""
+    and return this to the caller
+    
+    Parameters
+    ----------
+    filename: str
+        The file to be parsed
+    
+    Returns
+    -------
+    dict
+        The information necessary to read a biocam file (gain, n_samples, n_channels, etc)."""
     import h5py
 
     rf = h5py.File(filename, "r")
@@ -154,9 +185,9 @@ def open_biocam_file_header(filename):
         elif file_format in (101, 102) or file_format is None:
             num_channels = int(rf["3BData/Raw"].shape[0] / num_frames)
         else:
-            raise Exception("Unknown data file format.")
+            raise NeoReadWriteError("Unknown data file format.")
 
-        # # get channels
+        # get channels
         channels = rf["3BRecInfo/3BMeaStreams/Raw/Chs"][:]
 
         # determine correct function to read data
@@ -166,14 +197,14 @@ def open_biocam_file_header(filename):
             elif signal_inv == -1:
                 read_function = readHDF5t_100_i
             else:
-                raise Exception("Unknown signal inversion")
+                raise NeoReadWriteError("Unknown signal inversion")
         else:
             if signal_inv == 1:
                 read_function = readHDF5t_101
             elif signal_inv == -1:
                 read_function = readHDF5t_101_i
             else:
-                raise Exception("Unknown signal inversion")
+                raise NeoReadWriteError("Unknown signal inversion")
 
         gain = (max_uv - min_uv) / (2**bit_depth)
         offset = min_uv
@@ -200,19 +231,22 @@ def open_biocam_file_header(filename):
         scale_factor = experiment_settings["ValueConverter"]["ScaleFactor"]
         sampling_rate = experiment_settings["TimeConverter"]["FrameRate"]
 
+        num_channels = None
         for key in rf:
             if key[:5] == "Well_":
                 num_channels = len(rf[key]["StoredChIdxs"])
                 if len(rf[key]["Raw"]) % num_channels:
-                    raise RuntimeError(f"Length of raw data array is not multiple of channel number in {key}")
+                    raise NeoReadWriteError(f"Length of raw data array is not multiple of channel number in {key}")
                 num_frames = len(rf[key]["Raw"]) // num_channels
                 break
-        try:
+
+        if num_channels is not None:
             num_channels_x = num_channels_y = int(np.sqrt(num_channels))
-        except NameError:
-            raise RuntimeError("No Well found in the file")
+        else:
+            raise NeoReadWriteError("No Well found in the file")
+        
         if num_channels_x * num_channels_y != num_channels:
-            raise RuntimeError(f"Cannot determine structure of the MEA plate with {num_channels} channels")
+            raise NeoReadWriteError(f"Cannot determine structure of the MEA plate with {num_channels} channels")
         channels = 1 + np.concatenate(np.transpose(np.meshgrid(range(num_channels_x), range(num_channels_y))))
 
         gain = scale_factor * (max_uv - min_uv) / (max_digital - min_digital)
@@ -231,6 +265,10 @@ def open_biocam_file_header(filename):
         )
 
 
+######################################################################
+# Helper functions to obtain the raw data split by Biocam version.
+
+# return the full array for the old datasets
 def readHDF5t_100(rf, t0, t1, nch):
     return rf["3BData/Raw"][t0:t1]
 
@@ -239,15 +277,16 @@ def readHDF5t_100_i(rf, t0, t1, nch):
     return 4096 - rf["3BData/Raw"][t0:t1]
 
 
+# return flat array that we will iterate through
 def readHDF5t_101(rf, t0, t1, nch):
-    return rf["3BData/Raw"][nch * t0 : nch * t1].reshape((t1 - t0, nch), order="C")
+    return rf["3BData/Raw"][nch * t0 : nch * t1]
 
 
 def readHDF5t_101_i(rf, t0, t1, nch):
-    return 4096 - rf["3BData/Raw"][nch * t0 : nch * t1].reshape((t1 - t0, nch), order="C")
+    return 4096 - rf["3BData/Raw"][nch * t0 : nch * t1]
 
 
 def readHDF5t_brw4(rf, t0, t1, nch):
     for key in rf:
         if key[:5] == "Well_":
-            return rf[key]["Raw"][nch * t0 : nch * t1].reshape((t1 - t0, nch), order="C")
+            return rf[key]["Raw"][nch * t0 : nch * t1]
