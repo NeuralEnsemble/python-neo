@@ -986,7 +986,8 @@ class BlackrockRawIO(BaseRawIO):
         index = 0
 
         if offset is None:
-            offset = self.__nsx_basic_header[nsx_nb]["bytes_in_headers"]
+            # This is read as an uint32 numpy scalar from the header so we transform it to python int
+            offset = int(self.__nsx_basic_header[nsx_nb]["bytes_in_headers"])
 
         ptp_dt = [
             ("reserved", "uint8"),
