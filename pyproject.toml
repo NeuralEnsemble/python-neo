@@ -1,6 +1,6 @@
 [project]
 name = "neo"
-version = "0.14.0dev"
+version = "0.13.3"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
@@ -23,7 +23,7 @@ classifiers = [
 
 dependencies = [
     "packaging",
-    "numpy>=1.19.5",
+    "numpy>=1.19.5,<2.0.0",
     "quantities>=0.14.1,<0.16.0"
 ]
 
