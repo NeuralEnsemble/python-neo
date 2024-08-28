@@ -2,7 +2,7 @@
 Neo 0.13.3 release notes
 ========================
 
-29 August 2024
+28 August 2024
 
 This release of Neo contains bug fixes, still with a focus on the planned 1.0 release,
 and will be the last release not to support NumPy 2.0.
@@ -19,7 +19,7 @@ Neo has a limit of NumPy >= 1.19.5, < 2.0.0 and Quantities >= 14.0.1, < 0.16.0
 Bug fixes and improvements in IO modules
 ----------------------------------------
 
-Bug fixes and/or improvements have been made to :class:`PlexonIO`, :class:`SpikeGadgetsIO`,
+Bug fixes and/or improvements have been made to :class:`PlexonIO`, :class:`SpikeGLXIO`,
 :class:`BiocamIO`.
 
 Acknowledgements
