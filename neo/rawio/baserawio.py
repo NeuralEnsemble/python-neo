@@ -86,9 +86,15 @@ possible_raw_modes = [
 
 error_header = "Header is not read yet, do parse_header() first"
 
+_signal_buffer_dtype = [
+    ("name", "U64"),  # not necessarily unique
+    ("id", "U64"),  # must be unique
+]
+
 _signal_stream_dtype = [
     ("name", "U64"),  # not necessarily unique
     ("id", "U64"),  # must be unique
+    ("buffer_id", "U64"),
 ]
 
 _signal_channel_dtype = [
@@ -100,6 +106,7 @@ _signal_channel_dtype = [
     ("gain", "float64"),
     ("offset", "float64"),
     ("stream_id", "U64"),
+    ("buffer_id", "U64"),
 ]
 
 # TODO for later: add t_start and length in _signal_channel_dtype

@@ -20,6 +20,7 @@ import numpy as np
 from neo.rawio.baserawio import (
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
     _common_sig_characteristics,
@@ -46,6 +47,12 @@ def header_is_total(reader):
     assert "nb_block" in h, "`nb_block`missing in header"
     assert "nb_segment" in h, "`nb_segment`missing in header"
     assert len(h["nb_segment"]) == h["nb_block"]
+
+    assert "signal_buffers" in h, "signal_buffers missing in header"
+    if h["signal_buffers"] is not None:
+        dt = h["signal_buffers"].dtype
+        for k, _ in _signal_buffer_dtype:
+            assert k in dt.fields, f"{k} not in _ignal_buffers.dtype"
 
     assert "signal_streams" in h, "signal_streams missing in header"
     if h["signal_streams"] is not None:
