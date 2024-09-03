@@ -157,7 +157,7 @@ class Plexon2RawIO(BaseRawIO):
         for c in range(self.pl2reader.pl2_file_info.m_TotalNumberOfAnalogChannels):
             achannel_info = self.pl2reader.pl2_get_analog_channel_info(c)
             # only consider active channels
-            if not achannel_info.m_ChannelRecordingEnabled:
+            if not (achannel_info.m_ChannelEnabled and achannel_info.m_ChannelRecordingEnabled):
                 continue
 
             # assign to matching stream or create new stream based on signal characteristics
@@ -199,7 +199,7 @@ class Plexon2RawIO(BaseRawIO):
             schannel_info = self.pl2reader.pl2_get_spike_channel_info(c)
 
             # only consider active channels
-            if not schannel_info.m_ChannelRecordingEnabled:
+            if not (schannel_info.m_ChannelEnabled and schannel_info.m_ChannelRecordingEnabled):
                 continue
 
             for channel_unit_id in range(schannel_info.m_NumberOfUnits):
@@ -223,7 +223,7 @@ class Plexon2RawIO(BaseRawIO):
             echannel_info = self.pl2reader.pl2_get_digital_channel_info(i)
 
             # only consider active channels
-            if not echannel_info.m_ChannelRecordingEnabled:
+            if not (echannel_info.m_ChannelEnabled and echannel_info.m_ChannelRecordingEnabled):
                 continue
 
             # event channels are characterized by (name, id, type), with type in ['event', 'epoch']
