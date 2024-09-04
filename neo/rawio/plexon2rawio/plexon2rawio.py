@@ -55,7 +55,7 @@ class Plexon2RawIO(BaseRawIO):
         If None will find correct dll for architecture and if it does not exist will download it
     reading_attempts: int, default: 15
         Number of attempts to read the file before raising an error
-        This opening process is somehow unreliable and might fail occasionally. Adjust this higher
+        This opening process is somewhat unreliable and might fail occasionally. Adjust this higher
         if you encounter problems in opening the file.
 
     Notes
