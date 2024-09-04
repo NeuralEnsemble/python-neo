@@ -94,7 +94,7 @@ _signal_buffer_dtype = [
 _signal_stream_dtype = [
     ("name", "U64"),  # not necessarily unique
     ("id", "U64"),  # must be unique
-    ("buffer_id", "U64"),
+    ("buffer_id", "U64"), # optional can be ""
 ]
 
 _signal_channel_dtype = [

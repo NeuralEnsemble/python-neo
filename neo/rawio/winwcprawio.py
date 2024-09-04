@@ -35,6 +35,7 @@ class WinWcpRawIO(BaseRawIO):
 
     extensions = ["wcp"]
     rawmode = "one-file"
+    has_buffer_description_api = True
 
     def __init__(self, filename=""):
         BaseRawIO.__init__(self)
@@ -48,7 +49,9 @@ class WinWcpRawIO(BaseRawIO):
 
         # only one memmap for all segment to avoid
         # "error: [Errno 24] Too many open files"
-        self._memmap = np.memmap(self.filename, dtype="uint8", mode="r")
+        # self._memmap = np.memmap(self.filename, dtype="uint8", mode="r")
+
+        self._buffer_descriptions = {0 :{}}
 
         with open(self.filename, "rb") as fid:
 

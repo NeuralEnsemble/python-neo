@@ -37,6 +37,7 @@ from ..baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -181,15 +182,20 @@ class Plexon2RawIO(BaseRawIO):
             gain = achannel_info.m_CoeffToConvertToUnits
             offset = 0.0  # PL2 files don't contain information on signal offset
             stream_id = source_id
-            signal_channels.append((ch_name, chan_id, rate, dtype, units, gain, offset, stream_id))
+            buffer_id = ""
+            signal_channels.append((ch_name, chan_id, rate, dtype, units, gain, offset, stream_id, buffer_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         self.signal_stream_characteristics = source_characteristics
 
         # create signal streams from source information
+        # we consider stream = source but buffer is unkown
         signal_streams = []
         for stream_idx, source in source_characteristics.items():
-            signal_streams.append((source.name, str(source.id)))
+            stream_id = source_id = str(source.id)
+            buffer_id = ""
+            signal_streams.append((source.name, stream_id, buffer_id))
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # pre-loading spike channel_data for later usage
@@ -236,6 +242,7 @@ class Plexon2RawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]  # It seems pl2 can only contain a single segment
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
