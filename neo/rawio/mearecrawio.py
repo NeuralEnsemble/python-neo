@@ -95,7 +95,7 @@ class MEArecRawIO(BaseRawIO):
         self._dtype = self.info_dict["recordings"]["dtype"]
 
         signal_buffers = [("Signals", "0")] if self.load_analogsignal else []
-        signal_streams = [("Signals", "0"), "0"] if self.load_analogsignal else []
+        signal_streams = [("Signals", "0", "0")] if self.load_analogsignal else []
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
