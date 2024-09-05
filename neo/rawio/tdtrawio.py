@@ -36,6 +36,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -208,7 +209,8 @@ class TdtRawIO(BaseRawIO):
 
             stream_name = str(info["StoreName"])
             stream_id = f"{stream_index}"
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
 
             for c in range(info["NumChan"]):
                 global_chan_index = len(signal_channels)
@@ -308,13 +310,16 @@ class TdtRawIO(BaseRawIO):
                 units = "uV"  # see https://github.com/NeuralEnsemble/python-neo/issues/1369
                 gain = 1.0
                 offset = 0.0
-                signal_channels.append((chan_name, str(chan_id), sampling_rate, dtype, units, gain, offset, stream_id))
+                buffer_id = ""
+                signal_channels.append((chan_name, str(chan_id), sampling_rate, dtype, units, gain, offset, stream_id, buffer_id))
 
         if missing_sev_channels:
             warnings.warn(f"Could not identify sev files for channels {missing_sev_channels}.")
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        # buffer concept here, data are spread per channel and paquet
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # unit channels EVTYPE_SNIP
         self.internal_unit_ids = {}
@@ -365,6 +370,7 @@ class TdtRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
