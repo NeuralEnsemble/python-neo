@@ -412,15 +412,16 @@ class PlexonRawIO(BaseRawIO):
         return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        stream_id = signal_streams[stream_index]["id"]
+
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._signal_length[stream_index]
+            i_stop = self.stream_id_samples[stream_id]
 
         signal_channels = self.header["signal_channels"]
         signal_streams = self.header["signal_streams"]
 
-        stream_id = signal_streams[stream_index]["id"]
         mask = signal_channels["stream_id"] == stream_id
         signal_channels = signal_channels[mask]
         if channel_indexes is not None:
