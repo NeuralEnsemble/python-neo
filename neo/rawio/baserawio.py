@@ -1378,6 +1378,7 @@ class BaseRawIO:
         # When has_buffer_description_api=True this used to avoid to write _get_analogsignal_chunk())
 
         buffer_desc = self._get_analogsignal_buffer_description(block_index, seg_index, stream_index)
+        buffer_desc = self._get_signal_size(block_index, seg_index, stream_index)
         return buffer_desc['shape'][0]
 
     def _get_analogsignal_chunk_generic(

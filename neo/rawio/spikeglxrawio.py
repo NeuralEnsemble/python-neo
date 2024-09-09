@@ -161,7 +161,6 @@ class SpikeGLXRawIO(BaseRawIO):
 
 
         # create channel header
-
         signal_buffers = []
         signal_streams = []
         signal_channels = []
