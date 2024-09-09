@@ -231,7 +231,7 @@ class Plexon2RawIO(BaseRawIO):
             if not (schannel_info.m_ChannelEnabled and schannel_info.m_ChannelRecordingEnabled):
                 continue
 
-            for channel_unit_id in range(schannel_info.m_NumberOfUnits):
+            for channel_unit_id in range(schannel_info.m_NumberOfUnits+1):
                 unit_name = f"{schannel_info.m_Name.decode()}.{channel_unit_id}"
                 unit_id = f"unit{schannel_info.m_Channel}.{channel_unit_id}"
                 wf_units = schannel_info.m_Units
