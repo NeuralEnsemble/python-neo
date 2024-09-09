@@ -222,7 +222,8 @@ class MicromedRawIO(BaseRawIO):
         return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals.shape[0] / self._sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = sig_size / self._sampling_rate
         return t_stop
 
     # def _get_signal_size(self, block_index, seg_index, stream_index):
