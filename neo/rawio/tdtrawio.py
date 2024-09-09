@@ -318,7 +318,7 @@ class TdtRawIO(BaseRawIO):
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        # buffer concept here, data are spread per channel and paquet
+        # no buffer concept here, data are spread per channel and data block
         signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # unit channels EVTYPE_SNIP

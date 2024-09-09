@@ -401,6 +401,7 @@ class BlackrockRawIO(BaseRawIO):
                         ext_header.append(d)
 
                 if len(ext_header) > 0:
+                    # in blackrock : one stream per buffer so same id
                     buffer_id = stream_id = str(nsx_nb)
                     stream_name = f"nsx{nsx_nb}"
                     signal_buffers.append((stream_name, buffer_id))
