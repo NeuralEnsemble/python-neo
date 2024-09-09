@@ -97,6 +97,26 @@ class MicromedRawIO(BaseRawIO):
                 -1, Num_Chan
             )
 
+            # "TRONCA" zone define segments
+            zname2, pos, length = zones["TRONCA"]
+            f.seek(pos)
+            max_segments = 100
+            info_segments = []
+            for i in range(max_segments):
+                seg_time = np.frombuffer(f.read(8), dtype="u8")[0]
+                seg_size = np.frombuffer(f.read(8), dtype="u8")[0]
+
+                if seg_time == 0:
+                    break
+                else:
+                    info_segments.append((seg_time, seg_size))
+            
+            if len(info_segments) == 0:
+                info_segments = [(0, 0)]
+
+            if len(info_segments) > 1:
+                raise RuntimeError("Neo do not support more than one segment at the moment")
+
             # Reading Code Info
             zname2, pos, length = zones["ORDER"]
             f.seek(pos)
@@ -133,6 +153,11 @@ class MicromedRawIO(BaseRawIO):
 
             assert np.unique(signal_channels["sampling_rate"]).size == 1
             self._sampling_rate = float(np.unique(signal_channels["sampling_rate"])[0])
+
+            # TODO change this when multi segment handling
+            self._global_t_start = info_segments[0][0] / self._sampling_rate
+
+            
 
             # Event channels
             event_channels = []
@@ -194,11 +219,12 @@ class MicromedRawIO(BaseRawIO):
         return self.filename
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.0
+        # return 0.0
+        return self._global_t_start
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = self._raw_signals.shape[0] / self._sampling_rate
-        return t_stop
+        return t_stop + self.segment_t_start(block_index, seg_index)
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
         assert stream_index == 0
@@ -206,7 +232,8 @@ class MicromedRawIO(BaseRawIO):
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         assert stream_index == 0
-        return 0.0
+        # return 0.0
+        return self._global_t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         if channel_indexes is None:
@@ -249,7 +276,8 @@ class MicromedRawIO(BaseRawIO):
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
-        return event_times
+        event_times += self._global_t_start
+        return event_times 
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         durations = raw_duration.astype(dtype) / self._sampling_rate
