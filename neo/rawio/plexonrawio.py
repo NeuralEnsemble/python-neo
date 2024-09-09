@@ -43,6 +43,7 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+from neo.core.baseneo import NeoReadWriteError
 
 class PlexonRawIO(BaseRawIO):
     extensions = ["plx"]
@@ -302,22 +303,24 @@ class PlexonRawIO(BaseRawIO):
 
             signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
-            self.stream_id_samples = {}
-            self.stream_id_sampling_frequency = {}
-            self.stream_index_to_stream_id = {}
+            self._stream_id_samples = {}
+            self._stream_id_sampling_frequency = {}
+            self._stream_index_to_stream_id = {}
             for stream_index, stream_id in enumerate(signal_streams["id"]):
                 # Keep a mapping from stream_index to stream_id
-                self.stream_index_to_stream_id[stream_index] = stream_id
+                self._stream_index_to_stream_id[stream_index] = stream_id
 
-                # We extract the number of samples for each stream
                 mask = signal_channels["stream_id"] == stream_id
+                
                 signal_num_samples = np.unique(channel_num_samples[mask])
-                assert signal_num_samples.size == 1, "All channels in a stream must have the same number of samples"
+                if signal_num_samples.size > 1:
+                    raise NeoReadWriteError(f"Channels in stream {stream_id} don't have the same number of samples")
                 self.stream_id_samples[stream_id] = signal_num_samples[0]
 
                 signal_sampling_frequency = np.unique(signal_channels[mask]["sampling_rate"])
-                assert signal_sampling_frequency.size == 1, "All channels in a stream must have the same sampling frequency"
-                self.stream_id_sampling_frequency[stream_id] = signal_sampling_frequency[0]
+                if signal_sampling_frequency.size > 1:
+                    raise NeoReadWriteError(f"Channels in stream {stream_id} don't have the same sampling frequency")
+                self._stream_id_sampling_frequency[stream_id] = signal_sampling_frequency[0]
                 
         self._global_ssampling_rate = global_header["ADFrequency"]
 
@@ -398,15 +401,15 @@ class PlexonRawIO(BaseRawIO):
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = float(self._last_timestamps) / self._global_ssampling_rate
-        if hasattr(self, "stream_id_samples"):
-            for stream_id in self.stream_id_samples.keys():
-                t_stop_sig = self.stream_id_samples[stream_id] / self.stream_id_sampling_frequency[stream_id]
+        if hasattr(self, "_stream_id_samples"):
+            for stream_id in self._stream_id_samples.keys():
+                t_stop_sig = self._stream_id_samples[stream_id] / self._stream_id_sampling_frequency[stream_id]
                 t_stop = max(t_stop, t_stop_sig)
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        stream_id = self.stream_index_to_stream_id[stream_index]
-        return self.stream_id_samples[stream_id]
+        stream_id = self._stream_index_to_stream_id[stream_index]
+        return self._stream_id_samples[stream_id]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
@@ -419,7 +422,7 @@ class PlexonRawIO(BaseRawIO):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self.stream_id_samples[stream_id]
+            i_stop = self._stream_id_samples[stream_id]
 
 
 
