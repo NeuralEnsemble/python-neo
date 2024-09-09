@@ -315,7 +315,7 @@ class PlexonRawIO(BaseRawIO):
                 signal_num_samples = np.unique(channel_num_samples[mask])
                 if signal_num_samples.size > 1:
                     raise NeoReadWriteError(f"Channels in stream {stream_id} don't have the same number of samples")
-                self.stream_id_samples[stream_id] = signal_num_samples[0]
+                self._stream_id_samples[stream_id] = signal_num_samples[0]
 
                 signal_sampling_frequency = np.unique(signal_channels[mask]["sampling_rate"])
                 if signal_sampling_frequency.size > 1:
@@ -401,7 +401,7 @@ class PlexonRawIO(BaseRawIO):
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = float(self._last_timestamps) / self._global_ssampling_rate
-        if hasattr(self, "_stream_id_samples"):
+        if hasattr(self, "__stream_id_samples"):
             for stream_id in self._stream_id_samples.keys():
                 t_stop_sig = self._stream_id_samples[stream_id] / self._stream_id_sampling_frequency[stream_id]
                 t_stop = max(t_stop, t_stop_sig)
