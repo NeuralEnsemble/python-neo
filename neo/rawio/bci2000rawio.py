@@ -15,6 +15,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -49,8 +50,10 @@ class BCI2000RawIO(BaseRawIO):
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
 
-        # one unique stream
-        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+        # one unique stream and buffer
+        signal_buffers = np.array(("Signals", "0"), dtype=_signal_buffer_dtype)
+        signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
 
         sig_channels = []
@@ -78,7 +81,8 @@ class BCI2000RawIO(BaseRawIO):
                 offset = float(offset)
 
             stream_id = "0"
-            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+            buffer_id = "0"
+            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
         self.header["signal_channels"] = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         self.header["spike_channels"] = np.array([], dtype=_spike_channel_dtype)

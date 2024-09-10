@@ -19,6 +19,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -120,6 +121,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         for stream_index, stream_name in enumerate(sig_stream_names):
             # stream_index is the index in vector sytream names
             stream_id = str(stream_index)
+            buffer_id = stream_id
             info = self._sig_streams[0][0][stream_index]
             new_channels = []
             for chan_info in info["channels"]:
@@ -141,16 +143,21 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         chan_info["bit_volts"],
                         0.0,
                         stream_id,
+                        buffer_id,
                     )
                 )
             signal_channels.extend(new_channels)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         signal_streams = []
+        signal_buffers = []
         for stream_index, stream_name in enumerate(sig_stream_names):
             stream_id = str(stream_index)
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = str(stream_index)
+            signal_buffers.append((stream_name, buffer_id))
+            signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
         # create memmap for signals
         for block_index in range(nb_block):
@@ -299,6 +306,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = nb_block
         self.header["nb_segment"] = nb_segment_per_block
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

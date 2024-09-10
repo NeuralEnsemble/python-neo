@@ -17,6 +17,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -162,6 +163,8 @@ class OpenEphysRawIO(BaseRawIO):
                         units = "uV"
                     else:
                         units = "V"
+                    stream_id = processor_id
+                    buffer_id = ""
                     signal_channels.append(
                         (
                             ch_name,
@@ -171,7 +174,8 @@ class OpenEphysRawIO(BaseRawIO):
                             units,
                             chan_info["bitVolts"],
                             0.0,
-                            processor_id,
+                            stream_id,
+                            buffer_id,
                         )
                     )
 
@@ -221,10 +225,13 @@ class OpenEphysRawIO(BaseRawIO):
             # and create streams channels (keep natural order 'CH' first)
             stream_ids, order = np.unique(chan_stream_ids, return_index=True)
             stream_ids = stream_ids[np.argsort(order)]
-            signal_streams = [(f"Signals {stream_id}", f"{stream_id}") for stream_id in stream_ids]
-            signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+            signal_streams = [(f"Signals {stream_id}", f"{stream_id}", "") for stream_id in stream_ids]
         else:
-            signal_streams = np.array([])
+            signal_streams = []
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # no buffer handling in this format because one channel per file
+        signal_buffers = np.array( [], dtype=_signal_buffer_dtype)
+
         # scan for spikes files
         spike_channels = []
 
@@ -328,6 +335,7 @@ class OpenEphysRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
