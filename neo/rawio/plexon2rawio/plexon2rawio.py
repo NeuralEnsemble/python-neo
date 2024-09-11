@@ -196,6 +196,7 @@ class Plexon2RawIO(BaseRawIO):
             "FP": "FPl-Low Pass Filtered",
             "SP": "SPKC-High Pass Filtered",
             "AI": "AI-Auxiliary Input",
+            "AIF": "AIF-Auxiliary Input Filtered",
         }
 
         unique_stream_ids = np.unique(signal_channels["stream_id"])
