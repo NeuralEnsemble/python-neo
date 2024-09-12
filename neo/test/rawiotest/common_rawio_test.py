@@ -52,7 +52,7 @@ class BaseTestRawIO:
     rawioclass = None  # the IOclass to be tested
 
     entities_to_test = []  # list of files to test compliances
-    entities_to_download = []  # when files are at gin
+    entities_to_download = []  # when files a   re at gin
 
     # allow environment to tell avoid using network
     use_network = can_use_network()
