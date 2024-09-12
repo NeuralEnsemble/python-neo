@@ -224,7 +224,7 @@ def read_analogsignals(reader):
             i_start=i_start,
             i_stop=i_stop,
             stream_index=stream_index,
-            channel_indexes=slice(None)
+            channel_indexes=slice(None),
         )
         raw_chunk_channel_indexes = reader.get_analogsignal_chunk(
             block_index=block_index,
@@ -232,7 +232,7 @@ def read_analogsignals(reader):
             i_start=i_start,
             i_stop=i_stop,
             stream_index=stream_index,
-            channel_indexes=channel_indexes
+            channel_indexes=channel_indexes,
         )
 
         np.testing.assert_array_equal(raw_chunk_slice_none, raw_chunk_channel_indexes)

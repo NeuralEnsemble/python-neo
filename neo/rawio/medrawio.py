@@ -240,7 +240,7 @@ class MedRawIO(BaseRawIO):
             self.sess.set_channel_active(self._stream_info[stream_index]["raw_chans"])
             num_channels = len(self._stream_info[stream_index]["raw_chans"])
             self.sess.set_reference_channel(self._stream_info[stream_index]["raw_chans"][0])
-        
+
         # in the case we have a slice or we give an ArrayLike we need to iterate through the channels
         # in order to activate them.
         else:
