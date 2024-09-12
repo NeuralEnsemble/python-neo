@@ -53,7 +53,7 @@ class Plexon2RawIO(BaseRawIO):
     pl2_dll_file_path: str | Path | None, default: None
         The path to the necessary dll for loading pl2 files
         If None will find correct dll for architecture and if it does not exist will download it
-    reading_attempts: int, default: 15
+    reading_attempts: int, default: 25
         Number of attempts to read the file before raising an error
         This opening process is somewhat unreliable and might fail occasionally. Adjust this higher
         if you encounter problems in opening the file.
@@ -92,7 +92,7 @@ class Plexon2RawIO(BaseRawIO):
     extensions = ["pl2"]
     rawmode = "one-file"
 
-    def __init__(self, filename, pl2_dll_file_path=None, reading_attempts=15):
+    def __init__(self, filename, pl2_dll_file_path=None, reading_attempts=25):
 
         # signals, event and spiking data will be cached
         # cached signal data can be cleared using `clear_analogsignal_cache()()`
