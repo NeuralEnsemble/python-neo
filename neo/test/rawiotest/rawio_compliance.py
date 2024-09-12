@@ -172,7 +172,7 @@ def read_analogsignals(reader):
         channel_names = signal_channels["name"][mask]
         channel_ids = signal_channels["id"][mask]
 
-        # acces by channel inde/ids/names should give the same chunk
+        # acces by channel index/ids/names should give the same chunk
         channel_indexes2 = channel_indexes[::2]
         channel_names2 = channel_names[::2]
         channel_ids2 = channel_ids[::2]
@@ -213,6 +213,29 @@ def read_analogsignals(reader):
                 channel_names=channel_names2,
             )
             np.testing.assert_array_equal(raw_chunk0, raw_chunk1)
+
+        # test slice(None). This should return the same array as giving
+        # all channel indexes or using None as an argument in `get_analogsignal_chunk`
+        # see https://github.com/NeuralEnsemble/python-neo/issues/1533
+
+        raw_chunk_slice_none = reader.get_analogsignal_chunk(
+            block_index=block_index,
+            seg_index=seg_index,
+            i_start=i_start,
+            i_stop=i_stop,
+            stream_index=stream_index,
+            channel_indexes=slice(None),
+        )
+        raw_chunk_channel_indexes = reader.get_analogsignal_chunk(
+            block_index=block_index,
+            seg_index=seg_index,
+            i_start=i_start,
+            i_stop=i_stop,
+            stream_index=stream_index,
+            channel_indexes=channel_indexes,
+        )
+
+        np.testing.assert_array_equal(raw_chunk_slice_none, raw_chunk_channel_indexes)
 
         # test prefer_slice=True/False
         if nb_chan >= 3:

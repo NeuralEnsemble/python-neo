@@ -240,9 +240,18 @@ class MedRawIO(BaseRawIO):
             self.sess.set_channel_active(self._stream_info[stream_index]["raw_chans"])
             num_channels = len(self._stream_info[stream_index]["raw_chans"])
             self.sess.set_reference_channel(self._stream_info[stream_index]["raw_chans"][0])
+
+        # in the case we have a slice or we give an ArrayLike we need to iterate through the channels
+        # in order to activate them.
         else:
-            if any(channel_indexes < 0):
-                raise IndexError(f"Can not index negative channels: {channel_indexes}")
+            if isinstance(channel_indexes, slice):
+                start = channel_indexes.start or 0
+                stop = channel_indexes.stop or len(self._stream_info[stream_index]["raw_chans"])
+                step = channel_indexes.step or 1
+                channel_indexes = [ch for ch in range(start, stop, step)]
+            else:
+                if any(channel_indexes < 0):
+                    raise IndexError(f"Can not index negative channels: {channel_indexes}")
             # Set all channels to be inactive, then selectively set some of them to be active
             self.sess.set_channel_inactive("all")
             for i, channel_idx in enumerate(channel_indexes):
