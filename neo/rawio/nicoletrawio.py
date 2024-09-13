@@ -531,7 +531,7 @@ class NicoletRawIO(BaseRawIO):
             with open(self.filepath, "rb") as fid:
                 pkt_structure = [
                     ('guid', 'uint8', 16),
-                    ('len', 'uint64', 1),
+                    ('len', 'uint64'),
                     ]
                 fid.seek(offset)
                 pkt = read_as_dict(fid,
