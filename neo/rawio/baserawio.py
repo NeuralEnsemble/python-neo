@@ -1365,10 +1365,10 @@ class BaseRawIO:
     ###
     # json buffer api zone
     # must be implemented if has_buffer_description_api=True
-    def get_analogsignal_buffer_description(self, block_index: int = 0, seg_index: int = 0, stream_index: int = 0):
+    def get_analogsignal_buffer_description(self, block_index: int = 0, seg_index: int = 0, buffer_id: str = None):
         if not self.has_buffer_description_api:
             raise ValueError("This reader do not support buffer_description API")
-        descr = self._get_analogsignal_buffer_description(block_index, seg_index, stream_index)
+        descr = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
         return descr
 
     def _get_analogsignal_buffer_description(self, block_index, seg_index, stream_index):
@@ -1390,8 +1390,15 @@ class BaseRawIO:
         stream_index: int,
         channel_indexes: list[int] | None,
     ):
+        
+        stream_id = self.header["signal_streams"][stream_index]["id"]
+        buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
+        
+        buffer_slice = self._stream_buffer_slice[stream_id]
+
+
         # When has_buffer_description_api=True this used to avoid to write _get_analogsignal_chunk())
-        buffer_desc = self._get_analogsignal_buffer_description( block_index, seg_index, stream_index)
+        buffer_desc = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
 
         if buffer_desc['type'] == 'binary':
 
@@ -1417,10 +1424,9 @@ class BaseRawIO:
             raw_sigs = get_memmap_chunk_from_opened_file(fid, num_channels,  i_start, i_stop, np.dtype(buffer_desc['dtype']), file_offset=buffer_desc['file_offset'])
 
             # this is a pre slicing when the stream do not contain all channels (for instance spikeglx when load_sync_channel=False)
-            channel_slice = buffer_desc.get('channel_slice', None)
-            if channel_slice is not None:
-                raw_sigs = raw_sigs[:, channel_slice]
-
+            if buffer_slice is not None:
+                raw_sigs = raw_sigs[:, buffer_slice]
+            
             # channel slice requested
             if channel_indexes is not None:
                 raw_sigs = raw_sigs[:, channel_indexes]

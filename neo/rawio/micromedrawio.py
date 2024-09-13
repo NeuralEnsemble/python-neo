@@ -107,7 +107,9 @@ class MicromedRawIO(BaseRawIO):
             #     -1, Num_Chan
             # )
             signal_shape = get_memmap_shape(self.filename, sig_dtype, num_channels=Num_Chan, offset=Data_Start_Offset)
-            self._buffer_descriptions[0][0][0] = {
+            buffer_id = "0"
+            stream_id = "0"
+            self._buffer_descriptions[0][0][buffer_id] = {
                 "type" : "binary",
                 "file_path" : str(self.filename),
                 "dtype" : sig_dtype,
@@ -145,14 +147,14 @@ class MicromedRawIO(BaseRawIO):
                 (sampling_rate,) = f.read_f("H")
                 sampling_rate *= Rate_Min
                 chan_id = str(c)
-                stream_id = "0"
-                buffer_id = "0"
+                
                 signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-
-            signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
-            signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
+            
+            self._stream_buffer_slice = {"0": slice(None)}
+            signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
+            signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
 
             if np.unique(signal_channels["sampling_rate"]).size != 1:
                 raise NeoReadWriteError("The sampling rates must be the same across signal channels")
@@ -283,5 +285,5 @@ class MicromedRawIO(BaseRawIO):
         durations = raw_duration.astype(dtype) / self._sampling_rate
         return durations
 
-    def _get_analogsignal_buffer_description(self, block_index, seg_index, stream_index):
-        return self._buffer_descriptions[block_index][seg_index][stream_index]
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]

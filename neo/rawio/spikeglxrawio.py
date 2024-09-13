@@ -130,8 +130,9 @@ class SpikeGLXRawIO(BaseRawIO):
         
         # self._memmaps = {}
         self.signals_info_dict = {}
-        # on block
+        # one unique block
         self._buffer_descriptions = {0 :{}}
+        self._stream_buffer_slice = {}
         for info in self.signals_info_list:
             seg_index, stream_name = info["seg_index"], info["stream_name"]
             key = (seg_index, stream_name)
@@ -146,11 +147,13 @@ class SpikeGLXRawIO(BaseRawIO):
             # data = data.reshape(-1, info["num_chan"])
             # self._memmaps[key] = data
 
-            stream_index = stream_names.index(info["stream_name"])
+            buffer_id = stream_name
+            block_index = 0
+
             if seg_index not in self._buffer_descriptions[0]:
-                self._buffer_descriptions[0][seg_index] = {}
+                self._buffer_descriptions[block_index][seg_index] = {}
             
-            self._buffer_descriptions[0][seg_index][stream_index] = {
+            self._buffer_descriptions[block_index][seg_index][buffer_id] = {
                 "type" : "binary",
                 "file_path" : info["bin_file"],
                 "dtype" : "int16",
@@ -158,6 +161,7 @@ class SpikeGLXRawIO(BaseRawIO):
                 "file_offset" : 0,
                 "shape" : get_memmap_shape(info["bin_file"], "int16", num_channels=info["num_chan"], offset=0),
             }
+            
 
 
         # create channel header
@@ -193,10 +197,14 @@ class SpikeGLXRawIO(BaseRawIO):
                         buffer_id,
                     )
                 )
+            
+            # all channel by dafult unless load_sync_channel=False
+            self._stream_buffer_slice[stream_id] = None
             # check sync channel validity
             if "nidq" not in stream_name:
                 if not self.load_sync_channel and info["has_sync_trace"]:
                     signal_channels = signal_channels[:-1]
+                    self._stream_buffer_slice[stream_id] = slice(0, -1)
                 if self.load_sync_channel and not info["has_sync_trace"]:
                     raise ValueError("SYNC channel is not present in the recording. " "Set load_sync_channel to False")
 

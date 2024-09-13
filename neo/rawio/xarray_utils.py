@@ -54,7 +54,7 @@ import base64
 # TODO implement zarr v3
 
 
-def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, stream_index=0):
+def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, buffer_id=None):
     """
     Transform the buffer_description_api into a dict ready for the xarray API 'reference://'
 
@@ -70,30 +70,29 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, stream_index=
     """
 
     # rawio_reader.
-    signal_streams = rawio_reader.header["signal_streams"]
+    signal_buffers = rawio_reader.header["signal_buffers"]
 
-    stream_name = signal_streams["name"][stream_index]
-    stream_id = signal_streams["id"][stream_index]
+    buffer_index = list(signal_buffers["id"]).index(buffer_id)
+
+    buffer_name = signal_buffers["name"][buffer_index]
 
 
     rfs = dict()
     rfs["version"] = 1
     rfs["refs"] = dict()
     rfs["refs"][".zgroup"] = json.dumps(dict(zarr_format=2))
-    zattrs = dict(name=stream_name)
+    zattrs = dict(name=buffer_name)
     rfs["refs"][".zattrs"] = json.dumps(zattrs)
 
-    # print(stream_index, stream_name, stream_id)
-    
     
     descr = rawio_reader.get_analogsignal_buffer_description(block_index=block_index, seg_index=seg_index, 
-                                                                stream_index=stream_index)
+                                                                buffer_id=buffer_id)
 
     if descr["type"] == "binary":
 
 
         # channel : small enough can be internal with base64
-        mask = rawio_reader.header["signal_channels"]["stream_id"] == stream_id
+        mask = rawio_reader.header["signal_channels"]["buffer_id"] == buffer_id
         channels = rawio_reader.header["signal_channels"][mask]
         channel_ids = channels["id"]
         base64_encoded = base64.b64encode(channel_ids.tobytes())
@@ -128,7 +127,7 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, stream_index=
         )
         zattrs = dict(
             _ARRAY_DIMENSIONS=['time', 'channel'],
-            name=stream_name,
+            name=buffer_name,
         )
         units = np.unique(channels['units'])
         if units.size == 1:
@@ -159,7 +158,7 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, stream_index=
 
 
 
-def to_xarray_dataset(rawio_reader, block_index=0, seg_index=0, stream_index=0):
+def to_xarray_dataset(rawio_reader, block_index=0, seg_index=0, buffer_id=None):
     """
     Utils fonction that transorm an instance a rawio into a xarray.Dataset
     with lazy access.
@@ -171,7 +170,7 @@ def to_xarray_dataset(rawio_reader, block_index=0, seg_index=0, stream_index=0):
     """
     import xarray as xr
 
-    rfs = to_zarr_v2_reference(rawio_reader, block_index=block_index, seg_index=seg_index, stream_index=stream_index)
+    rfs = to_zarr_v2_reference(rawio_reader, block_index=block_index, seg_index=seg_index, buffer_id=buffer_id)
 
     ds = xr.open_dataset(
         "reference://",
@@ -201,8 +200,8 @@ def to_xarray_datatree(rawio_reader):
         except:
             raise ImportError("use xarray dev branch or pip install xarray-datatree")
 
-    num_streams = rawio_reader.header['signal_streams'].size
-    print(num_streams)
+    signal_buffers = rawio_reader.header['signal_buffers']
+    buffer_ids = signal_buffers["id"]
 
     tree = DataTree(name="root")
 
@@ -213,8 +212,8 @@ def to_xarray_datatree(rawio_reader):
         for seg_index in range(num_seg):
             segment = DataTree(name=f'segment{block_index}', parent=block)
 
-            for stream_index in range(num_streams):
-                ds = to_xarray_dataset(rawio_reader, block_index=block_index, seg_index=seg_index, stream_index=stream_index)
+            for buffer_id in buffer_ids:
+                ds = to_xarray_dataset(rawio_reader, block_index=block_index, seg_index=seg_index, buffer_id=buffer_id)
                 DataTree(data=ds, name=ds.attrs['name'], parent=segment)
 
     return tree
