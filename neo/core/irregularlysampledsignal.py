@@ -550,6 +550,9 @@ class IrregularlySampledSignal(BaseSignal):
             (the original :class:`IrregularlySampledSignal` is not modified).
         """
         new_sig = deepcopy(self)
+        # As of numpy 2.0/quantities 0.16 we need to copy the array itself
+        # in order to be able to time_shift
+        new_sig.times = self.times.copy()
 
         new_sig.times += t_shift
 
@@ -594,7 +597,7 @@ class IrregularlySampledSignal(BaseSignal):
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
-        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype, copy=False, **kwargs)
+        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype, copy=None, **kwargs)
         signal.segment = self.segment
         signal.array_annotate(**self._merge_array_annotations(other))
 
@@ -687,7 +690,7 @@ class IrregularlySampledSignal(BaseSignal):
             times=new_times[sorting],
             units=self.units,
             dtype=self.dtype,
-            copy=False,
+            copy=None,
             t_start=t_start,
             t_stop=t_stop,
             **kwargs,

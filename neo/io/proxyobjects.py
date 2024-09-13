@@ -296,7 +296,7 @@ class AnalogSignalProxy(BaseProxy):
         anasig = AnalogSignal(
             sig,
             units=units,
-            copy=False,
+            copy=None,
             t_start=sig_t_start,
             sampling_rate=self.sampling_rate,
             name=name,
@@ -433,7 +433,7 @@ class SpikeTrainProxy(BaseProxy):
             units=units,
             dtype=dtype,
             t_start=t_start,
-            copy=False,
+            copy=None,
             sampling_rate=self.sampling_rate,
             waveforms=waveforms,
             left_sweep=self.left_sweep,
