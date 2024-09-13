@@ -147,20 +147,11 @@ class NicoletRawIO(BaseRawIO):
         self._generate_additional_annotations()
             
     def _get_tags(self):
-        misc_structure = [
-            ('misc1', 'uint32', 5)
-            ]
         tags_structure = [
             ('tag', 'S80'),
             ('index', 'uint32')]
         
         with open(self.filepath, "rb") as fid:
-            
-            index_idx = read_as_dict(fid, 
-                                     misc_structure)
-            unknown = read_as_dict(fid,
-                                   [('unknown', 'uint32', 1)])
-            
             fid.seek(172)
             n_tags = read_as_list(fid,
                                   [('n_tags', 'uint32')])
@@ -172,7 +163,6 @@ class NicoletRawIO(BaseRawIO):
                 except KeyError:
                     entry['id_str'] = 'UNKNOWN'  
         self.n_tags = n_tags
-        self.index_idx = index_idx
         self.tags = tags
 
     def _get_qi(self):
