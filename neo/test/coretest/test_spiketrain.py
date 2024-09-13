@@ -1656,32 +1656,33 @@ class TestChanging(unittest.TestCase):
         self.assertEqual(train[0], 99 * pq.s)
         self.assertEqual(data[0], 3 * pq.s)
 
-    def test_change_with_copy_false(self):
+    # now we test default behavior here so change false to None
+    def test_change_with_default(self):
         # Changing spike train also changes data, because it is a view
         # Data source is quantity
         data = [3, 4, 5] * pq.s
-        train = SpikeTrain(data, copy=False, t_stop=100.0)
+        train = SpikeTrain(data, t_stop=100.0)
         train[0] = 99 * pq.s
         assert_neo_object_is_compliant(train)
         self.assertEqual(train[0], 99 * pq.s)
         self.assertEqual(data[0], 99 * pq.s)
 
-    def test_change_with_copy_false_and_fake_rescale(self):
+    def test_change_with_fake_rescale(self):
         # Changing spike train also changes data, because it is a view
         # Data source is quantity
         data = [3000, 4000, 5000] * pq.ms
         # even though we specify units, it still returns a view
-        train = SpikeTrain(data, units="ms", copy=False, t_stop=100000)
+        train = SpikeTrain(data, units="ms", t_stop=100000)
         train[0] = 99000 * pq.ms
         assert_neo_object_is_compliant(train)
         self.assertEqual(train[0], 99000 * pq.ms)
         self.assertEqual(data[0], 99000 * pq.ms)
 
-    def test_change_with_copy_false_and_rescale_true(self):
+    def test_change_and_rescale_true(self):
         # When rescaling, a view cannot be returned
         # Changing spike train also changes data, because it is a view
         data = [3, 4, 5] * pq.s
-        self.assertRaises(ValueError, SpikeTrain, data, units="ms", copy=False, t_stop=10000)
+        self.assertRaises(ValueError, SpikeTrain, data, units="ms", t_stop=10000)
 
     def test_init_with_rescale(self):
         data = [3, 4, 5] * pq.s
@@ -1691,81 +1692,83 @@ class TestChanging(unittest.TestCase):
         self.assertEqual(train._dimensionality, pq.ms._dimensionality)
         self.assertEqual(train.t_stop, 6000 * pq.ms)
 
-    def test_change_with_copy_true(self):
-        # Changing spike train does not change data
-        # Data source is quantity
-        data = [3, 4, 5] * pq.s
-        train = SpikeTrain(data, copy=True, t_stop=100)
-        train[0] = 99 * pq.s
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[0], 99 * pq.s)
-        self.assertEqual(data[0], 3 * pq.s)
+    # need to remove for quantities + numpy 2.0
+    #def test_change_with_copy_true(self):
+    #    # Changing spike train does not change data
+    #    # Data source is quantity
+    #    data = [3, 4, 5] * pq.s
+    #    train = SpikeTrain(data, copy=True, t_stop=100)
+    #    train[0] = 99 * pq.s
+    #    assert_neo_object_is_compliant(train)
+    #    self.assertEqual(train[0], 99 * pq.s)
+    #    self.assertEqual(data[0], 3 * pq.s)
 
-    def test_change_with_copy_default_and_data_not_quantity(self):
+    # default is no longer copy=True. Need to remove for numpy 2.0
+    #def test_change_with_copy_default_and_data_not_quantity(self):
         # Default is copy = True
         # Changing spike train does not change data
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
-        data = [3, 4, 5]
-        train = SpikeTrain(data, units="sec", t_stop=100)
-        train[0] = 99 * pq.s
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[0], 99 * pq.s)
-        self.assertEqual(data[0], 3 * pq.s)
+    #    data = [3, 4, 5]
+    #    train = SpikeTrain(data, units="sec", t_stop=100)
+    #    train[0] = 99 * pq.s
+    #    assert_neo_object_is_compliant(train)
+    #    self.assertEqual(train[0], 99 * pq.s)
+    #    self.assertEqual(data[0], 3 * pq.s)
 
-    def test_change_with_copy_false_and_data_not_quantity(self):
+    def test_change_and_data_not_quantity(self):
         # Changing spike train also changes data, because it is a view
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
         data = np.array([3, 4, 5])
-        train = SpikeTrain(data, units="sec", copy=False, dtype=int, t_stop=101)
+        train = SpikeTrain(data, units="sec", dtype=int, t_stop=101)
         train[0] = 99 * pq.s
         assert_neo_object_is_compliant(train)
         self.assertEqual(train[0], 99 * pq.s)
         self.assertEqual(data[0], 99)
 
-    def test_change_with_copy_false_and_dtype_change(self):
+    def test__dtype_change(self):
         # You cannot change dtype and request a view
         data = np.array([3, 4, 5])
-        self.assertRaises(ValueError, SpikeTrain, data, units="sec", copy=False, t_stop=101, dtype=np.float64)
+        self.assertRaises(ValueError, SpikeTrain, data, units="sec", t_stop=101, dtype=np.float64)
 
-    def test_change_with_copy_true_and_data_not_quantity(self):
+    # need to remove for numpy 2.0 and quantities
+    #def test_change_with_copy_true_and_data_not_quantity(self):
         # Changing spike train does not change data
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
-        data = [3, 4, 5]
-        train = SpikeTrain(data, units="sec", copy=True, t_stop=123.4)
-        train[0] = 99 * pq.s
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[0], 99 * pq.s)
-        self.assertEqual(data[0], 3)
+    #   data = [3, 4, 5]
+    #    train = SpikeTrain(data, units="sec", copy=True, t_stop=123.4)
+    #   train[0] = 99 * pq.s
+    #    assert_neo_object_is_compliant(train)
+    #    self.assertEqual(train[0], 99 * pq.s)
+    #    self.assertEqual(data[0], 3)
+
+    #def test_changing_slice_changes_original_spiketrain(self):
+        # If we slice a spiketrain and then change the slice, the
+        # original spiketrain should change.
+        # Whether the original data source changes is dependent on the
+        # copy parameter.
+        # This is compatible with both np and quantity default behavior.
+    #   data = [3, 4, 5] * pq.s
+    #    train = SpikeTrain(data, copy=True, t_stop=99.9)
+    #    result = train[1:3]
+    #    result[0] = 99 * pq.s
+    #    assert_neo_object_is_compliant(train)
+    #    self.assertEqual(train[1], 99 * pq.s)
+    #   self.assertEqual(result[0], 99 * pq.s)
+    #    self.assertEqual(data[1], 4 * pq.s)
 
     def test_changing_slice_changes_original_spiketrain(self):
         # If we slice a spiketrain and then change the slice, the
         # original spiketrain should change.
-        # Whether the original data source changes is dependent on the
-        # copy parameter.
+        # Test new default behavior of neo for neo 14.0
         # This is compatible with both np and quantity default behavior.
         data = [3, 4, 5] * pq.s
-        train = SpikeTrain(data, copy=True, t_stop=99.9)
-        result = train[1:3]
-        result[0] = 99 * pq.s
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[1], 99 * pq.s)
-        self.assertEqual(result[0], 99 * pq.s)
-        self.assertEqual(data[1], 4 * pq.s)
-
-    def test_changing_slice_changes_original_spiketrain_with_copy_false(self):
-        # If we slice a spiketrain and then change the slice, the
-        # original spiketrain should change.
-        # Whether the original data source changes is dependent on the
-        # copy parameter.
-        # This is compatible with both np and quantity default behavior.
-        data = [3, 4, 5] * pq.s
-        train = SpikeTrain(data, copy=False, t_stop=100.0)
+        train = SpikeTrain(data, t_stop=100.0)
         result = train[1:3]
         result[0] = 99 * pq.s
         assert_neo_object_is_compliant(train)
@@ -1776,7 +1779,7 @@ class TestChanging(unittest.TestCase):
 
     def test__changing_spiketime_should_check_time_in_range(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         self.assertRaises(ValueError, train.__setitem__, 0, 10.1 * pq.ms)
         self.assertRaises(ValueError, train.__setitem__, 1, 5.0 * pq.s)
@@ -1785,19 +1788,19 @@ class TestChanging(unittest.TestCase):
 
     def test__changing_multiple_spiketimes(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         train[:] = [7, 8, 9] * pq.ms
         assert_neo_object_is_compliant(train)
         assert_arrays_equal(train, np.array([7, 8, 9]))
 
     def test__changing_multiple_spiketimes_should_check_time_in_range(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
 
     def test__adding_time_scalar(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         # t_start and t_stop are also changed
         self.assertEqual((train + 10 * pq.ms).t_start, 10.5 * pq.ms)
@@ -1808,7 +1811,7 @@ class TestChanging(unittest.TestCase):
 
     def test__adding_time_array(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         delta = [-2, 2, 4] * pq.ms
         assert_arrays_equal(train + delta, np.array([1, 6, 9]) * pq.ms)
@@ -1825,13 +1828,13 @@ class TestChanging(unittest.TestCase):
 
     def test__adding_two_spike_trains(self):
         data = [3, 4, 5] * pq.ms
-        train1 = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
-        train2 = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train1 = SpikeTrain(data, t_start=0.5, t_stop=10.0)
+        train2 = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         self.assertRaises(TypeError, train1.__add__, train2)
 
     def test__subtracting_time_scalar(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         # t_start and t_stop are also changed
         self.assertEqual((train - 1 * pq.ms).t_start, -0.5 * pq.ms)
@@ -1841,7 +1844,7 @@ class TestChanging(unittest.TestCase):
 
     def test__subtracting_time_array(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         delta = [2, 1, -2] * pq.ms
         self.assertIsInstance(train - delta, SpikeTrain)
@@ -1856,9 +1859,9 @@ class TestChanging(unittest.TestCase):
         self.assertEqual((train - delta).t_stop, 11 * pq.ms)
 
     def test__subtracting_two_spike_trains(self):
-        train1 = SpikeTrain([3, 4, 5] * pq.ms, copy=False, t_start=0.5, t_stop=10.0)
-        train2 = SpikeTrain([4, 5, 6] * pq.ms, copy=False, t_start=0.5, t_stop=10.0)
-        train3 = SpikeTrain([3, 4, 5, 6] * pq.ms, copy=False, t_start=0.5, t_stop=10.0)
+        train1 = SpikeTrain([3, 4, 5] * pq.ms, t_start=0.5, t_stop=10.0)
+        train2 = SpikeTrain([4, 5, 6] * pq.ms, t_start=0.5, t_stop=10.0)
+        train3 = SpikeTrain([3, 4, 5, 6] * pq.ms, t_start=0.5, t_stop=10.0)
         self.assertRaises(TypeError, train1.__sub__, train3)
         self.assertRaises(TypeError, train3.__sub__, train1)
         self.assertIsInstance(train1 - train2, pq.Quantity)
@@ -2064,6 +2067,8 @@ class TestPropertiesMethods(unittest.TestCase):
 
 
 class TestMiscellaneous(unittest.TestCase):
+    # we can't do any of this construction since we lose copy = True
+    """
     def test__different_dtype_for_t_start_and_array(self):
         data = np.array([0, 9.9999999], dtype=np.float64) * pq.s
         data16 = data.astype(np.float16)
@@ -2192,7 +2197,7 @@ class TestMiscellaneous(unittest.TestCase):
         assert_neo_object_is_compliant(train)
         train = SpikeTrain(data32, copy=True, t_start=t_start64, t_stop=t_stop64, dtype=np.float64)
         assert_neo_object_is_compliant(train)
-
+"""
     def test_as_array(self):
         data = np.arange(10.0)
         st = SpikeTrain(data, t_stop=10.0, units="ms")

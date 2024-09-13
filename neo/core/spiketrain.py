@@ -138,7 +138,7 @@ def _new_spiketrain(
     t_stop,
     units=None,
     dtype=None,
-    copy=True,
+    copy=None,
     sampling_rate=1.0 * pq.Hz,
     t_start=0.0 * pq.s,
     waveforms=None,
@@ -158,19 +158,19 @@ def _new_spiketrain(
     if annotations is None:
         annotations = {}
     obj = SpikeTrain(
-        signal,
-        t_stop,
-        units,
-        dtype,
-        copy,
-        sampling_rate,
-        t_start,
-        waveforms,
-        left_sweep,
-        name,
-        file_origin,
-        description,
-        array_annotations,
+        signal=signal,
+        t_stop=t_stop,
+        units=units,
+        dtype=dtype,
+        copy=copy,
+        sampling_rate=sampling_rate,
+        t_start=t_start,
+        waveforms=waveforms,
+        left_sweep=left_sweep,
+        name=name,
+        file_origin=file_origin,
+        description=description,
+        array_annotations=array_annotations,
         **annotations,
     )
     obj.segment = segment
@@ -246,11 +246,9 @@ class SpikeTrain(DataObject):
         Required if `times` is a list or numpy.ndarray`
         Not required if times is a quantities.Quantity
     dtype: numpy dtype | str | None, default: None
-        Overrides the dtype of the times array if given.
-        If None, the dtype of the times is used
-    copy: bool, default: True
-        Whether to copy the times array.
-        Must be True when you request a change of units or dtype.
+        Due to change in `copy` behavior this argument is also deprecated during construction
+    copy: bool, default: None
+        Deprecated in order to support NumPy 2.0 and will be removed.
     sampling_rate: quantity scalar, default: 1.0 pq.Hz
         Number of samples per unit time for the waveforms.
     t_start: quantity scalar | numpy scalar | float
@@ -330,7 +328,7 @@ class SpikeTrain(DataObject):
         t_stop,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         sampling_rate=1.0 * pq.Hz,
         t_start=0.0 * pq.s,
         waveforms=None,
@@ -347,13 +345,17 @@ class SpikeTrain(DataObject):
         This is called whenever a new :class:`SpikeTrain` is created from the
         constructor, but not when slicing.
         """
+        if copy is not None:
+            raise ValueError(
+                "`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0."
+            )
+
         if len(times) != 0 and waveforms is not None and len(times) != waveforms.shape[0]:
             # len(times)!=0 has been used to workaround a bug occurring during neo import
             raise ValueError("the number of waveforms should be equal to the number of spikes")
 
         if dtype is not None and hasattr(times, "dtype") and times.dtype != dtype:
-            if not copy:
-                raise ValueError("cannot change dtype and return view")
+            raise ValueError("cannot change dtype during construction due to change in copy behavior")
 
             # if t_start.dtype or t_stop.dtype != times.dtype != dtype,
             # _check_time_in_range can have problems, so we set the t_start
@@ -420,7 +422,7 @@ class SpikeTrain(DataObject):
         t_stop,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         sampling_rate=1.0 * pq.Hz,
         t_start=0.0 * pq.s,
         waveforms=None,

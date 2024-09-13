@@ -38,7 +38,7 @@ def _new_IrregularlySampledSignal(
     units=None,
     time_units=None,
     dtype=None,
-    copy=True,
+    copy=None,
     name=None,
     file_origin=None,
     description=None,
@@ -93,8 +93,8 @@ class IrregularlySampledSignal(BaseSignal):
     dtype: numpy dtype | string | None, default: None
         Overrides the signal array dtype
         Does not affect the dtype of the times which must be floats
-    copy: bool, default: True
-        Whether copy should be set to True when making the quantity array
+    copy: bool | None, default: None
+        deprecated and no longer used (for NumPy 2.0 support). Will be removed.
     name: str | None, default: None
         An optional label for the dataset
     description: str | None, default: None
@@ -158,7 +158,7 @@ class IrregularlySampledSignal(BaseSignal):
         units=None,
         time_units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         name=None,
         file_origin=None,
         description=None,
@@ -171,6 +171,12 @@ class IrregularlySampledSignal(BaseSignal):
         This is called whenever a new :class:`IrregularlySampledSignal` is
         created from the constructor, but not when slicing.
         """
+
+        if copy is not None:
+            raise ValueError(
+                "`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0."
+            )
+
         signal = cls._rescale(signal, units=units)
         if time_units is None:
             if hasattr(times, "units"):
