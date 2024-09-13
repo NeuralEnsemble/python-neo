@@ -92,14 +92,38 @@ class NicoletRawIO(BaseRawIO):
         '{291E2381-B3B4-44D1-BB77-8CF5C24420D7}' : 'GENERALSAMPLESGUID',
         '{5F11C628-FCCC-4FDD-B429-5EC94CB3AFEB}' : 'FILTERSAMPLESGUID',
         '{728087F8-73E1-44D1-8882-C770976478A2}' : 'DATEXDATAGUID',
-        '{35F356D9-0F1C-4DFE-8286-D3DB3346FD75}' : 'TESTINFOGUID'}
+        '{35F356D9-0F1C-4DFE-8286-D3DB3346FD75}' : 'TESTINFOGUID',
+        }
 
     INFO_PROPS = [
-        'patientID', 'firstName','middleName','lastName',
-        'altID','mothersMaidenName','DOB','DOD','street','sexID','phone',
-        'notes','dominance','siteID','suffix','prefix','degree','apartment',
-        'city','state','country','language','height','weight','race','religion',
-        'maritalStatus']
+        'patientID', 
+        'firstName',
+        'middleName',
+        'lastName',
+        'altID',
+        'mothersMaidenName',
+        'DOB',
+        'DOD',
+        'street',
+        'sexID',
+        'phone',
+        'notes',
+        'dominance',
+        'siteID',
+        'suffix',
+        'prefix',
+        'degree',
+        'apartment',
+        'city',
+        'state',
+        'country',
+        'language',
+        'height',
+        'weight',
+        'race',
+        'religion',
+        'maritalStatus',
+        ]
 
     HC_EVENT = {
         '{A5A95612-A7F8-11CF-831A-0800091B5BDA}' : 'Annotation',
@@ -121,7 +145,8 @@ class NicoletRawIO(BaseRawIO):
         '{BAE4550A-8409-4289-9D8A-0D571A206BEC}' : 'Eating',
         '{1F3A45A4-4D0F-4CC4-A43A-CAD2BC2D71F2}' : 'ECG',
         '{B0BECF64-E669-42B1-AE20-97A8B0BBEE26}' : 'Toilet',
-        '{A5A95611-A7F8-11CF-831A-0800091B5BDA}' : 'Fix Electrode'}
+        '{A5A95611-A7F8-11CF-831A-0800091B5BDA}' : 'Fix Electrode',
+        }
     
     def __init__(self, filepath = ""):
         BaseRawIO.__init__(self)
@@ -149,7 +174,8 @@ class NicoletRawIO(BaseRawIO):
     def _get_tags(self):
         tags_structure = [
             ('tag', 'S80'),
-            ('index', 'uint32')]
+            ('index', 'uint32'),
+            ]
         
         with open(self.filepath, "rb") as fid:
             fid.seek(172)
@@ -197,7 +223,8 @@ class NicoletRawIO(BaseRawIO):
                         'section_idx' : int(var[3*(i)]),
                         'offset' : int(var[3*(i)+1]),
                         'block_l' : int(var[3*(i)+2] % 2**32),
-                        'section_l' : round(var[3*(i)+2]/(2**32))})
+                        'section_l' : round(var[3*(i)+2]/(2**32)),
+                        })
                 next_index_pointer = read_as_list(fid, 
                                                   [('next_index_pointer', 'uint64')])
                 current_index = current_index + (i + 1)
@@ -210,7 +237,8 @@ class NicoletRawIO(BaseRawIO):
                     ('date', 'float64'),
                     ('datefrace', 'float64'),
                     ('internal_offset_start', 'uint64'),
-                    ('packet_size', 'uint64')]
+                    ('packet_size', 'uint64'),
+                    ]
         dynamic_packets = []
         [dynamic_packets_instace] = self._get_index_instances(id_str = 'InfoChangeStream')
         offset = dynamic_packets_instace['offset']
@@ -265,7 +293,8 @@ class NicoletRawIO(BaseRawIO):
             ('guid', 'uint8', 16),
             ('l_section', 'uint64'),
             ('n_values', 'uint64'),
-            ('n_bstr', 'uint64')]
+            ('n_bstr', 'uint64'),
+            ]
         with open(self.filepath, "rb") as fid:
             fid.seek(idx_instance['offset'])
             patient_info = read_as_dict(fid,
@@ -291,7 +320,6 @@ class NicoletRawIO(BaseRawIO):
                 value = ''.join([read_as_list(fid,
                                     [('value', 'S2')]) for _ in range(int(str_setup[i + 1]) + 1)]).strip()
                 patient_info[self.INFO_PROPS[int(id_temp) - 1]] = value
-            pass #TODO: Find out if removing 'pass' makes any difference
         self.patient_info = patient_info
     
     def _get_signal_properties(self):
@@ -307,7 +335,8 @@ class NicoletRawIO(BaseRawIO):
         signal_properties = []
         signal_structure_segment = [
             ('guid', 'uint8', 16),
-            ('name', 'S1', self.ITEMNAMESIZE)]
+            ('name', 'S1', self.ITEMNAMESIZE),
+            ]
         idx_instances = self._get_index_instances('SIGNALINFOGUID')
         for instance in idx_instances:
             with open(self.filepath, "rb") as fid:
@@ -334,9 +363,11 @@ class NicoletRawIO(BaseRawIO):
         channel_properties = []
         channel_structure_structure= [
             [('guid', 'uint8', 16),
-            ('name', 'S1', self.ITEMNAMESIZE)],
+            ('name', 'S1', self.ITEMNAMESIZE),
+            ],
             [('reserved', 'uint8', 16),
-            ('device_id', 'uint8', 16)]
+            ('device_id', 'uint8', 16),
+            ],
             ]
         [idx_instance] = self._get_index_instances('CHANNELGUID')
         with open(self.filepath, "rb") as fid:
@@ -356,7 +387,8 @@ class NicoletRawIO(BaseRawIO):
                     ('sampling_rate', 'float64'),
                     ('on', 'uint32'),
                     ('l_input_id', 'uint32'),
-                    ('l_input_setting_id', 'uint32')]
+                    ('l_input_setting_id', 'uint32'),
+                    ]
                 info = read_as_dict(fid,
                                     channel_properties_structure)
                 fid.seek(128, 1)
@@ -391,7 +423,7 @@ class NicoletRawIO(BaseRawIO):
                 internal_offset = internal_offset + self.TSLABELSIZE;
                 top_range = offset + internal_offset + 8
                 ref_sensor = _transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
-                internal_offset += 64;
+                internal_offset += 64
                 low_cut, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
                 high_cut, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
                 sampling_rate, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
@@ -410,7 +442,8 @@ class NicoletRawIO(BaseRawIO):
                     'resolution' : resolution,
                     'notch' : notch,
                     'mark' : mark,
-                    'eeg_offset' : eeg_offset})
+                    'eeg_offset' : eeg_offset,
+                    })
             ts_packets_properties.append(ts_properties)
         self.ts_packets = ts_packets    
         self.ts_packets_properties = ts_packets_properties
@@ -457,7 +490,8 @@ class NicoletRawIO(BaseRawIO):
                     'resolution' : resolution,
                     'notch' : notch,
                     'mark' : mark,
-                    'eeg_offset' : eeg_offset})
+                    'eeg_offset' : eeg_offset,
+                    })
         self.ts_properties = ts_properties
     
     def _get_segment_start_times(self):
@@ -497,7 +531,8 @@ class NicoletRawIO(BaseRawIO):
             with open(self.filepath, "rb") as fid:
                 pkt_structure = [
                     ('guid', 'uint8', 16),
-                    ('len', 'uint64', 1)]
+                    ('len', 'uint64', 1),
+                    ]
                 fid.seek(offset)
                 pkt = read_as_dict(fid,
                                    pkt_structure)
@@ -507,11 +542,13 @@ class NicoletRawIO(BaseRawIO):
                     event_structure = [
                         [('date_ole', 'float64'),
                          ('date_fraction', 'float64'),
-                         ('duration', 'float64')],
+                         ('duration', 'float64'),
+                         ],
                         [('user', 'S2', 12),
                          ('text_length', 'uint64'),
-                         ('guid', 'uint8', 16)],
-                        [('label', 'S2', 32)]
+                         ('guid', 'uint8', 16),
+                         ],
+                        [('label', 'S2', 32)],
                         ]
                     n_events += 1
                     fid.seek(8, 1)
@@ -562,12 +599,15 @@ class NicoletRawIO(BaseRawIO):
         montage_instances = self._get_index_instances(id_str = 'DERIVATIONGUID')
         with open(self.filepath, "rb") as fid:
             montage_info_structure = [
-                [('name', 'S2', 32)],
+                [('name', 'S2', 32),
+                 ],
                 [('n_derivations', 'uint32'),
-                 ('n_derivations_2', 'uint32')],
+                 ('n_derivations_2', 'uint32'),
+                 ],
                 [('derivation_name', 'S2', 64),
                  ('signal_name_1', 'S2', 32),
-                 ('signal_name_2', 'S2', 32)]
+                 ('signal_name_2', 'S2', 32),
+                 ],
                 ]
             fid.seek(int(montage_instances[0]['offset']) + 40)
             montage_info = read_as_dict(fid,
@@ -585,8 +625,9 @@ class NicoletRawIO(BaseRawIO):
             display_structure = [[
                 ('name', 'S2', 32)],
                 [('n_traces', 'uint32'),
-                 ('n_traces_2', 'uint32')],
-                [('color', 'uint32')]
+                 ('n_traces_2', 'uint32'),
+                 ],
+                [('color', 'uint32')],
                 ]
             fid.seek(int(display_instances[0]['offset']) + 40)
             display = read_as_dict(fid,
@@ -770,7 +811,6 @@ class NicoletRawIO(BaseRawIO):
             all_starts.append(block_starts)
         return all_starts[block_index][seg_index]
     
-
     def _segment_t_stop(self, block_index: int, seg_index: int):
         all_stops = []
         for block_index in range(self.header['nb_block']):
