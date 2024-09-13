@@ -35,6 +35,7 @@ import numpy as np
 
 from .baserawio import (
     BaseRawIO,
+    _signal_buffer_dtype,
     _signal_stream_dtype,
     _signal_channel_dtype,
     _spike_channel_dtype,
@@ -652,8 +653,9 @@ class AlphaOmegaRawIO(BaseRawIO):
         # could be loaded in any order
         self._merge_segments()
 
+        buffer_id = ""
         signal_streams = set(
-            (stream_name, stream_id)
+            (stream_name, stream_id, buffer_id)
             for segment in self._segments
             for stream in segment["streams"]
             for stream_name, _, stream_id in self.STREAM_CHANNELS
@@ -662,7 +664,9 @@ class AlphaOmegaRawIO(BaseRawIO):
         signal_streams = list(signal_streams)
         signal_streams.sort(key=lambda x: x[1])
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
+        buffer_id = ""
         signal_channels = set(
             (
                 channel["name"],
@@ -672,11 +676,12 @@ class AlphaOmegaRawIO(BaseRawIO):
                 "uV",
                 channel["gain"] / channel["bit_resolution"],
                 0,
-                stream,
+                stream_id,
+                buffer_id,
             )
             for segment in self._segments
-            for stream in segment["streams"]
-            for channel_id, channel in segment["streams"][stream].items()
+            for stream_id in segment["streams"]
+            for channel_id, channel in segment["streams"][stream_id].items()
         )
         signal_channels = list(signal_channels)
         signal_channels.sort(key=lambda x: (x[7], x[0]))
@@ -709,6 +714,7 @@ class AlphaOmegaRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [len(self._segments)]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

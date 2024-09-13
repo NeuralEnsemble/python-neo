@@ -14,6 +14,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -66,7 +67,9 @@ class BiocamRawIO(BaseRawIO):
         gain = self._header_dict["gain"]
         offset = self._header_dict["offset"]
 
-        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+        # buffer concept cannot be used in this reader because of too complicated dtype across version
+        signal_buffers = np.array([], dtype=_signal_stream_dtype)
+        signal_streams = np.array([("Signals", "0", "")], dtype=_signal_stream_dtype)
 
         sig_channels = []
         for c, chan in enumerate(self._channels):
@@ -78,7 +81,8 @@ class BiocamRawIO(BaseRawIO):
             gain = gain
             offset = offset
             stream_id = "0"
-            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+            buffer_id = ""
+            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No events
@@ -92,6 +96,7 @@ class BiocamRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = sig_channels
         self.header["spike_channels"] = spike_channels

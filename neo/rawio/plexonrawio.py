@@ -39,6 +39,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -259,9 +260,13 @@ class PlexonRawIO(BaseRawIO):
                 )
             offset = 0.0
             stream_id = "0"  # This is overwritten later
-            sig_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id))
+            buffer_id = ""
+            sig_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+
+        # no buffer here because block are splitted by channel
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         if sig_channels.size == 0:
             signal_streams = np.array([], dtype=_signal_stream_dtype)
@@ -309,7 +314,8 @@ class PlexonRawIO(BaseRawIO):
                 self._sig_sampling_rate[stream_index] = sr
                 self._signal_length[stream_index] = length
 
-                signal_streams.append((stream_name, stream_id))
+                buffer_id = ""
+                signal_streams.append((stream_name, stream_id, buffer_id))
 
             signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
@@ -373,6 +379,7 @@ class PlexonRawIO(BaseRawIO):
         self.header = {
             "nb_block": 1,
             "nb_segment": [1],
+            "signal_buffers": signal_buffers,
             "signal_streams": signal_streams,
             "signal_channels": sig_channels,
             "spike_channels": spike_channels,

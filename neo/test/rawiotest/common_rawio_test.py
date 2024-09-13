@@ -111,6 +111,7 @@ class BaseTestRawIO:
 
             # lanch a series of test compliance
             compliance.header_is_total(reader)
+            compliance.check_signal_stream_buffer_hierachy(reader)
             compliance.count_element(reader)
             compliance.read_analogsignals(reader)
             compliance.read_spike_times(reader)

@@ -20,6 +20,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -53,8 +54,9 @@ class RawMCSRawIO(BaseRawIO):
         self.sampling_rate = info["sampling_rate"]
         self.nb_channel = len(info["channel_names"])
 
-        # one unique stream
-        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+        # one unique stream and buffer
+        signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
+        signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
 
         self._raw_signals = np.memmap(self.filename, dtype=self.dtype, mode="r", offset=info["header_size"]).reshape(
             -1, self.nb_channel
@@ -64,6 +66,7 @@ class RawMCSRawIO(BaseRawIO):
         for c in range(self.nb_channel):
             chan_id = str(c)
             stream_id = "0"
+            buffer_id = "0"
             sig_channels.append(
                 (
                     info["channel_names"][c],
@@ -74,6 +77,7 @@ class RawMCSRawIO(BaseRawIO):
                     info["signal_gain"],
                     info["signal_offset"],
                     stream_id,
+                    buffer_id,
                 )
             )
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -90,6 +94,7 @@ class RawMCSRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = sig_channels
         self.header["spike_channels"] = spike_channels
