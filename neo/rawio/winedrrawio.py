@@ -25,6 +25,7 @@ from .baserawio import (
 class WinEdrRawIO(BaseRawIO):
     extensions = ["EDR", "edr"]
     rawmode = "one-file"
+    has_buffer_description_api = True
 
     def __init__(self, filename=""):
         """
@@ -62,16 +63,19 @@ class WinEdrRawIO(BaseRawIO):
                     val = float(val)
                 header[key] = val
 
-        self._raw_signals = np.memmap(
-            self.filename,
-            dtype="int16",
-            mode="r",
-            shape=(
-                header["NP"] // header["NC"],
-                header["NC"],
-            ),
-            offset=header["NBH"],
-        )
+        # one unique block with one unique segment
+        # one unique buffer splited in several streams
+        buffer_id = "0"
+        self._buffer_descriptions = {0 :{0 :{}}}
+        self._buffer_descriptions[0][0][buffer_id] = {
+            "type" : "binary",
+            "file_path" : str(self.filename),
+            "dtype" : "int16",
+            "order": "C",
+            "file_offset" : int(header["NBH"]),
+            "shape" : (header["NP"] // header["NC"], header["NC"]),
+        }
+
 
         DT = header["DT"]
         if "TU" in header:
@@ -101,12 +105,14 @@ class WinEdrRawIO(BaseRawIO):
         characteristics = signal_channels[_common_sig_characteristics]
         unique_characteristics = np.unique(characteristics)
         signal_streams = []
+        self._stream_buffer_slice = {}
         for i in range(unique_characteristics.size):
             mask = unique_characteristics[i] == characteristics
             signal_channels["stream_id"][mask] = str(i)
             # unique buffer for all streams    
             buffer_id = "0"
             signal_streams.append((f"stream {i}", str(i), buffer_id))
+            self._stream_buffer_slice[stream_id] = np.flatnonzero(mask)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # all stream are in the same unique buffer : memmap
@@ -137,20 +143,12 @@ class WinEdrRawIO(BaseRawIO):
         return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals.shape[0] / self._sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = sig_size / self._sampling_rate
         return t_stop
-
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        stream_id = self.header["signal_streams"][stream_index]["id"]
-        (global_channel_indexes,) = np.nonzero(self.header["signal_channels"]["stream_id"] == stream_id)
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        global_channel_indexes = global_channel_indexes[channel_indexes]
-        raw_signals = self._raw_signals[slice(i_start, i_stop), global_channel_indexes]
-        return raw_signals
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]

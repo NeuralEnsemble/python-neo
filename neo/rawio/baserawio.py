@@ -1371,14 +1371,14 @@ class BaseRawIO:
         descr = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
         return descr
 
-    def _get_analogsignal_buffer_description(self, block_index, seg_index, stream_index):
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         raise (NotImplementedError)
 
     def _get_signal_size_generic(self, block_index, seg_index, stream_index):
         # When has_buffer_description_api=True this used to avoid to write _get_analogsignal_chunk())
 
-        buffer_desc = self._get_analogsignal_buffer_description(block_index, seg_index, stream_index)
-        buffer_desc = self._get_signal_size(block_index, seg_index, stream_index)
+        buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
+        buffer_desc = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
         return buffer_desc['shape'][0]
 
     def _get_analogsignal_chunk_generic(

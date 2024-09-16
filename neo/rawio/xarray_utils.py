@@ -210,8 +210,7 @@ def to_xarray_datatree(rawio_reader):
         block = DataTree(name=f'block{block_index}', parent=tree)
         num_seg = rawio_reader.header['nb_segment'][block_index]
         for seg_index in range(num_seg):
-            segment = DataTree(name=f'segment{block_index}', parent=block)
-
+            segment = DataTree(name=f'segment{seg_index}', parent=block)
             for buffer_id in buffer_ids:
                 ds = to_xarray_dataset(rawio_reader, block_index=block_index, seg_index=seg_index, buffer_id=buffer_id)
                 DataTree(data=ds, name=ds.attrs['name'], parent=segment)
