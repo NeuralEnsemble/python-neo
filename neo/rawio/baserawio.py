@@ -1414,7 +1414,6 @@ class BaseRawIO:
                 self._memmap_analogsignal_streams[block_index][seg_index] = fid
             else:
                 fid = self._memmap_analogsignal_streams[block_index][seg_index]
-
             
             i_start = i_start or 0
             i_stop = i_stop or  buffer_desc['shape'][0]
