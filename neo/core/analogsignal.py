@@ -223,7 +223,7 @@ class AnalogSignal(BaseSignal):
         signal,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         t_start=0 * pq.s,
         sampling_rate=None,
         sampling_period=None,

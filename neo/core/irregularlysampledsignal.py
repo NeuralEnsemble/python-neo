@@ -205,7 +205,7 @@ class IrregularlySampledSignal(BaseSignal):
         units=None,
         time_units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         name=None,
         file_origin=None,
         description=None,
