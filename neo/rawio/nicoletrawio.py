@@ -851,7 +851,7 @@ class NicoletRawIO(BaseRawIO):
         events = [event for event in self.events if event['type'] == str(event_channel_index) and event['seg_index'] == seg_index]
         timestamp = np.array([event['timestamp'] for event in events], dtype="float64")
         durations = np.array([event['duration'] for event in events], dtype="float64")
-        labels = np.array([event['id_str'] for event in events], dtype="U12")    #TODO: Check if using id_str makes sense
+        labels = np.array([event['id_str'] for event in events], dtype="U12")
         if t_start is not None:
             keep = timestamp >= t_start
             timestamp, durations, labels = timestamp[keep], durations[keep], labels[keep]
@@ -933,7 +933,7 @@ def _transform_ts_properties(data, dtype):
         return(_transform_char(cast_list))
     
 def _transform_char(line):
-    if type(line) != list: line = [line] #TODO: Find a better way to do this
+    if type(line) != list: line = [line]
     line = ''.join([chr(item) for item in line if chr(item) != '\x00'])
     return line
 
@@ -955,3 +955,4 @@ if __name__ == '__main__':
     file = NicoletRawIO(r'C:\temp\Patient20_ABLEIT53_t1.e')
     file._parse_header()
     file._get_analogsignal_chunk()
+
