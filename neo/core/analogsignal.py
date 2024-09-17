@@ -262,7 +262,7 @@ class AnalogSignal(BaseSignal):
             np.array(self),
             self.units,
             self.dtype,
-            True,
+            None,
             self.t_start,
             self.sampling_rate,
             self.sampling_period,
