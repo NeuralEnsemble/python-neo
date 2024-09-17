@@ -950,9 +950,3 @@ def _get_relevant_section(lengths_list, to_compare):
     except ValueError:
         segment = len(lengths_list)
     return(segment)
-
-if __name__ == '__main__':
-    file = NicoletRawIO(r'C:\temp\Patient20_ABLEIT53_t1.e')
-    file._parse_header()
-    file._get_analogsignal_chunk()
-
