@@ -249,6 +249,7 @@ class NicoletRawIO(BaseRawIO):
                 guid_offset = offset + (i+1)*48
                 dynamic_packet = read_as_dict(fid,
                                               dynamic_packet_structure)
+                dynamic_packet['date'] = _convert_to_date(dynamic_packet['date'])
                 guid_as_str = _convert_to_guid(dynamic_packet['guid_list'])
                 if guid_as_str in list(self.TAGS_DICT.keys()):
                     id_str = self.TAGS_DICT[guid_as_str]
@@ -369,7 +370,7 @@ class NicoletRawIO(BaseRawIO):
             ('device_id', 'uint8', 16),
             ],
             ]
-        [idx_instance] = self._get_index_instances('CHANNELGUID')
+        idx_instance = self._get_index_instances('CHANNELGUID')[0]
         with open(self.filepath, "rb") as fid:
             fid.seek(idx_instance['offset'])
             channel_structure = read_as_dict(fid, 
