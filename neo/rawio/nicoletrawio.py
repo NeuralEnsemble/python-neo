@@ -917,9 +917,9 @@ def _convert_to_guid(hex_list,
     dec_list = [f'{nr:x}'.upper().rjust(2, '0') for nr in hex_list]
     return('{' + guid_format.format(*dec_list) + '}') 
 
-def _convert_to_date(data_float, origin = '31-12-1899'):
+def _convert_to_date(data_float, origin = '30-12-1899'): #Set Origin to 1 day back to account for something
     return(datetime.strptime(origin, '%d-%m-%Y') 
-            + timedelta(days = int(data_float)))
+            + timedelta(seconds = int(data_float*24*60*60)))
 
 def _typecast(data, dtype_in = np.uint8, dtype_out = np.uint32):
     data = np.array(data, dtype = dtype_in)
