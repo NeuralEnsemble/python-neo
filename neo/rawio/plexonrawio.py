@@ -45,6 +45,7 @@ from .baserawio import (
 
 from neo.core.baseneo import NeoReadWriteError
 
+
 class PlexonRawIO(BaseRawIO):
     extensions = ["plx"]
     rawmode = "one-file"
@@ -232,18 +233,18 @@ class PlexonRawIO(BaseRawIO):
 
         # signals channels
         source_id = []
-        
+
         # Scanning sources and populating signal channels at the same time. Sources have to have
         # same sampling rate and number of samples to belong to one stream.
         signal_channels = []
         channel_num_samples = []
-        
+
         # We will build the stream ids based on the channel prefixes
         # The channel prefixes are the first characters of the channel names which have the following format:
         # WB{number}, FPX{number}, SPKCX{number}, AI{number}, etc
         # We will extract the prefix and use it as stream id
         regex_prefix_pattern = r"^\D+"  # Match any non-digit character at the beginning of the string
-        
+
         if self.progress_bar:
             chan_loop = trange(nb_sig_chan, desc="Parsing signal channels", leave=True)
         else:
@@ -271,7 +272,7 @@ class PlexonRawIO(BaseRawIO):
             offset = 0.0
             channel_prefix = re.match(regex_prefix_pattern, name).group(0)
             stream_id = channel_prefix
-            
+
             signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -312,7 +313,7 @@ class PlexonRawIO(BaseRawIO):
                 self._stream_index_to_stream_id[stream_index] = stream_id
 
                 mask = signal_channels["stream_id"] == stream_id
-                
+
                 signal_num_samples = np.unique(channel_num_samples[mask])
                 if signal_num_samples.size > 1:
                     raise NeoReadWriteError(f"Channels in stream {stream_id} don't have the same number of samples")
@@ -322,7 +323,7 @@ class PlexonRawIO(BaseRawIO):
                 if signal_sampling_frequency.size > 1:
                     raise NeoReadWriteError(f"Channels in stream {stream_id} don't have the same sampling frequency")
                 self._stream_id_sampling_frequency[stream_id] = signal_sampling_frequency[0]
-                
+
         self._global_ssampling_rate = global_header["ADFrequency"]
 
         # Determine number of units per channels
@@ -424,8 +425,6 @@ class PlexonRawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = self._stream_id_samples[stream_id]
-
-
 
         mask = signal_channels["stream_id"] == stream_id
         signal_channels = signal_channels[mask]

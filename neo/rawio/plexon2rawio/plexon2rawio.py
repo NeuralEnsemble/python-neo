@@ -234,12 +234,12 @@ class Plexon2RawIO(BaseRawIO):
 
             # In a PL2 spike channel header, the field "m_NumberOfUnits" denotes the number
             # of units to which spikes detected on that channel have been assigned. It does
-            # not account for unsorted spikes, i.e., spikes that have not been assigned to 
-            # a unit. It is Plexon's convention to assign unsorted spikes to channel_unit_id=0, 
-            # and sorted spikes to channel_unit_id's 1, 2, 3...etc. Therefore, for a given value of 
-            # m_NumberOfUnits, there are m_NumberOfUnits+1 channel_unit_ids to consider - 1 
-            # unsorted channel_unit_id (0) + the m_NumberOfUnits sorted channel_unit_ids. 
-            for channel_unit_id in range(schannel_info.m_NumberOfUnits+1):
+            # not account for unsorted spikes, i.e., spikes that have not been assigned to
+            # a unit. It is Plexon's convention to assign unsorted spikes to channel_unit_id=0,
+            # and sorted spikes to channel_unit_id's 1, 2, 3...etc. Therefore, for a given value of
+            # m_NumberOfUnits, there are m_NumberOfUnits+1 channel_unit_ids to consider - 1
+            # unsorted channel_unit_id (0) + the m_NumberOfUnits sorted channel_unit_ids.
+            for channel_unit_id in range(schannel_info.m_NumberOfUnits + 1):
                 unit_name = f"{schannel_info.m_Name.decode()}.{channel_unit_id}"
                 unit_id = f"unit{schannel_info.m_Channel}.{channel_unit_id}"
                 wf_units = schannel_info.m_Units
