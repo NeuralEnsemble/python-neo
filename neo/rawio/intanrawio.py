@@ -179,6 +179,9 @@ class IntanRawIO(BaseRawIO):
             self._raw_data = np.memmap(self.filename, dtype=memmap_data_dtype, mode="r", offset=header_size)
 
         # for 'one-file-per-signal' we have one memory map / neo stream
+        # based on https://github.com/NeuralEnsemble/python-neo/issues/1556 and the recommendations on the
+        # Intan website the data appears to be ordered column-major ('F') rather than row-major ('C') so
+        # when making our memmaps we should do order='F'
         elif self.file_format == "one-file-per-signal":
             self._raw_data = {}
             for stream_index, (stream_index_key, stream_datatype) in enumerate(memmap_data_dtype.items()):
@@ -188,7 +191,7 @@ class IntanRawIO(BaseRawIO):
                 dtype_size = np.dtype(stream_datatype).itemsize
                 n_samples = size_in_bytes // (dtype_size * num_channels)
                 signal_stream_memmap = np.memmap(
-                    file_path, dtype=stream_datatype, mode="r", shape=(num_channels, n_samples)
+                    file_path, dtype=stream_datatype, mode="r", shape=(num_channels, n_samples), order='F',
                 ).T
                 self._raw_data[stream_index] = signal_stream_memmap
 
