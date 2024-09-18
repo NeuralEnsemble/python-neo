@@ -228,21 +228,10 @@ class MicromedRawIO(BaseRawIO):
         t_stop = sig_size / self._sampling_rate
         return t_stop
 
-    # def _get_signal_size(self, block_index, seg_index, stream_index):
-    #     if stream_index != 0:
-    #         raise ValueError("`stream_index` must be 0")
-    #     return self._raw_signals.shape[0]
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         if stream_index != 0:
             raise ValueError("`stream_index` must be 0")
         return 0.0
-
-    # def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-    #     if channel_indexes is None:
-    #         channel_indexes = slice(channel_indexes)
-    #     raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
-    #     return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
         return 0

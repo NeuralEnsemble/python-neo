@@ -30,10 +30,13 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+from .utils import get_memmap_shape
+
 
 class NeuroScopeRawIO(BaseRawIO):
     extensions = ["xml", "dat", "lfp", "eeg"]
     rawmode = "one-file"
+    has_buffer_description_api = True
 
     def __init__(self, filename, binary_file=None):
         """raw reader for Neuroscope
@@ -106,11 +109,24 @@ class NeuroScopeRawIO(BaseRawIO):
             raise (NotImplementedError)
 
         # Extract signal from the data file
-        self._raw_signals = np.memmap(self.data_file_path, dtype=sig_dtype, mode="r", offset=0).reshape(-1, nb_channel)
+        # one unique stream and buffer
+        shape = get_memmap_shape(self.data_file_path, sig_dtype, num_channels=nb_channel, offset=0)
+        buffer_id = "0"
+        stream_id = "0"
+        self._buffer_descriptions = {0: {0:{}}}
+        self._buffer_descriptions[0][0][buffer_id] = {
+            "type" : "binary",
+            "file_path" : str(self.data_file_path),
+            "dtype" : sig_dtype,
+            "order": "C",
+            "file_offset" : 0,
+            "shape" : shape,
+        }
+        self._stream_buffer_slice = {stream_id : None}
 
         # one unique stream and buffer
-        signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
-        signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
+        signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
+        signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
 
         # signals
         sig_channels = []
@@ -148,24 +164,14 @@ class NeuroScopeRawIO(BaseRawIO):
         return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals.shape[0] / self._sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = sig_size / self._sampling_rate
         return t_stop
-
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        if stream_index != 0:
-            raise ValueError("`stream_index` must be 0")
-        return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         if stream_index != 0:
             raise ValueError("`stream_index` must be 0")
         return 0.0
-
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
-        return raw_signals
 
     def _resolve_xml_and_data_paths(self):
         """
@@ -210,3 +216,6 @@ class NeuroScopeRawIO(BaseRawIO):
 
         self.xml_file_path = xml_file_path
         self.data_file_path = data_file_path
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]

@@ -24,6 +24,8 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+from .utils import get_memmap_shape
+
 
 class OpenEphysBinaryRawIO(BaseRawIO):
     """
@@ -60,6 +62,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
     extensions = ["xml", "oebin", "txt", "dat", "npy"]
     rawmode = "one-dir"
+    has_buffer_description_api = True
 
     def __init__(self, dirname="", load_sync_channel=False, experiment_names=None):
         BaseRawIO.__init__(self)
@@ -160,13 +163,30 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
         # create memmap for signals
+        self._buffer_descriptions = {}
+        self._stream_buffer_slice = {}
         for block_index in range(nb_block):
+            self._buffer_descriptions[block_index] = {}
             for seg_index in range(nb_segment_per_block[block_index]):
+                self._buffer_descriptions[block_index][seg_index] = {}
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(info["channels"])
-                    memmap_sigs = np.memmap(info["raw_filename"], info["dtype"], order="C", mode="r").reshape(
-                        -1, num_channels
-                    )
+                    # memmap_sigs = np.memmap(info["raw_filename"], info["dtype"], order="C", mode="r").reshape(
+                    #     -1, num_channels
+                    # )
+                    stream_id = str(stream_index)
+                    buffer_id = str(stream_index)
+                    shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels,
+                                             offset=0)
+                    self._buffer_descriptions[block_index][seg_index][buffer_id] = {
+                        "type" : "binary",
+                        "file_path" : str(info["raw_filename"]),
+                        "dtype" : info["dtype"],
+                        "order": "C",
+                        "file_offset" : 0,
+                        "shape" : shape,
+                    }
+
                     has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
 
                     # check sync channel validity (only for AP and LF)
@@ -174,7 +194,13 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         raise ValueError(
                             "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
                         )
-                    info["memmap"] = memmap_sigs
+
+                    if has_sync_trace:
+                        self._stream_buffer_slice[stream_id] = slice(None, -1)
+                    else:
+                        self._stream_buffer_slice[stream_id] = None
+
+                    # info["memmap"] = memmap_sigs
 
         # events zone
         # channel map: one channel one stream
@@ -275,7 +301,11 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 # loop over signals
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     t_start = info["t_start"]
-                    dur = info["memmap"].shape[0] / float(info["sample_rate"])
+                    stream_id = str(stream_index)
+                    buffer_id = str(stream_index)
+                    sig_size = self._buffer_descriptions[block_index][seg_index][buffer_id]["shape"][0]
+                    # dur = info["memmap"].shape[0] / float(info["sample_rate"])
+                    dur = sig_size / float(info["sample_rate"])
                     t_stop = t_start + dur
                     if global_t_start is None or global_t_start > t_start:
                         global_t_start = t_start
@@ -373,25 +403,25 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         group_id = group_ids[0]
         return group_id
 
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-        return sigs.shape[0]
+    # def _get_signal_size(self, block_index, seg_index, stream_index):
+    #     sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
+    #     return sigs.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         t_start = self._sig_streams[block_index][seg_index][stream_index]["t_start"]
         return t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-        has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
+    # def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    #     sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
+    #     has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
 
-        if not self.load_sync_channel and has_sync_trace:
-            sigs = sigs[:, :-1]
+    #     if not self.load_sync_channel and has_sync_trace:
+    #         sigs = sigs[:, :-1]
 
-        sigs = sigs[i_start:i_stop, :]
-        if channel_indexes is not None:
-            sigs = sigs[:, channel_indexes]
-        return sigs
+    #     sigs = sigs[i_start:i_stop, :]
+    #     if channel_indexes is not None:
+    #         sigs = sigs[:, channel_indexes]
+    #     return sigs
 
     def _spike_count(self, block_index, seg_index, unit_index):
         pass
@@ -449,6 +479,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         else:
             durations = raw_duration.astype(dtype)
         return durations
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
+
 
 
 _possible_event_stream_names = (
