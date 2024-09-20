@@ -97,25 +97,29 @@ class MicromedRawIO(BaseRawIO):
                 -1, Num_Chan
             )
 
+            print(self._raw_signals.shape)
+
             # "TRONCA" zone define segments
             zname2, pos, length = zones["TRONCA"]
             f.seek(pos)
             max_segments = 100
             info_segments = []
             for i in range(max_segments):
-                seg_time = np.frombuffer(f.read(8), dtype="u8")[0]
-                seg_size = np.frombuffer(f.read(8), dtype="u8")[0]
+                seg_time = np.frombuffer(f.read(4), dtype="u4")[0]
+                seg_size = np.frombuffer(f.read(4), dtype="u4")[0]
+                print(seg_time, seg_size)
 
                 if seg_time == 0:
                     break
                 else:
                     info_segments.append((seg_time, seg_size))
+            print(info_segments)
             
             if len(info_segments) == 0:
                 info_segments = [(0, 0)]
 
-            if len(info_segments) > 1:
-                raise RuntimeError("Neo do not support more than one segment at the moment")
+            # if len(info_segments) > 1:
+            #     raise RuntimeError("Neo do not support more than one segment at the moment")
 
             # Reading Code Info
             zname2, pos, length = zones["ORDER"]
