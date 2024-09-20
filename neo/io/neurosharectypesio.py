@@ -292,7 +292,7 @@ class NeurosharectypesIO(BaseIO):
                     waveforms[dwIndex, :, :] = pData[: nsample * nsource].reshape(nsample, nsource).transpose()
 
                 sptr = SpikeTrain(
-                    times=pq.Quantity(times, units="s",
+                    times=pq.Quantity(times, units="s"),
                     t_stop=times.max(),
                     waveforms=pq.Quantity(waveforms, units=str(pdwSegmentInfo.szUnits)),
                     left_sweep=nsample / 2.0 / float(pdwSegmentInfo.dSampleRate) * pq.s,
