@@ -225,7 +225,7 @@ def normalize_times_array(times, units=None, dtype=None, copy=None):
     # reference dimensionality
     if len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0], pq.UnitTime):
         ValueError(f"Units have dimensions {dim.simplified}, not [time]")
-    return pq.Quantity(times, units=units, dtype=dtype, copy=copy), dim
+    return pq.Quantity(times, units=units, dtype=dtype,), dim
 
 
 class SpikeTrain(DataObject):

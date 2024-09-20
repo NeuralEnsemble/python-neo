@@ -131,31 +131,6 @@ class TestAnalogSignalConstructor(unittest.TestCase):
         data = np.arange(10.0) * pq.mV
         self.assertRaises(ValueError, AnalogSignal, data, sampling_rate=1 * pq.kHz, sampling_period=5 * pq.s)
 
-    # to be removed after testing in CI
-    #def test__create_with_copy_true_should_return_copy(self):
-    #    data = np.arange(10.0) * pq.mV
-    #   rate = 5000 * pq.Hz
-    #    signal = AnalogSignal(data, copy=True, sampling_rate=rate)
-    #    data[3] = 99 * pq.mV
-    #    assert_neo_object_is_compliant(signal)
-    #    self.assertNotEqual(signal[3, 0], 99 * pq.mV)
-
-    #def test__create_with_copy_false_should_return_view(self):
-    #   data = np.arange(10.0) * pq.mV
-    #    rate = 5000 * pq.Hz
-    #    signal = AnalogSignal(data, copy=False, sampling_rate=rate)
-    #    data[3] = 99 * pq.mV
-    #    assert_neo_object_is_compliant(signal)
-    #    self.assertEqual(signal[3, 0], 99 * pq.mV)
-
-    #def test__create2D_with_copy_false_should_return_view(self):
-    #    data = np.arange(10.0) * pq.mV
-    #    data = data.reshape((5, 2))
-    #    rate = 5000 * pq.Hz
-    #    signal = AnalogSignal(data, copy=False, sampling_rate=rate)
-    #    data[3, 0] = 99 * pq.mV
-    #    assert_neo_object_is_compliant(signal)
-    #    self.assertEqual(signal[3, 0], 99 * pq.mV)
 
     def test__create_with_additional_argument(self):
         signal = AnalogSignal(
