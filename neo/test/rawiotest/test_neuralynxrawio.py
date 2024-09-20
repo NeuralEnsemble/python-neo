@@ -369,7 +369,7 @@ class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
 
         hdr = NlxHeader(filename, props_only=True)
 
-        self.assertEqual(len(hdr), 11)
+        self.assertEqual(len(hdr), 11) # 9 properties plus channel_ids and channel_names
         self.assertEqual(hdr['ApplicationName'], 'Pegasus')
         self.assertEqual(hdr['FileType'], 'Event')
 
