@@ -4,6 +4,8 @@ import os
 import re
 from collections import OrderedDict
 
+from neo.rawio.neuralynxrawio.ncssections import AcqType
+
 
 class NlxHeader(OrderedDict):
     """
@@ -345,52 +347,50 @@ class NlxHeader(OrderedDict):
         """
         Determines type of recording in Ncs file with this header.
 
-        RETURN:
-            one of 'PRE4','BML','DIGITALLYNX','DIGITALLYNXSX','CHEETAH64', 'RAWDATAFILE',
-            'CHEETAH560', 'UNKNOWN'
+        RETURN: NcsSections.AcqType
         """
 
         if "NLX_Base_Class_Type" in self:
 
             # older style standard neuralynx acquisition with rounded sampling frequency
             if self["NLX_Base_Class_Type"] == "CscAcqEnt":
-                return "PRE4"
+                return AcqType.PRE4
 
             # BML style with fractional frequency and microsPerSamp
             elif self["NLX_Base_Class_Type"] == "BmlAcq":
-                return "BML"
+                return AcqType.BML
 
             else:
-                return "UNKNOWN"
+                return AcqType.UNKNOWN
 
         elif "HardwareSubSystemType" in self:
 
             # DigitalLynx
             if self["HardwareSubSystemType"] == "DigitalLynx":
-                return "DIGITALLYNX"
+                return AcqType.DIGITALLYNX
 
             # DigitalLynxSX
             elif self["HardwareSubSystemType"] == "DigitalLynxSX":
-                return "DIGITALLYNXSX"
+                return AcqType.DIGITALLYNXSX
 
             # Cheetah64
             elif self["HardwareSubSystemType"] == "Cheetah64":
-                return "CHEETAH64"
+                return AcqType.CHEETAH64
 
             # RawDataFile
             elif self["HardwareSubSystemType"] == "RawDataFile":
-                return "RAWDATAFILE"
+                return AcqType.RAWDATAFILE
 
             else:
-                return "UNKNOWN"
+                return AcqType.UNKNOWN
 
         elif "FileType" in self:
 
             if "FileVersion" in self and self["FileVersion"] in ["3.2", "3.3", "3.4"]:
-                return self["AcquisitionSystem"].split()[1].upper()
+                return AcqType[self["AcquisitionSystem"].split()[1].upper()]
 
             else:
-                return "CHEETAH560"  # only known case of FileType without FileVersion
+                return AcqType.CHEETAH560  # only known case of FileType without FileVersion
 
         else:
-            return "UNKNOWN"
+            return AcqType.UNKNOWN

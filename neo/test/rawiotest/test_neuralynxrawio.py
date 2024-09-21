@@ -5,7 +5,7 @@ import numpy as np
 
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuralynxrawio.nlxheader import NlxHeader
-from neo.rawio.neuralynxrawio.ncssections import NcsSection, NcsSections, NcsSectionsFactory
+from neo.rawio.neuralynxrawio.ncssections import AcqType, NcsSection, NcsSections, NcsSectionsFactory
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 import logging
@@ -182,15 +182,15 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
     entities_to_test = []
 
     ncsTypeTestFiles = [
-        ("neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs", "PRE4"),
-        ("neuralynx/Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs", "DIGITALLYNX"),
-        ("neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v5.5.1/original_data/Tet3a.ncs", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v5.6.3/original_data/TT1.ntt", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs", "DIGITALLYNXSX"),
-        ("neuralynx/Pegasus_v2.1.1/Events_0008.nev", "ATLAS"),
+        ("neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs", AcqType.PRE4),
+        ("neuralynx/Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs", AcqType.DIGITALLYNX),
+        ("neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v5.5.1/original_data/Tet3a.ncs", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v5.6.3/original_data/TT1.ntt", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Pegasus_v2.1.1/Events_0008.nev", AcqType.ATLAS),
     ]
 
     def test_recording_types(self):
@@ -375,12 +375,3 @@ class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-    # test = TestNeuralynxRawIO()
-    # test.test_scan_ncs_files()
-    # test.test_exclude_filenames()
-    # test.test_include_filenames()
-
-    # test = TestNcsSectionsFactory()
-    # test.test_ncsblocks_partial()
-    # test.test_build_given_actual_frequency()
