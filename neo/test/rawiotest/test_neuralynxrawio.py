@@ -1,6 +1,8 @@
 import unittest
 
 import os
+from packaging.version import Version
+
 import numpy as np
 
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
@@ -372,6 +374,12 @@ class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
         self.assertEqual(len(hdr), 11) # 9 properties plus channel_ids and channel_names
         self.assertEqual(hdr['ApplicationName'], 'Pegasus')
         self.assertEqual(hdr['FileType'], 'Event')
+
+    def test_cheetah_v6_4_1dev(self):
+        filename = self.get_local_path("neuralynx/Cheetah_v6.4.1dev/original_data/CSC1_truncated.Ncs")
+        hdr = NlxHeader(filename)
+        self.assertEqual("3.4", hdr['FileVersion'])
+        self.assertEqual(Version("6.4.1.dev0"), hdr['ApplicationVersion'])
 
 if __name__ == "__main__":
     unittest.main()
