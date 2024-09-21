@@ -70,7 +70,6 @@ class NlxHeader(OrderedDict):
         ("NLX_Base_Class_Type", "", None),  # in version 4 and earlier versions of Cheetah
     ]
 
-
     def __init__(self, filename, props_only=False):
         """
         Factory function to build NlxHeader for a given file.
@@ -89,7 +88,7 @@ class NlxHeader(OrderedDict):
 
         self.read_properties(filename, txt_header)
         numChidEntries = self.convert_channel_ids_names(filename)
-        self.setApplicationAndVersion(txt_header)
+        self.setApplicationAndVersion()
         self.setBitToMicroVolt()
         self.setInputRanges(numChidEntries)
 
@@ -148,7 +147,7 @@ class NlxHeader(OrderedDict):
             assert len(self["bit_to_microVolt"]) == len( self["channel_ids"]), \
                 "Number of channel ids does not match bit_to_microVolt conversion factors."
 
-    def setApplicationAndVersion(self, txt_header):
+    def setApplicationAndVersion(self):
         """
         Set "ApplicationName" property and app_version attribute based on existing properties
         """
@@ -164,7 +163,7 @@ class NlxHeader(OrderedDict):
             assert len(match) == 1, "impossible to find application name and version"
             self["ApplicationName"], app_version = match[0]
         # BML Ncs file contain neither property, but 'NLX_Base_Class_Type'
-        elif "NLX_Base_Class_Type" in txt_header:
+        elif "NLX_Base_Class_Type" in self:
             self["ApplicationName"] = "BML"
             app_version = "2.0"
         # Neuraview Ncs file contained neither property nor NLX_Base_Class_Type information
@@ -347,7 +346,8 @@ class NlxHeader(OrderedDict):
         Determines type of recording in Ncs file with this header.
 
         RETURN:
-            one of 'PRE4','BML','DIGITALLYNX','DIGITALLYNXSX','UNKNOWN'
+            one of 'PRE4','BML','DIGITALLYNX','DIGITALLYNXSX','CHEETAH64', 'RAWDATAFILE',
+            'CHEETAH560', 'UNKNOWN'
         """
 
         if "NLX_Base_Class_Type" in self:
