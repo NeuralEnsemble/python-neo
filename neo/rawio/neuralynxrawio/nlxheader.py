@@ -22,7 +22,9 @@ class NlxHeader(OrderedDict):
         else:
             raise Exception("Can not convert %s to bool" % txt)
 
-    # keys that may be present in header which we parse
+    # Keys that may be present in header which we parse. First entry of tuple is what is
+    # present in header, second entry is key which will be used in dictionary, third entry
+    # type the value will be converted to.
     txt_header_keys = [
         ("AcqEntName", "channel_names", None),  # used
         ("FileType", "", None),
@@ -67,6 +69,143 @@ class NlxHeader(OrderedDict):
         ("ReferenceChannel", "", None),
         ("NLX_Base_Class_Type", "", None),  # in version 4 and earlier versions of Cheetah
     ]
+
+
+    def __init__(self, filename, props_only=False):
+        """
+        Factory function to build NlxHeader for a given file.
+
+        :param filename: name of Neuralynx file
+        :param props_only: if true, will not try and read time and date or check start
+        """
+        super(OrderedDict, self).__init__()
+        with open(filename, "rb") as f:
+            txt_header = f.read(NlxHeader.HEADER_SIZE)
+        txt_header = txt_header.strip(b"\x00").decode("latin-1")
+
+        # must start with 8 # characters
+        if not props_only and not txt_header.startswith("########"):
+            ValueError("Neuralynx files must start with 8 # characters.")
+
+        self.read_properties(filename, txt_header)
+        numChidEntries = self.convert_channel_ids_names(filename)
+        self.setApplicationAndVersion(txt_header)
+        self.setBitToMicroVolt()
+        self.setInputRanges(numChidEntries)
+
+        if not props_only:
+            self.readTimeDate(txt_header)
+
+    @staticmethod
+    def build_with_properties_only(filename):
+        """
+        Builds a version of the header without time and date or other validity checking.
+
+        Intended mostly for utilities but may also be useful for some recalcitrant header formats.
+
+        :param filename: name of Neuralynx file.
+        :return: NlxHeader with properties from header text
+        """
+        res = OrderedDict()
+
+    def read_properties(self, filename, txt_header):
+        """
+        Read properties from header and place in OrderedDictionary which this object is.
+        :param filename: name of ncs file, used for extracting channel number
+        :param txt_header: header text
+        """
+        # find keys
+        for k1, k2, type_ in NlxHeader.txt_header_keys:
+            pattern = r"-(?P<name>" + k1 + r")\s+(?P<value>[\S ]*)"
+            matches = re.findall(pattern, txt_header)
+            for match in matches:
+                if k2 == "":
+                    name = match[0]
+                else:
+                    name = k2
+                value = match[1].rstrip(" ")
+                if type_ is not None:
+                    value = type_(value)
+                self[name] = value
+
+    def setInputRanges(self, numChidEntries):
+        if "InputRange" in self:
+            ir_entries = re.findall(r"\w+", self["InputRange"])
+            if len(ir_entries) == 1:
+                self["InputRange"] = [int(ir_entries[0])] * numChidEntries
+            else:
+                self["InputRange"] = [int(e) for e in ir_entries]
+            assert len(self["InputRange"]) == numChidEntries, \
+                "Number of channel ids does not match input range values."
+
+    def setBitToMicroVolt(self):
+        # convert bit_to_microvolt
+        if "bit_to_microVolt" in self:
+            btm_entries = re.findall(r"\S+", self["bit_to_microVolt"])
+            if len(btm_entries) == 1:
+                btm_entries = btm_entries * len(self["channel_ids"])
+            self["bit_to_microVolt"] = [float(e) * 1e6 for e in btm_entries]
+            assert len(self["bit_to_microVolt"]) == len( self["channel_ids"]), \
+                "Number of channel ids does not match bit_to_microVolt conversion factors."
+
+    def setApplicationAndVersion(self, txt_header):
+        """
+        Set "ApplicationName" property and app_version attribute based on existing properties
+        """
+        # older Cheetah versions with CheetahRev property
+        if "CheetahRev" in self:
+            assert "ApplicationName" not in self
+            self["ApplicationName"] = "Cheetah"
+            app_version = self["CheetahRev"]
+        # new file version 3.4 does not contain CheetahRev property, but ApplicationName instead
+        elif "ApplicationName" in self:
+            pattern = r'(\S*) "([\S ]*)"'
+            match = re.findall(pattern, self["ApplicationName"])
+            assert len(match) == 1, "impossible to find application name and version"
+            self["ApplicationName"], app_version = match[0]
+        # BML Ncs file contain neither property, but 'NLX_Base_Class_Type'
+        elif "NLX_Base_Class_Type" in txt_header:
+            self["ApplicationName"] = "BML"
+            app_version = "2.0"
+        # Neuraview Ncs file contained neither property nor NLX_Base_Class_Type information
+        else:
+            self["ApplicationName"] = "Neuraview"
+            app_version = "2"
+
+        if " Development" in app_version:
+            app_version = app_version.replace(" Development", ".dev0")
+
+        self["ApplicationVersion"] = Version(app_version)
+
+    def convert_channel_ids_names(self, filename):
+        """
+        Convert channel ids and channel name properties, if present.
+
+        :return number of channel id entries
+        """
+        # if channel_ids or names not in self then the filename is used for channel name
+        name = os.path.splitext(os.path.basename(filename))[0]
+
+        # convert channel ids
+        if "channel_ids" in self:
+            chid_entries = re.findall(r"\S+", self["channel_ids"])
+            self["channel_ids"] = [int(c) for c in chid_entries]
+        else:
+            self["channel_ids"] = ["unknown"]
+            chid_entries = []
+
+        # convert channel names
+        if "channel_names" in self:
+            name_entries = re.findall(r"\S+", self["channel_names"])
+            if len(name_entries) == 1:
+                self["channel_names"] = name_entries * len(self["channel_ids"])
+            assert len(self["channel_names"]) == len(
+                self["channel_ids"]
+            ), "Number of channel ids does not match channel names."
+        else:
+            self["channel_names"] = ["unknown"] * len(self["channel_ids"])
+
+        return len(chid_entries)
 
     # Filename and datetime may appear in header lines starting with # at
     # beginning of header or in later versions as a property. The exact format
@@ -130,119 +269,6 @@ class NlxHeader(OrderedDict):
             datetimeformat="%Y/%m/%d %H:%M:%S",
         ),
     }
-
-    def __init__(self, filename, props_only=False):
-        """
-        Factory function to build NlxHeader for a given file.
-
-        :param filename: name of Neuralynx file
-        :param props_only: if true, will not try and read time and date or check start
-        """
-        super(OrderedDict, self).__init__()
-        with open(filename, "rb") as f:
-            txt_header = f.read(NlxHeader.HEADER_SIZE)
-        txt_header = txt_header.strip(b"\x00").decode("latin-1")
-
-        # must start with 8 # characters
-        if not props_only and not txt_header.startswith("########"):
-            ValueError("Neuralynx files must start with 8 # characters.")
-
-        self.read_properties(filename, txt_header)
-
-        if not props_only:
-            self.readTimeDate(txt_header)
-
-    @staticmethod
-    def build_with_properties_only(filename):
-        """
-        Builds a version of the header without time and date or other validity checking.
-
-        Intended mostly for utilities but may also be useful for some recalcitrant header formats.
-
-        :param filename: name of Neuralynx file.
-        :return: NlxHeader with properties from header text
-        """
-        res = OrderedDict()
-
-    def read_properties(self, filename, txt_header):
-        """
-        Read properties from header and place in OrderedDictionary which this object is.
-        :param filename: name of ncs file, used for extracting channel number
-        :param txt_header: header text
-        """
-        # find keys
-        for k1, k2, type_ in NlxHeader.txt_header_keys:
-            pattern = r"-(?P<name>" + k1 + r")\s+(?P<value>[\S ]*)"
-            matches = re.findall(pattern, txt_header)
-            for match in matches:
-                if k2 == "":
-                    name = match[0]
-                else:
-                    name = k2
-                value = match[1].rstrip(" ")
-                if type_ is not None:
-                    value = type_(value)
-                self[name] = value
-        # if channel_ids or s not in self then the filename is used
-        name = os.path.splitext(os.path.basename(filename))[0]
-        # convert channel ids
-        if "channel_ids" in self:
-            chid_entries = re.findall(r"\S+", self["channel_ids"])
-            self["channel_ids"] = [int(c) for c in chid_entries]
-        else:
-            self["channel_ids"] = ["unknown"]
-        # convert channel names
-        if "channel_names" in self:
-            name_entries = re.findall(r"\S+", self["channel_names"])
-            if len(name_entries) == 1:
-                self["channel_names"] = name_entries * len(self["channel_ids"])
-            assert len(self["channel_names"]) == len(
-                self["channel_ids"]
-            ), "Number of channel ids does not match channel names."
-        else:
-            self["channel_names"] = ["unknown"] * len(self["channel_ids"])
-        # version and application name
-        # older Cheetah versions with CheetahRev property
-        if "CheetahRev" in self:
-            assert "ApplicationName" not in self
-            self["ApplicationName"] = "Cheetah"
-            app_version = self["CheetahRev"]
-        # new file version 3.4 does not contain CheetahRev property, but ApplicationName instead
-        elif "ApplicationName" in self:
-            pattern = r'(\S*) "([\S ]*)"'
-            match = re.findall(pattern, self["ApplicationName"])
-            assert len(match) == 1, "impossible to find application name and version"
-            self["ApplicationName"], app_version = match[0]
-        # BML Ncs file contain neither property, but 'NLX_Base_Class_Type'
-        elif "NLX_Base_Class_Type" in txt_header:
-            self["ApplicationName"] = "BML"
-            app_version = "2.0"
-        # Neuraview Ncs file contained neither property nor
-        # NLX_Base_Class_Type information
-        else:
-            self["ApplicationName"] = "Neuraview"
-            app_version = "2"
-        if " Development" in app_version:
-            app_version = app_version.replace(" Development", ".dev0")
-        self["ApplicationVersion"] = Version(app_version)
-        # convert bit_to_microvolt
-        if "bit_to_microVolt" in self:
-            btm_entries = re.findall(r"\S+", self["bit_to_microVolt"])
-            if len(btm_entries) == 1:
-                btm_entries = btm_entries * len(self["channel_ids"])
-            self["bit_to_microVolt"] = [float(e) * 1e6 for e in btm_entries]
-            assert len(self["bit_to_microVolt"]) == len(
-                self["channel_ids"]
-            ), "Number of channel ids does not match bit_to_microVolt conversion factors."
-        if "InputRange" in self:
-            ir_entries = re.findall(r"\w+", self["InputRange"])
-            if len(ir_entries) == 1:
-                self["InputRange"] = [int(ir_entries[0])] * len(chid_entries)
-            else:
-                self["InputRange"] = [int(e) for e in ir_entries]
-            assert len(self["InputRange"]) == len(
-                chid_entries
-            ), "Number of channel ids does not match input range values."
 
     def readTimeDate(self, txt_header):
         """
