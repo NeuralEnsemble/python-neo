@@ -360,6 +360,7 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
         ns0.sampFreqUsed = 400
         self.assertNotEqual(ns0, ns1)
 
+
 class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
     def test_no_date_time(self):
         filename = self.get_local_path("neuralynx/NoDateHeader/NoDateHeader.nev")
@@ -369,9 +370,10 @@ class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
 
         hdr = NlxHeader(filename, props_only=True)
 
-        self.assertEqual(len(hdr), 11) # 9 properties plus channel_ids and channel_names
-        self.assertEqual(hdr['ApplicationName'], 'Pegasus')
-        self.assertEqual(hdr['FileType'], 'Event')
+        self.assertEqual(len(hdr), 11)  # 9 properties plus channel_ids and channel_names
+        self.assertEqual(hdr["ApplicationName"], "Pegasus")
+        self.assertEqual(hdr["FileType"], "Event")
+
 
 if __name__ == "__main__":
     unittest.main()
