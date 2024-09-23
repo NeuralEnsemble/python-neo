@@ -230,11 +230,10 @@ class NeuroNexusRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self._get_signal_size(block_index, seg_index, stream_index)
 
+        raw_data = self._raw_data[i_start:i_stop, :]
         if channel_indexes is None:
-            channel_indexes = slice(None)
-
-        raw_data = self._raw_data
-        return raw_data[i_start:i_stop, channel_indexes]
+            raw_data = raw_data[:, channel_indexes]
+        return raw_data
 
     def _segment_t_stop(self, block_index, seg_index):
 
