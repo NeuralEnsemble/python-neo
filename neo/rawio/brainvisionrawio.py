@@ -92,8 +92,22 @@ class BrainVisionRawIO(BaseRawIO):
                 channel_desc = channel_infos[f"Ch{c+1}"]
             except KeyError:
                 channel_desc = channel_infos[f"ch{c + 1}"]
-            name, ref, res, units = channel_desc.split(",")
-            units = units.replace("µ", "u")
+            # split up channel description, handling default values
+            cds = channel_desc.split(",")
+            name = cds[0]
+            if len(cds) >= 2:
+                ref = cds[1]
+            else:
+                ref = ""
+            if len(cds) >= 3:
+                res = cds[2]
+            else:
+                res = "1.0"
+            if len(cds) == 4:
+                units = cds[3]
+            else:
+                units = "u"
+            units = units.replace("µ", "u") # Brainvision spec for specific unicode
             chan_id = str(c + 1)
             if sig_dtype == np.int16 or sig_dtype == np.int32:
                 gain = float(res)
