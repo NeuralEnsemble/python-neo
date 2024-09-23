@@ -218,6 +218,8 @@ class NeuroNexusRawIO(BaseRawIO):
         # Add the minimum annotations
         self._generate_minimal_annotations()
 
+        self.header['rec_datetime'] = self.metadata['status']['start_time']
+
     def _get_signal_size(self, block_index, seg_index, stream_index):
 
         # All streams have the same size so just return the raw_data size
@@ -231,8 +233,11 @@ class NeuroNexusRawIO(BaseRawIO):
             i_stop = self._get_signal_size(block_index, seg_index, stream_index)
 
         raw_data = self._raw_data[i_start:i_stop, :]
+
         if channel_indexes is None:
-            raw_data = raw_data[:, channel_indexes]
+            channel_indexes = slice(None)
+
+        raw_data = raw_data[:, channel_indexes]
         return raw_data
 
     def _segment_t_stop(self, block_index, seg_index):
