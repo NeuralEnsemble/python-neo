@@ -97,26 +97,24 @@ class MicromedRawIO(BaseRawIO):
                 -1, Num_Chan
             )
 
-            print(self._raw_signals.shape)
-
             # "TRONCA" zone define segments
             zname2, pos, length = zones["TRONCA"]
             f.seek(pos)
             max_segments = 100
-            info_segments = []
+            self.info_segments = []
             for i in range(max_segments):
-                seg_time = np.frombuffer(f.read(4), dtype="u4")[0]
-                seg_size = np.frombuffer(f.read(4), dtype="u4")[0]
-                print(seg_time, seg_size)
-
-                if seg_time == 0:
+                seg_start = int(np.frombuffer(f.read(4), dtype="u4")[0])
+                trace_offset = int(np.frombuffer(f.read(4), dtype="u4")[0])
+                if seg_start == 0 and trace_offset == 0:
                     break
                 else:
-                    info_segments.append((seg_time, seg_size))
-            print(info_segments)
+                    self.info_segments.append((seg_start, trace_offset))
             
-            if len(info_segments) == 0:
-                info_segments = [(0, 0)]
+            if len(self.info_segments) == 0:
+                # one unique segment = general case
+                self.info_segments.append((0, 0))
+
+
 
             # if len(info_segments) > 1:
             #     raise RuntimeError("Neo do not support more than one segment at the moment")
@@ -159,9 +157,18 @@ class MicromedRawIO(BaseRawIO):
             self._sampling_rate = float(np.unique(signal_channels["sampling_rate"])[0])
 
             # TODO change this when multi segment handling
-            self._global_t_start = info_segments[0][0] / self._sampling_rate
+            seg_limits = [trace_offset for seg_start, trace_offset in self.info_segments] + [self._raw_signals.shape[0]]
+            nb_segment = len(self.info_segments)
+            self._t_starts = []
+            self._seg_raw_signals = []
+            for seg_index in range(nb_segment):
+                seg_start, trace_offset = self.info_segments[seg_index]
+                self._t_starts.append(seg_start / self._sampling_rate)
 
-            
+                start = seg_limits[seg_index]
+                stop = seg_limits[seg_index + 1]
+                self._seg_raw_signals.append(self._raw_signals[start:stop])
+
 
             # Event channels
             event_channels = []
@@ -199,7 +206,7 @@ class MicromedRawIO(BaseRawIO):
             # fille into header dict
             self.header = {}
             self.header["nb_block"] = 1
-            self.header["nb_segment"] = [1]
+            self.header["nb_segment"] = [nb_segment]
             self.header["signal_streams"] = signal_streams
             self.header["signal_channels"] = signal_channels
             self.header["spike_channels"] = spike_channels
@@ -223,26 +230,24 @@ class MicromedRawIO(BaseRawIO):
         return self.filename
 
     def _segment_t_start(self, block_index, seg_index):
-        # return 0.0
-        return self._global_t_start
+        return self._t_starts[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals.shape[0] / self._sampling_rate
-        return t_stop + self.segment_t_start(block_index, seg_index)
+        duration = self._seg_raw_signals[seg_index].shape[0] / self._sampling_rate
+        return duration + self.segment_t_start(block_index, seg_index)
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
         assert stream_index == 0
-        return self._raw_signals.shape[0]
+        return self._seg_raw_signals[seg_index].shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         assert stream_index == 0
-        # return 0.0
-        return self._global_t_start
+        return self._t_starts[seg_index]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(channel_indexes)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
+        raw_signals = self._seg_raw_signals[seg_index][slice(i_start, i_stop), :]
+        if channel_indexes is not None:
+            raw_signals = raw_signals[:, channel_indexes]
         return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
@@ -280,7 +285,7 @@ class MicromedRawIO(BaseRawIO):
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
-        event_times += self._global_t_start
+        # event_times += self._global_t_start
         return event_times 
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
