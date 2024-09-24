@@ -11,6 +11,12 @@ class NlxHeader(OrderedDict):
     """
     Representation of basic information in all 16 kbytes Neuralynx file headers,
     including dates opened and closed if given.
+
+    The OrderedDict contains entries for each property given in the header with '-' in front
+    of the key value as well as an 'ApplicationName', 'ApplicationVersion', 'recording_opened'
+    and 'recording_closed' entries. The 'InputRange', 'channel_ids', 'channel_names' and
+    'bit_to_microvolt' properties are set to lists of entries for each channel which may be
+    in the file.  
     """
 
     HEADER_SIZE = 2**14  # Neuralynx files have a txt header of 16kB
@@ -93,6 +99,7 @@ class NlxHeader(OrderedDict):
         self.setApplicationAndVersion()
         self.setBitToMicroVolt()
         self.setInputRanges(numChidEntries)
+        # :TODO: needs to also handle filename property
 
         if not props_only:
             self.readTimeDate(txt_header)
