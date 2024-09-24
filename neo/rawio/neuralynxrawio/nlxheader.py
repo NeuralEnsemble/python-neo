@@ -16,7 +16,7 @@ class NlxHeader(OrderedDict):
     of the key value as well as an 'ApplicationName', 'ApplicationVersion', 'recording_opened'
     and 'recording_closed' entries. The 'InputRange', 'channel_ids', 'channel_names' and
     'bit_to_microvolt' properties are set to lists of entries for each channel which may be
-    in the file.  
+    in the file.
     """
 
     HEADER_SIZE = 2**14  # Neuralynx files have a txt header of 16kB
@@ -226,11 +226,7 @@ class NlxHeader(OrderedDict):
         # ## File Name F:\2000-01-01_18-28-39\RMH3.ncs
         # ## Time Opened (m/d/y): 1/1/2000  (h:m:s.ms) 18:28:39.821
         # ## Time Closed (m/d/y): 1/1/2000  (h:m:s.ms) 9:58:41.322
-        "bv5": dict(
-            datetime1_regex=r"## Time Opened: \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
-            filename_regex=r"## File Name: (?P<filename>\S+)",
-            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
-        ),
+
         # Cheetah version 4.0.2 - example
         # ######## Neuralynx Data File Header
         # ## File Name: D:\Cheetah_Data\2003-10-4_10-2-58\CSC14.Ncs
@@ -256,11 +252,7 @@ class NlxHeader(OrderedDict):
         # Cheetah version 5.6.0 - example
         # ## File Name: F:\processing\sum-big-board\252-1375\recording-20180107\2018-01-07_15-14-54\04. tmaze1-no-light-start To tmaze1-light-stop\VT1_fixed.nvt
         # ## Time Opened: (m/d/y): 2/5/2018 At Time: 18:5:12.654
-        "v5.6.0": dict(
-            datetime1_regex=r"## Time Opened: \(m/d/y\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
-            filename_regex=r"## File Name: (?P<filename>\S+)",
-            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
-        ),
+
         # Cheetah version 5.6.3 - example
         # ######## Neuralynx Data File Header
         # ## File Name C:\CheetahData\2016-11-28_21-50-00\CSC1.ncs
@@ -320,6 +312,11 @@ class NlxHeader(OrderedDict):
             datetimeformat=r"%Y/%m/%d %H:%M:%S",
             datetime2format=r"%Y/%m/%d %H:%M:%S.%f",
         ),
+        # general version for in date and time in ## header lines
+        "inHeader": dict(
+            datetime1_regex=r"## Time Opened: \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
+            datetimeformat="%m/%d/%y %H:%M:%S.%f",
+        )
     }
 
     def readTimeDate(self, txt_header):
@@ -335,17 +332,17 @@ class NlxHeader(OrderedDict):
             if av <= Version("2"):  # version 1 uses same as older versions
                 hpd = NlxHeader.header_pattern_dicts["bv5.6.4"]
             elif av < Version("5"):
-                hpd = NlxHeader.header_pattern_dicts["bv5"]
+                hpd = NlxHeader.header_pattern_dicts["inHeader"]
             elif av <= Version("5.4.0"):
                 hpd = NlxHeader.header_pattern_dicts["v5.4.0"]
             elif av == Version("5.6.0"):
-                hpd = NlxHeader.header_pattern_dicts["v5.6.0"]
+                hpd = NlxHeader.header_pattern_dicts["inHeader"]
             elif av <= Version("5.6.4"):
                 hpd = NlxHeader.header_pattern_dicts["bv5.6.4"]
             else:
                 hpd = NlxHeader.header_pattern_dicts["inProps"]
         elif an == "BML":
-            hpd = NlxHeader.header_pattern_dicts["bml"]
+            hpd = NlxHeader.header_pattern_dicts["inHeader"]
             av = Version("2")
         elif an == "Neuraview":
             hpd = NlxHeader.header_pattern_dicts["neuraview2"]
