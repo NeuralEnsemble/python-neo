@@ -97,18 +97,6 @@ class NlxHeader(OrderedDict):
         if not props_only:
             self.readTimeDate(txt_header)
 
-    @staticmethod
-    def build_with_properties_only(filename):
-        """
-        Builds a version of the header without time and date or other validity checking.
-
-        Intended mostly for utilities but may also be useful for some recalcitrant header formats.
-
-        :param filename: name of Neuralynx file.
-        :return: NlxHeader with properties from header text
-        """
-        res = OrderedDict()
-
     def read_properties(self, filename, txt_header):
         """
         Read properties from header and place in OrderedDictionary which this object is.
