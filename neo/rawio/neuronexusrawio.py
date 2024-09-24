@@ -231,7 +231,7 @@ class NeuroNexusRawIO(BaseRawIO):
         hour = int(time_info[0][-2:])
         minute = int(time_info[1])
         second = int(float(time_info[2]))
-        microsecond = 1000 * 1000 * (float(time_info[2]) - second) # second -> micro is 1000 * 1000
+        microsecond = int(1000 * 1000 * (float(time_info[2]) - second))# second -> micro is 1000 * 1000
 
         rec_datetime = datetime.datetime(year, month, day, hour, minute, second, microsecond)
         bl_annotations = self.raw_annotations["blocks"][0]
