@@ -36,6 +36,7 @@ Zach McKenzie
 from __future__ import annotations
 from pathlib import Path
 import json
+import datetime
 
 import numpy as np
 
@@ -218,7 +219,25 @@ class NeuroNexusRawIO(BaseRawIO):
         # Add the minimum annotations
         self._generate_minimal_annotations()
 
-        self.header['rec_datetime'] = self.metadata['status']['start_time']
+        # date comes out as:
+        # year-month-daydayofweektime all as a string so we need to prep it for
+        # entering into datetime
+        # example: '2024-07-01T13:04:49.4972245-04:00'
+        stringified_date_list = self.metadata['status']['start_time'].split('-')
+        year = int(stringified_date_list[0])
+        month = int(stringified_date_list[1])
+        day = int(stringified_date_list[2][:2]) # day should be first two digits of the third item in list
+        time_info = stringified_date_list[2].split(':')
+        hour = int(time_info[0][-2:])
+        minute = int(time_info[1])
+        second = int(time_info[2])
+        microsecond = 1000 * 1000 * (float(time_info[2]) - second) # second -> micro is 1000 * 1000
+
+        rec_datetime = datetime.datetime(year, month, day, hour, minute, second, microsecond)
+        bl_annotations = self.raw_annotations["blocks"][0]
+        seg_annotations = bl_annotations["segments"][0]
+        for d in (bl_annotations, seg_annotations):
+            d["rec_datetime"] = rec_datetime
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
 
