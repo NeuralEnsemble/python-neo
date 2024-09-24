@@ -174,11 +174,11 @@ class TestNeuralynxRawIO(
         self.assertEqual(len(rawio.header["event_channels"]), 0)
 
 
-class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
+class TestNcsRecordingType(BaseTestRawIO, unittest.TestCase):
     """
     Test of decoding of NlxHeader for type of recording.
     """
-
+    rawioclass = NeuralynxRawIO
     entities_to_test = []
 
     ncsTypeTestFiles = [
@@ -202,11 +202,11 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
             self.assertEqual(hdr.type_of_recording(), typeTest[1])
 
 
-class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
+class TestNcsSectionsFactory(BaseTestRawIO, unittest.TestCase):
     """
     Test building NcsBlocks for files of different revisions.
     """
-
+    rawioclass = NeuralynxRawIO
     entities_to_test = []
 
     def test_ncsblocks_partial(self):
@@ -323,11 +323,11 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertTrue(NcsSectionsFactory._verifySectionsStructure(data1, nb1))
 
 
-class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
+class TestNcsSections(BaseTestRawIO, unittest.TestCase):
     """
     Test building NcsBlocks for files of different revisions.
     """
-
+    rawioclass = NeuralynxRawIO
     entities_to_test = []
 
     def test_equality(self):
@@ -360,7 +360,9 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
         ns0.sampFreqUsed = 400
         self.assertNotEqual(ns0, ns1)
 
-class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
+class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
+    rawioclass = NeuralynxRawIO
+
     def test_no_date_time(self):
         filename = self.get_local_path("neuralynx/NoDateHeader/NoDateHeader.nev")
 
