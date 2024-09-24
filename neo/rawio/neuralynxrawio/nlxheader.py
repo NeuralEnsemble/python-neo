@@ -300,25 +300,18 @@ class NlxHeader(OrderedDict):
             filename_regex=r"## File Name: (?P<filename>\S+)",
             datetimeformat="%m/%d/%Y %H:%M:%S",
         ),
-        # pegasus version 2.1.1 - example
+        # pegasus version 2.1.1 and Cheetah beyond version 5.6.4 - example
         # ######## Neuralynx Data File Header
         # and then properties
         # -OriginalFileName D:\Pegasus Data\Dr_NM\1902\2019-06-28_17-36-50\Events_0008.nev
         # -TimeCreated 2019/06/28 17:36:50
         # -TimeClosed 2019/06/28 17:45:48
-        "peg": dict(
+        "inProps": dict(
             datetime1_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
             datetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
             filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
             datetimeformat=r"%Y/%m/%d %H:%M:%S",
             datetime2format=r"%Y/%m/%d %H:%M:%S.%f",
-        ),
-        # Cheetah after v 5.6.4 and default for others such as Pegasus
-        "def": dict(
-            datetime1_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
-            datetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
-            filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
-            datetimeformat="%Y/%m/%d %H:%M:%S",
         ),
     }
 
@@ -343,7 +336,7 @@ class NlxHeader(OrderedDict):
             elif av <= Version("5.6.4"):
                 hpd = NlxHeader.header_pattern_dicts["bv5.6.4"]
             else:
-                hpd = NlxHeader.header_pattern_dicts["def"]
+                hpd = NlxHeader.header_pattern_dicts["inProps"]
         elif an == "BML":
             hpd = NlxHeader.header_pattern_dicts["bml"]
             av = Version("2")
@@ -351,12 +344,13 @@ class NlxHeader(OrderedDict):
             hpd = NlxHeader.header_pattern_dicts["neuraview2"]
             av = Version("2")
         elif an == "Pegasus":
-            hpd = NlxHeader.header_pattern_dicts["peg"]
+            hpd = NlxHeader.header_pattern_dicts["inProps"]
             av = Version("2")
         else:
             an = "Unknown"
             av = "NA"
-            hpd = NlxHeader.header_pattern_dicts["def"]
+            hpd = NlxHeader.header_pattern_dicts["inProps"]
+
         # opening time
         sr = re.search(hpd["datetime1_regex"], txt_header)
         if not sr:
