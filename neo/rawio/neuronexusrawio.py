@@ -230,7 +230,7 @@ class NeuroNexusRawIO(BaseRawIO):
         time_info = stringified_date_list[2].split(':')
         hour = int(time_info[0][-2:])
         minute = int(time_info[1])
-        second = int(time_info[2])
+        second = int(float(time_info[2]))
         microsecond = 1000 * 1000 * (float(time_info[2]) - second) # second -> micro is 1000 * 1000
 
         rec_datetime = datetime.datetime(year, month, day, hour, minute, second, microsecond)
