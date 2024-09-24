@@ -206,7 +206,7 @@ class NlxHeader(OrderedDict):
     # Filename and datetime may appear in header lines starting with # at
     # beginning of header or in later versions as a property. The exact format
     # used depends on the application name and its version as well as the
-    # -FileVersion property.
+    # -FileVersion property. Examples of each known case are shown below in comments.
     #
     # There are 4 styles understood by this code and the patterns used for parsing
     # the items within each are stored in a dictionary. Each dictionary is then
@@ -277,8 +277,10 @@ class NlxHeader(OrderedDict):
         # ## Date Opened: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
         # ## Date Closed: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
         "neuraview2": dict(
-            datetime1_regex=r"## (Time|Date) Opened: \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
-            datetime2_regex=r"## (Time|Date) Closed: \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
+            datetime1_regex=r"## (Time|Date) Opened:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" \
+                             r" At Time: (?P<time>\S+)",
+            datetime2_regex=r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" \
+                             r" At Time: (?P<time>\S+)",
             datetimeformat="%m/%d/%Y %H:%M:%S",
         ),
         # pegasus version 2.1.1 and Cheetah beyond version 5.6.4 - example
@@ -300,8 +302,10 @@ class NlxHeader(OrderedDict):
         ),
         # version with time open and closed in ## header lines
         "openClosedInHeader": dict(
-           datetime1_regex=r"## (Time|Date) Opened \(m/d/y\): (?P<date>\S+)" r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
-           datetime2_regex=r"## (Time|Date) Closed \(m/d/y\): (?P<date>\S+)" r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
+           datetime1_regex=r"## (Time|Date) Opened:* \(m/d/y\): (?P<date>\S+)" \
+                            r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
+           datetime2_regex=r"## (Time|Date) Closed:* \(m/d/y\): (?P<date>\S+)" \
+                            r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
         )
     }
@@ -347,6 +351,9 @@ class NlxHeader(OrderedDict):
             hpd = NlxHeader.header_pattern_dicts["inProps"]
 
         # opening time
+        # :TODO: Processing for this and close time should be changed to not depend on storing
+        # in a particular formatted string by header type, but rather always should be
+        # formatted in one standard way. 
         sr = re.search(hpd["datetime1_regex"], txt_header)
         if not sr:
             raise IOError(
