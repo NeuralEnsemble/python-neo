@@ -233,12 +233,7 @@ class NlxHeader(OrderedDict):
         # ## File Name C:\CheetahData\2000-01-01_00-00-00\CSC5.ncs
         # ## Time Opened (m/d/y): 1/01/2001  At Time: 0:00:00.000
         # ## Time Closed (m/d/y): 1/01/2001  At Time: 00:00:00.000
-        "v5.4.0": dict(
-            datetime1_regex=r"## Time Opened \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
-            datetime2_regex=r"## Time Closed \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
-            filename_regex=r"## File Name: (?P<filename>\S+)",
-            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
-        ),
+
         # Cheetah version 5.5.1 - example
         # ######## Neuralynx Data File Header
         # ## File Name C:\CheetahData\2013-11-29_17-05-05\Tet3a.ncs
@@ -284,7 +279,6 @@ class NlxHeader(OrderedDict):
         "neuraview2": dict(
             datetime1_regex=r"## Date Opened: \(mm/dd/yyy\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
             datetime2_regex=r"## Date Closed: \(mm/dd/yyy\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
-            filename_regex=r"## File Name: (?P<filename>\S+)",
             datetimeformat="%m/%d/%Y %H:%M:%S",
         ),
         # pegasus version 2.1.1 and Cheetah beyond version 5.6.4 - example
@@ -296,7 +290,6 @@ class NlxHeader(OrderedDict):
         "inProps": dict(
             datetime1_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
             datetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
-            filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
             datetimeformat=r"%Y/%m/%d %H:%M:%S",
             datetime2format=r"%Y/%m/%d %H:%M:%S.%f",
         ),
@@ -306,14 +299,17 @@ class NlxHeader(OrderedDict):
             datetimeformat="%m/%d/%y %H:%M:%S.%f",
         ),
         # version with time open and closed in ## header lines
-       "openClosedInHeader": dict(
-           datetime1_regex=r"## Time Opened \(m/d/y\): (?P<date>\S+)" r"  \(h:m:s\.ms\) (?P<time>\S+)",
-           datetime2_regex=r"## Time Closed \(m/d/y\): (?P<date>\S+)" r"  \(h:m:s\.ms\) (?P<time>\S+)",
-           filename_regex=r"## File Name (?P<filename>\S+)",
+        "openClosedInHeader": dict(
+           datetime1_regex=r"## Time Opened \(m/d/y\): (?P<date>\S+)" r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
+           datetime2_regex=r"## Time Closed \(m/d/y\): (?P<date>\S+)" r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
-       )
+        )
     }
 
+    # regular expressions to match filename
+    filename_regex = [r"## File Name (?P<filename>\S+)",
+                       r'-OriginalFileName "?(?P<filename>\S+)"?']
+    
     def readTimeDate(self, txt_header):
         """
         Read time and date from text of header appropriate for app name and version
@@ -329,7 +325,7 @@ class NlxHeader(OrderedDict):
             elif av < Version("5"):
                 hpd = NlxHeader.header_pattern_dicts["inHeader"]
             elif av <= Version("5.4.0"):
-                hpd = NlxHeader.header_pattern_dicts["v5.4.0"]
+                hpd = NlxHeader.header_pattern_dicts["openClosedInHeader"]
             elif av == Version("5.6.0"):
                 hpd = NlxHeader.header_pattern_dicts["inHeader"]
             elif av <= Version("5.6.4"):
