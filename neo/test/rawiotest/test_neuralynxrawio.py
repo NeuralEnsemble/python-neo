@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 import os
@@ -374,6 +375,13 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
         self.assertEqual(len(hdr), 11) # 9 properties plus channel_ids and channel_names
         self.assertEqual(hdr['ApplicationName'], 'Pegasus')
         self.assertEqual(hdr['FileType'], 'Event')
+
+    def test_neuraview2(self):
+        filename = self.get_local_path("neuralynx/Neuraview_v2/original_data/NeuraviewEventMarkers-sample.nev")
+        hdr = NlxHeader(filename)
+
+        self.assertEqual(datetime.datetime(2015,12,14, 15,58,32), hdr['recording_opened'])
+        self.assertEqual(datetime.datetime(2015,12,14, 15,58,32), hdr['recording_closed'])
 
 if __name__ == "__main__":
     unittest.main()

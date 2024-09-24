@@ -277,8 +277,8 @@ class NlxHeader(OrderedDict):
         # ## Date Opened: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
         # ## Date Closed: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
         "neuraview2": dict(
-            datetime1_regex=r"## Date Opened: \(mm/dd/yyy\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
-            datetime2_regex=r"## Date Closed: \(mm/dd/yyy\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
+            datetime1_regex=r"## (Time|Date) Opened: \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
+            datetime2_regex=r"## (Time|Date) Closed: \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" r" At Time: (?P<time>\S+)",
             datetimeformat="%m/%d/%Y %H:%M:%S",
         ),
         # pegasus version 2.1.1 and Cheetah beyond version 5.6.4 - example
@@ -300,8 +300,8 @@ class NlxHeader(OrderedDict):
         ),
         # version with time open and closed in ## header lines
         "openClosedInHeader": dict(
-           datetime1_regex=r"## Time Opened \(m/d/y\): (?P<date>\S+)" r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
-           datetime2_regex=r"## Time Closed \(m/d/y\): (?P<date>\S+)" r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
+           datetime1_regex=r"## (Time|Date) Opened \(m/d/y\): (?P<date>\S+)" r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
+           datetime2_regex=r"## (Time|Date) Closed \(m/d/y\): (?P<date>\S+)" r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
            datetimeformat="%m/%d/%Y %H:%M:%S.%f",
         )
     }
