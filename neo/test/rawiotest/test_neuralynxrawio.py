@@ -385,22 +385,21 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
         self.assertEqual(datetime.datetime(2015,12,14, 15,58,32), hdr['recording_opened'])
         self.assertEqual(datetime.datetime(2015,12,14, 15,58,32), hdr['recording_closed'])
 
+    # left in for possible future header tests
     def get_text_header(self, filename):
         with open(filename, "rb") as f:
             txt_header = f.read(NlxHeader.HEADER_SIZE)
         return txt_header.strip(b"\x00").decode("latin-1")
 
-    def check_dateutil_parse(self, hdrTxt, hdrPatternName, openDate, closeDate):
-        hpd = NlxHeader.header_pattern_dicts[hdrPatternName]
-        mtch = re.search(hpd["openDatetime1_regex"], hdrTxt)
-        if mtch is None: mtch = re.search(hpd["openDatetime2_regex"], hdrTxt)
+    # left in for possible future header tests
+    def check_dateutil_parse(self, hdrTxt, openPat, closePat, openDate, closeDate):
+        mtch = openPat.search(hdrTxt)
         self.assertIsNotNone(mtch)
         dt = mtch.groupdict()
         date = dateutil.parser.parse(f"{dt['date']} {dt['time']}")
         self.assertEqual(openDate, date)
-        if closeDate is not None:
-            mtch = re.search(hpd["closeDatetime1_regex"], hdrTxt)
-            if mtch is None: mtch = re.search(hpd["closeDatetime2_regex"], hdrTxt)
+        if closePat is not None:
+            mtch = closePat.search(hdrTxt)
             self.assertIsNotNone(mtch)
             dt = mtch.groupdict()
             date = dateutil.parser.parse(f"{dt['date']} {dt['time']}")
@@ -411,7 +410,7 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
         # neuraview2
         filename = self.get_local_path("neuralynx/Neuraview_v2/original_data/NeuraviewEventMarkers-sample.nev")
         txt_header = self.get_text_header(filename)
-        self.check_dateutil_parse(txt_header, 'combined',
+        self.check_dateutil_parse(txt_header, NlxHeader.openDatetime1_pat, NlxHeader.closeDatetime1_pat,
                                   datetime.datetime(2015,12,14, 15,58,32),
                                   datetime.datetime(2015,12,14, 15,58,32))
         hdr = NlxHeader(filename)
@@ -423,7 +422,7 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
         # Cheetah 5.7.4 'inProps'
         filename = self.get_local_path("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs")
         txt_header = self.get_text_header(filename)
-        self.check_dateutil_parse(txt_header, 'combined',
+        self.check_dateutil_parse(txt_header, NlxHeader.openDatetime2_pat, NlxHeader.closeDatetime2_pat,
                                   datetime.datetime(2017,2,16, 17,56,4),
                                   datetime.datetime(2017,2,16, 18,1,18))
         hdr = NlxHeader(filename)
@@ -435,7 +434,7 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
         # Cheetah 4.0.2
         filename = self.get_local_path("neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs")
         txt_header = self.get_text_header(filename)
-        self.check_dateutil_parse(txt_header, 'combined',
+        self.check_dateutil_parse(txt_header, NlxHeader.openDatetime1_pat, None,
                                   datetime.datetime(2003,10,4, 10,3,0, 578000),
                                   None)
         hdr = NlxHeader(filename)
@@ -446,7 +445,7 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
         # Cheetah 5.4.0 'openClosedInHeader'
         filename = self.get_local_path("neuralynx/Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs")
         txt_header = self.get_text_header(filename)
-        self.check_dateutil_parse(txt_header, 'combined',
+        self.check_dateutil_parse(txt_header, NlxHeader.openDatetime1_pat, NlxHeader.closeDatetime1_pat,
                                   datetime.datetime(2001,1,1, 0,0,0, 0),
                                   datetime.datetime(2001,1,1, 0,0,0, 0))
         hdr = NlxHeader(filename)

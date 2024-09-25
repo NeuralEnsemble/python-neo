@@ -79,6 +79,96 @@ class NlxHeader(OrderedDict):
         ("NLX_Base_Class_Type", "", None),  # in version 4 and earlier versions of Cheetah
     ]
 
+    # Filename and datetime may appear in header lines starting with # at
+    # beginning of header or in later versions as a property. The exact format
+    # used depends on the application name and its version as well as the
+    # -FileVersion property. Examples of each known case are shown below in comments.
+    #
+    # There are now separate patterns for the in header line and in properties cases which cover
+    # the known variations in each case. They are compiled here once for efficiency.
+    openDatetime1_pat = re.compile(r"## (Time|Date) Opened:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)"\
+                                      r"\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)")
+    openDatetime2_pat = re.compile(r"-TimeCreated (?P<date>\S+) (?P<time>\S+)")
+    closeDatetime1_pat = re.compile(r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): " \
+                                        r"(?P<date>\S+)\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)")
+    closeDatetime2_pat = re.compile(r"-TimeClosed (?P<date>\S+) (?P<time>\S+)")
+
+    # BML - example
+    # ######## Neuralynx Data File Header
+    # ## File Name: null
+    # ## Time Opened: (m/d/y): 12/11/15  At Time: 11:37:39.000
+
+    # Cheetah after version 1 and before version 5 - example
+    # ######## Neuralynx Data File Header
+    # ## File Name F:\2000-01-01_18-28-39\RMH3.ncs
+    # ## Time Opened (m/d/y): 1/1/2000  (h:m:s.ms) 18:28:39.821
+    # ## Time Closed (m/d/y): 1/1/2000  (h:m:s.ms) 9:58:41.322
+
+    # Cheetah version 4.0.2 - example
+    # ######## Neuralynx Data File Header
+    # ## File Name: D:\Cheetah_Data\2003-10-4_10-2-58\CSC14.Ncs
+    # ## Time Opened: (m/d/y): 10/4/2003  At Time: 10:3:0.578
+
+    # Cheetah version 5.4.0 - example
+    # ######## Neuralynx Data File Header
+    # ## File Name C:\CheetahData\2000-01-01_00-00-00\CSC5.ncs
+    # ## Time Opened (m/d/y): 1/01/2001  At Time: 0:00:00.000
+    # ## Time Closed (m/d/y): 1/01/2001  At Time: 00:00:00.000
+
+    # Cheetah version 5.5.1 - example
+    # ######## Neuralynx Data File Header
+    # ## File Name C:\CheetahData\2013-11-29_17-05-05\Tet3a.ncs
+    # ## Time Opened (m/d/y): 11/29/2013  (h:m:s.ms) 17:5:16.793
+    # ## Time Closed (m/d/y): 11/29/2013  (h:m:s.ms) 18:3:13.603
+
+    # Cheetah version 5.6.0 - example
+    # ## File Name: F:\processing\sum-big-board\252-1375\recording-20180107\2018-01-07_15-14-54\04. tmaze1-no-light-start To tmaze1-light-stop\VT1_fixed.nvt
+    # ## Time Opened: (m/d/y): 2/5/2018 At Time: 18:5:12.654
+
+    # Cheetah version 5.6.3 - example
+    # ######## Neuralynx Data File Header
+    # ## File Name C:\CheetahData\2016-11-28_21-50-00\CSC1.ncs
+    # ## Time Opened (m/d/y): 11/28/2016  (h:m:s.ms) 21:50:33.322
+    # ## Time Closed (m/d/y): 11/28/2016  (h:m:s.ms) 22:44:41.145
+
+    # Cheetah version 5.7.4 - example
+    # ######## Neuralynx Data File Header
+    # and then properties
+    # -OriginalFileName "C:\CheetahData\2017-02-16_17-55-55\CSC1.ncs"
+    # -TimeCreated 2017/02/16 17:56:04
+    # -TimeClosed 2017/02/16 18:01:18
+
+    # Cheetah version 6.3.2 - example
+    # ######## Neuralynx Data File Header
+    # and then properties
+    # -OriginalFileName "G:\CheetahDataD\2019-07-12_13-21-32\CSC1.ncs"
+    # -TimeCreated 2019/07/12 13:21:32
+    # -TimeClosed 2019/07/12 15:07:55
+
+    # Cheetah version 6.4.1dev - example
+    # ######## Neuralynx Data File Header
+    # and then properties
+    # -OriginalFileName "D:\CheetahData\2021-02-26_15-46-33\CSC1.ncs"
+    # -TimeCreated 2021/02/26 15:46:52
+    # -TimeClosed 2021/10/12 09:07:58
+
+    # neuraview version 2 - example
+    # ######## Neuralynx Data File Header
+    # ## File Name: L:\McHugh Lab\Recording\2015-06-24_18-05-11\NeuraviewEventMarkers-20151214_SleepScore.nev
+    # ## Date Opened: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
+    # ## Date Closed: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
+
+    # pegasus version 2.1.1 and Cheetah beyond version 5.6.4 - example
+    # ######## Neuralynx Data File Header
+    # and then properties
+    # -OriginalFileName D:\Pegasus Data\Dr_NM\1902\2019-06-28_17-36-50\Events_0008.nev
+    # -TimeCreated 2019/06/28 17:36:50
+    # -TimeClosed 2019/06/28 17:45:48
+
+    # regular expressions to match filename
+    filename_regex = [r"## File Name (?P<filename>\S+)",
+                      r'-OriginalFileName "?(?P<filename>\S+)"?']
+
     def __init__(self, filename, props_only=False):
         """
         Factory function to build NlxHeader for a given file.
@@ -163,7 +253,7 @@ class NlxHeader(OrderedDict):
         # BML Ncs file contain neither property, but 'NLX_Base_Class_Type'
         elif "NLX_Base_Class_Type" in self:
             self["ApplicationName"] = "BML"
-            app_version = "2.0"
+            app_version = "1.0"
         # Neuraview Ncs file contained neither property nor NLX_Base_Class_Type information
         else:
             self["ApplicationName"] = "Neuraview"
@@ -204,151 +294,26 @@ class NlxHeader(OrderedDict):
 
         return len(chid_entries)
 
-    # Filename and datetime may appear in header lines starting with # at
-    # beginning of header or in later versions as a property. The exact format
-    # used depends on the application name and its version as well as the
-    # -FileVersion property. Examples of each known case are shown below in comments.
-    #
-    # There are 4 styles understood by this code and the patterns used for parsing
-    # the items within each are stored in a dictionary. Each dictionary is then
-    # stored in main dictionary keyed by an abbreviation for the style.
-    header_pattern_dicts = {
-        # BML - example
-        # ######## Neuralynx Data File Header
-        # ## File Name: null
-        # ## Time Opened: (m/d/y): 12/11/15  At Time: 11:37:39.000
-
-        # Cheetah after version 1 and before version 5 - example
-        # ######## Neuralynx Data File Header
-        # ## File Name F:\2000-01-01_18-28-39\RMH3.ncs
-        # ## Time Opened (m/d/y): 1/1/2000  (h:m:s.ms) 18:28:39.821
-        # ## Time Closed (m/d/y): 1/1/2000  (h:m:s.ms) 9:58:41.322
-
-        # Cheetah version 4.0.2 - example
-        # ######## Neuralynx Data File Header
-        # ## File Name: D:\Cheetah_Data\2003-10-4_10-2-58\CSC14.Ncs
-        # ## Time Opened: (m/d/y): 10/4/2003  At Time: 10:3:0.578
-
-        # Cheetah version 5.4.0 - example
-        # ######## Neuralynx Data File Header
-        # ## File Name C:\CheetahData\2000-01-01_00-00-00\CSC5.ncs
-        # ## Time Opened (m/d/y): 1/01/2001  At Time: 0:00:00.000
-        # ## Time Closed (m/d/y): 1/01/2001  At Time: 00:00:00.000
-
-        # Cheetah version 5.5.1 - example
-        # ######## Neuralynx Data File Header
-        # ## File Name C:\CheetahData\2013-11-29_17-05-05\Tet3a.ncs
-        # ## Time Opened (m/d/y): 11/29/2013  (h:m:s.ms) 17:5:16.793
-        # ## Time Closed (m/d/y): 11/29/2013  (h:m:s.ms) 18:3:13.603
-
-        # Cheetah version 5.6.0 - example
-        # ## File Name: F:\processing\sum-big-board\252-1375\recording-20180107\2018-01-07_15-14-54\04. tmaze1-no-light-start To tmaze1-light-stop\VT1_fixed.nvt
-        # ## Time Opened: (m/d/y): 2/5/2018 At Time: 18:5:12.654
-
-        # Cheetah version 5.6.3 - example
-        # ######## Neuralynx Data File Header
-        # ## File Name C:\CheetahData\2016-11-28_21-50-00\CSC1.ncs
-        # ## Time Opened (m/d/y): 11/28/2016  (h:m:s.ms) 21:50:33.322
-        # ## Time Closed (m/d/y): 11/28/2016  (h:m:s.ms) 22:44:41.145
-
-        # Cheetah version 5.7.4 - example
-        # ######## Neuralynx Data File Header
-        # and then properties
-        # -OriginalFileName "C:\CheetahData\2017-02-16_17-55-55\CSC1.ncs"
-        # -TimeCreated 2017/02/16 17:56:04
-        # -TimeClosed 2017/02/16 18:01:18
-
-        # Cheetah version 6.3.2 - example
-        # ######## Neuralynx Data File Header
-        # and then properties
-        # -OriginalFileName "G:\CheetahDataD\2019-07-12_13-21-32\CSC1.ncs"
-        # -TimeCreated 2019/07/12 13:21:32
-        # -TimeClosed 2019/07/12 15:07:55
-
-        # Cheetah version 6.4.1dev - example
-        # ######## Neuralynx Data File Header
-        # and then properties
-        # -OriginalFileName "D:\CheetahData\2021-02-26_15-46-33\CSC1.ncs"
-        # -TimeCreated 2021/02/26 15:46:52
-        # -TimeClosed 2021/10/12 09:07:58
-
-        # neuraview version 2 - example
-        # ######## Neuralynx Data File Header
-        # ## File Name: L:\McHugh Lab\Recording\2015-06-24_18-05-11\NeuraviewEventMarkers-20151214_SleepScore.nev
-        # ## Date Opened: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
-        # ## Date Closed: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
-
-        # pegasus version 2.1.1 and Cheetah beyond version 5.6.4 - example
-        # ######## Neuralynx Data File Header
-        # and then properties
-        # -OriginalFileName D:\Pegasus Data\Dr_NM\1902\2019-06-28_17-36-50\Events_0008.nev
-        # -TimeCreated 2019/06/28 17:36:50
-        # -TimeClosed 2019/06/28 17:45:48
-
-        "combined": dict(
-            openDatetime1_regex=r"## (Time|Date) Opened:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" \
-                            r"\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
-            openDatetime2_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
-            closeDatetime1_regex=r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" \
-                            r"\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
-            closeDatetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
-        )
-    }
-
-    # regular expressions to match filename
-    filename_regex = [r"## File Name (?P<filename>\S+)",
-                       r'-OriginalFileName "?(?P<filename>\S+)"?']
-    
     def readTimeDate(self, txt_header):
         """
-        Read time and date from text of header appropriate for app name and version
-
-        :TODO: this works for current examples but is not likely actually related
-        to app version in this manner.
+        Read time and date from text of header
         """
-        an = self["ApplicationName"]
-        if an == "Cheetah":
-            av = self["ApplicationVersion"]
-            if av <= Version("2"):  # version 1 uses same as older versions
-                hpd = NlxHeader.header_pattern_dicts["combined"]
-            elif av < Version("5"):
-                hpd = NlxHeader.header_pattern_dicts["combined"]
-            elif av <= Version("5.4.0"):
-                hpd = NlxHeader.header_pattern_dicts["combined"]
-            elif av == Version("5.6.0"):
-                hpd = NlxHeader.header_pattern_dicts["combined"]
-            elif av <= Version("5.6.4"):
-                hpd = NlxHeader.header_pattern_dicts["combined"]
-            else:
-                hpd = NlxHeader.header_pattern_dicts["combined"]
-        elif an == "BML":
-            hpd = NlxHeader.header_pattern_dicts["combined"]
-            av = Version("2")
-        elif an == "Neuraview":
-            hpd = NlxHeader.header_pattern_dicts["combined"]
-            av = Version("2")
-        elif an == "Pegasus":
-            hpd = NlxHeader.header_pattern_dicts["combined"]
-            av = Version("2")
-        else:
-            an = "Unknown"
-            av = "NA"
-            hpd = NlxHeader.header_pattern_dicts["combined"]
 
         # opening time
-        sr = re.search(hpd["openDatetime1_regex"], txt_header)
-        if not sr: sr=re.search(hpd["openDatetime2_regex"], txt_header)
+        sr = NlxHeader.openDatetime1_pat.search(txt_header)
+        if not sr: sr=NlxHeader.openDatetime2_pat.search(txt_header)
         if not sr:
             raise IOError(
-                f"No matching header open date/time for application {an} " + f"version {av}. Please contact developers."
+                f"No matching header open date/time for application {self['ApplicationName']} " +
+                f"version {self['ApplicationVersion']}. Please contact developers."
             )
         else:
             dt1 = sr.groupdict()
             self['recording_opened'] = dateutil.parser.parse(f"{dt1['date']} {dt1['time']}")
 
         # close time, if available
-        sr = re.search(hpd["closeDatetime1_regex"], txt_header)
-        if not sr: sr=re.search(hpd["closeDatetime2_regex"], txt_header)
+        sr = NlxHeader.closeDatetime1_pat.search(txt_header)
+        if not sr: sr=NlxHeader.closeDatetime2_pat.search(txt_header)
         if sr:
             dt2 = sr.groupdict()
             self['recording_closed'] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
