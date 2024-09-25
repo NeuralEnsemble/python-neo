@@ -364,8 +364,8 @@ class SpikeGLXRawIO(BaseRawIO):
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         return None
 
-    def _get_analogsignal_buffer_description(self, block_index, seg_index, stream_index):
-        return self._buffer_descriptions[block_index][seg_index][stream_index]
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
         
 
 

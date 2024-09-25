@@ -90,6 +90,7 @@ class AxonRawIO(BaseRawIO):
 
     extensions = ["abf"]
     rawmode = "one-file"
+    has_buffer_description_api = True
 
     def __init__(self, filename=""):
         BaseRawIO.__init__(self)
@@ -115,7 +116,7 @@ class AxonRawIO(BaseRawIO):
             head_offset = info["sections"]["DataSection"]["uBlockIndex"] * BLOCKSIZE
             totalsize = info["sections"]["DataSection"]["llNumEntries"]
 
-        self._raw_data = np.memmap(self.filename, dtype=sig_dtype, mode="r", shape=(totalsize,), offset=head_offset)
+        # self._raw_data = np.memmap(self.filename, dtype=sig_dtype, mode="r", shape=(totalsize,), offset=head_offset)
 
         # 3 possible modes
         if version < 2.0:
@@ -142,7 +143,7 @@ class AxonRawIO(BaseRawIO):
             )
         else:
             episode_array = np.empty(1, [("offset", "i4"), ("len", "i4")])
-            episode_array[0]["len"] = self._raw_data.size
+            episode_array[0]["len"] = totalsize
             episode_array[0]["offset"] = 0
 
         # sampling_rate
@@ -154,9 +155,14 @@ class AxonRawIO(BaseRawIO):
         # one sweep = one segment
         nb_segment = episode_array.size
 
+        stream_id = "0"
+        buffer_id = "0"
+
         # Get raw data by segment
-        self._raw_signals = {}
+        # self._raw_signals = {}
         self._t_starts = {}
+        self._buffer_descriptions = {0 :{}}
+        self._stream_buffer_slice = {stream_id : None}
         pos = 0
         for seg_index in range(nb_segment):
             length = episode_array[seg_index]["len"]
@@ -169,7 +175,17 @@ class AxonRawIO(BaseRawIO):
             if (fSynchTimeUnit != 0) and (mode == 1):
                 length /= fSynchTimeUnit
 
-            self._raw_signals[seg_index] = self._raw_data[pos : pos + length].reshape(-1, nbchannel)
+            # self._raw_signals[seg_index] = self._raw_data[pos : pos + length].reshape(-1, nbchannel)
+
+            self._buffer_descriptions[0][seg_index] = {}
+            self._buffer_descriptions[0][seg_index][buffer_id] = {
+                "type" : "binary",
+                "file_path" : str(self.filename),
+                "dtype" : str(sig_dtype),
+                "order": "C",
+                "file_offset" : head_offset + pos * sig_dtype.itemsize,
+                "shape" : (int(length // nbchannel), int(nbchannel)),
+            }
             pos += length
 
             t_start = float(episode_array[seg_index]["offset"])
@@ -227,15 +243,13 @@ class AxonRawIO(BaseRawIO):
                     offset -= info["listADCInfo"][chan_id]["fSignalOffset"]
             else:
                 gain, offset = 1.0, 0.0
-            stream_id = "0"
-            buffer_id = "0"
             signal_channels.append((name, str(chan_id), self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         # one unique signal stream and buffer
-        signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
-        signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
+        signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
+        signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
 
         # only one events channel : tag
         # In ABF timstamps are not attached too any particular segment
@@ -293,21 +307,26 @@ class AxonRawIO(BaseRawIO):
         return self._t_starts[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._t_starts[seg_index] + self._raw_signals[seg_index].shape[0] / self._sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = self._t_starts[seg_index] + sig_size / self._sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        shape = self._raw_signals[seg_index].shape
-        return shape[0]
+    # def _get_signal_size(self, block_index, seg_index, stream_index):
+    #     shape = self._raw_signals[seg_index].shape
+    #     return shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._t_starts[seg_index]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_indexes]
-        return raw_signals
+    # def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    #     if channel_indexes is None:
+    #         channel_indexes = slice(None)
+    #     raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_indexes]
+    #     return raw_signals
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
+
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._raw_ev_timestamps.size
