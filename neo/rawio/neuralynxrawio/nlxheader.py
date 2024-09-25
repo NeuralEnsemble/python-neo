@@ -277,32 +277,21 @@ class NlxHeader(OrderedDict):
         # ## File Name: L:\McHugh Lab\Recording\2015-06-24_18-05-11\NeuraviewEventMarkers-20151214_SleepScore.nev
         # ## Date Opened: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
         # ## Date Closed: (mm/dd/yyy): 12/14/2015 At Time: 15:58:32
-        "neuraview2": dict(
-            datetime1_regex=r"## (Time|Date) Opened:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" \
-                             r" At Time: (?P<time>\S+)",
-            datetime2_regex=r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" \
-                             r" At Time: (?P<time>\S+)",
-        ),
+
         # pegasus version 2.1.1 and Cheetah beyond version 5.6.4 - example
         # ######## Neuralynx Data File Header
         # and then properties
         # -OriginalFileName D:\Pegasus Data\Dr_NM\1902\2019-06-28_17-36-50\Events_0008.nev
         # -TimeCreated 2019/06/28 17:36:50
         # -TimeClosed 2019/06/28 17:45:48
-        "inProps": dict(
-            datetime1_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
-            datetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
-        ),
-        # general version for date and time in ## header lines
-        "inHeader": dict(
-            datetime1_regex=r"## Time Opened: \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
-        ),
-        # version with time open and closed in ## header lines
-        "openClosedInHeader": dict(
-           datetime1_regex=r"## (Time|Date) Opened:* \(m/d/y\): (?P<date>\S+)" \
-                            r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
-           datetime2_regex=r"## (Time|Date) Closed:* \(m/d/y\): (?P<date>\S+)" \
-                            r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
+
+        "combined": dict(
+            openDatetime1_regex=r"## (Time|Date) Opened:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" \
+                            r"\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
+            openDatetime2_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
+            closeDatetime1_regex=r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" \
+                            r"\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
+            closeDatetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
         )
     }
 
@@ -321,33 +310,34 @@ class NlxHeader(OrderedDict):
         if an == "Cheetah":
             av = self["ApplicationVersion"]
             if av <= Version("2"):  # version 1 uses same as older versions
-                hpd = NlxHeader.header_pattern_dicts["openClosedInHeader"]
+                hpd = NlxHeader.header_pattern_dicts["combined"]
             elif av < Version("5"):
-                hpd = NlxHeader.header_pattern_dicts["inHeader"]
+                hpd = NlxHeader.header_pattern_dicts["combined"]
             elif av <= Version("5.4.0"):
-                hpd = NlxHeader.header_pattern_dicts["openClosedInHeader"]
+                hpd = NlxHeader.header_pattern_dicts["combined"]
             elif av == Version("5.6.0"):
-                hpd = NlxHeader.header_pattern_dicts["inHeader"]
+                hpd = NlxHeader.header_pattern_dicts["combined"]
             elif av <= Version("5.6.4"):
-                hpd = NlxHeader.header_pattern_dicts["openClosedInHeader"]
+                hpd = NlxHeader.header_pattern_dicts["combined"]
             else:
-                hpd = NlxHeader.header_pattern_dicts["inProps"]
+                hpd = NlxHeader.header_pattern_dicts["combined"]
         elif an == "BML":
-            hpd = NlxHeader.header_pattern_dicts["inHeader"]
+            hpd = NlxHeader.header_pattern_dicts["combined"]
             av = Version("2")
         elif an == "Neuraview":
-            hpd = NlxHeader.header_pattern_dicts["neuraview2"]
+            hpd = NlxHeader.header_pattern_dicts["combined"]
             av = Version("2")
         elif an == "Pegasus":
-            hpd = NlxHeader.header_pattern_dicts["inProps"]
+            hpd = NlxHeader.header_pattern_dicts["combined"]
             av = Version("2")
         else:
             an = "Unknown"
             av = "NA"
-            hpd = NlxHeader.header_pattern_dicts["inProps"]
+            hpd = NlxHeader.header_pattern_dicts["combined"]
 
         # opening time
-        sr = re.search(hpd["datetime1_regex"], txt_header)
+        sr = re.search(hpd["openDatetime1_regex"], txt_header)
+        if not sr: sr=re.search(hpd["openDatetime2_regex"], txt_header)
         if not sr:
             raise IOError(
                 f"No matching header open date/time for application {an} " + f"version {av}. Please contact developers."
@@ -357,16 +347,11 @@ class NlxHeader(OrderedDict):
             self['recording_opened'] = dateutil.parser.parse(f"{dt1['date']} {dt1['time']}")
 
         # close time, if available
-        if "datetime2_regex" in hpd:
-            sr = re.search(hpd["datetime2_regex"], txt_header)
-            if not sr:
-                raise IOError(
-                    f"No matching header close date/time for application {an} "
-                    + f"version {av}. Please contact developers."
-                )
-            else:
-                dt2 = sr.groupdict()
-                self['recording_closed'] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
+        sr = re.search(hpd["closeDatetime1_regex"], txt_header)
+        if not sr: sr=re.search(hpd["closeDatetime2_regex"], txt_header)
+        if sr:
+            dt2 = sr.groupdict()
+            self['recording_closed'] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
 
     def type_of_recording(self):
         """
