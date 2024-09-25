@@ -45,7 +45,7 @@ iocache = [
 ]
 
 test = [
-    "dhn_med_py>=1.0.0",
+    "dhn_med_py", #  < 1.0 was removed from pypi
     "pytest",
     "pytest-cov",
     # datalad   # this dependency is covered by conda (environment_testing.yml)
@@ -106,7 +106,7 @@ plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32
 all = [
     "coverage",
     "coveralls",
-    "dhn_med_py>=1.0.0",
+    "dhn_med_py",
     "h5py",
     "igor2",
     "ipython",
