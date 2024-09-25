@@ -1,4 +1,5 @@
 import datetime
+import dateutil
 from packaging.version import Version
 import os
 import re
@@ -281,7 +282,6 @@ class NlxHeader(OrderedDict):
                              r" At Time: (?P<time>\S+)",
             datetime2_regex=r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" \
                              r" At Time: (?P<time>\S+)",
-            datetimeformat="%m/%d/%Y %H:%M:%S",
         ),
         # pegasus version 2.1.1 and Cheetah beyond version 5.6.4 - example
         # ######## Neuralynx Data File Header
@@ -292,13 +292,10 @@ class NlxHeader(OrderedDict):
         "inProps": dict(
             datetime1_regex=r"-TimeCreated (?P<date>\S+) (?P<time>\S+)",
             datetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
-            datetimeformat=r"%Y/%m/%d %H:%M:%S",
-            datetime2format=r"%Y/%m/%d %H:%M:%S.%f",
         ),
         # general version for date and time in ## header lines
         "inHeader": dict(
             datetime1_regex=r"## Time Opened: \(m/d/y\): (?P<date>\S+)" r"  At Time: (?P<time>\S+)",
-            datetimeformat="%m/%d/%y %H:%M:%S.%f",
         ),
         # version with time open and closed in ## header lines
         "openClosedInHeader": dict(
@@ -306,7 +303,6 @@ class NlxHeader(OrderedDict):
                             r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
            datetime2_regex=r"## (Time|Date) Closed:* \(m/d/y\): (?P<date>\S+)" \
                             r"  (\(h:m:s\.ms\)|At Time:) (?P<time>\S+)",
-           datetimeformat="%m/%d/%Y %H:%M:%S.%f",
         )
     }
 
@@ -351,9 +347,6 @@ class NlxHeader(OrderedDict):
             hpd = NlxHeader.header_pattern_dicts["inProps"]
 
         # opening time
-        # :TODO: Processing for this and close time should be changed to not depend on storing
-        # in a particular formatted string by header type, but rather always should be
-        # formatted in one standard way. 
         sr = re.search(hpd["datetime1_regex"], txt_header)
         if not sr:
             raise IOError(
@@ -361,17 +354,7 @@ class NlxHeader(OrderedDict):
             )
         else:
             dt1 = sr.groupdict()
-            try:  # allow two possible formats for date and time
-                self["recording_opened"] = datetime.datetime.strptime(
-                    dt1["date"] + " " + dt1["time"], hpd["datetimeformat"]
-                )
-            except:
-                try:
-                    self["recording_opened"] = datetime.datetime.strptime(
-                        dt1["date"] + " " + dt1["time"], hpd["datetime2format"]
-                    )
-                except:
-                    self["recording_opened"] = None
+            self['recording_opened'] = dateutil.parser.parse(f"{dt1['date']} {dt1['time']}")
 
         # close time, if available
         if "datetime2_regex" in hpd:
@@ -382,13 +365,8 @@ class NlxHeader(OrderedDict):
                     + f"version {av}. Please contact developers."
                 )
             else:
-                try:
-                    dt2 = sr.groupdict()
-                    self["recording_closed"] = datetime.datetime.strptime(
-                        dt2["date"] + " " + dt2["time"], hpd["datetimeformat"]
-                    )
-                except:
-                    self["recording_closed"] = None
+                dt2 = sr.groupdict()
+                self['recording_closed'] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
 
     def type_of_recording(self):
         """
