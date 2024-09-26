@@ -85,12 +85,12 @@ class NlxHeader(OrderedDict):
     #
     # There are now separate patterns for the in header line and in properties cases which cover
     # the known variations in each case. They are compiled here once for efficiency.
-    openDatetime1_pat = re.compile(r"## (Time|Date) Opened:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)"\
+    _openDatetime1_pat = re.compile(r"## (Time|Date) Opened:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)"\
                                       r"\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)")
-    openDatetime2_pat = re.compile(r"-TimeCreated (?P<date>\S+) (?P<time>\S+)")
-    closeDatetime1_pat = re.compile(r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): " \
+    _openDatetime2_pat = re.compile(r"-TimeCreated (?P<date>\S+) (?P<time>\S+)")
+    _closeDatetime1_pat = re.compile(r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): " \
                                         r"(?P<date>\S+)\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)")
-    closeDatetime2_pat = re.compile(r"-TimeClosed (?P<date>\S+) (?P<time>\S+)")
+    _closeDatetime2_pat = re.compile(r"-TimeClosed (?P<date>\S+) (?P<time>\S+)")
 
     # Precompiled filename pattern
     _filename_pat = re.compile(r"## File Name:* (?P<filename>.*)")
@@ -182,15 +182,15 @@ class NlxHeader(OrderedDict):
         if not props_only and not txt_header.startswith("########"):
             ValueError("Neuralynx files must start with 8 # characters.")
 
-        self.read_properties(filename, txt_header)
-        self.setApplicationAndVersion()
-        numChidEntries = self.convert_channel_ids_names(filename)
-        self.setBitToMicroVolt()
-        self.setInputRanges(numChidEntries)
+        self._readProperties(filename, txt_header)
+        self._setApplicationAndVersion()
+        numChidEntries = self._convertChannelIdsNames(filename)
+        self._setBitToMicroVolt()
+        self._setInputRanges(numChidEntries)
         self._setFilenameProp(txt_header)
 
         if not props_only:
-            self.readTimeDate(txt_header)
+            self._setTimeDate(txt_header)
 
     @staticmethod
     def get_text_header(filename):
@@ -202,7 +202,7 @@ class NlxHeader(OrderedDict):
             txt_header = f.read(NlxHeader.HEADER_SIZE)
         return txt_header.strip(b"\x00").decode("latin-1")
 
-    def read_properties(self, filename, txt_header):
+    def _readProperties(self, filename, txt_header):
         """
         Read properties from header and place in OrderedDictionary which this object is.
         :param filename: name of ncs file, used for extracting channel number
@@ -222,7 +222,7 @@ class NlxHeader(OrderedDict):
                     value = type_(value)
                 self[name] = value
 
-    def setApplicationAndVersion(self):
+    def _setApplicationAndVersion(self):
         """
         Set "ApplicationName" property and app_version attribute based on existing properties
         """
@@ -251,7 +251,7 @@ class NlxHeader(OrderedDict):
 
         self["ApplicationVersion"] = Version(app_version)
 
-    def convert_channel_ids_names(self, filename):
+    def _convertChannelIdsNames(self, filename):
         """
         Convert channel ids and channel name properties, if present.
 
@@ -281,7 +281,7 @@ class NlxHeader(OrderedDict):
 
         return len(chid_entries)
 
-    def setBitToMicroVolt(self):
+    def _setBitToMicroVolt(self):
         # convert bit_to_microvolt
         if "bit_to_microVolt" in self:
             btm_entries = re.findall(r"\S+", self["bit_to_microVolt"])
@@ -291,7 +291,7 @@ class NlxHeader(OrderedDict):
             assert len(self["bit_to_microVolt"]) == len( self["channel_ids"]), \
                 "Number of channel ids does not match bit_to_microVolt conversion factors."
 
-    def setInputRanges(self, numChidEntries):
+    def _setInputRanges(self, numChidEntries):
         if "InputRange" in self:
             ir_entries = re.findall(r"\w+", self["InputRange"])
             if len(ir_entries) == 1:
@@ -313,14 +313,14 @@ class NlxHeader(OrderedDict):
             # some file types quote the property so strip that also
             self['OriginalFileName'] = self['OriginalFileName'].strip(' "\t\r\n')
 
-    def readTimeDate(self, txt_header):
+    def _setTimeDate(self, txt_header):
         """
         Read time and date from text of header
         """
 
         # opening time
-        sr = NlxHeader.openDatetime1_pat.search(txt_header)
-        if not sr: sr=NlxHeader.openDatetime2_pat.search(txt_header)
+        sr = NlxHeader._openDatetime1_pat.search(txt_header)
+        if not sr: sr=NlxHeader._openDatetime2_pat.search(txt_header)
         if not sr:
             raise IOError(
                 f"No matching header open date/time for application {self['ApplicationName']} " +
@@ -331,8 +331,8 @@ class NlxHeader(OrderedDict):
             self['recording_opened'] = dateutil.parser.parse(f"{dt1['date']} {dt1['time']}")
 
         # close time, if available
-        sr = NlxHeader.closeDatetime1_pat.search(txt_header)
-        if not sr: sr=NlxHeader.closeDatetime2_pat.search(txt_header)
+        sr = NlxHeader._closeDatetime1_pat.search(txt_header)
+        if not sr: sr=NlxHeader._closeDatetime2_pat.search(txt_header)
         if sr:
             dt2 = sr.groupdict()
             self['recording_closed'] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
