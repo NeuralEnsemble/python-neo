@@ -93,6 +93,9 @@ class NlxHeader(OrderedDict):
                                         r"(?P<date>\S+)\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)")
     closeDatetime2_pat = re.compile(r"-TimeClosed (?P<date>\S+) (?P<time>\S+)")
 
+    # Precompiled filename pattern
+    _filename_pat = re.compile(r"## File Name:* (?P<filename>.*)")
+
     # BML - example
     # ######## Neuralynx Data File Header
     # ## File Name: null
@@ -165,10 +168,6 @@ class NlxHeader(OrderedDict):
     # -TimeCreated 2019/06/28 17:36:50
     # -TimeClosed 2019/06/28 17:45:48
 
-    # regular expressions to match filename
-    filename_regex = [r"## File Name (?P<filename>\S+)",
-                      r'-OriginalFileName "?(?P<filename>\S+)"?']
-
     def __init__(self, filename, props_only=False):
         """
         Factory function to build NlxHeader for a given file.
@@ -186,11 +185,11 @@ class NlxHeader(OrderedDict):
             ValueError("Neuralynx files must start with 8 # characters.")
 
         self.read_properties(filename, txt_header)
-        numChidEntries = self.convert_channel_ids_names(filename)
         self.setApplicationAndVersion()
+        numChidEntries = self.convert_channel_ids_names(filename)
         self.setBitToMicroVolt()
         self.setInputRanges(numChidEntries)
-        # :TODO: needs to also handle filename property
+        self._setFilenameProp(txt_header)
 
         if not props_only:
             self.readTimeDate(txt_header)
@@ -214,26 +213,6 @@ class NlxHeader(OrderedDict):
                 if type_ is not None:
                     value = type_(value)
                 self[name] = value
-
-    def setInputRanges(self, numChidEntries):
-        if "InputRange" in self:
-            ir_entries = re.findall(r"\w+", self["InputRange"])
-            if len(ir_entries) == 1:
-                self["InputRange"] = [int(ir_entries[0])] * numChidEntries
-            else:
-                self["InputRange"] = [int(e) for e in ir_entries]
-            assert len(self["InputRange"]) == numChidEntries, \
-                "Number of channel ids does not match input range values."
-
-    def setBitToMicroVolt(self):
-        # convert bit_to_microvolt
-        if "bit_to_microVolt" in self:
-            btm_entries = re.findall(r"\S+", self["bit_to_microVolt"])
-            if len(btm_entries) == 1:
-                btm_entries = btm_entries * len(self["channel_ids"])
-            self["bit_to_microVolt"] = [float(e) * 1e6 for e in btm_entries]
-            assert len(self["bit_to_microVolt"]) == len( self["channel_ids"]), \
-                "Number of channel ids does not match bit_to_microVolt conversion factors."
 
     def setApplicationAndVersion(self):
         """
@@ -293,6 +272,38 @@ class NlxHeader(OrderedDict):
             self["channel_names"] = ["unknown"] * len(self["channel_ids"])
 
         return len(chid_entries)
+
+    def setBitToMicroVolt(self):
+        # convert bit_to_microvolt
+        if "bit_to_microVolt" in self:
+            btm_entries = re.findall(r"\S+", self["bit_to_microVolt"])
+            if len(btm_entries) == 1:
+                btm_entries = btm_entries * len(self["channel_ids"])
+            self["bit_to_microVolt"] = [float(e) * 1e6 for e in btm_entries]
+            assert len(self["bit_to_microVolt"]) == len( self["channel_ids"]), \
+                "Number of channel ids does not match bit_to_microVolt conversion factors."
+
+    def setInputRanges(self, numChidEntries):
+        if "InputRange" in self:
+            ir_entries = re.findall(r"\w+", self["InputRange"])
+            if len(ir_entries) == 1:
+                self["InputRange"] = [int(ir_entries[0])] * numChidEntries
+            else:
+                self["InputRange"] = [int(e) for e in ir_entries]
+            assert len(self["InputRange"]) == numChidEntries, \
+                "Number of channel ids does not match input range values."
+
+    def _setFilenameProp(self, txt_header):
+        """
+        Add an OriginalFileName property if in header.
+        """
+        if not 'OriginalFileName' in self.keys():
+            fnm = NlxHeader._filename_pat.search(txt_header)
+            if not fnm: return
+            else: self['OriginalFileName'] = fnm.group(1).strip(' "\t\r\n')
+        else:
+            # some file types quote the property so strip that also
+            self['OriginalFileName'] = self['OriginalFileName'].strip(' "\t\r\n')
 
     def readTimeDate(self, txt_header):
         """

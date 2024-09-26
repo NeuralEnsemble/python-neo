@@ -199,7 +199,6 @@ class TestNcsRecordingType(BaseTestRawIO, unittest.TestCase):
     def test_recording_types(self):
 
         for typeTest in self.ncsTypeTestFiles:
-
             filename = self.get_local_path(typeTest[0])
             hdr = NlxHeader(filename)
             self.assertEqual(hdr.type_of_recording(), typeTest[1])
@@ -363,6 +362,7 @@ class TestNcsSections(BaseTestRawIO, unittest.TestCase):
         ns0.sampFreqUsed = 400
         self.assertNotEqual(ns0, ns1)
 
+
 class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
     rawioclass = NeuralynxRawIO
 
@@ -406,7 +406,6 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
             self.assertEqual(closeDate, date)
 
     def test_datetime_parsing(self):
-
         # neuraview2
         filename = self.get_local_path("neuralynx/Neuraview_v2/original_data/NeuraviewEventMarkers-sample.nev")
         txt_header = self.get_text_header(filename)
@@ -453,6 +452,32 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
                          hdr['recording_opened'])
         self.assertEqual(datetime.datetime(2001,1,1, 0,0,0, 0),
                          hdr['recording_closed'])
+
+    def test_filename_prop(self):
+        # neuraview2
+        filename = self.get_local_path("neuralynx/Neuraview_v2/original_data/NeuraviewEventMarkers-sample.nev")
+        hdr = NlxHeader(filename)
+        self.assertEqual(r"L:\McHugh Lab\Recording\2015-06-24_18-05-11\NeuraviewEventMarkers-20151214_SleepScore.nev",
+                         hdr['OriginalFileName'])
+
+        # Cheetah 5.7.4 'inProps'
+        filename = self.get_local_path("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs")
+        hdr = NlxHeader(filename)
+        self.assertEqual(r'C:\CheetahData\2017-02-16_17-55-55\CSC1.ncs',
+                         hdr['OriginalFileName'])
+
+        # Cheetah 4.0.2
+        filename = self.get_local_path("neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs")
+        hdr = NlxHeader(filename)
+        self.assertEqual(r'D:\Cheetah_Data\2003-10-4_10-2-58\CSC14.Ncs',
+                         hdr['OriginalFileName'])
+
+        # Cheetah 5.4.0
+        filename = self.get_local_path("neuralynx/Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs")
+        hdr = NlxHeader(filename)
+        self.assertEqual(r'C:\CheetahData\2000-01-01_00-00-00\CSC5.ncs',
+                         hdr['OriginalFileName'])
+
 
 if __name__ == "__main__":
     unittest.main()
