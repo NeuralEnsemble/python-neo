@@ -1,4 +1,3 @@
-import datetime
 import dateutil
 from packaging.version import Version
 import os
@@ -176,9 +175,8 @@ class NlxHeader(OrderedDict):
         :param props_only: if true, will not try and read time and date or check start
         """
         super(OrderedDict, self).__init__()
-        with open(filename, "rb") as f:
-            txt_header = f.read(NlxHeader.HEADER_SIZE)
-        txt_header = txt_header.strip(b"\x00").decode("latin-1")
+
+        txt_header = NlxHeader.get_text_header(filename)
 
         # must start with 8 # characters
         if not props_only and not txt_header.startswith("########"):
@@ -193,6 +191,16 @@ class NlxHeader(OrderedDict):
 
         if not props_only:
             self.readTimeDate(txt_header)
+
+    @staticmethod
+    def get_text_header(filename):
+        """
+        Accessory method to extract text in header. Useful for subclasses.
+        :param filename: name of Neuralynx file
+        """
+        with open(filename, "rb") as f:
+            txt_header = f.read(NlxHeader.HEADER_SIZE)
+        return txt_header.strip(b"\x00").decode("latin-1")
 
     def read_properties(self, filename, txt_header):
         """
