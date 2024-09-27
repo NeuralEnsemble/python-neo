@@ -227,7 +227,7 @@ class NeuroNexusRawIO(BaseRawIO):
 
         # TODO: remove once minimal version is 3.11
         # Python 3.10 and below do not support the fractional seconds in fromisoformat
-        if sys.version_info.minor <= 3.11:
+        if sys.version_info.minor <= 11:
             rec_datetime = datetime.datetime.strptime(datetime_string, "%Y-%m-%dT%H:%M:%S.%f%z")
         else:
             rec_datetime = datetime.datetime.fromisoformat(datetime_string)
