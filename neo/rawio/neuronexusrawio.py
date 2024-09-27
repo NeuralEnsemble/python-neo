@@ -37,6 +37,8 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import datetime
+import sys 
+import re
 
 import numpy as np
 
@@ -219,21 +221,15 @@ class NeuroNexusRawIO(BaseRawIO):
         # Add the minimum annotations
         self._generate_minimal_annotations()
 
-        # date comes out as:
-        # year-month-daydayofweektime all as a string so we need to prep it for
-        # entering into datetime
-        # example: '2024-07-01T13:04:49.4972245-04:00'
-        stringified_date_list = self.metadata['status']['start_time'].split('-')
-        year = int(stringified_date_list[0])
-        month = int(stringified_date_list[1])
-        day = int(stringified_date_list[2][:2]) # day should be first two digits of the third item in list
-        time_info = stringified_date_list[2].split(':')
-        hour = int(time_info[0][-2:])
-        minute = int(time_info[1])
-        second = int(float(time_info[2]))
-        microsecond = int(1000 * 1000 * (float(time_info[2]) - second))# second -> micro is 1000 * 1000
+        # date comes out as: '2024-07-01T13:04:49.4972245-04:00' so in ISO format
+        datetime_string = self.metadata["status"]["start_time"]
+        
+        # Python 3.10 and older expect iso format to only have 3 or 6 decimal places
+        if sys.version_info.minor < 11:
+            datetime_string = re.sub(r"(\.\d{6})\d+", r"\1", datetime_string)
+        
+        rec_datetime = datetime.datetime.fromisoformat(datetime_string)
 
-        rec_datetime = datetime.datetime(year, month, day, hour, minute, second, microsecond)
         bl_annotations = self.raw_annotations["blocks"][0]
         seg_annotations = bl_annotations["segments"][0]
         for d in (bl_annotations, seg_annotations):
