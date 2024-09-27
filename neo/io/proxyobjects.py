@@ -296,7 +296,7 @@ class AnalogSignalProxy(BaseProxy):
         anasig = AnalogSignal(
             sig,
             units=units,
-            copy=False,
+            copy=None,
             t_start=sig_t_start,
             sampling_rate=self.sampling_rate,
             name=name,
@@ -419,11 +419,11 @@ class SpikeTrainProxy(BaseProxy):
                 float_wfs = self._rawio.rescale_waveforms_to_float(
                     raw_wfs, dtype="float32", spike_channel_index=self._spike_channel_index
                 )
-                waveforms = pq.Quantity(float_wfs, units=self._wf_units, dtype="float32", copy=False)
+                waveforms = pq.Quantity(float_wfs, units=self._wf_units, dtype="float32")
             elif magnitude_mode == "raw":
                 # could code also CompundUnit here but it is over killed
                 # so we used dimentionless
-                waveforms = pq.Quantity(raw_wfs, units="", dtype=raw_wfs.dtype, copy=False)
+                waveforms = pq.Quantity(raw_wfs, units="", dtype=raw_wfs.dtype)
         else:
             waveforms = None
 
@@ -433,7 +433,7 @@ class SpikeTrainProxy(BaseProxy):
             units=units,
             dtype=dtype,
             t_start=t_start,
-            copy=False,
+            copy=None,
             sampling_rate=self.sampling_rate,
             waveforms=waveforms,
             left_sweep=self.left_sweep,

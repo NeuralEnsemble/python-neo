@@ -251,7 +251,7 @@ def proc_src_condition_unit_repetition(sweep, damaIndex, timeStamp, sweepLen, si
         timestamp=timeStamp,
         dama_index=damaIndex,
         side=side,
-        copy=True,
+        copy=None,
         respwin=respWin,
         waveforms=waveforms,
         file_origin=filename,

@@ -212,7 +212,7 @@ class BrainwareDamIO(BaseIO):
             t_start=t_start * pq.d,
             file_origin=self._filename,
             sampling_period=1.0 * pq.s,
-            copy=False,
+            copy=None,
         )
         # Note: setting the sampling_period to 1 s is arbitrary
 

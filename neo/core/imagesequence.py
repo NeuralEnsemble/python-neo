@@ -70,7 +70,7 @@ class ImageSequence(BaseSignal):
 
     *Optional attributes/properties*:
         :dtype: (numpy dtype or str) Override the dtype of the signal array.
-        :copy: (bool) True by default.
+        :copy: deprecated
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
@@ -103,7 +103,7 @@ class ImageSequence(BaseSignal):
         image_data,
         units=pq.dimensionless,
         dtype=None,
-        copy=True,
+        copy=None,
         t_start=0 * pq.s,
         spatial_scale=None,
         frame_duration=None,
@@ -121,6 +121,12 @@ class ImageSequence(BaseSignal):
 
         __array_finalize__ is called on the new object.
         """
+
+        if copy is not None:
+            raise ValueError(
+                "`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0."
+            )
+
         if spatial_scale is None:
             raise ValueError("spatial_scale is required")
 
@@ -128,7 +134,7 @@ class ImageSequence(BaseSignal):
         if len(image_data.shape) != 3:
             raise ValueError("list doesn't have the correct number of dimensions")
 
-        obj = pq.Quantity(image_data, units=units, dtype=dtype, copy=copy).view(cls)
+        obj = pq.Quantity(image_data, units=units, dtype=dtype).view(cls)
         obj.segment = None
         # function from analogsignal.py in neo/core directory
         obj.sampling_rate = _get_sampling_rate(sampling_rate, frame_duration)
@@ -144,7 +150,7 @@ class ImageSequence(BaseSignal):
         image_data,
         units=pq.dimensionless,
         dtype=None,
-        copy=True,
+        copy=None,
         t_start=0 * pq.s,
         spatial_scale=None,
         frame_duration=None,
