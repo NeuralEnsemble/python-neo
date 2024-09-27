@@ -37,6 +37,8 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import datetime
+import sys 
+import re
 
 import numpy as np
 
@@ -221,6 +223,13 @@ class NeuroNexusRawIO(BaseRawIO):
 
         # date comes out as: '2024-07-01T13:04:49.4972245-04:00' so in ISO format
         datetime_string = self.metadata["status"]["start_time"]
+        
+
+        # TODO: remove once minimal version is 3.11
+        # Python 3.10 and below do not support the fractional seconds in fromisoformat
+        if sys.version_info.minor <= 3.11:
+            datetime_string = re.sub(r"(\.\d{6})\d+", r"\1", datetime_string)        
+        
         rec_datetime = datetime.datetime.fromisoformat(datetime_string)
 
         bl_annotations = self.raw_annotations["blocks"][0]
