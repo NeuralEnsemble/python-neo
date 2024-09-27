@@ -224,14 +224,11 @@ class NeuroNexusRawIO(BaseRawIO):
         # date comes out as: '2024-07-01T13:04:49.4972245-04:00' so in ISO format
         datetime_string = self.metadata["status"]["start_time"]
         
-
-        # TODO: remove once minimal version is 3.11
-        # Python 3.10 and below do not support the fractional seconds in fromisoformat
+        # Python 3.10 and older expect iso format to only have 3 or 6 decimal places
         if sys.version_info.minor < 11:
             datetime_string = re.sub(r"(\.\d{6})\d+", r"\1", datetime_string)
-            rec_datetime = datetime.datetime.strptime(datetime_string, "%Y-%m-%dT%H:%M:%S.%f%z")
-        else:
-            rec_datetime = datetime.datetime.fromisoformat(datetime_string)
+        
+        rec_datetime = datetime.datetime.fromisoformat(datetime_string)
 
         bl_annotations = self.raw_annotations["blocks"][0]
         seg_annotations = bl_annotations["segments"][0]
