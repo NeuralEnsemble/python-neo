@@ -107,7 +107,7 @@ class BrainVisionRawIO(BaseRawIO):
                 units = cds[3]
             else:
                 units = "u"
-            units = units.replace("µ", "u") # Brainvision spec for specific unicode
+            units = units.replace("µ", "u")  # Brainvision spec for specific unicode
             chan_id = str(c + 1)
             if sig_dtype == np.int16 or sig_dtype == np.int32:
                 gain = float(res)

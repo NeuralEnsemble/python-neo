@@ -189,7 +189,11 @@ class IntanRawIO(BaseRawIO):
                 dtype_size = np.dtype(stream_datatype).itemsize
                 n_samples = size_in_bytes // (dtype_size * num_channels)
                 signal_stream_memmap = np.memmap(
-                    file_path, dtype=stream_datatype, mode="r", shape=(n_samples, num_channels), order='C',
+                    file_path,
+                    dtype=stream_datatype,
+                    mode="r",
+                    shape=(n_samples, num_channels),
+                    order="C",
                 )
                 self._raw_data[stream_index] = signal_stream_memmap
 

@@ -37,7 +37,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import datetime
-import sys 
+import sys
 import re
 
 import numpy as np
@@ -165,7 +165,7 @@ class NeuroNexusRawIO(BaseRawIO):
         # and because all data is stored in the same buffer stream for the moment all channels
         # will be in stream_id = 0. In the future this will be split into sub_streams based on
         # type but for now it will be the end-users responsability for this.
-        stream_id = '0'  # hard-coded see note above
+        stream_id = "0"  # hard-coded see note above
         for channel_index, channel_name in enumerate(channel_info["chan_name"]):
             channel_id = channel_info["ntv_chan_name"][channel_index]
             # 'ai0' indicates analog data which is stored as microvolts
@@ -223,11 +223,11 @@ class NeuroNexusRawIO(BaseRawIO):
 
         # date comes out as: '2024-07-01T13:04:49.4972245-04:00' so in ISO format
         datetime_string = self.metadata["status"]["start_time"]
-        
+
         # Python 3.10 and older expect iso format to only have 3 or 6 decimal places
         if sys.version_info.minor < 11:
             datetime_string = re.sub(r"(\.\d{6})\d+", r"\1", datetime_string)
-        
+
         rec_datetime = datetime.datetime.fromisoformat(datetime_string)
 
         bl_annotations = self.raw_annotations["blocks"][0]
@@ -297,4 +297,4 @@ class NeuroNexusRawIO(BaseRawIO):
 # this is pretty useless right now, but I think after a
 # refactor with sub streams we could adapt this for the sub-streams
 # so let's leave this here for now :)
-stream_id_to_stream_name = {'0': "Neuronexus Allego Data"}
+stream_id_to_stream_name = {"0": "Neuronexus Allego Data"}
