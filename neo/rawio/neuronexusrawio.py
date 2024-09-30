@@ -237,8 +237,8 @@ class NeuroNexusRawIO(BaseRawIO):
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
 
-        # All streams have the same size so just return the raw_data size
-        return self._raw_data.size
+        # All streams have the same size so just return the raw_data (num_samples, num_chans)
+        return self._raw_data.shape[0]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
 
