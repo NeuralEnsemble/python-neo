@@ -27,14 +27,8 @@ jobs:
         os: ["ubuntu-latest", "windows-latest"]
         # "macos-latest",
         python-version: ['3.9', '3.10', '3.11', '3.12']
-        numpy-version: ['1.21.6', '1.22.4', '1.23.5', '1.24.1', '1.25.1', '1.26.4', '2.0']
+        numpy-version: ['1.22.4', '1.23.5', '1.24.1', '1.25.1', '1.26.4']
         exclude:
-           - python-version: '3.11'
-             numpy-version: '1.21.6'
-           - python-version: '3.12'
-           # python 3.12 only works on latest numpy
-           - python-version: '3.12'
-             numpy-version: '1.21.6'
            - python-version: '3.12'
              numpy-version: '1.22.4'
            - python-version: '3.12'

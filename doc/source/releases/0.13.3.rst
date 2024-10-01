@@ -1,0 +1,33 @@
+========================
+Neo 0.13.3 release notes
+========================
+
+28 August 2024
+
+This release of Neo contains bug fixes, still with a focus on the planned 1.0 release,
+and will be the last release not to support NumPy 2.0.
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+
+Updated dependencies
+--------------------
+
+Neo has a limit of NumPy >= 1.19.5, < 2.0.0 and Quantities >= 14.0.1, < 0.16.0
+
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+Bug fixes and/or improvements have been made to :class:`PlexonIO`, :class:`SpikeGLXIO`,
+:class:`BiocamIO`.
+
+Acknowledgements
+----------------
+
+Thanks to Zach McKenzie, Heberto Mayorquin, and Alessio Buccino for their contributions to this release.
+
+
+.. _`pull requests`: https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+milestone%3A0.13.3
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+is%3Aclosed+milestone%3A0.13.3

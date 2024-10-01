@@ -179,6 +179,7 @@ class IntanRawIO(BaseRawIO):
             self._raw_data = np.memmap(self.filename, dtype=memmap_data_dtype, mode="r", offset=header_size)
 
         # for 'one-file-per-signal' we have one memory map / neo stream
+        # based on https://github.com/NeuralEnsemble/python-neo/issues/1556 bug in versions 0.13.1, .2, .3
         elif self.file_format == "one-file-per-signal":
             self._raw_data = {}
             for stream_index, (stream_index_key, stream_datatype) in enumerate(memmap_data_dtype.items()):
@@ -188,8 +189,12 @@ class IntanRawIO(BaseRawIO):
                 dtype_size = np.dtype(stream_datatype).itemsize
                 n_samples = size_in_bytes // (dtype_size * num_channels)
                 signal_stream_memmap = np.memmap(
-                    file_path, dtype=stream_datatype, mode="r", shape=(num_channels, n_samples)
-                ).T
+                    file_path,
+                    dtype=stream_datatype,
+                    mode="r",
+                    shape=(n_samples, num_channels),
+                    order="C",
+                )
                 self._raw_data[stream_index] = signal_stream_memmap
 
         # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
