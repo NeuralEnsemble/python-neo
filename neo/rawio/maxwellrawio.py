@@ -21,6 +21,7 @@ Author : Samuel Garcia, Alessio Buccino, Pierre Yger
 import os
 from pathlib import Path
 import platform
+import warnings
 from urllib.request import urlopen
 
 import numpy as np
@@ -114,7 +115,8 @@ class MaxwellRawIO(BaseRawIO):
         max_sig_length = 0
         self._signals = {}
         sig_channels = []
-        for stream_id in signal_streams["id"]:
+        well_indices_to_remove = []
+        for stream_index, stream_id in enumerate(signal_streams["id"]):
             if int(version) == 20160704:
                 sr = 20000.0
                 settings = h5file["settings"]
@@ -145,7 +147,13 @@ class MaxwellRawIO(BaseRawIO):
                         gain = settings["gain"][0]
                     gain_uV = 3.3 / (1024 * gain) * 1e6
                 mapping = settings["mapping"]
-                sigs = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
+                if "routed" in h5file["wells"][stream_id][self.rec_name]["groups"]:
+                    sigs = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
+                else:
+                    warnings.warn(f"No 'routed' group found for well {stream_id}")
+                    well_indices_to_remove.append(stream_index)
+                    continue
+                
 
             channel_ids = np.array(mapping["channel"])
             electrode_ids = np.array(mapping["electrode"])
@@ -163,6 +171,9 @@ class MaxwellRawIO(BaseRawIO):
             max_sig_length = max(max_sig_length, sigs.shape[1])
 
         self._t_stop = max_sig_length / sr
+
+        if len(well_indices_to_remove) > 0:
+            signal_streams = np.delete(signal_streams, np.array(well_indices_to_remove))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
