@@ -86,10 +86,19 @@ possible_raw_modes = [
 
 error_header = "Header is not read yet, do parse_header() first"
 
+_signal_buffer_dtype = [
+    ("name", "U64"),  # not necessarily unique
+    ("id", "U64"),  # must be unique
+]
+
 _signal_stream_dtype = [
     ("name", "U64"),  # not necessarily unique
     ("id", "U64"),  # must be unique
 ]
+
+# TODO once all the formats have logic to separate signal and signal buffer
+# Rename this to _signal_stream_dtype
+_new_signal_stream_dtype = _signal_stream_dtype.append(    ("buffer_id", "U64"))
 
 _signal_channel_dtype = [
     ("name", "U64"),  # not necessarily unique
@@ -101,6 +110,10 @@ _signal_channel_dtype = [
     ("offset", "float64"),
     ("stream_id", "U64"),
 ]
+
+# TODO once all the formats have logic to separate signal and signal buffer
+# Rename this to _signal_channel_dtype
+_new_signal_channel_dtype = _signal_buffer_dtype.append(("buffer_id", "U64"))
 
 # TODO for later: add t_start and length in _signal_channel_dtype
 # this would simplify all t_start/t_stop stuff for each RawIO class
@@ -189,6 +202,28 @@ class BaseRawIO:
         self._parse_header()
         self._check_stream_signal_channel_characteristics()
         self.is_header_parsed = True
+
+        # Fill the stream buffer with dummy content equal to signal to signal stream
+        # And update the signal stream dtype to include buffer_id     
+        
+        if self.header.get("signal_buffers", None):
+            signal_stream = self.header["signal_streams"]
+            self.header["signal_buffers"] = signal_stream.copy() 
+
+            if signal_stream.dtype != _new_signal_stream_dtype:
+                
+
+                names = signal_stream["name"]
+                ids = signal_stream["id"]
+                buffer_ids = ids.copy()
+                new_header = [x for x in zip(names, ids, buffer_ids)]
+                self.header["signal_streams"] = np.array(new_header, dtype=_signal_buffer_dtype)
+    
+        signal_channels = self.header["signal_channels"]
+        
+        if signal_channels.dtype != _new_signal_channel_dtype:
+            new_channel = [(name, id, sr, dtype, units, gain, offset, stream_id, stream_id) for name, id, sr, dtype, units, gain, offset, stream_id in signal_channels]
+            self.header["signal_channels"] = np.array(new_channel, dtype=_new_signal_channel_dtype)
 
     def source_name(self):
         """Return fancy name of file source"""
