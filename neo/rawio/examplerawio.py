@@ -112,8 +112,8 @@ class ExampleRawIO(BaseRawIO):
         # In short `_parse_header()` can be slow but
         # `_get_analogsignal_chunk()` needs to be as fast as possible
 
-        # create fake signal streams and buffer information
-        # a buffer is a group of channels that are in the same buffer for instance hdf5 or binary : this is optional
+        # create simulated signal streams and buffer information
+        # a buffer is a group of channels that are in the same IO buffer for instance hdf5 or binary that can mapped to with np.memmap : this is optional machinery but must be specified as an empty list if not present
         # a stream is a set channels that need to be grouped : this is mandatory
         # very often streams are similar to buffer
         signal_buffers = []
@@ -149,7 +149,7 @@ class ExampleRawIO(BaseRawIO):
             #  (sampling rate/dtype/t_start/units/...)
             stream_id = str(c // 8)
             # buffer_id indicates optionally if channels are in the same buffer
-            # this is optional. In case the buffer concept do not apply then buffer_id must be ""
+            # this is optional. In case the buffer concept does not apply then buffer_id must be ""
             buffer_id = str(c // 8)
             signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
