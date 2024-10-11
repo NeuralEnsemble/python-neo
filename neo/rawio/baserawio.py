@@ -1379,7 +1379,10 @@ class BaseRawIO:
 
         buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
         buffer_desc = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
-        return buffer_desc['shape'][0]
+
+        # some hdf5 revert teh buffer
+        time_axis = buffer_desc.get("time_axis", 0)
+        return buffer_desc['shape'][time_axis]
 
     def _get_analogsignal_chunk_generic(
         self,
@@ -1400,37 +1403,72 @@ class BaseRawIO:
         # When has_buffer_description_api=True this used to avoid to write _get_analogsignal_chunk())
         buffer_desc = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
 
+        i_start = i_start or 0
+        i_stop = i_stop or buffer_desc['shape'][0]
+
         if buffer_desc['type'] == 'binary':
 
             # open files on demand and keep reference to opened file 
-            if not hasattr(self, '_memmap_analogsignal_streams'):
-                self._memmap_analogsignal_streams = {}
-            if block_index not in self._memmap_analogsignal_streams:
-                self._memmap_analogsignal_streams[block_index] = {}
-            if seg_index not in self._memmap_analogsignal_streams[block_index]:
-                self._memmap_analogsignal_streams[block_index][seg_index] = {}
-            if stream_index not in self._memmap_analogsignal_streams[block_index][seg_index]:
+            if not hasattr(self, '_memmap_analogsignal_buffers'):
+                self._memmap_analogsignal_buffers = {}
+            if block_index not in self._memmap_analogsignal_buffers:
+                self._memmap_analogsignal_buffers[block_index] = {}
+            if seg_index not in self._memmap_analogsignal_buffers[block_index]:
+                self._memmap_analogsignal_buffers[block_index][seg_index] = {}
+            if buffer_id not in self._memmap_analogsignal_buffers[block_index][seg_index]:
                 fid = open(buffer_desc['file_path'], mode='rb')
-                self._memmap_analogsignal_streams[block_index][seg_index] = fid
+                self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id] = fid
             else:
-                fid = self._memmap_analogsignal_streams[block_index][seg_index]
+                fid = self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id]
             
-            i_start = i_start or 0
-            i_stop = i_stop or  buffer_desc['shape'][0]
-
             num_channels = buffer_desc['shape'][1]
             
             raw_sigs = get_memmap_chunk_from_opened_file(fid, num_channels,  i_start, i_stop, np.dtype(buffer_desc['dtype']), file_offset=buffer_desc['file_offset'])
 
-            # this is a pre slicing when the stream do not contain all channels (for instance spikeglx when load_sync_channel=False)
+                
+        elif buffer_desc['type'] == 'hdf5':
+
+            # open files on demand and keep reference to opened file 
+            if not hasattr(self, '_hdf5_analogsignal_buffers'):
+                self._hdf5_analogsignal_buffers = {}
+            if block_index not in self._hdf5_analogsignal_buffers:
+                self._hdf5_analogsignal_buffers[block_index] = {}
+            if seg_index not in self._hdf5_analogsignal_buffers[block_index]:
+                self._hdf5_analogsignal_buffers[block_index][seg_index] = {}
+            if buffer_id not in self._hdf5_analogsignal_buffers[block_index][seg_index]:
+                import h5py
+                h5file = h5py.File(buffer_desc['file_path'], mode="r")
+                self._hdf5_analogsignal_buffers[block_index][seg_index][buffer_id] = h5file
+            else:
+                h5file = self._hdf5_analogsignal_buffers[block_index][seg_index][buffer_id]
+
+            hdf5_path = buffer_desc["hdf5_path"]
+            full_raw_sigs = h5file[hdf5_path]
+            
+            time_axis = buffer_desc.get("time_axis", 0)
+            if time_axis == 0:
+                raw_sigs = full_raw_sigs[i_start:i_stop, :]
+            elif time_axis == 1:
+                raw_sigs = full_raw_sigs[:, i_start:i_stop].T
+            else:
+                raise RuntimeError("Should never happen")
+
             if buffer_slice is not None:
                 raw_sigs = raw_sigs[:, buffer_slice]
-            
-            # channel slice requested
-            if channel_indexes is not None:
-                raw_sigs = raw_sigs[:, channel_indexes]
+
+
+
         else:
             raise NotImplementedError()
+
+        # this is a pre slicing when the stream do not contain all channels (for instance spikeglx when load_sync_channel=False)
+        if buffer_slice is not None:
+            raw_sigs = raw_sigs[:, buffer_slice]
+        
+        # channel slice requested
+        if channel_indexes is not None:
+            raw_sigs = raw_sigs[:, channel_indexes]
+
 
         return raw_sigs
 
