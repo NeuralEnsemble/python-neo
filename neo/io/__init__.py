@@ -45,6 +45,7 @@ Classes:
 * :attr:`NestIO`
 * :attr:`NeuralynxIO`
 * :attr:`NeuroExplorerIO`
+* :attr:`NeuroNexusIO
 * :attr:`NeuroScopeIO`
 * :attr:`NeuroshareIO`
 * :attr:`NixIO`
@@ -191,6 +192,9 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.NeuroNexusIO
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.NeuroScopeIO
 
     .. autoattribute:: extensions
@@ -326,6 +330,7 @@ from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
 from neo.io.neuralynxio import NeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
+from neo.io.neuronexusio import NeuroNexusIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
 from neo.io.nixio_fr import NixIO as NixIOFr
@@ -382,6 +387,7 @@ iolist = [
     NestIO,
     NeuralynxIO,
     NeuroExplorerIO,
+    NeuroNexusIO,
     NeuroScopeIO,
     NeuroshareIO,
     NWBIO,
