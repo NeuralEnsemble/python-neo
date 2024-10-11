@@ -58,8 +58,8 @@ class NeuroshareapiIO(BaseIO):
     #    # common_io_test will be skipped.
     read_params = {
         Segment: [
-            ("segment_duration", {"value": 0., "label": "Segment size (s.)"}),
-            ("t_start", {"value": 0., "label": "start reading (s.)"}),
+            ("segment_duration", {"value": 0.0, "label": "Segment size (s.)"}),
+            ("t_start", {"value": 0.0, "label": "start reading (s.)"}),
             #            ("num_analogsignal",
             #                {'value" : 8, "label" : "Number of recording points"}),
             #            ("num_spiketrain_by_channel',
@@ -72,15 +72,16 @@ class NeuroshareapiIO(BaseIO):
 
     name = "Neuroshare"
 
-    extensions = []
+    extensions = ["mcd"]
 
     # This object operates on neuroshare files
     mode = "file"
 
-    def __init__(self, filename=None, dllpath=None):
+    def __init__(self, filename=None, dllname=None):
         """
         Arguments:
             filename : the filename
+            dllname: the path of the library to use for reading
         The init function will run automatically upon calling of the class, as
         in: test = MultichannelIO(filename = filetoberead.mcd), therefore the first
         operations with the file are set here, so that the user doesn't have to
@@ -88,7 +89,7 @@ class NeuroshareapiIO(BaseIO):
 
         """
         BaseIO.__init__(self)
-        self.filename = filename
+        self.filename = str(filename)
         # set the flags for each event type
         eventID = 1
         analogID = 2
@@ -96,7 +97,9 @@ class NeuroshareapiIO(BaseIO):
         # if a filename was given, create a dictionary with information that will
         # be needed later on.
         if self.filename is not None:
-            if dllpath is not None:
+            if dllname is not None:
+                # converting to string to also accept pathlib objects
+                dllpath = str(dllname)
                 name = os.path.splitext(os.path.basename(dllpath))[0]
                 library = ns.Library(name, dllpath)
             else:
@@ -105,7 +108,7 @@ class NeuroshareapiIO(BaseIO):
             # get all the metadata from file
             self.metadata = self.fd.metadata_raw
             # get sampling rate
-            self.metadata["sampRate"] = 1. / self.metadata["TimeStampResolution"]  # hz
+            self.metadata["sampRate"] = 1.0 / self.metadata["TimeStampResolution"]  # hz
             # create lists and array for electrode, spike cutouts and trigger channels
             self.metadata["elecChannels"] = list()
             self.metadata["elecChanId"] = list()
@@ -171,12 +174,13 @@ class NeuroshareapiIO(BaseIO):
                 #        return blk
 
     # create function to read segment
-    def read_segment(self,
-                     lazy=False,
-                     # all following arguments are decided by this IO and are free
-                     t_start=0.,
-                     segment_duration=0.,
-                     ):
+    def read_segment(
+        self,
+        lazy=False,
+        # all following arguments are decided by this IO and are free
+        t_start=0.0,
+        segment_duration=0.0,
+    ):
         """
         Return a Segment containing all analog and spike channels, as well as
         all trigger events.
@@ -190,10 +194,10 @@ class NeuroshareapiIO(BaseIO):
         num_spiketrain : int
             Number of SpikeTrain in this segment.
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         # if no segment duration is given, use the complete file
-        if segment_duration == 0.:
+        if segment_duration == 0.0:
             segment_duration = float(self.metadata["TimeSpan"])
         # if the segment duration is bigger than file, use the complete file
         if segment_duration >= float(self.metadata["TimeSpan"]):
@@ -214,38 +218,43 @@ class NeuroshareapiIO(BaseIO):
             # run through the number of analog channels found at the __init__ function
             for i in range(self.metadata["num_analogs"]):
                 # create an analog signal object for each channel found
-                ana = self.read_analogsignal(channel_index=self.metadata["elecChanId"][i],
-                                             segment_duration=segment_duration, t_start=t_start)
+                ana = self.read_analogsignal(
+                    channel_index=self.metadata["elecChanId"][i], segment_duration=segment_duration, t_start=t_start
+                )
                 # add analog signal read to segment object
                 seg.analogsignals += [ana]
 
         # read triggers (in this case without any duration)
         for i in range(self.metadata["num_trigs"]):
             # create event object for each trigger/bit found
-            eva = self.read_event(channel_index=self.metadata["triggersId"][i],
-                                       segment_duration=segment_duration,
-                                       t_start=t_start, )
+            eva = self.read_event(
+                channel_index=self.metadata["triggersId"][i],
+                segment_duration=segment_duration,
+                t_start=t_start,
+            )
             # add event object to segment
             seg.events += [eva]
         # read epochs (digital events with duration)
         for i in range(self.metadata["num_digiEpochs"]):
             # create event object for each trigger/bit found
-            epa = self.read_epoch(channel_index=self.metadata["digiEpochId"][i],
-                                       segment_duration=segment_duration,
-                                       t_start=t_start, )
+            epa = self.read_epoch(
+                channel_index=self.metadata["digiEpochId"][i],
+                segment_duration=segment_duration,
+                t_start=t_start,
+            )
             # add event object to segment
             seg.epochs += [epa]
         # read nested spiketrain
         # run through all spike channels found
         for i in range(self.metadata["num_spkChans"]):
             # create spike object
-            sptr = self.read_spiketrain(channel_index=self.metadata["spkChanId"][i],
-                                        segment_duration=segment_duration,
-                                        t_start=t_start)
+            sptr = self.read_spiketrain(
+                channel_index=self.metadata["spkChanId"][i], segment_duration=segment_duration, t_start=t_start
+            )
             # add the spike object to segment
             seg.spiketrains += [sptr]
 
-        seg.create_many_to_one_relationship()
+        seg.check_relationships()
 
         return seg
 
@@ -253,20 +262,21 @@ class NeuroshareapiIO(BaseIO):
         With this IO AnalogSignal can be accessed directly with its channel number
     """
 
-    def read_analogsignal(self,
-                          lazy=False,
-                          # channel index as given by the neuroshare API
-                          channel_index=0,
-                          # time in seconds to be read
-                          segment_duration=0.,
-                          # time in seconds to start reading from
-                          t_start=0.,
-                          ):
-        assert not lazy, 'Do not support lazy'
+    def read_analogsignal(
+        self,
+        lazy=False,
+        # channel index as given by the neuroshare API
+        channel_index=0,
+        # time in seconds to be read
+        segment_duration=0.0,
+        # time in seconds to start reading from
+        t_start=0.0,
+    ):
+        assert not lazy, "Do not support lazy"
 
         # some controls:
         # if no segment duration is given, use the complete file
-        if segment_duration == 0.:
+        if segment_duration == 0.0:
             segment_duration = float(self.metadata["TimeSpan"])
         # if the segment duration is bigger than file, use the complete file
         if segment_duration >= float(self.metadata["TimeSpan"]):
@@ -291,28 +301,28 @@ class NeuroshareapiIO(BaseIO):
         # read the data from the sig object
         sig, _, _ = sig.get_data(index=startat, count=bins)
         # store it to the 'AnalogSignal' object
-        anasig = AnalogSignal(sig, units=sigUnits, sampling_rate=self.metadata["sampRate"] * pq.Hz,
-                              t_start=t_start * pq.s,
-                              t_stop=(t_start + segment_duration) * pq.s,
-                              channel_index=channel_index)
+        anasig = AnalogSignal(
+            sig,
+            units=sigUnits,
+            sampling_rate=self.metadata["sampRate"] * pq.Hz,
+            t_start=t_start * pq.s,
+            t_stop=(t_start + segment_duration) * pq.s,
+            channel_index=channel_index,
+        )
 
         # annotate from which electrode the signal comes from
-        anasig.annotate(info="signal from channel %s" % chanName)
+        anasig.annotate(info=f"signal from channel {chanName}")
 
         return anasig
 
     # function to read spike trains
-    def read_spiketrain(self,
-                        lazy=False,
-                        channel_index=0,
-                        segment_duration=0.,
-                        t_start=0.):
+    def read_spiketrain(self, lazy=False, channel_index=0, segment_duration=0.0, t_start=0.0):
         """
         Function to read in spike trains. This API still does not support read in of
         specific channels as they are recorded. rather the fuunction gets the entity set
         by 'channel_index' which is set in the __init__ function (all spike channels)
         """
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         # sampling rate
         sr = self.metadata["sampRate"]
@@ -330,34 +340,35 @@ class NeuroshareapiIO(BaseIO):
         numIndx = endat - startat
         # get the end point using segment duration
         # create a numpy empty array to store the waveforms
-        waveforms = np.array(np.zeros([numIndx, tempSpks.max_sample_count]))
+        waveforms = np.array(np.zeros([numIndx, 1, tempSpks.max_sample_count]))
         # loop through the data from the specific channel index
         for i in range(startat, endat, 1):
             # get cutout, timestamp, cutout duration, and spike unit
             tempCuts, timeStamp, duration, unit = tempSpks.get_data(i)
             # save the cutout in the waveform matrix
-            waveforms[i] = tempCuts[0]
+            waveforms[i, 0, :] = tempCuts[0]
             # append time stamp to list
             times.append(timeStamp)
 
         # create a spike train object
-        spiketr = SpikeTrain(times, units=pq.s,
-                             t_stop=t_start + segment_duration,
-                             t_start=t_start * pq.s,
-                             name="spikes from electrode" + tempSpks.label[-3:],
-                             waveforms=waveforms * pq.volt,
-                             sampling_rate=sr * pq.Hz,
-                             file_origin=self.filename,
-                             annotate=("channel_index:" + str(channel_index)))
+        spiketr = SpikeTrain(
+            times,
+            units=pq.s,
+            t_stop=t_start + segment_duration,
+            t_start=t_start * pq.s,
+            name="spikes from electrode" + tempSpks.label[-3:],
+            waveforms=waveforms * pq.volt,
+            sampling_rate=sr * pq.Hz,
+            file_origin=self.filename,
+            annotate=("channel_index:" + str(channel_index)),
+        )
 
         return spiketr
 
-    def read_event(self, lazy=False, channel_index=0,
-                        t_start=0.,
-                        segment_duration=0.):
+    def read_event(self, lazy=False, channel_index=0, t_start=0.0, segment_duration=0.0):
         """function to read digital timestamps. this function only reads the event
         onset. to get digital event durations, use the epoch function (to be implemented)."""
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         # create temporary empty lists to store data
         tempNames = list()
@@ -367,8 +378,7 @@ class NeuroshareapiIO(BaseIO):
         # transform t_start into index (reading will start from this index)
         startat = trigEntity.get_index_by_time(t_start, 0)  # zero means closest index to value
         # get the last index to read, using segment duration and t_start
-        endat = trigEntity.get_index_by_time(
-            float(segment_duration + t_start), -1)  # -1 means last index before time
+        endat = trigEntity.get_index_by_time(float(segment_duration + t_start), -1)  # -1 means last index before time
         # numIndx = endat-startat
         # run through specified intervals in entity
         for i in range(startat, endat + 1, 1):  # trigEntity.item_count):
@@ -384,20 +394,19 @@ class NeuroshareapiIO(BaseIO):
                 # append the time stamp to them empty list
                 tempTimeStamp.append(tempData)
                 # create an event array
-        eva = Event(labels=np.array(tempNames, dtype="U"),
-                    times=np.array(tempTimeStamp) * pq.s,
-                    file_origin=self.filename,
-                    description="the trigger events (without durations)")
+        eva = Event(
+            labels=np.array(tempNames, dtype="U"),
+            times=np.array(tempTimeStamp) * pq.s,
+            file_origin=self.filename,
+            description="the trigger events (without durations)",
+        )
         return eva
 
-    def read_epoch(self, lazy=False,
-                        channel_index=0,
-                        t_start=0.,
-                        segment_duration=0.):
+    def read_epoch(self, lazy=False, channel_index=0, t_start=0.0, segment_duration=0.0):
         """function to read digital timestamps. this function reads the event
         onset and offset and outputs onset and duration. to get only onsets use
         the event array function"""
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Do not support lazy"
 
         # create temporary empty lists to store data
         tempNames = list()
@@ -431,9 +440,11 @@ class NeuroshareapiIO(BaseIO):
                 # if onOrOff == 255:
                 # pass
                 durations.append(tempData1 - tempData)
-        epa = Epoch(file_origin=self.filename,
-                    times=np.array(tempTimeStamp) * pq.s,
-                    durations=np.array(durations) * pq.s,
-                    labels=np.array(tempNames, dtype="U"),
-                    description="digital events with duration")
+        epa = Epoch(
+            file_origin=self.filename,
+            times=np.array(tempTimeStamp) * pq.s,
+            durations=np.array(durations) * pq.s,
+            labels=np.array(tempNames, dtype="U"),
+            description="digital events with duration",
+        )
         return epa

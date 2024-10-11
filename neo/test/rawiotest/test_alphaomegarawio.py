@@ -82,9 +82,8 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             # just create a temporary folder that is removed
             pass
-        with self.assertLogs(logger=self.logger, level="ERROR") as cm:
+        with self.assertRaisesRegex(ValueError, "is not a folder"):
             reader = AlphaOmegaRawIO(dirname=tmpdir)
-        self.assertIn("is not a folder", cm.output[0])
 
     def test_empty_folder(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -221,9 +220,7 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
         """Check that we keep empty channels when pruning is False"""
         path = Path(self.get_local_path("alphaomega/mpx_map_version4"))
         reader = AlphaOmegaRawIO(dirname=path)
-        mpx_file = Path(
-            self.get_local_path("alphaomega/mpx_map_version4/mapfile0054.mpx")
-        )
+        mpx_file = Path(self.get_local_path("alphaomega/mpx_map_version4/mapfile0054.mpx"))
         (
             metadata,
             continuous_analog_channels,
@@ -236,29 +233,21 @@ class TestAlphaOmegaRawIO(BaseTestRawIO, unittest.TestCase):
             _,  # ignore unknown_blocks
         ) = reader._read_file_datablocks(mpx_file, prune_channels=False)
 
-        self.assertFalse(
-            all(c["positions"] for c in continuous_analog_channels.values())
-        )
-        self.assertFalse(
-            all(c["positions"] for c in segmented_analog_channels.values())
-        )
+        self.assertFalse(all(c["positions"] for c in continuous_analog_channels.values()))
+        self.assertFalse(all(c["positions"] for c in segmented_analog_channels.values()))
         self.assertFalse(all(c["samples"] for c in digital_channels.values()))
         self.assertFalse(all(c["samples"] for c in ports.values()))
 
     def test_correct_number_of_blocks_and_segments(self):
         """We just check that when we read test data we get what we expect"""
-        reader = AlphaOmegaRawIO(
-            dirname=self.get_local_path("alphaomega/mpx_map_version4")
-        )
+        reader = AlphaOmegaRawIO(dirname=self.get_local_path("alphaomega/mpx_map_version4"))
         reader.parse_header()
         nb_blocks = 1
         self.assertEqual(reader.block_count(), nb_blocks)
         nb_segments = [3]
         for block_index in range(nb_blocks):
             with self.subTest(block_index=block_index):
-                self.assertEqual(
-                    reader.segment_count(block_index), nb_segments[block_index]
-                )
+                self.assertEqual(reader.segment_count(block_index), nb_segments[block_index])
 
         nb_streams = 5
         self.assertEqual(reader.signal_streams_count(), nb_streams)

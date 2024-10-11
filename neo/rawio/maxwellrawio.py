@@ -11,37 +11,52 @@ The implementation is a mix between:
  * the implementation in spyking-circus
     https://github.com/spyking-circus/spyking-circus/blob/master/circus/files/maxwell.py
 
-The implementation do not handle spike at the moment.
+This implementation does not handle spikes at the moment.
 
 For maxtwo device, each well will be a different signal stream.
 
 Author : Samuel Garcia, Alessio Buccino, Pierre Yger
 """
+
 import os
 from pathlib import Path
 import platform
 from urllib.request import urlopen
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _signal_stream_dtype,
-                        _spike_channel_dtype, _event_channel_dtype)
-
 import numpy as np
 
-try:
-    import h5py
-    HAVE_H5 = True
-except ImportError:
-    HAVE_H5 = False
+from .baserawio import (
+    BaseRawIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
+)
+
+from neo.core import NeoReadWriteError
 
 
 class MaxwellRawIO(BaseRawIO):
     """
     Class for reading MaxOne or MaxTwo files.
-    """
-    extensions = ['h5']
-    rawmode = 'one-file'
 
-    def __init__(self, filename='', rec_name=None):
+    Parameters
+    ----------
+
+    filename: str, default: ''
+        The *.h5 file to be loaded
+    rec_name: str | None, default: None
+        If the file has multiple recordings, specify the one to read.
+        For 24-well plates, the rec_name needs to be specified since different well
+        rows generate different recording ids.
+        E.g., rec0001, rec0002, etc.
+
+    """
+
+    extensions = ["h5"]
+    rawmode = "one-file"
+
+    def __init__(self, filename="", rec_name=None):
         BaseRawIO.__init__(self)
         self.filename = filename
         self.rec_name = rec_name
@@ -50,93 +65,99 @@ class MaxwellRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        try:
-            import MEArec as mr
-            HAVE_MEAREC = True
-        except ImportError:
-            HAVE_MEAREC = False
-        assert HAVE_H5, 'h5py is not installed'
+        import h5py
 
-        h5 = h5py.File(self.filename, mode='r')
-        self.h5_file = h5
-        version = h5['version'][0].decode()
+        h5file = h5py.File(self.filename, mode="r")
+        self.h5_file = h5file
+        version = h5file["version"][0].decode()
 
         # create signal stream
         # one stream per well
         signal_streams = []
         if int(version) == 20160704:
             self._old_format = True
-            signal_streams.append(('well000', 'well000'))
+            signal_streams.append(("well000", "well000"))
         elif int(version) > 20160704:
             # multi stream stream (one well is one stream)
             self._old_format = False
-            stream_ids = list(h5['wells'].keys())
-            for stream_id in stream_ids:
-                rec_names = list(h5['wells'][stream_id].keys())
-                if len(rec_names) > 1:
-                    if self.rec_name is None:
-                        raise ValueError("Detected multiple recordings. Please select a "
-                                         "single recording using the `rec_name` parameter. "
-                                         f"Possible rec_name {rec_names}")
+            well_ids = list(h5file["wells"].keys())
+            unique_rec_names = []
+            for well_name in well_ids:
+                rec_names = list(h5file["wells"][well_name].keys())
+                for rec_name in rec_names:
+                    unique_rec_names.append(rec_name)
+            # check consistency of rec_names
+            unique_rec_names = np.unique(unique_rec_names)
+            if len(unique_rec_names) > 1:
+                if self.rec_name is None:
+                    raise ValueError(
+                        f"Detected multiple recording IDs across wells. "
+                        f"Please select a single recording using the `rec_name` parameter. "
+                        f"Possible rec_names: {unique_rec_names}"
+                    )
                 else:
-                    self.rec_name = rec_names[0]
-                signal_streams.append((stream_id, stream_id))
+                    if self.rec_name not in unique_rec_names:
+                        raise NeoReadWriteError(f"rec_name {self.rec_name} not found")
+            else:
+                self.rec_name = unique_rec_names[0]
+            # add streams that contain the selected rec_name
+            for well_name in well_ids:
+                rec_names = list(h5file["wells"][well_name].keys())
+                if self.rec_name in rec_names:
+                    signal_streams.append((well_name, well_name))
         else:
-            raise NotImplementedError(
-                f'This version {version} is not supported')
+            raise NotImplementedError(f"This version {version} is not supported")
+
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # create signal channels
         max_sig_length = 0
         self._signals = {}
         sig_channels = []
-        for stream_id in signal_streams['id']:
+        for stream_id in signal_streams["id"]:
             if int(version) == 20160704:
-                sr = 20000.
-                settings = h5["settings"]
-                if 'lsb' in settings:
-                    gain_uV = settings['lsb'][0] * 1e6
+                sr = 20000.0
+                settings = h5file["settings"]
+                if "lsb" in settings:
+                    gain_uV = settings["lsb"][0] * 1e6
                 else:
                     if "gain" not in settings:
-                        print("'gain' amd 'lsb' not found in settings. "
-                              "Setting gain to 512 (default)")
+                        print("'gain' amd 'lsb' not found in settings. " "Setting gain to 512 (default)")
                         gain = 512
                     else:
-                        gain = settings['gain'][0]
+                        gain = settings["gain"][0]
                     gain_uV = 3.3 / (1024 * gain) * 1e6
-                sigs = h5['sig']
-                mapping = h5["mapping"]
-                ids = np.array(mapping['channel'])
+                sigs = h5file["sig"]
+                mapping = h5file["mapping"]
+                ids = np.array(mapping["channel"])
                 ids = ids[ids >= 0]
                 self._channel_slice = ids
             elif int(version) > 20160704:
-                settings = h5['wells'][stream_id][self.rec_name]['settings']
-                sr = settings['sampling'][0]
-                if 'lsb' in settings:
-                    gain_uV = settings['lsb'][0] * 1e6
+                settings = h5file["wells"][stream_id][self.rec_name]["settings"]
+                sr = settings["sampling"][0]
+                if "lsb" in settings:
+                    gain_uV = settings["lsb"][0] * 1e6
                 else:
                     if "gain" not in settings:
-                        print("'gain' amd 'lsb' not found in settings. "
-                              "Setting gain to 512 (default)")
+                        print("'gain' amd 'lsb' not found in settings. " "Setting gain to 512 (default)")
                         gain = 512
                     else:
-                        gain = settings['gain'][0]
+                        gain = settings["gain"][0]
                     gain_uV = 3.3 / (1024 * gain) * 1e6
-                mapping = settings['mapping']
-                sigs = h5['wells'][stream_id][self.rec_name]['groups']['routed']['raw']
+                mapping = settings["mapping"]
+                sigs = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
 
-            channel_ids = np.array(mapping['channel'])
-            electrode_ids = np.array(mapping['electrode'])
+            channel_ids = np.array(mapping["channel"])
+            electrode_ids = np.array(mapping["electrode"])
             mask = channel_ids >= 0
             channel_ids = channel_ids[mask]
             electrode_ids = electrode_ids[mask]
 
             for i, chan_id in enumerate(channel_ids):
                 elec_id = electrode_ids[i]
-                ch_name = f'ch{chan_id} elec{elec_id}'
+                ch_name = f"ch{chan_id} elec{elec_id}"
                 offset_uV = 0
-                sig_channels.append((ch_name, str(chan_id), sr, 'uint16', 'uV',
-                                     gain_uV, offset_uV, stream_id))
+                sig_channels.append((ch_name, str(chan_id), sr, "uint16", "uV", gain_uV, offset_uV, stream_id))
 
             self._signals[stream_id] = sigs
             max_sig_length = max(max_sig_length, sigs.shape[1])
@@ -152,34 +173,33 @@ class MaxwellRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         self.header = {}
-        self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
-        self.header['signal_streams'] = signal_streams
-        self.header['signal_channels'] = sig_channels
-        self.header['spike_channels'] = spike_channels
-        self.header['event_channels'] = event_channels
+        self.header["nb_block"] = 1
+        self.header["nb_segment"] = [1]
+        self.header["signal_streams"] = signal_streams
+        self.header["signal_channels"] = sig_channels
+        self.header["spike_channels"] = spike_channels
+        self.header["event_channels"] = event_channels
 
         self._generate_minimal_annotations()
-        bl_ann = self.raw_annotations['blocks'][0]
-        bl_ann['maxwell_version'] = version
+        bl_ann = self.raw_annotations["blocks"][0]
+        bl_ann["maxwell_version"] = version
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.
+        return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
         return self._t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        stream_id = self.header['signal_streams'][stream_index]['id']
+        stream_id = self.header["signal_streams"][stream_index]["id"]
         sigs = self._signals[stream_id]
         return sigs.shape[1]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        return 0.
+        return 0.0
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
-                                stream_index, channel_indexes):
-        stream_id = self.header['signal_streams'][stream_index]['id']
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        stream_id = self.header["signal_streams"][stream_index]["id"]
         sigs = self._signals[stream_id]
 
         if i_start is None:
@@ -194,9 +214,10 @@ class MaxwellRawIO(BaseRawIO):
             if np.array(channel_indexes).size > 1 and np.any(np.diff(channel_indexes) < 0):
                 # get around h5py constraint that it does not allow datasets
                 # to be indexed out of order
-                sorted_channel_indexes = np.sort(channel_indexes)
-                resorted_indexes = np.array(
-                    [list(channel_indexes).index(ch) for ch in sorted_channel_indexes])
+                order_f = np.argsort(channel_indexes)
+                sorted_channel_indexes = channel_indexes[order_f]
+                # use argsort again on order_f to obtain resorted_indexes
+                resorted_indexes = np.argsort(order_f)
 
         try:
             if resorted_indexes is None:
@@ -213,10 +234,10 @@ class MaxwellRawIO(BaseRawIO):
                     sigs = sigs[sorted_channel_indexes, i_start:i_stop]
                 sigs = sigs[resorted_indexes]
         except OSError as e:
-            print('*' * 10)
+            print("*" * 10)
             print(_hdf_maxwell_error)
-            print('*' * 10)
-            raise(e)
+            print("*" * 10)
+            raise (e)
         sigs = sigs.T
 
         return sigs
@@ -230,7 +251,7 @@ Please visit this page and install the missing decompression libraries:
 https://share.mxwbio.com/d/4742248b2e674a85be97/
 Then, link the decompression library by setting the `HDF5_PLUGIN_PATH` to your
 installation location, e.g. via
-os.environ['HDF5_PLUGIN_PATH'] = '/path/to/cutum/hdf5/plugin/'
+os.environ['HDF5_PLUGIN_PATH'] = '/path/to/custom/hdf5/plugin/'
 
 Alternatively, you can use the auto_install_maxwell_hdf5_compression_plugin() below
 function that do it automagically.
@@ -239,27 +260,27 @@ function that do it automagically.
 
 def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None, force_download=True):
     if hdf5_plugin_path is None:
-        hdf5_plugin_path = os.getenv('HDF5_PLUGIN_PATH', None)
+        hdf5_plugin_path = os.getenv("HDF5_PLUGIN_PATH", None)
         if hdf5_plugin_path is None:
-            hdf5_plugin_path = Path.home() / 'hdf5_plugin_path_maxwell'
-            os.environ['HDF5_PLUGIN_PATH'] = str(hdf5_plugin_path)
+            hdf5_plugin_path = Path.home() / "hdf5_plugin_path_maxwell"
+            os.environ["HDF5_PLUGIN_PATH"] = str(hdf5_plugin_path)
     hdf5_plugin_path = Path(hdf5_plugin_path)
     hdf5_plugin_path.mkdir(exist_ok=True)
 
-    if platform.system() == 'Linux':
-        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FLinux%2Flibcompression.so&dl=1'
-        local_lib = hdf5_plugin_path / 'libcompression.so'
-    elif platform.system() == 'Darwin':
-        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FMacOS%2Flibcompression.dylib&dl=1'
-        local_lib = hdf5_plugin_path / 'libcompression.dylib'
-    elif platform.system() == 'Windows':
-        remote_lib = 'https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FWindows%2Fcompression.dll&dl=1'
-        local_lib = hdf5_plugin_path / 'compression.dll'
+    if platform.system() == "Linux":
+        remote_lib = "https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FLinux%2Flibcompression.so&dl=1"
+        local_lib = hdf5_plugin_path / "libcompression.so"
+    elif platform.system() == "Darwin":
+        remote_lib = "https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FMacOS%2Flibcompression.dylib&dl=1"
+        local_lib = hdf5_plugin_path / "libcompression.dylib"
+    elif platform.system() == "Windows":
+        remote_lib = "https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FWindows%2Fcompression.dll&dl=1"
+        local_lib = hdf5_plugin_path / "compression.dll"
 
     if not force_download and local_lib.is_file():
-        print(f'lib h5 compression for maxwell already already in {local_lib}')
+        print(f"The h5 compression library for Maxwell is already located in {local_lib}!")
         return
 
     dist = urlopen(remote_lib)
-    with open(local_lib, 'wb') as f:
+    with open(local_lib, "wb") as f:
         f.write(dist.read())

@@ -24,9 +24,9 @@ class ElanIO(ElanRawIO, BaseFromRaw):
             file is inferred from the filename by adding the ".pos" extension
             to it
     """
-    _prefered_signal_group_mode = 'group-by-same-units'
+
+    _prefered_signal_group_mode = "group-by-same-units"
 
     def __init__(self, filename, entfile=None, posfile=None):
-        ElanRawIO.__init__(self, filename=filename, entfile=entfile,
-                           posfile=posfile)
+        ElanRawIO.__init__(self, filename=filename, entfile=entfile, posfile=posfile)
         BaseFromRaw.__init__(self, filename)

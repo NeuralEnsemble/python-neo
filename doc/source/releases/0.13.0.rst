@@ -1,0 +1,141 @@
+========================
+Neo 0.13.0 release notes
+========================
+
+2nd February 2024
+
+
+This release of Neo sees a lot of changes and improvements, with a documentation rewrite,
+final tweaks and refinements to the object model (in anticipation of a 1.0 release in the next few months),
+a new approach to filtering objects of interest from complex datasets,
+and a large number of bug fixes and performance improvements in IO modules.
+23 people contributed to this release, which is a new record for Neo!
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+
+Refinements to the Neo object model
+-----------------------------------
+
+In order to simplify the structure of Neo datasets, and make a clearer distinction between the Block-Segment-data
+hierarchy and the more flexible data-grouping functionality, we no longer allow Groups to contain Segments.
+
+We have made the handling of RegionOfInterest subclasses consistent with :class:`ChannelView`,
+i.e., just as a :class:`ChannelView` gives a view of a subset of the channels in a multi-channel :class:`AnalogSignal`,
+so the :class:`RegionOfInterest`` subclasses give views of a subset of the pixels in an :class:`ImageSequence`.
+
+Neo now has automatic handling of relationships between objects.
+In previous versions, the child-parent relationships between objects had to be handled manually,
+for example when you added a :class:`SpikeTrain` to a :class:`Segment`, this created a parent-child relationship,
+but the reverse child-parent relationship was not automatically created, leading to potential inconsistencies.
+Now these relationships are created automatically, as the various child lists
+(``Segment.spiketrains``, ``Segment.analogsignals``, ``Block.segments``, etc.)
+are now represented by pseudo-list objects which take care of the book-keeping behind the scenes.
+
+As a convenience, all Neo containers (:class:`Block`, :class:`Segment`, :class:`Group`)
+now have an :meth:`add()` method that automatically puts the object in the correct list, for example::
+
+    segment.add(signal1, event2, spiketrain3)
+
+instead of::
+
+    segment.analogsignals.append(signal1)
+    segment.events.append(event2)
+    segment.spiketrains.append(spiketrain3)
+
+
+Documentation rewrite and new theme
+-----------------------------------
+
+The Neo documentation has had a complete overhaul,
+with a rewrite aimed at providing different entry points to the documentation for different_ user_ needs_,
+using the Sphinx IPython extension to ensure code snippets are always up-to-date,
+and a switch to the `PyData Sphinx theme`_.
+
+Improved filtering
+------------------
+
+For complex datasets, it is often necessary to extract subsets of the data from a Neo object tree by filtering
+based on object types, names, and annotations.
+Neo's filtering capabilities have been improved, with the addition of a new :mod:`filters` module.
+
+For example, suppose we have a dataset from an animal performing a behavioural task.
+Our objective is to retain only the trials where the animal performed correctly,
+for one of the four trial types in the experiment, and where the recordings met certain quality criteria.
+Based on an annotated Neo dataset, we can extract the spike trains of interest in a single step,
+without for loops or complex list comprehensions, as follows:
+
+.. code-block:: python
+
+   import neo.core.filters as nf
+
+   # ... load data, `trial` is a Segment object ...
+
+   sua_spiketrains = trial.filter(
+       objects=neo.SpikeTrain,
+       targdict=[
+           {"sua": True},                                # only single-unit activity
+           {"electrode_reject_HFC": False},              # } exclude different types
+           {"electrode_reject_LFC": False},              # } of artefacts
+           {"electrode_reject_IFC": False},              # } or markers of poor-quality
+           {"noise": False},                             # } recordings
+           {"spike_count": nf.FilterGreaterThan(10000)}  # only use neurons with a sufficiently high firing rate
+       ]
+   )
+
+New IO modules
+--------------
+
+Neo now supports MED_ format, with the new :class:`MedIO` and :class:`MedRawIO` classes.
+
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+Bug fixes and/or improvements have been made to :class:`AsciiSignalIO`, :class:`BCI2000IO`, :class:`BiocamIO`,
+:class:`BlackrockIO`, :class:`IgorIO`, :class:`IntanIO`, :class:`KlustaKwikIO`, :class:`MaxwellIO`, :class:`MEArecIO`,
+:class:`NeoMatlabIO`, :class:`NeuralynxIO`, :class:`NixIO`, :class:`NWBIO`, :class:`OpenEphysIO`, :class:`PlexonIO`,
+:class:`Plexon2IO`, :class:`SpikeGLXIO`, and :class:`TdtIO`.
+
+Other changes
+-------------
+
+- RawIO classes have a method :meth:`parse_header` that extracts all the information from the formats
+  and therefore is usually a computationally heavy process.
+  A flag ``is_header_parsed`` has now been added, to avoid re-extracting the header information
+  if it is already available. This can produce significant speed ups.
+
+- Type hints have been added to the :mod:`baseio`, :mod:`baserawio`, and :mod:`exampleio` modules,
+  with the aim of helping developers who wish to add a new IO module.
+
+- All of the code is now formatted with black_.
+
+- The continuous integration (CI) pipeline has been sped up.
+
+
+Updated dependencies
+--------------------
+
+Neo now requires NumPy version >=1.20.3.
+
+
+Acknowledgements
+----------------
+
+Thanks to Julia Sprenger, Andrew Davison, Zach McKenzie, Alessio Buccino, Moritz Alexander Kern,
+Samuel Garcia, Heberto Mayorquin, Joscha Schmiedt, Daniel P. Crepeau, Divyansh Gupta, Nate Dolensek,
+Peter N. Steinmetz, Philipp Hornauer, Robert Wolff, Jules Lebert, Kyle Johnsen, Ben Dichter, Benjamin Heasly,
+Baptiste Grimaud, Cody Baker, Fernando J. Chaure, @Filipe, and Matthias Klumpp
+for their contributions to this release.
+
+.. generated with git shortlog --since=2023-02-17 -sne then checking Github for PRs merged since the last release but with commits before then
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.13.0+is%3Aclosed
+.. _`pull requests`: https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+merged%3A%3E2023-02-17+milestone%3A0.13.0
+.. _`latest recommendations`: https://packaging.python.org/en/latest/
+.. _black: https://black.readthedocs.io
+.. _`PyData Sphinx theme`: https://pydata-sphinx-theme.readthedocs.io
+.. _MED: https://medformat.org
+.. _different: https://neo.readthedocs.io/en/latest/read_and_analyze.html
+.. _user: https://neo.readthedocs.io/en/latest/share_data.html
+.. _needs: https://neo.readthedocs.io/en/latest/use_neo_as_dependency.html

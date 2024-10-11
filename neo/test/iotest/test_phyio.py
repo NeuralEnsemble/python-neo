@@ -6,9 +6,8 @@ import unittest
 
 from neo.io.phyio import PhyIO  # , HAVE_SCIPY
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io.proxyobjects import (AnalogSignalProxy,
-                                 SpikeTrainProxy, EventProxy, EpochProxy)
-from neo import (AnalogSignal, SpikeTrain)
+from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
+from neo import AnalogSignal, SpikeTrain
 
 import quantities as pq
 import numpy as np
@@ -19,15 +18,11 @@ from pathlib import Path
 
 class TestPhyIO(BaseTestIO, unittest.TestCase):
     ioclass = PhyIO
-    entities_to_download = [
-        'phy'
-    ]
-    entities_to_test = [
-        'phy/phy_example_0'
-    ]
+    entities_to_download = ["phy"]
+    entities_to_test = ["phy/phy_example_0"]
 
     def test_read_segment_lazy(self):
-        dirname = self.get_local_path('phy/phy_example_0')
+        dirname = self.get_local_path("phy/phy_example_0")
         r = PhyIO(dirname=dirname)
         seg = r.read_segment(lazy=True)
         for ana in seg.analogsignals:
@@ -48,7 +43,7 @@ class TestPhyIO(BaseTestIO, unittest.TestCase):
             self.assertNotEqual(st.size, 0)
 
         # annotations
-        assert seg.name == 'Seg #0 Block #0'
+        assert seg.name == "Seg #0 Block #0"
         for anasig in seg.analogsignals:
             assert anasig.name is not None
         for st in seg.spiketrains:
@@ -59,12 +54,12 @@ class TestPhyIO(BaseTestIO, unittest.TestCase):
             assert ep.name is not None
 
     def test_read_block(self):
-        dirname = self.get_local_path('phy/phy_example_0')
+        dirname = self.get_local_path("phy/phy_example_0")
         r = PhyIO(dirname=dirname)
         bl = r.read_block(lazy=True)
 
     def test_read_segment_with_time_slice(self):
-        dirname = self.get_local_path('phy/phy_example_0')
+        dirname = self.get_local_path("phy/phy_example_0")
         r = PhyIO(dirname=dirname)
         seg = r.read_segment(time_slice=None)
         spikes_full = seg.spiketrains[0]

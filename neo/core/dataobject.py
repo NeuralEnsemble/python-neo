@@ -4,11 +4,13 @@ used by all :module:`neo.core` classes that can contain data (i.e. are not conta
 It contains basic functionality that is shared among all those data objects.
 
 """
+
 from copy import deepcopy
 import warnings
 
 import quantities as pq
 import numpy as np
+
 from neo.core.baseneo import BaseNeo, _check_annotations
 
 
@@ -20,7 +22,7 @@ def _normalize_array_annotations(value, length):
 
     Parameters
     ----------
-    value : np.ndarray or list or dict
+    value : np.ndarray or list or tuple or dict
         Value to be checked for consistency.
     length : int
         Required length of the array annotation.
@@ -48,8 +50,7 @@ def _normalize_array_annotations(value, length):
         raise ValueError("Array annotations must not be None")
     # If not array annotation, pass on to regular check and make it a list, that is checked again
     # This covers array annotations with length 1
-    elif not isinstance(value, (list, np.ndarray)) or (
-            isinstance(value, pq.Quantity) and value.shape == ()):
+    elif not isinstance(value, (list, np.ndarray, tuple)) or (isinstance(value, pq.Quantity) and value.shape == ()):
         _check_annotations(value)
         value = _normalize_array_annotations(np.array([value]), length)
 
@@ -72,8 +73,7 @@ def _normalize_array_annotations(value, length):
             val_length = len(value)
 
         if not own_length == val_length:
-            raise ValueError(
-                "Incorrect length of array annotation: {} != {}".format(val_length, own_length))
+            raise ValueError(f"Incorrect length of array annotation: {val_length} != {own_length}")
 
         # Local function used to check single elements of a list or an array
         # They must not be lists or arrays and fit the usual annotation data types
@@ -81,9 +81,10 @@ def _normalize_array_annotations(value, length):
             # Nested array annotations not allowed currently
             # If element is a list or a np.ndarray, it's not conform except if it's a quantity of
             # length 1
-            if isinstance(element, list) or (isinstance(element, np.ndarray) and not (
-                    isinstance(element, pq.Quantity) and (
-                    element.shape == () or element.shape == (1,)))):
+            if isinstance(element, list) or (
+                isinstance(element, np.ndarray)
+                and not (isinstance(element, pq.Quantity) and (element.shape == () or element.shape == (1,)))
+            ):
                 raise ValueError("Array annotations should only be 1-dimensional")
             if isinstance(element, dict):
                 raise ValueError("Dictionaries are not supported as array annotations")
@@ -116,8 +117,9 @@ def _normalize_array_annotations(value, length):
             except ValueError as e:
                 msg = str(e)
                 if "setting an array element with a sequence." in msg:
-                    raise ValueError("Scalar values and arrays/lists cannot be "
-                                     "combined into a single array annotation")
+                    raise ValueError(
+                        "Scalar values and arrays/lists cannot be " "combined into a single array annotation"
+                    )
                 else:
                     raise e
 
@@ -125,8 +127,7 @@ def _normalize_array_annotations(value, length):
             # raise an Error with a telling error message, because this means the elements
             # are not compatible
             if value.dtype == object:
-                raise ValueError("Cannot convert list of incompatible types into a single"
-                                 " array annotation")
+                raise ValueError("Cannot convert list of incompatible types into a single" " array annotation")
 
             # Check the first element for correctness
             # If its type is correct for annotations, all others are correct as well
@@ -137,9 +138,23 @@ def _normalize_array_annotations(value, length):
 
 
 class DataObject(BaseNeo, pq.Quantity):
-    '''
+    """
     This is the base class from which all objects containing data inherit
     It contains common functionality for all those objects and handles array_annotations.
+
+    Parameters
+    ----------
+    name: str | None, default: None
+        Name of the Neo object
+    description: str | None, default: None
+        Human readable string description of the Neo object
+    array_annotations: dict | None, default: None
+        Dictionary containing arrays / lists which annotate individual data points of the Neo object.
+    **annotations: dict | None:
+        Other keyword annotations to be included
+
+    Notes
+    -----
 
     Common functionality that is not included in BaseNeo includes:
     - duplicating with new data
@@ -154,38 +169,34 @@ class DataObject(BaseNeo, pq.Quantity):
     They can contain the same data types as regular annotations, but are always represented
     as numpy arrays of the same length as the number of data points of the annotated neo object.
 
-    Args:
-        name (str, optional): Name of the Neo object
-        description (str, optional): Human readable string description of the Neo object
-        file_origin (str, optional): Origin of the data contained in this Neo object
-        array_annotations (dict, optional): Dictionary containing arrays / lists which annotate
-            individual data points of the Neo object.
-        kwargs: regular annotations stored in a separate annotation dictionary
-    '''
+    """
 
-    def __init__(self, name=None, description=None, file_origin=None, array_annotations=None,
-                 **annotations):
+    def __init__(self, name=None, description=None, file_origin=None, array_annotations=None, **annotations):
         """
         This method is called by each data object and initializes the newly created object by
         adding array annotations and calling __init__ of the super class, where more annotations
         and attributes are processed.
         """
 
-        if not hasattr(self, 'array_annotations') or not self.array_annotations:
+        if not hasattr(self, "array_annotations") or not self.array_annotations:
             self.array_annotations = ArrayDict(self._get_arr_ann_length())
         if array_annotations is not None:
             self.array_annotate(**array_annotations)
 
-        BaseNeo.__init__(self, name=name, description=description, file_origin=file_origin,
-                         **annotations)
+        BaseNeo.__init__(self, name=name, description=description, file_origin=file_origin, **annotations)
 
     def array_annotate(self, **array_annotations):
         """
         Add array annotations (annotations for individual data points) as arrays to a Neo data
         object.
 
-        Example:
+        Parameters
+        ----------
+        **array_annotations: dict
+            Series of keyword annotations to add to the object
 
+        Examples
+        --------
         >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
         >>> obj.array_annotations['code'][1]
         'b'
@@ -196,12 +207,19 @@ class DataObject(BaseNeo, pq.Quantity):
     def array_annotations_at_index(self, index):
         """
         Return dictionary of array annotations at a given index or list of indices
-        :param index: int, list, numpy array: The index (indices) from which the annotations
-                      are extracted
-        :return: dictionary of values or numpy arrays containing all array annotations
-                 for given index/indices
 
-        Example:
+        Parameters
+        ----------
+        index: int | list | np.ndarray
+            The index (indices) from which the annotations are extracted
+
+        Returns
+        -------
+        index_annotations: dict
+            Dictionary of values or numpy arrays containing all array annotations for given index/indices
+
+        Examples
+        --------
         >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
         >>> obj.array_annotations_at_index(1)
         {code='b', category=1}
@@ -228,13 +246,25 @@ class DataObject(BaseNeo, pq.Quantity):
         return index_annotations
 
     def _merge_array_annotations(self, other):
-        '''
+        """
         Merges array annotations of 2 different objects.
+
+        Parameters
+        ----------
+        other: any
+            The annotation to attemp to merge
+
+        Returns
+        -------
+        merged_array_annotations: dict
+            The merged annotations
+
+        Notes
+        -----
         The merge happens in such a way that the result fits the merged data
         In general this means concatenating the arrays from the 2 objects.
         If an annotation is only present in one of the objects, it will be omitted
-        :return Merged array_annotations
-        '''
+        """
 
         merged_array_annotations = {}
         omitted_keys_self = []
@@ -248,8 +278,7 @@ class DataObject(BaseNeo, pq.Quantity):
                     try:
                         other_value = other_value.rescale(value.units)
                     except ValueError:
-                        raise ValueError("Could not merge array annotations "
-                                         "due to different units")
+                        raise ValueError("Could not merge array annotations " "due to different units")
                     merged_array_annotations[key] = np.append(value, other_value) * value.units
                 else:
                     merged_array_annotations[key] = np.append(value, other_value)
@@ -259,25 +288,43 @@ class DataObject(BaseNeo, pq.Quantity):
                 omitted_keys_self.append(key)
                 continue
         # Also save omitted keys from 'other'
-        omitted_keys_other = [key for key in other.array_annotations if
-                              key not in self.array_annotations]
+        omitted_keys_other = [key for key in other.array_annotations if key not in self.array_annotations]
 
         # Warn if keys were omitted
         if omitted_keys_other or omitted_keys_self:
-            warnings.warn("The following array annotations were omitted, because they were only "
-                          "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the one that was merged into the other"
-                          "".format(omitted_keys_self, omitted_keys_other), UserWarning)
+            warnings.warn(
+                f"The following array annotations were omitted, because they were only "
+                f"present in one of the merged objects: {omitted_keys_self} from the "
+                f"one that was merged into and {omitted_keys_other} from the one that "
+                f"was merged into the other",
+                UserWarning,
+            )
 
         # Return the merged array_annotations
         return merged_array_annotations
 
-    def rescale(self, units):
-        '''
-        Return a copy of the object converted to the specified
-        units
-        :return: Copy of self with specified units
-        '''
+    def rescale(self, units, dtype=None):
+        """
+        Return a copy of the object converted to the specified units.
+
+        Parameters
+        ----------
+        units: quantity unit
+            The units to convert the object to
+        dtype: a numpy dtype
+            Only exists for backward compatibility see [1]
+
+        Returns
+        -------
+        self.copy(): Any
+            A copy of the object with the desired units
+
+        Notes
+        -----
+        [1] The `dtype` argument exists only for backward compatibility within quantities, see
+        https://github.com/python-quantities/python-quantities/pull/204
+        """
+
         # Use simpler functionality, if nothing will be changed
         dim = pq.quantity.validate_dimensionality(units)
         if self.dimensionality == dim:
@@ -295,10 +342,10 @@ class DataObject(BaseNeo, pq.Quantity):
 
     # Needed to implement this so array annotations are copied as well, ONLY WHEN copying 1:1
     def copy(self, **kwargs):
-        '''
+        """
         Returns a shallow copy of the object
         :return: Copy of self
-        '''
+        """
 
         obj = super().copy(**kwargs)
         obj.array_annotations = self.array_annotations
@@ -307,6 +354,16 @@ class DataObject(BaseNeo, pq.Quantity):
     def as_array(self, units=None):
         """
         Return the object's data as a plain NumPy array.
+
+        Parameters
+        ----------
+        units: quantities units | None, default: None
+            The data return as a np.ndarray with units requested
+
+        Returns
+        -------
+        data_array: np.ndarray
+            The data as an array
 
         If `units` is specified, first rescale to those units.
         """
@@ -339,18 +396,18 @@ class DataObject(BaseNeo, pq.Quantity):
 
     def __deepcopy__(self, memo):
         """
-            Create a deep copy of the data object.
-            All attributes and annotations are also deep copied.
-            References to parent objects are not kept, they are set to None.
+        Create a deep copy of the data object.
+        All attributes and annotations are also deep copied.
+        References to parent objects are not kept, they are set to None.
 
 
-            :param memo: (dict) Objects that have been deep copied already
-            :return: (DataObject) Deep copy of the input DataObject
+        :param memo: (dict) Objects that have been deep copied already
+        :return: (DataObject) Deep copy of the input DataObject
         """
         cls = self.__class__
         necessary_attrs = {}
         # Units need to be specified explicitly for analogsignals/irregularlysampledsignals
-        for k in self._necessary_attrs + (('units',),):
+        for k in self._necessary_attrs + (("units",),):
             necessary_attrs[k[0]] = getattr(self, k[0], self)
         # Create object using constructor with necessary attributes
         new_obj = cls(**necessary_attrs)
@@ -377,10 +434,10 @@ class DataObject(BaseNeo, pq.Quantity):
 class ArrayDict(dict):
     """Dictionary subclass to handle array annotations
 
-       When setting `obj.array_annotations[key]=value`, checks for consistency
-       should not be bypassed.
-       This class overrides __setitem__ from dict to perform these checks every time.
-       The method used for these checks is given as an argument for __init__.
+    When setting `obj.array_annotations[key]=value`, checks for consistency
+    should not be bypassed.
+    This class overrides __setitem__ from dict to perform these checks every time.
+    The method used for these checks is given as an argument for __init__.
     """
 
     def __init__(self, length, check_function=_normalize_array_annotations, *args, **kwargs):
@@ -399,8 +456,7 @@ class ArrayDict(dict):
     def update(self, *args, **kwargs):
         if args:
             if len(args) > 1:
-                raise TypeError("update expected at most 1 arguments, "
-                                "got %d" % len(args))
+                raise TypeError("update expected at most 1 arguments, " f"got {len(args)}")
             other = dict(args[0])
             for key in other:
                 self[key] = other[key]

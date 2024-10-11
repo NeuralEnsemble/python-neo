@@ -27,6 +27,7 @@ and may not be the current affiliation of a contributor.
 * Kyler Brown
 * Mikkel Elle Lepperød [11]
 * C Daniel Meliza [12]
+* Michael Denker [13, 29]
 * Julia Sprenger [13, 6]
 * Maximilian Schmidt [13]
 * Johanna Senk [13]
@@ -54,14 +55,39 @@ and may not be the current affiliation of a contributor.
 * Aitor Morales-Gregorio [13]
 * Peter N Steinmetz [22]
 * Shashwat Sridhar
-* Alessio Buccino [23]
+* Alessio Buccino [23, 24, 38]
 * Regimantas Jurkus [13]
 * Steffen Buergers [24]
 * Etienne Combrisson [6]
 * Ben Dichter [24]
 * Elodie Legouée [21]
+* Oliver Kloss [13]
 * Heberto Mayorquin [24]
 * Thomas Perret [25]
+* Kyle Johnsen [26, 27]
+* Zach McKenzie [28,39]
+* Moritz Alexander Kern [29]
+* Joscha Schmiedt
+* Daniel P. Crepeau [30]
+* Divyansh Gupta [31]
+* Nate Dolensek [3]
+* Philipp Hornauer [32]
+* Robert Wolff
+* Jules Lebert [33]
+* Benjamin Heasly
+* Baptiste Grimaud [34]
+* Cody Baker [24]
+* Fernando J. Chaure [35]
+* Filipe*github
+* Matthias Klumpp
+* Greg Knoll [36]
+* Chris Halcrow [37]
+* Szonja Weigl [24]
+* Chris Heydrick [40]
+* Kyu Hun Lee
+* Téo Lohrer
+* Anthony Pinto [41]
+* Xin Niu
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -88,6 +114,24 @@ and may not be the current affiliation of a contributor.
 23. Bio Engineering Laboratory, DBSSE, ETH, Basel, Switzerland
 24. CatalystNeuro
 25. Institut des Sciences Cognitives Marc Jeannerod, CNRS UMR5229, Lyon, France
+26. Georgia Institute of Technology
+27. Emory University
+28. Harvard Medical School
+29. Institute for Advanced Simulation (IAS-6), Forschungszentrum Jülich, Germany
+30. Dark Horse Neuro, Inc.
+31. IST Austria
+32. Department of Biosystems Science and Engineering, ETH Zürich, Basel, Switzerland
+33. University College London
+34. École Normale Supérieure Paris-Saclay
+35. Institute of Biomedical Engineering, University of Buenos Aires, Argentina
+36. Bernstein Center for Computational Neuroscience, Berlin, Germany
+37. University of Edinburgh
+38. Allen Institute for Neural Dynamics, Seattle, WA, United States
+39. Massachusetts General Hospital, Department of Molecular Biology
+40. Plexon Inc.
+41. Paris Brain Institute
+
+
 
 If we've somehow missed you off the list we're very sorry - please let us know.
 
@@ -101,6 +145,9 @@ Acknowledgements
    :width: 156px
    :align: right
 
-Neo was developed in part in the Human Brain Project,
-funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation
-under Specific Grant Agreements No. 720270 and No. 785907 (Human Brain Project SGA1 and SGA2).
+Development of Neo has been partially funded by the European Union Sixth Framework Program (FP6) under
+grant agreement FETPI-015879 (FACETS), by the European Union Seventh Framework Program (FP7/2007­-2013)
+under grant agreements no. 269921 (BrainScaleS) and no. 604102 (HBP),
+and by the European Union's Horizon 2020 Framework Programme for
+Research and Innovation under the Specific Grant Agreements No. 720270 (Human Brain Project SGA1),
+No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3).

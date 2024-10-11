@@ -7,9 +7,12 @@ neuron/channel the spike is from).
 """
 
 import warnings
+
 import numpy as np
 import quantities as pq
+
 from .spiketrain import SpikeTrain, normalize_times_array
+from .objectlist import ObjectList
 
 
 def is_spiketrain_or_proxy(obj):
@@ -17,78 +20,106 @@ def is_spiketrain_or_proxy(obj):
 
 
 def unique(quantities):
-    """np.unique doesn't work with a list of quantities of different scale,
+    """
+    Function to mimic np.unique for use with quantities
+
+    Parameters
+    ----------
+    quantities: array-like[pq.Quantity dtype]
+        An array-like object containing quantities
+
+    Returns
+    -------
+    unique_quantities: array[pq.Quantity dtype]
+        The unique entries within the array
+    Notes
+    -----
+    np.unique doesn't work with a list of quantities of different scale,
     this function can be used instead."""
     # todo: add a tolerance to handle floating point discrepancies
     #       due to scaling.
     if len(quantities) > 0:
         common_units = quantities[0].units
-        scaled_quantities = pq.Quantity(
-            [q.rescale(common_units) for q in quantities],
-            common_units)
+        scaled_quantities = pq.Quantity([q.rescale(common_units) for q in quantities], common_units)
         return np.unique(scaled_quantities)
     else:
         return quantities
 
 
-
-class SpikeTrainList(object):
+class SpikeTrainList(ObjectList):
     """
     This class contains multiple spike trains, and can represent them
     either as a list of SpikeTrain objects or as a pair of arrays
     (all spike times in a single array, with a second array indicating which
     neuron/channel the spike is from).
 
+    Parameters
+    ----------
+    items: list[neo.SpikeTrain] | array[neo.SpikeTrain] | None, default: None
+        The SpikeTrains to add to the list
+    parent: neo.Segment | None, default: None
+        The Segment to include the SpikeTrainList within or None for no parent
+
+    Notes
+    -----
     A SpikeTrainList object should behave like a list of SpikeTrains
     for iteration and item access. It is not intended to be used directly
     by users, but is available as the attribute `spiketrains` of Segments.
 
-    Examples:
+    Examples
+    --------
+    # Create from list of SpikeTrain objects
 
-        # Create from list of SpikeTrain objects
+    >>> stl = SpikeTrainList(items=(
+    ...     SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+    ...     SpikeTrain([0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+    ...     SpikeTrain([1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+    ...     SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
+    ...                             )
+    ...                     )
+    >>> stl.multiplexed
+    (array([0, 0, 0, 0, 1, 1, 2, 2]),
+    array([ 0.5,  0.6, 23.6, 99.2,  0.7, 11.2,  1.1, 88.5]) * ms)
 
-        >>> stl = SpikeTrainList(items=(
-        ...     SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ...     SpikeTrain([0.0007, 0.0112], units="s", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ...     SpikeTrain([1100, 88500], units="us", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ...     SpikeTrain([], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms),
-        ... ))
-        >>> stl.multiplexed
-        (array([0, 0, 0, 0, 1, 1, 2, 2]),
-         array([ 0.5,  0.6, 23.6, 99.2,  0.7, 11.2,  1.1, 88.5]) * ms)
+    # Create from a pair of arrays
 
-        # Create from a pair of arrays
-
-        >>> stl = SpikeTrainList.from_spike_time_array(
-        ...     np.array([0.5, 0.6, 0.7, 1.1, 11.2, 23.6, 88.5, 99.2]),
-        ...     np.array([0, 0, 1, 2, 1, 0, 2, 0]),
-        ...     all_channel_ids=[0, 1, 2, 3],
-        ...     units='ms',
-        ...     t_start=0 * pq.ms,
-        ...     t_stop=100.0 * pq.ms)
-        >>> list(stl)
-        [<SpikeTrain(array([ 0.5,  0.6, 23.6, 99.2]) * ms, [0.0 ms, 100.0 ms])>,
-         <SpikeTrain(array([ 0.7, 11.2]) * ms, [0.0 ms, 100.0 ms])>,
-         <SpikeTrain(array([ 1.1, 88.5]) * ms, [0.0 ms, 100.0 ms])>,
-         <SpikeTrain(array([], dtype=float64) * ms, [0.0 ms, 100.0 ms])>]
+    >>> stl = SpikeTrainList.from_spike_time_array(
+    ...     np.array([0.5, 0.6, 0.7, 1.1, 11.2, 23.6, 88.5, 99.2]),
+    ...     np.array([0, 0, 1, 2, 1, 0, 2, 0]),
+    ...     all_channel_ids=[0, 1, 2, 3],
+    ...     units='ms',
+    ...     t_start=0 * pq.ms,
+    ...     t_stop=100.0 * pq.ms)
+    >>> list(stl)
+    [<SpikeTrain(array([ 0.5,  0.6, 23.6, 99.2]) * ms, [0.0 ms, 100.0 ms])>,
+    <SpikeTrain(array([ 0.7, 11.2]) * ms, [0.0 ms, 100.0 ms])>,
+    <SpikeTrain(array([ 1.1, 88.5]) * ms, [0.0 ms, 100.0 ms])>,
+    <SpikeTrain(array([], dtype=float64) * ms, [0.0 ms, 100.0 ms])>]
 
     """
 
-    def __init__(self, items=None, segment=None):
+    allowed_contents = (SpikeTrain,)
+
+    def __init__(self, items=None, parent=None):
         """Initialize self"""
         if items is None:
             self._items = items
         else:
             for item in items:
                 if not is_spiketrain_or_proxy(item):
-                    raise ValueError(
-                        "`items` can only contain SpikeTrain objects or proxy pbjects")
+                    raise ValueError("`items` can only contain SpikeTrain objects or proxy objects")
             self._items = list(items)
         self._spike_time_array = None
         self._channel_id_array = None
         self._all_channel_ids = None
         self._spiketrain_metadata = {}
-        self.segment = segment
+        if parent is not None and parent.__class__.__name__ != "Segment":
+            raise AttributeError("The parent class must be a Segment")
+        self.segment = parent
+
+    @property
+    def parent(self):
+        return self.segment
 
     def __iter__(self):
         """Implement iter(self)"""
@@ -107,17 +138,26 @@ class SpikeTrainList(object):
         else:
             return SpikeTrainList(items=items)
 
+    def __setitem__(self, i, value):
+        if self._items is None:
+            self._spiketrains_from_array()
+        self._items[i] = value
+
     def __str__(self):
         """Return str(self)"""
         if self._items is None:
             if self._spike_time_array is None:
                 return str([])
             else:
-                return "SpikeTrainList containing {} spikes from {} neurons".format(
-                    self._spike_time_array.size,
-                    len(self._all_channel_ids))
+                return (
+                    f"SpikeTrainList containing {self._spike_time_array.size} "
+                    f"spikes from {len(self._all_channel_ids)} neurons"
+                )
         else:
             return str(self._items)
+
+    def __repr__(self):
+        return "<SpikeTrainList>"
 
     def __len__(self):
         """Return len(self)"""
@@ -147,20 +187,16 @@ class SpikeTrainList(object):
         else:
             # both self and other are storing multiplexed spike trains
             # so we update the array representation
-            if self._spiketrain_metadata['t_start'] != other._spiketrain_metadata['t_start']:
+            if self._spiketrain_metadata["t_start"] != other._spiketrain_metadata["t_start"]:
                 raise ValueError("Incompatible t_start")
                 # todo: adjust times and t_start of other to be compatible with self
-            if self._spiketrain_metadata['t_stop'] != other._spiketrain_metadata['t_stop']:
+            if self._spiketrain_metadata["t_stop"] != other._spiketrain_metadata["t_stop"]:
                 raise ValueError("Incompatible t_stop")
                 # todo: adjust t_stop of self and other as necessary
-            combined_spike_time_array = np.hstack(
-                (self._spike_time_array, other._spike_time_array))
-            combined_channel_id_array = np.hstack(
-                (self._channel_id_array, other._channel_id_array))
+            combined_spike_time_array = np.hstack((self._spike_time_array, other._spike_time_array))
+            combined_channel_id_array = np.hstack((self._channel_id_array, other._channel_id_array))
             combined_channel_ids = set(list(self._all_channel_ids) + other._all_channel_ids)
-            if len(combined_channel_ids) != (
-                len(self._all_channel_ids) + len(other._all_channel_ids)
-            ):
+            if len(combined_channel_ids) != (len(self._all_channel_ids) + len(other._all_channel_ids)):
                 raise ValueError("Duplicate channel ids, please rename channels before adding")
             if in_place:
                 self._spike_time_array = combined_spike_time_array
@@ -173,17 +209,16 @@ class SpikeTrainList(object):
                     combined_spike_time_array,
                     combined_channel_id_array,
                     combined_channel_ids,
-                    t_start=self._spiketrain_metadata['t_start'],
-                    t_stop=self._spiketrain_metadata['t_stop'])
+                    t_start=self._spiketrain_metadata["t_start"],
+                    t_stop=self._spiketrain_metadata["t_stop"],
+                )
 
     def __add__(self, other):
         """Return self + other"""
         if isinstance(other, self.__class__):
             return self._add_spiketrainlists(other)
         elif other and is_spiketrain_or_proxy(other[0]):
-            return self._add_spiketrainlists(
-                self.__class__(items=other, segment=self.segment)
-            )
+            return self._add_spiketrainlists(self.__class__(items=other, parent=self.segment))
         else:
             if self._items is None:
                 self._spiketrains_from_array()
@@ -195,7 +230,7 @@ class SpikeTrainList(object):
             return self._add_spiketrainlists(other, in_place=True)
         elif other and is_spiketrain_or_proxy(other[0]):
             for obj in other:
-                obj.segment = self.segment
+                self._handle_append(obj)
             if self._items is None:
                 self._spiketrains_from_array()
             self._items.extend(other)
@@ -222,68 +257,94 @@ class SpikeTrainList(object):
             return other + self._items
 
     def append(self, obj):
-        """L.append(object) -> None -- append object to end"""
+        """
+        Appends to the SpikeTrainList with a new neo.core.SpikeTrain
+
+        Parameters
+        ----------
+        obj: neo.core.SpikeTrain
+            The new neo.core.SpikeTrain to append to the current SpikeTrainList
+
+        Examples
+        --------
+        # with SpikeTrainList stl with two SpikeTrains
+        >>> len(stl)
+        2
+        >>> stl.append(SpikeTrain([0.5, 0.6, 23.6, 99.2], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms))
+        >>> len(stl)
+        3
+        """
         if not is_spiketrain_or_proxy(obj):
             raise ValueError("Can only append SpikeTrain objects")
         if self._items is None:
             self._spiketrains_from_array()
-        obj.segment = self.segment
+        self._handle_append(obj)
         self._items.append(obj)
 
     def extend(self, iterable):
-        """L.extend(iterable) -> None -- extend list by appending elements from the iterable"""
+        """Extends the SpikeTrainList with additional SpikeTrain's from an iterable
+
+        Parameters
+        ----------
+        iterable: iterable[neo.core.SpikeTrain]
+            A list-like or array-like object containing neo.core.SpikeTrain to be added to the SpikeTrainList
+
+        Examples
+        --------
+        # with SpikeTrainList stl with two SpikeTrains and stl_other with three SpikeTrains
+        >>> len(stl)
+        2
+        >>> len(stl_other)
+        3
+        >>> stl.extend(stl_other)
+        >>> len(stl)
+        5
+        """
+
         if self._items is None:
             self._spiketrains_from_array()
         for obj in iterable:
-            obj.segment = self.segment
+            self._handle_append(obj)
         self._items.extend(iterable)
 
     @classmethod
-    def from_spike_time_array(cls, spike_time_array, channel_id_array,
-                              all_channel_ids, t_stop, units=None,
-                              t_start=0.0 * pq.s, **annotations):
+    def from_spike_time_array(
+        cls, spike_time_array, channel_id_array, all_channel_ids, t_stop, units=None, t_start=0.0 * pq.s, **annotations
+    ):
         """Create a SpikeTrainList object from an array of spike times
         and an array of channel ids.
 
-        *Required attributes/properties*:
+        Parameters
+        ----------
+        spike_time_array: quantity array 1D | numpy array 1D, | list
+            The times of all spikes.
+        channel_id_array: numpy array 1D of dtype int
+            The id of the channel (e.g. the neuron) to which each spike belongs. This array should have the same length
+            as the `spike_time_array`
+        all_channel_ids: list | tuple, | numpy array 1D containing integers
+            All channel ids. This is needed to represent channels in which there are no spikes.
+        t_stop: quantity scalar | numpy scalar | float
+            Time at which spike recording ended. This will be converted to the same units as `spike_time_array` or `units`.
+        units: quantity units | None, default: None
+            Required if `spike_time_array is not a :class:`~quantities.Quantity`.
+        :t_start: quantity scalar | numpy scalar | float, default: 0.0 * pq.s
+            Time at which spike recording began. This will be converted to the same units as `spike_time_array` or `units`
+        **annotations: dict
+            The neo.core.baseneo annotations (e.g. name, or user-defined)
 
-        :spike_time_array: (quantity array 1D, numpy array 1D, or list) The times of
-            all spikes.
-        :channel_id_array: (numpy array 1D of dtype int) The id of the channel (e.g. the
-            neuron) to which each spike belongs. This array should have the same length
-            as :attr:`spike_time_array`
-        :all_channel_ids: (list, tuple, or numpy array 1D containing integers) All
-            channel ids. This is needed to represent channels in which there are no
-            spikes.
-        :units: (quantity units) Required if :attr:`spike_time_array` is not a
-                :class:`~quantities.Quantity`.
-        :t_stop: (quantity scalar, numpy scalar, or float) Time at which
-            spike recording ended. This will be converted to the
-            same units as :attr:`spike_time_array` or :attr:`units`.
-
-        *Recommended attributes/properties*:
-        :t_start: (quantity scalar, numpy scalar, or float) Time at which
-            spike recording began. This will be converted to the
-            same units as :attr:`spike_time_array` or :attr:`units`.
-            Default: 0.0 seconds.
-
-
-        *Optional attributes/properties*:
         """
         spike_time_array, dim = normalize_times_array(spike_time_array, units)
         obj = cls()
         obj._spike_time_array = spike_time_array
         obj._channel_id_array = channel_id_array
         obj._all_channel_ids = all_channel_ids
-        obj._spiketrain_metadata = {
-            "t_start": t_start,
-            "t_stop": t_stop
-        }
+        obj._spiketrain_metadata = {"t_start": t_start, "t_stop": t_stop}
         for name, ann_value in annotations.items():
-            if (not isinstance(ann_value, str)
+            if (
+                not isinstance(ann_value, str)
                 and hasattr(ann_value, "__len__")
                 and len(ann_value) != len(all_channel_ids)
-               ):
+            ):
                 raise ValueError(f"incorrect length for annotation '{name}'")
         obj._annotations = annotations
         return obj
@@ -299,10 +360,11 @@ class SpikeTrainList(object):
                 times = self._spike_time_array[mask]
                 spiketrain = SpikeTrain(times, **self._spiketrain_metadata)
                 for name, value in self._annotations.items():
-                    if (not isinstance(value, str)
+                    if (
+                        not isinstance(value, str)
                         and hasattr(value, "__len__")
                         and len(value) == len(self._all_channel_ids)
-                       ):
+                    ):
                         spiketrain.annotate(**{name: value[i]})
                     else:
                         spiketrain.annotate(**{name: value})
@@ -312,10 +374,15 @@ class SpikeTrainList(object):
 
     @property
     def multiplexed(self):
-        """Return spike trains as a pair of arrays.
+        """
+        Return spike trains as a pair of arrays.
 
-        The first (plain NumPy) array contains the ids of the channels/neurons that produced
-        each spike, the second (Quantity) array contains the times of the spikes.
+        Returns
+        -------
+        channel_id_array: np.ndarray
+            The ids of the channels/neurons that produced each spike
+        spike_time_array: np.ndarray of dtype Quantity
+            The Quantity array containing the times of the spikes
         """
         if self._spike_time_array is None:
             # need to convert list of SpikeTrains into multiplexed spike times array
@@ -333,9 +400,7 @@ class SpikeTrainList(object):
                         spike_times.append(spiketrain.times)
                     else:
                         spike_times.append(spiketrain.times.rescale(dim))
-                    if ("channel_id" in spiketrain.annotations
-                        and isinstance(spiketrain.annotations["channel_id"], int)
-                        ):
+                    if "channel_id" in spiketrain.annotations and isinstance(spiketrain.annotations["channel_id"], int):
                         ch_id = spiketrain.annotations["channel_id"]
                     else:
                         ch_id = i
@@ -349,8 +414,9 @@ class SpikeTrainList(object):
         if "t_start" in self._spiketrain_metadata:
             return self._spiketrain_metadata["t_start"]
         else:
-            t_start_values = unique([item.t_start for item in self._items
-                                    if isinstance(item, SpikeTrain)])  # ignore proxy objects
+            t_start_values = unique(
+                [item.t_start for item in self._items if isinstance(item, SpikeTrain)]
+            )  # ignore proxy objects
             if len(t_start_values) == 0:
                 raise ValueError("t_start not defined for an empty spike train list")
             elif len(t_start_values) > 1:
@@ -366,8 +432,9 @@ class SpikeTrainList(object):
         if "t_stop" in self._spiketrain_metadata:
             return self._spiketrain_metadata["t_stop"]
         else:
-            t_stop_values = unique([item.t_stop for item in self._items
-                                    if isinstance(item, SpikeTrain)])  # ignore proxy objects
+            t_stop_values = unique(
+                [item.t_stop for item in self._items if isinstance(item, SpikeTrain)]
+            )  # ignore proxy objects
             if len(t_stop_values) == 0:
                 raise ValueError("t_stop not defined for an empty spike train list")
             elif len(t_stop_values) > 1:
@@ -383,9 +450,7 @@ class SpikeTrainList(object):
         if self._all_channel_ids is None:
             self._all_channel_ids = []
             for i, spiketrain in enumerate(self._items):
-                if ("channel_id" in spiketrain.annotations
-                    and isinstance(spiketrain.annotations["channel_id"], int)
-                   ):
+                if "channel_id" in spiketrain.annotations and isinstance(spiketrain.annotations["channel_id"], int):
                     ch_id = spiketrain.annotations["channel_id"]
                 else:
                     ch_id = i

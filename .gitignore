@@ -15,6 +15,8 @@
 .idea
 *.swp
 *.swo
+.vscode
+
 
 # Compiled source #
 ###################
@@ -56,6 +58,7 @@ cover
 .directory
 .gdb_history
 .DS_Store?
+.DS_Store
 ehthumbs.db
 Icon?
 Thumbs.db
@@ -66,3 +69,15 @@ neo/test/io/neurosharemergeio.py
 files_for_testing_neo
 /venv
 /neo/test/resources
+doc/examples
+doc/*.abf
+doc/*.png
+doc/*.plx
+doc/*.nev
+doc/*.ns5
+doc/*.nix
+doc/*.nwb
+*.plx
+*.smr
+B95.zip
+grouped_ephys

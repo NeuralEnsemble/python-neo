@@ -30,7 +30,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal
+from neo.core import Block, Segment, AnalogSignal, NeoReadWriteError
 
 
 class StimfitIO(BaseIO):
@@ -80,10 +80,10 @@ class StimfitIO(BaseIO):
     read_params = {Block: []}
     write_params = None
 
-    name = 'Stimfit'
-    extensions = ['abf', 'dat', 'axgx', 'axgd', 'cfs']
+    name = "Stimfit"
+    extensions = ["abf", "dat", "axgx", "axgd", "cfs"]
 
-    mode = 'file'
+    mode = "file"
 
     def __init__(self, filename=None):
         """
@@ -96,7 +96,7 @@ class StimfitIO(BaseIO):
 
         BaseIO.__init__(self)
 
-        if hasattr(filename, 'lower'):
+        if hasattr(filename, "lower"):
             self.filename = filename
             self.stfio_rec = None
         else:
@@ -105,7 +105,9 @@ class StimfitIO(BaseIO):
 
     def read_block(self, lazy=False):
         import stfio
-        assert not lazy, 'Do not support lazy'
+
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy reading")
 
         if self.filename is not None:
             self.stfio_rec = stfio.read(self.filename)
@@ -134,17 +136,17 @@ class StimfitIO(BaseIO):
                 try:
                     pq.Quantity(1, unit)
                 except:
-                    unit = ''
+                    unit = ""
 
                 signal = pq.Quantity(recsig[j], unit)
-                anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
-                                      t_start=t_start, name=str(name),
-                                      channel_index=i)
+                anaSig = AnalogSignal(
+                    signal, sampling_rate=sampling_rate, t_start=t_start, name=str(name), channel_index=i
+                )
                 seg.analogsignals.append(anaSig)
 
             bl.segments.append(seg)
             t_start = t_start + length * dt
 
-        bl.create_many_to_one_relationship()
+        bl.check_relationships()
 
         return bl

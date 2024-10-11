@@ -5,12 +5,14 @@ analog signals, while others are containers to organize other classes
 (including both data classes and other container classes).
 
 Classes from :mod:`neo.io` return nested data structures containing one
-or more class from this module.
+or more classes from this module.
 
 Classes:
 
 .. autoclass:: Block
+.. automethod:: Block.filter
 .. autoclass:: Segment
+.. automethod:: Segment.filter
 .. autoclass:: Group
 
 .. autoclass:: AnalogSignal
@@ -35,6 +37,9 @@ from neo.core.segment import Segment
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
+# Import FilterClasses
+from neo.core import filters
+
 from neo.core.event import Event
 from neo.core.epoch import Epoch
 
@@ -46,12 +51,24 @@ from neo.core.regionofinterest import RectangularRegionOfInterest, CircularRegio
 from neo.core.view import ChannelView
 from neo.core.group import Group
 
+from neo.core.baseneo import NeoReadWriteError
+
 # Block should always be first in this list
-objectlist = [Block, Segment,
-              AnalogSignal, IrregularlySampledSignal,
-              Event, Epoch, SpikeTrain, ImageSequence,
-              RectangularRegionOfInterest, CircularRegionOfInterest,
-              PolygonRegionOfInterest, ChannelView, Group]
+objectlist = [
+    Block,
+    Segment,
+    AnalogSignal,
+    IrregularlySampledSignal,
+    Event,
+    Epoch,
+    SpikeTrain,
+    ImageSequence,
+    RectangularRegionOfInterest,
+    CircularRegionOfInterest,
+    PolygonRegionOfInterest,
+    ChannelView,
+    Group,
+]
 
 objectnames = [ob.__name__ for ob in objectlist]
 class_by_name = dict(zip(objectnames, objectlist))

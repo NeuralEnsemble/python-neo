@@ -45,7 +45,7 @@ More information
 ----------------
 
 - Home page: http://neuralensemble.org/neo
-- Mailing list: https://groups.google.com/forum/?fromgroups#!forum/neuralensemble
+- Mailing list: http://neuralensemble.org/community
 - Documentation: http://neo.readthedocs.io/
 - Bug reports: https://github.com/NeuralEnsemble/python-neo/issues
 
@@ -53,7 +53,7 @@ For installation instructions, see doc/source/install.rst
 
 To cite Neo in publications, see CITATION.txt
 
-:copyright: Copyright 2010-2022 by the Neo team, see doc/source/authors.rst.
+:copyright: Copyright 2010-2024 by the Neo team, see doc/source/authors.rst.
 :license: 3-Clause Revised BSD License, see LICENSE.txt for details.
 
 Funding
@@ -74,7 +74,7 @@ No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3).
 .. _NiBabel: http://nipy.sourceforge.net/nibabel/
 .. _PyNN: http://neuralensemble.org/PyNN
 .. _quantities: http://pypi.python.org/pypi/quantities
-.. _`NeuralEnsemble mailing list`: http://groups.google.com/group/neuralensemble
+.. _`NeuralEnsemble mailing list`: http://neuralensemble.org/community
 .. _`issue tracker`: https://github.c
 .. _tridesclous: https://github.com/tridesclous/tridesclous
 .. _ephyviewer: https://github.com/NeuralEnsemble/ephyviewer

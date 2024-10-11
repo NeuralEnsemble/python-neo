@@ -1,1 +1,1 @@
-See http://neo.readthedocs.io/en/latest/developers_guide.html
+See https://neo.readthedocs.io/en/latest/contributing.html
