@@ -208,7 +208,8 @@ class Plexon2RawIO(BaseRawIO):
             # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`).
             # In that case we use the channel prefix both as stream id and name
             stream_name = stream_id_to_stream_name.get(stream_id, stream_id)
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         # In plexon buffer is unkown
         signal_buffers = np.array([], dtype=_signal_buffer_dtype)

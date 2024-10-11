@@ -278,7 +278,7 @@ class PlexonRawIO(BaseRawIO):
             signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        
+
         # no buffer here because block are splitted by channel
         signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
@@ -301,11 +301,11 @@ class PlexonRawIO(BaseRawIO):
 
             unique_stream_ids = np.unique(signal_channels["stream_id"])
             signal_streams = []
-
             for stream_id in unique_stream_ids:
                 # We are using the channel prefixes as ids
                 # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`).
                 # In that case we use the channel prefix both as stream id and name
+                buffer_id = ""
                 stream_name = stream_id_to_stream_name.get(stream_id, stream_id)
                 buffer_id = ""
                 signal_streams.append((stream_name, stream_id, buffer_id))
