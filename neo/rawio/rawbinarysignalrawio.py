@@ -129,6 +129,7 @@ class RawBinarySignalRawIO(BaseRawIO):
             signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
             signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
         else:
+            signal_buffers = np.array([], dtype=_signal_buffer_dtype)
             signal_streams = np.array([], dtype=_signal_stream_dtype)
 
         # No events
