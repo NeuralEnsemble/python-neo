@@ -46,6 +46,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -196,11 +197,14 @@ class NeuroNexusRawIO(BaseRawIO):
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
+        buffer_id = "0"
+        signal_buffers = np.array([("", buffer_id)], dtype=_signal_buffer_dtype)
+
         stream_ids = np.unique(signal_channels["stream_id"])
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids]
         # One unique buffer
-        signal_streams["buffer_id"] = "0"
+        signal_streams["buffer_id"] = buffer_id
 
         for stream_index, stream_id in enumerate(stream_ids):
             name = stream_id_to_stream_name.get(int(stream_id), "")
@@ -218,6 +222,7 @@ class NeuroNexusRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
