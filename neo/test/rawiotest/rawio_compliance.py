@@ -151,7 +151,10 @@ def iter_over_sig_chunks(reader, stream_index, channel_indexes, chunksize=1024):
         for seg_index in range(nb_seg):
             sig_size = reader.get_signal_size(block_index, seg_index, stream_index)
 
-            nb = sig_size // chunksize + 1
+            nb = int(np.floor(sig_size / chunksize))
+            if sig_size % chunksize > 0:
+                nb += 1
+
             for i in range(nb):
                 i_start = i * chunksize
                 i_stop = min((i + 1) * chunksize, sig_size)

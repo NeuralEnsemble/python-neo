@@ -41,7 +41,7 @@ def get_memmap_chunk_from_opened_file(fid, num_channels,  start, stop, dtype, fi
     # Adjust the length so it includes the extra data from rounding down
     # the memmap offset to a multiple of ALLOCATIONGRANULARITY
     length += start_offset
-
+    
     memmap_obj = mmap.mmap(fid.fileno(), length=length, access=mmap.ACCESS_READ, offset=memmap_offset)
 
     arr = np.ndarray(

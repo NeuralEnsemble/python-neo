@@ -57,6 +57,7 @@ class NeuroNexusRawIO(BaseRawIO):
 
     extensions = ["xdat", "json"]
     rawmode = "one-file"
+    has_buffer_description_api = True
 
     def __init__(self, filename: str | Path = ""):
         """
@@ -134,14 +135,18 @@ class NeuroNexusRawIO(BaseRawIO):
         binary_file = self.binary_file
         timestamp_file = self.timestamp_file
 
-        # Make the two memory maps
-        self._raw_data = np.memmap(
-            binary_file,
-            dtype=BINARY_DTYPE,
-            mode="r",
-            shape=(self._n_samples, self._n_channels),
-            offset=0,  # headerless binary file
-        )
+        # the will cretae a memory map with teh generic mechanism
+        buffer_id = "0"
+        self._buffer_descriptions = {0 :{0 :{}}}
+        self._buffer_descriptions[0][0][buffer_id] = {
+            "type" : "binary",
+            "file_path" : str(binary_file),
+            "dtype" : BINARY_DTYPE,
+            "order": "C",
+            "file_offset" : 0,
+            "shape" : (self._n_samples, self._n_channels),
+        }
+        # Make the memory map for timestamp
         self._timestamps = np.memmap(
             timestamp_file,
             dtype=np.int64,  # this is from the allego sample reader timestamps are np.int64
@@ -205,10 +210,12 @@ class NeuroNexusRawIO(BaseRawIO):
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids]
         # One unique buffer
         signal_streams["buffer_id"] = buffer_id
-
+        self._stream_buffer_slice = {}
         for stream_index, stream_id in enumerate(stream_ids):
             name = stream_id_to_stream_name.get(int(stream_id), "")
             signal_streams["name"][stream_index] = name
+            chan_inds = np.flatnonzero(signal_channels["stream_id"] == stream_id)
+            self._stream_buffer_slice[stream_id] = chan_inds
 
         # No events
         event_channels = []
@@ -244,26 +251,6 @@ class NeuroNexusRawIO(BaseRawIO):
         seg_annotations = bl_annotations["segments"][0]
         for d in (bl_annotations, seg_annotations):
             d["rec_datetime"] = rec_datetime
-
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-
-        # All streams have the same size so just return the raw_data (num_samples, num_chans)
-        return self._raw_data.shape[0]
-
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-
-        if i_start is None:
-            i_start = 0
-        if i_stop is None:
-            i_stop = self._get_signal_size(block_index, seg_index, stream_index)
-
-        raw_data = self._raw_data[i_start:i_stop, :]
-
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-
-        raw_data = raw_data[:, channel_indexes]
-        return raw_data
 
     def _segment_t_stop(self, block_index, seg_index):
 
@@ -302,6 +289,9 @@ class NeuroNexusRawIO(BaseRawIO):
             metadata = json.load(read_file)
 
         return metadata
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
 # this is pretty useless right now, but I think after a
