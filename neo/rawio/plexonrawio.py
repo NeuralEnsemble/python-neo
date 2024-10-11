@@ -44,6 +44,8 @@ from .baserawio import (
     _event_channel_dtype,
 )
 
+from neo.core.baseneo import NeoReadWriteError
+
 
 class PlexonRawIO(BaseRawIO):
     extensions = ["plx"]
@@ -231,9 +233,19 @@ class PlexonRawIO(BaseRawIO):
                 self._data_blocks[bl_type][chan_id] = data_block
 
         # signals channels
-        sig_channels = []
-        all_sig_length = []
         source_id = []
+
+        # Scanning sources and populating signal channels at the same time. Sources have to have
+        # same sampling rate and number of samples to belong to one stream.
+        signal_channels = []
+        channel_num_samples = []
+
+        # We will build the stream ids based on the channel prefixes
+        # The channel prefixes are the first characters of the channel names which have the following format:
+        # WB{number}, FPX{number}, SPKCX{number}, AI{number}, etc
+        # We will extract the prefix and use it as stream id
+        regex_prefix_pattern = r"^\D+"  # Match any non-digit character at the beginning of the string
+
         if self.progress_bar:
             chan_loop = trange(nb_sig_chan, desc="Parsing signal channels", leave=True)
         else:
@@ -246,7 +258,7 @@ class PlexonRawIO(BaseRawIO):
             if length == 0:
                 continue  # channel not added
             source_id.append(h["SrcId"])
-            all_sig_length.append(length)
+            channel_num_samples.append(length)
             sampling_rate = float(h["ADFreq"])
             sig_dtype = "int16"
             units = ""  # I don't know units
@@ -259,65 +271,65 @@ class PlexonRawIO(BaseRawIO):
                     0.5 * (2 ** global_header["BitsPerSpikeSample"]) * h["Gain"] * h["PreampGain"]
                 )
             offset = 0.0
-            stream_id = "0"  # This is overwritten later
-            buffer_id = ""
-            sig_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+
+            channel_prefix = re.match(regex_prefix_pattern, name).group(0)
+            stream_id = channel_prefix
+            buffer_id = ""
+            signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+
+        signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         # no buffer here because block are splitted by channel
         signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
-        if sig_channels.size == 0:
+        if signal_channels.size == 0:
             signal_streams = np.array([], dtype=_signal_stream_dtype)
 
         else:
             # Detect streams
-            all_sig_length = np.asarray(all_sig_length)
-
-            # names are WB{number}, FPX{number}, SPKCX{number}, AI{number}, etc
-            pattern = r"^\D+"  # Match any non-digit character at the beginning of the string
-            channels_prefixes = np.asarray([re.match(pattern, name).group(0) for name in sig_channels["name"]])
-            buffer_stream_groups = set(zip(channels_prefixes, sig_channels["sampling_rate"], all_sig_length))
-
-            # There are explanations of the streams based on channel names
-            # provided by a Plexon Engineer, see here:
+            channel_num_samples = np.asarray(channel_num_samples)
+            # We are using channel prefixes as stream_ids
+            # The meaning of the channel prefixes was provided by a Plexon Engineer, see here:
             # https://github.com/NeuralEnsemble/python-neo/pull/1495#issuecomment-2184256894
-            channel_prefix_to_stream_name = {
+            stream_id_to_stream_name = {
                 "WB": "WB-Wideband",
-                "FP": "FPl-Low Pass Filtered ",
+                "FP": "FPl-Low Pass Filtered",
                 "SP": "SPKC-High Pass Filtered",
                 "AI": "AI-Auxiliary Input",
+                "AIF": "AIF-Auxiliary Input Filtered",
             }
 
-            # Using a mapping to ensure consistent order of stream_index
-            channel_prefix_to_stream_id = {
-                "WB": "0",
-                "FP": "1",
-                "SP": "2",
-                "AI": "3",
-            }
-
+            unique_stream_ids = np.unique(signal_channels["stream_id"])
             signal_streams = []
-            self._signal_length = {}
-            self._sig_sampling_rate = {}
-
-            for stream_index, (channel_prefix, sr, length) in enumerate(buffer_stream_groups):
-                # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`). This is not common but in that case
-                # We assign the channel_prefix both as stream_name and stream_id
-                stream_name = channel_prefix_to_stream_name.get(channel_prefix, channel_prefix)
-                stream_id = channel_prefix_to_stream_id.get(channel_prefix, channel_prefix)
-
-                mask = (sig_channels["sampling_rate"] == sr) & (all_sig_length == length)
-                sig_channels["stream_id"][mask] = stream_id
-
-                self._sig_sampling_rate[stream_index] = sr
-                self._signal_length[stream_index] = length
-
+            for stream_id in unique_stream_ids:
+                # We are using the channel prefixes as ids
+                # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`).
+                # In that case we use the channel prefix both as stream id and name
                 buffer_id = ""
+                stream_name = stream_id_to_stream_name.get(stream_id, stream_id)
                 signal_streams.append((stream_name, stream_id, buffer_id))
 
             signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+
+            self._stream_id_samples = {}
+            self._stream_id_sampling_frequency = {}
+            self._stream_index_to_stream_id = {}
+            for stream_index, stream_id in enumerate(signal_streams["id"]):
+                # Keep a mapping from stream_index to stream_id
+                self._stream_index_to_stream_id[stream_index] = stream_id
+
+                mask = signal_channels["stream_id"] == stream_id
+
+                signal_num_samples = np.unique(channel_num_samples[mask])
+                if signal_num_samples.size > 1:
+                    raise NeoReadWriteError(f"Channels in stream {stream_id} don't have the same number of samples")
+                self._stream_id_samples[stream_id] = signal_num_samples[0]
+
+                signal_sampling_frequency = np.unique(signal_channels[mask]["sampling_rate"])
+                if signal_sampling_frequency.size > 1:
+                    raise NeoReadWriteError(f"Channels in stream {stream_id} don't have the same sampling frequency")
+                self._stream_id_sampling_frequency[stream_id] = signal_sampling_frequency[0]
 
         self._global_ssampling_rate = global_header["ADFrequency"]
 
@@ -381,7 +393,7 @@ class PlexonRawIO(BaseRawIO):
             "nb_segment": [1],
             "signal_buffers": signal_buffers,
             "signal_streams": signal_streams,
-            "signal_channels": sig_channels,
+            "signal_channels": signal_channels,
             "spike_channels": spike_channels,
             "event_channels": event_channels,
         }
@@ -399,28 +411,29 @@ class PlexonRawIO(BaseRawIO):
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = float(self._last_timestamps) / self._global_ssampling_rate
-        if hasattr(self, "_signal_length"):
-            for stream_index in self._signal_length.keys():
-                t_stop_sig = self._signal_length[stream_index] / self._sig_sampling_rate[stream_index]
+        if hasattr(self, "__stream_id_samples"):
+            for stream_id in self._stream_id_samples.keys():
+                t_stop_sig = self._stream_id_samples[stream_id] / self._stream_id_sampling_frequency[stream_id]
                 t_stop = max(t_stop, t_stop_sig)
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        return self._signal_length[stream_index]
+        stream_id = self._stream_index_to_stream_id[stream_index]
+        return self._stream_id_samples[stream_id]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        signal_channels = self.header["signal_channels"]
+        signal_streams = self.header["signal_streams"]
+        stream_id = signal_streams[stream_index]["id"]
+
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._signal_length[stream_index]
+            i_stop = self._stream_id_samples[stream_id]
 
-        signal_channels = self.header["signal_channels"]
-        signal_streams = self.header["signal_streams"]
-
-        stream_id = signal_streams[stream_index]["id"]
         mask = signal_channels["stream_id"] == stream_id
         signal_channels = signal_channels[mask]
         if channel_indexes is not None:
