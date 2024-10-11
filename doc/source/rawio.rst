@@ -281,6 +281,32 @@ Read event timestamps and times
     In [42]: print(ev_times)
     [ 0.0317]
 
+Signal streams and signal buffers
+---------------------------------
+
+For reading analog signal **rawio** has 2 important concepts:
+
+ 1. The **signal_stream** : it is a group of channels that can be read together using :func:`get_analog_signal_chunk()`.
+    This group of channels are guaranteed to have the sample sampling rate, and the same duration per segment.
+    Most of the time, this group channel is a "logical" group of channel. In hsort there are from the same headstage
+    or from the auxilary board.
+    Optionally, depending the format, a **signal_stream** can be a slice or an entire **signal_buffer**.
+
+ 2. The **signal_buffer** : it is group channel that share the same data layout in a file. The most simple example
+    is channel that can be read by a simple :func:`signals = np.memmap(file, shape=..., dtype=... , offset=...)`.
+    A **signal_buffer** can contain one or several **signal_stream** (very often it is only one).
+    There are two kind of format that handle this concept:
+     
+      * the one that can use :func:`np.memmap()` internally
+      * format based on hdf5
+       
+    There are many format that do not handle at all this concept:
+
+      * the one that use an external python package for reading data (edf, ced, plexon2, ...)
+      * the one with a complicated data layout (data block are splited without structure)
+
+    To check if a format have the concept you can check the class attribute flag `has_buffer_description_api` of the
+    rawio class.
 
 
 
