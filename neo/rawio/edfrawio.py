@@ -23,6 +23,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -115,16 +116,18 @@ class EDFRawIO(BaseRawIO):
 
             stream_id = stream_characteristics.index((sr,))
             self.stream_idx_to_chidx.setdefault(stream_id, []).append(ch_idx)
-
-            signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+            buffer_id = ""
+            signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
 
         # convert channel index lists to arrays for indexing
         self.stream_idx_to_chidx = {k: np.array(v) for k, v in self.stream_idx_to_chidx.items()}
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        signal_streams = [(f"stream ({sr} Hz)", i) for i, sr in enumerate(stream_characteristics)]
+        signal_streams = [(f"stream ({sr} Hz)", i, "") for i, sr in enumerate(stream_characteristics)]
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # no buffer handling here
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # no unit/epoch information contained in edf
         spike_channels = []
@@ -138,6 +141,7 @@ class EDFRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]  # we only accept continuous edf files
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

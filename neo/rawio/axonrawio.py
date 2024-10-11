@@ -56,6 +56,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -227,12 +228,14 @@ class AxonRawIO(BaseRawIO):
             else:
                 gain, offset = 1.0, 0.0
             stream_id = "0"
-            signal_channels.append((name, str(chan_id), self._sampling_rate, sig_dtype, units, gain, offset, stream_id))
+            buffer_id = "0"
+            signal_channels.append((name, str(chan_id), self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        # one unique signal stream
-        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+        # one unique signal stream and buffer
+        signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
+        signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
 
         # only one events channel : tag
         # In ABF timstamps are not attached too any particular segment
@@ -258,6 +261,7 @@ class AxonRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

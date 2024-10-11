@@ -49,6 +49,7 @@ from ..baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -268,6 +269,8 @@ class NeuralynxRawIO(BaseRawIO):
                     else:
                         stream_props[stream_prop]["filenames"].append(filename)
                     stream_id = stream_props[stream_prop]["stream_id"]
+                    # @zach @ramon : we need to discuss this split by channel buffer
+                    buffer_id = ""
 
                     # a sampled signal channel
                     units = "uV"
@@ -276,7 +279,7 @@ class NeuralynxRawIO(BaseRawIO):
                         gain *= -1
                     offset = 0.0
                     signal_channels.append(
-                        (chan_name, str(chan_id), info["sampling_rate"], "int16", units, gain, offset, stream_id)
+                        (chan_name, str(chan_id), info["sampling_rate"], "int16", units, gain, offset, stream_id, buffer_id)
                     )
                     self.ncs_filenames[chan_uid] = filename
                     keys = [
@@ -370,11 +373,13 @@ class NeuralynxRawIO(BaseRawIO):
         if signal_channels.size > 0:
             # ordering streams according from high to low sampling rates
             stream_props = {k: stream_props[k] for k in sorted(stream_props, reverse=True)}
-            names = [f"Stream (rate,#packet,t0): {sp}" for sp in stream_props]
-            ids = [stream_prop["stream_id"] for stream_prop in stream_props.values()]
-            signal_streams = list(zip(names, ids))
+            stream_names = [f"Stream (rate,#packet,t0): {sp}" for sp in stream_props]
+            stream_ids = [stream_prop["stream_id"] for stream_prop in stream_props.values()]
+            buffer_ids = ["" for sp in stream_props]
+            signal_streams = list(zip(stream_names, stream_ids, buffer_ids))
         else:
             signal_streams = []
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # set 2 attributes needed later for header in case there are no ncs files in dataset,
@@ -509,6 +514,7 @@ class NeuralynxRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [self._nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

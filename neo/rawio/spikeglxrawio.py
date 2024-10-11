@@ -60,6 +60,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -140,15 +141,20 @@ class SpikeGLXRawIO(BaseRawIO):
             self._memmaps[key] = data
 
         # create channel header
+        signal_buffers = []
         signal_streams = []
         signal_channels = []
         for stream_name in stream_names:
             # take first segment
             info = self.signals_info_dict[0, stream_name]
 
+            buffer_id = stream_name
+            buffer_name = stream_name
+            signal_buffers.append((buffer_name, buffer_id))
+
             stream_id = stream_name
             stream_index = stream_names.index(info["stream_name"])
-            signal_streams.append((stream_name, stream_id))
+            signal_streams.append((stream_name, stream_id, buffer_id))
 
             # add channels to global list
             for local_chan in range(info["num_chan"]):
@@ -164,6 +170,7 @@ class SpikeGLXRawIO(BaseRawIO):
                         info["channel_gains"][local_chan],
                         info["channel_offsets"][local_chan],
                         stream_id,
+                        buffer_id,
                     )
                 )
             # check sync channel validity
@@ -173,6 +180,7 @@ class SpikeGLXRawIO(BaseRawIO):
                 if self.load_sync_channel and not info["has_sync_trace"]:
                     raise ValueError("SYNC channel is not present in the recording. " "Set load_sync_channel to False")
 
+        signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -213,6 +221,7 @@ class SpikeGLXRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

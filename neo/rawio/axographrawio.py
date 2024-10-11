@@ -158,6 +158,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -811,7 +812,9 @@ class AxographRawIO(BaseRawIO):
                     self.logger.debug("initial data: {array[:5] * gain + offset}")
 
                     # channel_info will be cast to _signal_channel_dtype
-                    channel_info = (name, str(i), 1 / sampling_period, f.byte_order + dtype, units, gain, offset, "0")
+                    buffer_id = ""
+                    stream_id = "0"
+                    channel_info = (name, str(i), 1 / sampling_period, f.byte_order + dtype, units, gain, offset, stream_id, buffer_id)
 
                     self.logger.debug("channel_info: {channel_info}")
                     self.logger.debug("")
@@ -1230,13 +1233,15 @@ class AxographRawIO(BaseRawIO):
         event_channels.append(("AxoGraph Intervals", "", "epoch"))
 
         if len(sig_channels) > 0:
-            signal_streams = [("Signals", "0")]
+            signal_streams = [("Signals", "0", "")]
         else:
             signal_streams = []
+        signal_buffers = []
 
         # organize header
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = np.array(signal_buffers, dtype=_signal_buffer_dtype)
         self.header["signal_streams"] = np.array(signal_streams, dtype=_signal_stream_dtype)
         self.header["signal_channels"] = np.array(sig_channels, dtype=_signal_channel_dtype)
         self.header["event_channels"] = np.array(event_channels, dtype=_event_channel_dtype)

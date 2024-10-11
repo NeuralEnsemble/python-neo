@@ -39,6 +39,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -270,12 +271,17 @@ class PlexonRawIO(BaseRawIO):
                     0.5 * (2 ** global_header["BitsPerSpikeSample"]) * h["Gain"] * h["PreampGain"]
                 )
             offset = 0.0
+
+
             channel_prefix = re.match(regex_prefix_pattern, name).group(0)
             stream_id = channel_prefix
-
-            signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id))
+            buffer_id = ""
+            signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+
+        # no buffer here because block are splitted by channel
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         if signal_channels.size == 0:
             signal_streams = np.array([], dtype=_signal_stream_dtype)
@@ -300,8 +306,9 @@ class PlexonRawIO(BaseRawIO):
                 # We are using the channel prefixes as ids
                 # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`).
                 # In that case we use the channel prefix both as stream id and name
+                buffer_id = ""
                 stream_name = stream_id_to_stream_name.get(stream_id, stream_id)
-                signal_streams.append((stream_name, stream_id))
+                signal_streams.append((stream_name, stream_id, buffer_id))
 
             signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
@@ -384,6 +391,7 @@ class PlexonRawIO(BaseRawIO):
         self.header = {
             "nb_block": 1,
             "nb_segment": [1],
+            "signal_buffers": signal_buffers,
             "signal_streams": signal_streams,
             "signal_channels": signal_channels,
             "spike_channels": spike_channels,
