@@ -1,0 +1,47 @@
+========================
+Neo 0.13.4 release notes
+========================
+
+22 October 2024
+
+This release of Neo contains bug fixes, a new IO for :code:`NeuroNexus`, drop of Python 3.8/NumPy 1.22, still with a focus on the planned 1.0 release.
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+
+Updated dependencies
+--------------------
+
+Neo has a limit of NumPy >= 1.22.4, < 2.0.0
+Neo now supports Python >= 3.9
+
+CI Additions
+------------
+
+Neo has sped up the testing suite by ~15% and added additional testing for IOs: :class:`NeuralynxIO` and
+:class:`Plexon2IO`
+
+
+Addition of a New IO module
+---------------------------
+
+Neo now has support for reading NeuroNexus :code:`.xdat` files with the new :class:`NeuroNexusIO`.
+
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+Bug fixes and/or improvements have been made to :class:`MaxwellIO`, :class:`NeuroNexusIO`,
+:class:`IntanIO`, :class:`Plexon2IO`, :class:`IgorIO`, :class:`SpikeGadgetsIO`, :class:`PlexonIO`,
+and :class:`BrainVisionRawIO`.
+
+
+Acknowledgements
+----------------
+
+Thanks to Zach McKenzie, Heberto Mayorquin, Samuel Garcia, Andrew Davison, Alessio Buccino, Nikhil Chandra, and Peter Steinmetz for their contributions to this release.
+
+
+.. _`pull requests`: https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+milestone%3A0.13.4
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+is%3Aclosed+milestone%3A0.13.4
