@@ -121,7 +121,9 @@ class NeuroScopeRawIO(BaseRawIO):
             offset = 0.0
             stream_id = "0"
             buffer_id = "0"
-            sig_channels.append((name, chan_id, self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+            sig_channels.append(
+                (name, chan_id, self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+            )
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No events

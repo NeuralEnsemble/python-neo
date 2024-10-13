@@ -158,7 +158,6 @@ class ElanRawIO(BaseRawIO):
         # unique buffer and stream
         signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
         signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
-        
 
         sig_channels = []
         for c, chan_info in enumerate(channel_infos[:-2]):
@@ -172,7 +171,17 @@ class ElanRawIO(BaseRawIO):
             stream_id = "0"
             buffer_id = "0"
             sig_channels.append(
-                (chan_name, chan_id, self._sampling_rate, sig_dtype, chan_info["units"], gain, offset, stream_id, buffer_id)
+                (
+                    chan_name,
+                    chan_id,
+                    self._sampling_rate,
+                    sig_dtype,
+                    chan_info["units"],
+                    gain,
+                    offset,
+                    stream_id,
+                    buffer_id,
+                )
             )
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)

@@ -78,6 +78,7 @@ def header_is_total(reader):
         for k, _ in _event_channel_dtype:
             assert k in dt.fields, f"{k} not in event_channels.dtype"
 
+
 def check_signal_stream_buffer_hierachy(reader):
     # rules:
     #  * a channel always belong to a stream
@@ -95,7 +96,7 @@ def check_signal_stream_buffer_hierachy(reader):
         assert channel["stream_id"] in h["signal_streams"]["id"]
         if channel["buffer_id"] != "":
             assert channel["buffer_id"] in h["signal_buffers"]["id"]
-    
+
     stream_ids = h["signal_streams"]["id"]
     if stream_ids.size > 0:
         assert stream_ids.size == np.unique(stream_ids).size
