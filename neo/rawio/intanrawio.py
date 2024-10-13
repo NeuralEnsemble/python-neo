@@ -242,7 +242,6 @@ class IntanRawIO(BaseRawIO):
 
         stream_ids = np.unique(signal_channels["stream_id"])
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
-        
 
         # we need to sort the data because the string of stream_index 10 is mis-sorted.
         buffer_ids = []

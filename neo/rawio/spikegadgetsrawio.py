@@ -271,7 +271,6 @@ class SpikeGadgetsRawIO(BaseRawIO):
             self._mask_channels_bytes[stream_id] = mask
             self._mask_streams[stream_id] = np.any(mask, axis=0)
 
-
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         # no buffer concept here data are too fragmented

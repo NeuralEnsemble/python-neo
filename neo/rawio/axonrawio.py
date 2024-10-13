@@ -229,7 +229,9 @@ class AxonRawIO(BaseRawIO):
                 gain, offset = 1.0, 0.0
             stream_id = "0"
             buffer_id = "0"
-            signal_channels.append((name, str(chan_id), self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+            signal_channels.append(
+                (name, str(chan_id), self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+            )
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 

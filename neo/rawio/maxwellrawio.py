@@ -111,12 +111,11 @@ class MaxwellRawIO(BaseRawIO):
             raise NotImplementedError(f"This version {version} is not supported")
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
-        
+
         # one stream per buffer
         signal_buffers = np.zeros(signal_streams.size, dtype=_signal_buffer_dtype)
         signal_buffers["id"] = signal_streams["id"]
         signal_buffers["name"] = signal_streams["name"]
-
 
         # create signal channels
         max_sig_length = 0
@@ -160,7 +159,6 @@ class MaxwellRawIO(BaseRawIO):
                     warnings.warn(f"No 'routed' group found for well {stream_id}")
                     well_indices_to_remove.append(stream_index)
                     continue
-                
 
             channel_ids = np.array(mapping["channel"])
             electrode_ids = np.array(mapping["electrode"])
@@ -173,7 +171,9 @@ class MaxwellRawIO(BaseRawIO):
                 ch_name = f"ch{chan_id} elec{elec_id}"
                 offset_uV = 0
                 buffer_id = stream_id
-                sig_channels.append((ch_name, str(chan_id), sr, "uint16", "uV", gain_uV, offset_uV, stream_id, buffer_id))
+                sig_channels.append(
+                    (ch_name, str(chan_id), sr, "uint16", "uV", gain_uV, offset_uV, stream_id, buffer_id)
+                )
 
             self._signals[stream_id] = sigs
             max_sig_length = max(max_sig_length, sigs.shape[1])

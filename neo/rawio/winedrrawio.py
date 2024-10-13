@@ -94,7 +94,9 @@ class WinEdrRawIO(BaseRawIO):
             offset = -YZ * gain
             stream_id = "0"
             buffer_id = "0"
-            signal_channels.append((name, str(chan_id), self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id))
+            signal_channels.append(
+                (name, str(chan_id), self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id)
+            )
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -104,7 +106,7 @@ class WinEdrRawIO(BaseRawIO):
         for i in range(unique_characteristics.size):
             mask = unique_characteristics[i] == characteristics
             signal_channels["stream_id"][mask] = str(i)
-            # unique buffer for all streams    
+            # unique buffer for all streams
             buffer_id = "0"
             signal_streams.append((f"stream {i}", str(i), buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)

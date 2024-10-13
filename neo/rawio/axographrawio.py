@@ -814,7 +814,17 @@ class AxographRawIO(BaseRawIO):
                     # channel_info will be cast to _signal_channel_dtype
                     buffer_id = ""
                     stream_id = "0"
-                    channel_info = (name, str(i), 1 / sampling_period, f.byte_order + dtype, units, gain, offset, stream_id, buffer_id)
+                    channel_info = (
+                        name,
+                        str(i),
+                        1 / sampling_period,
+                        f.byte_order + dtype,
+                        units,
+                        gain,
+                        offset,
+                        stream_id,
+                        buffer_id,
+                    )
 
                     self.logger.debug("channel_info: {channel_info}")
                     self.logger.debug("")
