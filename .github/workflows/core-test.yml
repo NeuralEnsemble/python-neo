@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
         # "macos-latest",
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
         numpy-version: ['1.22.4', '1.23.5', '1.24.1', '1.25.1', '1.26.4']
         exclude:
            - python-version: '3.12'
@@ -36,6 +36,14 @@ jobs:
            - python-version: '3.12'
              numpy-version: '1.24.1'
            - python-version: '3.12'
+             numpy-version: '1.25.1'
+           - python-version: '3.13'
+             numpy-version: '1.22.4'
+           - python-version: '3.13'
+             numpy-version: '1.23.5'
+           - python-version: '3.13'
+             numpy-version: '1.24.1'
+           - python-version: '3.13'
              numpy-version: '1.25.1'
     steps:
         - name: Set up Python ${{ matrix.python-version }}
