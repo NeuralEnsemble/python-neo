@@ -94,7 +94,10 @@ _signal_buffer_dtype = [
 _signal_stream_dtype = [
     ("name", "U64"),  # not necessarily unique
     ("id", "U64"),  # must be unique
-    ("buffer_id", "U64"), # should be "" (empty string) when the stream is not nested under a buffer or the buffer is undefined for some reason.
+    (
+        "buffer_id",
+        "U64",
+    ),  # should be "" (empty string) when the stream is not nested under a buffer or the buffer is undefined for some reason.
 ]
 
 _signal_channel_dtype = [

@@ -279,7 +279,17 @@ class NeuralynxRawIO(BaseRawIO):
                         gain *= -1
                     offset = 0.0
                     signal_channels.append(
-                        (chan_name, str(chan_id), info["sampling_rate"], "int16", units, gain, offset, stream_id, buffer_id)
+                        (
+                            chan_name,
+                            str(chan_id),
+                            info["sampling_rate"],
+                            "int16",
+                            units,
+                            gain,
+                            offset,
+                            stream_id,
+                            buffer_id,
+                        )
                     )
                     self.ncs_filenames[chan_uid] = filename
                     keys = [

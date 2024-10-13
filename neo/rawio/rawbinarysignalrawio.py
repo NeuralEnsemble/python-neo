@@ -105,7 +105,7 @@ class RawBinarySignalRawIO(BaseRawIO):
                         self.signal_gain,
                         self.signal_offset,
                         stream_id,
-                        buffer_id
+                        buffer_id,
                     )
                 )
 
