@@ -4,7 +4,7 @@ version = "0.13.4"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.13" # 3.13 will require NumPy > 2.0 (Windows issue in CI)
 license = {text = "BSD 3-Clause License"}
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -14,10 +14,10 @@ classifiers = [
     "Natural Language :: English",
     "Topic :: Scientific/Engineering",
     "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3 :: Only",
 ]
 
@@ -100,7 +100,7 @@ ced = ["sonpy"]
 nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
-med = ["dhn_med_py>=1.0.0"]
+med = ["dhn_med_py>=1.0.0,<2.0"] # ci failing with 2.0 test future version when stable
 plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32'"]
 
 all = [

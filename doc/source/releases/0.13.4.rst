@@ -4,7 +4,8 @@ Neo 0.13.4 release notes
 
 22 October 2024
 
-This release of Neo contains bug fixes, a new IO for :code:`NeuroNexus`, drop of Python 3.8/NumPy 1.22, still with a focus on the planned 1.0 release.
+This release of Neo contains bug fixes, a new IO for :code:`NeuroNexus`, drop of Python 3.8/NumPy 1.20 & 1.21, still with a focus on the planned 1.0 release.
+This point release will be the last release to not support Python 3.13 and NumPy > 2.0.
 
 See all `pull requests`_ included in this release and the `list of closed issues`_.
 
@@ -13,7 +14,7 @@ Updated dependencies
 --------------------
 
 Neo has a limit of NumPy >= 1.22.4, < 2.0.0
-Neo now supports Python >= 3.9
+Neo now supports Python >= 3.9, <3.13
 
 CI Additions
 ------------
