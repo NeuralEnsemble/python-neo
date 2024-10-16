@@ -497,7 +497,7 @@ class SpikeTrain(DataObject):
             self.t_stop,
             self.units,
             self.dtype,
-            True,
+            None,
             self.sampling_rate,
             self.t_start,
             self.waveforms,

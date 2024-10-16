@@ -237,7 +237,7 @@ class IrregularlySampledSignal(BaseSignal):
             self.units,
             self.times.units,
             self.dtype,
-            True,
+            None,
             self.name,
             self.file_origin,
             self.description,
