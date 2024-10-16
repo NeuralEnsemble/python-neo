@@ -25,6 +25,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -107,8 +108,9 @@ class NeuroScopeRawIO(BaseRawIO):
         # Extract signal from the data file
         self._raw_signals = np.memmap(self.data_file_path, dtype=sig_dtype, mode="r", offset=0).reshape(-1, nb_channel)
 
-        # one unique stream
-        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+        # one unique stream and buffer
+        signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
+        signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
 
         # signals
         sig_channels = []
@@ -118,7 +120,10 @@ class NeuroScopeRawIO(BaseRawIO):
             units = "mV"
             offset = 0.0
             stream_id = "0"
-            sig_channels.append((name, chan_id, self._sampling_rate, sig_dtype, units, gain, offset, stream_id))
+            buffer_id = "0"
+            sig_channels.append(
+                (name, chan_id, self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+            )
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No events
@@ -133,6 +138,7 @@ class NeuroScopeRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = sig_channels
         self.header["spike_channels"] = spike_channels

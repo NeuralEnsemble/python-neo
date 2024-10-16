@@ -21,6 +21,7 @@ Author : Samuel Garcia, Alessio Buccino, Pierre Yger
 import os
 from pathlib import Path
 import platform
+import warnings
 from urllib.request import urlopen
 
 import numpy as np
@@ -29,6 +30,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -104,17 +106,23 @@ class MaxwellRawIO(BaseRawIO):
             for well_name in well_ids:
                 rec_names = list(h5file["wells"][well_name].keys())
                 if self.rec_name in rec_names:
-                    signal_streams.append((well_name, well_name))
+                    signal_streams.append((well_name, well_name, well_name))
         else:
             raise NotImplementedError(f"This version {version} is not supported")
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
+        # one stream per buffer
+        signal_buffers = np.zeros(signal_streams.size, dtype=_signal_buffer_dtype)
+        signal_buffers["id"] = signal_streams["id"]
+        signal_buffers["name"] = signal_streams["name"]
+
         # create signal channels
         max_sig_length = 0
         self._signals = {}
         sig_channels = []
-        for stream_id in signal_streams["id"]:
+        well_indices_to_remove = []
+        for stream_index, stream_id in enumerate(signal_streams["id"]):
             if int(version) == 20160704:
                 sr = 20000.0
                 settings = h5file["settings"]
@@ -145,7 +153,12 @@ class MaxwellRawIO(BaseRawIO):
                         gain = settings["gain"][0]
                     gain_uV = 3.3 / (1024 * gain) * 1e6
                 mapping = settings["mapping"]
-                sigs = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
+                if "routed" in h5file["wells"][stream_id][self.rec_name]["groups"]:
+                    sigs = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
+                else:
+                    warnings.warn(f"No 'routed' group found for well {stream_id}")
+                    well_indices_to_remove.append(stream_index)
+                    continue
 
             channel_ids = np.array(mapping["channel"])
             electrode_ids = np.array(mapping["electrode"])
@@ -157,12 +170,18 @@ class MaxwellRawIO(BaseRawIO):
                 elec_id = electrode_ids[i]
                 ch_name = f"ch{chan_id} elec{elec_id}"
                 offset_uV = 0
-                sig_channels.append((ch_name, str(chan_id), sr, "uint16", "uV", gain_uV, offset_uV, stream_id))
+                buffer_id = stream_id
+                sig_channels.append(
+                    (ch_name, str(chan_id), sr, "uint16", "uV", gain_uV, offset_uV, stream_id, buffer_id)
+                )
 
             self._signals[stream_id] = sigs
             max_sig_length = max(max_sig_length, sigs.shape[1])
 
         self._t_stop = max_sig_length / sr
+
+        if len(well_indices_to_remove) > 0:
+            signal_streams = np.delete(signal_streams, np.array(well_indices_to_remove))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -175,6 +194,7 @@ class MaxwellRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = sig_channels
         self.header["spike_channels"] = spike_channels

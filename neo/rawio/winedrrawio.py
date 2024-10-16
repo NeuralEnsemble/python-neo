@@ -15,6 +15,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
     _common_sig_characteristics,
@@ -92,7 +93,10 @@ class WinEdrRawIO(BaseRawIO):
             gain = AD / (YCF * YAG * (ADCMAX + 1))
             offset = -YZ * gain
             stream_id = "0"
-            signal_channels.append((name, str(chan_id), self._sampling_rate, "int16", units, gain, offset, stream_id))
+            buffer_id = "0"
+            signal_channels.append(
+                (name, str(chan_id), self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id)
+            )
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -102,8 +106,13 @@ class WinEdrRawIO(BaseRawIO):
         for i in range(unique_characteristics.size):
             mask = unique_characteristics[i] == characteristics
             signal_channels["stream_id"][mask] = str(i)
-            signal_streams.append((f"stream {i}", str(i)))
+            # unique buffer for all streams
+            buffer_id = "0"
+            signal_streams.append((f"stream {i}", str(i), buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+
+        # all stream are in the same unique buffer : memmap
+        signal_buffers = np.array([("", "0")], dtype=_signal_buffer_dtype)
 
         # No events
         event_channels = []
@@ -117,6 +126,7 @@ class WinEdrRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

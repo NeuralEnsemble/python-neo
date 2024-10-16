@@ -133,7 +133,24 @@ class IgorIO(BaseIO):
         header = content["wave_header"]
         name = str(header["bname"].decode("utf-8"))
         units = "".join([x.decode() for x in header["dataUnits"]])
-        time_units = "".join([x.decode() for x in header["xUnits"]])
+        if "xUnits" in header:
+            # "xUnits" is used in Versions 1, 2, 3 of .pxp files
+            time_units = "".join([x.decode() for x in header["xUnits"]])
+        elif "dimUnits" in header:
+            # Version 5 uses "dimUnits"
+            # see https://github.com/AFM-analysis/igor2/blob/43fccf51714661fb96372e8119c59e17ce01f683/igor2/binarywave.py#L501
+            _time_unit_structure = header["dimUnits"].ravel()
+            # For the files we've seen so far, the first element of _time_unit_structure contains the units.
+            # If someone has a file for which this assumption does not hold an Exception will be raised.
+            if not all([element == b"" for element in _time_unit_structure[1:]]):
+                raise Exception(
+                    "Neo cannot yet handle the units in this file. "
+                    "Please create a new issue in the Neo issue tracker at "
+                    "https://github.com/NeuralEnsemble/python-neo/issues/new/choose"
+                )
+            time_units = _time_unit_structure[0].decode()
+        else:
+            time_units = ""
         if len(time_units) == 0:
             time_units = "s"
         try:

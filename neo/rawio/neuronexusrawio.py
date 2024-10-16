@@ -37,6 +37,8 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import datetime
+import sys
+import re
 
 import numpy as np
 
@@ -44,6 +46,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -163,7 +166,8 @@ class NeuroNexusRawIO(BaseRawIO):
         # and because all data is stored in the same buffer stream for the moment all channels
         # will be in stream_id = 0. In the future this will be split into sub_streams based on
         # type but for now it will be the end-users responsability for this.
-        stream_id = '0'  # hard-coded see note above
+        stream_id = "0"  # hard-coded see note above
+        buffer_id = "0"
         for channel_index, channel_name in enumerate(channel_info["chan_name"]):
             channel_id = channel_info["ntv_chan_name"][channel_index]
             # 'ai0' indicates analog data which is stored as microvolts
@@ -187,14 +191,21 @@ class NeuroNexusRawIO(BaseRawIO):
                     1,  # no gain
                     0,  # no offset
                     stream_id,
+                    buffer_id,
                 )
             )
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
+        buffer_id = "0"
+        signal_buffers = np.array([("", buffer_id)], dtype=_signal_buffer_dtype)
+
         stream_ids = np.unique(signal_channels["stream_id"])
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids]
+        # One unique buffer
+        signal_streams["buffer_id"] = buffer_id
+
         for stream_index, stream_id in enumerate(stream_ids):
             name = stream_id_to_stream_name.get(int(stream_id), "")
             signal_streams["name"][stream_index] = name
@@ -211,6 +222,7 @@ class NeuroNexusRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -219,21 +231,15 @@ class NeuroNexusRawIO(BaseRawIO):
         # Add the minimum annotations
         self._generate_minimal_annotations()
 
-        # date comes out as:
-        # year-month-daydayofweektime all as a string so we need to prep it for
-        # entering into datetime
-        # example: '2024-07-01T13:04:49.4972245-04:00'
-        stringified_date_list = self.metadata['status']['start_time'].split('-')
-        year = int(stringified_date_list[0])
-        month = int(stringified_date_list[1])
-        day = int(stringified_date_list[2][:2]) # day should be first two digits of the third item in list
-        time_info = stringified_date_list[2].split(':')
-        hour = int(time_info[0][-2:])
-        minute = int(time_info[1])
-        second = int(float(time_info[2]))
-        microsecond = int(1000 * 1000 * (float(time_info[2]) - second))# second -> micro is 1000 * 1000
+        # date comes out as: '2024-07-01T13:04:49.4972245-04:00' so in ISO format
+        datetime_string = self.metadata["status"]["start_time"]
 
-        rec_datetime = datetime.datetime(year, month, day, hour, minute, second, microsecond)
+        # Python 3.10 and older expect iso format to only have 3 or 6 decimal places
+        if sys.version_info.minor < 11:
+            datetime_string = re.sub(r"(\.\d{6})\d+", r"\1", datetime_string)
+
+        rec_datetime = datetime.datetime.fromisoformat(datetime_string)
+
         bl_annotations = self.raw_annotations["blocks"][0]
         seg_annotations = bl_annotations["segments"][0]
         for d in (bl_annotations, seg_annotations):
@@ -241,8 +247,8 @@ class NeuroNexusRawIO(BaseRawIO):
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
 
-        # All streams have the same size so just return the raw_data size
-        return self._raw_data.size
+        # All streams have the same size so just return the raw_data (num_samples, num_chans)
+        return self._raw_data.shape[0]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
 
@@ -301,4 +307,4 @@ class NeuroNexusRawIO(BaseRawIO):
 # this is pretty useless right now, but I think after a
 # refactor with sub streams we could adapt this for the sub-streams
 # so let's leave this here for now :)
-stream_id_to_stream_name = {'0': "Neuronexus Allego Data"}
+stream_id_to_stream_name = {"0": "Neuronexus Allego Data"}

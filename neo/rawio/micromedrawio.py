@@ -17,6 +17,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -128,11 +129,15 @@ class MicromedRawIO(BaseRawIO):
                 sampling_rate *= Rate_Min
                 chan_id = str(c)
                 stream_id = "0"
-                signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id))
+                buffer_id = "0"
+                signal_channels.append(
+                    (chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+                )
 
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-            signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+            signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
+            signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
 
             if np.unique(signal_channels["sampling_rate"]).size != 1:
                 raise NeoReadWriteError("The sampling rates must be the same across signal channels")
@@ -175,6 +180,7 @@ class MicromedRawIO(BaseRawIO):
             self.header = {}
             self.header["nb_block"] = 1
             self.header["nb_segment"] = [1]
+            self.header["signal_buffers"] = signal_buffers
             self.header["signal_streams"] = signal_streams
             self.header["signal_channels"] = signal_channels
             self.header["spike_channels"] = spike_channels

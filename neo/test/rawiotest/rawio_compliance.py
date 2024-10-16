@@ -20,6 +20,7 @@ import numpy as np
 from neo.rawio.baserawio import (
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
     _common_sig_characteristics,
@@ -47,6 +48,12 @@ def header_is_total(reader):
     assert "nb_segment" in h, "`nb_segment`missing in header"
     assert len(h["nb_segment"]) == h["nb_block"]
 
+    assert "signal_buffers" in h, "signal_buffers missing in header"
+    if h["signal_buffers"] is not None:
+        dt = h["signal_buffers"].dtype
+        for k, _ in _signal_buffer_dtype:
+            assert k in dt.fields, f"{k} not in _signal_buffers.dtype"
+
     assert "signal_streams" in h, "signal_streams missing in header"
     if h["signal_streams"] is not None:
         dt = h["signal_streams"].dtype
@@ -70,6 +77,33 @@ def header_is_total(reader):
         dt = h["event_channels"].dtype
         for k, _ in _event_channel_dtype:
             assert k in dt.fields, f"{k} not in event_channels.dtype"
+
+
+def check_signal_stream_buffer_hierachy(reader):
+    # rules:
+    #  * a channel always belong to a stream
+    #  * a channel optionaly belong to a buffer
+    #  * a stream optionaly belong to a buffer
+    #  * buffer_ids and channel_ids are unique
+
+    h = reader.header
+
+    for stream in h["signal_streams"]:
+        if stream["buffer_id"] != "":
+            assert stream["buffer_id"] in h["signal_buffers"]["id"]
+
+    for channel in h["signal_channels"]:
+        assert channel["stream_id"] in h["signal_streams"]["id"]
+        if channel["buffer_id"] != "":
+            assert channel["buffer_id"] in h["signal_buffers"]["id"]
+
+    stream_ids = h["signal_streams"]["id"]
+    if stream_ids.size > 0:
+        assert stream_ids.size == np.unique(stream_ids).size
+
+    buffer_ids = h["signal_buffers"]["id"]
+    if buffer_ids.size > 0:
+        assert buffer_ids.size == np.unique(buffer_ids).size
 
 
 def count_element(reader):
@@ -98,15 +132,15 @@ def count_element(reader):
             for stream_index in range(nb_stream):
                 sig_size = reader.get_signal_size(block_index, seg_index, stream_index=stream_index)
 
-                for spike_channel_index in range(nb_unit):
-                    nb_spike = reader.spike_count(
-                        block_index=block_index, seg_index=seg_index, spike_channel_index=spike_channel_index
-                    )
+            for spike_channel_index in range(nb_unit):
+                nb_spike = reader.spike_count(
+                    block_index=block_index, seg_index=seg_index, spike_channel_index=spike_channel_index
+                )
 
-                for event_channel_index in range(nb_event_channel):
-                    nb_event = reader.event_count(
-                        block_index=block_index, seg_index=seg_index, event_channel_index=event_channel_index
-                    )
+            for event_channel_index in range(nb_event_channel):
+                nb_event = reader.event_count(
+                    block_index=block_index, seg_index=seg_index, event_channel_index=event_channel_index
+                )
 
 
 def iter_over_sig_chunks(reader, stream_index, channel_indexes, chunksize=1024):

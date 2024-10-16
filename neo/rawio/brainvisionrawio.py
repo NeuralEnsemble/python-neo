@@ -16,6 +16,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -83,7 +84,8 @@ class BrainVisionRawIO(BaseRawIO):
             sigs = sigs[: -sigs.size % nb_channel]
         self._raw_signals = sigs.reshape(-1, nb_channel)
 
-        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+        signal_buffers = np.array(("Signals", "0"), dtype=_signal_buffer_dtype)
+        signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
 
         sig_channels = []
         channel_infos = vhdr_header["Channel Infos"]
@@ -107,7 +109,7 @@ class BrainVisionRawIO(BaseRawIO):
                 units = cds[3]
             else:
                 units = "u"
-            units = units.replace("µ", "u") # Brainvision spec for specific unicode
+            units = units.replace("µ", "u")  # Brainvision spec for specific unicode
             chan_id = str(c + 1)
             if sig_dtype == np.int16 or sig_dtype == np.int32:
                 gain = float(res)
@@ -115,7 +117,10 @@ class BrainVisionRawIO(BaseRawIO):
                 gain = 1
             offset = 0
             stream_id = "0"
-            sig_channels.append((name, chan_id, self._sampling_rate, sig_dtype, units, gain, offset, stream_id))
+            buffer_id = "0"
+            sig_channels.append(
+                (name, chan_id, self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+            )
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No spikes
@@ -152,6 +157,7 @@ class BrainVisionRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = sig_channels
         self.header["spike_channels"] = spike_channels
