@@ -22,7 +22,7 @@ import numpy as np
 from xml.etree import ElementTree
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -33,10 +33,9 @@ from .baserawio import (
 from .utils import get_memmap_shape
 
 
-class NeuroScopeRawIO(BaseRawIO):
+class NeuroScopeRawIO(BaseRawWithBufferApiIO):
     extensions = ["xml", "dat", "lfp", "eeg"]
     rawmode = "one-file"
-    has_buffer_description_api = True
 
     def __init__(self, filename, binary_file=None):
         """raw reader for Neuroscope
@@ -68,7 +67,7 @@ class NeuroScopeRawIO(BaseRawIO):
         filename provided with a supported data extension (.dat, .lfp, .eeg):
             - It assumes that the XML file has the same name and a .xml extension.
         """
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
         self.binary_file = binary_file
 
@@ -115,7 +114,7 @@ class NeuroScopeRawIO(BaseRawIO):
         stream_id = "0"
         self._buffer_descriptions = {0: {0:{}}}
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "binary",
+            "type" : "raw",
             "file_path" : str(self.data_file_path),
             "dtype" : sig_dtype,
             "order": "C",

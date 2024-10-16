@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -27,7 +27,7 @@ from .baserawio import (
 from .utils import get_memmap_shape
 
 
-class OpenEphysBinaryRawIO(BaseRawIO):
+class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     """
     Handle several Blocks and several Segments.
 
@@ -62,10 +62,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
 
     extensions = ["xml", "oebin", "txt", "dat", "npy"]
     rawmode = "one-dir"
-    has_buffer_description_api = True
 
     def __init__(self, dirname="", load_sync_channel=False, experiment_names=None):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
         if experiment_names is not None:
             if isinstance(experiment_names, str):
@@ -130,7 +129,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             for chan_info in info["channels"]:
                 chan_id = chan_info["channel_name"]
                 if "SYNC" in chan_id and not self.load_sync_channel:
-                    continue
+                    # the channel is removed from stream but not the buffer
+                    stream_id = ""
                 if chan_info["units"] == "":
                     # in some cases for some OE version the unit is "", but the gain is to "uV"
                     units = "uV"
@@ -179,7 +179,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels,
                                              offset=0)
                     self._buffer_descriptions[block_index][seg_index][buffer_id] = {
-                        "type" : "binary",
+                        "type" : "raw",
                         "file_path" : str(info["raw_filename"]),
                         "dtype" : info["dtype"],
                         "order": "C",
@@ -195,7 +195,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                             "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
                         )
 
-                    if has_sync_trace:
+                    if has_sync_trace and not self.load_sync_channel:
                         self._stream_buffer_slice[stream_id] = slice(None, -1)
                     else:
                         self._stream_buffer_slice[stream_id] = None

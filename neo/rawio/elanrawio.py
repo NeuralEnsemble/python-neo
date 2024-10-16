@@ -23,7 +23,7 @@ import pathlib
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -36,7 +36,7 @@ from .utils import get_memmap_shape
 from neo.core import NeoReadWriteError
 
 
-class ElanRawIO(BaseRawIO):
+class ElanRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading time-frequency EEG data maps from the Elan software
 
@@ -59,10 +59,9 @@ class ElanRawIO(BaseRawIO):
 
     extensions = ["eeg"]
     rawmode = "one-file"
-    has_buffer_description_api = True
 
     def __init__(self, filename=None, entfile=None, posfile=None):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = pathlib.Path(filename)
 
         # check whether ent and pos files are defined
@@ -165,11 +164,17 @@ class ElanRawIO(BaseRawIO):
         signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
         signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
         
-
         sig_channels = []
-        for c, chan_info in enumerate(channel_infos[:-2]):
+        for c, chan_info in enumerate(channel_infos):
             chan_name = chan_info["label"]
             chan_id = str(c)
+
+            if c < len(channel_infos) - 2:
+                # standard channels
+                stream_id = "0"
+            else:
+                # last 2 channels are not included in the stream
+                stream_id = ""
 
             gain = (chan_info["max_physic"] - chan_info["min_physic"]) / (
                 chan_info["max_logic"] - chan_info["min_logic"]
@@ -196,14 +201,14 @@ class ElanRawIO(BaseRawIO):
         self._stream_buffer_slice = {}
         shape = get_memmap_shape(self.filename, sig_dtype, num_channels=nb_channel + 2, offset=0)
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "binary",
+            "type" : "raw",
             "file_path" : self.filename,
             "dtype" : sig_dtype,
             "order": "C",
             "file_offset" : 0,
             "shape" : shape,
         }
-        self._stream_buffer_slice[stream_id] = slice(0, -2)
+        self._stream_buffer_slice["0"] = slice(0, -2)
 
         # triggers
         with open(self.posfile, mode="rt", encoding="ascii", newline=None) as f:

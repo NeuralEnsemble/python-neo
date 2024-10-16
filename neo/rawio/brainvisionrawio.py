@@ -13,7 +13,7 @@ import re
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -26,7 +26,7 @@ from .utils import get_memmap_shape
 from neo.core import NeoReadWriteError
 
 
-class BrainVisionRawIO(BaseRawIO):
+class BrainVisionRawIO(BaseRawWithBufferApiIO):
     """Class for reading BrainVision files
 
     Parameters
@@ -42,10 +42,9 @@ class BrainVisionRawIO(BaseRawIO):
 
     extensions = ["vhdr"]
     rawmode = "one-file"
-    has_buffer_description_api = True
 
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = str(filename)
 
     def _parse_header(self):
@@ -88,7 +87,7 @@ class BrainVisionRawIO(BaseRawIO):
         self._stream_buffer_slice = {}
         shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "binary",
+            "type" : "raw",
             "file_path" : binary_filename,
             "dtype" : sig_dtype,
             "order": "C",
@@ -97,7 +96,7 @@ class BrainVisionRawIO(BaseRawIO):
         }
         self._stream_buffer_slice[stream_id] = None
 
-        signal_buffers = np.array(("Signals", "0"), dtype=_signal_buffer_dtype)
+        signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
         signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
 
         sig_channels = []

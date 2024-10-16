@@ -17,7 +17,7 @@ Author: Samuel Garcia
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -26,7 +26,7 @@ from .baserawio import (
 )
 from .utils import get_memmap_shape
 
-class RawMCSRawIO(BaseRawIO):
+class RawMCSRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading an mcs file converted by the MC_DataToo binary converter
 
@@ -39,10 +39,9 @@ class RawMCSRawIO(BaseRawIO):
 
     extensions = ["raw"]
     rawmode = "one-file"
-    has_buffer_description_api = True
 
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _source_name(self):
@@ -68,7 +67,7 @@ class RawMCSRawIO(BaseRawIO):
         shape = get_memmap_shape(self.filename, self.dtype, num_channels=self.nb_channel, offset=file_offset)
         self._buffer_descriptions = {0:{0:{}}}
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "binary",
+            "type" : "raw",
             "file_path" : str(self.filename),
             "dtype" : "uint16",
             "order": "C",

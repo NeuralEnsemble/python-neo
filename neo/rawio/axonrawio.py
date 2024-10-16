@@ -53,7 +53,7 @@ from io import open, BufferedReader
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -63,7 +63,7 @@ from .baserawio import (
 from neo.core import NeoReadWriteError
 
 
-class AxonRawIO(BaseRawIO):
+class AxonRawIO(BaseRawWithBufferApiIO):
     """
     Class for Class for reading data from pCLAMP and AxoScope files (.abf version 1 and 2)
 
@@ -90,10 +90,9 @@ class AxonRawIO(BaseRawIO):
 
     extensions = ["abf"]
     rawmode = "one-file"
-    has_buffer_description_api = True
 
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _parse_header(self):
@@ -179,7 +178,7 @@ class AxonRawIO(BaseRawIO):
 
             self._buffer_descriptions[0][seg_index] = {}
             self._buffer_descriptions[0][seg_index][buffer_id] = {
-                "type" : "binary",
+                "type" : "raw",
                 "file_path" : str(self.filename),
                 "dtype" : str(sig_dtype),
                 "order": "C",

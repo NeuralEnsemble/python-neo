@@ -12,7 +12,7 @@ Author: Samuel Garcia
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -22,10 +22,9 @@ from .baserawio import (
 )
 
 
-class WinEdrRawIO(BaseRawIO):
+class WinEdrRawIO(BaseRawWithBufferApiIO):
     extensions = ["EDR", "edr"]
     rawmode = "one-file"
-    has_buffer_description_api = True
 
     def __init__(self, filename=""):
         """
@@ -37,7 +36,7 @@ class WinEdrRawIO(BaseRawIO):
             The *.edr file to be loaded
 
         """
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _source_name(self):
@@ -68,7 +67,7 @@ class WinEdrRawIO(BaseRawIO):
         buffer_id = "0"
         self._buffer_descriptions = {0 :{0 :{}}}
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "binary",
+            "type" : "raw",
             "file_path" : str(self.filename),
             "dtype" : "int16",
             "order": "C",

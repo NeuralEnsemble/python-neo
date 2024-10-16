@@ -57,7 +57,7 @@ import re
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -67,7 +67,7 @@ from .baserawio import (
 from .utils import get_memmap_shape
 
 
-class SpikeGLXRawIO(BaseRawIO):
+class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading data from a SpikeGLX system
 
@@ -108,10 +108,8 @@ class SpikeGLXRawIO(BaseRawIO):
     extensions = ["meta", "bin"]
     rawmode = "one-dir"
 
-    has_buffer_description_api = True
-
     def __init__(self, dirname="", load_sync_channel=False, load_channel_location=False):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
         self.load_sync_channel = load_sync_channel
         self.load_channel_location = load_channel_location
@@ -154,7 +152,7 @@ class SpikeGLXRawIO(BaseRawIO):
                 self._buffer_descriptions[block_index][seg_index] = {}
             
             self._buffer_descriptions[block_index][seg_index][buffer_id] = {
-                "type" : "binary",
+                "type" : "raw",
                 "file_path" : info["bin_file"],
                 "dtype" : "int16",
                 "order": "C",
@@ -177,6 +175,7 @@ class SpikeGLXRawIO(BaseRawIO):
             signal_buffers.append((buffer_name, buffer_id))
 
             stream_id = stream_name
+
             stream_index = stream_names.index(info["stream_name"])
             signal_streams.append((stream_name, stream_id, buffer_id))
 
@@ -203,7 +202,10 @@ class SpikeGLXRawIO(BaseRawIO):
             # check sync channel validity
             if "nidq" not in stream_name:
                 if not self.load_sync_channel and info["has_sync_trace"]:
-                    signal_channels = signal_channels[:-1]
+                    # the last channel is remove from the stream but not from the buffer
+                    last_chan = signal_channels[-1]
+                    last_chan = last_chan[:-2] + ("", buffer_id)
+                    signal_channels = signal_channels[:-1] + [last_chan]
                     self._stream_buffer_slice[stream_id] = slice(0, -1)
                 if self.load_sync_channel and not info["has_sync_trace"]:
                     raise ValueError("SYNC channel is not present in the recording. " "Set load_sync_channel to False")

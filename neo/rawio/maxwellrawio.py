@@ -27,7 +27,7 @@ from urllib.request import urlopen
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -38,7 +38,7 @@ from .baserawio import (
 from neo.core import NeoReadWriteError
 
 
-class MaxwellRawIO(BaseRawIO):
+class MaxwellRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading MaxOne or MaxTwo files.
 
@@ -57,10 +57,9 @@ class MaxwellRawIO(BaseRawIO):
 
     extensions = ["h5"]
     rawmode = "one-file"
-    has_buffer_description_api = True
 
     def __init__(self, filename="", rec_name=None):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
         self.rec_name = rec_name
 

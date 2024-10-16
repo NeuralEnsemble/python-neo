@@ -22,7 +22,7 @@ import numpy as np
 import os
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -32,7 +32,7 @@ from .baserawio import (
 from .utils import get_memmap_shape
 
 
-class RawBinarySignalRawIO(BaseRawIO):
+class RawBinarySignalRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading raw binary files with user specified values
     Parameters
@@ -55,7 +55,6 @@ class RawBinarySignalRawIO(BaseRawIO):
 
     extensions = ["raw", "bin", "dat"]
     rawmode = "one-file"
-    has_buffer_description_api = True
 
     def __init__(
         self,
@@ -67,7 +66,7 @@ class RawBinarySignalRawIO(BaseRawIO):
         signal_offset=0.0,
         bytesoffset=0,
     ):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
         self.dtype = dtype
         self.sampling_rate = sampling_rate
@@ -88,7 +87,7 @@ class RawBinarySignalRawIO(BaseRawIO):
             shape = get_memmap_shape(self.filename, self.dtype, num_channels=self.nb_channel, offset=self.bytesoffset)
             self._buffer_descriptions = {0:{0:{}}}
             self._buffer_descriptions[0][0][buffer_id] = {
-                "type" : "binary",
+                "type" : "raw",
                 "file_path" : str(self.filename),
                 "dtype" : "uint16",
                 "order": "C",

@@ -1,5 +1,5 @@
 """
-Module to export a rawio reader that support the buffer_description API
+Experimental module to export a rawio reader that support the buffer_description API
 to xarray dataset using zarr specification format v2.
 
 A block/segment/stream correspond to one xarray.DataSet
@@ -7,8 +7,7 @@ A block/segment/stream correspond to one xarray.DataSet
 A xarray.DataTree can also be expose to get all at block/segment/stream
 
 Note :
-  * only some IOs support this at the moment
-
+  * only some IOs support this at the moment has_buffer_description_api()=True
 """
 import json
 
@@ -17,41 +16,6 @@ import numpy as np
 import base64
 
 
-
-# TODO ios with memmap:
-# * spikeglx DONE
-# * openephysbinary
-# * winwcprawio
-# * winedr
-# * tdc
-# * rawmcs
-# * rawbinarysignal
-# * neuroscope
-# * neuroexplorer
-# * micromed
-# * brainvision
-# * blackrock
-# * bci200
-# * 
-
-# TODO ios with HDF5:
-# * nix
-# * mearec
-# * maxwell
-# * biocam
-
-# TODO with chunk by channel (more complicated):
-# * axona
-# * openephys legacy
-# axograph
-
-
-# add some test in stanard compliance
-
-
-
-
-# TODO implement zarr v3
 
 
 def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, buffer_id=None):
@@ -68,6 +32,8 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, buffer_id=Non
     Usefull read also https://github.com/saalfeldlab/n5
 
     """
+
+    # TODO later implement zarr v3
 
     # rawio_reader.
     signal_buffers = rawio_reader.header["signal_buffers"]
@@ -88,7 +54,7 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, buffer_id=Non
     descr = rawio_reader.get_analogsignal_buffer_description(block_index=block_index, seg_index=seg_index, 
                                                                 buffer_id=buffer_id)
 
-    if descr["type"] == "binary":
+    if descr["type"] == "raw":
 
 
         # channel : small enough can be internal with base64
@@ -140,7 +106,7 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, buffer_id=Non
         zattrs['sampling_rate'] = float(channels['sampling_rate'][0])
 
         # unique big chunk
-        # TODO : optional split in several small chunks
+        # TODO later : optional split in several small chunks
         array_size = np.prod(descr["shape"], dtype='int64')
         chunk_size = array_size * dtype.itemsize
         rfs["refs"]["traces/0.0"] = [str(descr["file_path"]), descr["file_offset"], chunk_size]
@@ -152,7 +118,7 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, buffer_id=Non
     else:
         raise ValueError(f"buffer_description type not handled {descr['type']}")
 
-    # TODO channel array_annotations
+    # TODO later channel array_annotations
 
     return rfs
 
@@ -162,7 +128,8 @@ def to_xarray_dataset(rawio_reader, block_index=0, seg_index=0, buffer_id=None):
     """
     Utils fonction that transorm an instance a rawio into a xarray.Dataset
     with lazy access.
-    This works only for rawio class that implement the has_buffer_description_api.
+    This works only for rawio class that return True with has_buffer_description_api() and hinerits from
+    BaseRawWithBufferApiIO.
     
 
     Note : the original idea of the function is from Ben Dichter in this page

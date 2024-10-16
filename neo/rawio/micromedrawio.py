@@ -14,7 +14,7 @@ import io
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -33,7 +33,7 @@ class StructFile(io.BufferedReader):
         return struct.unpack(fmt, self.read(struct.calcsize(fmt)))
 
 
-class MicromedRawIO(BaseRawIO):
+class MicromedRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading  data from micromed (.trc).
 
@@ -46,10 +46,9 @@ class MicromedRawIO(BaseRawIO):
     extensions = ["trc", "TRC"]
     rawmode = "one-file"
 
-    has_buffer_description_api = True
 
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _parse_header(self):
@@ -110,7 +109,7 @@ class MicromedRawIO(BaseRawIO):
             buffer_id = "0"
             stream_id = "0"
             self._buffer_descriptions[0][0][buffer_id] = {
-                "type" : "binary",
+                "type" : "raw",
                 "file_path" : str(self.filename),
                 "dtype" : sig_dtype,
                 "order": "C",

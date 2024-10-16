@@ -43,7 +43,7 @@ import re
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -53,11 +53,10 @@ from .baserawio import (
 from neo.core import NeoReadWriteError
 
 
-class NeuroNexusRawIO(BaseRawIO):
+class NeuroNexusRawIO(BaseRawWithBufferApiIO):
 
     extensions = ["xdat", "json"]
     rawmode = "one-file"
-    has_buffer_description_api = True
 
     def __init__(self, filename: str | Path = ""):
         """
@@ -95,7 +94,7 @@ class NeuroNexusRawIO(BaseRawIO):
 
         """
 
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
 
         if not Path(filename).is_file():
             raise FileNotFoundError(f"The metadata file {filename} was not found")
@@ -139,7 +138,7 @@ class NeuroNexusRawIO(BaseRawIO):
         buffer_id = "0"
         self._buffer_descriptions = {0 :{0 :{}}}
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "binary",
+            "type" : "raw",
             "file_path" : str(binary_file),
             "dtype" : BINARY_DTYPE,
             "order": "C",

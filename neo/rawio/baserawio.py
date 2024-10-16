@@ -151,9 +151,6 @@ class BaseRawIO:
 
     rawmode = None  # one key from possible_raw_modes
 
-    # If true then 
-    has_buffer_description_api = False
-
     #   TODO Why multi-file would have a single filename is confusing here - shouldn't
     #   the name of this argument be filenames_list or filenames_base or similar?
     #
@@ -187,6 +184,15 @@ class BaseRawIO:
         self.header = None
         self.is_header_parsed = False
 
+        self._has_buffer_description_api = False
+
+    def has_buffer_description_api(self):
+        """
+        Return if the reader handle the buffer API.
+        If True then the reader support internally `get_analogsignal_buffer_description()`
+        """
+        return self._has_buffer_description_api
+
     def parse_header(self):
         """
         Parses the header of the file(s) to allow for faster computations
@@ -196,6 +202,7 @@ class BaseRawIO:
         # this must create
         # self.header['nb_block']
         # self.header['nb_segment']
+        # self.header['signal_buffers']
         # self.header['signal_streams']
         # self.header['signal_channels']
         # self.header['spike_channels']
@@ -669,11 +676,7 @@ class BaseRawIO:
         """
         stream_index = self._get_stream_index_from_arg(stream_index)
 
-        if not self.has_buffer_description_api:
-            return self._get_signal_size(block_index, seg_index, stream_index)
-        else:
-            # use the buffer description
-            return self._get_signal_size_generic(block_index, seg_index, stream_index)
+        return self._get_signal_size(block_index, seg_index, stream_index)
 
     def get_signal_t_start(self, block_index: int, seg_index: int, stream_index: int | None = None):
         """
@@ -822,11 +825,7 @@ class BaseRawIO:
             if np.all(np.diff(channel_indexes) == 1):
                 channel_indexes = slice(channel_indexes[0], channel_indexes[-1] + 1)
 
-        if not self.has_buffer_description_api:
-            raw_chunk = self._get_analogsignal_chunk(block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
-        else:
-            # use the buffer description
-            raw_chunk = self._get_analogsignal_chunk_generic(block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
+        raw_chunk = self._get_analogsignal_chunk(block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
 
         return raw_chunk
 
@@ -1298,7 +1297,6 @@ class BaseRawIO:
 
         All channels indexed must have the same size and t_start.
         """
-        # must NOT be implemented if has_buffer_description_api=True
         raise (NotImplementedError)
 
     def _get_signal_t_start(self, block_index: int, seg_index: int, stream_index: int):
@@ -1326,7 +1324,6 @@ class BaseRawIO:
         -------
             array of samples, with each requested channel in a column
         """
-        # must NOT be implemented if has_buffer_description_api=True
         raise (NotImplementedError)
 
     ###
@@ -1366,7 +1363,7 @@ class BaseRawIO:
         raise (NotImplementedError)
 
     ###
-    # json buffer api zone
+    # buffer api zone
     # must be implemented if has_buffer_description_api=True
     def get_analogsignal_buffer_description(self, block_index: int = 0, seg_index: int = 0, buffer_id: str = None):
         if not self.has_buffer_description_api:
@@ -1377,17 +1374,37 @@ class BaseRawIO:
     def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         raise (NotImplementedError)
 
-    def _get_signal_size_generic(self, block_index, seg_index, stream_index):
-        # When has_buffer_description_api=True this used to avoid to write _get_analogsignal_chunk())
 
+
+class BaseRawWithBufferApiIO(BaseRawIO):
+    """
+    Generic class for reader that support "buffer api".
+
+    In short reader that are internally based on:
+
+      * np.memmap
+      * hdf5
+
+    In theses cases _get_signal_size and _get_analogsignal_chunk are totaly generic and do not need to be implemented in the class.
+
+    For this class sub classes must implements theses two dict:
+       * self._buffer_descriptions[block_index][seg_index] = buffer_description
+       * self._stream_buffer_slice[buffer_id] = None or slicer o indices
+
+    """
+
+    def __init__(self, *arg, **kwargs):
+        super().__init__(*arg, **kwargs)
+        self._has_buffer_description_api = True
+
+    def _get_signal_size(self, block_index, seg_index, stream_index):
         buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
-        buffer_desc = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
-
+        buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
         # some hdf5 revert teh buffer
         time_axis = buffer_desc.get("time_axis", 0)
         return buffer_desc['shape'][time_axis]
 
-    def _get_analogsignal_chunk_generic(
+    def _get_analogsignal_chunk(
         self,
         block_index: int,
         seg_index: int,
@@ -1403,13 +1420,12 @@ class BaseRawIO:
         buffer_slice = self._stream_buffer_slice[stream_id]
 
 
-        # When has_buffer_description_api=True this used to avoid to write _get_analogsignal_chunk())
-        buffer_desc = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
+        buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
 
         i_start = i_start or 0
         i_stop = i_stop or buffer_desc['shape'][0]
 
-        if buffer_desc['type'] == 'binary':
+        if buffer_desc['type'] == "raw":
 
             # open files on demand and keep reference to opened file 
             if not hasattr(self, '_memmap_analogsignal_buffers'):
@@ -1475,6 +1491,19 @@ class BaseRawIO:
 
         return raw_sigs
 
+    def __del__(self):
+        if hasattr(self, '_memmap_analogsignal_buffers'):
+            for block_index in self._memmap_analogsignal_buffers.keys():
+                for seg_index in self._memmap_analogsignal_buffers[block_index].keys():
+                    for buffer_id, fid in self._memmap_analogsignal_buffers[block_index][seg_index].items():
+                        fid.close()
+            del self._memmap_analogsignal_buffers
+
+        if hasattr(self, '_hdf5_analogsignal_buffers'):
+            for block_index in self._hdf5_analogsignal_buffers.keys():
+                for seg_index in self._hdf5_analogsignal_buffers[block_index].keys():
+                    for buffer_id, h5_file in self._hdf5_analogsignal_buffers[block_index][seg_index].items():
+                        h5_file.close()
 
 
 def pprint_vector(vector, lim: int = 8):
