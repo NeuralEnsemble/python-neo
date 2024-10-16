@@ -1033,8 +1033,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
 
 
 class TestAnalogSignalFunctions(unittest.TestCase):
-    # pickle help needed
-    """
+
     def test__pickle(self):
         signal1 = IrregularlySampledSignal(np.arange(10.0) / 100 * pq.s, np.arange(10.0), units="mV")
 
@@ -1051,7 +1050,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
         assert_array_equal(signal1, signal2)
         fobj.close()
         os.remove("./pickle")
-"""
+
 
 class TestIrregularlySampledSignalEquality(unittest.TestCase):
     def test__signals_with_different_times_should_be_not_equal(self):

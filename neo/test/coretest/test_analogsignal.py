@@ -1717,8 +1717,6 @@ class TestAnalogSignalCombination(unittest.TestCase):
 
 class TestAnalogSignalFunctions(unittest.TestCase):
 
-    ## someone with more pickle knowledge needs to work on this
-    """
     def test__pickle_1d(self):
         signal1 = AnalogSignal(signal=[1, 2, 3, 4], sampling_period=1 * pq.ms, units=pq.S)
         signal1.annotations["index"] = 2
@@ -1763,7 +1761,6 @@ class TestAnalogSignalFunctions(unittest.TestCase):
         assert_neo_object_is_compliant(signal2)
         fobj.close()
         os.remove("./pickle")
-"""
 
 class TestAnalogSignalSampling(unittest.TestCase):
     def test___get_sampling_rate__period_none_rate_none_ValueError(self):
