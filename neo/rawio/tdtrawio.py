@@ -311,7 +311,9 @@ class TdtRawIO(BaseRawIO):
                 gain = 1.0
                 offset = 0.0
                 buffer_id = ""
-                signal_channels.append((chan_name, str(chan_id), sampling_rate, dtype, units, gain, offset, stream_id, buffer_id))
+                signal_channels.append(
+                    (chan_name, str(chan_id), sampling_rate, dtype, units, gain, offset, stream_id, buffer_id)
+                )
 
         if missing_sev_channels:
             warnings.warn(f"Could not identify sev files for channels {missing_sev_channels}.")

@@ -275,7 +275,9 @@ class PlexonRawIO(BaseRawIO):
             channel_prefix = re.match(regex_prefix_pattern, name).group(0)
             stream_id = channel_prefix
             buffer_id = ""
-            signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+            signal_channels.append(
+                (name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+            )
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 

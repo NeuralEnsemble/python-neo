@@ -230,7 +230,7 @@ class OpenEphysRawIO(BaseRawIO):
             signal_streams = []
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         # no buffer handling in this format because one channel per file
-        signal_buffers = np.array( [], dtype=_signal_buffer_dtype)
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # scan for spikes files
         spike_channels = []

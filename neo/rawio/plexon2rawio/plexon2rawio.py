@@ -211,7 +211,7 @@ class Plexon2RawIO(BaseRawIO):
             buffer_id = ""
             signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
-        # In plexon buffer is unkown
+        # In plexon buffer is unknown
         signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         self._stream_id_samples = {}

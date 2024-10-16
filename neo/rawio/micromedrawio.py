@@ -147,8 +147,10 @@ class MicromedRawIO(BaseRawIO):
                 (sampling_rate,) = f.read_f("H")
                 sampling_rate *= Rate_Min
                 chan_id = str(c)
+
                 
                 signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+
 
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
             
