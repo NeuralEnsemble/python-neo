@@ -45,7 +45,7 @@ iocache = [
 ]
 
 test = [
-    "dhn_med_py", #  < 1.0 was removed from pypi
+    "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
     "pytest",
     "pytest-cov",
     # datalad   # this dependency is covered by conda (environment_testing.yml)
@@ -100,13 +100,13 @@ ced = ["sonpy"]
 nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
-med = ["dhn_med_py>=1.0.0"]
+med = ["dhn_med_py<2.0"] # ci failing with 2.0 test future version when stable
 plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32'"]
 
 all = [
     "coverage",
     "coveralls",
-    "dhn_med_py",
+    "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
     "h5py",
     "igor2",
     "ipython",
