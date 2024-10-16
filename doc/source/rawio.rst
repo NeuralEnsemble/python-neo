@@ -284,28 +284,28 @@ Read event timestamps and times
 Signal streams and signal buffers
 ---------------------------------
 
-For reading analog signal **rawio** has 2 important concepts:
+For reading analog signals **neo.rawio** has 2 important concepts:
 
  1. The **signal_stream** : it is a group of channels that can be read together using :func:`get_analog_signal_chunk()`.
-    This group of channels are guaranteed to have the sample sampling rate, and the same duration per segment.
-    Most of the time, this group channel is a "logical" group of channel. In hsort there are from the same headstage
-    or from the auxilary board.
-    Optionally, depending the format, a **signal_stream** can be a slice or an entire **signal_buffer**.
+    This group of channels is guaranteed to have the same sampling rate, and the same duration per segment.
+    Most of the time, this group of channel is a "logical" group of channels. In short they are from the same headstage
+    or from the same auxiliary board.
+    Optionally, depending on the format, a **signal_stream** can be a slice of or an entire **signal_buffer**.
 
- 2. The **signal_buffer** : it is group channel that share the same data layout in a file. The most simple example
+ 2. The **signal_buffer** : it is group of channels that share the same data layout in a file. The most simple example
     is channel that can be read by a simple :func:`signals = np.memmap(file, shape=..., dtype=... , offset=...)`.
-    A **signal_buffer** can contain one or several **signal_stream** (very often it is only one).
-    There are two kind of format that handle this concept:
+    A **signal_buffer** can contain one or several **signal_stream**'s (very often it is only one).
+    There are two kind of formats that handle this concept:
      
-      * the one that can use :func:`np.memmap()` internally
-      * format based on hdf5
+      * those which use :func:`np.memmap()` internally
+      * formats based on hdf5
        
-    There are many format that do not handle at all this concept:
+    There are many formats that do not handle this concept:
 
-      * the one that use an external python package for reading data (edf, ced, plexon2, ...)
-      * the one with a complicated data layout (data block are splited without structure)
+      * the ones that use an external python package for reading data (edf, ced, plexon2, ...)
+      * the ones with a complicated data layout (e.g. those where the data blocks are split without structure)
 
-    To check if a format have the concept you can check the class attribute flag `has_buffer_description_api` of the
+    To check if a format makes use of the buffer api you can check the class attribute flag `has_buffer_description_api` of the
     rawio class.
 
 
