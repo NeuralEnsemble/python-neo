@@ -256,7 +256,9 @@ class Spike2RawIO(BaseRawIO):
                     sig_dtype = "float32"
                 stream_id = "0"  # set it after the loop
                 buffer_id = ""
-                signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+                signal_channels.append(
+                    (name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+                )
 
             elif chan_info["kind"] in [2, 3, 4, 5, 8]:
                 # Event

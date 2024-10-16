@@ -191,7 +191,7 @@ class NeuroNexusRawIO(BaseRawIO):
                     1,  # no gain
                     0,  # no offset
                     stream_id,
-                    buffer_id
+                    buffer_id,
                 )
             )
 
@@ -203,7 +203,7 @@ class NeuroNexusRawIO(BaseRawIO):
         stream_ids = np.unique(signal_channels["stream_id"])
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids]
-        # One unique buffer
+        # One unique buffer
         signal_streams["buffer_id"] = buffer_id
 
         for stream_index, stream_id in enumerate(stream_ids):

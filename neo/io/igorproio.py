@@ -142,7 +142,7 @@ class IgorIO(BaseIO):
             _time_unit_structure = header["dimUnits"].ravel()
             # For the files we've seen so far, the first element of _time_unit_structure contains the units.
             # If someone has a file for which this assumption does not hold an Exception will be raised.
-            if not all([element == b'' for element in _time_unit_structure[1:]]):
+            if not all([element == b"" for element in _time_unit_structure[1:]]):
                 raise Exception(
                     "Neo cannot yet handle the units in this file. "
                     "Please create a new issue in the Neo issue tracker at "

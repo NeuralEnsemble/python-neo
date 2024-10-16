@@ -130,7 +130,9 @@ class MicromedRawIO(BaseRawIO):
                 chan_id = str(c)
                 stream_id = "0"
                 buffer_id = "0"
-                signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+                signal_channels.append(
+                    (chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+                )
 
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
