@@ -19,7 +19,6 @@ jobs:
       fail-fast: true
       matrix:
         python-version: ['3.9', '3.12']
-        numpy-version: ['1.26.4']
     defaults:
       # by default run in bash mode (required for conda usage)
       run:
@@ -91,9 +90,11 @@ jobs:
       - name: Install neo including dependencies
         # installation with dependencies is only required if no cache was found
         # restore-key hits should result in `cache-hit` == 'false'
+        # in the run we limit numpy for now. Change this in the next phase of numpy 2.0 support.
         if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
           pip install --upgrade -e .
+          pip install numpy==1.26.4
           pip install .[test]
 
       - name: Install neo without dependencies
