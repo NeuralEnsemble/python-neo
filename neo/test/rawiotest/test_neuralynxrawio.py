@@ -2,10 +2,11 @@ import unittest
 
 import os
 import numpy as np
+import re
 
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuralynxrawio.nlxheader import NlxHeader
-from neo.rawio.neuralynxrawio.ncssections import NcsSection, NcsSections, NcsSectionsFactory
+from neo.rawio.neuralynxrawio.ncssections import AcqType, NcsSection, NcsSections, NcsSectionsFactory
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 import logging
@@ -174,23 +175,23 @@ class TestNeuralynxRawIO(
         self.assertEqual(len(rawio.header["event_channels"]), 0)
 
 
-class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
+class TestNcsRecordingType(BaseTestRawIO, unittest.TestCase):
     """
     Test of decoding of NlxHeader for type of recording.
     """
-
+    rawioclass = NeuralynxRawIO
     entities_to_test = []
 
     ncsTypeTestFiles = [
-        ("neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs", "PRE4"),
-        ("neuralynx/Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs", "DIGITALLYNX"),
-        ("neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v5.5.1/original_data/Tet3a.ncs", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v5.6.3/original_data/TT1.ntt", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs", "DIGITALLYNXSX"),
-        ("neuralynx/Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs", "DIGITALLYNXSX"),
-        ("neuralynx/Pegasus_v2.1.1/Events_0008.nev", "ATLAS"),
+        ("neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs", AcqType.PRE4),
+        ("neuralynx/Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs", AcqType.DIGITALLYNX),
+        ("neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v5.5.1/original_data/Tet3a.ncs", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v5.6.3/original_data/TT1.ntt", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs", AcqType.DIGITALLYNXSX),
+        ("neuralynx/Pegasus_v2.1.1/Events_0008.nev", AcqType.ATLAS),
     ]
 
     def test_recording_types(self):
@@ -202,11 +203,11 @@ class TestNcsRecordingType(TestNeuralynxRawIO, unittest.TestCase):
             self.assertEqual(hdr.type_of_recording(), typeTest[1])
 
 
-class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
+class TestNcsSectionsFactory(BaseTestRawIO, unittest.TestCase):
     """
     Test building NcsBlocks for files of different revisions.
     """
-
+    rawioclass = NeuralynxRawIO
     entities_to_test = []
 
     def test_ncsblocks_partial(self):
@@ -323,11 +324,11 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
         self.assertTrue(NcsSectionsFactory._verifySectionsStructure(data1, nb1))
 
 
-class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
+class TestNcsSections(BaseTestRawIO, unittest.TestCase):
     """
     Test building NcsBlocks for files of different revisions.
     """
-
+    rawioclass = NeuralynxRawIO
     entities_to_test = []
 
     def test_equality(self):
@@ -360,8 +361,9 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
         ns0.sampFreqUsed = 400
         self.assertNotEqual(ns0, ns1)
 
+class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
+    rawioclass = NeuralynxRawIO
 
-class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
     def test_no_date_time(self):
         filename = self.get_local_path("neuralynx/NoDateHeader/NoDateHeader.nev")
 
@@ -370,10 +372,85 @@ class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
 
         hdr = NlxHeader(filename, props_only=True)
 
-        self.assertEqual(len(hdr), 11)  # 9 properties plus channel_ids and channel_names
-        self.assertEqual(hdr["ApplicationName"], "Pegasus")
-        self.assertEqual(hdr["FileType"], "Event")
+        self.assertEqual(len(hdr), 11) # 9 properties plus channel_ids and channel_names
+        self.assertEqual(hdr['ApplicationName'], 'Pegasus')
+        self.assertEqual(hdr['FileType'], 'Event')
 
+    def test_neuraview2(self):
+        filename = self.get_local_path("neuralynx/Neuraview_v2/original_data/NeuraviewEventMarkers-sample.nev")
+        hdr = NlxHeader(filename)
+
+        self.assertEqual(datetime.datetime(2015,12,14, 15,58,32), hdr['recording_opened'])
+        self.assertEqual(datetime.datetime(2015,12,14, 15,58,32), hdr['recording_closed'])
+
+    # left in for possible future header tests
+    def get_text_header(self, filename):
+        with open(filename, "rb") as f:
+            txt_header = f.read(NlxHeader.HEADER_SIZE)
+        return txt_header.strip(b"\x00").decode("latin-1")
+
+    # left in for possible future header tests
+    def check_dateutil_parse(self, hdrTxt, openPat, closePat, openDate, closeDate):
+        mtch = openPat.search(hdrTxt)
+        self.assertIsNotNone(mtch)
+        dt = mtch.groupdict()
+        date = dateutil.parser.parse(f"{dt['date']} {dt['time']}")
+        self.assertEqual(openDate, date)
+        if closePat is not None:
+            mtch = closePat.search(hdrTxt)
+            self.assertIsNotNone(mtch)
+            dt = mtch.groupdict()
+            date = dateutil.parser.parse(f"{dt['date']} {dt['time']}")
+            self.assertEqual(closeDate, date)
+
+    def test_datetime_parsing(self):
+
+        # neuraview2
+        filename = self.get_local_path("neuralynx/Neuraview_v2/original_data/NeuraviewEventMarkers-sample.nev")
+        txt_header = self.get_text_header(filename)
+        self.check_dateutil_parse(txt_header, NlxHeader.openDatetime1_pat, NlxHeader.closeDatetime1_pat,
+                                  datetime.datetime(2015,12,14, 15,58,32),
+                                  datetime.datetime(2015,12,14, 15,58,32))
+        hdr = NlxHeader(filename)
+        self.assertEqual(datetime.datetime(2015,12,14, 15,58,32),
+                          hdr['recording_opened'])
+        self.assertEqual(datetime.datetime(2015,12,14, 15,58,32),
+                          hdr['recording_closed'])
+
+        # Cheetah 5.7.4 'inProps'
+        filename = self.get_local_path("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs")
+        txt_header = self.get_text_header(filename)
+        self.check_dateutil_parse(txt_header, NlxHeader.openDatetime2_pat, NlxHeader.closeDatetime2_pat,
+                                  datetime.datetime(2017,2,16, 17,56,4),
+                                  datetime.datetime(2017,2,16, 18,1,18))
+        hdr = NlxHeader(filename)
+        self.assertEqual(datetime.datetime(2017,2,16, 17,56,4),
+                          hdr['recording_opened'])
+        self.assertEqual(datetime.datetime(2017,2,16, 18,1,18),
+                         hdr['recording_closed'])
+
+        # Cheetah 4.0.2
+        filename = self.get_local_path("neuralynx/Cheetah_v4.0.2/original_data/CSC14_trunc.Ncs")
+        txt_header = self.get_text_header(filename)
+        self.check_dateutil_parse(txt_header, NlxHeader.openDatetime1_pat, None,
+                                  datetime.datetime(2003,10,4, 10,3,0, 578000),
+                                  None)
+        hdr = NlxHeader(filename)
+        self.assertEqual(datetime.datetime(2003,10,4, 10,3,0, 578000),
+                         hdr['recording_opened'])
+        self.assertIsNone(hdr.get('recording_closed'))
+
+        # Cheetah 5.4.0 'openClosedInHeader'
+        filename = self.get_local_path("neuralynx/Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs")
+        txt_header = self.get_text_header(filename)
+        self.check_dateutil_parse(txt_header, NlxHeader.openDatetime1_pat, NlxHeader.closeDatetime1_pat,
+                                  datetime.datetime(2001,1,1, 0,0,0, 0),
+                                  datetime.datetime(2001,1,1, 0,0,0, 0))
+        hdr = NlxHeader(filename)
+        self.assertEqual(datetime.datetime(2001,1,1, 0,0,0, 0),
+                         hdr['recording_opened'])
+        self.assertEqual(datetime.datetime(2001,1,1, 0,0,0, 0),
+                         hdr['recording_closed'])
 
 if __name__ == "__main__":
     unittest.main()
