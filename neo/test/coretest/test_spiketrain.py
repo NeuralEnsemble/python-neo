@@ -315,6 +315,9 @@ class TestConstructor(unittest.TestCase):
 
     def test__create_from_quantity_array_with_dtype(self):
         times = np.arange(10, dtype="f4") * pq.ms
+        # this step is required for NumPy 2.0 which now casts to float64 in the case either value/array
+        # is float64 even if not necessary
+        # https://numpy.org/devdocs/numpy_2_0_migration_guide.html
         times = times.astype(dtype="f4")
         t_start = 0.0 * pq.s
         t_stop = 12.0 * pq.ms

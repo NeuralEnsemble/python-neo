@@ -27,7 +27,7 @@ jobs:
         os: ["ubuntu-latest", "windows-latest"]
         # "macos-latest",
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
-        numpy-version: ['1.22.4', '1.23.5', '1.24.4', '1.25.1', '1.26.4', '2.0.2',]
+        numpy-version: ['1.22.4', '1.23.5', '1.24.4', '1.25.1', '1.26.4', '2.0.2','2.1']
         exclude:
            - python-version: '3.9'
              numpy-version: '2.1'
