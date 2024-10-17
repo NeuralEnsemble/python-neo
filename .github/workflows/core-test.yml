@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false # change back before MERGE
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
         # "macos-latest",
