@@ -37,6 +37,7 @@ from ..baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -183,7 +184,8 @@ class Plexon2RawIO(BaseRawIO):
 
             channel_prefix = re.match(regex_prefix_pattern, ch_name).group(0)
             stream_id = channel_prefix
-            signal_channels.append((ch_name, chan_id, rate, dtype, units, gain, offset, stream_id))
+            buffer_id = ""
+            signal_channels.append((ch_name, chan_id, rate, dtype, units, gain, offset, stream_id, buffer_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         channel_num_samples = np.array(channel_num_samples)
@@ -206,9 +208,11 @@ class Plexon2RawIO(BaseRawIO):
             # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`).
             # In that case we use the channel prefix both as stream id and name
             stream_name = stream_id_to_stream_name.get(stream_id, stream_id)
-            signal_streams.append((stream_name, stream_id))
-
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # In plexon buffer is unknown
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         self._stream_id_samples = {}
         self._stream_index_to_stream_id = {}
@@ -273,6 +277,7 @@ class Plexon2RawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]  # It seems pl2 can only contain a single segment
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
