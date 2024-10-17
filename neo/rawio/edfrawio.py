@@ -224,7 +224,7 @@ class EDFRawIO(BaseRawIO):
 
         # load data into numpy array buffer
         data = []
-        self._open()
+        self._open_reader()
         for i, channel_idx in enumerate(selected_channel_idxs):
             # use int32 for compatibility with pyedflib
             buffer = np.empty(n, dtype=np.int32)
