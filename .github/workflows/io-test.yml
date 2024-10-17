@@ -90,11 +90,11 @@ jobs:
       - name: Install neo including dependencies
         # installation with dependencies is only required if no cache was found
         # restore-key hits should result in `cache-hit` == 'false'
-        # in the run we limit numpy for now. Change this in the next phase of numpy 2.0 support.
+        # in the run we don't do upgrade to prevent forced numpy 2.0. when ready
+        # change to pip install --upgrade -e . instead.
         if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
-          pip install --upgrade -e .
-          pip install numpy==1.26.4
+          pip install -e .
           pip install .[test]
 
       - name: Install neo without dependencies
