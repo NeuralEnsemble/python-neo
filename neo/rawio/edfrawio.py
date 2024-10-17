@@ -83,7 +83,7 @@ class EDFRawIO(BaseRawIO):
             # or continuous EDF+ files ('EDF+C' in header)
             if ("EDF+" in file_version_header) and ("EDF+C" not in file_version_header):
                 raise ValueError("Only continuous EDF+ files are currently supported.")
-        self._open()
+        self._open_reader()
         # load headers, signal information and
         self.edf_header = self.edf_reader.getHeader()
         self.signal_headers = self.edf_reader.getSignalHeaders()
@@ -287,7 +287,7 @@ class EDFRawIO(BaseRawIO):
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         return np.asarray(raw_duration, dtype=dtype)
 
-    def _open(self):
+    def _open_reader(self):
         self.edf_reader = EdfReader(self.filename)
 
     def __enter__(self):
