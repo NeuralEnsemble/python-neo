@@ -96,6 +96,8 @@ jobs:
         if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
           pip install -e .
+          pip uninstall numpy
+          pip install numpy==1.26.4
           pip install .[test]
 
       - name: Install neo without dependencies
