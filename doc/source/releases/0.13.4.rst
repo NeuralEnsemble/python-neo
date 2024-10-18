@@ -54,7 +54,7 @@ Many previous behaviors can still be achieved by using additional lines of code,
     >>> spiketrain = neo.SpikeTrain(times, t_stop=t_stop)
     >>> spiketrain
     <SpikeTrain(array[1, 2, 3] * ms, [0.0 ms, 1000.0 ms])>
-    >>> rescaled_spiketrain.rescale('s')
+    >>> rescaled_spiketrain = spiketrain.rescale('s')
     >>> rescaled_spiketrain
     <SpikeTrain(array[0.001, 0.002, 0.003] * s, [0.0 s, 10.0 s])>
 
