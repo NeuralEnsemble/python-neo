@@ -25,6 +25,7 @@ from json.decoder import JSONDecodeError
 import numpy as np
 import quantities as pq
 
+from neo.core.baseneo import _check_annotations
 from neo.core import Segment, SpikeTrain, Epoch, Event, AnalogSignal, IrregularlySampledSignal, Block, ImageSequence
 from neo.io.baseio import BaseIO
 from neo.io.proxyobjects import (
@@ -195,6 +196,18 @@ def _recompose_unit(base_unit_name, conversion):
         return pq.dimensionless
 
 
+def nwb_obj_to_dict(obj):
+    if not hasattr(obj, "fields"):
+        raise TypeError("Does not seem to be an NWB object")
+    result = {}
+    for key, value in obj.fields.items():
+        if hasattr(value, "fields"):
+            result[key] = nwb_obj_to_dict(value)
+        else:
+            result[key] = value
+    return result
+
+
 class NWBIO(BaseIO):
     """
     Class for "reading" experimental data from a .nwb file, and "writing" a .nwb file from Neo
@@ -244,6 +257,7 @@ class NWBIO(BaseIO):
         """
         Load all blocks in the file.
         """
+        import hdmf
         import pynwb
 
         if self.nwb_file_mode not in ("r",):
@@ -264,6 +278,11 @@ class NWBIO(BaseIO):
             if value is not None:
                 if annotation_name in POSSIBLE_JSON_FIELDS:
                     value = try_json_field(value)
+                elif isinstance(value, hdmf.utils.StrDataset):
+                    value = list(value)
+                # placing this check here for easier debugging, but it's redundant so we should remove it
+                # once we're handling all possible annotation types
+                _check_annotations(value)
                 self.global_block_metadata[annotation_name] = value
         if "session_description" in self.global_block_metadata:
             self.global_block_metadata["description"] = self.global_block_metadata["session_description"]
@@ -691,6 +710,8 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
     )
 
     def __init__(self, timeseries, nwb_group):
+        import pynwb
+
         self._timeseries = timeseries
         self.units = timeseries.unit
         if timeseries.conversion:
@@ -722,8 +743,11 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
                 pass
         for field_name in metadata_fields:
             value = getattr(timeseries, field_name)
+            if hasattr(value, "fields"):
+                value = nwb_obj_to_dict(value)
             if value is not None:
                 self.annotations[f"nwb:{field_name}"] = value
+            _check_annotations(value)  # tmp for easier debugging
         self.annotations["nwb_neurodata_type"] = (timeseries.__class__.__module__, timeseries.__class__.__name__)
         if hasattr(timeseries, "electrode"):
             # todo: once the Group class is available, we could add electrode metadata
@@ -865,15 +889,22 @@ class SpikeTrainProxy(BaseSpikeTrainProxy):
         self._units_table = units_table
         self.id = id
         self.units = pq.s
-        obs_intervals = units_table.get_unit_obs_intervals(id)
-        if len(obs_intervals) == 0:
+        try:
+            obs_intervals = units_table.get_unit_obs_intervals(id)
+        except KeyError:
+            logger.warn("Unable to retrieve obs_intervals")
             t_start, t_stop = None, None
-        elif len(obs_intervals) == 1:
-            t_start, t_stop = obs_intervals[0]
         else:
-            raise NotImplementedError("Can't yet handle multiple observation intervals")
-        self.t_start = t_start * pq.s
-        self.t_stop = t_stop * pq.s
+            if len(obs_intervals) == 0:
+                t_start, t_stop = None, None
+            elif len(obs_intervals) == 1:
+                t_start, t_stop = obs_intervals[0]
+                t_start = t_start * pq.s
+                t_stop = t_stop * pq.s
+            else:
+                raise NotImplementedError("Can't yet handle multiple observation intervals")
+        self.t_start = t_start
+        self.t_stop = t_stop
         self.annotations = {"nwb_group": "acquisition"}
         try:
             # NWB files created by Neo store the name as an extra column
