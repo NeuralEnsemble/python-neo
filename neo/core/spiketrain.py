@@ -975,7 +975,7 @@ class SpikeTrain(DataObject):
 
         omitted_keys_other = [
             key
-            for key in np.unique([key for other in others for key in other.array_annotations])
+            for key in set([key for other in others for key in other.array_annotations])
             if key not in self.array_annotations
         ]
 
