@@ -125,3 +125,7 @@ class BaseTestRawIO:
             logging.getLogger().setLevel(logging.INFO)
             compliance.benchmark_speed_read_signals(reader)
             logging.getLogger().setLevel(level)
+
+            # buffer api
+            if reader.has_buffer_description_api():
+                compliance.check_buffer_api(reader)

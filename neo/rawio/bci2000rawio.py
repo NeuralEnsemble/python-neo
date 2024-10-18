@@ -1,6 +1,9 @@
 """
 BCI2000RawIO is a class to read BCI2000 .dat files.
 https://www.bci2000.org/mediawiki/index.php/Technical_Reference:BCI2000_File_Format
+
+Note : BCI2000RawIO cannot implemented using has_buffer_description_api because the buffer
+is not compact. The buffer of signals is not compact (has some interleaved state uint in between channels)
 """
 
 import numpy as np
@@ -50,9 +53,11 @@ class BCI2000RawIO(BaseRawIO):
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
 
-        # one unique stream and buffer
-        signal_buffers = np.array(("Signals", "0"), dtype=_signal_buffer_dtype)
-        signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
+        # one unique stream but no buffer because channels are not compact
+        stream_id = "0"
+        buffer_id = ""
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
+        signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
         self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
 
@@ -80,8 +85,6 @@ class BCI2000RawIO(BaseRawIO):
             if isinstance(offset, str):
                 offset = float(offset)
 
-            stream_id = "0"
-            buffer_id = "0"
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
         self.header["signal_channels"] = np.array(sig_channels, dtype=_signal_channel_dtype)
 

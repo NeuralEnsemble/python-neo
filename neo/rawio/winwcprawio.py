@@ -13,7 +13,7 @@ import struct
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -23,7 +23,7 @@ from .baserawio import (
 )
 
 
-class WinWcpRawIO(BaseRawIO):
+class WinWcpRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading WinWCP data
 
@@ -38,7 +38,7 @@ class WinWcpRawIO(BaseRawIO):
     rawmode = "one-file"
 
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _source_name(self):
@@ -47,9 +47,9 @@ class WinWcpRawIO(BaseRawIO):
     def _parse_header(self):
         SECTORSIZE = 512
 
-        # only one memmap for all segment to avoid
-        # "error: [Errno 24] Too many open files"
-        self._memmap = np.memmap(self.filename, dtype="uint8", mode="r")
+        # one unique block with several segments
+        # one unique buffer splited in several streams
+        self._buffer_descriptions = {0 :{}}
 
         with open(self.filename, "rb") as fid:
 
@@ -59,7 +59,6 @@ class WinWcpRawIO(BaseRawIO):
             for line in headertext.split("\r\n"):
                 if "=" not in line:
                     continue
-                # print '#' , line , '#'
                 key, val = line.split("=")
                 if key in [
                     "NC",
@@ -81,7 +80,6 @@ class WinWcpRawIO(BaseRawIO):
                 header[key] = val
 
             nb_segment = header["NR"]
-            self._raw_signals = {}
             all_sampling_interval = []
             # loop for record number
             for seg_index in range(header["NR"]):
@@ -96,9 +94,16 @@ class WinWcpRawIO(BaseRawIO):
                 NP = NP // header["NC"]
                 NC = header["NC"]
                 ind0 = offset + header["NBA"] * SECTORSIZE
-                ind1 = ind0 + NP * NC * 2
-                sigs = self._memmap[ind0:ind1].view("int16").reshape(NP, NC)
-                self._raw_signals[seg_index] = sigs
+                buffer_id = "0"
+                self._buffer_descriptions[0][seg_index] = {}
+                self._buffer_descriptions[0][seg_index][buffer_id] = {
+                    "type" : "raw",
+                    "file_path" : str(self.filename),
+                    "dtype" : "int16",
+                    "order": "C",
+                    "file_offset" : ind0,
+                    "shape" : (NP, NC),
+                }
 
                 all_sampling_interval.append(analysisHeader["SamplingInterval"])
 
@@ -128,12 +133,15 @@ class WinWcpRawIO(BaseRawIO):
         characteristics = signal_channels[_common_sig_characteristics]
         unique_characteristics = np.unique(characteristics)
         signal_streams = []
+        self._stream_buffer_slice = {}
         for i in range(unique_characteristics.size):
             mask = unique_characteristics[i] == characteristics
             signal_channels["stream_id"][mask] = str(i)
             # unique buffer for all streams
             buffer_id = "0"
-            signal_streams.append((f"stream {i}", str(i), buffer_id))
+            stream_id = str(i)
+            signal_streams.append((f"stream {i}", stream_id, buffer_id))
+            self._stream_buffer_slice[stream_id] = np.flatnonzero(mask)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # all stream are in the same unique buffer : memmap
@@ -164,23 +172,15 @@ class WinWcpRawIO(BaseRawIO):
         return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals[seg_index].shape[0] / self._sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = sig_size / self._sampling_rate
         return t_stop
-
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        return self._raw_signals[seg_index].shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        stream_id = self.header["signal_streams"][stream_index]["id"]
-        (global_channel_indexes,) = np.nonzero(self.header["signal_channels"]["stream_id"] == stream_id)
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        inds = global_channel_indexes[channel_indexes]
-        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), inds]
-        return raw_signals
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
 AnalysisDescription = [
