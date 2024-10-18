@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      fail-fast: false # change back before MERGE
+      fail-fast: true
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
         # "macos-latest",
@@ -54,12 +54,12 @@ jobs:
 
     steps:
         - name: Set up Python ${{ matrix.python-version }}
-          uses: actions/setup-python@v4
+          uses: actions/setup-python@v5
           with:
             python-version: ${{ matrix.python-version }}
 
         - name: Checkout repository
-          uses: actions/checkout@v3
+          uses: actions/checkout@v4
 
         - name: Install numpy ${{ matrix.numpy-version }}
           run: |
