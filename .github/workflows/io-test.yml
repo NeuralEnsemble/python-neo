@@ -97,7 +97,7 @@ jobs:
         run: |
           pip install -e .
           pip uninstall numpy -y
-          pip install numpy==1.26.4 -y
+          pip install numpy==1.26.4
           pip install .[test]
 
       - name: Install neo without dependencies
