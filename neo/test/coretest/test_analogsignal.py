@@ -131,7 +131,6 @@ class TestAnalogSignalConstructor(unittest.TestCase):
         data = np.arange(10.0) * pq.mV
         self.assertRaises(ValueError, AnalogSignal, data, sampling_rate=1 * pq.kHz, sampling_period=5 * pq.s)
 
-
     def test__create_with_additional_argument(self):
         signal = AnalogSignal(
             [1, 2, 3], units="mV", sampling_rate=1 * pq.kHz, file_origin="crack.txt", ratname="Nicolas"
@@ -1761,6 +1760,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
         assert_neo_object_is_compliant(signal2)
         fobj.close()
         os.remove("./pickle")
+
 
 class TestAnalogSignalSampling(unittest.TestCase):
     def test___get_sampling_rate__period_none_rate_none_ValueError(self):
