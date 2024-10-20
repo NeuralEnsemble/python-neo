@@ -157,7 +157,7 @@ class PlexonRawIO(BaseRawIO):
 
         upper_byte_of_5_byte_timestamp = int(bl_header["UpperByteOf5ByteTimestamp"])
         bl_header_timestamp = int(bl_header["TimeStamp"])
-        self._last_timestamps =  upper_byte_of_5_byte_timestamp * 2**32 + bl_header_timestamp
+        self._last_timestamps = upper_byte_of_5_byte_timestamp * 2**32 + bl_header_timestamp
 
         # ... and finalize them in self._data_blocks
         # for a faster access depending on type (1, 4, 5)

@@ -194,10 +194,8 @@ def normalize_times_array(times, units=None, dtype=None, copy=None):
     """
 
     if copy is not None:
-        raise ValueError(
-            "`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0."
-            )
-    
+        raise ValueError("`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0.")
+
     if dtype is None:
         if not hasattr(times, "dtype"):
             dtype = float
@@ -218,14 +216,20 @@ def normalize_times_array(times, units=None, dtype=None, copy=None):
                 units = None  # units will be taken from times, avoids copying
             else:
                 raise ValueError("cannot rescale and return view")
-                
 
     # check to make sure the units are time
     # this approach is orders of magnitude faster than comparing the
     # reference dimensionality
     if len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0], pq.UnitTime):
         ValueError(f"Units have dimensions {dim.simplified}, not [time]")
-    return pq.Quantity(times, units=units, dtype=dtype,), dim
+    return (
+        pq.Quantity(
+            times,
+            units=units,
+            dtype=dtype,
+        ),
+        dim,
+    )
 
 
 class SpikeTrain(DataObject):
@@ -807,19 +811,19 @@ class SpikeTrain(DataObject):
         t_stop = self.t_stop + t_shift
         t_start = self.t_start + t_shift
         new_st = SpikeTrain(
-                times=times,
-                t_stop=t_stop,
-                units=self.unit,
-                sampling_rate=self.sampling_rate,
-                t_start=t_start,
-                waveforms=self.waveforms,
-                left_sweep=self.left_sweep,
-                name=self.name,
-                file_origin=self.file_origin,
-                description=self.description,
-                array_annotations=deepcopy(self.array_annotations),
-                **self.annotations,
-            )
+            times=times,
+            t_stop=t_stop,
+            units=self.unit,
+            sampling_rate=self.sampling_rate,
+            t_start=t_start,
+            waveforms=self.waveforms,
+            left_sweep=self.left_sweep,
+            name=self.name,
+            file_origin=self.file_origin,
+            description=self.description,
+            array_annotations=deepcopy(self.array_annotations),
+            **self.annotations,
+        )
 
         # Here we can safely copy the array annotations since we know that
         # the length of the SpikeTrain does not change.
