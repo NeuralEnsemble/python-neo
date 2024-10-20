@@ -236,7 +236,6 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
         self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
 
-
     def test__create_from_array(self):
         times = np.arange(10)
         t_start = 0.0 * pq.s
@@ -297,7 +296,6 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
         self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
 
-
     def test__create_from_quantity_array(self):
         times = np.arange(10) * pq.ms
         t_start = 0.0 * pq.s
@@ -328,7 +326,6 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
         self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
 
-
     def test__create_from_quantity_array_no_start_stop_units(self):
         times = np.arange(10) * pq.ms
         t_start = 0.0
@@ -358,7 +355,6 @@ class TestConstructor(unittest.TestCase):
         st_out = times.astype(dtype)
         self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
         self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
 
     def test__create_from_list_without_units_should_raise_ValueError(self):
         times = range(10)
@@ -1229,7 +1225,7 @@ class TestMerge(unittest.TestCase):
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_rescaling_units(self):
-        train3 = self.train1.duplicate_with_new_data(signal=(self.train1.times.magnitude/1000) * pq.millisecond)
+        train3 = self.train1.duplicate_with_new_data(signal=(self.train1.times.magnitude / 1000) * pq.millisecond)
         train3.segment = self.train1.segment
         train3.array_annotate(**self.arr_ann1)
         # Array annotations merge warning was already tested, can be ignored now
@@ -1495,7 +1491,6 @@ class TestAttributesAnnotations(unittest.TestCase):
 
 class TestChanging(unittest.TestCase):
 
-
     # now we test default behavior here so change false to None
     def test_change_with_default(self):
         # Changing spike train also changes data, because it is a view
@@ -1524,7 +1519,6 @@ class TestChanging(unittest.TestCase):
         data = [3, 4, 5] * pq.s
         self.assertRaises(ValueError, SpikeTrain, data, units="ms", t_stop=10000)
 
-
     def test_change_and_data_not_quantity(self):
         # Changing spike train also changes data, because it is a view
         # Data source is array
@@ -1541,7 +1535,6 @@ class TestChanging(unittest.TestCase):
         # You cannot change dtype and request a view
         data = np.array([3, 4, 5])
         self.assertRaises(ValueError, SpikeTrain, data, units="sec", t_stop=101, dtype=np.float64)
-
 
     def test_changing_slice_changes_original_spiketrain(self):
         # If we slice a spiketrain and then change the slice, the
@@ -1848,7 +1841,7 @@ class TestPropertiesMethods(unittest.TestCase):
 
 
 class TestMiscellaneous(unittest.TestCase):
-    
+
     def test_as_array(self):
         data = np.arange(10.0)
         st = SpikeTrain(data, t_stop=10.0, units="ms")
