@@ -89,7 +89,7 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         self._buffer_descriptions[0][0][buffer_id] = {
             "type" : "raw",
             "file_path" : binary_filename,
-            "dtype" : sig_dtype,
+            "dtype" : str(sig_dtype),
             "order": "C",
             "file_offset" : 0,
             "shape" : shape,

@@ -1504,6 +1504,7 @@ class BaseRawWithBufferApiIO(BaseRawIO):
                 for seg_index in self._hdf5_analogsignal_buffers[block_index].keys():
                     for buffer_id, h5_file in self._hdf5_analogsignal_buffers[block_index][seg_index].items():
                         h5_file.close()
+            del self._hdf5_analogsignal_buffers
 
 
 def pprint_vector(vector, lim: int = 8):

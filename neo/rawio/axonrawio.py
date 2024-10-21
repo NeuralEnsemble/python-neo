@@ -115,8 +115,6 @@ class AxonRawIO(BaseRawWithBufferApiIO):
             head_offset = info["sections"]["DataSection"]["uBlockIndex"] * BLOCKSIZE
             totalsize = info["sections"]["DataSection"]["llNumEntries"]
 
-        # self._raw_data = np.memmap(self.filename, dtype=sig_dtype, mode="r", shape=(totalsize,), offset=head_offset)
-
         # 3 possible modes
         if version < 2.0:
             mode = info["nOperationMode"]
@@ -173,8 +171,6 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
             if (fSynchTimeUnit != 0) and (mode == 1):
                 length /= fSynchTimeUnit
-
-            # self._raw_signals[seg_index] = self._raw_data[pos : pos + length].reshape(-1, nbchannel)
 
             self._buffer_descriptions[0][seg_index] = {}
             self._buffer_descriptions[0][seg_index][buffer_id] = {
