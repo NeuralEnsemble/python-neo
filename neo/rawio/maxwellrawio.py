@@ -119,7 +119,6 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
 
         # create signal channels
         max_sig_length = 0
-        # self._signals = {}
         self._buffer_descriptions = {0 :{0 :{}}}
         self._stream_buffer_slice = {}
         sig_channels = []
@@ -138,12 +137,10 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
                     else:
                         gain = settings["gain"][0]
                     gain_uV = 3.3 / (1024 * gain) * 1e6
-                # sigs = h5file["sig"]
                 hdf5_path = "sig"
                 mapping = h5file["mapping"]
                 ids = np.array(mapping["channel"])
                 ids = ids[ids >= 0]
-                # self._channel_slice = ids
                 self._stream_buffer_slice[stream_id] = ids
             elif int(version) > 20160704:
                 settings = h5file["wells"][stream_id][self.rec_name]["settings"]
@@ -159,7 +156,6 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
                     gain_uV = 3.3 / (1024 * gain) * 1e6
                 mapping = settings["mapping"]
                 if "routed" in h5file["wells"][stream_id][self.rec_name]["groups"]:
-                    # sigs = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
                     hdf5_path = f"/wells/{stream_id}/{self.rec_name}/groups/routed/raw"
                 else:
                     warnings.warn(f"No 'routed' group found for well {stream_id}")
@@ -194,7 +190,6 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
                     (ch_name, str(chan_id), sr, "uint16", "uV", gain_uV, offset_uV, stream_id, buffer_id)
                 )
 
-            # self._signals[stream_id] = sigs
             max_sig_length = max(max_sig_length, shape[1])
 
         self._t_stop = max_sig_length / sr
