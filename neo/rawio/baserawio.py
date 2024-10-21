@@ -186,7 +186,7 @@ class BaseRawIO:
 
         self._has_buffer_description_api = False
 
-    def has_buffer_description_api(self):
+    def has_buffer_description_api(self) -> bool:
         """
         Return if the reader handle the buffer API.
         If True then the reader support internally `get_analogsignal_buffer_description()`

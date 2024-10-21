@@ -297,8 +297,8 @@ For reading analog signals **neo.rawio** has 2 important concepts:
     A **signal_buffer** can contain one or several **signal_stream**'s (very often it is only one).
     There are two kind of formats that handle this concept:
      
-      * those which use :func:`np.memmap()` internally
-      * formats based on hdf5
+      * Formats which use :func:`np.memmap()` internally
+      * Formats based on hdf5
        
     There are many formats that do not handle this concept:
 
