@@ -4,7 +4,7 @@ version = "0.13.4"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
-requires-python = ">=3.9,<3.13" # 3.13 will require NumPy > 2.0 (Windows issue in CI)
+requires-python = ">=3.9"
 license = {text = "BSD 3-Clause License"}
 classifiers = [
     "Development Status :: 4 - Beta",
