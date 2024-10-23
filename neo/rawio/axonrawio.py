@@ -307,18 +307,8 @@ class AxonRawIO(BaseRawWithBufferApiIO):
         t_stop = self._t_starts[seg_index] + sig_size / self._sampling_rate
         return t_stop
 
-    # def _get_signal_size(self, block_index, seg_index, stream_index):
-    #     shape = self._raw_signals[seg_index].shape
-    #     return shape[0]
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._t_starts[seg_index]
-
-    # def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-    #     if channel_indexes is None:
-    #         channel_indexes = slice(None)
-    #     raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_indexes]
-    #     return raw_signals
 
     def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]

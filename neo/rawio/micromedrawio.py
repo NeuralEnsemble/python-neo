@@ -102,9 +102,6 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
 
             # raw signals memmap
             sig_dtype = "u" + str(Bytes)
-            # self._raw_signals = np.memmap(self.filename, dtype=sig_dtype, mode="r", offset=Data_Start_Offset).reshape(
-            #     -1, Num_Chan
-            # )
             signal_shape = get_memmap_shape(self.filename, sig_dtype, num_channels=Num_Chan, offset=Data_Start_Offset)
             buffer_id = "0"
             stream_id = "0"

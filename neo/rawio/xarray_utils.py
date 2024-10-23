@@ -9,7 +9,6 @@ A xarray.DataTree can also be expose to get all at block/segment/stream
 Note :
   * only some IOs support this at the moment has_buffer_description_api()=True
 """
-import json
 
 import numpy as np
 
@@ -46,9 +45,9 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, buffer_id=Non
     rfs = dict()
     rfs["version"] = 1
     rfs["refs"] = dict()
-    rfs["refs"][".zgroup"] = json.dumps(dict(zarr_format=2))
+    rfs["refs"][".zgroup"] = dict(zarr_format=2)
     zattrs = dict(name=buffer_name)
-    rfs["refs"][".zattrs"] = json.dumps(zattrs)
+    rfs["refs"][".zattrs"] = zattrs
 
     
     descr = rawio_reader.get_analogsignal_buffer_description(block_index=block_index, seg_index=seg_index, 
@@ -76,8 +75,8 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, buffer_id=Non
         zattrs = dict(
             _ARRAY_DIMENSIONS=['channel'],
         )
-        rfs["refs"]["channel/.zattrs"] =json.dumps(zattrs)
-        rfs["refs"]["channel/.zarray"] =json.dumps(zarray)
+        rfs["refs"]["channel/.zattrs"] = zattrs
+        rfs["refs"]["channel/.zarray"] = zarray
 
         # traces buffer
         dtype = np.dtype(descr["dtype"])
@@ -110,8 +109,8 @@ def to_zarr_v2_reference(rawio_reader, block_index=0, seg_index=0, buffer_id=Non
         array_size = np.prod(descr["shape"], dtype='int64')
         chunk_size = array_size * dtype.itemsize
         rfs["refs"]["traces/0.0"] = [str(descr["file_path"]), descr["file_offset"], chunk_size]
-        rfs["refs"]["traces/.zarray"] =json.dumps(zarray)
-        rfs["refs"]["traces/.zattrs"] =json.dumps(zattrs)
+        rfs["refs"]["traces/.zarray"] = zarray
+        rfs["refs"]["traces/.zattrs"] = zattrs
 
     elif descr["type"] == "hdf5":
         raise NotImplementedError

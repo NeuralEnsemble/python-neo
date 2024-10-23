@@ -138,13 +138,6 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                 raise KeyError(f"key {key} is already in the signals_info_dict")
             self.signals_info_dict[key] = info
 
-            # create memmap
-            # data = np.memmap(info["bin_file"], dtype="int16", mode="r", offset=0, order="C")
-            # this should be (info['sample_length'], info['num_chan'])
-            # be some file are shorten
-            # data = data.reshape(-1, info["num_chan"])
-            # self._memmaps[key] = data
-
             buffer_id = stream_name
             block_index = 0
 
@@ -291,42 +284,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._t_stops[seg_index]
 
-    # def _get_signal_size(self, block_index, seg_index, stream_index):
-    #     stream_id = self.header["signal_streams"][stream_index]["id"]
-    #     memmap = self._memmaps[seg_index, stream_id]
-    #     return int(memmap.shape[0])
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
-
-    # def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-    #     stream_id = self.header["signal_streams"][stream_index]["id"]
-    #     memmap = self._memmaps[seg_index, stream_id]
-    #     stream_name = self.header["signal_streams"]["name"][stream_index]
-
-    #     # take care of sync channel
-    #     info = self.signals_info_dict[0, stream_name]
-    #     if not self.load_sync_channel and info["has_sync_trace"]:
-    #         memmap = memmap[:, :-1]
-
-    #     # since we cut the memmap, we can simplify the channel selection
-    #     if channel_indexes is None:
-    #         channel_selection = slice(None)
-    #     elif isinstance(channel_indexes, slice):
-    #         channel_selection = channel_indexes
-    #     elif not isinstance(channel_indexes, slice):
-    #         if np.all(np.diff(channel_indexes) == 1):
-    #             # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
-    #             # and so keep the underlying memmap
-    #             channel_selection = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
-    #         else:
-    #             channel_selection = channel_indexes
-    #     else:
-    #         raise ValueError("get_analogsignal_chunk : channel_indexes" "must be slice or list or array of int")
-
-    #     raw_signals = memmap[slice(i_start, i_stop), channel_selection]
-
-    #     return raw_signals
 
     def _event_count(self, event_channel_idx, block_index=None, seg_index=None):
         timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_idx, None, None)

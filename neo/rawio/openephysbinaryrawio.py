@@ -171,9 +171,6 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 self._buffer_descriptions[block_index][seg_index] = {}
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(info["channels"])
-                    # memmap_sigs = np.memmap(info["raw_filename"], info["dtype"], order="C", mode="r").reshape(
-                    #     -1, num_channels
-                    # )
                     stream_id = str(stream_index)
                     buffer_id = str(stream_index)
                     shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels,
@@ -199,8 +196,6 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         self._stream_buffer_slice[stream_id] = slice(None, -1)
                     else:
                         self._stream_buffer_slice[stream_id] = None
-
-                    # info["memmap"] = memmap_sigs
 
         # events zone
         # channel map: one channel one stream
@@ -304,7 +299,6 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     stream_id = str(stream_index)
                     buffer_id = str(stream_index)
                     sig_size = self._buffer_descriptions[block_index][seg_index][buffer_id]["shape"][0]
-                    # dur = info["memmap"].shape[0] / float(info["sample_rate"])
                     dur = sig_size / float(info["sample_rate"])
                     t_stop = t_start + dur
                     if global_t_start is None or global_t_start > t_start:
@@ -403,25 +397,9 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         group_id = group_ids[0]
         return group_id
 
-    # def _get_signal_size(self, block_index, seg_index, stream_index):
-    #     sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-    #     return sigs.shape[0]
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         t_start = self._sig_streams[block_index][seg_index][stream_index]["t_start"]
         return t_start
-
-    # def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-    #     sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-    #     has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
-
-    #     if not self.load_sync_channel and has_sync_trace:
-    #         sigs = sigs[:, :-1]
-
-    #     sigs = sigs[i_start:i_stop, :]
-    #     if channel_indexes is not None:
-    #         sigs = sigs[:, channel_indexes]
-    #     return sigs
 
     def _spike_count(self, block_index, seg_index, unit_index):
         pass

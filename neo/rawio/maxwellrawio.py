@@ -227,57 +227,17 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
     def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
-    # def _get_signal_size(self, block_index, seg_index, stream_index):
-    #     stream_id = self.header["signal_streams"][stream_index]["id"]
-    #     sigs = self._signals[stream_id]
-    #     return sigs.shape[1]
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
 
-    # def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-    #     stream_id = self.header["signal_streams"][stream_index]["id"]
-    #     sigs = self._signals[stream_id]
-
-    #     if i_start is None:
-    #         i_start = 0
-    #     if i_stop is None:
-    #         i_stop = sigs.shape[1]
-
-    #     resorted_indexes = None
-    #     if channel_indexes is None:
-    #         channel_indexes = slice(None)
-    #     else:
-    #         if np.array(channel_indexes).size > 1 and np.any(np.diff(channel_indexes) < 0):
-    #             # get around h5py constraint that it does not allow datasets
-    #             # to be indexed out of order
-    #             order_f = np.argsort(channel_indexes)
-    #             sorted_channel_indexes = channel_indexes[order_f]
-    #             # use argsort again on order_f to obtain resorted_indexes
-    #             resorted_indexes = np.argsort(order_f)
-
-    #     try:
-    #         if resorted_indexes is None:
-    #             if self._old_format:
-    #                 sigs = sigs[self._channel_slice, i_start:i_stop]
-    #                 sigs = sigs[channel_indexes]
-    #             else:
-    #                 sigs = sigs[channel_indexes, i_start:i_stop]
-    #         else:
-    #             if self._old_format:
-    #                 sigs = sigs[self._channel_slice, i_start:i_stop]
-    #                 sigs = sigs[sorted_channel_indexes]
-    #             else:
-    #                 sigs = sigs[sorted_channel_indexes, i_start:i_stop]
-    #             sigs = sigs[resorted_indexes]
-    #     except OSError as e:
-    #         print("*" * 10)
-    #         print(_hdf_maxwell_error)
-    #         print("*" * 10)
-    #         raise (e)
-    #     sigs = sigs.T
-
-    #     return sigs
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        try:
+            return super()._get_analogsignal_chunk(block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
+        except OSError as e:
+            print("*" * 10)
+            print(_hdf_maxwell_error)
+            print("*" * 10)
+            raise (e)
 
 
 _hdf_maxwell_error = """Maxwell file format is based on HDF5.
