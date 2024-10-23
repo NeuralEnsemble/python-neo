@@ -174,7 +174,7 @@ class IgorIO(BaseIO):
         signal = AnalogSignal(
             signal,
             units=units,
-            copy=False,
+            copy=None,
             t_start=t_start,
             sampling_period=sampling_period,
             name=name,

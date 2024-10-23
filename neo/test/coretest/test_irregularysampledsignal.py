@@ -1033,6 +1033,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
 
 
 class TestAnalogSignalFunctions(unittest.TestCase):
+
     def test__pickle(self):
         signal1 = IrregularlySampledSignal(np.arange(10.0) / 100 * pq.s, np.arange(10.0), units="mV")
 
