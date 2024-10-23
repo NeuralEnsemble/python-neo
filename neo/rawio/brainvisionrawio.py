@@ -78,7 +78,7 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         if fmt not in fmts:
             raise NeoReadWriteError(f"the fmt {fmt} is not implmented. Must be one of {fmts}")
 
-        sig_dtype = fmts[fmt]
+        sig_dtype = np.dtype(fmts[fmt])
 
         
         stream_id = "0"
