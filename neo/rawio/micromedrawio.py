@@ -156,7 +156,6 @@ class MicromedRawIO(BaseRawIO):
             assert np.unique(signal_channels["sampling_rate"]).size == 1
             self._sampling_rate = float(np.unique(signal_channels["sampling_rate"])[0])
 
-            # TODO change this when multi segment handling
             seg_limits = [trace_offset for seg_start, trace_offset in self.info_segments] + [self._raw_signals.shape[0]]
             nb_segment = len(self.info_segments)
             self._t_starts = []
@@ -191,13 +190,17 @@ class MicromedRawIO(BaseRawIO):
                 dtype = np.dtype(ev_dtype)
                 rawevent = np.memmap(self.filename, dtype=dtype, mode="r", offset=pos, shape=length // dtype.itemsize)
 
-                keep = (
-                    (rawevent["start"] >= rawevent["start"][0])
-                    & (rawevent["start"] < self._raw_signals.shape[0])
-                    & (rawevent["start"] != 0)
-                )
-                rawevent = rawevent[keep]
-                self._raw_events.append(rawevent)
+                # important : all events timing are related to the first segment t_start
+                self._raw_events.append([])
+                for seg_index in range(nb_segment):
+                    left_lim = seg_limits[seg_index]
+                    right_lim = seg_limits[seg_index + 1]
+                    keep = (
+                        (rawevent["start"] >= left_lim)
+                        & (rawevent["start"] < right_lim)
+                        & (rawevent["start"] != 0)
+                    )
+                    self._raw_events[-1].append(rawevent[keep])
 
             # No spikes
             spike_channels = []
@@ -254,22 +257,26 @@ class MicromedRawIO(BaseRawIO):
         return 0
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        n = self._raw_events[event_channel_index].size
+        n = self._raw_events[event_channel_index][seg_index].size
         return n
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
 
-        raw_event = self._raw_events[event_channel_index]
+        raw_event = self._raw_events[event_channel_index][seg_index]
+
+        # important : all events timing are related to the first segment t_start
+        seg_start0, _ = self.info_segments[0]
 
         if t_start is not None:
-            keep = raw_event["start"] >= int(t_start * self._sampling_rate)
+            keep = raw_event["start"] + seg_start0 >= int(t_start * self._sampling_rate)
             raw_event = raw_event[keep]
 
         if t_stop is not None:
-            keep = raw_event["start"] <= int(t_stop * self._sampling_rate)
+            keep = raw_event["start"] + seg_start0 <= int(t_stop * self._sampling_rate)
             raw_event = raw_event[keep]
 
-        timestamp = raw_event["start"]
+        timestamp = raw_event["start"] + seg_start0
+
         if event_channel_index < 2:
             durations = None
         else:
@@ -285,8 +292,7 @@ class MicromedRawIO(BaseRawIO):
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
-        # event_times += self._global_t_start
-        return event_times 
+        return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         durations = raw_duration.astype(dtype) / self._sampling_rate
