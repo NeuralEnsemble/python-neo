@@ -208,6 +208,28 @@ The first time this is run, all of the Neo test files will be downloaded to your
 so the run time can be an hour or more.
 For subsequent runs, the files are already there, so the tests will run much faster.
 
+Because Neo downloads datasets this can lead to issues in the course of offline development or
+for packaging Neo (e.g. for a Linux distribution). In order to not download datasets and to skip
+tests which require downloaded datasets the environment variable :code:`NEO_TESTS_NO_NETWORK` can
+be set to any truthy value (e.g. :code:`'True'``).
+
+For macOS/Linux this can be done by doing:
+
+.. code-block:: bash
+
+    NEO_TESTS_NO_NETWORK='True' pytest .
+
+For Windows this can be done by doing:
+
+.. code-block:: bat
+
+    set NEO_TESTS_NO_NETWORK=true
+
+    pytest . 
+
+This can also be done with a conda environment variable if developing in a conda env. To configure these
+see the docs at `conda env vars documentation`_.
+
 It is often helpful to run only parts of the test suite. To test only the :mod:`neo.core` module,
 which is much quicker than testing :mod:`neo.io`, run::
 
@@ -466,3 +488,4 @@ Making a release
 .. _`continuous integration server`: https://github.com/NeuralEnsemble/python-neo/actions
 .. _`Read the Docs`: https://neo.readthedocs.io/en/latest/
 .. _`docs configuration page`: https://readthedocs.org/projects/neo/
+.. _`conda env vars documentation`: https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment

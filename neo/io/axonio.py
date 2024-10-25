@@ -1,8 +1,8 @@
+import quantities as pq
+
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.axonrawio import AxonRawIO
-
-from neo.core import Block, Segment, AnalogSignal, Event
-import quantities as pq
+from neo.core import Segment, AnalogSignal
 
 
 class AxonIO(AxonRawIO, BaseFromRaw):

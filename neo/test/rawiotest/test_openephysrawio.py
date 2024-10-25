@@ -15,6 +15,9 @@ class TestOpenEphysRawIO(
         # this file has gaps and this is now handle corretly
         "openephys/OpenEphys_SampleData_2_(multiple_starts)",
         # 'openephys/OpenEphys_SampleData_3',
+        # two nodes with the new naming convention for openephys
+        "openephys/openephys_rhythmdata_test_nodes/Record Node 120",
+        "openephys/openephys_rhythmdata_test_nodes/Record Node 121",
     ]
 
     def test_raise_error_if_strange_timestamps(self):

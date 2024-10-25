@@ -1,5 +1,6 @@
 import unittest
 
+import os
 import numpy as np
 
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
@@ -105,14 +106,15 @@ class TestNeuralynxRawIO(
         # check that there are only 3 memmaps
         self.assertEqual(len(rawio._sigs_memmaps[seg_idx]), 3)
 
-    def test_single_file_mode(self):
+    def test_include_filenames(self):
         """
-        Tests reading of single files.
+        Tests include_filenames with only one file
         """
 
         # test single analog signal channel
         fname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs")
-        rawio = NeuralynxRawIO(filename=fname)
+        dirname, filename = os.path.split(fname)
+        rawio = NeuralynxRawIO(dirname=dirname, include_filenames=filename)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
@@ -127,7 +129,8 @@ class TestNeuralynxRawIO(
 
         # test one single electrode channel
         fname = self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse")
-        rawio = NeuralynxRawIO(filename=fname)
+        dirname, filename = os.path.split(fname)
+        rawio = NeuralynxRawIO(dirname=dirname, include_filenames=filename)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 1)
@@ -143,7 +146,7 @@ class TestNeuralynxRawIO(
     def test_exclude_filenames(self):
         # exclude single ncs file from session
         dname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data/")
-        rawio = NeuralynxRawIO(dirname=dname, exclude_filename="CSC2.ncs")
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filenames="CSC2.ncs")
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
@@ -157,7 +160,7 @@ class TestNeuralynxRawIO(
         self.assertEqual(len(rawio.header["event_channels"]), 2)
 
         # exclude multiple files from session
-        rawio = NeuralynxRawIO(dirname=dname, exclude_filename=["Events.nev", "CSC2.ncs"])
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filenames=["Events.nev", "CSC2.ncs"])
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
@@ -228,7 +231,7 @@ class TestNcsSectionsFactory(TestNeuralynxRawIO, unittest.TestCase):
         ncsBlocks = NcsSections()
         ncsBlocks.sampFreqUsed = 1 / (35e-6)
         ncsBlocks.microsPerSampUsed = 35
-        
+
         ncsBlocks = NcsSectionsFactory._buildNcsSections(data0, ncsBlocks.sampFreqUsed)
 
         self.assertEqual(len(ncsBlocks.sects), 1)
@@ -324,7 +327,7 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
     """
     Test building NcsBlocks for files of different revisions.
     """
-    
+
     entities_to_test = []
 
     def test_equality(self):
@@ -358,19 +361,19 @@ class TestNcsSections(TestNeuralynxRawIO, unittest.TestCase):
         self.assertNotEqual(ns0, ns1)
 
 
-# I comment this now and will put it back when files will be in gin.g-node
-# class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
-#     def test_no_date_time(self):
-#         filename = self.get_local_path("neuralynx/NoDateHeader/NoDateHeader.nev")
+class TestNlxHeader(TestNeuralynxRawIO, unittest.TestCase):
+    def test_no_date_time(self):
+        filename = self.get_local_path("neuralynx/NoDateHeader/NoDateHeader.nev")
 
-#         with self.assertRaises(IOError):
-#             hdr = NlxHeader(filename)
+        with self.assertRaises(IOError):
+            hdr = NlxHeader(filename)
 
-#         hdr = NlxHeader(filename, props_only=True)
+        hdr = NlxHeader(filename, props_only=True)
 
-#         self.assertEqual(len(hdr), 11)
-#         self.assertEqual(hdr['ApplicationName'], 'Pegasus')
-#         self.assertEqual(hdr['FileType'], 'Event')
+        self.assertEqual(len(hdr), 11)  # 9 properties plus channel_ids and channel_names
+        self.assertEqual(hdr["ApplicationName"], "Pegasus")
+        self.assertEqual(hdr["FileType"], "Event")
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -378,6 +381,7 @@ if __name__ == "__main__":
     # test = TestNeuralynxRawIO()
     # test.test_scan_ncs_files()
     # test.test_exclude_filenames()
+    # test.test_include_filenames()
 
     # test = TestNcsSectionsFactory()
     # test.test_ncsblocks_partial()

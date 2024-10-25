@@ -87,7 +87,7 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import Block, Segment, AnalogSignal, Event, SpikeTrain
+from neo.core import Block, Segment, AnalogSignal, Event, SpikeTrain, NeoReadWriteError
 
 
 # --------------------------------------------------------
@@ -328,7 +328,8 @@ class ElphySpikeTrain(ElphyEvent):
         super().__init__(layout, episode, number, x_unit, n_events, name)
         self.wf_samples = wf_samples
         self.wf_sampling_frequency = wf_sampling_frequency
-        assert wf_sampling_frequency, "bad sampling frequency"
+        if not wf_sampling_frequency:
+            raise ValueError("bad sampling frequency")
         self.wf_sampling_period = 1.0 / wf_sampling_frequency
         self.wf_units = [unit_x_wf, unit_y_wf]
         self.t_start = t_start
@@ -532,7 +533,8 @@ class ClassicFileInfo(FileInfoBlock):
         match = re.search(pattern, path)
         if hasattr(match, "end"):
             code = codes.get(path[match.end() - 1].lower(), None)
-            assert code != "m", "multistim file detected"
+            if code == "m":
+                raise ValueError("multistim file detected")
             return code
         elif "spt" in filename.lower():
             return "spontaneousactivity"
@@ -897,7 +899,8 @@ class Acquis1Header(Header):
 
         # extract episode properties
         n_channels = read_from_char(fileobj, "B")
-        assert not ((n_channels < 1) or (n_channels > 16)), "bad number of channels"
+        if (n_channels < 1) or (n_channels > 16):
+            raise ValueError(f"`n_channels` must be between 1 and 15. It is currently {n_channels}")
         nbpt = read_from_char(fileobj, "h")
         l_xu, x_unit = struct.unpack("<B3s", fileobj.read(4))
         if hasattr(x_unit, "decode"):
@@ -1001,7 +1004,8 @@ class Acquis1Header(Header):
 
         n_ep = read_from_char(fileobj, "h")
         tpData = read_from_char(fileobj, "h")
-        assert tpData in [3, 2, 1, 0], "bad sample size"
+        if tpData not in [3, 2, 1, 0]:
+            raise ValueError(f"`tpData` must be 3, 2, 1, or 0, but is {tpData}")
         no_analog_data = read_from_char(fileobj, "?")
 
         self.n_ep = n_ep
@@ -1784,8 +1788,10 @@ class ElphyLayout:
         Return the signal description relative
         to the specified episode and channel.
         """
-        assert episode in range(1, self.n_episodes + 1)
-        assert channel in range(1, self.n_channels(episode) + 1)
+        if episode not in range(1, self.n_episodes + 1):
+            raise ValueError(f"`episode must be in {range(1, self.n_episodes + 1)}, but is {episode}")
+        if channel not in range(1, self.n_channels(episode) + 1):
+            raise ValueError(f"`channel` must be in {range(1, self.n_channels(episode)+1)} but is {channel}")
         t_start = 0
         sampling_period = self.sampling_period(episode, channel)
         t_stop = sampling_period * self.n_samples(episode, channel)
@@ -1863,7 +1869,8 @@ class ElphyLayout:
         """
         Reshape a numpy array containing a set of databytes.
         """
-        assert datatypes and len(datatypes) == len(reshape), "datatypes are not well defined"
+        if not datatypes and len(datatypes) == len(reshape):
+            raise NeoReadWriteError("The `datatypes` are not well-defined")
 
         l_bytes = len(databytes)
 
@@ -2080,7 +2087,8 @@ class Acquis1Layout(ElphyLayout):
 
     def set_info_block(self):
         i_blks = self.get_blocks_of_type("USER INFO")
-        assert len(i_blks) < 2, "too many info blocks"
+        if len(i_blks) >= 2:
+            raise ValueError(f"There are too many info blocks: {i_blks}")
         if len(i_blks):
             self.info_block = i_blks[0]
 
@@ -2205,7 +2213,8 @@ class DAC2GSLayout(ElphyLayout):
 
     def set_info_block(self):
         i_blks = self.get_blocks_of_type("USER INFO")
-        assert len(i_blks) < 2, "too many info blocks"
+        if len(i_blks) >= 2:
+            raise ValueError(f"There are too many info blocks: {i_blks}")
         if len(i_blks):
             self.info_block = i_blks[0]
 
@@ -2243,7 +2252,8 @@ class DAC2GSLayout(ElphyLayout):
 
     def sample_size(self, ep, ch):
         size = super().sample_size(ep, ch)
-        assert size == 2, "sample size is always 2 bytes for DAC2/GS/2000 format"
+        if size != 2:
+            raise ValueError(f"sample size is always 2 bytes for DAC2/GS/2000 format, but size is calculated as {size}")
         return size
 
     def sampling_period(self, ep, ch):
@@ -2297,10 +2307,12 @@ class DAC2GSLayout(ElphyLayout):
         return self.main_block.dX * self.n_samples
 
     def get_tag(self, episode, tag_channel):
-        assert episode in range(1, self.n_episodes + 1)
+        if episode not in range(1, self.n_episodes + 1):
+            raise ValueError(f"`episode` must be within {range(1 + self.n_episodes + 1)} and is {episode}")
         # there are none or 2 tag channels
         if self.tag_mode(episode) == 1:
-            assert tag_channel in range(1, 3), "DAC2/GS/2000 format support only 2 tag channels"
+            if tag_channel not in range(1, 3):
+                raise ValueError("DAC2/GS/2000 format support only 2 tag channels")
             block = self.episode_block(episode)
             t_stop = self.main_block.n_samples * block.dX
             return ElphyTag(self, episode, tag_channel, block.x_unit, 1.0 / block.dX, 0, t_stop)
@@ -2384,7 +2396,8 @@ class DAC2Layout(ElphyLayout):
     def set_info_block(self):
         # in fact the file info are contained into a single sub-block with an USR identifier
         i_blks = self.get_blocks_of_type("B_Finfo")
-        assert len(i_blks) < 2, "too many info blocks"
+        if len(i_blks) >= 2:
+            raise ValueError(f"There are too many info blocks: {i_blks}")
         if len(i_blks):
             i_blk = i_blks[0]
             sub_blocks = i_blk.sub_blocks
@@ -2658,7 +2671,8 @@ class DAC2Layout(ElphyLayout):
         Return a :class:`ElphyTag` which is a
         descriptor of the specified event channel.
         """
-        assert episode in range(1, self.n_episodes + 1)
+        if episode not in range(1, self.n_episodes + 1):
+            raise ValueError(f"`episode` must be in {range(1, self.n_episodes + 1)} and is {episode}")
 
         # there are none, 2 or 16 tag
         # channels depending on tag_mode
@@ -2669,11 +2683,11 @@ class DAC2Layout(ElphyLayout):
 
             # verify the validity of the tag channel
             if tag_mode == 1:
-                assert tag_channel in range(1, 3), "Elphy format support only 2 tag channels for tag_mode == 1"
-            elif tag_mode == 2:
-                assert tag_channel in range(1, 17), "Elphy format support only 16 tag channels for tag_mode == 2"
-            elif tag_mode == 3:
-                assert tag_channel in range(1, 17), "Elphy format support only 16 tag channels for tag_mode == 3"
+                if tag_channel not in range(1, 3):
+                    raise ValueError("Elphy format support only 2 tag channels for tag_mode == 1")
+            elif tag_mode == 2 or tag_mode == 3:
+                if tag_channel not in range(1, 17):
+                    raise ValueError("Elphy format support only 16 tag channels for tag_mode == 2 or tag_mode == 3")
 
             smp_period = block.ep_block.dX
             smp_freq = 1.0 / smp_period
@@ -2707,12 +2721,15 @@ class DAC2Layout(ElphyLayout):
         Return a :class:`ElphyEvent` which is a
         descriptor of the specified event channel.
         """
-        assert ep in range(1, self.n_episodes + 1)
-        assert ch in range(1, self.n_channels + 1)
+        if ep not in range(1, self.n_episodes + 1):
+            raise ValueError(f"`ep` must be in {range(1, self.n_episodes + 1)}, but is {ep}")
+        if ch not in range(1, self.n_channels + 1):
+            raise ValueError(f"`ch` must be in {range(1, self.n_channels + 1)}, but is {ch}")
 
         # find the event channel number
         evt_channel = np.where(marked_ks == -1)[0][0]
-        assert evt_channel in range(1, self.n_events(ep) + 1)
+        if evt_channel not in range(1, self.n_events(ep) + 1):
+            raise ValueError(f"`evt_channel` must be in {range(1, self.n_events(ep) + 1)}, but is {evt_channel}")
 
         block = self.episode_block(ep)
         ep_blocks = self.get_blocks_stored_in_episode(ep)
@@ -2792,8 +2809,12 @@ class DAC2Layout(ElphyLayout):
         Return a :class:`Spike` which is a
         descriptor of the specified spike channel.
         """
-        assert episode in range(1, self.n_episodes + 1)
-        assert electrode_id in range(1, self.n_spiketrains(episode) + 1)
+        if episode not in range(1, self.n_episodes + 1):
+            raise ValueError(f"`episode` must be in {range(1, self.n_episodes + 1)}, but is {episode}")
+        if electrode_id not in range(1, self.n_spiketrains(episode) + 1):
+            raise ValueError(
+                f"`eletrodee_id` must be in {range(1, self.n_spiketrains(episode)+1)}, but is {electrode_id}"
+            )
         # get some properties stored in the episode sub-block
         block = self.episode_block(episode)
         x_unit = block.ep_block.x_unit
@@ -3748,7 +3769,8 @@ class ElphyIO(BaseIO):
         lazy : bool
             Postpone actual reading of the file.
         """
-        assert not lazy, "Do not support lazy"
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy reading")
 
         # basic
         block = Block(name=None)

@@ -45,6 +45,7 @@ Classes:
 * :attr:`NestIO`
 * :attr:`NeuralynxIO`
 * :attr:`NeuroExplorerIO`
+* :attr:`NeuroNexusIO
 * :attr:`NeuroScopeIO`
 * :attr:`NeuroshareIO`
 * :attr:`NixIO`
@@ -191,6 +192,9 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.NeuroNexusIO
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.NeuroScopeIO
 
     .. autoattribute:: extensions
@@ -281,7 +285,7 @@ from collections import Counter
 # if it is not present, use the neurosharectypesio to load files
 try:
     import neuroshare as ns
-except ImportError as err:
+except ModuleNotFoundError as err:
     from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
 
     # print("\n neuroshare library not found, loading data with ctypes" )
@@ -326,6 +330,7 @@ from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
 from neo.io.neuralynxio import NeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
+from neo.io.neuronexusio import NeuroNexusIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
 from neo.io.nixio_fr import NixIO as NixIOFr
@@ -382,6 +387,7 @@ iolist = [
     NestIO,
     NeuralynxIO,
     NeuroExplorerIO,
+    NeuroNexusIO,
     NeuroScopeIO,
     NeuroshareIO,
     NWBIO,
@@ -453,7 +459,7 @@ def list_candidate_ios(file_or_folder, ignore_patterns=["*.ini", "README.txt", "
 
     elif file_or_folder.is_dir():
         # scan files in folder to determine io type
-        filenames = [f for f in file_or_folder.glob("*") if f.is_file()]
+        filenames = [f for f in file_or_folder.glob("**/*") if f.is_file()]
         # keep only relevant filenames
         filenames = [f for f in filenames if f.suffix and not any([f.match(p) for p in ignore_patterns])]
 

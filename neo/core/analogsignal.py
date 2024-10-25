@@ -18,21 +18,13 @@ the old object.
 """
 
 import logging
-
-try:
-    import scipy.signal
-except ImportError as err:
-    HAVE_SCIPY = False
-else:
-    HAVE_SCIPY = True
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations, intersect_annotations
 from neo.core.dataobject import DataObject
-from copy import copy, deepcopy
-
 from neo.core.basesignal import BaseSignal
 
 logger = logging.getLogger("Neo")
@@ -60,7 +52,7 @@ def _new_AnalogSignalArray(
     signal,
     units=None,
     dtype=None,
-    copy=True,
+    copy=None,
     t_start=0 * pq.s,
     sampling_rate=None,
     sampling_period=None,
@@ -188,7 +180,7 @@ class AnalogSignal(BaseSignal):
         signal,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         t_start=0 * pq.s,
         sampling_rate=None,
         sampling_period=None,
@@ -206,8 +198,13 @@ class AnalogSignal(BaseSignal):
 
         __array_finalize__ is called on the new object.
         """
+        if copy is not None:
+            raise ValueError(
+                "`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0."
+            )
+
         signal = cls._rescale(signal, units=units)
-        obj = pq.Quantity(signal, units=units, dtype=dtype, copy=copy).view(cls)
+        obj = pq.Quantity(signal, units=units, dtype=dtype).view(cls)
 
         if obj.ndim == 1:
             obj.shape = (-1, 1)
@@ -226,7 +223,7 @@ class AnalogSignal(BaseSignal):
         signal,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         t_start=0 * pq.s,
         sampling_rate=None,
         sampling_period=None,
@@ -265,7 +262,7 @@ class AnalogSignal(BaseSignal):
             np.array(self),
             self.units,
             self.dtype,
-            True,
+            None,
             self.t_start,
             self.sampling_rate,
             self.sampling_period,
@@ -555,6 +552,7 @@ class AnalogSignal(BaseSignal):
 
         return new_sig
 
+    # copy in splice is a deepcopy not a numpy copy so we can keep
     def splice(self, signal, copy=False):
         """
         Replace part of the current signal by a new piece of signal.
@@ -612,8 +610,9 @@ class AnalogSignal(BaseSignal):
         -----
         For resampling the signal with a fixed number of samples, see `resample` method.
         """
-
-        if not HAVE_SCIPY:
+        try:
+            import scipy.signal
+        except ImportError as err:
             raise ImportError("Decimating requires availability of scipy.signal")
 
         # Resampling is only permitted along the time axis (axis=0)
@@ -655,8 +654,10 @@ class AnalogSignal(BaseSignal):
         For reducing the number of samples to a fraction of the original, see `downsample` method
         """
 
-        if not HAVE_SCIPY:
-            raise ImportError("Resampling requires availability of scipy.signal")
+        try:
+            import scipy.signal
+        except ImportError as err:
+            raise ImportError("Decimating requires availability of scipy.signal")
 
         # Resampling is only permitted along the time axis (axis=0)
         if "axis" in kwargs:

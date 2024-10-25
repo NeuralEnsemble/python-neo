@@ -39,6 +39,7 @@ from neo.core import (
     PolygonRegionOfInterest,
     objectnames,
     class_by_name,
+    NeoReadWriteError,
 )
 from neo.core.regionofinterest import RegionOfInterest
 from neo.core.baseneo import _container_name
@@ -262,7 +263,8 @@ class NeoMatlabIO(BaseIO):
         """
         import scipy.io
 
-        assert not lazy, "Does not support lazy"
+        if lazy:
+            raise NeoReadWriteError(f"This IO does not support lazy reading")
 
         d = scipy.io.loadmat(self.filename, struct_as_record=False, squeeze_me=True, mat_dtype=True)
         if "block" not in d:
@@ -420,7 +422,8 @@ class NeoMatlabIO(BaseIO):
                 value = getattr(struct, attr[0])
                 if i == 0:
                     # this is a bit hacky, should really add an attribute _view_attr to ChannelView and RegionOfInterest
-                    assert isinstance(value, int)  # object id
+                    if not isinstance(value, int):  # object id
+                        raise TypeError(f"value must be int not of type {type(value)}")
                     kwargs[attr[0]] = _Ref(identifier=value, target_class_name=struct.viewed_classname)
                 else:
                     if attr[1] == np.ndarray and isinstance(value, int):
@@ -531,13 +534,18 @@ class NeoMatlabIO(BaseIO):
                     container = getattr(grp, container_name)
                     for i, item in enumerate(container):
                         if isinstance(item, _Ref):
-                            assert isinstance(item.identifier, (int, np.integer))
+                            if not isinstance(item.identifier, (int, np.integer)):
+                                raise TypeError(
+                                    f"item.identifier must be either int or np.integer not of type {type(item.identifier)}"
+                                )
                             # A reference to an object that already exists
                             container[i] = obj_lookup[item.identifier]
                         else:
                             # ChannelView and RegionOfInterest
-                            assert item.is_view
-                            assert isinstance(item.obj, _Ref)
+                            if not item.is_view:
+                                raise TypeError(f"`item` must be a view")
+                            if not isinstance(item.obj, _Ref):
+                                raise TypeError(f"`item.obj` must be a {_Ref} and is of type {type(item.obj)}")
                             item.obj = obj_lookup[item.obj.identifier]
 
 

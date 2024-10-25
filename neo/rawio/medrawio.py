@@ -6,15 +6,16 @@ Uses the dhn-med-py python package, created by Dark Horse Neuro, Inc.
 Authors: Dan Crepeau, Matt Stead
 """
 
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
 
 
 class MedRawIO(BaseRawIO):
@@ -152,14 +153,17 @@ class MedRawIO(BaseRawIO):
             # create stream name/id with info that we now have
             name = f'stream (rate,#sample,t0): ({stream_info["sampling_frequency"]}, {stream_info["num_samples"]}, {stream_start_time})'
             stream_id = signal_stream_counter
-            signal_streams.append((name, stream_id))
+            buffer_id = ""
+            signal_streams.append((name, stream_id, buffer_id))
 
             # add entry for signal_channels for each channel in a stream
             for chan in stream_info["chan_list"]:
                 signal_channels.append(
-                    (chan[1], chan[0], stream_info["sampling_frequency"], "int32", "uV", 1, 0, stream_id)
+                    (chan[1], chan[0], stream_info["sampling_frequency"], "int32", "uV", 1, 0, stream_id, buffer_id)
                 )
 
+        # the MED format is one dir per channel and so no buffer concept
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -177,6 +181,7 @@ class MedRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [self._nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -240,9 +245,18 @@ class MedRawIO(BaseRawIO):
             self.sess.set_channel_active(self._stream_info[stream_index]["raw_chans"])
             num_channels = len(self._stream_info[stream_index]["raw_chans"])
             self.sess.set_reference_channel(self._stream_info[stream_index]["raw_chans"][0])
+
+        # in the case we have a slice or we give an ArrayLike we need to iterate through the channels
+        # in order to activate them.
         else:
-            if any(channel_indexes < 0):
-                raise IndexError(f"Can not index negative channels: {channel_indexes}")
+            if isinstance(channel_indexes, slice):
+                start = channel_indexes.start or 0
+                stop = channel_indexes.stop or len(self._stream_info[stream_index]["raw_chans"])
+                step = channel_indexes.step or 1
+                channel_indexes = [ch for ch in range(start, stop, step)]
+            else:
+                if any(channel_indexes < 0):
+                    raise IndexError(f"Can not index negative channels: {channel_indexes}")
             # Set all channels to be inactive, then selectively set some of them to be active
             self.sess.set_channel_inactive("all")
             for i, channel_idx in enumerate(channel_indexes):

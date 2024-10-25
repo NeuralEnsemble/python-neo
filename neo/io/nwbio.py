@@ -24,6 +24,7 @@ from json.decoder import JSONDecodeError
 
 import numpy as np
 import quantities as pq
+
 from neo.core import Segment, SpikeTrain, Epoch, Event, AnalogSignal, IrregularlySampledSignal, Block, ImageSequence
 from neo.io.baseio import BaseIO
 from neo.io.proxyobjects import (
@@ -86,7 +87,10 @@ def get_class(module, name):
     import pynwb
 
     module_path = module.split(".")
-    assert len(module_path) == 2  # todo: handle the general case where this isn't 2
+    if len(module_path) != 2:
+        raise ValueError(
+            f"`module_path` must be 2, not {module_path}"
+        )  # todo: handle the general case where this isn't 2
     return getattr(getattr(pynwb, module_path[1]), name)
 
 
@@ -139,8 +143,10 @@ def _decompose_unit(unit):
     >>> _decompose_unit(pq.mV)
     ('volt', 0.001)
     """
-    assert isinstance(unit, pq.quantity.Quantity)
-    assert unit.magnitude == 1
+    if not isinstance(unit, pq.quantity.Quantity):
+        raise TypeError(f"`unit` must be of type pq.quantity.Quantity and not type {type(unit)}")
+    if unit.magnitude != 1:
+        raise ValueError(f"The magnitude of the `unit` must be 1 not {unit.magnitude}")
     conversion = 1.0
 
     def _decompose(unit):
@@ -240,7 +246,8 @@ class NWBIO(BaseIO):
         """
         import pynwb
 
-        assert self.nwb_file_mode in ("r",)
+        if self.nwb_file_mode not in ("r",):
+            raise ValueError("`mode` at init needs to be set to 'r' to read files")
         self._io_nwb = pynwb.NWBHDF5IO(
             self.filename, mode=self.nwb_file_mode, load_namespaces=True
         )  # Open a file with NWBHDF5IO
@@ -320,7 +327,8 @@ class NWBIO(BaseIO):
                         epoch = epoch.load()
                     segment_name = np.unique(segment_names[index])
                     block_name = np.unique(block_names[index])
-                    assert segment_name.size == block_name.size == 1
+                    if segment_name.size != block_name.size == 1:
+                        raise ValueError("the `segment_name` and the `block_name` should be the same")
                     segment = self._get_segment(block_name[0], segment_name[0])
                     segment.epochs.append(epoch)
             else:
@@ -449,7 +457,8 @@ class NWBIO(BaseIO):
         for i, block in enumerate(blocks):
             self._write_block(block)
 
-        assert self.nwb_file_mode in ("w",)  # possibly expand to 'a'ppend later
+        if self.nwb_file_mode not in ("w",):
+            raise ValueError("mode must be 'w' in order to write files")  # possibly expand to 'a'ppend later
         if self.nwb_file_mode == "w" and os.path.exists(self.filename):
             os.remove(self.filename)
         io_nwb = pynwb.NWBHDF5IO(self.filename, mode=self.nwb_file_mode)
@@ -483,7 +492,8 @@ class NWBIO(BaseIO):
         if not block.name:
             block.name = f"block{self.blocks_written}"
         for i, segment in enumerate(block.segments):
-            assert segment.block is block
+            if segment.block is not block:
+                raise TypeError(f"segment.block must be block it is {segment.block}")
             if not segment.name:
                 segment.name = f"{block.name} : segment{i}"
             self._write_segment(self._nwbfile, segment, electrodes)
@@ -513,7 +523,8 @@ class NWBIO(BaseIO):
     def _write_segment(self, nwbfile, segment, electrodes):
         # maybe use NWB trials to store Segment metadata?
         for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
-            assert signal.segment is segment
+            if signal.segment is not segment:
+                raise TypeError(f"signal.segment must be segment and is {signal.segment}")
             if hasattr(signal, "name"):
                 signal.name = f"{segment.name} {signal.name} {i}"
                 logging.warning(f"Warning signal name exists. New name: {signal.name}")
@@ -522,13 +533,15 @@ class NWBIO(BaseIO):
             self._write_signal(self._nwbfile, signal, electrodes)
 
         for i, train in enumerate(segment.spiketrains):
-            assert train.segment is segment
+            if train.segment is not segment:
+                raise TypeError(f"train.segment must be segment and is {train.segment}")
             if not train.name:
                 train.name = f"{segment.name} : spiketrain{i}"
             self._write_spiketrain(self._nwbfile, train)
 
         for i, event in enumerate(segment.events):
-            assert event.segment is segment
+            if event.segment is not segment:
+                raise TypeError(f"event.segment mst be segment and is {event.segment}")
             if hasattr(event, "name"):
                 event.name = f"{segment.name}  {event.name} {i}"
                 logging.warning(f"Warning event name exists. New name: {event.name}")

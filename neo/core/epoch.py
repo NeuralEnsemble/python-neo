@@ -5,7 +5,7 @@ This module defines :class:`Epoch`, an array of epochs.
 :module:`neo.core.baseneo`.
 """
 
-from copy import deepcopy, copy
+from copy import deepcopy
 from numbers import Number
 
 import numpy as np
@@ -51,6 +51,25 @@ class Epoch(DataObject):
     """
     Array of epochs.
 
+    Parameters
+    ----------
+    times: quantity array 1D | numpy array 1D | list | None, default: None
+        The start times of each time period.
+        If None, generates an empty array
+    durations: quantity array 1D | numpy array 1D | list |  quantity scalar | float | None, default: None
+        The length(s) of each time period.
+        If a scalar/float, the same value is used for all time periods.
+        If None, generates an empty array
+    labels: numpy.array 1D dtype='U' | list | None, default: None
+        Names or labels for the time periods.
+        If None, creates an empty array
+    units: quantity units | str | None, default: None
+        The units for the time
+        Required if the times is a list or NumPy, not required if it is a :class:`Quantity`
+    name: (str) A label for the dataset,
+    description: (str) Text description,
+    file_origin: (str) Filesystem path or URL of the original data file.
+
     *Usage*::
 
         >>> from neo.core import Epoch
@@ -69,20 +88,10 @@ class Epoch(DataObject):
         array(['btn0', 'btn1', 'btn2'],
               dtype='<U4')
 
-    *Required attributes/properties*:
-        :times: (quantity array 1D, numpy array 1D or list) The start times
-           of each time period.
-        :durations: (quantity array 1D, numpy array 1D, list, quantity scalar or float)
-           The length(s) of each time period.
-           If a scalar/float, the same value is used for all time periods.
-        :labels: (numpy.array 1D dtype='U' or list) Names or labels for the time periods.
-        :units: (quantity units or str) Required if the times is a list or NumPy
-                array, not if it is a :class:`Quantity`
+
 
     *Recommended attributes/properties*:
-        :name: (str) A label for the dataset,
-        :description: (str) Text description,
-        :file_origin: (str) Filesystem path or URL of the original data file.
+
 
     *Optional attributes/properties*:
         :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \

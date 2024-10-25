@@ -64,7 +64,8 @@ grant agreement FETPI-015879 (FACETS), by the European Union Seventh Framework P
 under grant agreements no. 269921 (BrainScaleS) and no. 604102 (HBP),
 and by the European Union’s Horizon 2020 Framework Programme for
 Research and Innovation under the Specific Grant Agreements No. 720270 (Human Brain Project SGA1),
-No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3).
+No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3),
+and by the European Union's Research and Innovation Program Horizon Europe Grant Agreement No. 101147319 (EBRAINS 2.0).
 
 .. _OpenElectrophy: https://github.com/OpenElectrophy/OpenElectrophy
 .. _Elephant: http://neuralensemble.org/elephant

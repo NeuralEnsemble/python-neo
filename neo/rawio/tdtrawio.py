@@ -25,20 +25,23 @@ Alternative package for loading the tdt format:
 https://pypi.org/project/tdt
 """
 
-from .baserawio import (
-    BaseRawIO,
-    _signal_channel_dtype,
-    _signal_stream_dtype,
-    _spike_channel_dtype,
-    _event_channel_dtype,
-)
-
 import numpy as np
 import os
 import re
 import warnings
 from collections import OrderedDict
 from pathlib import Path
+
+from .baserawio import (
+    BaseRawIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _signal_buffer_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
+)
+
+from neo.core import NeoReadWriteError
 
 
 class TdtRawIO(BaseRawIO):
@@ -125,7 +128,8 @@ class TdtRawIO(BaseRawIO):
             if info_channel_groups is None:
                 info_channel_groups = _info_channel_groups
             else:
-                assert np.array_equal(info_channel_groups, _info_channel_groups), "Channels differ across segments"
+                if not np.array_equal(info_channel_groups, _info_channel_groups):
+                    raise NeoReadWriteError("Channels differ across segments")
 
         # TEV (mixed data)
         self._tev_datas = []
@@ -205,7 +209,8 @@ class TdtRawIO(BaseRawIO):
 
             stream_name = str(info["StoreName"])
             stream_id = f"{stream_index}"
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
 
             for c in range(info["NumChan"]):
                 global_chan_index = len(signal_channels)
@@ -229,7 +234,8 @@ class TdtRawIO(BaseRawIO):
                     if stream_index not in self._sigs_lengths[seg_index]:
                         self._sigs_lengths[seg_index][stream_index] = size
                     else:
-                        assert self._sigs_lengths[seg_index][stream_index] == size
+                        if self._sigs_lengths[seg_index][stream_index] != size:
+                            raise ValueError(f"The sig lengths for {seg_index=}, {stream_index=} is not of size {size}")
 
                     # signal start time, relative to start of segment
                     if len(data_index["timestamp"]):
@@ -240,7 +246,8 @@ class TdtRawIO(BaseRawIO):
                     if stream_index not in self._sigs_t_start[seg_index]:
                         self._sigs_t_start[seg_index][stream_index] = t_start
                     else:
-                        assert self._sigs_t_start[seg_index][stream_index] == t_start
+                        if self._sigs_t_start[seg_index][stream_index] != t_start:
+                            raise ValueError(f"The t_start for {seg_index=}, {stream_index=} is not of time {t_start}")
 
                     # sampling_rate and dtype
                     if len(data_index):
@@ -256,10 +263,15 @@ class TdtRawIO(BaseRawIO):
                         if stream_index not in self._sig_dtype_by_group:
                             self._sig_dtype_by_group[stream_index] = np.dtype(dtype)
                         else:
-                            assert self._sig_dtype_by_group[stream_index] == dtype
+                            if self._sig_dtype_by_group[stream_index] != dtype:
+                                raise TypeError(
+                                    f"The dtype for the signal in {stream_index=} is not the correct dtype of {dtype}"
+                                )
                     else:
-                        assert sampling_rate == _sampling_rate, "sampling is changing!!!"
-                        assert dtype == _dtype, "sampling is changing!!!"
+                        if sampling_rate != _sampling_rate:
+                            raise ValueError("sampling is changing!!!")
+                        if dtype != _dtype:
+                            raise ValueError("Dtype is changing!!")
 
                     # data buffer test if SEV file exists otherwise TEV
                     # path = self.dirname / segment_name
@@ -289,7 +301,8 @@ class TdtRawIO(BaseRawIO):
                         data = np.memmap(sev_filename, mode="r", offset=0, dtype="uint8")
                     else:
                         data = self._tev_datas[seg_index]
-                    assert data is not None, "no TEV nor SEV"
+                    if data is None:
+                        raise NeoReadWriteError("no TEV nor SEV data to read")
                     self._sigs_data_buf[seg_index][global_chan_index] = data
 
                 chan_name = f"{info['StoreName']} {c + 1}"
@@ -297,13 +310,18 @@ class TdtRawIO(BaseRawIO):
                 units = "uV"  # see https://github.com/NeuralEnsemble/python-neo/issues/1369
                 gain = 1.0
                 offset = 0.0
-                signal_channels.append((chan_name, str(chan_id), sampling_rate, dtype, units, gain, offset, stream_id))
+                buffer_id = ""
+                signal_channels.append(
+                    (chan_name, str(chan_id), sampling_rate, dtype, units, gain, offset, stream_id, buffer_id)
+                )
 
         if missing_sev_channels:
             warnings.warn(f"Could not identify sev files for channels {missing_sev_channels}.")
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+        # no buffer concept here, data are spread per channel and data block
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # unit channels EVTYPE_SNIP
         self.internal_unit_ids = {}
@@ -354,6 +372,7 @@ class TdtRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -557,8 +576,16 @@ def read_tbk(tbk_filename):
         infos.append(info)
 
     # and put into numpy
+    tbk_field_names = [tbk_field_type[0] for tbk_field_type in tbk_field_types]
     info_channel_groups = np.zeros(len(infos), dtype=tbk_field_types)
     for i, info in enumerate(infos):
+        missing_keys = set(tbk_field_names) - set(info.keys())
+        if missing_keys:
+            warnings.warn(
+                f"The tbk file contains incomplete channel group info for group {list(info.items())}. "
+                "This channel group will be skipped."
+            )
+            continue
         for k, dt in tbk_field_types:
             v = np.dtype(dt).type(info[k])
             info_channel_groups[i][k] = v

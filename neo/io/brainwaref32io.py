@@ -32,7 +32,7 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import Block, Group, Segment, SpikeTrain
+from neo.core import Block, Group, Segment, SpikeTrain, NeoReadWriteError
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -127,7 +127,8 @@ class BrainwareF32IO(BaseIO):
         Reads a block from the simple spike data file "fname" generated
         with BrainWare
         """
-        assert not lazy, "Do not support lazy"
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy reading")
 
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,

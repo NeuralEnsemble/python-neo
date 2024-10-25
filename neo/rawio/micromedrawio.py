@@ -7,20 +7,23 @@ Completed with matlab Guillaume BECQ code.
 Author: Samuel Garcia
 """
 
-from .baserawio import (
-    BaseRawIO,
-    _signal_channel_dtype,
-    _signal_stream_dtype,
-    _spike_channel_dtype,
-    _event_channel_dtype,
-)
+import datetime
+import struct
+import io
 
 import numpy as np
 
-import datetime
-import os
-import struct
-import io
+from .baserawio import (
+    BaseRawWithBufferApiIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _signal_buffer_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
+)
+from .utils import get_memmap_shape
+
+from neo.core import NeoReadWriteError
 
 
 class StructFile(io.BufferedReader):
@@ -30,7 +33,7 @@ class StructFile(io.BufferedReader):
         return struct.unpack(fmt, self.read(struct.calcsize(fmt)))
 
 
-class MicromedRawIO(BaseRawIO):
+class MicromedRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading  data from micromed (.trc).
 
@@ -43,11 +46,15 @@ class MicromedRawIO(BaseRawIO):
     extensions = ["trc", "TRC"]
     rawmode = "one-file"
 
+
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _parse_header(self):
+
+
+
         with open(self.filename, "rb") as fid:
             f = StructFile(fid)
 
@@ -61,10 +68,12 @@ class MicromedRawIO(BaseRawIO):
             rec_datetime = datetime.datetime(year + 1900, month, day, hour, minute, sec)
 
             Data_Start_Offset, Num_Chan, Multiplexer, Rate_Min, Bytes = f.read_f("IHHHH", offset=138)
+            sig_dtype = "u" + str(Bytes)
 
             # header version
             (header_version,) = f.read_f("b", offset=175)
-            assert header_version == 4
+            if header_version != 4:
+                raise NotImplementedError(f"`header_version {header_version} is not implemented in neo yet")
 
             # area
             f.seek(176)
@@ -89,13 +98,9 @@ class MicromedRawIO(BaseRawIO):
             for zname in zone_names:
                 zname2, pos, length = f.read_f("8sII")
                 zones[zname] = zname2, pos, length
-                assert zname == zname2.decode("ascii").strip(" ")
+                if zname != zname2.decode("ascii").strip(" "):
+                    raise NeoReadWriteError("expected the zone name to match")
 
-            # raw signals memmap
-            sig_dtype = "u" + str(Bytes)
-            self._raw_signals = np.memmap(self.filename, dtype=sig_dtype, mode="r", offset=Data_Start_Offset).reshape(
-                -1, Num_Chan
-            )
 
             # "TRONCA" zone define segments
             zname2, pos, length = zones["TRONCA"]
@@ -114,15 +119,16 @@ class MicromedRawIO(BaseRawIO):
                 # one unique segment = general case
                 self.info_segments.append((0, 0))
 
-
-
-            # if len(info_segments) > 1:
-            #     raise RuntimeError("Neo do not support more than one segment at the moment")
+            nb_segment = len(self.info_segments)
 
             # Reading Code Info
             zname2, pos, length = zones["ORDER"]
             f.seek(pos)
             code = np.frombuffer(f.read(Num_Chan * 2), dtype="u2")
+
+            # unique stream and buffer
+            buffer_id = "0"
+            stream_id = "0"
 
             units_code = {-1: "nV", 0: "uV", 1: "mV", 2: 1, 100: "percent", 101: "dimensionless", 102: "dimensionless"}
             signal_channels = []
@@ -146,27 +152,43 @@ class MicromedRawIO(BaseRawIO):
                 (sampling_rate,) = f.read_f("H")
                 sampling_rate *= Rate_Min
                 chan_id = str(c)
-                stream_id = "0"
-                signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id))
+                signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+
 
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+            
+            self._stream_buffer_slice = {"0": slice(None)}
+            signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
+            signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
 
-            signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
-
-            assert np.unique(signal_channels["sampling_rate"]).size == 1
+            if np.unique(signal_channels["sampling_rate"]).size != 1:
+                raise NeoReadWriteError("The sampling rates must be the same across signal channels")
             self._sampling_rate = float(np.unique(signal_channels["sampling_rate"])[0])
 
-            seg_limits = [trace_offset for seg_start, trace_offset in self.info_segments] + [self._raw_signals.shape[0]]
-            nb_segment = len(self.info_segments)
+            # memmap traces buffer
+            full_signal_shape = get_memmap_shape(self.filename, sig_dtype, num_channels=Num_Chan, offset=Data_Start_Offset)
+            seg_limits = [trace_offset for seg_start, trace_offset in self.info_segments] + [full_signal_shape[0]]
             self._t_starts = []
-            self._seg_raw_signals = []
+            self._buffer_descriptions = {0 :{}}
             for seg_index in range(nb_segment):
                 seg_start, trace_offset = self.info_segments[seg_index]
                 self._t_starts.append(seg_start / self._sampling_rate)
 
                 start = seg_limits[seg_index]
                 stop = seg_limits[seg_index + 1]
-                self._seg_raw_signals.append(self._raw_signals[start:stop])
+                
+                shape = (stop - start, Num_Chan)
+                file_offset = Data_Start_Offset + start * np.dtype(sig_dtype).itemsize * Num_Chan
+                self._buffer_descriptions[0][seg_index] = {}
+                self._buffer_descriptions[0][seg_index][buffer_id] = {
+                    "type" : "raw",
+                    "file_path" : str(self.filename),
+                    "dtype" : sig_dtype,
+                    "order": "C",
+                    "file_offset" : file_offset,
+                    "shape" : shape,
+                }
+
 
 
             # Event channels
@@ -202,6 +224,7 @@ class MicromedRawIO(BaseRawIO):
                     )
                     self._raw_events[-1].append(rawevent[keep])
 
+
             # No spikes
             spike_channels = []
             spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
@@ -210,6 +233,7 @@ class MicromedRawIO(BaseRawIO):
             self.header = {}
             self.header["nb_block"] = 1
             self.header["nb_segment"] = [nb_segment]
+            self.header["signal_buffers"] = signal_buffers
             self.header["signal_streams"] = signal_streams
             self.header["signal_channels"] = signal_channels
             self.header["spike_channels"] = spike_channels
@@ -236,22 +260,12 @@ class MicromedRawIO(BaseRawIO):
         return self._t_starts[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
-        duration = self._seg_raw_signals[seg_index].shape[0] / self._sampling_rate
+        duration = self.get_signal_size(block_index, seg_index, stream_index=0) / self._sampling_rate
         return duration + self.segment_t_start(block_index, seg_index)
-
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
-        return self._seg_raw_signals[seg_index].shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         assert stream_index == 0
         return self._t_starts[seg_index]
-
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        raw_signals = self._seg_raw_signals[seg_index][slice(i_start, i_stop), :]
-        if channel_indexes is not None:
-            raw_signals = raw_signals[:, channel_indexes]
-        return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
         return 0
@@ -297,3 +311,6 @@ class MicromedRawIO(BaseRawIO):
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         durations = raw_duration.astype(dtype) / self._sampling_rate
         return durations
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]

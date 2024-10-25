@@ -12,6 +12,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -114,8 +115,8 @@ class PhyRawIO(BaseRawIO):
         self._t_start = 0.0
         self._t_stop = max(self._spike_times).item() / self._sampling_frequency
 
-        signal_streams = []
-        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_streams = np.array([], dtype=_signal_stream_dtype)
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         signal_channels = []
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -138,6 +139,7 @@ class PhyRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -197,11 +199,13 @@ class PhyRawIO(BaseRawIO):
                 spiketrain_an["pc_feature_ind"] = self._pc_feature_ind[unique_templates]
 
     def _segment_t_start(self, block_index, seg_index):
-        assert block_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index` must be 0")
         return self._t_start
 
     def _segment_t_stop(self, block_index, seg_index):
-        assert block_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index` must be 0")
         return self._t_stop
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
@@ -214,7 +218,8 @@ class PhyRawIO(BaseRawIO):
         return None
 
     def _spike_count(self, block_index, seg_index, spike_channel_index):
-        assert block_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index` must be 0")
         spikes = self._spike_clusters
         unit_label = self.unit_labels[spike_channel_index]
         mask = spikes == unit_label
@@ -222,8 +227,10 @@ class PhyRawIO(BaseRawIO):
         return nb_spikes
 
     def _get_spike_timestamps(self, block_index, seg_index, spike_channel_index, t_start, t_stop):
-        assert block_index == 0
-        assert seg_index == 0
+        if block_index != 0:
+            raise ValueError("`block_index` must be 0")
+        if seg_index != 0:
+            raise ValueError("`seg_index` must be 0")
 
         unit_label = self.unit_labels[spike_channel_index]
         mask = self._spike_clusters == unit_label

@@ -14,7 +14,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, SpikeTrain
+from neo.core import Segment, SpikeTrain, NeoReadWriteError
 
 
 class AsciiSpikeTrainIO(BaseIO):
@@ -91,7 +91,8 @@ class AsciiSpikeTrainIO(BaseIO):
             t_start : time start of all spiketrain 0 by default
             unit : unit of spike times, can be a str or directly a Quantities
         """
-        assert not lazy, "Do not support lazy"
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy reading")
 
         unit = pq.Quantity(1, unit)
 

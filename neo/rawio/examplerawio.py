@@ -44,6 +44,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -111,12 +112,18 @@ class ExampleRawIO(BaseRawIO):
         # In short `_parse_header()` can be slow but
         # `_get_analogsignal_chunk()` needs to be as fast as possible
 
-        # create fake signal streams information
+        # create simulated signal streams and buffer information
+        # a buffer is a group of channels that are in the same IO buffer for instance hdf5 or binary that can mapped to with np.memmap : this is optional machinery but must be specified as an empty list if not present
+        # a stream is a set channels that need to be grouped : this is mandatory
+        # very often streams are similar to buffer
+        signal_buffers = []
         signal_streams = []
         for c in range(2):
-            name = f"stream {c}"
-            stream_id = c
-            signal_streams.append((name, stream_id))
+            stream_id = f"{c}"
+            buffer_id = f"{c}"
+            signal_buffers.append((f"buffer {c}", buffer_id))
+            signal_streams.append((f"stream {c}", stream_id, buffer_id))
+        signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
         # create fake signal channels information
@@ -141,7 +148,10 @@ class ExampleRawIO(BaseRawIO):
             # channels inside a "stream" share the same characteristics
             #  (sampling rate/dtype/t_start/units/...)
             stream_id = str(c // 8)
-            signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+            # buffer_id indicates optionally if channels are in the same buffer
+            # this is optional. In case the buffer concept does not apply then buffer_id must be ""
+            buffer_id = str(c // 8)
+            signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         # A stream can contain signals with different physical units.
@@ -182,6 +192,7 @@ class ExampleRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 2
         self.header["nb_segment"] = [2, 3]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

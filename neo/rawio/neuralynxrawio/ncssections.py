@@ -190,17 +190,19 @@ class NcsSectionsFactory:
             and ncsMemMap["sample_rate"][0] == ncsMemMap["sample_rate"][-1]
             and ncsMemMap["timestamp"][-1] == predLastBlockStartTime
         ):
-            lastBlkEndTime = NcsSectionsFactory.calc_sample_time(sampFreq, ncsMemMap["timestamp"][-1], ncsMemMap["nb_valid"][-1])
+            lastBlkEndTime = NcsSectionsFactory.calc_sample_time(
+                sampFreq, ncsMemMap["timestamp"][-1], ncsMemMap["nb_valid"][-1]
+            )
             n_samples = NcsSection._RECORD_SIZE * (ncsMemMap.size - 1) + ncsMemMap["nb_valid"][-1]
             section0 = NcsSection(
-                    startRec=0,
-                    startTime=ncsMemMap["timestamp"][0],
-                    endRec=ncsMemMap.size - 1,
-                    endTime=lastBlkEndTime,
-                    n_samples=n_samples
-                )
+                startRec=0,
+                startTime=ncsMemMap["timestamp"][0],
+                endRec=ncsMemMap.size - 1,
+                endTime=lastBlkEndTime,
+                n_samples=n_samples,
+            )
             ncsSects.sects.append(section0)
-        
+
         else:
             # need to parse all data block to detect gaps
             # check when the predicted timestamp is outside the tolerance
@@ -210,19 +212,19 @@ class NcsSectionsFactory:
             gap_inds = np.flatnonzero(np.abs(delta - delta_prediction) > gapTolerance)
             gap_inds += 1
 
-            sections_limits = [ 0 ] + gap_inds.tolist() + [len(ncsMemMap)]
+            sections_limits = [0] + gap_inds.tolist() + [len(ncsMemMap)]
 
             for i in range(len(gap_inds) + 1):
                 start = sections_limits[i]
                 stop = sections_limits[i + 1]
-                duration = np.uint64(1e6 / sampFreq * ncsMemMap["nb_valid"][stop-1])
+                duration = np.uint64(1e6 / sampFreq * ncsMemMap["nb_valid"][stop - 1])
                 ncsSects.sects.append(
                     NcsSection(
                         startRec=start,
                         startTime=ncsMemMap["timestamp"][start],
-                        endRec=stop-1,
-                        endTime=ncsMemMap["timestamp"][stop-1] + duration,
-                        n_samples=np.sum(ncsMemMap["nb_valid"][start:stop])
+                        endRec=stop - 1,
+                        endTime=ncsMemMap["timestamp"][stop - 1] + duration,
+                        n_samples=np.sum(ncsMemMap["nb_valid"][start:stop]),
                     )
                 )
 
@@ -274,7 +276,6 @@ class NcsSectionsFactory:
                     # quarter of paquet size is tolerate
                     gapTolerance = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
             ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gapTolerance)
-            
 
             # take longer data block to compute reaal sampling rate
             # ind_max = np.argmax([section.n_samples for section in ncsSects.sects])
@@ -292,7 +293,6 @@ class NcsSectionsFactory:
             ncsSects.sampFreqUsed = sampFreqUsed
             ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(sampFreqUsed)
 
-        
         elif acqType == "BML" or acqType == "ATLAS":
             # BML & ATLAS style with fractional frequency and micros per samp
             if strict_gap_mode:
@@ -304,7 +304,6 @@ class NcsSectionsFactory:
             ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gapTolerance)
             ncsSects.sampFreqUsed = freq
             ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(freq)
-
 
         else:
             raise TypeError("Unknown Ncs file type from header.")
