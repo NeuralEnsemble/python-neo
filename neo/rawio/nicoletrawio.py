@@ -370,7 +370,7 @@ class NicoletRawIO(BaseRawIO):
             ('device_id', 'uint8', 16),
             ],
             ]
-        [idx_instance] = self._get_index_instances('CHANNELGUID')
+        idx_instance = self._get_index_instances('CHANNELGUID')[0]
         with open(self.filepath, "rb") as fid:
             fid.seek(idx_instance['offset'])
             channel_structure = read_as_dict(fid, 
