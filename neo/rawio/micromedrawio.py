@@ -14,13 +14,14 @@ import io
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from .utils import get_memmap_shape
 
 from neo.core import NeoReadWriteError
 
@@ -32,7 +33,7 @@ class StructFile(io.BufferedReader):
         return struct.unpack(fmt, self.read(struct.calcsize(fmt)))
 
 
-class MicromedRawIO(BaseRawIO):
+class MicromedRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading  data from micromed (.trc).
 
@@ -45,11 +46,15 @@ class MicromedRawIO(BaseRawIO):
     extensions = ["trc", "TRC"]
     rawmode = "one-file"
 
+
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _parse_header(self):
+
+        self._buffer_descriptions = {0 :{ 0: {}}}
+
         with open(self.filename, "rb") as fid:
             f = StructFile(fid)
 
@@ -97,9 +102,19 @@ class MicromedRawIO(BaseRawIO):
 
             # raw signals memmap
             sig_dtype = "u" + str(Bytes)
-            self._raw_signals = np.memmap(self.filename, dtype=sig_dtype, mode="r", offset=Data_Start_Offset).reshape(
-                -1, Num_Chan
-            )
+            signal_shape = get_memmap_shape(self.filename, sig_dtype, num_channels=Num_Chan, offset=Data_Start_Offset)
+            buffer_id = "0"
+            stream_id = "0"
+            self._buffer_descriptions[0][0][buffer_id] = {
+                "type" : "raw",
+                "file_path" : str(self.filename),
+                "dtype" : sig_dtype,
+                "order": "C",
+                "file_offset" : 0,
+                "shape" : signal_shape,
+            }
+
+
 
             # Reading Code Info
             zname2, pos, length = zones["ORDER"]
@@ -128,16 +143,16 @@ class MicromedRawIO(BaseRawIO):
                 (sampling_rate,) = f.read_f("H")
                 sampling_rate *= Rate_Min
                 chan_id = str(c)
-                stream_id = "0"
-                buffer_id = "0"
-                signal_channels.append(
-                    (chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
-                )
+
+                
+                signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+
 
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-
-            signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
-            signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
+            
+            self._stream_buffer_slice = {"0": slice(None)}
+            signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
+            signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
 
             if np.unique(signal_channels["sampling_rate"]).size != 1:
                 raise NeoReadWriteError("The sampling rates must be the same across signal channels")
@@ -166,7 +181,7 @@ class MicromedRawIO(BaseRawIO):
 
                 keep = (
                     (rawevent["start"] >= rawevent["start"][0])
-                    & (rawevent["start"] < self._raw_signals.shape[0])
+                    & (rawevent["start"] < signal_shape[0])
                     & (rawevent["start"] != 0)
                 )
                 rawevent = rawevent[keep]
@@ -207,24 +222,14 @@ class MicromedRawIO(BaseRawIO):
         return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals.shape[0] / self._sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = sig_size / self._sampling_rate
         return t_stop
-
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        if stream_index != 0:
-            raise ValueError("`stream_index` must be 0")
-        return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         if stream_index != 0:
             raise ValueError("`stream_index` must be 0")
         return 0.0
-
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(channel_indexes)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
-        return raw_signals
 
     def _spike_count(self, block_index, seg_index, unit_index):
         return 0
@@ -266,3 +271,6 @@ class MicromedRawIO(BaseRawIO):
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         durations = raw_duration.astype(dtype) / self._sampling_rate
         return durations
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
