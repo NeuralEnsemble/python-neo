@@ -489,7 +489,6 @@ def check_buffer_api(reader):
     nb_block = reader.block_count()
     nb_event_channel = reader.event_channels_count()
 
-
     for block_index in range(nb_block):
         nb_seg = reader.segment_count(block_index)
         for seg_index in range(nb_seg):
@@ -501,6 +500,7 @@ def check_buffer_api(reader):
 
                 try:
                     import xarray
+
                     HAVE_XARRAY = True
                 except ImportError:
                     HAVE_XARRAY = False
@@ -509,5 +509,6 @@ def check_buffer_api(reader):
                     # this test quickly the experimental xaray_utils.py if xarray is present on the system
                     # this is not the case for the CI
                     from neo.rawio.xarray_utils import to_xarray_dataset
+
                     ds = to_xarray_dataset(reader, block_index=block_index, seg_index=seg_index, buffer_id=buffer_id)
                     assert isinstance(ds, xarray.Dataset)

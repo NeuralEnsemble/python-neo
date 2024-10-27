@@ -49,7 +49,7 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
 
         # one unique block with several segments
         # one unique buffer splited in several streams
-        self._buffer_descriptions = {0 :{}}
+        self._buffer_descriptions = {0: {}}
 
         with open(self.filename, "rb") as fid:
 
@@ -97,12 +97,12 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
                 buffer_id = "0"
                 self._buffer_descriptions[0][seg_index] = {}
                 self._buffer_descriptions[0][seg_index][buffer_id] = {
-                    "type" : "raw",
-                    "file_path" : str(self.filename),
-                    "dtype" : "int16",
+                    "type": "raw",
+                    "file_path": str(self.filename),
+                    "dtype": "int16",
                     "order": "C",
-                    "file_offset" : ind0,
-                    "shape" : (NP, NC),
+                    "file_offset": ind0,
+                    "shape": (NP, NC),
                 }
 
                 all_sampling_interval.append(analysisHeader["SamplingInterval"])

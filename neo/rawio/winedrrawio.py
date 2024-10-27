@@ -65,16 +65,15 @@ class WinEdrRawIO(BaseRawWithBufferApiIO):
         # one unique block with one unique segment
         # one unique buffer splited in several streams
         buffer_id = "0"
-        self._buffer_descriptions = {0 :{0 :{}}}
+        self._buffer_descriptions = {0: {0: {}}}
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "raw",
-            "file_path" : str(self.filename),
-            "dtype" : "int16",
+            "type": "raw",
+            "file_path": str(self.filename),
+            "dtype": "int16",
             "order": "C",
-            "file_offset" : int(header["NBH"]),
-            "shape" : (header["NP"] // header["NC"], header["NC"]),
+            "file_offset": int(header["NBH"]),
+            "shape": (header["NP"] // header["NC"], header["NC"]),
         }
-
 
         DT = header["DT"]
         if "TU" in header:

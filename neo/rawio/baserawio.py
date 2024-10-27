@@ -1375,7 +1375,6 @@ class BaseRawIO:
         raise (NotImplementedError)
 
 
-
 class BaseRawWithBufferApiIO(BaseRawIO):
     """
     Generic class for reader that support "buffer api".
@@ -1402,7 +1401,7 @@ class BaseRawWithBufferApiIO(BaseRawIO):
         buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
         # some hdf5 revert teh buffer
         time_axis = buffer_desc.get("time_axis", 0)
-        return buffer_desc['shape'][time_axis]
+        return buffer_desc["shape"][time_axis]
 
     def _get_analogsignal_chunk(
         self,
@@ -1413,42 +1412,47 @@ class BaseRawWithBufferApiIO(BaseRawIO):
         stream_index: int,
         channel_indexes: list[int] | None,
     ):
-        
+
         stream_id = self.header["signal_streams"][stream_index]["id"]
         buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
-        
-        buffer_slice = self._stream_buffer_slice[stream_id]
 
+        buffer_slice = self._stream_buffer_slice[stream_id]
 
         buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
 
         i_start = i_start or 0
-        i_stop = i_stop or buffer_desc['shape'][0]
+        i_stop = i_stop or buffer_desc["shape"][0]
 
-        if buffer_desc['type'] == "raw":
+        if buffer_desc["type"] == "raw":
 
-            # open files on demand and keep reference to opened file 
-            if not hasattr(self, '_memmap_analogsignal_buffers'):
+            # open files on demand and keep reference to opened file
+            if not hasattr(self, "_memmap_analogsignal_buffers"):
                 self._memmap_analogsignal_buffers = {}
             if block_index not in self._memmap_analogsignal_buffers:
                 self._memmap_analogsignal_buffers[block_index] = {}
             if seg_index not in self._memmap_analogsignal_buffers[block_index]:
                 self._memmap_analogsignal_buffers[block_index][seg_index] = {}
             if buffer_id not in self._memmap_analogsignal_buffers[block_index][seg_index]:
-                fid = open(buffer_desc['file_path'], mode='rb')
+                fid = open(buffer_desc["file_path"], mode="rb")
                 self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id] = fid
             else:
                 fid = self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id]
-            
-            num_channels = buffer_desc['shape'][1]
-            
-            raw_sigs = get_memmap_chunk_from_opened_file(fid, num_channels,  i_start, i_stop, np.dtype(buffer_desc['dtype']), file_offset=buffer_desc['file_offset'])
 
-                
-        elif buffer_desc['type'] == 'hdf5':
+            num_channels = buffer_desc["shape"][1]
 
-            # open files on demand and keep reference to opened file 
-            if not hasattr(self, '_hdf5_analogsignal_buffers'):
+            raw_sigs = get_memmap_chunk_from_opened_file(
+                fid,
+                num_channels,
+                i_start,
+                i_stop,
+                np.dtype(buffer_desc["dtype"]),
+                file_offset=buffer_desc["file_offset"],
+            )
+
+        elif buffer_desc["type"] == "hdf5":
+
+            # open files on demand and keep reference to opened file
+            if not hasattr(self, "_hdf5_analogsignal_buffers"):
                 self._hdf5_analogsignal_buffers = {}
             if block_index not in self._hdf5_analogsignal_buffers:
                 self._hdf5_analogsignal_buffers[block_index] = {}
@@ -1456,14 +1460,15 @@ class BaseRawWithBufferApiIO(BaseRawIO):
                 self._hdf5_analogsignal_buffers[block_index][seg_index] = {}
             if buffer_id not in self._hdf5_analogsignal_buffers[block_index][seg_index]:
                 import h5py
-                h5file = h5py.File(buffer_desc['file_path'], mode="r")
+
+                h5file = h5py.File(buffer_desc["file_path"], mode="r")
                 self._hdf5_analogsignal_buffers[block_index][seg_index][buffer_id] = h5file
             else:
                 h5file = self._hdf5_analogsignal_buffers[block_index][seg_index][buffer_id]
 
             hdf5_path = buffer_desc["hdf5_path"]
             full_raw_sigs = h5file[hdf5_path]
-            
+
             time_axis = buffer_desc.get("time_axis", 0)
             if time_axis == 0:
                 raw_sigs = full_raw_sigs[i_start:i_stop, :]
@@ -1475,31 +1480,28 @@ class BaseRawWithBufferApiIO(BaseRawIO):
             if buffer_slice is not None:
                 raw_sigs = raw_sigs[:, buffer_slice]
 
-
-
         else:
             raise NotImplementedError()
 
         # this is a pre slicing when the stream do not contain all channels (for instance spikeglx when load_sync_channel=False)
         if buffer_slice is not None:
             raw_sigs = raw_sigs[:, buffer_slice]
-        
+
         # channel slice requested
         if channel_indexes is not None:
             raw_sigs = raw_sigs[:, channel_indexes]
 
-
         return raw_sigs
 
     def __del__(self):
-        if hasattr(self, '_memmap_analogsignal_buffers'):
+        if hasattr(self, "_memmap_analogsignal_buffers"):
             for block_index in self._memmap_analogsignal_buffers.keys():
                 for seg_index in self._memmap_analogsignal_buffers[block_index].keys():
                     for buffer_id, fid in self._memmap_analogsignal_buffers[block_index][seg_index].items():
                         fid.close()
             del self._memmap_analogsignal_buffers
 
-        if hasattr(self, '_hdf5_analogsignal_buffers'):
+        if hasattr(self, "_hdf5_analogsignal_buffers"):
             for block_index in self._hdf5_analogsignal_buffers.keys():
                 for seg_index in self._hdf5_analogsignal_buffers[block_index].keys():
                     for buffer_id, h5_file in self._hdf5_analogsignal_buffers[block_index][seg_index].items():

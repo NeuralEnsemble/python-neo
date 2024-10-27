@@ -80,19 +80,18 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
 
         sig_dtype = np.dtype(fmts[fmt])
 
-        
         stream_id = "0"
         buffer_id = "0"
-        self._buffer_descriptions = {0 :{0 : {}}}
+        self._buffer_descriptions = {0: {0: {}}}
         self._stream_buffer_slice = {}
         shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "raw",
-            "file_path" : binary_filename,
-            "dtype" : str(sig_dtype),
+            "type": "raw",
+            "file_path": binary_filename,
+            "dtype": str(sig_dtype),
             "order": "C",
-            "file_offset" : 0,
-            "shape" : shape,
+            "file_offset": 0,
+            "shape": shape,
         }
         self._stream_buffer_slice[stream_id] = None
 
