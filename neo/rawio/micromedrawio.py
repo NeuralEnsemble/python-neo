@@ -46,14 +46,13 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
     extensions = ["trc", "TRC"]
     rawmode = "one-file"
 
-
     def __init__(self, filename=""):
         BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _parse_header(self):
 
-        self._buffer_descriptions = {0 :{ 0: {}}}
+        self._buffer_descriptions = {0: {0: {}}}
 
         with open(self.filename, "rb") as fid:
             f = StructFile(fid)
@@ -106,15 +105,13 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
             buffer_id = "0"
             stream_id = "0"
             self._buffer_descriptions[0][0][buffer_id] = {
-                "type" : "raw",
-                "file_path" : str(self.filename),
-                "dtype" : sig_dtype,
+                "type": "raw",
+                "file_path": str(self.filename),
+                "dtype": sig_dtype,
                 "order": "C",
-                "file_offset" : 0,
-                "shape" : signal_shape,
+                "file_offset": 0,
+                "shape": signal_shape,
             }
-
-
 
             # Reading Code Info
             zname2, pos, length = zones["ORDER"]
@@ -144,12 +141,12 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
                 sampling_rate *= Rate_Min
                 chan_id = str(c)
 
-                
-                signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
-
+                signal_channels.append(
+                    (chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+                )
 
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-            
+
             self._stream_buffer_slice = {"0": slice(None)}
             signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
             signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)

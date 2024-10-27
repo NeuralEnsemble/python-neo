@@ -173,14 +173,17 @@ class EDFRawIO(BaseRawIO):
         for array_key in array_keys:
             array_anno = {array_key: [h[array_key] for h in self.signal_headers]}
         seg_ann["signals"].append({"__array_annotations__": array_anno})
-        
+
         # We store the following attributes for rapid access without needing the reader
-        
+
         self._t_stop = self.edf_reader.datarecord_duration * self.edf_reader.datarecords_in_file
         # use sample count of first signal in stream
-        self._stream_index_samples = {stream_index : self.edf_reader.getNSamples()[chidx][0] for stream_index, chidx in self.stream_idx_to_chidx.items()}
+        self._stream_index_samples = {
+            stream_index: self.edf_reader.getNSamples()[chidx][0]
+            for stream_index, chidx in self.stream_idx_to_chidx.items()
+        }
         self._number_of_events = len(self.edf_reader.readAnnotations()[0])
-        
+
         self.close()
 
     def _get_stream_channels(self, stream_index):
