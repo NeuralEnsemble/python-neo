@@ -42,7 +42,7 @@ class HekaIO(BaseIO):
 
     mode = 'file'
 
-    def __init__(self, filename, group_idx, series_idx):
+    def __init__(self, filename, group_idx, series_idx, add_zero_offset, stimulus_experimental_mode):
         """
         Assumes HEKA file units is A and V for data and stimulus. This is enforced in LoadHeka level.
         """
@@ -56,6 +56,8 @@ class HekaIO(BaseIO):
         self.header = {}
         self.group_idx = group_idx
         self.series_idx = series_idx
+        self.add_zero_offset = add_zero_offset
+        self.stimulus_experimental_mode = stimulus_experimental_mode
         self.num_sweeps = None
         self.series_data = None
 
@@ -153,8 +155,8 @@ class HekaIO(BaseIO):
                     self.group_idx,
                     self.series_idx,
                     ch_idx,
-                    include_stim_protocol="experimental",
-                    add_zero_offset=False,
+                    include_stim_protocol="experimental" if self.stimulus_experimental_mode else True,
+                    add_zero_offset=self.add_zero_offset,
                     fill_with_mean=True,
                     stim_channel_idx=None,
                 )
@@ -173,6 +175,7 @@ class HekaIO(BaseIO):
 
         signal_channels = []
         heka_metadata = {
+            "add_zero_offset": self.add_zero_offset,
             "zero_offsets": [],
         }
         for ch_idx, chan_data in enumerate(self.series_data):
