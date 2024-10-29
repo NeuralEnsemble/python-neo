@@ -1,9 +1,10 @@
 import mmap
 import numpy as np
 
+
 def get_memmap_shape(filename, dtype, num_channels=None, offset=0):
     dtype = np.dtype(dtype)
-    with open(filename, mode='rb') as f:
+    with open(filename, mode="rb") as f:
         f.seek(0, 2)
         flen = f.tell()
         bytes = flen - offset
@@ -17,7 +18,7 @@ def get_memmap_shape(filename, dtype, num_channels=None, offset=0):
         return shape
 
 
-def get_memmap_chunk_from_opened_file(fid, num_channels,  start, stop, dtype, file_offset=0):
+def get_memmap_chunk_from_opened_file(fid, num_channels, start, stop, dtype, file_offset=0):
     """
     Utility function to get a chunk as a memmap array directly from an opened file.
     Using this instead memmap can avoid memmory consumption when multiprocessing.
@@ -41,7 +42,7 @@ def get_memmap_chunk_from_opened_file(fid, num_channels,  start, stop, dtype, fi
     # Adjust the length so it includes the extra data from rounding down
     # the memmap offset to a multiple of ALLOCATIONGRANULARITY
     length += start_offset
-    
+
     memmap_obj = mmap.mmap(fid.fileno(), length=length, access=mmap.ACCESS_READ, offset=memmap_offset)
 
     arr = np.ndarray(
@@ -52,5 +53,3 @@ def get_memmap_chunk_from_opened_file(fid, num_channels,  start, stop, dtype, fi
     )
 
     return arr
-
-

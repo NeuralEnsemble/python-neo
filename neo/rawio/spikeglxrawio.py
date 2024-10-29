@@ -125,11 +125,10 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         stream_names = sorted(list(srates.keys()), key=lambda e: srates[e])[::-1]
         nb_segment = np.unique([info["seg_index"] for info in self.signals_info_list]).size
 
-        
         # self._memmaps = {}
         self.signals_info_dict = {}
         # one unique block
-        self._buffer_descriptions = {0 :{}}
+        self._buffer_descriptions = {0: {}}
         self._stream_buffer_slice = {}
         for info in self.signals_info_list:
             seg_index, stream_name = info["seg_index"], info["stream_name"]
@@ -143,17 +142,15 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
             if seg_index not in self._buffer_descriptions[0]:
                 self._buffer_descriptions[block_index][seg_index] = {}
-            
-            self._buffer_descriptions[block_index][seg_index][buffer_id] = {
-                "type" : "raw",
-                "file_path" : info["bin_file"],
-                "dtype" : "int16",
-                "order": "C",
-                "file_offset" : 0,
-                "shape" : get_memmap_shape(info["bin_file"], "int16", num_channels=info["num_chan"], offset=0),
-            }
-            
 
+            self._buffer_descriptions[block_index][seg_index][buffer_id] = {
+                "type": "raw",
+                "file_path": info["bin_file"],
+                "dtype": "int16",
+                "order": "C",
+                "file_offset": 0,
+                "shape": get_memmap_shape(info["bin_file"], "int16", num_channels=info["num_chan"], offset=0),
+            }
 
         # create channel header
         signal_buffers = []
@@ -189,7 +186,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         buffer_id,
                     )
                 )
-            
+
             # all channel by dafult unless load_sync_channel=False
             self._stream_buffer_slice[stream_id] = None
             # check sync channel validity
@@ -327,8 +324,6 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
     def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
-        
-
 
 
 def scan_files(dirname):

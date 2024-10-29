@@ -26,6 +26,7 @@ from .baserawio import (
 )
 from .utils import get_memmap_shape
 
+
 class RawMCSRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading an mcs file converted by the MC_DataToo binary converter
@@ -65,16 +66,16 @@ class RawMCSRawIO(BaseRawWithBufferApiIO):
         # )
         file_offset = info["header_size"]
         shape = get_memmap_shape(self.filename, self.dtype, num_channels=self.nb_channel, offset=file_offset)
-        self._buffer_descriptions = {0:{0:{}}}
+        self._buffer_descriptions = {0: {0: {}}}
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "raw",
-            "file_path" : str(self.filename),
-            "dtype" : "uint16",
+            "type": "raw",
+            "file_path": str(self.filename),
+            "dtype": "uint16",
             "order": "C",
-            "file_offset" : file_offset,
-            "shape" : shape,
+            "file_offset": file_offset,
+            "shape": shape,
         }
-        self._stream_buffer_slice = {stream_id : None}
+        self._stream_buffer_slice = {stream_id: None}
 
         sig_channels = []
         for c in range(self.nb_channel):
@@ -121,7 +122,7 @@ class RawMCSRawIO(BaseRawWithBufferApiIO):
     def _segment_t_stop(self, block_index, seg_index):
         # t_stop = self._raw_signals.shape[0] / self.sampling_rate
         sig_size = self.get_signal_size(block_index, seg_index, 0)
-        t_stop = sig_size / self.sampling_rate        
+        t_stop = sig_size / self.sampling_rate
         return t_stop
 
     # def _get_signal_size(self, block_index, seg_index, stream_index):

@@ -112,16 +112,16 @@ class NeuroScopeRawIO(BaseRawWithBufferApiIO):
         shape = get_memmap_shape(self.data_file_path, sig_dtype, num_channels=nb_channel, offset=0)
         buffer_id = "0"
         stream_id = "0"
-        self._buffer_descriptions = {0: {0:{}}}
+        self._buffer_descriptions = {0: {0: {}}}
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "raw",
-            "file_path" : str(self.data_file_path),
-            "dtype" : sig_dtype,
+            "type": "raw",
+            "file_path": str(self.data_file_path),
+            "dtype": sig_dtype,
             "order": "C",
-            "file_offset" : 0,
-            "shape" : shape,
+            "file_offset": 0,
+            "shape": shape,
         }
-        self._stream_buffer_slice = {stream_id : None}
+        self._stream_buffer_slice = {stream_id: None}
 
         # one unique stream and buffer
         signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)

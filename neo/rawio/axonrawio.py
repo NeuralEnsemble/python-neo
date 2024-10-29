@@ -158,8 +158,8 @@ class AxonRawIO(BaseRawWithBufferApiIO):
         # Get raw data by segment
         # self._raw_signals = {}
         self._t_starts = {}
-        self._buffer_descriptions = {0 :{}}
-        self._stream_buffer_slice = {stream_id : None}
+        self._buffer_descriptions = {0: {}}
+        self._stream_buffer_slice = {stream_id: None}
         pos = 0
         for seg_index in range(nb_segment):
             length = episode_array[seg_index]["len"]
@@ -174,12 +174,12 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
             self._buffer_descriptions[0][seg_index] = {}
             self._buffer_descriptions[0][seg_index][buffer_id] = {
-                "type" : "raw",
-                "file_path" : str(self.filename),
-                "dtype" : str(sig_dtype),
+                "type": "raw",
+                "file_path": str(self.filename),
+                "dtype": str(sig_dtype),
                 "order": "C",
-                "file_offset" : head_offset + pos * sig_dtype.itemsize,
-                "shape" : (int(length // nbchannel), int(nbchannel)),
+                "file_offset": head_offset + pos * sig_dtype.itemsize,
+                "shape": (int(length // nbchannel), int(nbchannel)),
             }
             pos += length
 
@@ -239,7 +239,9 @@ class AxonRawIO(BaseRawWithBufferApiIO):
             else:
                 gain, offset = 1.0, 0.0
 
-            signal_channels.append((name, str(chan_id), self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
+            signal_channels.append(
+                (name, str(chan_id), self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+            )
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -312,7 +314,6 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
     def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
-
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._raw_ev_timestamps.size

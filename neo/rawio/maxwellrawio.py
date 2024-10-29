@@ -119,12 +119,12 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
 
         # create signal channels
         max_sig_length = 0
-        self._buffer_descriptions = {0 :{0 :{}}}
+        self._buffer_descriptions = {0: {0: {}}}
         self._stream_buffer_slice = {}
         sig_channels = []
         well_indices_to_remove = []
         for stream_index, stream_id in enumerate(signal_streams["id"]):
-            
+
             if int(version) == 20160704:
                 sr = 20000.0
                 settings = h5file["settings"]
@@ -163,14 +163,14 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
                     continue
 
                 self._stream_buffer_slice[stream_id] = None
-            
+
             buffer_id = stream_id
             shape = h5file[hdf5_path].shape
             self._buffer_descriptions[0][0][buffer_id] = {
-                "type" : "hdf5",
-                "file_path" : str(self.filename),
-                "hdf5_path" : hdf5_path,
-                "shape" : shape,
+                "type": "hdf5",
+                "file_path": str(self.filename),
+                "hdf5_path": hdf5_path,
+                "shape": shape,
                 "time_axis": 1,
             }
             self._stream_buffer_slice[stream_id] = slice(None)
@@ -232,7 +232,9 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         try:
-            return super()._get_analogsignal_chunk(block_index, seg_index, i_start, i_stop, stream_index, channel_indexes)
+            return super()._get_analogsignal_chunk(
+                block_index, seg_index, i_start, i_stop, stream_index, channel_indexes
+            )
         except OSError as e:
             print("*" * 10)
             print(_hdf_maxwell_error)

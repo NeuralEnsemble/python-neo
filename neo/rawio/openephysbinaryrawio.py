@@ -173,15 +173,14 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     num_channels = len(info["channels"])
                     stream_id = str(stream_index)
                     buffer_id = str(stream_index)
-                    shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels,
-                                             offset=0)
+                    shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels, offset=0)
                     self._buffer_descriptions[block_index][seg_index][buffer_id] = {
-                        "type" : "raw",
-                        "file_path" : str(info["raw_filename"]),
-                        "dtype" : info["dtype"],
+                        "type": "raw",
+                        "file_path": str(info["raw_filename"]),
+                        "dtype": info["dtype"],
                         "order": "C",
-                        "file_offset" : 0,
-                        "shape" : shape,
+                        "file_offset": 0,
+                        "shape": shape,
                     }
 
                     has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
@@ -460,7 +459,6 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
     def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
-
 
 
 _possible_event_stream_names = (

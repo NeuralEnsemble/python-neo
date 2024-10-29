@@ -85,17 +85,16 @@ class RawBinarySignalRawIO(BaseRawWithBufferApiIO):
             buffer_id = "0"
             stream_id = "0"
             shape = get_memmap_shape(self.filename, self.dtype, num_channels=self.nb_channel, offset=self.bytesoffset)
-            self._buffer_descriptions = {0:{0:{}}}
+            self._buffer_descriptions = {0: {0: {}}}
             self._buffer_descriptions[0][0][buffer_id] = {
-                "type" : "raw",
-                "file_path" : str(self.filename),
-                "dtype" : "uint16",
+                "type": "raw",
+                "file_path": str(self.filename),
+                "dtype": "uint16",
                 "order": "C",
-                "file_offset" : self.bytesoffset,
-                "shape" : shape,
+                "file_offset": self.bytesoffset,
+                "shape": shape,
             }
-            self._stream_buffer_slice = {stream_id : None}
-
+            self._stream_buffer_slice = {stream_id: None}
 
         else:
             # The the neo.io.RawBinarySignalIO is used for write_segment

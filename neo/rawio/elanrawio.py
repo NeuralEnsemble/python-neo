@@ -163,7 +163,7 @@ class ElanRawIO(BaseRawWithBufferApiIO):
         buffer_id = "0"
         signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
         signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
-        
+
         sig_channels = []
         for c, chan_info in enumerate(channel_infos):
             chan_name = chan_info["label"]
@@ -197,16 +197,16 @@ class ElanRawIO(BaseRawWithBufferApiIO):
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # raw data
-        self._buffer_descriptions = {0 :{0 : {}}}
+        self._buffer_descriptions = {0: {0: {}}}
         self._stream_buffer_slice = {}
         shape = get_memmap_shape(self.filename, sig_dtype, num_channels=nb_channel + 2, offset=0)
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "raw",
-            "file_path" : self.filename,
-            "dtype" : sig_dtype,
+            "type": "raw",
+            "file_path": self.filename,
+            "dtype": sig_dtype,
             "order": "C",
-            "file_offset" : 0,
-            "shape" : shape,
+            "file_offset": 0,
+            "shape": shape,
         }
         self._stream_buffer_slice["0"] = slice(0, -2)
 

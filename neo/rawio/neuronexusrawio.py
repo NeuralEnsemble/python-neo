@@ -136,14 +136,14 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
 
         # the will cretae a memory map with teh generic mechanism
         buffer_id = "0"
-        self._buffer_descriptions = {0 :{0 :{}}}
+        self._buffer_descriptions = {0: {0: {}}}
         self._buffer_descriptions[0][0][buffer_id] = {
-            "type" : "raw",
-            "file_path" : str(binary_file),
-            "dtype" : BINARY_DTYPE,
+            "type": "raw",
+            "file_path": str(binary_file),
+            "dtype": BINARY_DTYPE,
             "order": "C",
-            "file_offset" : 0,
-            "shape" : (self._n_samples, self._n_channels),
+            "file_offset": 0,
+            "shape": (self._n_samples, self._n_channels),
         }
         # Make the memory map for timestamp
         self._timestamps = np.memmap(

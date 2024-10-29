@@ -46,13 +46,11 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
     extensions = ["trc", "TRC"]
     rawmode = "one-file"
 
-
     def __init__(self, filename=""):
         BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _parse_header(self):
-
 
 
         with open(self.filename, "rb") as fid:
@@ -156,7 +154,7 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
 
 
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-            
+
             self._stream_buffer_slice = {"0": slice(None)}
             signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
             signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
