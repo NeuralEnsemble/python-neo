@@ -34,7 +34,7 @@ Code status
 .. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/core-test.yml/badge.svg?event=push&branch=master
    :target: https://github.com/NeuralEnsemble/python-neo/actions?query=event%3Apush+branch%3Amaster
    :alt: Core Test Status (Github Actions)
-.. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/io-test.yml/badge.svg?event=push&branch=master
+.. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/io-test_trigger.yml/badge.svg?event=push&branch=master
    :target: https://github.com/NeuralEnsemble/python-neo/actions?query=event%3Apush+branch%3Amaster
    :alt: IO Test Status (Github Actions)
 .. image:: https://coveralls.io/repos/NeuralEnsemble/python-neo/badge.png
