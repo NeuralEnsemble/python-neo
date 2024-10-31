@@ -31,6 +31,9 @@ A project with similar aims but for neuroimaging file formats is `NiBabel`_.
 Code status
 -----------
 
+.. image:: https://img.shields.io/pypi/v/neo.svg
+   :target: https://pypi.python.org/pypi/neo
+   :alt: PyPI Release Version
 .. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/core-test.yml/badge.svg?event=push&branch=master
    :target: https://github.com/NeuralEnsemble/python-neo/actions?query=event%3Apush+branch%3Amaster
    :alt: Core Test Status (Github Actions)
