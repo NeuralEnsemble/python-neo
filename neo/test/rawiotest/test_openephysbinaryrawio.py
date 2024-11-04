@@ -1,5 +1,4 @@
 import unittest
-import pytest
 
 from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
