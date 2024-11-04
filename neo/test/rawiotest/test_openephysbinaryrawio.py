@@ -1,4 +1,5 @@
 import unittest
+import pytest
 
 from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -13,6 +14,7 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         "openephysbinary/v0.5.x_two_nodes",
         "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
         "openephysbinary/v0.6.x_neuropixels_with_sync",
+        "openephysbinary/v0.6.x_neuropixels_missing_folders"
     ]
 
     def test_sync(self):
@@ -47,6 +49,14 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
                 self.get_local_path("openephysbinary/v0.6.x_neuropixels_multiexp_multistream"), load_sync_channel=True
             )
             rawio_no_sync.parse_header()
+
+    def test_missing_folders(self):
+        # missing folders should raise an error
+        with self.assertWarns(UserWarning):
+            rawio = OpenEphysBinaryRawIO(
+                self.get_local_path("openephysbinary/v0.6.x_neuropixels_missing_folders"), load_sync_channel=False
+            )
+            rawio.parse_header()
 
 
 if __name__ == "__main__":
