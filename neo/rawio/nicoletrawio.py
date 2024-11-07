@@ -321,6 +321,10 @@ class NicoletRawIO(BaseRawIO):
                 value = ''.join([read_as_list(fid,
                                     [('value', 'S2')]) for _ in range(int(str_setup[i + 1]) + 1)]).strip()
                 patient_info[self.INFO_PROPS[int(id_temp) - 1]] = value
+        
+        for prop in self.INFO_PROPS:
+            if prop not in patient_info.keys():
+                patient_info[prop] = None
         self.patient_info = patient_info
     
     def _get_signal_properties(self):
