@@ -552,43 +552,47 @@ class NicoletRawIO(BaseRawIO):
                         [('label', 'S2', 32)],
                         ]
                     n_events += 1
-                    fid.seek(8, 1)
-                    event = read_as_dict(fid,
-                                         event_structure[0])
-                    fid.seek(48, 1)
-                    event = event | read_as_dict(fid,
-                                                 event_structure[1])
-                    fid.seek(16, 1)
-                    event = event | read_as_dict(fid,
-                                                 event_structure[2])
-                    event['date'] = datetime.fromtimestamp(event['date_ole']*self.SEC_PER_DAY + event['date_fraction'] - self.UNIX_TIME_CONVERSION)
-                    event['timestamp'] = (event['date'] - self.segments_properties[0]['date']).total_seconds()
-                    event['guid'] = _convert_to_guid(event['guid'])
                     try:
-                        id_str = self.HC_EVENT[event['guid']]
+                        fid.seek(8, 1)
+                        event = read_as_dict(fid,
+                                            event_structure[0])
+                        fid.seek(48, 1)
+                        event = event | read_as_dict(fid,
+                                                    event_structure[1])
+                        fid.seek(16, 1)
+                        event = event | read_as_dict(fid,
+                                                    event_structure[2])
+                        event['date'] = datetime.fromtimestamp(event['date_ole']*self.SEC_PER_DAY + event['date_fraction'] - self.UNIX_TIME_CONVERSION)
+                        event['timestamp'] = (event['date'] - self.segments_properties[0]['date']).total_seconds()
+                        event['guid'] = _convert_to_guid(event['guid'])
+                        try:
+                            id_str = self.HC_EVENT[event['guid']]
+                        except:
+                            id_str = 'UNKNOWN'
+                        if id_str == 'Annotation':
+                            fid.seek(31, 1)
+                            annotation = read_as_list(fid,
+                                                    [('annotation', 'S2', event['text_length'])])
+                        else:
+                            annotation = ''
+                        event['id_str'] = id_str
+                        event['annotation'] = annotation   
+                        event['block_index'] = 0
+                        seg_index = 0
+                        segment_time_range = [segment['date'] for segment in self.segments_properties]
+                        for segment_time in segment_time_range[1:]:
+                            if segment_time < event['date']:
+                                seg_index += 1
+                        event['seg_index'] = seg_index
+                        events.append(event)
+                        event['type'] = '0' if event['duration'] == 0 else '1'
                     except:
-                        id_str = 'UNKNOWN'
-                    if id_str == 'Annotation':
-                        fid.seek(31, 1)
-                        annotation = read_as_list(fid,
-                                                  [('annotation', 'S2', event['text_length'])])
-                    else:
-                        annotation = ''
-                    event['id_str'] = id_str
-                    event['annotation'] = annotation   
-                    event['block_index'] = 0
-                    seg_index = 0
-                    segment_time_range = [segment['date'] for segment in self.segments_properties]
-                    for segment_time in segment_time_range[1:]:
-                        if segment_time < event['date']:
-                            seg_index += 1
-                    event['seg_index'] = seg_index
-                    events.append(event)
-                    event['type'] = '0' if event['duration'] == 0 else '1'
+                        warnings.warn(f'Not all events could not be read, only {n_events - 1} events were read', BytesWarning)
+                        break
                     offset += int(pkt['len'])
                     fid.seek(offset)
                     pkt = read_as_dict(fid,
-                                       pkt_structure)
+                                    pkt_structure)
                     pkt['guid'] = _convert_to_guid(pkt['guid'])
         self.events = events
         pass
