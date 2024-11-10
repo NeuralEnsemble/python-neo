@@ -13,7 +13,7 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         "openephysbinary/v0.5.x_two_nodes",
         "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
         "openephysbinary/v0.6.x_neuropixels_with_sync",
-        "openephysbinary/v0.6.x_neuropixels_missing_folders"
+        "openephysbinary/v0.6.x_neuropixels_missing_folders",
     ]
 
     def test_sync(self):
