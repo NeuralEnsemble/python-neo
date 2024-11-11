@@ -94,6 +94,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
         This doesn't work for all types of spikegadgets
         see: https://github.com/NeuralEnsemble/python-neo/issues/1517
 
+        If there are any missing hardware channels, they must be specified in missing_hw_chans.
+        See: https://github.com/NeuralEnsemble/python-neo/issues/1592
         """
         ephys_channel_ids_list = []
         for local_hw_channel in range(n_channels_per_chip):
