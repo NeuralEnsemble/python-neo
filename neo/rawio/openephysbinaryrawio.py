@@ -12,6 +12,7 @@ Author: Julia Sprenger, Samuel Garcia, and Alessio Buccino
 import os
 import json
 from pathlib import Path
+from warnings import warn
 
 import numpy as np
 
@@ -570,6 +571,15 @@ def explore_folder(dirname, experiment_names=None):
                         stream_name = node_name + "#" + oe_stream_name
                     else:
                         stream_name = oe_stream_name
+
+                    # skip streams if folder is on oebin, but doesn't exist
+                    if not (recording_folder / "continuous" / info["folder_name"]).is_dir():
+                        warn(
+                            f"For {recording_folder} the folder continuous/{info['folder_name']} is missing. "
+                            f"Skipping {stream_name} continuous stream."
+                        )
+                        continue
+
                     raw_filename = recording_folder / "continuous" / info["folder_name"] / "continuous.dat"
 
                     # Updates for OpenEphys v0.6:
@@ -603,6 +613,14 @@ def explore_folder(dirname, experiment_names=None):
                         stream_name = node_name + "#" + oe_stream_name
                     else:
                         stream_name = oe_stream_name
+
+                    # skip streams if folder is on oebin, but doesn't exist
+                    if not (recording_folder / "events" / info["folder_name"]).is_dir():
+                        warn(
+                            f"For {recording_folder} the folder events/{info['folder_name']} is missing. "
+                            f"Skipping {stream_name} event stream."
+                        )
+                        continue
 
                     event_stream = info.copy()
                     for name in _possible_event_stream_names:
