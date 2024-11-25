@@ -93,7 +93,8 @@ def check_signal_stream_buffer_hierachy(reader):
             assert stream["buffer_id"] in h["signal_buffers"]["id"]
 
     for channel in h["signal_channels"]:
-        assert channel["stream_id"] in h["signal_streams"]["id"]
+        if channel["stream_id"] != "":
+            assert channel["stream_id"] in h["signal_streams"]["id"]
         if channel["buffer_id"] != "":
             assert channel["buffer_id"] in h["signal_buffers"]["id"]
 
@@ -152,7 +153,10 @@ def iter_over_sig_chunks(reader, stream_index, channel_indexes, chunksize=1024):
         for seg_index in range(nb_seg):
             sig_size = reader.get_signal_size(block_index, seg_index, stream_index)
 
-            nb = sig_size // chunksize + 1
+            nb = int(np.floor(sig_size / chunksize))
+            if sig_size % chunksize > 0:
+                nb += 1
+
             for i in range(nb):
                 i_start = i * chunksize
                 i_stop = min((i + 1) * chunksize, sig_size)
@@ -477,3 +481,34 @@ def read_events(reader):
 
 def has_annotations(reader):
     assert hasattr(reader, "raw_annotations"), "raw_annotation are not set"
+
+
+def check_buffer_api(reader):
+    buffer_ids = reader.header["signal_buffers"]["id"]
+
+    nb_block = reader.block_count()
+    nb_event_channel = reader.event_channels_count()
+
+    for block_index in range(nb_block):
+        nb_seg = reader.segment_count(block_index)
+        for seg_index in range(nb_seg):
+            for buffer_id in buffer_ids:
+                descr = reader.get_analogsignal_buffer_description(
+                    block_index=block_index, seg_index=seg_index, buffer_id=buffer_id
+                )
+                assert descr["type"] in ("raw", "hdf5"), "buffer_description type uncorrect"
+
+                try:
+                    import xarray
+
+                    HAVE_XARRAY = True
+                except ImportError:
+                    HAVE_XARRAY = False
+
+                if HAVE_XARRAY:
+                    # this test quickly the experimental xaray_utils.py if xarray is present on the system
+                    # this is not the case for the CI
+                    from neo.rawio.xarray_utils import to_xarray_dataset
+
+                    ds = to_xarray_dataset(reader, block_index=block_index, seg_index=seg_index, buffer_id=buffer_id)
+                    assert isinstance(ds, xarray.Dataset)

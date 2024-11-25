@@ -155,7 +155,9 @@ class PlexonRawIO(BaseRawIO):
         if self.progress_bar:
             progress_bar.close()
 
-        self._last_timestamps = bl_header["UpperByteOf5ByteTimestamp"] * 2**32 + bl_header["TimeStamp"]
+        upper_byte_of_5_byte_timestamp = int(bl_header["UpperByteOf5ByteTimestamp"])
+        bl_header_timestamp = int(bl_header["TimeStamp"])
+        self._last_timestamps = upper_byte_of_5_byte_timestamp * 2**32 + bl_header_timestamp
 
         # ... and finalize them in self._data_blocks
         # for a faster access depending on type (1, 4, 5)
@@ -309,6 +311,7 @@ class PlexonRawIO(BaseRawIO):
                 # In that case we use the channel prefix both as stream id and name
                 buffer_id = ""
                 stream_name = stream_id_to_stream_name.get(stream_id, stream_id)
+                buffer_id = ""
                 signal_streams.append((stream_name, stream_id, buffer_id))
 
             signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)

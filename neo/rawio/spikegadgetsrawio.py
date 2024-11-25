@@ -273,6 +273,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+
         # no buffer concept here data are too fragmented
         signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 

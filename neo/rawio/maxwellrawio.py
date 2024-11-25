@@ -27,7 +27,7 @@ from urllib.request import urlopen
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
@@ -38,7 +38,7 @@ from .baserawio import (
 from neo.core import NeoReadWriteError
 
 
-class MaxwellRawIO(BaseRawIO):
+class MaxwellRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading MaxOne or MaxTwo files.
 
@@ -59,7 +59,7 @@ class MaxwellRawIO(BaseRawIO):
     rawmode = "one-file"
 
     def __init__(self, filename="", rec_name=None):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
         self.rec_name = rec_name
 
@@ -119,10 +119,12 @@ class MaxwellRawIO(BaseRawIO):
 
         # create signal channels
         max_sig_length = 0
-        self._signals = {}
+        self._buffer_descriptions = {0: {0: {}}}
+        self._stream_buffer_slice = {}
         sig_channels = []
         well_indices_to_remove = []
         for stream_index, stream_id in enumerate(signal_streams["id"]):
+
             if int(version) == 20160704:
                 sr = 20000.0
                 settings = h5file["settings"]
@@ -135,11 +137,11 @@ class MaxwellRawIO(BaseRawIO):
                     else:
                         gain = settings["gain"][0]
                     gain_uV = 3.3 / (1024 * gain) * 1e6
-                sigs = h5file["sig"]
+                hdf5_path = "sig"
                 mapping = h5file["mapping"]
                 ids = np.array(mapping["channel"])
                 ids = ids[ids >= 0]
-                self._channel_slice = ids
+                self._stream_buffer_slice[stream_id] = ids
             elif int(version) > 20160704:
                 settings = h5file["wells"][stream_id][self.rec_name]["settings"]
                 sr = settings["sampling"][0]
@@ -154,11 +156,24 @@ class MaxwellRawIO(BaseRawIO):
                     gain_uV = 3.3 / (1024 * gain) * 1e6
                 mapping = settings["mapping"]
                 if "routed" in h5file["wells"][stream_id][self.rec_name]["groups"]:
-                    sigs = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["raw"]
+                    hdf5_path = f"/wells/{stream_id}/{self.rec_name}/groups/routed/raw"
                 else:
                     warnings.warn(f"No 'routed' group found for well {stream_id}")
                     well_indices_to_remove.append(stream_index)
                     continue
+
+                self._stream_buffer_slice[stream_id] = None
+
+            buffer_id = stream_id
+            shape = h5file[hdf5_path].shape
+            self._buffer_descriptions[0][0][buffer_id] = {
+                "type": "hdf5",
+                "file_path": str(self.filename),
+                "hdf5_path": hdf5_path,
+                "shape": shape,
+                "time_axis": 1,
+            }
+            self._stream_buffer_slice[stream_id] = slice(None)
 
             channel_ids = np.array(mapping["channel"])
             electrode_ids = np.array(mapping["electrode"])
@@ -175,8 +190,7 @@ class MaxwellRawIO(BaseRawIO):
                     (ch_name, str(chan_id), sr, "uint16", "uV", gain_uV, offset_uV, stream_id, buffer_id)
                 )
 
-            self._signals[stream_id] = sigs
-            max_sig_length = max(max_sig_length, sigs.shape[1])
+            max_sig_length = max(max_sig_length, shape[1])
 
         self._t_stop = max_sig_length / sr
 
@@ -210,57 +224,22 @@ class MaxwellRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._t_stop
 
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        stream_id = self.header["signal_streams"][stream_index]["id"]
-        sigs = self._signals[stream_id]
-        return sigs.shape[1]
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        stream_id = self.header["signal_streams"][stream_index]["id"]
-        sigs = self._signals[stream_id]
-
-        if i_start is None:
-            i_start = 0
-        if i_stop is None:
-            i_stop = sigs.shape[1]
-
-        resorted_indexes = None
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        else:
-            if np.array(channel_indexes).size > 1 and np.any(np.diff(channel_indexes) < 0):
-                # get around h5py constraint that it does not allow datasets
-                # to be indexed out of order
-                order_f = np.argsort(channel_indexes)
-                sorted_channel_indexes = channel_indexes[order_f]
-                # use argsort again on order_f to obtain resorted_indexes
-                resorted_indexes = np.argsort(order_f)
-
         try:
-            if resorted_indexes is None:
-                if self._old_format:
-                    sigs = sigs[self._channel_slice, i_start:i_stop]
-                    sigs = sigs[channel_indexes]
-                else:
-                    sigs = sigs[channel_indexes, i_start:i_stop]
-            else:
-                if self._old_format:
-                    sigs = sigs[self._channel_slice, i_start:i_stop]
-                    sigs = sigs[sorted_channel_indexes]
-                else:
-                    sigs = sigs[sorted_channel_indexes, i_start:i_stop]
-                sigs = sigs[resorted_indexes]
+            return super()._get_analogsignal_chunk(
+                block_index, seg_index, i_start, i_stop, stream_index, channel_indexes
+            )
         except OSError as e:
             print("*" * 10)
             print(_hdf_maxwell_error)
             print("*" * 10)
             raise (e)
-        sigs = sigs.T
-
-        return sigs
 
 
 _hdf_maxwell_error = """Maxwell file format is based on HDF5.

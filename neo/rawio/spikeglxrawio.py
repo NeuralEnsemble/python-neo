@@ -57,16 +57,17 @@ import re
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from .utils import get_memmap_shape
 
 
-class SpikeGLXRawIO(BaseRawIO):
+class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading data from a SpikeGLX system
 
@@ -108,7 +109,7 @@ class SpikeGLXRawIO(BaseRawIO):
     rawmode = "one-dir"
 
     def __init__(self, dirname="", load_sync_channel=False, load_channel_location=False):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
         self.load_sync_channel = load_sync_channel
         self.load_channel_location = load_channel_location
@@ -124,21 +125,32 @@ class SpikeGLXRawIO(BaseRawIO):
         stream_names = sorted(list(srates.keys()), key=lambda e: srates[e])[::-1]
         nb_segment = np.unique([info["seg_index"] for info in self.signals_info_list]).size
 
-        self._memmaps = {}
+        # self._memmaps = {}
         self.signals_info_dict = {}
+        # one unique block
+        self._buffer_descriptions = {0: {}}
+        self._stream_buffer_slice = {}
         for info in self.signals_info_list:
-            # key is (seg_index, stream_name)
-            key = (info["seg_index"], info["stream_name"])
+            seg_index, stream_name = info["seg_index"], info["stream_name"]
+            key = (seg_index, stream_name)
             if key in self.signals_info_dict:
                 raise KeyError(f"key {key} is already in the signals_info_dict")
             self.signals_info_dict[key] = info
 
-            # create memmap
-            data = np.memmap(info["bin_file"], dtype="int16", mode="r", offset=0, order="C")
-            # this should be (info['sample_length'], info['num_chan'])
-            # be some file are shorten
-            data = data.reshape(-1, info["num_chan"])
-            self._memmaps[key] = data
+            buffer_id = stream_name
+            block_index = 0
+
+            if seg_index not in self._buffer_descriptions[0]:
+                self._buffer_descriptions[block_index][seg_index] = {}
+
+            self._buffer_descriptions[block_index][seg_index][buffer_id] = {
+                "type": "raw",
+                "file_path": info["bin_file"],
+                "dtype": "int16",
+                "order": "C",
+                "file_offset": 0,
+                "shape": get_memmap_shape(info["bin_file"], "int16", num_channels=info["num_chan"], offset=0),
+            }
 
         # create channel header
         signal_buffers = []
@@ -153,6 +165,7 @@ class SpikeGLXRawIO(BaseRawIO):
             signal_buffers.append((buffer_name, buffer_id))
 
             stream_id = stream_name
+
             stream_index = stream_names.index(info["stream_name"])
             signal_streams.append((stream_name, stream_id, buffer_id))
 
@@ -173,10 +186,17 @@ class SpikeGLXRawIO(BaseRawIO):
                         buffer_id,
                     )
                 )
+
+            # all channel by dafult unless load_sync_channel=False
+            self._stream_buffer_slice[stream_id] = None
             # check sync channel validity
             if "nidq" not in stream_name:
                 if not self.load_sync_channel and info["has_sync_trace"]:
-                    signal_channels = signal_channels[:-1]
+                    # the last channel is remove from the stream but not from the buffer
+                    last_chan = signal_channels[-1]
+                    last_chan = last_chan[:-2] + ("", buffer_id)
+                    signal_channels = signal_channels[:-1] + [last_chan]
+                    self._stream_buffer_slice[stream_id] = slice(0, -1)
                 if self.load_sync_channel and not info["has_sync_trace"]:
                     raise ValueError("SYNC channel is not present in the recording. " "Set load_sync_channel to False")
 
@@ -261,42 +281,8 @@ class SpikeGLXRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._t_stops[seg_index]
 
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        stream_id = self.header["signal_streams"][stream_index]["id"]
-        memmap = self._memmaps[seg_index, stream_id]
-        return int(memmap.shape[0])
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
-
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        stream_id = self.header["signal_streams"][stream_index]["id"]
-        memmap = self._memmaps[seg_index, stream_id]
-        stream_name = self.header["signal_streams"]["name"][stream_index]
-
-        # take care of sync channel
-        info = self.signals_info_dict[0, stream_name]
-        if not self.load_sync_channel and info["has_sync_trace"]:
-            memmap = memmap[:, :-1]
-
-        # since we cut the memmap, we can simplify the channel selection
-        if channel_indexes is None:
-            channel_selection = slice(None)
-        elif isinstance(channel_indexes, slice):
-            channel_selection = channel_indexes
-        elif not isinstance(channel_indexes, slice):
-            if np.all(np.diff(channel_indexes) == 1):
-                # consecutive channel then slice this avoid a copy (because of ndarray.take(...)
-                # and so keep the underlying memmap
-                channel_selection = slice(channel_indexes[0], channel_indexes[0] + len(channel_indexes))
-            else:
-                channel_selection = channel_indexes
-        else:
-            raise ValueError("get_analogsignal_chunk : channel_indexes" "must be slice or list or array of int")
-
-        raw_signals = memmap[slice(i_start, i_stop), channel_selection]
-
-        return raw_signals
 
     def _event_count(self, event_channel_idx, block_index=None, seg_index=None):
         timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_idx, None, None)
@@ -335,6 +321,9 @@ class SpikeGLXRawIO(BaseRawIO):
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         return None
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
 def scan_files(dirname):
