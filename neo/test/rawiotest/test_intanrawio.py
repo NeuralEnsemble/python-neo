@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+from pathlib import Path
 
 from neo.rawio.intanrawio import IntanRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -66,6 +67,23 @@ class TestIntanRawIO(
         )
         np.testing.assert_array_equal(signal_array_annotations["board_stream_num"][:10], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
+    
+    def test_correct_reading_one_file_per_channel(self):
+        # Test reading of one-file-per-channel format file. The channels should match the raw files
+        file_path = Path(self.get_local_path("intan/intan_fpc_test_231117_052630/info.rhd"))
+        intan_reader = IntanRawIO(filename=file_path)
+        intan_reader.parse_header()
+
+        # This should be the folder where the files of all the channels are stored
+        folder_path = file_path.parent
+        amplifier_file_paths = [p for p in folder_path.iterdir() if "amp" in p.name]
+        
+        channel_names = [p.name[4:-4] for p in amplifier_file_paths]
+
+        for channel_name, amplifier_file_path in zip(channel_names, amplifier_file_paths):
+            data_raw = np.fromfile(amplifier_file_path, dtype=np.int16).squeeze()
+            data_from_neo = intan_reader.get_analogsignal_chunk(channel_ids=[channel_name], stream_index=0).squeeze()
+            np.testing.assert_allclose(data_raw, data_from_neo)
 
 if __name__ == "__main__":
     unittest.main()
