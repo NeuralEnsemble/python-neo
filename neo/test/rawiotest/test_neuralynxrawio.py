@@ -177,6 +177,75 @@ class TestNeuralynxRawIO(
         self.assertEqual(len(rawio.header["spike_channels"]), 8)
         self.assertEqual(len(rawio.header["event_channels"]), 0)
 
+    def test_keep_original_times(self):
+        # Cheetah_5.5.1 has .ncs, .nse and .nev files all with different start times for each:
+        # Events.nev  26122558117
+        # STet3a.nse  26122760712
+        # STet3b.nse  26122898212
+        # STet3a.ncs  26122557633
+        # STet3b.ncs  26122557633
+        dname = self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data/")
+
+        # Without keep_original_times, the global_start_time will be the first time of any signal
+        # or spike or event in seconds, corresponding to the earliest value from STet3{a|b}.ncs.
+        rawio = NeuralynxRawIO(dirname=dname)
+        rawio.parse_header()
+        self.assertEqual(26122.557633, rawio.global_t_start)
+
+        # The first time in the first stream of signals will be 0, the time of the sample relative
+        # to global_t_start, in seconds.
+        self.assertEqual(0.0, rawio.get_signal_t_start(0, 0, 0))
+
+        # The first time for the first spike in integer µS from STet3a.nse. BaseRawIO has this be
+        # as close to the raw dataformat as possible, so in this case, that is the whole number of
+        # microseconds as recorded by Neuralynx.
+        ts = rawio.get_spike_timestamps(0,0,0)
+        self.assertEqual(26122760712, ts[0])
+
+        # After rescaling, the spike timestamps are in seconds relative to global_t_start, as
+        # per BaseRawIO.
+        rts = rawio.rescale_spike_timestamp(ts)
+        self.assertAlmostEqual((26122760712 - 26122557633)/1e6, rts[0], places=6)
+
+        # The first time for the first event in µS from Events.nev, also in whole number of
+        # microseconds as recorded by Neuralynx. Return is tuple of (timestamp, durations, labels).
+        ts = rawio.get_event_timestamps(0,0,0)
+        self.assertEqual(26122558117, ts[0][0])
+
+        # After rescaling, event timestamps also are in seconds relative to global_t_start.
+        rts = rawio.rescale_spike_timestamp(ts[0])
+        self.assertAlmostEqual((26122558117 - 26122557633)/1e6, rts[0], places=6)
+
+        # With keep_original_times=True, the global_start_time is now 0, as times returned below
+        # are original, but also relative to the global_t_start.
+        rawio = NeuralynxRawIO(dirname=dname, keep_original_times=True)
+        rawio.parse_header()
+        self.assertEqual(0.0, rawio.global_t_start)
+
+        # The first time in the first stream of signals will now be the first time of any signal
+        # or spike or event in seconds, corresponding to the earliest value from STet3{a|b}.ncs,
+        # relative to the global_start_time of 0.
+        self.assertEqual(26122.557633, rawio.get_signal_t_start(0, 0, 0))
+
+        # The first time for the first spike in integer µS from STet3a.nse. BaseRawIO has this be
+        # as close to the raw dataformat as possible, so in this case, that is the whole number of
+        # microseconds as recorded by Neuralynx.
+        ts = rawio.get_spike_timestamps(0,0,0)
+        self.assertEqual(26122760712, ts[0])
+
+        # After rescaling, the spike timestamps are now in seconds relative 0.
+        rts = rawio.rescale_spike_timestamp(ts)
+        self.assertAlmostEqual(26122760712/1e6, rts[0], places=6)
+
+        # The first time for the first event in µS from Events.nev, also in whole number of
+        # microseconds as recorded by Neuralynx. Return is tuple of (timestamp, durations, labels).
+        ts = rawio.get_event_timestamps(0,0,0)
+        self.assertEqual(26122558117, ts[0][0])
+
+        # After rescaling, event timestamps also are in seconds relative to 0..
+        rts = rawio.rescale_spike_timestamp(ts[0])
+        self.assertAlmostEqual(26122558117/1e6, rts[0], places=6)
+
 
 class TestNcsRecordingType(BaseTestRawIO, unittest.TestCase):
     """
