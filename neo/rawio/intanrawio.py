@@ -185,15 +185,15 @@ class IntanRawIO(BaseRawIO):
         # based on https://github.com/NeuralEnsemble/python-neo/issues/1556 bug in versions 0.13.1, .2, .3
         elif self.file_format == "one-file-per-signal":
             self._raw_data = {}
-            for stream_index, (stream_name, stream_datatype) in enumerate(memmap_data_dtype.items()):
+            for stream_name, stream_dtype in memmap_data_dtype.items():
                 num_channels = channel_number_dict[stream_name]
                 file_path = raw_file_paths_dict[stream_name]
                 size_in_bytes = file_path.stat().st_size
-                dtype_size = np.dtype(stream_datatype).itemsize
+                dtype_size = np.dtype(stream_dtype).itemsize
                 n_samples = size_in_bytes // (dtype_size * num_channels)
                 signal_stream_memmap = np.memmap(
                     file_path,
-                    dtype=stream_datatype,
+                    dtype=stream_dtype,
                     mode="r",
                     shape=(n_samples, num_channels),
                     order="C",
@@ -203,9 +203,9 @@ class IntanRawIO(BaseRawIO):
         # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
         elif self.file_format == "one-file-per-channel":
             self._raw_data = {}
-            for stream_index, (stream_name, stream_datatype) in enumerate(memmap_data_dtype.items()):
+            for stream_name, stream_dtype in memmap_data_dtype.items():
                 channel_file_paths = raw_file_paths_dict[stream_name]
-                channel_memmap_list = [np.memmap(fp, dtype=stream_datatype, mode="r") for fp in channel_file_paths]
+                channel_memmap_list = [np.memmap(fp, dtype=stream_dtype, mode="r") for fp in channel_file_paths]
                 self._raw_data[stream_name] = channel_memmap_list
                 
 
@@ -216,6 +216,7 @@ class IntanRawIO(BaseRawIO):
 
         # signals
         signal_channels = []
+        # This is used to calculate bit masks
         self.native_channel_order = {}
         for chan_info in self._ordered_channel_info:
             name = chan_info["custom_channel_name"]
