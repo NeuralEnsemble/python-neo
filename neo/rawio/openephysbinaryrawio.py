@@ -252,47 +252,47 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     # 'states' was introduced in OpenEphys v0.6. For previous versions, events used 'channel_states'
                     if "states" in info or "channel_states" in info:
                         states = info["channel_states"] if "channel_states" in info else info["states"]
-                            
+
                         if states.size > 0:
                             timestamps = info["timestamps"]
                             labels = info["labels"]
-                            
+
                             # Identify unique channels based on state values
                             channels = np.unique(np.abs(states))
-                            
+
                             rising_indices = []
                             falling_indices = []
-                            
+
                             for channel in channels:
                                 # Find rising and falling edges for each channel
                                 rising = np.where(states == channel)[0]
                                 falling = np.where(states == -channel)[0]
-                                
+
                                 # Ensure each rising has a corresponding falling
                                 if rising.size > 0 and falling.size > 0:
                                     if rising[0] > falling[0]:
                                         falling = falling[1:]
                                     if rising.size > falling.size:
                                         rising = rising[:-1]
-                                    
+
                                     rising_indices.extend(rising)
                                     falling_indices.extend(falling)
-                            
+
                             rising_indices = np.array(rising_indices)
                             falling_indices = np.array(falling_indices)
-                            
+
                             # Sort the indices to maintain chronological order
                             sorted_order = np.argsort(rising_indices)
                             rising_indices = rising_indices[sorted_order]
                             falling_indices = falling_indices[sorted_order]
-                            
+
                             durations = None
                             if len(rising_indices) == len(falling_indices):
                                 durations = timestamps[falling_indices] - timestamps[rising_indices]
                                 if not self._use_direct_evt_timestamps:
                                     timestamps = timestamps / info["sample_rate"]
                                     durations = durations / info["sample_rate"]
-                            
+
                             info["rising"] = rising_indices
                             info["timestamps"] = timestamps[rising_indices]
                             info["labels"] = labels[rising_indices]
