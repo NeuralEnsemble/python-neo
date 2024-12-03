@@ -66,11 +66,11 @@ class BaseTestRawIO:
         """
         cls.shortname = cls.rawioclass.__name__.lower().replace("rawio", "")
 
-        if HAVE_DATALAD and cls.use_network:
-            for remote_path in cls.entities_to_download:
-                download_dataset(repo=repo_for_test, remote_path=remote_path)
-        else:
-            raise unittest.SkipTest("Requires datalad download of data from the web")
+        # if HAVE_DATALAD and cls.use_network:
+        #     for remote_path in cls.entities_to_download:
+        #         download_dataset(repo=repo_for_test, remote_path=remote_path)
+        # else:
+        #     raise unittest.SkipTest("Requires datalad download of data from the web")
 
     def get_local_base_folder(self):
         return get_local_testing_data_folder()

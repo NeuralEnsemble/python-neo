@@ -263,6 +263,11 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             rising_indices = []
                             falling_indices = []
 
+                            # all channels are packed into the same `states` array. 
+                            # So the states array includes positive and negative values for each channel:
+                            #  for example channel one rising would be +1 and channel one falling would be -1, 
+                            # channel two rising would be +2 and channel two falling would be -2, etc.
+                            # This is the case for sure for version >= 0.6.x.
                             for channel in channels:
                                 # Find rising and falling edges for each channel
                                 rising = np.where(states == channel)[0]
