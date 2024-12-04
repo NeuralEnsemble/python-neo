@@ -747,11 +747,13 @@ def read_rhs(filename, file_format: str):
 
         # Build a dictionary with channel count
         special_cases_for_counting = [
-            "DC Amplifier channel",  # Same as RHS2000 amplifier channel
-            "Stim channel",  # Same as RHS2000 amplifier channel
+            "DC Amplifier channel", 
+            "Stim channel",  
         ]
         names_to_count = [name for name in stream_names if name not in special_cases_for_counting]
         channel_number_dict = {name: len(stream_name_to_channel_info_list[name]) for name in names_to_count}
+        
+        # Both DC Amplifier and Stim streams have the same number of channels as the amplifier stream
         channel_number_dict["DC Amplifier channel"] = channel_number_dict["RHS2000 amplifier channel"]
         channel_number_dict["Stim channel"] = channel_number_dict["RHS2000 amplifier channel"]
 
@@ -1264,6 +1266,8 @@ def create_one_file_per_channel_dict_rhd(dirname):
     raw_files_paths_dict: dict
         A dict of all the file paths
     """
+    # Developer note, at the moment, the channels require to be n in order
+    # See https://github.com/NeuralEnsemble/python-neo/issues/1599 fo
 
     file_names = dirname.glob("**/*.dat")
     files = [file for file in file_names if file.is_file()]
@@ -1316,9 +1320,7 @@ def create_one_file_per_channel_dict_rhs(
         sorted_stream_files = sorted(stream_files, key=file_path_to_channel_name)
         raw_file_paths_dict[stream_name] = sorted_stream_files
 
-    # we need time to be the last value
     raw_file_paths_dict["timestamp"] = [Path(dirname / "time.dat")]
-    # 10 and 11 are hardcoded in the rhs reader so hardcoded here
     raw_file_paths_dict["DC Amplifier channel"] = [file for file in files if "dc-" in file.name]
     # we can find the files, but I can see how to read them out of header
     # so for now we don't expose the stim files in one-file-per-channel

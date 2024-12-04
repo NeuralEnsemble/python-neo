@@ -69,6 +69,7 @@ class TestIntanRawIO(
 
     
     def test_correct_reading_one_file_per_channel(self):
+        "Issue: https://github.com/NeuralEnsemble/python-neo/issues/1599"
         # Test reading of one-file-per-channel format file. The channels should match the raw files
         file_path = Path(self.get_local_path("intan/intan_fpc_test_231117_052630/info.rhd"))
         intan_reader = IntanRawIO(filename=file_path)
