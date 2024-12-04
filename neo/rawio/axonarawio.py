@@ -558,7 +558,7 @@ class AxonaRawIO(BaseRawIO):
                     active_tetrodes.append(tetrode_id)
         return active_tetrodes
     
-    def get_active_channels(self):
+    def _get_active_channels(self):
         """
         Returns the ID numbers of the active channels as a list.
         E.g.: [20,21,22,23] for tetrode 6 active.
@@ -567,8 +567,8 @@ class AxonaRawIO(BaseRawIO):
         active_channels = []
         
         for tetrode in active_tetrodes:
-            chan = self._get_channel_from_tetrode(tetrode)
-            active_channels.append(chan)
+            chans = self._get_channel_from_tetrode(tetrode)
+            active_channels.append(chans)
         
         return np.concatenate(active_channels)
 
@@ -648,7 +648,7 @@ class AxonaRawIO(BaseRawIO):
 
             for ielec in range(elec_per_tetrode):
                 cntr = (itetr * elec_per_tetrode) + ielec + first_channel
-                ch_name = "{}{}".format(itetr + active_tetrode_set[0], letters[ielec])
+                ch_name = f"{itetr + active_tetrode_set[0]}{letters[ielec]}"
                 chan_id = str(cntr)
                 gain = gain_list[cntr]
                 stream_id = "0"
