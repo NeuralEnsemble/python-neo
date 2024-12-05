@@ -84,12 +84,9 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     -----
     * Contrary to other implementations this IO reads the entire folder and subfolders and:
       deals with several segments based on the `_gt0`, `_gt1`, `_gt2`, etc postfixes
-      deals with all signals "imec0", "imec1" for neuropixel probes and also
-      external signal like"nidq". This is the "device"
-    * For imec device both "ap" and "lf" are extracted so one device have several "streams"
-    * There are several versions depending the neuropixel probe generation (`1.x`/`2.x`/`3.x`)
-    * Here, we assume that the `meta` file has the same structure across all generations.
-    * This IO is developed based on neuropixel generation 2.0, single shank recordings.
+      deals with all signals coming from different acquisition cards ("imec0", "imec1", etc) in a typical 
+      PXIe chassis and also external signal like"nidq". This is the "device"
+    * For imec device both "ap" and "lf" are extracted so even a one device setup has several "streams"
 
     Examples
     --------
@@ -125,7 +122,6 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         stream_names = sorted(list(srates.keys()), key=lambda e: srates[e])[::-1]
         nb_segment = np.unique([info["seg_index"] for info in self.signals_info_list]).size
 
-        # self._memmaps = {}
         self.signals_info_dict = {}
         # one unique block
         self._buffer_descriptions = {0: {}}
@@ -166,7 +162,6 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
             stream_id = stream_name
 
-            stream_index = stream_names.index(info["stream_name"])
             signal_streams.append((stream_name, stream_id, buffer_id))
 
             # add channels to global list
@@ -250,7 +245,6 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         # insert some annotation at some place
         self._generate_minimal_annotations()
         self._generate_minimal_annotations()
-        block_ann = self.raw_annotations["blocks"][0]
 
         for seg_index in range(nb_segment):
             seg_ann = self.raw_annotations["blocks"][0]["segments"][seg_index]
@@ -354,17 +348,17 @@ def scan_files(dirname):
     if len(info_list) == 0:
         raise FileNotFoundError(f"No appropriate combination of .meta and .bin files were detected in {dirname}")
 
-    # the segment index will depend on both 'gate_num' and 'trigger_num'
+    # the segment index will depend on both 'gate_num' and 'trigger_num' and on "dock_num"
     # so we order by 'gate_num' then 'trigger_num'
     # None is before any int
     def make_key(info):
-        k0 = info["gate_num"]
-        if k0 is None:
-            k0 = -1
-        k1 = info["trigger_num"]
-        if k1 is None:
-            k1 = -1
-        return (k0, k1)
+        gate_num = info["gate_num"]
+        if gate_num is None:
+            gate_num = -1
+        trigger_num = info["trigger_num"]
+        if trigger_num is None:
+            trigger_num = -1
+        return (gate_num, trigger_num)
 
     order_key = list({make_key(info) for info in info_list})
     order_key = sorted(order_key)
@@ -488,9 +482,21 @@ def extract_stream_info(meta_file, meta):
     else:
         # NIDQ case
         has_sync_trace = False
-    fname = Path(meta_file).stem
+    
+    bin_file_path = meta["fileName"]
+    fname = Path(bin_file_path).stem
+    
+    
+    # First we check if the gate, trigger and dock numbers are present in the meta
+    
+    probe_slot = meta.get("imDatPrb_slot", None)
+    probe_port = meta.get("imDatPrb_port", None)
+    probe_dock = meta.get("imDatPrb_dock", None) 
+    
+    
     run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
-
+    # x = 1
+    
     if "imec" in fname.split(".")[-2]:
         device = fname.split(".")[-2]
         stream_kind = fname.split(".")[-1]
