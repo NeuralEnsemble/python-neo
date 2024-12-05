@@ -267,7 +267,7 @@ class BaseSignal(DataObject):
             stack,
             units=self.units,
             dtype=self.dtype,
-            copy=False,
+            copy=None,
             t_start=self.t_start,
             sampling_rate=self.sampling_rate,
             **kwargs,

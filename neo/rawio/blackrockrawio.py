@@ -72,6 +72,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -253,6 +254,7 @@ class BlackrockRawIO(BaseRawIO):
 
         event_channels = []
         spike_channels = []
+        signal_buffers = []
         signal_streams = []
         signal_channels = []
 
@@ -399,7 +401,11 @@ class BlackrockRawIO(BaseRawIO):
                         ext_header.append(d)
 
                 if len(ext_header) > 0:
-                    signal_streams.append((f"nsx{nsx_nb}", str(nsx_nb)))
+                    # in blackrock : one stream per buffer so same id
+                    buffer_id = stream_id = str(nsx_nb)
+                    stream_name = f"nsx{nsx_nb}"
+                    signal_buffers.append((stream_name, buffer_id))
+                    signal_streams.append((stream_name, stream_id, buffer_id))
                 for i, chan in enumerate(ext_header):
                     if spec in ["2.2", "2.3", "3.0"]:
                         ch_name = chan["electrode_label"].decode()
@@ -420,8 +426,8 @@ class BlackrockRawIO(BaseRawIO):
                             float(chan["max_digital_val"]) - float(chan["min_digital_val"])
                         )
                         offset = -float(chan["min_digital_val"]) * gain + float(chan["min_analog_val"])
-                    stream_id = str(nsx_nb)
-                    signal_channels.append((ch_name, ch_id, sr, sig_dtype, units, gain, offset, stream_id))
+                    buffer_id = stream_id = str(nsx_nb)
+                    signal_channels.append((ch_name, ch_id, sr, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
             # check nb segment per nsx
             nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]
@@ -509,10 +515,12 @@ class BlackrockRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [self._nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -986,7 +994,8 @@ class BlackrockRawIO(BaseRawIO):
         index = 0
 
         if offset is None:
-            offset = self.__nsx_basic_header[nsx_nb]["bytes_in_headers"]
+            # This is read as an uint32 numpy scalar from the header so we transform it to python int
+            offset = int(self.__nsx_basic_header[nsx_nb]["bytes_in_headers"])
 
         ptp_dt = [
             ("reserved", "uint8"),

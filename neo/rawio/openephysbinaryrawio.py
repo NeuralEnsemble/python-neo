@@ -12,19 +12,23 @@ Author: Julia Sprenger, Samuel Garcia, and Alessio Buccino
 import os
 import json
 from pathlib import Path
+from warnings import warn
 
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
 
+from .utils import get_memmap_shape
 
-class OpenEphysBinaryRawIO(BaseRawIO):
+
+class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     """
     Handle several Blocks and several Segments.
 
@@ -61,7 +65,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     rawmode = "one-dir"
 
     def __init__(self, dirname="", load_sync_channel=False, experiment_names=None):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
         if experiment_names is not None:
             if isinstance(experiment_names, str):
@@ -120,12 +124,14 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         for stream_index, stream_name in enumerate(sig_stream_names):
             # stream_index is the index in vector sytream names
             stream_id = str(stream_index)
+            buffer_id = stream_id
             info = self._sig_streams[0][0][stream_index]
             new_channels = []
             for chan_info in info["channels"]:
                 chan_id = chan_info["channel_name"]
                 if "SYNC" in chan_id and not self.load_sync_channel:
-                    continue
+                    # the channel is removed from stream but not the buffer
+                    stream_id = ""
                 if chan_info["units"] == "":
                     # in some cases for some OE version the unit is "", but the gain is to "uV"
                     units = "uV"
@@ -141,25 +147,43 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         chan_info["bit_volts"],
                         0.0,
                         stream_id,
+                        buffer_id,
                     )
                 )
             signal_channels.extend(new_channels)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         signal_streams = []
+        signal_buffers = []
         for stream_index, stream_name in enumerate(sig_stream_names):
             stream_id = str(stream_index)
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = str(stream_index)
+            signal_buffers.append((stream_name, buffer_id))
+            signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
         # create memmap for signals
+        self._buffer_descriptions = {}
+        self._stream_buffer_slice = {}
         for block_index in range(nb_block):
+            self._buffer_descriptions[block_index] = {}
             for seg_index in range(nb_segment_per_block[block_index]):
+                self._buffer_descriptions[block_index][seg_index] = {}
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(info["channels"])
-                    memmap_sigs = np.memmap(info["raw_filename"], info["dtype"], order="C", mode="r").reshape(
-                        -1, num_channels
-                    )
+                    stream_id = str(stream_index)
+                    buffer_id = str(stream_index)
+                    shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels, offset=0)
+                    self._buffer_descriptions[block_index][seg_index][buffer_id] = {
+                        "type": "raw",
+                        "file_path": str(info["raw_filename"]),
+                        "dtype": info["dtype"],
+                        "order": "C",
+                        "file_offset": 0,
+                        "shape": shape,
+                    }
+
                     has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
 
                     # check sync channel validity (only for AP and LF)
@@ -167,7 +191,11 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         raise ValueError(
                             "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
                         )
-                    info["memmap"] = memmap_sigs
+
+                    if has_sync_trace and not self.load_sync_channel:
+                        self._stream_buffer_slice[stream_id] = slice(None, -1)
+                    else:
+                        self._stream_buffer_slice[stream_id] = None
 
         # events zone
         # channel map: one channel one stream
@@ -268,7 +296,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 # loop over signals
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     t_start = info["t_start"]
-                    dur = info["memmap"].shape[0] / float(info["sample_rate"])
+                    stream_id = str(stream_index)
+                    buffer_id = str(stream_index)
+                    sig_size = self._buffer_descriptions[block_index][seg_index][buffer_id]["shape"][0]
+                    dur = sig_size / float(info["sample_rate"])
                     t_stop = t_start + dur
                     if global_t_start is None or global_t_start > t_start:
                         global_t_start = t_start
@@ -299,6 +330,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = nb_block
         self.header["nb_segment"] = nb_segment_per_block
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -365,25 +397,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         group_id = group_ids[0]
         return group_id
 
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-        return sigs.shape[0]
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         t_start = self._sig_streams[block_index][seg_index][stream_index]["t_start"]
         return t_start
-
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-        has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
-
-        if not self.load_sync_channel and has_sync_trace:
-            sigs = sigs[:, :-1]
-
-        sigs = sigs[i_start:i_stop, :]
-        if channel_indexes is not None:
-            sigs = sigs[:, channel_indexes]
-        return sigs
 
     def _spike_count(self, block_index, seg_index, unit_index):
         pass
@@ -441,6 +457,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         else:
             durations = raw_duration.astype(dtype)
         return durations
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
 _possible_event_stream_names = (
@@ -552,6 +571,15 @@ def explore_folder(dirname, experiment_names=None):
                         stream_name = node_name + "#" + oe_stream_name
                     else:
                         stream_name = oe_stream_name
+
+                    # skip streams if folder is on oebin, but doesn't exist
+                    if not (recording_folder / "continuous" / info["folder_name"]).is_dir():
+                        warn(
+                            f"For {recording_folder} the folder continuous/{info['folder_name']} is missing. "
+                            f"Skipping {stream_name} continuous stream."
+                        )
+                        continue
+
                     raw_filename = recording_folder / "continuous" / info["folder_name"] / "continuous.dat"
 
                     # Updates for OpenEphys v0.6:
@@ -585,6 +613,14 @@ def explore_folder(dirname, experiment_names=None):
                         stream_name = node_name + "#" + oe_stream_name
                     else:
                         stream_name = oe_stream_name
+
+                    # skip streams if folder is on oebin, but doesn't exist
+                    if not (recording_folder / "events" / info["folder_name"]).is_dir():
+                        warn(
+                            f"For {recording_folder} the folder events/{info['folder_name']} is missing. "
+                            f"Skipping {stream_name} event stream."
+                        )
+                        continue
 
                     event_stream = info.copy()
                     for name in _possible_event_stream_names:

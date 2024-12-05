@@ -25,6 +25,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -199,6 +200,7 @@ class AxonaRawIO(BaseRawIO):
         params["set"]["sampling_rate"] = int(set_dict["rawRate"])
 
         # SCAN BIN FILE
+        signal_buffers = []
         signal_streams = []
         signal_channels = []
         if self.bin_file:
@@ -289,6 +291,7 @@ class AxonaRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = np.array(signal_buffers, dtype=_signal_buffer_dtype)
         self.header["signal_streams"] = np.array(signal_streams, dtype=_signal_stream_dtype)
         self.header["signal_channels"] = np.array(signal_channels, dtype=_signal_channel_dtype)
         self.header["spike_channels"] = np.array(spike_channels, dtype=_spike_channel_dtype)
@@ -315,7 +318,7 @@ class AxonaRawIO(BaseRawIO):
 
     def _get_signal_streams_header(self):
         # create signals stream information (we always expect a single stream)
-        return np.array([("stream 0", "0")], dtype=_signal_stream_dtype)
+        return np.array([("stream 0", "0", "")], dtype=_signal_stream_dtype)
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.0
@@ -652,10 +655,11 @@ class AxonaRawIO(BaseRawIO):
                 chan_id = str(cntr)
                 gain = gain_list[cntr]
                 stream_id = "0"
+                buffer_id = ""
                 # the sampling rate information is stored in the set header
                 # and not in the bin file
                 sr = self.file_parameters["set"]["sampling_rate"]
-                sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+                sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
 
         return np.array(sig_channels, dtype=_signal_channel_dtype)
 

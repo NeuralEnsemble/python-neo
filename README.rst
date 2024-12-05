@@ -31,10 +31,13 @@ A project with similar aims but for neuroimaging file formats is `NiBabel`_.
 Code status
 -----------
 
+.. image:: https://img.shields.io/pypi/v/neo.svg
+   :target: https://pypi.python.org/pypi/neo
+   :alt: PyPI Release Version
 .. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/core-test.yml/badge.svg?event=push&branch=master
    :target: https://github.com/NeuralEnsemble/python-neo/actions?query=event%3Apush+branch%3Amaster
    :alt: Core Test Status (Github Actions)
-.. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/io-test.yml/badge.svg?event=push&branch=master
+.. image:: https://github.com/NeuralEnsemble/python-neo/actions/workflows/io-test_trigger.yml/badge.svg?event=push&branch=master
    :target: https://github.com/NeuralEnsemble/python-neo/actions?query=event%3Apush+branch%3Amaster
    :alt: IO Test Status (Github Actions)
 .. image:: https://coveralls.io/repos/NeuralEnsemble/python-neo/badge.png
@@ -64,7 +67,8 @@ grant agreement FETPI-015879 (FACETS), by the European Union Seventh Framework P
 under grant agreements no. 269921 (BrainScaleS) and no. 604102 (HBP),
 and by the European Union’s Horizon 2020 Framework Programme for
 Research and Innovation under the Specific Grant Agreements No. 720270 (Human Brain Project SGA1),
-No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3).
+No. 785907 (Human Brain Project SGA2) and No. 945539 (Human Brain Project SGA3),
+and by the European Union's Research and Innovation Program Horizon Europe Grant Agreement No. 101147319 (EBRAINS 2.0).
 
 .. _OpenElectrophy: https://github.com/OpenElectrophy/OpenElectrophy
 .. _Elephant: http://neuralensemble.org/elephant

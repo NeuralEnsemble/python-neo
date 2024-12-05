@@ -12,6 +12,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -114,8 +115,8 @@ class PhyRawIO(BaseRawIO):
         self._t_start = 0.0
         self._t_stop = max(self._spike_times).item() / self._sampling_frequency
 
-        signal_streams = []
-        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_streams = np.array([], dtype=_signal_stream_dtype)
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         signal_channels = []
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
@@ -138,6 +139,7 @@ class PhyRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

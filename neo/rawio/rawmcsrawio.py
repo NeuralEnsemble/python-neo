@@ -17,15 +17,17 @@ Author: Samuel Garcia
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from .utils import get_memmap_shape
 
 
-class RawMCSRawIO(BaseRawIO):
+class RawMCSRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading an mcs file converted by the MC_DataToo binary converter
 
@@ -40,7 +42,7 @@ class RawMCSRawIO(BaseRawIO):
     rawmode = "one-file"
 
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _source_name(self):
@@ -53,17 +55,31 @@ class RawMCSRawIO(BaseRawIO):
         self.sampling_rate = info["sampling_rate"]
         self.nb_channel = len(info["channel_names"])
 
-        # one unique stream
-        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+        # one unique stream and buffer with all channels
+        stream_id = "0"
+        buffer_id = "0"
+        signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
+        signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
 
-        self._raw_signals = np.memmap(self.filename, dtype=self.dtype, mode="r", offset=info["header_size"]).reshape(
-            -1, self.nb_channel
-        )
+        # self._raw_signals = np.memmap(self.filename, dtype=self.dtype, mode="r", offset=info["header_size"]).reshape(
+        #     -1, self.nb_channel
+        # )
+        file_offset = info["header_size"]
+        shape = get_memmap_shape(self.filename, self.dtype, num_channels=self.nb_channel, offset=file_offset)
+        self._buffer_descriptions = {0: {0: {}}}
+        self._buffer_descriptions[0][0][buffer_id] = {
+            "type": "raw",
+            "file_path": str(self.filename),
+            "dtype": "uint16",
+            "order": "C",
+            "file_offset": file_offset,
+            "shape": shape,
+        }
+        self._stream_buffer_slice = {stream_id: None}
 
         sig_channels = []
         for c in range(self.nb_channel):
             chan_id = str(c)
-            stream_id = "0"
             sig_channels.append(
                 (
                     info["channel_names"][c],
@@ -74,6 +90,7 @@ class RawMCSRawIO(BaseRawIO):
                     info["signal_gain"],
                     info["signal_offset"],
                     stream_id,
+                    buffer_id,
                 )
             )
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -90,6 +107,7 @@ class RawMCSRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = sig_channels
         self.header["spike_channels"] = spike_channels
@@ -102,20 +120,25 @@ class RawMCSRawIO(BaseRawIO):
         return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals.shape[0] / self.sampling_rate
+        # t_stop = self._raw_signals.shape[0] / self.sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = sig_size / self.sampling_rate
         return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        return self._raw_signals.shape[0]
+    # def _get_signal_size(self, block_index, seg_index, stream_index):
+    #     return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
-        return raw_signals
+    # def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+    #     if channel_indexes is None:
+    #         channel_indexes = slice(None)
+    #     raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
+    #     return raw_signals
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
 def parse_mcs_raw_header(filename):

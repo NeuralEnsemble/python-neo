@@ -26,6 +26,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -102,7 +103,8 @@ class CedRawIO(BaseRawIO):
                 dtype = "int16"
                 # set later after grouping
                 stream_id = "0"
-                signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+                buffer_id = ""
+                signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
 
             elif chan_type == sonpy.lib.DataType.AdcMark:
                 # spike and waveforms : only spike times is used here
@@ -142,8 +144,11 @@ class CedRawIO(BaseRawIO):
             signal_channels["stream_id"][mask] = stream_id
             num_chans = np.sum(mask)
             stream_name = f"{stream_id} {num_chans}chans"
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # buffer is unknown because using a close source API
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # spike channels not handled
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
@@ -162,6 +167,7 @@ class CedRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
