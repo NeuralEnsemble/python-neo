@@ -377,7 +377,7 @@ class AxonaRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = [i for i in range(bin_dict["num_channels"])]
         elif isinstance(channel_indexes, slice):
-            channel_indexes = self.get_active_channels()
+            channel_indexes = self._get_active_channels()
 
         num_samples = i_stop - i_start
 
