@@ -263,9 +263,9 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             rising_indices = []
                             falling_indices = []
 
-                            # all channels are packed into the same `states` array. 
+                            # all channels are packed into the same `states` array.
                             # So the states array includes positive and negative values for each channel:
-                            #  for example channel one rising would be +1 and channel one falling would be -1, 
+                            #  for example channel one rising would be +1 and channel one falling would be -1,
                             # channel two rising would be +2 and channel two falling would be -2, etc.
                             # This is the case for sure for version >= 0.6.x.
                             for channel in channels:
@@ -280,6 +280,15 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                                     if rising.size > falling.size:
                                         rising = rising[:-1]
 
+                                    # ensure that the number of rising and falling edges are the same:
+                                    if len(rising) != len(falling):
+                                        warn(
+                                            f"Channel {channel} has {len(rising)} rising edges and "
+                                            f"{len(falling)} falling edges. The number of rising and "
+                                            f"falling edges should be equal. Skipping events from this channel."
+                                        )
+                                        continue
+
                                     rising_indices.extend(rising)
                                     falling_indices.extend(falling)
 
@@ -292,11 +301,11 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             falling_indices = falling_indices[sorted_order]
 
                             durations = None
-                            if len(rising_indices) == len(falling_indices):
-                                durations = timestamps[falling_indices] - timestamps[rising_indices]
-                                if not self._use_direct_evt_timestamps:
-                                    timestamps = timestamps / info["sample_rate"]
-                                    durations = durations / info["sample_rate"]
+                            # if len(rising_indices) == len(falling_indices):
+                            durations = timestamps[falling_indices] - timestamps[rising_indices]
+                            if not self._use_direct_evt_timestamps:
+                                timestamps = timestamps / info["sample_rate"]
+                                durations = durations / info["sample_rate"]
 
                             info["rising"] = rising_indices
                             info["timestamps"] = timestamps[rising_indices]
