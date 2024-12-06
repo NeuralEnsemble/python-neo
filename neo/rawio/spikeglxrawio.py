@@ -82,11 +82,11 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
     Notes
     -----
-    * Contrary to other implementations this IO reads the entire folder and subfolders and:
-      deals with several segments based on the `_gt0`, `_gt1`, `_gt2`, etc postfixes
-      deals with all signals coming from different acquisition cards ("imec0", "imec1", etc) in a typical 
-      PXIe chassis and also external signal like"nidq". This is the "device"
-    * For imec device both "ap" and "lf" are extracted so even a one device setup has several "streams"
+    * This IO reads the entire folder and subfolders locating the `.bin` and `.meta` files
+    * Handles gates and triggers as segments (based on the `_gt0`, `_gt1`, `_t0` , `_t1` in filenames)
+    * Handles all signals coming from different acquisition cards ("imec0", "imec1", etc) in a typical
+        PXIe chassis setup and also external signal like"nidq". 
+    * For imec devices both "ap" and "lf" are extracted so even a one device setup will have several "streams"
 
     Examples
     --------
@@ -348,22 +348,31 @@ def scan_files(dirname):
     if len(info_list) == 0:
         raise FileNotFoundError(f"No appropriate combination of .meta and .bin files were detected in {dirname}")
 
-    # the segment index will depend on both 'gate_num' and 'trigger_num' and on "dock_num"
-    # so we order by 'gate_num' then 'trigger_num'
-    # None is before any int
-    def make_key(info):
-        gate_num = info["gate_num"]
-        if gate_num is None:
-            gate_num = -1
-        trigger_num = info["trigger_num"]
-        if trigger_num is None:
-            trigger_num = -1
-        return (gate_num, trigger_num)
+    # This sets non-integers values before integers
+    normalize = lambda x: x if isinstance(x, int) else -1  
 
-    order_key = list({make_key(info) for info in info_list})
-    order_key = sorted(order_key)
-    for info in info_list:
-        info["seg_index"] = order_key.index(make_key(info))
+    # Segment index is determined by the gate_num and trigger_num in that order
+    gate_trigger_tuples = [
+        (info_index, (normalize(info["gate_num"]), normalize(info["trigger_num"])))
+        for info_index, info in enumerate(info_list)
+    ]
+    
+    sorted_info = sorted(gate_trigger_tuples, key=lambda x: x[1])
+    
+    for seg_index, (info_index, _) in enumerate(sorted_info):
+        info_list[info_index]["seg_index"] = seg_index
+    
+    # Add probe_index
+    # The logic is that the probe_index is the order of the probe_slot, probe_port, and probe_dock
+    slot_port_dock_tuples = [
+        (info_index, (normalize(info["probe_slot"]), normalize(info["probe_port"]), normalize(info["probe_dock"])))
+        for info_index, info in enumerate(info_list)
+    ]
+    
+    # Sorts by the probe_slot, probe_port, and probe_dock tuples
+    sorted_info = sorted(slot_port_dock_tuples, key=lambda x: x[1])
+    for probe_index, (info_index, _) in enumerate(sorted_info):
+        info_list[info_index]["probe_index"] = probe_index
 
     return info_list
 
@@ -482,21 +491,12 @@ def extract_stream_info(meta_file, meta):
     else:
         # NIDQ case
         has_sync_trace = False
-    
+
     bin_file_path = meta["fileName"]
     fname = Path(bin_file_path).stem
-    
-    
-    # First we check if the gate, trigger and dock numbers are present in the meta
-    
-    probe_slot = meta.get("imDatPrb_slot", None)
-    probe_port = meta.get("imDatPrb_port", None)
-    probe_dock = meta.get("imDatPrb_dock", None) 
-    
-    
+
     run_name, gate_num, trigger_num, device, stream_kind = parse_spikeglx_fname(fname)
-    # x = 1
-    
+
     if "imec" in fname.split(".")[-2]:
         device = fname.split(".")[-2]
         stream_kind = fname.split(".")[-1]
@@ -556,6 +556,10 @@ def extract_stream_info(meta_file, meta):
         gain_factor = float(meta["niAiRangeMax"]) / 32768
         channel_gains = per_channel_gain * gain_factor
 
+    probe_slot = meta.get("imDatPrb_slot", None)
+    probe_port = meta.get("imDatPrb_port", None)
+    probe_dock = meta.get("imDatPrb_dock", None)
+
     info = {}
     info["fname"] = fname
     info["meta"] = meta
@@ -575,6 +579,9 @@ def extract_stream_info(meta_file, meta):
     info["channel_gains"] = channel_gains
     info["channel_offsets"] = np.zeros(info["num_chan"])
     info["has_sync_trace"] = has_sync_trace
+    info["probe_slot"] = int(probe_slot) if probe_slot else None
+    info["probe_port"] = int(probe_port) if probe_port else None
+    info["probe_dock"] = int(probe_dock) if probe_dock else None
 
     if "nidq" in device:
         info["digital_channels"] = []
