@@ -3,6 +3,8 @@ import unittest
 from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
+import numpy as np
+
 
 class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = OpenEphysBinaryRawIO
@@ -56,6 +58,25 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
                 self.get_local_path("openephysbinary/v0.6.x_neuropixels_missing_folders"), load_sync_channel=False
             )
             rawio.parse_header()
+
+    def test_multiple_ttl_events_parsing(self):
+        rawio = OpenEphysBinaryRawIO(
+            self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"), load_sync_channel=False
+        )
+        rawio.parse_header()
+        rawio.header = rawio.header
+        # Testing co
+        # This is the TTL events from the NI Board channel
+        ttl_events = rawio._evt_streams[0][0][1]
+        assert "rising" in ttl_events.keys()
+        assert "labels" in ttl_events.keys()
+        assert "durations" in ttl_events.keys()
+        assert "timestamps" in ttl_events.keys()
+
+        # Check that durations of different event streams are correctly parsed:
+        assert np.allclose(ttl_events["durations"][ttl_events["labels"] == "1"], 0.5, atol=0.001)
+        assert np.allclose(ttl_events["durations"][ttl_events["labels"] == "6"], 0.025, atol=0.001)
+        assert np.allclose(ttl_events["durations"][ttl_events["labels"] == "7"], 0.016666, atol=0.001)
 
 
 if __name__ == "__main__":
