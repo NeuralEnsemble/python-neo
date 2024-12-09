@@ -352,27 +352,40 @@ def scan_files(dirname):
     normalize = lambda x: x if isinstance(x, int) else -1  
 
     # Segment index is determined by the gate_num and trigger_num in that order
-    gate_trigger_tuples = [
-        (info_index, (normalize(info["gate_num"]), normalize(info["trigger_num"])))
-        for info_index, info in enumerate(info_list)
-    ]
+    def get_segment_tuple(info):
+        # Create a key from the normalized gate_num and trigger_num
+        gate_num = normalize(info.get("gate_num"))
+        trigger_num = normalize(info.get("trigger_num"))
+        return (gate_num, trigger_num)
     
-    sorted_info = sorted(gate_trigger_tuples, key=lambda x: x[1])
+    unique_segment_tuples = {get_segment_tuple(info) for info in info_list}
+    sorted_keys = sorted(unique_segment_tuples)
+
+    # Map each unique key to a corresponding index
+    segment_tuple_to_segment_index = {key: idx for idx, key in enumerate(sorted_keys)}
+
+    for info in info_list:
+        info["seg_index"] = segment_tuple_to_segment_index[get_segment_tuple(info)]    
     
-    for seg_index, (info_index, _) in enumerate(sorted_info):
-        info_list[info_index]["seg_index"] = seg_index
-    
-    # Add probe_index
-    # The logic is that the probe_index is the order of the probe_slot, probe_port, and probe_dock
-    slot_port_dock_tuples = [
-        (info_index, (normalize(info["probe_slot"]), normalize(info["probe_port"]), normalize(info["probe_dock"])))
-        for info_index, info in enumerate(info_list)
-    ]
-    
-    # Sorts by the probe_slot, probe_port, and probe_dock tuples
-    sorted_info = sorted(slot_port_dock_tuples, key=lambda x: x[1])
-    for probe_index, (info_index, _) in enumerate(sorted_info):
-        info_list[info_index]["probe_index"] = probe_index
+
+    # Probe index calculation
+    # This ensures that all nidq entries come before any other keys, which corresponds to index 0.
+    def get_probe_tuple(info):
+        slot = normalize(info.get("probe_slot"))
+        port = normalize(info.get("probe_port"))
+        dock = normalize(info.get("probe_dock"))
+        return (slot, port, dock)
+
+    unique_probe_tuples = {get_probe_tuple(info) for info in info_list}
+    sorted_probe_keys = sorted(unique_probe_tuples)
+    probe_tuple_to_probe_index = {key: idx for idx, key in enumerate(sorted_probe_keys)}
+
+    for info in info_list:
+        if info.get("device") == "nidq":
+            info["device_index"] = 0  # TODO: Handle multi nidq case
+        else:
+            info["device_index"] = probe_tuple_to_probe_index[get_probe_tuple(info)]
+
 
     return info_list
 
