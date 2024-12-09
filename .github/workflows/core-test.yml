@@ -25,10 +25,12 @@ jobs:
       fail-fast: true
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macos-latest"]
-        python-version: ['3.9', '3.10', '3.11', '3.12']
-        numpy-version: ['1.22.4', '1.23.5', '1.24.1', '1.25.1', '1.26.4']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        numpy-version: ['1.22.4', '1.23.5', '1.24.4', '1.25.1', '1.26.4', '2.0.2','2.1']
         # numpy 1.22: 3.10, 1.23: 3.11, 1.24: 3.11, 1.25: 3.11, 1.26: 3.12
         exclude:
+           - python-version: '3.9'
+             numpy-version: '2.1'
            - python-version: '3.11'
              numpy-version: '1.22.4'
            - python-version: '3.12'
@@ -36,17 +38,30 @@ jobs:
            - python-version: '3.12'
              numpy-version: '1.23.5'
            - python-version: '3.12'
-             numpy-version: '1.24.1'
+             numpy-version: '1.24.4'
            - python-version: '3.12'
              numpy-version: '1.25.1'
+           - python-version: '3.13'
+             numpy-version: '1.22.4'
+           - python-version: '3.13'
+             numpy-version: '1.23.5'
+           - python-version: '3.13'
+             numpy-version: '1.24.4'
+           - python-version: '3.13'
+             numpy-version: '1.25.1'
+           - python-version: '3.13'
+             numpy-version: '1.26.4'
+           - python-version: '3.13'
+             numpy-version: '2.0.2'
+
     steps:
         - name: Set up Python ${{ matrix.python-version }}
-          uses: actions/setup-python@v4
+          uses: actions/setup-python@v5
           with:
             python-version: ${{ matrix.python-version }}
 
         - name: Checkout repository
-          uses: actions/checkout@v3
+          uses: actions/checkout@v4
 
         - name: Install numpy ${{ matrix.numpy-version }}
           run: |
