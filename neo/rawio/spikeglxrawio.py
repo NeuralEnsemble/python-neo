@@ -232,31 +232,21 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
         self._t_starts = {stream_name: {} for stream_name in stream_names}
         self._t_stops = {seg_index: 0.0 for seg_index in range(nb_segment)}
-        self._t_since_recording_time = {stream_name: {} for stream_name in stream_names}
-        self._session_start_time = {stream_name: {} for stream_name in stream_names}
-        self._gate_trigger = {stream_name: {} for stream_name in stream_names}
-        for seg_index in range(nb_segment):
-            for stream_name in stream_names:
+        
+        for stream_name in stream_names:
+            for seg_index in range(nb_segment):
                 info = self.signals_info_dict[seg_index, stream_name]
 
                 frame_start = float(info["meta"]["firstSample"])
                 sampling_frequency = info["sampling_rate"]
                 t_start = frame_start / sampling_frequency
-                
-                initial_date_time = info["meta"]["fileCreateTime"]
-                from datetime import datetime
-                initial_date_time_parsed = datetime.strptime(initial_date_time, "%Y-%m-%dT%H:%M:%S")
-                initial_timestamp = initial_date_time_parsed.timestamp()
-                shifted_timestamps = t_start + initial_timestamp
-                
+                                
                 self._t_starts[stream_name][seg_index] = t_start 
-                self._t_since_recording_time[stream_name][seg_index] = (initial_timestamp, shifted_timestamps)
-                gate_num = info["gate_num"]
-                trigger_num = info["trigger_num"]
-                self._gate_trigger[stream_name][seg_index] = f"{gate_num=}, {trigger_num} "
-                self._session_start_time[stream_name][seg_index] = initial_date_time_parsed
                 t_stop = info["sample_length"] / info["sampling_rate"]
                 self._t_stops[seg_index] = max(self._t_stops[seg_index], t_stop)
+
+                
+
 
         # fille into header dict
         self.header = {}
