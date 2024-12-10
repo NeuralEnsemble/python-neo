@@ -376,17 +376,26 @@ def scan_files(dirname):
         dock = normalize(info.get("probe_dock"))
         return (slot, port, dock)
 
-    unique_probe_tuples = {get_probe_tuple(info) for info in info_list}
+    info_list_imec = [info for info in info_list if info.get("device") != "nidq"]
+    unique_probe_tuples = {get_probe_tuple(info) for info in info_list_imec}
     sorted_probe_keys = sorted(unique_probe_tuples)
     probe_tuple_to_probe_index = {key: idx for idx, key in enumerate(sorted_probe_keys)}
 
     for info in info_list:
         if info.get("device") == "nidq":
-            info["device_index"] = 0  # TODO: Handle multi nidq case
+            info["device_index"] = ""  # TODO: Handle multi nidq case, maybe use meta["typeNiEnabled"]
         else:
             info["device_index"] = probe_tuple_to_probe_index[get_probe_tuple(info)]
 
+    # Define stream base on device [imec|nidq], device_index and stream_kind [ap|lf] for imec
+    for info in info_list:
+        device_kind = info["device_kind"]
+        device_index = info["device_index"]
+        stream_kind = f".{info['stream_kind']}" if info["stream_kind"] else ""
+        stream_name = f"{device_kind}{device_index}{stream_kind}"
 
+        info["stream_name"] = stream_name
+        
     return info_list
 
 
@@ -513,7 +522,6 @@ def extract_stream_info(meta_file, meta):
     if "imec" in fname.split(".")[-2]:
         device = fname.split(".")[-2]
         stream_kind = fname.split(".")[-1]
-        stream_name = device + "." + stream_kind
         units = "uV"
         # please note the 1e6 in gain for this uV
 
@@ -553,7 +561,6 @@ def extract_stream_info(meta_file, meta):
     else:
         device = fname.split(".")[-1]
         stream_kind = ""
-        stream_name = device
         units = "V"
         channel_gains = np.ones(num_chan)
 
@@ -586,7 +593,7 @@ def extract_stream_info(meta_file, meta):
     info["trigger_num"] = trigger_num
     info["device"] = device
     info["stream_kind"] = stream_kind
-    info["stream_name"] = stream_name
+    info["device_kind"] = meta.get("typeThis", device.split(".")[0])
     info["units"] = units
     info["channel_names"] = [txt.split(";")[0] for txt in meta["snsChanMap"]]
     info["channel_gains"] = channel_gains
