@@ -32,6 +32,8 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/NP2_subset_with_sync",
         # NP-ultra
         "spikeglx/np_ultra_stub",
+        # Filename changed by the user, multi-dock
+        "spikeglx/multi_probe_multi_dock_multi_shank_filename_without_info",
         # CatGT
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-A",
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-B",
