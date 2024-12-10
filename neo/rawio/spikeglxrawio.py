@@ -85,7 +85,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     * This IO reads the entire folder and subfolders locating the `.bin` and `.meta` files
     * Handles gates and triggers as segments (based on the `_gt0`, `_gt1`, `_t0` , `_t1` in filenames)
     * Handles all signals coming from different acquisition cards ("imec0", "imec1", etc) in a typical
-        PXIe chassis setup and also external signal like"nidq". 
+        PXIe chassis setup and also external signal like "nidq". 
     * For imec devices both "ap" and "lf" are extracted so even a one device setup will have several "streams"
 
     Examples
