@@ -77,9 +77,10 @@ class TestIntanRawIO(
 
         # This should be the folder where the files of all the channels are stored
         folder_path = file_path.parent
-        amplifier_file_paths = [p for p in folder_path.iterdir() if "amp" in p.name]
         
-        channel_names = [p.name[4:-4] for p in amplifier_file_paths]
+        # The paths are named as amp-A-000.dat, amp-A-001.dat, amp-A-002.dat, ...
+        amplifier_file_paths = [path for path in folder_path.iterdir() if "amp" in path.name]
+        channel_names = [path.name[4:-4] for path in amplifier_file_paths]
 
         for channel_name, amplifier_file_path in zip(channel_names, amplifier_file_paths):
             data_raw = np.fromfile(amplifier_file_path, dtype=np.int16).squeeze()
