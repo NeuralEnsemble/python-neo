@@ -369,13 +369,15 @@ def scan_files(dirname):
     
 
     # Probe index calculation
-    # This ensures that all nidq entries come before any other keys, which corresponds to index 0.
+    # The calculation is ordered by slot, port, dock in that order, this is the number that appears in the filename
+    # after imec when using native names (e.g. imec0, imec1, etc.)
     def get_probe_tuple(info):
         slot = normalize(info.get("probe_slot"))
         port = normalize(info.get("probe_port"))
         dock = normalize(info.get("probe_dock"))
         return (slot, port, dock)
 
+    # TODO: handle one box case
     info_list_imec = [info for info in info_list if info.get("device") != "nidq"]
     unique_probe_tuples = {get_probe_tuple(info) for info in info_list_imec}
     sorted_probe_keys = sorted(unique_probe_tuples)
@@ -593,6 +595,7 @@ def extract_stream_info(meta_file, meta):
     info["trigger_num"] = trigger_num
     info["device"] = device
     info["stream_kind"] = stream_kind
+    # All non-production probes (phase 3B onwards) have "typeThis", otherwise revert to file parsing
     info["device_kind"] = meta.get("typeThis", device.split(".")[0])
     info["units"] = units
     info["channel_names"] = [txt.split(";")[0] for txt in meta["snsChanMap"]]
