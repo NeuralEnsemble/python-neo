@@ -213,14 +213,7 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
         self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
 
-    def test__create_from_list_set_dtype(self):
-        times = range(10)
-        t_start = 0.0 * pq.s
-        t_stop = 10000.0 * pq.ms
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="ms", dtype="f4")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="ms", dtype="f4")
-
-        dtype = np.float32
+        dtype = np.float64
         units = 1 * pq.ms
         t_start_out = t_start.astype(dtype)
         t_stop_out = t_stop.astype(dtype)
@@ -240,21 +233,6 @@ class TestConstructor(unittest.TestCase):
         t_start_out = t_start * units
         t_stop_out = t_stop * units
         st_out = times * units
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
-    def test__create_from_list_no_start_stop_units_set_dtype(self):
-        times = range(10)
-        t_start = 0.0
-        t_stop = 10000.0
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="ms", dtype="f4")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="ms", dtype="f4")
-
-        dtype = np.float32
-        units = 1 * pq.ms
-        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
-        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
-        st_out = pq.Quantity(times, units=units, dtype=dtype)
         self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
         self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
 
@@ -288,21 +266,6 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
         self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
 
-    def test__create_from_array_set_dtype(self):
-        times = np.arange(10)
-        t_start = 0.0 * pq.s
-        t_stop = 10000.0 * pq.ms
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s", dtype="f4")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s", dtype="f4")
-
-        dtype = np.float32
-        units = 1 * pq.s
-        t_start_out = t_start.astype(dtype)
-        t_stop_out = t_stop.astype(dtype)
-        st_out = times.astype(dtype) * units
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
     def test__create_from_array_no_start_stop_units(self):
         times = np.arange(10)
         t_start = 0.0
@@ -333,21 +296,6 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
         self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
 
-    def test__create_from_array_no_start_stop_units_set_dtype(self):
-        times = np.arange(10)
-        t_start = 0.0
-        t_stop = 10000.0
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s", dtype="f4")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s", dtype="f4")
-
-        dtype = np.float32
-        units = 1 * pq.s
-        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
-        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
-        st_out = times.astype(dtype) * units
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
     def test__create_from_quantity_array(self):
         times = np.arange(10) * pq.ms
         t_start = 0.0 * pq.s
@@ -365,25 +313,14 @@ class TestConstructor(unittest.TestCase):
 
     def test__create_from_quantity_array_with_dtype(self):
         times = np.arange(10, dtype="f4") * pq.ms
+        # this step is required for NumPy 2.0 which now casts to float64 in the case either value/array
+        # is float64 even if not necessary
+        # https://numpy.org/devdocs/numpy_2_0_migration_guide.html
+        times = times.astype(dtype="f4")
         t_start = 0.0 * pq.s
         t_stop = 12.0 * pq.ms
         train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
         train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop)
-
-        dtype = np.float32
-        units = 1 * pq.ms
-        t_start_out = t_start.astype(dtype)
-        t_stop_out = t_stop.astype(dtype)
-        st_out = times.astype(dtype)
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
-    def test__create_from_quantity_array_set_dtype(self):
-        times = np.arange(10) * pq.ms
-        t_start = 0.0 * pq.s
-        t_stop = 12.0 * pq.ms
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, dtype="f4")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, dtype="f4")
 
         dtype = np.float32
         units = 1 * pq.ms
@@ -410,6 +347,10 @@ class TestConstructor(unittest.TestCase):
 
     def test__create_from_quantity_array_no_start_stop_units_with_dtype(self):
         times = np.arange(10, dtype="f4") * pq.ms
+        # this step is required for NumPy 2.0 which now casts to float64 in the case either value/array
+        # is float64 even if not necessary
+        # https://numpy.org/devdocs/numpy_2_0_migration_guide.html
+        times = times.astype(dtype="f4")
         t_start = 0.0
         t_stop = 12.0
         train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
@@ -420,96 +361,6 @@ class TestConstructor(unittest.TestCase):
         t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
         t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
         st_out = times.astype(dtype)
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
-    def test__create_from_quantity_array_no_start_stop_units_set_dtype(self):
-        times = np.arange(10) * pq.ms
-        t_start = 0.0
-        t_stop = 12.0
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, dtype="f4")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, dtype="f4")
-
-        dtype = np.float32
-        units = 1 * pq.ms
-        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
-        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
-        st_out = times.astype(dtype)
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
-    def test__create_from_quantity_array_units(self):
-        times = np.arange(10) * pq.ms
-        t_start = 0.0 * pq.s
-        t_stop = 12.0 * pq.ms
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s")
-
-        dtype = np.float64
-        units = 1 * pq.s
-        t_start_out = t_start
-        t_stop_out = t_stop
-        st_out = times
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
-    def test__create_from_quantity_array_units_with_dtype(self):
-        times = np.arange(10, dtype="f4") * pq.ms
-        t_start = 0.0 * pq.s
-        t_stop = 12.0 * pq.ms
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s")
-
-        dtype = np.float32
-        units = 1 * pq.s
-        t_start_out = t_start.astype(dtype)
-        t_stop_out = t_stop.rescale(units).astype(dtype)
-        st_out = times.rescale(units).astype(dtype)
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
-    def test__create_from_quantity_array_units_set_dtype(self):
-        times = np.arange(10) * pq.ms
-        t_start = 0.0 * pq.s
-        t_stop = 12.0 * pq.ms
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s", dtype="f4")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s", dtype="f4")
-
-        dtype = np.float32
-        units = 1 * pq.s
-        t_start_out = t_start.astype(dtype)
-        t_stop_out = t_stop.rescale(units).astype(dtype)
-        st_out = times.rescale(units).astype(dtype)
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
-    def test__create_from_quantity_array_units_no_start_stop_units(self):
-        times = np.arange(10) * pq.ms
-        t_start = 0.0
-        t_stop = 12.0
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s")
-
-        dtype = np.float64
-        units = 1 * pq.s
-        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
-        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
-        st_out = times
-        self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
-        self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
-
-    def test__create_from_quantity_units_no_start_stop_units_set_dtype(self):
-        times = np.arange(10) * pq.ms
-        t_start = 0.0
-        t_stop = 12.0
-        train1 = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s", dtype="f4")
-        train2 = _new_spiketrain(SpikeTrain, times, t_start=t_start, t_stop=t_stop, units="s", dtype="f4")
-
-        dtype = np.float32
-        units = 1 * pq.s
-        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
-        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
-        st_out = times.rescale(units).astype(dtype)
         self.result_spike_check(train1, st_out, t_start_out, t_stop_out, dtype, units)
         self.result_spike_check(train2, st_out, t_start_out, t_stop_out, dtype, units)
 
@@ -1267,10 +1118,11 @@ class TestMerge(unittest.TestCase):
         )
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
+    # can't rescale time so need to load milliseconds rather than micro (numpy 2.0)
     def test_merge_multiple(self):
         self.train1.waveforms = None
 
-        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * pq.microsecond)
+        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * 0.1 * pq.millisecond)
         train3.segment = self.train1.segment
         train3.array_annotate(index=np.arange(301, 307))
 
@@ -1299,7 +1151,7 @@ class TestMerge(unittest.TestCase):
         expected *= time_unit
         sorting = np.argsort(expected)
         expected = expected[sorting]
-        np.testing.assert_array_equal(result.times, expected)
+        np.testing.assert_array_equal(result.times.magnitude, expected.magnitude)
 
         # Make sure array annotations are merged correctly
         self.assertTrue("label" not in result.array_annotations)
@@ -1317,8 +1169,9 @@ class TestMerge(unittest.TestCase):
             self.assertTrue("array annotations" in str(w[0].message))
         assert_neo_object_is_compliant(result)
 
+    # times need to be same since we can't autoconvert
     def test_merge_multiple_with_waveforms(self):
-        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * pq.microsecond)
+        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * 0.1 * pq.millisecond)
         train3.segment = self.train1.segment
         train3.array_annotate(index=np.arange(301, 307))
         train3.waveforms = self.train1.waveforms / 10
@@ -1380,7 +1233,7 @@ class TestMerge(unittest.TestCase):
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_rescaling_units(self):
-        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * pq.microsecond)
+        train3 = self.train1.duplicate_with_new_data(signal=(self.train1.times.magnitude / 1000) * pq.millisecond)
         train3.segment = self.train1.segment
         train3.array_annotate(**self.arr_ann1)
         # Array annotations merge warning was already tested, can be ignored now
@@ -1411,7 +1264,7 @@ class TestMerge(unittest.TestCase):
         self.train2.description = "desc2"
         self.train2.file_origin = "file2"
 
-        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * pq.microsecond)
+        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * pq.millisecond)
         train3.segment = self.train1.segment
         train3.name = "name3"
         train3.description = "desc3"
@@ -1645,127 +1498,59 @@ class TestAttributesAnnotations(unittest.TestCase):
 
 
 class TestChanging(unittest.TestCase):
-    def test_change_with_copy_default(self):
-        # Default is copy = True
-        # Changing spike train does not change data
+
+    # now we test default behavior here so change false to None
+    def test_change_with_default(self):
+        # Changing spike train also changes data, because it is a view
         # Data source is quantity
         data = [3, 4, 5] * pq.s
         train = SpikeTrain(data, t_stop=100.0)
         train[0] = 99 * pq.s
         assert_neo_object_is_compliant(train)
         self.assertEqual(train[0], 99 * pq.s)
-        self.assertEqual(data[0], 3 * pq.s)
-
-    def test_change_with_copy_false(self):
-        # Changing spike train also changes data, because it is a view
-        # Data source is quantity
-        data = [3, 4, 5] * pq.s
-        train = SpikeTrain(data, copy=False, t_stop=100.0)
-        train[0] = 99 * pq.s
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[0], 99 * pq.s)
         self.assertEqual(data[0], 99 * pq.s)
 
-    def test_change_with_copy_false_and_fake_rescale(self):
+    def test_change_with_fake_rescale(self):
         # Changing spike train also changes data, because it is a view
         # Data source is quantity
         data = [3000, 4000, 5000] * pq.ms
         # even though we specify units, it still returns a view
-        train = SpikeTrain(data, units="ms", copy=False, t_stop=100000)
+        train = SpikeTrain(data, units="ms", t_stop=100000)
         train[0] = 99000 * pq.ms
         assert_neo_object_is_compliant(train)
         self.assertEqual(train[0], 99000 * pq.ms)
         self.assertEqual(data[0], 99000 * pq.ms)
 
-    def test_change_with_copy_false_and_rescale_true(self):
+    def test_change_and_rescale_true(self):
         # When rescaling, a view cannot be returned
         # Changing spike train also changes data, because it is a view
         data = [3, 4, 5] * pq.s
-        self.assertRaises(ValueError, SpikeTrain, data, units="ms", copy=False, t_stop=10000)
+        self.assertRaises(ValueError, SpikeTrain, data, units="ms", t_stop=10000)
 
-    def test_init_with_rescale(self):
-        data = [3, 4, 5] * pq.s
-        train = SpikeTrain(data, units="ms", t_stop=6000)
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[0], 3000 * pq.ms)
-        self.assertEqual(train._dimensionality, pq.ms._dimensionality)
-        self.assertEqual(train.t_stop, 6000 * pq.ms)
-
-    def test_change_with_copy_true(self):
-        # Changing spike train does not change data
-        # Data source is quantity
-        data = [3, 4, 5] * pq.s
-        train = SpikeTrain(data, copy=True, t_stop=100)
-        train[0] = 99 * pq.s
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[0], 99 * pq.s)
-        self.assertEqual(data[0], 3 * pq.s)
-
-    def test_change_with_copy_default_and_data_not_quantity(self):
-        # Default is copy = True
-        # Changing spike train does not change data
-        # Data source is array
-        # Array and quantity are tested separately because copy default
-        # is different for these two.
-        data = [3, 4, 5]
-        train = SpikeTrain(data, units="sec", t_stop=100)
-        train[0] = 99 * pq.s
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[0], 99 * pq.s)
-        self.assertEqual(data[0], 3 * pq.s)
-
-    def test_change_with_copy_false_and_data_not_quantity(self):
+    def test_change_and_data_not_quantity(self):
         # Changing spike train also changes data, because it is a view
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
         data = np.array([3, 4, 5])
-        train = SpikeTrain(data, units="sec", copy=False, dtype=int, t_stop=101)
+        train = SpikeTrain(data, units="sec", dtype=int, t_stop=101)
         train[0] = 99 * pq.s
         assert_neo_object_is_compliant(train)
         self.assertEqual(train[0], 99 * pq.s)
         self.assertEqual(data[0], 99)
 
-    def test_change_with_copy_false_and_dtype_change(self):
+    def test__dtype_change(self):
         # You cannot change dtype and request a view
         data = np.array([3, 4, 5])
-        self.assertRaises(ValueError, SpikeTrain, data, units="sec", copy=False, t_stop=101, dtype=np.float64)
-
-    def test_change_with_copy_true_and_data_not_quantity(self):
-        # Changing spike train does not change data
-        # Data source is array
-        # Array and quantity are tested separately because copy default
-        # is different for these two.
-        data = [3, 4, 5]
-        train = SpikeTrain(data, units="sec", copy=True, t_stop=123.4)
-        train[0] = 99 * pq.s
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[0], 99 * pq.s)
-        self.assertEqual(data[0], 3)
+        self.assertRaises(ValueError, SpikeTrain, data, units="sec", t_stop=101, dtype=np.float64)
 
     def test_changing_slice_changes_original_spiketrain(self):
         # If we slice a spiketrain and then change the slice, the
         # original spiketrain should change.
-        # Whether the original data source changes is dependent on the
-        # copy parameter.
+        # Test new default behavior of neo for neo 14.0
         # This is compatible with both np and quantity default behavior.
         data = [3, 4, 5] * pq.s
-        train = SpikeTrain(data, copy=True, t_stop=99.9)
-        result = train[1:3]
-        result[0] = 99 * pq.s
-        assert_neo_object_is_compliant(train)
-        self.assertEqual(train[1], 99 * pq.s)
-        self.assertEqual(result[0], 99 * pq.s)
-        self.assertEqual(data[1], 4 * pq.s)
-
-    def test_changing_slice_changes_original_spiketrain_with_copy_false(self):
-        # If we slice a spiketrain and then change the slice, the
-        # original spiketrain should change.
-        # Whether the original data source changes is dependent on the
-        # copy parameter.
-        # This is compatible with both np and quantity default behavior.
-        data = [3, 4, 5] * pq.s
-        train = SpikeTrain(data, copy=False, t_stop=100.0)
+        train = SpikeTrain(data, t_stop=100.0)
         result = train[1:3]
         result[0] = 99 * pq.s
         assert_neo_object_is_compliant(train)
@@ -1776,7 +1561,7 @@ class TestChanging(unittest.TestCase):
 
     def test__changing_spiketime_should_check_time_in_range(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         self.assertRaises(ValueError, train.__setitem__, 0, 10.1 * pq.ms)
         self.assertRaises(ValueError, train.__setitem__, 1, 5.0 * pq.s)
@@ -1785,19 +1570,19 @@ class TestChanging(unittest.TestCase):
 
     def test__changing_multiple_spiketimes(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         train[:] = [7, 8, 9] * pq.ms
         assert_neo_object_is_compliant(train)
         assert_arrays_equal(train, np.array([7, 8, 9]))
 
     def test__changing_multiple_spiketimes_should_check_time_in_range(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
 
     def test__adding_time_scalar(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         # t_start and t_stop are also changed
         self.assertEqual((train + 10 * pq.ms).t_start, 10.5 * pq.ms)
@@ -1808,7 +1593,7 @@ class TestChanging(unittest.TestCase):
 
     def test__adding_time_array(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         delta = [-2, 2, 4] * pq.ms
         assert_arrays_equal(train + delta, np.array([1, 6, 9]) * pq.ms)
@@ -1825,13 +1610,13 @@ class TestChanging(unittest.TestCase):
 
     def test__adding_two_spike_trains(self):
         data = [3, 4, 5] * pq.ms
-        train1 = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
-        train2 = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train1 = SpikeTrain(data, t_start=0.5, t_stop=10.0)
+        train2 = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         self.assertRaises(TypeError, train1.__add__, train2)
 
     def test__subtracting_time_scalar(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         # t_start and t_stop are also changed
         self.assertEqual((train - 1 * pq.ms).t_start, -0.5 * pq.ms)
@@ -1841,7 +1626,7 @@ class TestChanging(unittest.TestCase):
 
     def test__subtracting_time_array(self):
         data = [3, 4, 5] * pq.ms
-        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         delta = [2, 1, -2] * pq.ms
         self.assertIsInstance(train - delta, SpikeTrain)
@@ -1856,9 +1641,9 @@ class TestChanging(unittest.TestCase):
         self.assertEqual((train - delta).t_stop, 11 * pq.ms)
 
     def test__subtracting_two_spike_trains(self):
-        train1 = SpikeTrain([3, 4, 5] * pq.ms, copy=False, t_start=0.5, t_stop=10.0)
-        train2 = SpikeTrain([4, 5, 6] * pq.ms, copy=False, t_start=0.5, t_stop=10.0)
-        train3 = SpikeTrain([3, 4, 5, 6] * pq.ms, copy=False, t_start=0.5, t_stop=10.0)
+        train1 = SpikeTrain([3, 4, 5] * pq.ms, t_start=0.5, t_stop=10.0)
+        train2 = SpikeTrain([4, 5, 6] * pq.ms, t_start=0.5, t_stop=10.0)
+        train3 = SpikeTrain([3, 4, 5, 6] * pq.ms, t_start=0.5, t_stop=10.0)
         self.assertRaises(TypeError, train1.__sub__, train3)
         self.assertRaises(TypeError, train3.__sub__, train1)
         self.assertIsInstance(train1 - train2, pq.Quantity)
@@ -2064,134 +1849,6 @@ class TestPropertiesMethods(unittest.TestCase):
 
 
 class TestMiscellaneous(unittest.TestCase):
-    def test__different_dtype_for_t_start_and_array(self):
-        data = np.array([0, 9.9999999], dtype=np.float64) * pq.s
-        data16 = data.astype(np.float16)
-        data32 = data.astype(np.float32)
-        data64 = data.astype(np.float64)
-        t_start = data[0]
-        t_stop = data[1]
-        t_start16 = data[0].astype(dtype=np.float16)
-        t_stop16 = data[1].astype(dtype=np.float16)
-        t_start32 = data[0].astype(dtype=np.float32)
-        t_stop32 = data[1].astype(dtype=np.float32)
-        t_start64 = data[0].astype(dtype=np.float64)
-        t_stop64 = data[1].astype(dtype=np.float64)
-        t_start_custom = 0.0
-        t_stop_custom = 10.0
-        t_start_custom16 = np.array(t_start_custom, dtype=np.float16)
-        t_stop_custom16 = np.array(t_stop_custom, dtype=np.float16)
-        t_start_custom32 = np.array(t_start_custom, dtype=np.float32)
-        t_stop_custom32 = np.array(t_stop_custom, dtype=np.float32)
-        t_start_custom64 = np.array(t_start_custom, dtype=np.float64)
-        t_stop_custom64 = np.array(t_stop_custom, dtype=np.float64)
-
-        # This is OK.
-        train = SpikeTrain(data64, copy=True, t_start=t_start, t_stop=t_stop)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data16, copy=True, t_start=t_start, t_stop=t_stop, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data16, copy=True, t_start=t_start, t_stop=t_stop, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start, t_stop=t_stop, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start, t_stop=t_stop, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start16, t_stop=t_stop16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start16, t_stop=t_stop16, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start16, t_stop=t_stop16, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start16, t_stop=t_stop16, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start32, t_stop=t_stop32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start32, t_stop=t_stop32, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start32, t_stop=t_stop32, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start32, t_stop=t_stop32, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start64, t_stop=t_stop64, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start64, t_stop=t_stop64, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data16, copy=True, t_start=t_start_custom, t_stop=t_stop_custom)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data16, copy=True, t_start=t_start_custom, t_stop=t_stop_custom, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data16, copy=True, t_start=t_start_custom, t_stop=t_stop_custom, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data16, copy=True, t_start=t_start_custom, t_stop=t_stop_custom, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom, t_stop=t_stop_custom)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom, t_stop=t_stop_custom, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom, t_stop=t_stop_custom, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom, t_stop=t_stop_custom, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data16, copy=True, t_start=t_start_custom, t_stop=t_stop_custom)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data16, copy=True, t_start=t_start_custom, t_stop=t_stop_custom, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data16, copy=True, t_start=t_start_custom, t_stop=t_stop_custom, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data16, copy=True, t_start=t_start_custom, t_stop=t_stop_custom, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom16, t_stop=t_stop_custom16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom16, t_stop=t_stop_custom16, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom16, t_stop=t_stop_custom16, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom16, t_stop=t_stop_custom16, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom32, t_stop=t_stop_custom32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom32, t_stop=t_stop_custom32, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom32, t_stop=t_stop_custom32, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom32, t_stop=t_stop_custom32, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom64, t_stop=t_stop_custom64)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom64, t_stop=t_stop_custom64, dtype=np.float16)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom64, t_stop=t_stop_custom64, dtype=np.float32)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start_custom64, t_stop=t_stop_custom64, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        # This use to bug - see ticket #38
-        train = SpikeTrain(data16, copy=True, t_start=t_start, t_stop=t_stop)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data16, copy=True, t_start=t_start, t_stop=t_stop, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start, t_stop=t_stop)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start, t_stop=t_stop, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
-
-        train = SpikeTrain(data32, copy=True, t_start=t_start64, t_stop=t_stop64)
-        assert_neo_object_is_compliant(train)
-        train = SpikeTrain(data32, copy=True, t_start=t_start64, t_stop=t_stop64, dtype=np.float64)
-        assert_neo_object_is_compliant(train)
 
     def test_as_array(self):
         data = np.arange(10.0)

@@ -37,6 +37,7 @@ from ..baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -53,7 +54,7 @@ class Plexon2RawIO(BaseRawIO):
     pl2_dll_file_path: str | Path | None, default: None
         The path to the necessary dll for loading pl2 files
         If None will find correct dll for architecture and if it does not exist will download it
-    reading_attempts: int, default: 15
+    reading_attempts: int, default: 25
         Number of attempts to read the file before raising an error
         This opening process is somewhat unreliable and might fail occasionally. Adjust this higher
         if you encounter problems in opening the file.
@@ -92,7 +93,7 @@ class Plexon2RawIO(BaseRawIO):
     extensions = ["pl2"]
     rawmode = "one-file"
 
-    def __init__(self, filename, pl2_dll_file_path=None, reading_attempts=15):
+    def __init__(self, filename, pl2_dll_file_path=None, reading_attempts=25):
 
         # signals, event and spiking data will be cached
         # cached signal data can be cleared using `clear_analogsignal_cache()()`
@@ -183,7 +184,8 @@ class Plexon2RawIO(BaseRawIO):
 
             channel_prefix = re.match(regex_prefix_pattern, ch_name).group(0)
             stream_id = channel_prefix
-            signal_channels.append((ch_name, chan_id, rate, dtype, units, gain, offset, stream_id))
+            buffer_id = ""
+            signal_channels.append((ch_name, chan_id, rate, dtype, units, gain, offset, stream_id, buffer_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         channel_num_samples = np.array(channel_num_samples)
@@ -196,6 +198,7 @@ class Plexon2RawIO(BaseRawIO):
             "FP": "FPl-Low Pass Filtered",
             "SP": "SPKC-High Pass Filtered",
             "AI": "AI-Auxiliary Input",
+            "AIF": "AIF-Auxiliary Input Filtered",
         }
 
         unique_stream_ids = np.unique(signal_channels["stream_id"])
@@ -205,21 +208,23 @@ class Plexon2RawIO(BaseRawIO):
             # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`).
             # In that case we use the channel prefix both as stream id and name
             stream_name = stream_id_to_stream_name.get(stream_id, stream_id)
-            signal_streams.append((stream_name, stream_id))
-
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # In plexon buffer is unknown
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
-        self.stream_id_samples = {}
-        self.stream_index_to_stream_id = {}
+        self._stream_id_samples = {}
+        self._stream_index_to_stream_id = {}
         for stream_index, stream_id in enumerate(signal_streams["id"]):
             # Keep a mapping from stream_index to stream_id
-            self.stream_index_to_stream_id[stream_index] = stream_id
+            self._stream_index_to_stream_id[stream_index] = stream_id
 
             # We extract the number of samples for each stream
             mask = signal_channels["stream_id"] == stream_id
             signal_num_samples = np.unique(channel_num_samples[mask])
             assert signal_num_samples.size == 1, "All channels in a stream must have the same number of samples"
-            self.stream_id_samples[stream_id] = signal_num_samples[0]
+            self._stream_id_samples[stream_id] = signal_num_samples[0]
 
         # pre-loading spike channel_data for later usage
         self._spike_channel_cache = {}
@@ -231,7 +236,14 @@ class Plexon2RawIO(BaseRawIO):
             if not (schannel_info.m_ChannelEnabled and schannel_info.m_ChannelRecordingEnabled):
                 continue
 
-            for channel_unit_id in range(schannel_info.m_NumberOfUnits):
+            # In a PL2 spike channel header, the field "m_NumberOfUnits" denotes the number
+            # of units to which spikes detected on that channel have been assigned. It does
+            # not account for unsorted spikes, i.e., spikes that have not been assigned to
+            # a unit. It is Plexon's convention to assign unsorted spikes to channel_unit_id=0,
+            # and sorted spikes to channel_unit_id's 1, 2, 3...etc. Therefore, for a given value of
+            # m_NumberOfUnits, there are m_NumberOfUnits+1 channel_unit_ids to consider - 1
+            # unsorted channel_unit_id (0) + the m_NumberOfUnits sorted channel_unit_ids.
+            for channel_unit_id in range(schannel_info.m_NumberOfUnits + 1):
                 unit_name = f"{schannel_info.m_Name.decode()}.{channel_unit_id}"
                 unit_id = f"unit{schannel_info.m_Channel}.{channel_unit_id}"
                 wf_units = schannel_info.m_Units
@@ -265,6 +277,7 @@ class Plexon2RawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]  # It seems pl2 can only contain a single segment
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -386,8 +399,8 @@ class Plexon2RawIO(BaseRawIO):
         return float(end_time / self.pl2reader.pl2_file_info.m_TimestampFrequency)
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        stream_id = self.stream_index_to_stream_id[stream_index]
-        num_samples = int(self.stream_id_samples[stream_id])
+        stream_id = self._stream_index_to_stream_id[stream_index]
+        num_samples = int(self._stream_id_samples[stream_id])
         return num_samples
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):

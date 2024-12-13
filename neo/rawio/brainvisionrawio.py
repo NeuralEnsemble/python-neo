@@ -13,17 +13,20 @@ import re
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
 
+from .utils import get_memmap_shape
+
 from neo.core import NeoReadWriteError
 
 
-class BrainVisionRawIO(BaseRawIO):
+class BrainVisionRawIO(BaseRawWithBufferApiIO):
     """Class for reading BrainVision files
 
     Parameters
@@ -41,8 +44,8 @@ class BrainVisionRawIO(BaseRawIO):
     rawmode = "one-file"
 
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
-        self.filename = filename
+        BaseRawWithBufferApiIO.__init__(self)
+        self.filename = str(filename)
 
     def _parse_header(self):
         # Read header file (vhdr)
@@ -75,15 +78,25 @@ class BrainVisionRawIO(BaseRawIO):
         if fmt not in fmts:
             raise NeoReadWriteError(f"the fmt {fmt} is not implmented. Must be one of {fmts}")
 
-        sig_dtype = fmts[fmt]
+        sig_dtype = np.dtype(fmts[fmt])
 
-        # raw signals memmap
-        sigs = np.memmap(binary_filename, dtype=sig_dtype, mode="r", offset=0)
-        if sigs.size % nb_channel != 0:
-            sigs = sigs[: -sigs.size % nb_channel]
-        self._raw_signals = sigs.reshape(-1, nb_channel)
+        stream_id = "0"
+        buffer_id = "0"
+        self._buffer_descriptions = {0: {0: {}}}
+        self._stream_buffer_slice = {}
+        shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
+        self._buffer_descriptions[0][0][buffer_id] = {
+            "type": "raw",
+            "file_path": binary_filename,
+            "dtype": str(sig_dtype),
+            "order": "C",
+            "file_offset": 0,
+            "shape": shape,
+        }
+        self._stream_buffer_slice[stream_id] = None
 
-        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+        signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
+        signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
 
         sig_channels = []
         channel_infos = vhdr_header["Channel Infos"]
@@ -92,8 +105,22 @@ class BrainVisionRawIO(BaseRawIO):
                 channel_desc = channel_infos[f"Ch{c+1}"]
             except KeyError:
                 channel_desc = channel_infos[f"ch{c + 1}"]
-            name, ref, res, units = channel_desc.split(",")
-            units = units.replace("µ", "u")
+            # split up channel description, handling default values
+            cds = channel_desc.split(",")
+            name = cds[0]
+            if len(cds) >= 2:
+                ref = cds[1]
+            else:
+                ref = ""
+            if len(cds) >= 3:
+                res = cds[2]
+            else:
+                res = "1.0"
+            if len(cds) == 4:
+                units = cds[3]
+            else:
+                units = "u"
+            units = units.replace("µ", "u")  # Brainvision spec for specific unicode
             chan_id = str(c + 1)
             if sig_dtype == np.int16 or sig_dtype == np.int32:
                 gain = float(res)
@@ -101,7 +128,10 @@ class BrainVisionRawIO(BaseRawIO):
                 gain = 1
             offset = 0
             stream_id = "0"
-            sig_channels.append((name, chan_id, self._sampling_rate, sig_dtype, units, gain, offset, stream_id))
+            buffer_id = "0"
+            sig_channels.append(
+                (name, chan_id, self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+            )
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No spikes
@@ -138,6 +168,7 @@ class BrainVisionRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = sig_channels
         self.header["spike_channels"] = spike_channels
@@ -161,23 +192,13 @@ class BrainVisionRawIO(BaseRawIO):
         return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals.shape[0] / self._sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = sig_size / self._sampling_rate
         return t_stop
 
     ###
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        if stream_index != 0:
-            raise ValueError("`stream_index` must be 0")
-        return self._raw_signals.shape[0]
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0
-
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
-        return raw_signals
 
     ###
     def _spike_count(self, block_index, seg_index, unit_index):
@@ -211,6 +232,9 @@ class BrainVisionRawIO(BaseRawIO):
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate
         return event_times
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
 def read_brainvsion_soup(filename):

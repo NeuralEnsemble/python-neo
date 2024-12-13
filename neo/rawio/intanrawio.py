@@ -31,6 +31,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -179,6 +180,7 @@ class IntanRawIO(BaseRawIO):
             self._raw_data = np.memmap(self.filename, dtype=memmap_data_dtype, mode="r", offset=header_size)
 
         # for 'one-file-per-signal' we have one memory map / neo stream
+        # based on https://github.com/NeuralEnsemble/python-neo/issues/1556 bug in versions 0.13.1, .2, .3
         elif self.file_format == "one-file-per-signal":
             self._raw_data = {}
             for stream_index, (stream_index_key, stream_datatype) in enumerate(memmap_data_dtype.items()):
@@ -188,8 +190,12 @@ class IntanRawIO(BaseRawIO):
                 dtype_size = np.dtype(stream_datatype).itemsize
                 n_samples = size_in_bytes // (dtype_size * num_channels)
                 signal_stream_memmap = np.memmap(
-                    file_path, dtype=stream_datatype, mode="r", shape=(num_channels, n_samples)
-                ).T
+                    file_path,
+                    dtype=stream_datatype,
+                    mode="r",
+                    shape=(n_samples, num_channels),
+                    order="C",
+                )
                 self._raw_data[stream_index] = signal_stream_memmap
 
         # for one-file-per-channel we have one memory map / channel stored as a list / neo stream
@@ -216,6 +222,8 @@ class IntanRawIO(BaseRawIO):
             channel_id = chan_info["native_channel_name"]
             sig_dtype = chan_info["dtype"]
             stream_id = str(chan_info["signal_type"])
+            # buffer will be handled later bepending the format
+            buffer_id = ""
             signal_channels.append(
                 (
                     name,
@@ -226,6 +234,7 @@ class IntanRawIO(BaseRawIO):
                     chan_info["gain"],
                     chan_info["offset"],
                     stream_id,
+                    buffer_id,
                 )
             )
             self.native_channel_order[channel_id] = chan_info["native_order"]
@@ -235,16 +244,34 @@ class IntanRawIO(BaseRawIO):
         signal_streams = np.zeros(stream_ids.size, dtype=_signal_stream_dtype)
 
         # we need to sort the data because the string of stream_index 10 is mis-sorted.
+        buffer_ids = []
         stream_ids_sorted = sorted([int(stream_id) for stream_id in stream_ids])
         signal_streams["id"] = [str(stream_id) for stream_id in stream_ids_sorted]
-
         for stream_index, stream_id in enumerate(stream_ids_sorted):
             if self.filename.suffix == ".rhd":
                 name = stream_id_to_stream_name_rhd.get(int(stream_id), "")
             else:
                 name = stream_id_to_stream_name_rhs.get(int(stream_id), "")
-
             signal_streams["name"][stream_index] = name
+            # zach I need you help here
+            if self.file_format == "header-attached":
+                buffer_id = ""
+            elif self.file_format == "one-file-per-signal":
+                buffer_id = stream_id
+                buffer_ids.append(buffer_id)
+            elif self.file_format == "one-file-per-channel":
+                buffer_id = ""
+
+            signal_streams["buffer_id"][stream_index] = buffer_id
+
+            # set buffer_id to channels
+            if buffer_id != "":
+                mask = signal_channels["stream_id"] == stream_id
+                signal_channels["buffer_id"][mask] = buffer_id
+
+        # depending the format we can have buffer_id or not
+        signal_buffers = np.zeros(len(buffer_ids), dtype=_signal_buffer_dtype)
+        signal_buffers["id"] = buffer_ids
 
         self._max_sampling_rate = np.max(signal_channels["sampling_rate"])
 
@@ -272,6 +299,7 @@ class IntanRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
