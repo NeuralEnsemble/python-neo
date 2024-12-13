@@ -365,8 +365,8 @@ class PlexonRawIO(BaseRawIO):
             unit_loop = enumerate(self.internal_unit_ids)
 
         for unit_index, (chan_id, unit_id) in unit_loop:
-            c = np.nonzero(dspChannelHeaders["Channel"] == chan_id)[0][0]
-            h = dspChannelHeaders[c]
+            channel_index = np.nonzero(dspChannelHeaders["Channel"] == chan_id)[0][0]
+            dsp_channel_headers = dspChannelHeaders[channel_index]
 
             name = h["Name"].decode("utf8")
             _id = f"ch{chan_id}#{unit_id}"
@@ -375,11 +375,11 @@ class PlexonRawIO(BaseRawIO):
                 wf_gain = 3000.0 / (2048 * h["Gain"] * 1000.0)
             elif 103 <= global_header["Version"] < 105:
                 wf_gain = global_header["SpikeMaxMagnitudeMV"] / (
-                    0.5 * 2.0 ** (global_header["BitsPerSpikeSample"]) * h["Gain"] * 1000.0
+                    0.5 * 2.0 ** (global_header["BitsPerSpikeSample"]) * dsp_channel_headers["Gain"] * 1000.0
                 )
             elif global_header["Version"] >= 105:
                 wf_gain = global_header["SpikeMaxMagnitudeMV"] / (
-                    0.5 * 2.0 ** (global_header["BitsPerSpikeSample"]) * h["Gain"] * global_header["SpikePreAmpGain"]
+                    0.5 * 2.0 ** (global_header["BitsPerSpikeSample"]) * dsp_channel_headers["Gain"] * global_header["SpikePreAmpGain"]
                 )
             wf_offset = 0.0
             wf_left_sweep = -1  # DONT KNOWN
