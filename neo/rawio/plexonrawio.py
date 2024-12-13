@@ -213,7 +213,9 @@ class PlexonRawIO(BaseRawIO):
                     np_scalar_to_python_scalar = lambda x: x.item() if isinstance(x, np.generic) else x
                     bl_header = {key: np_scalar_to_python_scalar(bl_header[key]) for key in bl_header.dtype.names}
                     
-                    timestamp = bl_header["UpperByteOf5ByteTimestamp"] * 2**32 + bl_header["TimeStamp"]
+                    current_upper_byte_of_5_byte_timestamp = int(bl_header["UpperByteOf5ByteTimestamp"])
+                    current_bl_timestamp = int(bl_header["TimeStamp"])
+                    timestamp = current_upper_byte_of_5_byte_timestamp * 2**32 + current_bl_timestamp
                     n1 = bl_header["NumberOfWaveforms"]
                     n2 = bl_header["NumberOfWordsInWaveform"]
                     sample_count = n1 * n2
