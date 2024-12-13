@@ -80,7 +80,8 @@ docs = [
     "matplotlib",
     "nixio",
     "pynwb",
-    "igor2"
+    "igor2",
+    "numpy<2.0" # https://github.com/NeuralEnsemble/python-neo/pull/1612
 ]
 
 dev = [

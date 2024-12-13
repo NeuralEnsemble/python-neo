@@ -209,7 +209,9 @@ class PlexonRawIO(BaseRawIO):
                 for index, pos in enumerate(positions):
                     bl_header = data[pos : pos + 16].view(DataBlockHeader)[0]
 
-                    timestamp = bl_header["UpperByteOf5ByteTimestamp"] * 2**32 + bl_header["TimeStamp"]
+                    current_upper_byte_of_5_byte_timestamp = int(bl_header["UpperByteOf5ByteTimestamp"])
+                    current_bl_timestamp = int(bl_header["TimeStamp"])
+                    timestamp = current_upper_byte_of_5_byte_timestamp * 2**32 + current_bl_timestamp
                     n1 = bl_header["NumberOfWaveforms"]
                     n2 = bl_header["NumberOfWordsInWaveform"]
                     sample_count = n1 * n2
