@@ -279,7 +279,7 @@ class PlexonRawIO(BaseRawIO):
                 gain = 5000.0 / (2048 * channel_headers["Gain"] * channel_headers["PreampGain"])
             elif global_header["Version"] >= 103:
                 gain = global_header["SlowMaxMagnitudeMV"] / (
-                    0.5 * (2 ** global_header["BitsPerSpikeSample"]) * h["Gain"] * h["PreampGain"]
+                    0.5 * (2 ** global_header["BitsPerSpikeSample"]) * channel_headers["Gain"] * channel_headers["PreampGain"]
                 )
             offset = 0.0
 
