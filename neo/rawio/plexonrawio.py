@@ -209,6 +209,10 @@ class PlexonRawIO(BaseRawIO):
                 for index, pos in enumerate(positions):
                     bl_header = data[pos : pos + 16].view(DataBlockHeader)[0]
 
+                    # To avoid overflow errors when doing arithmetic operations on numpy scalars
+                    np_scalar_to_python_scalar = lambda x: x.item() if isinstance(x, np.generic) else x
+                    bl_header = {key: np_scalar_to_python_scalar(bl_header[key]) for key in bl_header.dtype.names}
+                    
                     timestamp = bl_header["UpperByteOf5ByteTimestamp"] * 2**32 + bl_header["TimeStamp"]
                     n1 = bl_header["NumberOfWaveforms"]
                     n2 = bl_header["NumberOfWordsInWaveform"]
@@ -253,21 +257,26 @@ class PlexonRawIO(BaseRawIO):
         else:
             chan_loop = range(nb_sig_chan)
         for chan_index in chan_loop:
-            h = slowChannelHeaders[chan_index]
-            name = h["Name"].decode("utf8")
-            chan_id = h["Channel"]
+            channel_headers = slowChannelHeaders[chan_index]
+            
+            # To avoid overflow errors when doing arithmetic operations on numpy scalars
+            np_scalar_to_python_scalar = lambda x: x.item() if isinstance(x, np.generic) else x
+            channel_headers = {key: np_scalar_to_python_scalar(channel_headers[key]) for key in channel_headers.dtype.names}
+            
+            name = channel_headers["Name"].decode("utf8")
+            chan_id = channel_headers["Channel"]
             length = self._data_blocks[5][chan_id]["size"].sum() // 2
             if length == 0:
                 continue  # channel not added
-            source_id.append(h["SrcId"])
+            source_id.append(channel_headers["SrcId"])
             channel_num_samples.append(length)
-            sampling_rate = float(h["ADFreq"])
+            sampling_rate = float(channel_headers["ADFreq"])
             sig_dtype = "int16"
             units = ""  # I don't know units
             if global_header["Version"] in [100, 101]:
-                gain = 5000.0 / (2048 * h["Gain"] * 1000.0)
+                gain = 5000.0 / (2048 * channel_headers["Gain"] * 1000.0)
             elif global_header["Version"] in [102]:
-                gain = 5000.0 / (2048 * h["Gain"] * h["PreampGain"])
+                gain = 5000.0 / (2048 * channel_headers["Gain"] * channel_headers["PreampGain"])
             elif global_header["Version"] >= 103:
                 gain = global_header["SlowMaxMagnitudeMV"] / (
                     0.5 * (2 ** global_header["BitsPerSpikeSample"]) * h["Gain"] * h["PreampGain"]
@@ -574,7 +583,7 @@ def read_as_dict(fid, dtype, offset=None):
             v = v.replace("\x03", "")
             v = v.replace("\x00", "")
 
-        info[k] = v
+        info[k] = v.item() if isinstance(v, np.generic) else v
     return info
 
 
