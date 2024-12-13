@@ -23,7 +23,7 @@ urllib.request.urlretrieve(distantfile, localfile)
 # Now we can create our reader and read some data
 
 # create a reader
-reader = neo.io.PlexonIO(filename="4chDemoPlx.plx")
+reader = neo.io.PlexonIO(filename="4chDemoPLX.plx")
 # read the blocks
 blks = reader.read(lazy=False)
 print(blks)
