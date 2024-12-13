@@ -14,8 +14,8 @@ import neo
 url_repo = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 # Plexon files
-distantfile = url_repo + "plexon/4chDemoPLX.plx"
-localfile = "4chDemoPLX.plx"
+distantfile = url_repo + "plexon/File_plexon_3.plx"
+localfile = "File_plexon_3.plx"
 urllib.request.urlretrieve(distantfile, localfile)
 
 
@@ -23,7 +23,7 @@ urllib.request.urlretrieve(distantfile, localfile)
 # Now we can create our reader and read some data
 
 # create a reader
-reader = neo.io.PlexonIO(filename="4chDemoPLX.plx")
+reader = neo.io.PlexonIO(filename="File_plexon_3.plx")
 # read the blocks
 blks = reader.read(lazy=False)
 print(blks)
