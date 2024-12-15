@@ -67,7 +67,6 @@ class TestIntanRawIO(
         )
         np.testing.assert_array_equal(signal_array_annotations["board_stream_num"][:10], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
-    
     def test_correct_reading_one_file_per_channel(self):
         "Issue: https://github.com/NeuralEnsemble/python-neo/issues/1599"
         # Test reading of one-file-per-channel format file. The channels should match the raw files
@@ -77,7 +76,7 @@ class TestIntanRawIO(
 
         # This should be the folder where the files of all the channels are stored
         folder_path = file_path.parent
-        
+
         # The paths are named as amp-A-000.dat, amp-A-001.dat, amp-A-002.dat, ...
         amplifier_file_paths = [path for path in folder_path.iterdir() if "amp" in path.name]
         channel_names = [path.name[4:-4] for path in amplifier_file_paths]
@@ -86,6 +85,7 @@ class TestIntanRawIO(
             data_raw = np.fromfile(amplifier_file_path, dtype=np.int16).squeeze()
             data_from_neo = intan_reader.get_analogsignal_chunk(channel_ids=[channel_name], stream_index=0).squeeze()
             np.testing.assert_allclose(data_raw, data_from_neo)
+
 
 if __name__ == "__main__":
     unittest.main()

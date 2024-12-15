@@ -173,7 +173,7 @@ class IntanRawIO(BaseRawIO):
                 self._block_size,
                 channel_number_dict,
             ) = read_rhd(self.filename, self.file_format)
-        
+
         #############################################
         # memmap the raw data for each format type
         #############################################
@@ -207,7 +207,6 @@ class IntanRawIO(BaseRawIO):
                 channel_file_paths = raw_file_paths_dict[stream_name]
                 channel_memmap_list = [np.memmap(fp, dtype=stream_dtype, mode="r") for fp in channel_file_paths]
                 self._raw_data[stream_name] = channel_memmap_list
-                
 
         # Data Integrity checks
         # strictness of check is controlled by ignore_integrity_checks
@@ -747,12 +746,12 @@ def read_rhs(filename, file_format: str):
 
         # Build a dictionary with channel count
         special_cases_for_counting = [
-            "DC Amplifier channel", 
-            "Stim channel",  
+            "DC Amplifier channel",
+            "Stim channel",
         ]
         names_to_count = [name for name in stream_names if name not in special_cases_for_counting]
         channel_number_dict = {name: len(stream_name_to_channel_info_list[name]) for name in names_to_count}
-        
+
         # Both DC Amplifier and Stim streams have the same number of channels as the amplifier stream
         channel_number_dict["DC Amplifier channel"] = channel_number_dict["RHS2000 amplifier channel"]
         channel_number_dict["Stim channel"] = channel_number_dict["RHS2000 amplifier channel"]
@@ -1204,6 +1203,7 @@ def create_one_file_per_signal_dict_rhd(dirname):
 
     return raw_file_paths_dict
 
+
 stream_name_to_file_name_rhs = {
     "RHS2000 amplifier channel": "amplifier.dat",
     "RHS2000 auxiliary input channel": "auxiliary.dat",
@@ -1213,6 +1213,7 @@ stream_name_to_file_name_rhs = {
     "USB board digital input channel": "digitalin.dat",
     "USB board digital output channel": "digitalout.dat",
 }
+
 
 def create_one_file_per_signal_dict_rhs(dirname):
     """Function for One File Per Signal Type
@@ -1275,10 +1276,10 @@ def create_one_file_per_channel_dict_rhd(dirname):
     for stream_name, file_prefix in stream_name_to_file_prefix_rhd.items():
         stream_files = [file for file in files if file_prefix in file.name]
         # Map file name to channel name amp-A-000.dat -> A-000  amp-B-006.dat -> B-006  etc
-        file_path_to_channel_name = lambda x: '-'.join(x.stem.split('-')[1:])
+        file_path_to_channel_name = lambda x: "-".join(x.stem.split("-")[1:])
         sorted_stream_files = sorted(stream_files, key=file_path_to_channel_name)
         raw_file_paths_dict[stream_name] = sorted_stream_files
-    
+
     raw_file_paths_dict["timestamp"] = [Path(dirname / "time.dat")]
     return raw_file_paths_dict
 
@@ -1293,6 +1294,7 @@ stream_name_to_file_prefix_rhs = {
     "USB board digital input channel": "board-DIGITAL-IN",
     "USB board digital output channel": "board-DIGITAL-OUT",
 }
+
 
 def create_one_file_per_channel_dict_rhs(
     dirname,
@@ -1316,7 +1318,7 @@ def create_one_file_per_channel_dict_rhs(
     for stream_name, file_prefix in stream_name_to_file_prefix_rhs.items():
         stream_files = [file for file in files if file_prefix in file.name]
         # Map file name to channel name amp-A-000.dat -> A-000  amp-B-006.dat -> B-006  etc
-        file_path_to_channel_name = lambda x: '-'.join(x.stem.split('-')[1:])
+        file_path_to_channel_name = lambda x: "-".join(x.stem.split("-")[1:])
         sorted_stream_files = sorted(stream_files, key=file_path_to_channel_name)
         raw_file_paths_dict[stream_name] = sorted_stream_files
 
