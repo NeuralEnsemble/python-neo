@@ -64,6 +64,7 @@ def download_dataset(repo=default_testing_repo, remote_path=None, local_folder=N
         # make sure git repo is in clean state
         repo = dataset.repo
         repo.call_git(["checkout", "--force", "master"])
+        repo.unlock(remote_path)
         dataset.update(merge=True)
     else:
         dataset = datalad.api.install(path=local_folder, source=repo)
