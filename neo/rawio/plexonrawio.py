@@ -257,29 +257,29 @@ class PlexonRawIO(BaseRawIO):
         else:
             chan_loop = range(nb_sig_chan)
         for chan_index in chan_loop:
-            channel_headers = slowChannelHeaders[chan_index]
+            slow_channel_headers = slowChannelHeaders[chan_index]
             
             # To avoid overflow errors when doing arithmetic operations on numpy scalars
             np_scalar_to_python_scalar = lambda x: x.item() if isinstance(x, np.generic) else x
-            channel_headers = {key: np_scalar_to_python_scalar(channel_headers[key]) for key in channel_headers.dtype.names}
+            slow_channel_headers = {key: np_scalar_to_python_scalar(slow_channel_headers[key]) for key in slow_channel_headers.dtype.names}
             
-            name = channel_headers["Name"].decode("utf8")
-            chan_id = channel_headers["Channel"]
+            name = slow_channel_headers["Name"].decode("utf8")
+            chan_id = slow_channel_headers["Channel"]
             length = self._data_blocks[5][chan_id]["size"].sum() // 2
             if length == 0:
                 continue  # channel not added
-            source_id.append(channel_headers["SrcId"])
+            source_id.append(slow_channel_headers["SrcId"])
             channel_num_samples.append(length)
-            sampling_rate = float(channel_headers["ADFreq"])
+            sampling_rate = float(slow_channel_headers["ADFreq"])
             sig_dtype = "int16"
             units = ""  # I don't know units
             if global_header["Version"] in [100, 101]:
-                gain = 5000.0 / (2048 * channel_headers["Gain"] * 1000.0)
+                gain = 5000.0 / (2048 * slow_channel_headers["Gain"] * 1000.0)
             elif global_header["Version"] in [102]:
-                gain = 5000.0 / (2048 * channel_headers["Gain"] * channel_headers["PreampGain"])
+                gain = 5000.0 / (2048 * slow_channel_headers["Gain"] * slow_channel_headers["PreampGain"])
             elif global_header["Version"] >= 103:
                 gain = global_header["SlowMaxMagnitudeMV"] / (
-                    0.5 * (2 ** global_header["BitsPerSpikeSample"]) * channel_headers["Gain"] * channel_headers["PreampGain"]
+                    0.5 * (2 ** global_header["BitsPerSpikeSample"]) * slow_channel_headers["Gain"] * slow_channel_headers["PreampGain"]
                 )
             offset = 0.0
 
