@@ -4,6 +4,3 @@ channels:
 dependencies:
   - datalad
   - pip
-  # temporary have this here for IO testing while we decide how to deal with
-  # external packages not 2.0 ready
-  - numpy=1.26.4
