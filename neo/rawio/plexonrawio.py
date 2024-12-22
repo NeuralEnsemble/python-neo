@@ -212,7 +212,7 @@ class PlexonRawIO(BaseRawIO):
                     # To avoid overflow errors when doing arithmetic operations on numpy scalars
                     np_scalar_to_python_scalar = lambda x: x.item() if isinstance(x, np.generic) else x
                     bl_header = {key: np_scalar_to_python_scalar(bl_header[key]) for key in bl_header.dtype.names}
-                    
+
                     current_upper_byte_of_5_byte_timestamp = int(bl_header["UpperByteOf5ByteTimestamp"])
                     current_bl_timestamp = int(bl_header["TimeStamp"])
                     timestamp = current_upper_byte_of_5_byte_timestamp * 2**32 + current_bl_timestamp
@@ -260,11 +260,13 @@ class PlexonRawIO(BaseRawIO):
             chan_loop = range(nb_sig_chan)
         for chan_index in chan_loop:
             slow_channel_headers = slowChannelHeaders[chan_index]
-            
+
             # To avoid overflow errors when doing arithmetic operations on numpy scalars
             np_scalar_to_python_scalar = lambda x: x.item() if isinstance(x, np.generic) else x
-            slow_channel_headers = {key: np_scalar_to_python_scalar(slow_channel_headers[key]) for key in slow_channel_headers.dtype.names}
-            
+            slow_channel_headers = {
+                key: np_scalar_to_python_scalar(slow_channel_headers[key]) for key in slow_channel_headers.dtype.names
+            }
+
             name = slow_channel_headers["Name"].decode("utf8")
             chan_id = slow_channel_headers["Channel"]
             length = self._data_blocks[5][chan_id]["size"].sum() // 2
@@ -281,7 +283,10 @@ class PlexonRawIO(BaseRawIO):
                 gain = 5000.0 / (2048 * slow_channel_headers["Gain"] * slow_channel_headers["PreampGain"])
             elif global_header["Version"] >= 103:
                 gain = global_header["SlowMaxMagnitudeMV"] / (
-                    0.5 * (2 ** global_header["BitsPerSpikeSample"]) * slow_channel_headers["Gain"] * slow_channel_headers["PreampGain"]
+                    0.5
+                    * (2 ** global_header["BitsPerSpikeSample"])
+                    * slow_channel_headers["Gain"]
+                    * slow_channel_headers["PreampGain"]
                 )
             offset = 0.0
 
@@ -381,7 +386,10 @@ class PlexonRawIO(BaseRawIO):
                 )
             elif global_header["Version"] >= 105:
                 wf_gain = global_header["SpikeMaxMagnitudeMV"] / (
-                    0.5 * 2.0 ** (global_header["BitsPerSpikeSample"]) * dsp_channel_headers["Gain"] * global_header["SpikePreAmpGain"]
+                    0.5
+                    * 2.0 ** (global_header["BitsPerSpikeSample"])
+                    * dsp_channel_headers["Gain"]
+                    * global_header["SpikePreAmpGain"]
                 )
             wf_offset = 0.0
             wf_left_sweep = -1  # DONT KNOWN
