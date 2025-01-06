@@ -495,7 +495,7 @@ class NWBIO(BaseIO):
             if segment.block is not block:
                 raise TypeError(f"segment.block must be block it is {segment.block}")
             if not segment.name:
-                segment.name = f"{block.name} : segment{i}"
+                segment.name = f"{block.name}  segment{i}"
             self._write_segment(self._nwbfile, segment, electrodes)
         self.blocks_written += 1
 
