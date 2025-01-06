@@ -529,7 +529,7 @@ class NWBIO(BaseIO):
                 signal.name = f"{segment.name} {signal.name} {i}"
                 logging.warning(f"Warning signal name exists. New name: {signal.name}")
             else:
-                signal.name = f"{segment.name} : analogsignal{signal.name} {i}"
+                signal.name = f"{segment.name}  analogsignal{signal.name} {i}"
             self._write_signal(self._nwbfile, signal, electrodes)
 
         for i, train in enumerate(segment.spiketrains):
