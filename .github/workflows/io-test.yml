@@ -69,13 +69,16 @@ jobs:
             ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-
             ${{ runner.os }}-conda-env-
 
+      - name: Install Python Version
+        run: |
+          conda install python=${{ matrix.python-version }}
+
       - name: Install testing dependencies
         # testing environment is only created from yml if no cache was found
         # restore-key hits should result in `cache-hit` == 'false'
         if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
           conda env update --name neo-test-env --file environment_testing.yml --prune
-          conda install python=${{ matrix.python-version }}
 
       - name: Configure git
         run: |
