@@ -536,7 +536,7 @@ class NWBIO(BaseIO):
             if train.segment is not segment:
                 raise TypeError(f"train.segment must be segment and is {train.segment}")
             if not train.name:
-                train.name = f"{segment.name} : spiketrain{i}"
+                train.name = f"{segment.name}  spiketrain{i}"
             self._write_spiketrain(self._nwbfile, train)
 
         for i, event in enumerate(segment.events):
@@ -546,12 +546,12 @@ class NWBIO(BaseIO):
                 event.name = f"{segment.name}  {event.name} {i}"
                 logging.warning(f"Warning event name exists. New name: {event.name}")
             else:
-                event.name = f"{segment.name} : event{event.name} {i}"
+                event.name = f"{segment.name}  event{event.name} {i}"
             self._write_event(self._nwbfile, event)
 
         for i, epoch in enumerate(segment.epochs):
             if not epoch.name:
-                epoch.name = f"{segment.name} : epoch{i}"
+                epoch.name = f"{segment.name}  epoch{i}"
             self._write_epoch(self._nwbfile, epoch)
 
     def _write_signal(self, nwbfile, signal, electrodes):
