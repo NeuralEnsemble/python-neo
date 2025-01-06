@@ -194,7 +194,12 @@ def normalize_times_array(times, units=None, dtype=None, copy=None):
     """
 
     if copy is not None:
-        raise ValueError("`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0.")
+        raise ValueError(
+            "`copy` is now deprecated in Neo due to removal in Quantites to support Numpy 2.0. "
+            "In order to facilitate the deprecation copy can be set to None but will raise an "
+            "error if set to True/False since this will silently do nothing. This argument will be completely "
+            "removed in Neo 0.15.0. Please update your code base as necessary."
+            )
 
     if dtype is None:
         if not hasattr(times, "dtype"):
@@ -352,7 +357,10 @@ class SpikeTrain(DataObject):
         """
         if copy is not None:
             raise ValueError(
-                "`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0."
+                "`copy` is now deprecated in Neo due to removal in Quantites to support Numpy 2.0. "
+                "In order to facilitate the deprecation copy can be set to None but will raise an "
+                "error if set to True/False since this will silently do nothing. This argument will be completely "
+                "removed in Neo 0.15.0. Please update your code base as necessary."
             )
 
         if len(times) != 0 and waveforms is not None and len(times) != waveforms.shape[0]:
