@@ -71,7 +71,7 @@ jobs:
 
       - name: Install Python Version
         run: |
-          conda install --force-reinstall python=${{ matrix.python-version }} pip 
+          conda install --force-reinstall python=${{ matrix.python-version }} pip pytest
 
       - name: Install testing dependencies
         # testing environment is only created from yml if no cache was found
