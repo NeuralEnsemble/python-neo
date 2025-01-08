@@ -103,9 +103,11 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
             # "TRONCA" zone define segments
             zname2, pos, length = zones["TRONCA"]
             f.seek(pos)
+            # this number avoid a infinite loop in case of corrupted  TRONCA zone (seg_start!=0 and trace_offset!=0)
             max_segments = 100
             self.info_segments = []
             for i in range(max_segments):
+                # 4 bytes u4 each
                 seg_start = int(np.frombuffer(f.read(4), dtype="u4")[0])
                 trace_offset = int(np.frombuffer(f.read(4), dtype="u4")[0])
                 if seg_start == 0 and trace_offset == 0:
