@@ -176,7 +176,7 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
                 stop = seg_limits[seg_index + 1]
                 
                 shape = (stop - start, Num_Chan)
-                file_offset = Data_Start_Offset + start * np.dtype(sig_dtype).itemsize * Num_Chan
+                file_offset = Data_Start_Offset + ( start * np.dtype(sig_dtype).itemsize * Num_Chan)
                 self._buffer_descriptions[0][seg_index] = {}
                 self._buffer_descriptions[0][seg_index][buffer_id] = {
                     "type" : "raw",
