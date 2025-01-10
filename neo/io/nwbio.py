@@ -495,7 +495,7 @@ class NWBIO(BaseIO):
             if segment.block is not block:
                 raise TypeError(f"segment.block must be block it is {segment.block}")
             if not segment.name:
-                segment.name = f"{block.name} : segment{i}"
+                segment.name = f"{block.name}  segment{i}"
             self._write_segment(self._nwbfile, segment, electrodes)
         self.blocks_written += 1
 
@@ -529,14 +529,14 @@ class NWBIO(BaseIO):
                 signal.name = f"{segment.name} {signal.name} {i}"
                 logging.warning(f"Warning signal name exists. New name: {signal.name}")
             else:
-                signal.name = f"{segment.name} : analogsignal{signal.name} {i}"
+                signal.name = f"{segment.name}  analogsignal{signal.name} {i}"
             self._write_signal(self._nwbfile, signal, electrodes)
 
         for i, train in enumerate(segment.spiketrains):
             if train.segment is not segment:
                 raise TypeError(f"train.segment must be segment and is {train.segment}")
             if not train.name:
-                train.name = f"{segment.name} : spiketrain{i}"
+                train.name = f"{segment.name}  spiketrain{i}"
             self._write_spiketrain(self._nwbfile, train)
 
         for i, event in enumerate(segment.events):
@@ -546,12 +546,12 @@ class NWBIO(BaseIO):
                 event.name = f"{segment.name}  {event.name} {i}"
                 logging.warning(f"Warning event name exists. New name: {event.name}")
             else:
-                event.name = f"{segment.name} : event{event.name} {i}"
+                event.name = f"{segment.name}  event{event.name} {i}"
             self._write_event(self._nwbfile, event)
 
         for i, epoch in enumerate(segment.epochs):
             if not epoch.name:
-                epoch.name = f"{segment.name} : epoch{i}"
+                epoch.name = f"{segment.name}  epoch{i}"
             self._write_epoch(self._nwbfile, epoch)
 
     def _write_signal(self, nwbfile, signal, electrodes):
