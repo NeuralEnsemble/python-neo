@@ -4,7 +4,7 @@ version = "0.14.0.dev0"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
-requires-python = ">=3.9,<3.13" # 3.13 will require NumPy > 2.0 (Windows issue in CI)
+requires-python = ">=3.9"
 license = {text = "BSD 3-Clause License"}
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -23,7 +23,7 @@ classifiers = [
 
 dependencies = [
     "packaging",
-    "numpy>=1.22.4,<2.0.0",
+    "numpy>=1.22.4",
     "quantities>=0.16.1"
 ]
 
@@ -45,7 +45,7 @@ iocache = [
 ]
 
 test = [
-    "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
+    # "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
     "pytest",
     "pytest-cov",
     # datalad   # this dependency is covered by conda (environment_testing.yml)
@@ -80,7 +80,8 @@ docs = [
     "matplotlib",
     "nixio",
     "pynwb",
-    "igor2"
+    "igor2",
+    "numpy<2.0" # https://github.com/NeuralEnsemble/python-neo/pull/1612
 ]
 
 dev = [
@@ -93,7 +94,6 @@ igorproio = ["igor2"]
 kwikio = ["klusta"]
 neomatlabio = ["scipy>=1.0.0"]
 nixio = ["nixio>=1.5.0"]
-stimfitio = ["stfio"]
 tiffio = ["pillow"]
 edf = ["pyedflib"]
 ced = ["sonpy"]
@@ -106,7 +106,7 @@ plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32
 all = [
     "coverage",
     "coveralls",
-    "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
+    # "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
     "h5py",
     "igor2",
     "ipython",
