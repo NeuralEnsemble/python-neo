@@ -1357,7 +1357,7 @@ class BlackrockRawIO(BaseRawIO):
 
                     # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
                     # Spike should belong to segment before
-                    mask_outside = (ev_ids == i) & (data["timestamp"] < int(seg["timestamp"]) - nsx_offset - nsx_period)
+                    mask_outside = (ev_ids == i) & (data["timestamp"] < int(seg["timestamp"]) - int(nsx_offset) - int(nsx_period))
 
                     if len(data[mask_outside]) > 0:
                         warnings.warn(f"Spikes outside any segment. Detected on segment #{i}")
@@ -1987,6 +1987,7 @@ class BlackrockRawIO(BaseRawIO):
         else:
             units = "uV"
 
+        
         nsx_parameters = {
             "nb_data_points": int(
                 (self.__get_file_size(filename) - bytes_in_headers)
@@ -1995,8 +1996,8 @@ class BlackrockRawIO(BaseRawIO):
             ),
             "labels": labels,
             "units": np.array([units] * self.__nsx_basic_header[nsx_nb]["channel_count"]),
-            "min_analog_val": -1 * np.array(dig_factor),
-            "max_analog_val": np.array(dig_factor),
+            "min_analog_val": -1 * np.array(dig_factor, dtype="float"),
+            "max_analog_val": np.array(dig_factor, dtype="float"),
             "min_digital_val": np.array([-1000] * self.__nsx_basic_header[nsx_nb]["channel_count"]),
             "max_digital_val": np.array([1000] * self.__nsx_basic_header[nsx_nb]["channel_count"]),
             "timestamp_resolution": 30000,
