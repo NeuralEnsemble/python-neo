@@ -121,8 +121,9 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         # signals zone
         # create signals channel map: several channel per stream
         signal_channels = []
+        
         for stream_index, stream_name in enumerate(sig_stream_names):
-            # stream_index is the index in vector sytream names
+            # stream_index is the index in vector stream names
             stream_id = str(stream_index)
             buffer_id = stream_id
             info = self._sig_streams[0][0][stream_index]
@@ -132,11 +133,23 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 if "SYNC" in chan_id and not self.load_sync_channel:
                     # the channel is removed from stream but not the buffer
                     stream_id = ""
+
                 if chan_info["units"] == "":
                     # in some cases for some OE version the unit is "", but the gain is to "uV"
                     units = "uV"
                 else:
                     units = chan_info["units"]
+                
+                if "ADC" in chan_id:
+                    # These are non-neural channels and their stream should be separated
+                    # We defined their stream_id as the stream_index of neural data plus the number of neural streams
+                    # This is to not break backwards compatbility with the stream_id numbering
+                    stream_id = str(stream_index + len(sig_stream_names))
+                    # For ADC channels multiplying by the bit_volts whe un units are not provided converts to Volts
+                    units = "V" if units == "" else units
+                    
+                gain = chan_info["bit_volts"]
+                offset = 0.0
                 new_channels.append(
                     (
                         chan_info["channel_name"],
@@ -144,24 +157,41 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         float(info["sample_rate"]),
                         info["dtype"],
                         units,
-                        chan_info["bit_volts"],
-                        0.0,
+                        gain,
+                        offset,
                         stream_id,
                         buffer_id,
                     )
                 )
             signal_channels.extend(new_channels)
+        
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         signal_streams = []
         signal_buffers = []
-        for stream_index, stream_name in enumerate(sig_stream_names):
-            stream_id = str(stream_index)
-            buffer_id = str(stream_index)
-            signal_buffers.append((stream_name, buffer_id))
+        
+        unique_streams_ids = np.unique(signal_channels["stream_id"])
+        for stream_id in unique_streams_ids:
+            # Handle special case of Synch channel having stream_id empty
+            if stream_id == "":
+                continue
+            stream_index = int(stream_id)
+            # Neural signal
+            if stream_index < len(sig_stream_names):
+                stream_name = sig_stream_names[stream_index]
+                buffer_id = stream_id
+                # We add the buffers here as both the neural and the ADC channels are in the same buffer
+                signal_buffers.append((stream_name, buffer_id))
+            else: # This names the ADC streams
+                neural_stream_index = stream_index - len(sig_stream_names)
+                neural_stream_name = sig_stream_names[neural_stream_index]
+                stream_name = f"{neural_stream_name}_ADC"
+                buffer_id = str(neural_stream_index)
             signal_streams.append((stream_name, stream_id, buffer_id))
+        
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
+
 
         # create memmap for signals
         self._buffer_descriptions = {}
@@ -431,6 +461,8 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         return group_id
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
+        if stream_index >= len(self._sig_streams[block_index][seg_index]):
+            stream_index = stream_index - len(self._sig_streams[block_index][seg_index])    
         t_start = self._sig_streams[block_index][seg_index][stream_index]["t_start"]
         return t_start
 
