@@ -22,15 +22,17 @@ import numpy as np
 import os
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from .utils import get_memmap_shape
 
 
-class RawBinarySignalRawIO(BaseRawIO):
+class RawBinarySignalRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading raw binary files with user specified values
     Parameters
@@ -64,7 +66,7 @@ class RawBinarySignalRawIO(BaseRawIO):
         signal_offset=0.0,
         bytesoffset=0,
     ):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
         self.dtype = dtype
         self.sampling_rate = sampling_rate
@@ -79,20 +81,31 @@ class RawBinarySignalRawIO(BaseRawIO):
     def _parse_header(self):
 
         if os.path.exists(self.filename):
-            self._raw_signals = np.memmap(self.filename, dtype=self.dtype, mode="r", offset=self.bytesoffset).reshape(
-                -1, self.nb_channel
-            )
+            # on unique buffer and stream
+            buffer_id = "0"
+            stream_id = "0"
+            shape = get_memmap_shape(self.filename, self.dtype, num_channels=self.nb_channel, offset=self.bytesoffset)
+            self._buffer_descriptions = {0: {0: {}}}
+            self._buffer_descriptions[0][0][buffer_id] = {
+                "type": "raw",
+                "file_path": str(self.filename),
+                "dtype": "uint16",
+                "order": "C",
+                "file_offset": self.bytesoffset,
+                "shape": shape,
+            }
+            self._stream_buffer_slice = {stream_id: None}
+
         else:
             # The the neo.io.RawBinarySignalIO is used for write_segment
-            self._raw_signals = None
+            self._buffer_descriptions = None
 
         signal_channels = []
-        if self._raw_signals is not None:
+        if self._buffer_descriptions is not None:
             for c in range(self.nb_channel):
                 name = f"ch{c}"
                 chan_id = f"{c}"
                 units = ""
-                stream_id = "0"
                 signal_channels.append(
                     (
                         name,
@@ -103,15 +116,18 @@ class RawBinarySignalRawIO(BaseRawIO):
                         self.signal_gain,
                         self.signal_offset,
                         stream_id,
+                        buffer_id,
                     )
                 )
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        # one unique stream
+        # one unique stream and buffer
         if signal_channels.size > 0:
-            signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+            signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
+            signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
         else:
+            signal_buffers = np.array([], dtype=_signal_buffer_dtype)
             signal_streams = np.array([], dtype=_signal_stream_dtype)
 
         # No events
@@ -126,6 +142,7 @@ class RawBinarySignalRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -138,21 +155,14 @@ class RawBinarySignalRawIO(BaseRawIO):
         return 0.0
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals.shape[0] / self.sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = sig_size / self.sampling_rate
         return t_stop
-
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        if stream_index != 0:
-            raise ValueError("stream_index must be 0")
-        return self._raw_signals.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         if stream_index != 0:
             raise ValueError("stream_index must be 0")
         return 0.0
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
-        return raw_signals
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]

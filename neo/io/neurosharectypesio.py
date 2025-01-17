@@ -224,10 +224,10 @@ class NeurosharectypesIO(BaseIO):
                     total_read += pdwContCount.value
 
                 try:
-                    signal = pq.Quantity(pData, units=pAnalogInfo.szUnits.decode(), copy=False)
+                    signal = pq.Quantity(pData, units=pAnalogInfo.szUnits.decode())
                     unit_annotation = None
                 except LookupError:
-                    signal = pq.Quantity(pData, units="dimensionless", copy=False)
+                    signal = pq.Quantity(pData, units="dimensionless")
                     unit_annotation = pAnalogInfo.szUnits.decode()
 
                 # t_start
@@ -292,9 +292,9 @@ class NeurosharectypesIO(BaseIO):
                     waveforms[dwIndex, :, :] = pData[: nsample * nsource].reshape(nsample, nsource).transpose()
 
                 sptr = SpikeTrain(
-                    times=pq.Quantity(times, units="s", copy=False),
+                    times=pq.Quantity(times, units="s"),
                     t_stop=times.max(),
-                    waveforms=pq.Quantity(waveforms, units=str(pdwSegmentInfo.szUnits), copy=False),
+                    waveforms=pq.Quantity(waveforms, units=str(pdwSegmentInfo.szUnits)),
                     left_sweep=nsample / 2.0 / float(pdwSegmentInfo.dSampleRate) * pq.s,
                     sampling_rate=float(pdwSegmentInfo.dSampleRate) * pq.Hz,
                     name=str(entityInfo.szEntityLabel),

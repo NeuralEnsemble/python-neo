@@ -29,7 +29,7 @@ Classes:
 * :attr:`MicromedRawIO`
 * :attr:`NeuralynxRawIO`
 * :attr:`NeuroExplorerRawIO`
-* :attr:`NeuroNexusRawIO
+* :attr:`NeuroNexusRawIO`
 * :attr:`NeuroScopeRawIO`
 * :attr:`NIXRawIO`
 * :attr:`OpenEphysRawIO`

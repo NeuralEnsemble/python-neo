@@ -138,7 +138,7 @@ def _new_spiketrain(
     t_stop,
     units=None,
     dtype=None,
-    copy=True,
+    copy=None,
     sampling_rate=1.0 * pq.Hz,
     t_start=0.0 * pq.s,
     waveforms=None,
@@ -158,19 +158,19 @@ def _new_spiketrain(
     if annotations is None:
         annotations = {}
     obj = SpikeTrain(
-        signal,
-        t_stop,
-        units,
-        dtype,
-        copy,
-        sampling_rate,
-        t_start,
-        waveforms,
-        left_sweep,
-        name,
-        file_origin,
-        description,
-        array_annotations,
+        times=signal,
+        t_stop=t_stop,
+        units=units,
+        dtype=dtype,
+        copy=copy,
+        sampling_rate=sampling_rate,
+        t_start=t_start,
+        waveforms=waveforms,
+        left_sweep=left_sweep,
+        name=name,
+        file_origin=file_origin,
+        description=description,
+        array_annotations=array_annotations,
         **annotations,
     )
     obj.segment = segment
@@ -178,7 +178,7 @@ def _new_spiketrain(
     return obj
 
 
-def normalize_times_array(times, units=None, dtype=None, copy=True):
+def normalize_times_array(times, units=None, dtype=None, copy=None):
     """
     Return a quantity array with the correct units.
     There are four scenarios:
@@ -192,6 +192,10 @@ def normalize_times_array(times, units=None, dtype=None, copy=True):
     In scenario C, we rescale the original array to match `units`
     In scenario D, we raise a ValueError
     """
+
+    if copy is not None:
+        raise ValueError("`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0.")
+
     if dtype is None:
         if not hasattr(times, "dtype"):
             dtype = float
@@ -211,20 +215,21 @@ def normalize_times_array(times, units=None, dtype=None, copy=True):
             if times.dimensionality.items() == dim.items():
                 units = None  # units will be taken from times, avoids copying
             else:
-                if not copy:
-                    raise ValueError("cannot rescale and return view")
-                else:
-                    # this is needed because of a bug in python-quantities
-                    # see issue # 65 in python-quantities github
-                    # remove this if it is fixed
-                    times = times.rescale(dim)
+                raise ValueError("cannot rescale and return view")
 
     # check to make sure the units are time
     # this approach is orders of magnitude faster than comparing the
     # reference dimensionality
     if len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0], pq.UnitTime):
         ValueError(f"Units have dimensions {dim.simplified}, not [time]")
-    return pq.Quantity(times, units=units, dtype=dtype, copy=copy), dim
+    return (
+        pq.Quantity(
+            times,
+            units=units,
+            dtype=dtype,
+        ),
+        dim,
+    )
 
 
 class SpikeTrain(DataObject):
@@ -239,18 +244,16 @@ class SpikeTrain(DataObject):
     times: quantity array 1D | numpy array 1D | list
         The times of each spike.
     t_stop: quantity scalar | numpy scalar |float
-        Time at which the SpikeTrain ended. This will be converted to thesame units as `times`.
+        Time at which the SpikeTrain ended. This will be converted to the same units as `times`.
         This argument is required because it specifies the period of time over which spikes could have occurred.
         Note that :attr:`t_start` is highly recommended for the same reason.
     units: (quantity units) | None, default: None
         Required if `times` is a list or numpy.ndarray`
         Not required if times is a quantities.Quantity
     dtype: numpy dtype | str | None, default: None
-        Overrides the dtype of the times array if given.
-        If None, the dtype of the times is used
-    copy: bool, default: True
-        Whether to copy the times array.
-        Must be True when you request a change of units or dtype.
+        Due to change in `copy` behavior this argument is also deprecated during construction
+    copy: bool, default: None
+        Deprecated in order to support NumPy 2.0 and will be removed.
     sampling_rate: quantity scalar, default: 1.0 pq.Hz
         Number of samples per unit time for the waveforms.
     t_start: quantity scalar | numpy scalar | float
@@ -330,7 +333,7 @@ class SpikeTrain(DataObject):
         t_stop,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         sampling_rate=1.0 * pq.Hz,
         t_start=0.0 * pq.s,
         waveforms=None,
@@ -347,13 +350,17 @@ class SpikeTrain(DataObject):
         This is called whenever a new :class:`SpikeTrain` is created from the
         constructor, but not when slicing.
         """
+        if copy is not None:
+            raise ValueError(
+                "`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0."
+            )
+
         if len(times) != 0 and waveforms is not None and len(times) != waveforms.shape[0]:
             # len(times)!=0 has been used to workaround a bug occurring during neo import
             raise ValueError("the number of waveforms should be equal to the number of spikes")
 
         if dtype is not None and hasattr(times, "dtype") and times.dtype != dtype:
-            if not copy:
-                raise ValueError("cannot change dtype and return view")
+            raise ValueError("cannot change dtype during construction due to change in copy behavior")
 
             # if t_start.dtype or t_stop.dtype != times.dtype != dtype,
             # _check_time_in_range can have problems, so we set the t_start
@@ -420,7 +427,7 @@ class SpikeTrain(DataObject):
         t_stop,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         sampling_rate=1.0 * pq.Hz,
         t_start=0.0 * pq.s,
         waveforms=None,
@@ -494,7 +501,7 @@ class SpikeTrain(DataObject):
             self.t_stop,
             self.units,
             self.dtype,
-            True,
+            None,
             self.sampling_rate,
             self.t_start,
             self.waveforms,
@@ -738,7 +745,8 @@ class SpikeTrain(DataObject):
         else:
             units = pq.quantity.validate_dimensionality(units)
 
-        new_st = self.__class__(signal, t_start=t_start, t_stop=t_stop, waveforms=waveforms, units=units)
+        signal = deepcopy(signal)
+        new_st = SpikeTrain(signal, t_start=t_start, t_stop=t_stop, waveforms=waveforms, units=units)
         new_st._copy_data_complement(self, deep_copy=deep_copy)
 
         # Note: Array annotations are not copied here, because length of data could change
@@ -798,8 +806,23 @@ class SpikeTrain(DataObject):
             New instance of a :class:`SpikeTrain` object starting at t_shift later than the
             original :class:`SpikeTrain` (the original :class:`SpikeTrain` is not modified).
         """
-        new_st = self.duplicate_with_new_data(
-            signal=self.times.view(pq.Quantity) + t_shift, t_start=self.t_start + t_shift, t_stop=self.t_stop + t_shift
+        # We need new to make a new SpikeTrain
+        times = self.times.copy() + t_shift
+        t_stop = self.t_stop + t_shift
+        t_start = self.t_start + t_shift
+        new_st = SpikeTrain(
+            times=times,
+            t_stop=t_stop,
+            units=self.unit,
+            sampling_rate=self.sampling_rate,
+            t_start=t_start,
+            waveforms=self.waveforms,
+            left_sweep=self.left_sweep,
+            name=self.name,
+            file_origin=self.file_origin,
+            description=self.description,
+            array_annotations=deepcopy(self.array_annotations),
+            **self.annotations,
         )
 
         # Here we can safely copy the array annotations since we know that
@@ -845,7 +868,7 @@ class SpikeTrain(DataObject):
             raise MergeError("Cannot merge signal with waveform and signal " "without waveform.")
         stack = np.concatenate([np.asarray(st) for st in all_spiketrains])
         sorting = np.argsort(stack)
-        stack = stack[sorting]
+        sorted_stack = stack[sorting]
 
         kwargs = {}
 
@@ -900,10 +923,10 @@ class SpikeTrain(DataObject):
         kwargs.update(merged_annotations)
 
         train = SpikeTrain(
-            stack,
+            sorted_stack,
             units=self.units,
             dtype=self.dtype,
-            copy=False,
+            copy=None,
             t_start=self.t_start,
             t_stop=self.t_stop,
             sampling_rate=self.sampling_rate,
@@ -956,7 +979,7 @@ class SpikeTrain(DataObject):
 
         omitted_keys_other = [
             key
-            for key in np.unique([key for other in others for key in other.array_annotations])
+            for key in set([key for other in others for key in other.array_annotations])
             if key not in self.array_annotations
         ]
 

@@ -28,6 +28,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -187,7 +188,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     if stream_id not in stream_ids:
                         stream_ids.append(stream_id)
                         stream_name = stream_id
-                        signal_streams.append((stream_name, stream_id))
+                        buffer_id = ""
+                        signal_streams.append((stream_name, stream_id, buffer_id))
                         self._mask_channels_bytes[stream_id] = []
 
                     name = channel.attrib["id"]
@@ -197,8 +199,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     units = ""
                     gain = 1.0
                     offset = 0.0
+                    buffer_id = ""
                     signal_channels.append(
-                        (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id)
+                        (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id)
                     )
 
                     num_bytes = stream_bytes[stream_id] + int(channel.attrib["startByte"])
@@ -210,7 +213,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
         if num_ephy_channels > 0:
             stream_id = "trodes"
             stream_name = stream_id
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
             self._mask_channels_bytes[stream_id] = []
 
             # we can only produce these channels for a subset of spikegadgets setup. If this criteria isn't
@@ -247,8 +251,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
                         name = "hwChan" + chan_id
 
                     offset = 0.0
+                    buffer_id = ""
                     signal_channels.append(
-                        (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id)
+                        (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id)
                     )
 
                     chan_mask = np.zeros(packet_size, dtype="bool")
@@ -268,6 +273,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+
+        # no buffer concept here data are too fragmented
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # remove some stream if not wanted
         if self.selected_streams is not None:
@@ -296,6 +304,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

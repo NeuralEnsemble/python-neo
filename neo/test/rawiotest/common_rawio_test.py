@@ -112,6 +112,7 @@ class BaseTestRawIO:
 
             # lanch a series of test compliance
             compliance.header_is_total(reader)
+            compliance.check_signal_stream_buffer_hierachy(reader)
             compliance.count_element(reader)
             compliance.read_analogsignals(reader)
             compliance.read_spike_times(reader)
@@ -124,3 +125,7 @@ class BaseTestRawIO:
             logging.getLogger().setLevel(logging.INFO)
             compliance.benchmark_speed_read_signals(reader)
             logging.getLogger().setLevel(level)
+
+            # buffer api
+            if reader.has_buffer_description_api():
+                compliance.check_buffer_api(reader)
