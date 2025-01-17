@@ -96,6 +96,8 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         else:
             event_stream_names = []
 
+        self._num_of_signal_streams = len(sig_stream_names)
+        
         # first loop to reassign stream by "stream_index" instead of "stream_name"
         self._sig_streams = {}
         self._evt_streams = {}
@@ -177,13 +179,13 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 continue
             stream_index = int(stream_id)
             # Neural signal
-            if stream_index < len(sig_stream_names):
+            if stream_index < self._num_of_signal_streams:
                 stream_name = sig_stream_names[stream_index]
                 buffer_id = stream_id
                 # We add the buffers here as both the neural and the ADC channels are in the same buffer
                 signal_buffers.append((stream_name, buffer_id))
             else: # This names the ADC streams
-                neural_stream_index = stream_index - len(sig_stream_names)
+                neural_stream_index = stream_index - self._num_of_signal_streams
                 neural_stream_name = sig_stream_names[neural_stream_index]
                 stream_name = f"{neural_stream_name}_ADC"
                 buffer_id = str(neural_stream_index)
@@ -461,9 +463,12 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         return group_id
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        if stream_index >= len(self._sig_streams[block_index][seg_index]):
-            stream_index = stream_index - len(self._sig_streams[block_index][seg_index])    
-        t_start = self._sig_streams[block_index][seg_index][stream_index]["t_start"]
+        if stream_index < self._num_of_signal_streams:
+            _sig_stream_index = stream_index
+        else:
+            _sig_stream_index = stream_index - self._num_of_signal_streams    
+        
+        t_start = self._sig_streams[block_index][seg_index][_sig_stream_index]["t_start"]
         return t_start
 
     def _spike_count(self, block_index, seg_index, unit_index):
