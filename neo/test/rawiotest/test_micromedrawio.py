@@ -47,8 +47,8 @@ class TestMicromedRawIO(
             assert t_start > 0
             sr = reader2.get_signal_sampling_rate(stream_index=0)
             ind_start = int(t_start * sr)
-            traces1_chunk = traces1[ind_start: ind_start+traces2.shape[0]]
             traces2 = reader2.get_analogsignal_chunk(block_index=0, seg_index=seg_index, stream_index=0)
+            traces1_chunk = traces1[ind_start: ind_start+traces2.shape[0]]
             # we remove the last 100 sample because tools that cut traces is truncating the last buffer
             assert np.array_equal(traces2[:-100], traces1_chunk[:-100])
 
