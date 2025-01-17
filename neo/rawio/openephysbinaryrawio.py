@@ -232,10 +232,10 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             "ADC channels must be contiguous. Open an issue in python-neo to request this feature."
                         )
 
-
                     # Find sync channel and verify it's the last channel
                     sync_index = next(
-                        (index for index, ch in enumerate(info["channels"]) if ch["channel_name"].endswith("_SYNC")), None
+                        (index for index, ch in enumerate(info["channels"]) if ch["channel_name"].endswith("_SYNC")),
+                        None,
                     )
                     if sync_index is not None and sync_index != num_channels - 1:
                         raise ValueError(
@@ -452,21 +452,22 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     info = self._sig_streams[block_index][seg_index][_sig_stream_index]
                     has_sync_trace = self._sig_streams[block_index][seg_index][_sig_stream_index]["has_sync_trace"]
 
-                    for k in ("identifier", "history", "source_processor_index", "recorded_processor_index"):
-                        if k in info["channels"][0]:
-                            values = np.array([chan_info[k] for chan_info in info["channels"]])
-                            
-                            
+                    for key in ("identifier", "history", "source_processor_index", "recorded_processor_index"):
+                        if key in info["channels"][0]:
+                            values = np.array([chan_info[key] for chan_info in info["channels"]])
+
                             if has_sync_trace:
                                 values = values[:-1]
 
-                            num_neural_channels = sum(1 for ch_info in info["channels"] if "ADC" not in ch_info["channel_name"])
+                            num_neural_channels = sum(
+                                1 for ch_info in info["channels"] if "ADC" not in ch_info["channel_name"]
+                            )
                             if is_neural_stream:
                                 values = values[:num_neural_channels]
                             else:
                                 values = values[num_neural_channels:]
 
-                            sig_ann["__array_annotations__"][k] = values
+                            sig_ann["__array_annotations__"][key] = values
 
                 # array annotations for event channels
                 # use other possible data in _possible_event_stream_names
