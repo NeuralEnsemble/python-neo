@@ -145,7 +145,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     # We defined their stream_id as the stream_index of neural data plus the number of neural streams
                     # This is to not break backwards compatbility with the stream_id numbering
                     stream_id = str(stream_index + len(sig_stream_names))
-                    # For ADC channels multiplying by the bit_volts whe un units are not provided converts to Volts
+                    # For ADC channels multiplying by the bit_volts when units are not provided converts to Volts
                     units = "V" if units == "" else units
                     
                 gain = chan_info["bit_volts"]
