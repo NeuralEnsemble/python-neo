@@ -1,0 +1,35 @@
+========================
+Neo 0.14.0 release notes
+========================
+
+17 January 2025
+
+This release of Neo contains bug fixes across many IOs as well as support for NumPy 2.0 in the core of Neo all with an eye toward a 1.0 release.
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+Updated dependencies
+--------------------
+
+Neo now has a limit of NumPy >= 1.22.4
+
+CI Improvements
+---------------
+
+A bug in the CI was fixed which ensures testing on the lowest (3.9) and highest (3.12) supported Python versions for :code:`RawIO` and :code:`IO` testing.
+
+Testing of additional Python-NumPy combinations for core tests were added (NumPy 2.0, 2.1, and 2.2 with their respective Python versions).
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+Bug fixes and/or improvements have been made to :class:`NeuroNexusIO`, :class:`OpenEphysBinaryIO`, :class:`MicromedIO`, and :class:`IntanIO`.
+
+Acknowledgements
+----------------
+
+Thanks to Zach McKenzie, Heberto Mayorquin, Andrew Davison, Luigi Petrucco, Alessio Buccino, and Samuel Garcia.
+
+.. _`pull requests` : https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+milestone%3A0.14.0
+
+.. _`list of closed issues` : https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue%20state%3Aclosed%20milestone%3A0.14.0
