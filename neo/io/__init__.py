@@ -45,7 +45,7 @@ Classes:
 * :attr:`NestIO`
 * :attr:`NeuralynxIO`
 * :attr:`NeuroExplorerIO`
-* :attr:`NeuroNexusIO
+* :attr:`NeuroNexusIO`
 * :attr:`NeuroScopeIO`
 * :attr:`NeuroshareIO`
 * :attr:`NixIO`
@@ -193,6 +193,7 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.NeuroNexusIO
+
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.NeuroScopeIO

@@ -42,7 +42,7 @@ class Segment(Container):
     index: int | None, default: None
         You can use this to define a temporal ordering of your Segment.
         For instance you could use this for trial numbers.
-    **annotations: dict | None,
+    annotations: dict | None,
         Other keyword annotations for the dataset
 
     Examples

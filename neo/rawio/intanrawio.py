@@ -13,7 +13,6 @@ RHS headerless binary support 3.x
 
 
 See:
-
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
   * http://intantech.com/files/Intan_RHS2000_data_file_formats.pdf
 
@@ -57,20 +56,20 @@ class IntanRawIO(BaseRawIO):
     Notes
     -----
     * The Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
-    check for the file extension and will gather the header information based on the
-    extension. Additionally it functions with RHS v 1.0 and v 3.x and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
-    3.x files.
+      check for the file extension and will gather the header information based on the
+      extension. Additionally it functions with RHS v 1.0 and v 3.x and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
+      3.x files.
 
     * The Intan reader can also handle the headerless binary formats 'one-file-per-signal' and
-    'one-file-per-channel' which have a header file called 'info.rhd' or 'info.rhs' and a series
-    of binary files with the '.dat' suffix
+      'one-file-per-channel' which have a header file called 'info.rhd' or 'info.rhs' and a series
+      of binary files with the '.dat' suffix
 
     * The reader can handle three file formats 'header-attached', 'one-file-per-signal' and
-    'one-file-per-channel'.
+      'one-file-per-channel'.
 
     * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
-    depending on the port in which they were recorded along with the following
-    additional streams.
+      depending on the port in which they were recorded along with the following
+      additional streams.
 
     0: 'RHD2000' amplifier channel
     1: 'RHD2000 auxiliary input channel',
@@ -90,8 +89,8 @@ class IntanRawIO(BaseRawIO):
     11: 'Stim channel',
 
     * For the "header-attached" and "one-file-per-signal" formats, the structure of the digital input and output channels is
-    one long vector, which must be post-processed to extract individual digital channel information.
-    See the intantech website for more information on performing this post-processing.
+      one long vector, which must be post-processed to extract individual digital channel information.
+      See the intantech website for more information on performing this post-processing.
 
     
     Examples

@@ -43,11 +43,11 @@ class ElanRawIO(BaseRawWithBufferApiIO):
     Parameters
     ----------
     filename: str | None, default: None
-        The raw data to load (*.eeg)
+        The raw data to load (.eeg)
     entfile: str | None, default: None
-        The header file to load (*.eeg.ent)
+        The header file to load (.eeg.ent)
     posfile: str | None, deafult: None
-        The event file to load (*.eeg.pos)
+        The event file to load (.eeg.pos)
 
     Examples
     --------
