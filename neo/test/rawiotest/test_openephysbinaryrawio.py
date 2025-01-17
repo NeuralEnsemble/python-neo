@@ -86,7 +86,7 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         rawio.parse_header()
         # Check that the non-neural data stream is correctly separated
         assert len(rawio.header["signal_streams"]["name"]) == 2
-        assert rawio.header["signal_streams"]["name"] == ["'Rhythm_FPGA-100.0", "'Rhythm_FPGA-100.0_ADC"]
+        assert rawio.header["signal_streams"]["name"].tolist() == ["'Rhythm_FPGA-100.0", "'Rhythm_FPGA-100.0_ADC"]
 
 
 
