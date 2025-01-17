@@ -441,16 +441,31 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 seg_ann = bl_ann["segments"][seg_index]
 
                 # array annotations for signal channels
-                for stream_index, stream_name in enumerate(sig_stream_names):
+                for stream_index, stream_name in enumerate(self.header["signal_streams"]["name"]):
                     sig_ann = seg_ann["signals"][stream_index]
-                    info = self._sig_streams[block_index][seg_index][stream_index]
-                    has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
+                    if stream_index < self._num_of_signal_streams:
+                        _sig_stream_index = stream_index
+                        is_neural_stream = True
+                    else:
+                        _sig_stream_index = stream_index - self._num_of_signal_streams
+                        is_neural_stream = False
+                    info = self._sig_streams[block_index][seg_index][_sig_stream_index]
+                    has_sync_trace = self._sig_streams[block_index][seg_index][_sig_stream_index]["has_sync_trace"]
 
                     for k in ("identifier", "history", "source_processor_index", "recorded_processor_index"):
                         if k in info["channels"][0]:
                             values = np.array([chan_info[k] for chan_info in info["channels"]])
+                            
+                            
                             if has_sync_trace:
                                 values = values[:-1]
+
+                            num_neural_channels = sum(1 for ch_info in info["channels"] if "ADC" not in ch_info["channel_name"])
+                            if is_neural_stream:
+                                values = values[:num_neural_channels]
+                            else:
+                                values = values[num_neural_channels:]
+
                             sig_ann["__array_annotations__"][k] = values
 
                 # array annotations for event channels
