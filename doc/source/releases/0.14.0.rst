@@ -4,7 +4,8 @@ Neo 0.14.0 release notes
 
 17 January 2025
 
-This release of Neo contains bug fixes across many IOs as well as support for NumPy 2.0 in the core of Neo all with an eye toward a 1.0 release.
+This release of Neo is now compatible with NumPy 2.0 for core and IOs (with exception of :class:`MedIO`) as well Python 3.13, 
+and includes IO bug fixes with an eye toward a 1.0 release.
 
 See all `pull requests`_ included in this release and the `list of closed issues`_.
 
@@ -16,14 +17,14 @@ Neo now has a limit of NumPy >= 1.22.4
 CI Improvements
 ---------------
 
-A bug in the CI was fixed which ensures testing on the lowest (3.9) and highest (3.12) supported Python versions for :code:`RawIO` and :code:`IO` testing.
+A bug in the CI was fixed which ensures testing on the lowest (3.9) and highest (3.13) supported Python versions for :code:`RawIO` and :code:`IO` testing.
 
-Testing of additional Python-NumPy combinations for core tests were added (NumPy 2.0, 2.1, and 2.2 with their respective Python versions).
+Testing of additional Python-NumPy combinations for core tests were added (NumPy 2.0, 2.1, and 2.1 with their respective Python versions).
 
 Bug fixes and improvements in IO modules
 ----------------------------------------
 
-Bug fixes and/or improvements have been made to :class:`NeuroNexusIO`, :class:`OpenEphysBinaryIO`, :class:`MicromedIO`, and :class:`IntanIO`.
+Bug fixes and/or improvements have been made to :class:`NeuroNexusIO`, :class:`OpenEphysBinaryIO`, :class:`MicromedIO`, :class:`IntanIO` and :class:`SpikeGLX`.
 
 Acknowledgements
 ----------------
