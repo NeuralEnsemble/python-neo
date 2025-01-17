@@ -97,7 +97,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
             event_stream_names = []
 
         self._num_of_signal_streams = len(sig_stream_names)
-        
+
         # first loop to reassign stream by "stream_index" instead of "stream_name"
         self._sig_streams = {}
         self._evt_streams = {}
@@ -123,7 +123,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         # signals zone
         # create signals channel map: several channel per stream
         signal_channels = []
-        
+
         for stream_index, stream_name in enumerate(sig_stream_names):
             # stream_index is the index in vector stream names
             stream_id = str(stream_index)
@@ -141,7 +141,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     units = "uV"
                 else:
                     units = chan_info["units"]
-                
+
                 if "ADC" in chan_id:
                     # These are non-neural channels and their stream should be separated
                     # We defined their stream_id as the stream_index of neural data plus the number of neural streams
@@ -149,7 +149,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     stream_id = str(stream_index + len(sig_stream_names))
                     # For ADC channels multiplying by the bit_volts when units are not provided converts to Volts
                     units = "V" if units == "" else units
-                    
+
                 gain = chan_info["bit_volts"]
                 offset = 0.0
                 new_channels.append(
@@ -166,12 +166,12 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     )
                 )
             signal_channels.extend(new_channels)
-        
+
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         signal_streams = []
         signal_buffers = []
-        
+
         unique_streams_ids = np.unique(signal_channels["stream_id"])
         for stream_id in unique_streams_ids:
             # Handle special case of Synch channel having stream_id empty
@@ -184,16 +184,15 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 buffer_id = stream_id
                 # We add the buffers here as both the neural and the ADC channels are in the same buffer
                 signal_buffers.append((stream_name, buffer_id))
-            else: # This names the ADC streams
+            else:  # This names the ADC streams
                 neural_stream_index = stream_index - self._num_of_signal_streams
                 neural_stream_name = sig_stream_names[neural_stream_index]
                 stream_name = f"{neural_stream_name}_ADC"
                 buffer_id = str(neural_stream_index)
             signal_streams.append((stream_name, stream_id, buffer_id))
-        
+
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
-
 
         # create memmap for signals
         self._buffer_descriptions = {}
@@ -223,30 +222,45 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         raise ValueError(
                             "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
                         )
-                    
-                    num_neural_channels = sum(1 for ch in info["channels"] if "ADC" not in ch["channel_name"])
-                    num_non_neural_channels = sum(1 for ch in info["channels"] if "ADC" in ch["channel_name"])
-                    
-    
-                    if num_non_neural_channels == 0:                        
+
+                    # Check if ADC and non-ADC channels are contiguous
+                    is_adc = ["ADC" in ch["channel_name"] for ch in info["channels"]]
+                    first_adc = is_adc.index(True) if True in is_adc else len(is_adc)
+                    if any(not x for x in is_adc[first_adc:]):
+                        raise ValueError(
+                            "Interleaved ADC and non-ADC channels are not supported. "
+                            "ADC channels must be contiguous. Open an issue in python-neo to request this feature."
+                        )
+
+
+                    # Find sync channel and verify it's the last channel
+                    sync_index = next(
+                        (index for index, ch in enumerate(info["channels"]) if ch["channel_name"].endswith("_SYNC")), None
+                    )
+                    if sync_index is not None and sync_index != num_channels - 1:
+                        raise ValueError(
+                            "SYNC channel must be the last channel in the buffer. Open an issue in python-neo to request this feature."
+                        )
+
+                    num_neural_channels = sum(1 for ch_info in info["channels"] if "ADC" not in ch_info["channel_name"])
+                    num_non_neural_channels = sum(1 for ch_info in info["channels"] if "ADC" in ch_info["channel_name"])
+
+                    if num_non_neural_channels == 0:
                         if has_sync_trace and not self.load_sync_channel:
                             self._stream_buffer_slice[stream_id] = slice(None, -1)
                         else:
                             self._stream_buffer_slice[stream_id] = None
                     else:
-                        # For ADC channels, we remove the last channel which is the Synch channel
                         stream_id_neural = stream_id
                         stream_id_non_neural = str(int(stream_id) + self._num_of_signal_streams)
-                        
-                        # Note this implementation assumes that the neural channels come before the non-neural channels
 
                         self._stream_buffer_slice[stream_id_neural] = slice(0, num_neural_channels)
-                        self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, None)
-                        
-                        # It also assumes that the synch channel is the last channel in the buffer
+
                         if has_sync_trace and not self.load_sync_channel:
                             self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, -1)
-                        
+                        else:
+                            self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, None)
+
         # events zone
         # channel map: one channel one stream
         event_channels = []
@@ -484,8 +498,8 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         if stream_index < self._num_of_signal_streams:
             _sig_stream_index = stream_index
         else:
-            _sig_stream_index = stream_index - self._num_of_signal_streams    
-        
+            _sig_stream_index = stream_index - self._num_of_signal_streams
+
         t_start = self._sig_streams[block_index][seg_index][_sig_stream_index]["t_start"]
         return t_start
 
