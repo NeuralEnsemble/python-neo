@@ -224,13 +224,24 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # deal with nb_segment and t_start/t_stop per segment
-        self._t_starts = {seg_index: 0.0 for seg_index in range(nb_segment)}
+
+        self._t_starts = {stream_name: {} for stream_name in stream_names}
         self._t_stops = {seg_index: 0.0 for seg_index in range(nb_segment)}
-        for seg_index in range(nb_segment):
-            for stream_name in stream_names:
+        
+        for stream_name in stream_names:
+            for seg_index in range(nb_segment):
                 info = self.signals_info_dict[seg_index, stream_name]
+
+                frame_start = float(info["meta"]["firstSample"])
+                sampling_frequency = info["sampling_rate"]
+                t_start = frame_start / sampling_frequency
+                                
+                self._t_starts[stream_name][seg_index] = t_start 
                 t_stop = info["sample_length"] / info["sampling_rate"]
                 self._t_stops[seg_index] = max(self._t_stops[seg_index], t_stop)
+
+                
+
 
         # fille into header dict
         self.header = {}
@@ -276,7 +287,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         return self._t_stops[seg_index]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        return 0.0
+        stream_name = self.header["signal_streams"][stream_index]["name"]
+        return self._t_starts[stream_name][seg_index]
 
     def _event_count(self, event_channel_idx, block_index=None, seg_index=None):
         timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_idx, None, None)
