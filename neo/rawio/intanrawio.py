@@ -11,10 +11,13 @@ RHD supported version  1.0 1.1 1.2 1.3 2.0 3.0, 3.1
 RHD headerless binary support 3.x
 RHS headerless binary support 3.x
 
+
 See:
+
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
   * http://intantech.com/files/Intan_RHS2000_data_file_formats.pdf
 
+  
 Author: Samuel Garcia (Initial), Zach McKenzie & Heberto Mayorquin (Updates)
 
 """
@@ -50,6 +53,7 @@ class IntanRawIO(BaseRawIO):
         check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
         the attribute `discontinuous_timestamps` to True if the timestamps are not continous. This attribute can be checked
         after parsing the header to see if the timestamps are continuous or not.
+
     Notes
     -----
     * The Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
@@ -67,6 +71,7 @@ class IntanRawIO(BaseRawIO):
     * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
     depending on the port in which they were recorded along with the following
     additional streams.
+
     0: 'RHD2000' amplifier channel
     1: 'RHD2000 auxiliary input channel',
     2: 'RHD2000 supply voltage channel',
@@ -88,6 +93,7 @@ class IntanRawIO(BaseRawIO):
     one long vector, which must be post-processed to extract individual digital channel information.
     See the intantech website for more information on performing this post-processing.
 
+    
     Examples
     --------
     >>> import neo.rawio

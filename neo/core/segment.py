@@ -70,7 +70,7 @@ class Segment(Container):
     Notes
     -----
 
-    *Container of*:
+    Container of:
         :class:`Epoch`
         :class:`Event`
         :class:`AnalogSignal`
