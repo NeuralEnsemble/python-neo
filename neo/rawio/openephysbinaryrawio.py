@@ -223,12 +223,30 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         raise ValueError(
                             "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
                         )
-
-                    if has_sync_trace and not self.load_sync_channel:
-                        self._stream_buffer_slice[stream_id] = slice(None, -1)
+                    
+                    num_neural_channels = sum(1 for ch in info["channels"] if "ADC" not in ch["channel_name"])
+                    num_non_neural_channels = sum(1 for ch in info["channels"] if "ADC" in ch["channel_name"])
+                    
+    
+                    if num_non_neural_channels == 0:                        
+                        if has_sync_trace and not self.load_sync_channel:
+                            self._stream_buffer_slice[stream_id] = slice(None, -1)
+                        else:
+                            self._stream_buffer_slice[stream_id] = None
                     else:
-                        self._stream_buffer_slice[stream_id] = None
+                        # For ADC channels, we remove the last channel which is the Synch channel
+                        stream_id_neural = stream_id
+                        stream_id_non_neural = str(int(stream_id) + self._num_of_signal_streams)
+                        
+                        # Note this implementation assumes that the neural channels come before the non-neural channels
 
+                        self._stream_buffer_slice[stream_id_neural] = slice(0, num_neural_channels)
+                        self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, None)
+                        
+                        # It also assumes that the synch channel is the last channel in the buffer
+                        if has_sync_trace and not self.load_sync_channel:
+                            self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, -1)
+                        
         # events zone
         # channel map: one channel one stream
         event_channels = []
