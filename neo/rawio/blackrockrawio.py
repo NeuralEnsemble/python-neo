@@ -473,6 +473,7 @@ class BlackrockRawIO(BaseRawIO):
                         segment_mask = ev_ids == data_bl
                         if data[segment_mask].size > 0:
                             t = data[segment_mask][-1]["timestamp"] / self.__nev_basic_header["timestamp_resolution"]
+
                             max_nev_time = max(max_nev_time, t)
                     if max_nev_time > t_stop:
                         t_stop = max_nev_time
@@ -680,7 +681,8 @@ class BlackrockRawIO(BaseRawIO):
             if t_start is None:
                 t_start = self._seg_t_starts[seg_index]
             if t_stop is None:
-                t_stop = self._seg_t_stops[seg_index]
+                t_stop = self._seg_t_stops[seg_index] + 1 / float(
+                    self.__nev_basic_header['timestamp_resolution'])
 
         if t_start is None:
             ind_start = None
@@ -713,10 +715,16 @@ class BlackrockRawIO(BaseRawIO):
         )
         unit_spikes = all_spikes[mask]
 
-        wf_dtype = self.__nev_params("waveform_dtypes")[channel_id]
-        wf_size = self.__nev_params("waveform_size")[channel_id]
+        wf_dtype = self.__nev_params('waveform_dtypes')[channel_id]
+        wf_size = self.__nev_params('waveform_size')[channel_id]
+        wf_byte_size = np.dtype(wf_dtype).itemsize * wf_size
 
-        waveforms = unit_spikes["waveform"].flatten().view(wf_dtype)
+        dt1 = [
+            ('extra', 'S{}'.format(unit_spikes['waveform'].dtype.itemsize - wf_byte_size)),
+            ('ch_waveform', 'S{}'.format(wf_byte_size))]
+
+        waveforms = unit_spikes['waveform'].view(dt1)['ch_waveform'].flatten().view(wf_dtype)
+
         waveforms = waveforms.reshape(int(unit_spikes.size), 1, int(wf_size))
 
         timestamp = unit_spikes["timestamp"]
@@ -1357,7 +1365,7 @@ class BlackrockRawIO(BaseRawIO):
 
                     # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
                     # Spike should belong to segment before
-                    mask_outside = (ev_ids == i) & (data["timestamp"] < int(seg["timestamp"]) - nsx_offset - nsx_period)
+                    mask_outside = (ev_ids == i) & (data["timestamp"] < int(seg["timestamp"]) - int(nsx_offset) - int(nsx_period))
 
                     if len(data[mask_outside]) > 0:
                         warnings.warn(f"Spikes outside any segment. Detected on segment #{i}")
@@ -1987,6 +1995,7 @@ class BlackrockRawIO(BaseRawIO):
         else:
             units = "uV"
 
+        
         nsx_parameters = {
             "nb_data_points": int(
                 (self.__get_file_size(filename) - bytes_in_headers)
@@ -1995,8 +2004,8 @@ class BlackrockRawIO(BaseRawIO):
             ),
             "labels": labels,
             "units": np.array([units] * self.__nsx_basic_header[nsx_nb]["channel_count"]),
-            "min_analog_val": -1 * np.array(dig_factor),
-            "max_analog_val": np.array(dig_factor),
+            "min_analog_val": -1 * np.array(dig_factor, dtype="float"),
+            "max_analog_val": np.array(dig_factor, dtype="float"),
             "min_digital_val": np.array([-1000] * self.__nsx_basic_header[nsx_nb]["channel_count"]),
             "max_digital_val": np.array([1000] * self.__nsx_basic_header[nsx_nb]["channel_count"]),
             "timestamp_resolution": 30000,
