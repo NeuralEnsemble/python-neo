@@ -73,6 +73,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
             * The *.xdat.json metadata file
             * The *_data.xdat binary file of all raw data
             * The *_timestamps.xdat binary file of the timestamp data
+            
         From the metadata the other two files are located within the same directory
         and loaded.
 

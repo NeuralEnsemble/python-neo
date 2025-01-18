@@ -276,7 +276,7 @@ class SpikeTrain(DataObject):
         The path or location of the original data file.
     array_annotations: dict
         A dictonary mapping of strings to numpy arrays containing annotations for all data points
-    **annotations: dict
+    annotations: dict
         Other user defined metadata given as a dict
 
     Notes
