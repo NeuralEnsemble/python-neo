@@ -41,7 +41,7 @@ class Spike2RawIO(BaseRawIO):
     Parameters
     ----------
     filename: str, default: ''
-        The *.smr file to be loaded
+        The .smr file to be loaded
     take_ideal_sampling_rate: bool, default: False
         If True takes the `ideal_rate` from info
     ced_units: bool, default: True
