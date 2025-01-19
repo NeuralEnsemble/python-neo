@@ -85,7 +85,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     * This IO reads the entire folder and subfolders locating the `.bin` and `.meta` files
     * Handles gates and triggers as segments (based on the `_gt0`, `_gt1`, `_t0` , `_t1` in filenames)
     * Handles all signals coming from different acquisition cards ("imec0", "imec1", etc) in a typical
-        PXIe chassis setup and also external signal like "nidq". 
+        PXIe chassis setup and also external signal like "nidq".
     * For imec devices both "ap" and "lf" are extracted so even a one device setup will have several "streams"
 
     Examples
@@ -227,7 +227,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
         self._t_starts = {stream_name: {} for stream_name in stream_names}
         self._t_stops = {seg_index: 0.0 for seg_index in range(nb_segment)}
-        
+
         for stream_name in stream_names:
             for seg_index in range(nb_segment):
                 info = self.signals_info_dict[seg_index, stream_name]
@@ -235,13 +235,10 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                 frame_start = float(info["meta"]["firstSample"])
                 sampling_frequency = info["sampling_rate"]
                 t_start = frame_start / sampling_frequency
-                                
-                self._t_starts[stream_name][seg_index] = t_start 
+
+                self._t_starts[stream_name][seg_index] = t_start
                 t_stop = info["sample_length"] / info["sampling_rate"]
                 self._t_stops[seg_index] = max(self._t_stops[seg_index], t_stop)
-
-                
-
 
         # fille into header dict
         self.header = {}
@@ -361,7 +358,7 @@ def scan_files(dirname):
         raise FileNotFoundError(f"No appropriate combination of .meta and .bin files were detected in {dirname}")
 
     # This sets non-integers values before integers
-    normalize = lambda x: x if isinstance(x, int) else -1  
+    normalize = lambda x: x if isinstance(x, int) else -1
 
     # Segment index is determined by the gate_num and trigger_num in that order
     def get_segment_tuple(info):
@@ -369,7 +366,7 @@ def scan_files(dirname):
         gate_num = normalize(info.get("gate_num"))
         trigger_num = normalize(info.get("trigger_num"))
         return (gate_num, trigger_num)
-    
+
     unique_segment_tuples = {get_segment_tuple(info) for info in info_list}
     sorted_keys = sorted(unique_segment_tuples)
 
@@ -377,8 +374,7 @@ def scan_files(dirname):
     segment_tuple_to_segment_index = {key: idx for idx, key in enumerate(sorted_keys)}
 
     for info in info_list:
-        info["seg_index"] = segment_tuple_to_segment_index[get_segment_tuple(info)]    
-    
+        info["seg_index"] = segment_tuple_to_segment_index[get_segment_tuple(info)]
 
     # Probe index calculation
     # The calculation is ordered by slot, port, dock in that order, this is the number that appears in the filename
@@ -409,7 +405,7 @@ def scan_files(dirname):
         stream_name = f"{device_kind}{device_index}{stream_kind}"
 
         info["stream_name"] = stream_name
-        
+
     return info_list
 
 
