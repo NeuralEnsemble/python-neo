@@ -103,7 +103,7 @@ class IrregularlySampledSignal(BaseSignal):
         The filesystem path or url of the orginal data
     array_annotations: dict | None, default: None
         Dict mapping strings to numpy arrays containing annotations for all data points
-    **annotations: dict
+    annotations: dict
         Optional additional metadata supplied by the user as a dict. Will be stored in
         the annotations attribute of the object
 

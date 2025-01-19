@@ -30,7 +30,7 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
     Parameters
     ----------
     filename: str, default: ''
-        The *.wcp file to load
+        The .wcp file to load
 
     """
 
