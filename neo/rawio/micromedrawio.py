@@ -52,7 +52,6 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
 
     def _parse_header(self):
 
-
         with open(self.filename, "rb") as fid:
             f = StructFile(fid)
 
@@ -99,7 +98,6 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
                 if zname != zname2.decode("ascii").strip(" "):
                     raise NeoReadWriteError("expected the zone name to match")
 
-
             # "TRONCA" zone define segments
             zname2, pos, length = zones["TRONCA"]
             f.seek(pos)
@@ -114,7 +112,7 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
                     break
                 else:
                     self.info_segments.append((seg_start, trace_offset))
-            
+
             if len(self.info_segments) == 0:
                 # one unique segment = general case
                 self.info_segments.append((0, 0))
@@ -152,8 +150,9 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
                 (sampling_rate,) = f.read_f("H")
                 sampling_rate *= Rate_Min
                 chan_id = str(c)
-                signal_channels.append((chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id))
-
+                signal_channels.append(
+                    (chan_name, chan_id, sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+                )
 
             signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -166,30 +165,30 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
             self._sampling_rate = float(np.unique(signal_channels["sampling_rate"])[0])
 
             # memmap traces buffer
-            full_signal_shape = get_memmap_shape(self.filename, sig_dtype, num_channels=Num_Chan, offset=Data_Start_Offset)
+            full_signal_shape = get_memmap_shape(
+                self.filename, sig_dtype, num_channels=Num_Chan, offset=Data_Start_Offset
+            )
             seg_limits = [trace_offset for seg_start, trace_offset in self.info_segments] + [full_signal_shape[0]]
             self._t_starts = []
-            self._buffer_descriptions = {0 :{}}
+            self._buffer_descriptions = {0: {}}
             for seg_index in range(nb_segment):
                 seg_start, trace_offset = self.info_segments[seg_index]
                 self._t_starts.append(seg_start / self._sampling_rate)
 
                 start = seg_limits[seg_index]
                 stop = seg_limits[seg_index + 1]
-                
+
                 shape = (stop - start, Num_Chan)
-                file_offset = Data_Start_Offset + ( start * np.dtype(sig_dtype).itemsize * Num_Chan)
+                file_offset = Data_Start_Offset + (start * np.dtype(sig_dtype).itemsize * Num_Chan)
                 self._buffer_descriptions[0][seg_index] = {}
                 self._buffer_descriptions[0][seg_index][buffer_id] = {
-                    "type" : "raw",
-                    "file_path" : str(self.filename),
-                    "dtype" : sig_dtype,
+                    "type": "raw",
+                    "file_path": str(self.filename),
+                    "dtype": sig_dtype,
                     "order": "C",
-                    "file_offset" : file_offset,
-                    "shape" : shape,
+                    "file_offset": file_offset,
+                    "shape": shape,
                 }
-
-
 
             # Event channels
             event_channels = []
@@ -217,13 +216,8 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
                 for seg_index in range(nb_segment):
                     left_lim = seg_limits[seg_index]
                     right_lim = seg_limits[seg_index + 1]
-                    keep = (
-                        (rawevent["start"] >= left_lim)
-                        & (rawevent["start"] < right_lim)
-                        & (rawevent["start"] != 0)
-                    )
+                    keep = (rawevent["start"] >= left_lim) & (rawevent["start"] < right_lim) & (rawevent["start"] != 0)
                     self._raw_events[-1].append(rawevent[keep])
-
 
             # No spikes
             spike_channels = []
