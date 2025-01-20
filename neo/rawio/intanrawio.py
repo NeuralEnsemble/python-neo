@@ -92,7 +92,7 @@ class IntanRawIO(BaseRawIO):
       one long vector, which must be post-processed to extract individual digital channel information.
       See the intantech website for more information on performing this post-processing.
 
-    
+
     Examples
     --------
     >>> import neo.rawio

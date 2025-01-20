@@ -199,7 +199,7 @@ def normalize_times_array(times, units=None, dtype=None, copy=None):
             "In order to facilitate the deprecation copy can be set to None but will raise an "
             "error if set to True/False since this will silently do nothing. This argument will be completely "
             "removed in Neo 0.15.0. Please update your code base as necessary."
-            )
+        )
 
     if dtype is None:
         if not hasattr(times, "dtype"):
