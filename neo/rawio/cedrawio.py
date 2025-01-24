@@ -2,19 +2,18 @@
 Class for reading data from CED (Cambridge Electronic Design)
 http://ced.co.uk/
 
-This read *.smrx (and *.smr) from spike2 and signal software.
+This reads *.smrx (and *.smr) from spike2 and signal software.
 
 Note Spike2RawIO/Spike2IO is the old implementation in neo.
 It still works without any dependency and should be faster.
 Spike2IO only works for smr (32 bit) and not for smrx (64 bit) files.
 
-This implementation depends on the SONPY package:
-https://pypi.org/project/sonpy/
+This implementation depends on the SONPY package: https://pypi.org/project/sonpy/
 
 Please note that the SONPY package:
   * is NOT open source
   * internally uses a list instead of numpy.ndarray, potentially causing slow data reading
-  *  is maintained by CED
+  * is maintained by CED
 
 
 Author : Samuel Garcia
@@ -39,7 +38,7 @@ class CedRawIO(BaseRawIO):
     Parameters
     ----------
     filename: str, default: ''
-        The *.smr or *.smrx file to load
+        The .smr or .smrx file to load
     take_ideal_sampling_rate: bool, default: False
         If true use the `GetIdealRate` function from sonpy package
 
