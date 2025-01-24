@@ -16,7 +16,7 @@ from neo.io import get_io
 # we can try out some data on the NeuralEnsemble ephy testing repo
 
 url_repo = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
-distantfile = "igor/win-version2.ibw"
+distantfile = url_repo + "igor/win-version2.ibw"
 localfile = "win-version2.ibw"
 urlretrieve(distantfile, localfile)
 
