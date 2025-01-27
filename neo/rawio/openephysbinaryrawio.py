@@ -132,31 +132,32 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
             new_channels = []
             for chan_info in info["channels"]:
                 chan_id = chan_info["channel_name"]
+
+                units = chan_info["units"]
+                if units == "":
+                    # When units are not provided they are microvolts for neural channels and volts for ADC channels
+                    # See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#continuous
+                    units = "uV" if "ADC" not in chan_id else "V"
+
+                # Special cases for stream
                 if "SYNC" in chan_id and not self.load_sync_channel:
                     # the channel is removed from stream but not the buffer
                     stream_id = ""
 
-                if chan_info["units"] == "":
-                    # in some cases for some OE version the unit is "", but the gain is to "uV"
-                    units = "uV"
-                else:
-                    units = chan_info["units"]
-
-                if "ADC" in chan_id:
+                if "ADC" in chan_id:  
                     # These are non-neural channels and their stream should be separated
                     # We defined their stream_id as the stream_index of neural data plus the number of neural streams
                     # This is to not break backwards compatbility with the stream_id numbering
                     stream_id = str(stream_index + len(sig_stream_names))
-                    # For ADC channels multiplying by the bit_volts when units are not provided converts to Volts
-                    units = "V" if units == "" else units
-
-                gain = chan_info["bit_volts"]
+                    
+                gain = float(chan_info["bit_volts"])
+                sampling_rate = float(info["sample_rate"])
                 offset = 0.0
                 new_channels.append(
                     (
                         chan_info["channel_name"],
                         chan_id,
-                        float(info["sample_rate"]),
+                        sampling_rate,
                         info["dtype"],
                         units,
                         gain,
@@ -224,9 +225,10 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         )
 
                     # Check if ADC and non-ADC channels are contiguous
-                    is_adc = ["ADC" in ch["channel_name"] for ch in info["channels"]]
-                    first_adc = is_adc.index(True) if True in is_adc else len(is_adc)
-                    if any(not x for x in is_adc[first_adc:]):
+                    is_channel_adc = ["ADC" in ch["channel_name"] for ch in info["channels"]]
+                    first_adc_index = is_channel_adc.index(True) if any(is_channel_adc) else len(is_channel_adc)
+                    non_adc_channels_after_adc_channels = [not flag for flag in is_channel_adc[first_adc_index:]]
+                    if any(non_adc_channels_after_adc_channels):
                         raise ValueError(
                             "Interleaved ADC and non-ADC channels are not supported. "
                             "ADC channels must be contiguous. Open an issue in python-neo to request this feature."
