@@ -281,6 +281,8 @@ class NeoMatlabIO(BaseIO):
         """
         Arguments:
             bl: the block to be saved
+            kargs: extra keyword arguments broadcasted to scipy.io.savemat
+            
         """
         import scipy.io
 
@@ -307,7 +309,7 @@ class NeoMatlabIO(BaseIO):
                     else:
                         group_structure[container_name].append(id(child_obj))
 
-        scipy.io.savemat(self.filename, {"block": bl_struct}, oned_as="row")
+        scipy.io.savemat(self.filename, {"block": bl_struct}, oned_as="row", **kargs)
 
     def _get_matlab_value(self, ob, attrname):
         units = None
