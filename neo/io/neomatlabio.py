@@ -282,7 +282,7 @@ class NeoMatlabIO(BaseIO):
         Arguments:
             bl: the block to be saved
             kargs: extra keyword arguments broadcasted to scipy.io.savemat
-            
+
         """
         import scipy.io
 
