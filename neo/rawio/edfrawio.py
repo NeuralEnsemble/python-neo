@@ -101,7 +101,7 @@ class EDFRawIO(BaseRawIO):
             ch_name = sig_dict["label"]
             chan_id = ch_idx
             # pyedf >= 0.1.39 uses sample_frequency, pyedf < 0.1.39 uses sample_rate
-            sr = sig_dict.get("sample_frequency") or  sig_dict.get("sample_rate") # Hz
+            sr = sig_dict.get("sample_frequency") or sig_dict.get("sample_rate")  # Hz
             dtype = "int16"  # assume general int16 based on edf documentation
             units = sig_dict["dimension"]
             physical_range = sig_dict["physical_max"] - sig_dict["physical_min"]
