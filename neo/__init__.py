@@ -14,3 +14,4 @@ logging_handler = logging.StreamHandler()
 
 from neo.core import *
 from neo.io import *
+import neo.units
