@@ -264,10 +264,14 @@ def open_biocam_file_header(filename) -> dict:
         for well_ID in rf:
             if well_ID.startswith("Well_"):
                 num_channels = len(rf[well_ID]["StoredChIdxs"])
-                if len(rf[well_ID]["Raw"]) % num_channels:
-                    raise NeoReadWriteError(f"Length of raw data array is not multiple of channel number in {well_ID}")
-                num_frames = len(rf[well_ID]["Raw"]) // num_channels
-                break
+                if "Raw" in rf[well_ID]:
+                    if len(rf[well_ID]["Raw"]) % num_channels:
+                        raise NeoReadWriteError(f"Length of raw data array is not multiple of channel number in {well_ID}")
+                    num_frames = len(rf[well_ID]["Raw"]) // num_channels
+                    break
+                elif "EventsBasedSparseRaw" in rf[well_ID]:
+                    # Not sure how to check for this with sparse data
+                    pass
 
         if num_channels is not None:
             num_channels_x = num_channels_y = int(np.sqrt(num_channels))
