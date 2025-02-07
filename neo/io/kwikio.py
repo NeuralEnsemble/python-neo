@@ -16,13 +16,11 @@ import numpy as np
 import quantities as pq
 import os
 
-
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import Segment, SpikeTrain, Epoch, AnalogSignal, Block, Group
-import neo.io.tools
+from neo.core import Segment, SpikeTrain, AnalogSignal, Block, Group
 
 
 class KwikIO(BaseIO):

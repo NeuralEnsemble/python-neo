@@ -59,14 +59,15 @@ class BaseTestRawIO:
 
     local_test_dir = get_local_testing_data_folder()
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """
-        Set up the test fixture.  This is run for every test
+        Set up the test fixture. This is run once before all tests.
         """
-        self.shortname = self.rawioclass.__name__.lower().replace("rawio", "")
+        cls.shortname = cls.rawioclass.__name__.lower().replace("rawio", "")
 
-        if HAVE_DATALAD:
-            for remote_path in self.entities_to_download:
+        if HAVE_DATALAD and cls.use_network:
+            for remote_path in cls.entities_to_download:
                 download_dataset(repo=repo_for_test, remote_path=remote_path)
         else:
             raise unittest.SkipTest("Requires datalad download of data from the web")
@@ -111,6 +112,7 @@ class BaseTestRawIO:
 
             # lanch a series of test compliance
             compliance.header_is_total(reader)
+            compliance.check_signal_stream_buffer_hierachy(reader)
             compliance.count_element(reader)
             compliance.read_analogsignals(reader)
             compliance.read_spike_times(reader)
@@ -123,3 +125,7 @@ class BaseTestRawIO:
             logging.getLogger().setLevel(logging.INFO)
             compliance.benchmark_speed_read_signals(reader)
             logging.getLogger().setLevel(level)
+
+            # buffer api
+            if reader.has_buffer_description_api():
+                compliance.check_buffer_api(reader)

@@ -25,8 +25,8 @@ Author: Julia Sprenger
 import pathlib
 import warnings
 import platform
+import re
 
-from collections import namedtuple
 from urllib.request import urlopen
 from datetime import datetime
 
@@ -37,6 +37,7 @@ from ..baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -53,6 +54,10 @@ class Plexon2RawIO(BaseRawIO):
     pl2_dll_file_path: str | Path | None, default: None
         The path to the necessary dll for loading pl2 files
         If None will find correct dll for architecture and if it does not exist will download it
+    reading_attempts: int, default: 25
+        Number of attempts to read the file before raising an error
+        This opening process is somewhat unreliable and might fail occasionally. Adjust this higher
+        if you encounter problems in opening the file.
 
     Notes
     -----
@@ -88,7 +93,7 @@ class Plexon2RawIO(BaseRawIO):
     extensions = ["pl2"]
     rawmode = "one-file"
 
-    def __init__(self, filename, pl2_dll_file_path=None):
+    def __init__(self, filename, pl2_dll_file_path=None, reading_attempts=25):
 
         # signals, event and spiking data will be cached
         # cached signal data can be cleared using `clear_analogsignal_cache()()`
@@ -107,7 +112,7 @@ class Plexon2RawIO(BaseRawIO):
         # download default PL2 dll once if not yet available
         if pl2_dll_file_path is None:
             architecture = platform.architecture()[0]
-            if architecture == "64bit" and platform.system() == "Windows":
+            if architecture == "64bit" and platform.system() in ["Windows", "Darwin"]:
                 file_name = "PL2FileReader64.dll"
             else:  # Apparently wine uses the 32 bit version in linux
                 file_name = "PL2FileReader.dll"
@@ -120,7 +125,7 @@ class Plexon2RawIO(BaseRawIO):
                 dist = urlopen(url=url)
 
                 with open(pl2_dll_file_path, "wb") as f:
-                    print(f"Downloading plexon dll to {pl2_dll_file_path}")
+                    warnings.warn(f"dll file does not exist, downloading plexon dll to {pl2_dll_file_path}")
                     f.write(dist.read())
 
         # Instantiate wrapper for Windows DLL
@@ -128,8 +133,17 @@ class Plexon2RawIO(BaseRawIO):
 
         self.pl2reader = PyPL2FileReader(pl2_dll_file_path=pl2_dll_file_path)
 
-        # Open the file.
-        self.pl2reader.pl2_open_file(self.filename)
+        for attempt in range(reading_attempts):
+            self.pl2reader.pl2_open_file(self.filename)
+
+            # Verify the file handle is valid.
+            if self.pl2reader._file_handle.value != 0:
+                # File handle is valid, exit the loop early
+                break
+            else:
+                if attempt == reading_attempts - 1:
+                    self.pl2reader._print_error()
+                    raise IOError(f"Opening {self.filename} failed after {reading_attempts} attempts.")
 
     def _source_name(self):
         return self.filename
@@ -142,25 +156,24 @@ class Plexon2RawIO(BaseRawIO):
         # Scanning sources and populating signal channels at the same time. Sources have to have
         # same sampling rate and number of samples to belong to one stream.
         signal_channels = []
-        source_characteristics = {}
-        Source = namedtuple("Source", "id name sampling_rate n_samples")
-        for c in range(self.pl2reader.pl2_file_info.m_TotalNumberOfAnalogChannels):
-            achannel_info = self.pl2reader.pl2_get_analog_channel_info(c)
+        channel_num_samples = []
 
+        # We will build the stream ids based on the channel prefixes
+        # The channel prefixes are the first characters of the channel names which have the following format:
+        # WB{number}, FPX{number}, SPKCX{number}, AI{number}, etc
+        # We will extract the prefix and use it as stream id
+        regex_prefix_pattern = r"^\D+"  # Match any non-digit character at the beginning of the string
+
+        for channel_index in range(self.pl2reader.pl2_file_info.m_TotalNumberOfAnalogChannels):
+            achannel_info = self.pl2reader.pl2_get_analog_channel_info(channel_index)
             # only consider active channels
-            if not achannel_info.m_ChannelEnabled:
+            if not (achannel_info.m_ChannelEnabled and achannel_info.m_ChannelRecordingEnabled):
                 continue
 
             # assign to matching stream or create new stream based on signal characteristics
             rate = achannel_info.m_SamplesPerSecond
-            n_samples = achannel_info.m_NumberOfValues
-            source_id = str(achannel_info.m_Source)
-
-            channel_source = Source(source_id, f"stream@{rate}Hz", rate, n_samples)
-            existing_source = source_characteristics.setdefault(source_id, channel_source)
-
-            # ensure that stream of this channel and existing stream have same properties
-            assert channel_source == existing_source
+            num_samples = achannel_info.m_NumberOfValues
+            channel_num_samples.append(num_samples)
 
             ch_name = achannel_info.m_Name.decode()
             chan_id = f"source{achannel_info.m_Source}.{achannel_info.m_Channel}"
@@ -168,17 +181,50 @@ class Plexon2RawIO(BaseRawIO):
             units = achannel_info.m_Units.decode()
             gain = achannel_info.m_CoeffToConvertToUnits
             offset = 0.0  # PL2 files don't contain information on signal offset
-            stream_id = source_id
-            signal_channels.append((ch_name, chan_id, rate, dtype, units, gain, offset, stream_id))
+
+            channel_prefix = re.match(regex_prefix_pattern, ch_name).group(0)
+            stream_id = channel_prefix
+            buffer_id = ""
+            signal_channels.append((ch_name, chan_id, rate, dtype, units, gain, offset, stream_id, buffer_id))
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
-        self.signal_stream_characteristics = source_characteristics
+        channel_num_samples = np.array(channel_num_samples)
 
-        # create signal streams from source information
+        # We are using channel prefixes as stream_ids
+        # The meaning of the channel prefixes was provided by a Plexon Engineer, see here:
+        # https://github.com/NeuralEnsemble/python-neo/pull/1495#issuecomment-2184256894
+        stream_id_to_stream_name = {
+            "WB": "WB-Wideband",
+            "FP": "FPl-Low Pass Filtered",
+            "SP": "SPKC-High Pass Filtered",
+            "AI": "AI-Auxiliary Input",
+            "AIF": "AIF-Auxiliary Input Filtered",
+        }
+
+        unique_stream_ids = np.unique(signal_channels["stream_id"])
         signal_streams = []
-        for stream_idx, source in source_characteristics.items():
-            signal_streams.append((source.name, str(source.id)))
+        for stream_id in unique_stream_ids:
+            # We are using the channel prefixes as ids
+            # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`).
+            # In that case we use the channel prefix both as stream id and name
+            stream_name = stream_id_to_stream_name.get(stream_id, stream_id)
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # In plexon buffer is unknown
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
+
+        self._stream_id_samples = {}
+        self._stream_index_to_stream_id = {}
+        for stream_index, stream_id in enumerate(signal_streams["id"]):
+            # Keep a mapping from stream_index to stream_id
+            self._stream_index_to_stream_id[stream_index] = stream_id
+
+            # We extract the number of samples for each stream
+            mask = signal_channels["stream_id"] == stream_id
+            signal_num_samples = np.unique(channel_num_samples[mask])
+            assert signal_num_samples.size == 1, "All channels in a stream must have the same number of samples"
+            self._stream_id_samples[stream_id] = signal_num_samples[0]
 
         # pre-loading spike channel_data for later usage
         self._spike_channel_cache = {}
@@ -187,10 +233,17 @@ class Plexon2RawIO(BaseRawIO):
             schannel_info = self.pl2reader.pl2_get_spike_channel_info(c)
 
             # only consider active channels
-            if not schannel_info.m_ChannelEnabled:
+            if not (schannel_info.m_ChannelEnabled and schannel_info.m_ChannelRecordingEnabled):
                 continue
 
-            for channel_unit_id in range(schannel_info.m_NumberOfUnits):
+            # In a PL2 spike channel header, the field "m_NumberOfUnits" denotes the number
+            # of units to which spikes detected on that channel have been assigned. It does
+            # not account for unsorted spikes, i.e., spikes that have not been assigned to
+            # a unit. It is Plexon's convention to assign unsorted spikes to channel_unit_id=0,
+            # and sorted spikes to channel_unit_id's 1, 2, 3...etc. Therefore, for a given value of
+            # m_NumberOfUnits, there are m_NumberOfUnits+1 channel_unit_ids to consider - 1
+            # unsorted channel_unit_id (0) + the m_NumberOfUnits sorted channel_unit_ids.
+            for channel_unit_id in range(schannel_info.m_NumberOfUnits + 1):
                 unit_name = f"{schannel_info.m_Name.decode()}.{channel_unit_id}"
                 unit_id = f"unit{schannel_info.m_Channel}.{channel_unit_id}"
                 wf_units = schannel_info.m_Units
@@ -211,7 +264,7 @@ class Plexon2RawIO(BaseRawIO):
             echannel_info = self.pl2reader.pl2_get_digital_channel_info(i)
 
             # only consider active channels
-            if not echannel_info.m_ChannelEnabled:
+            if not (echannel_info.m_ChannelEnabled and echannel_info.m_ChannelRecordingEnabled):
                 continue
 
             # event channels are characterized by (name, id, type), with type in ['event', 'epoch']
@@ -224,6 +277,7 @@ class Plexon2RawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]  # It seems pl2 can only contain a single segment
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -259,8 +313,10 @@ class Plexon2RawIO(BaseRawIO):
                     # python is 1..12 https://docs.python.org/3/library/datetime.html#datetime.datetime
                     # so month needs to be tm_mon+1; also tm_sec could cause problems in the case of leap
                     # seconds, but this is harder to defend against.
+                    year = tmo.tm_year  # This has base 1900 in the c++ struct specification so we need to add 1900
+                    year += 1900
                     dt = datetime(
-                        year=tmo.tm_year,
+                        year=year,
                         month=tmo.tm_mon + 1,
                         day=tmo.tm_mday,
                         hour=tmo.tm_hour,
@@ -314,7 +370,6 @@ class Plexon2RawIO(BaseRawIO):
                 "m_OneBasedChannelInTrode",
                 "m_Source",
                 "m_Channel",
-                "m_Name",
                 "m_MaximumNumberOfFragments",
             ]
 
@@ -341,15 +396,12 @@ class Plexon2RawIO(BaseRawIO):
         end_time = (
             self.pl2reader.pl2_file_info.m_StartRecordingTime + self.pl2reader.pl2_file_info.m_DurationOfRecording
         )
-        return end_time / self.pl2reader.pl2_file_info.m_TimestampFrequency
+        return float(end_time / self.pl2reader.pl2_file_info.m_TimestampFrequency)
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        # this must return an integer value (the number of samples)
-
-        stream_id = self.header["signal_streams"][stream_index]["id"]
-        stream_characteristic = list(self.signal_stream_characteristics.values())[stream_index]
-        assert stream_id == stream_characteristic.id
-        return int(stream_characteristic.n_samples)  # Avoids returning a numpy.int64 scalar
+        stream_id = self._stream_index_to_stream_id[stream_index]
+        num_samples = int(self._stream_id_samples[stream_id])
+        return num_samples
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         # This returns the t_start of signals as a float value in seconds

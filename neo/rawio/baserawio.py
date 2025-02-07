@@ -77,6 +77,8 @@ import sys
 
 from neo import logging_handler
 
+from .utils import get_memmap_chunk_from_opened_file
+
 
 possible_raw_modes = [
     "one-file",
@@ -86,9 +88,18 @@ possible_raw_modes = [
 
 error_header = "Header is not read yet, do parse_header() first"
 
+_signal_buffer_dtype = [
+    ("name", "U64"),  # not necessarily unique
+    ("id", "U64"),  # must be unique
+]
+# To be left an empty array if the concept of buffer is undefined for a reader.
 _signal_stream_dtype = [
     ("name", "U64"),  # not necessarily unique
     ("id", "U64"),  # must be unique
+    (
+        "buffer_id",
+        "U64",
+    ),  # should be "" (empty string) when the stream is not nested under a buffer or the buffer is undefined for some reason.
 ]
 
 _signal_channel_dtype = [
@@ -100,6 +111,7 @@ _signal_channel_dtype = [
     ("gain", "float64"),
     ("offset", "float64"),
     ("stream_id", "U64"),
+    ("buffer_id", "U64"),
 ]
 
 # TODO for later: add t_start and length in _signal_channel_dtype
@@ -172,6 +184,15 @@ class BaseRawIO:
         self.header = None
         self.is_header_parsed = False
 
+        self._has_buffer_description_api = False
+
+    def has_buffer_description_api(self) -> bool:
+        """
+        Return if the reader handle the buffer API.
+        If True then the reader support internally `get_analogsignal_buffer_description()`
+        """
+        return self._has_buffer_description_api
+
     def parse_header(self):
         """
         Parses the header of the file(s) to allow for faster computations
@@ -181,6 +202,7 @@ class BaseRawIO:
         # this must create
         # self.header['nb_block']
         # self.header['nb_segment']
+        # self.header['signal_buffers']
         # self.header['signal_streams']
         # self.header['signal_channels']
         # self.header['spike_channels']
@@ -497,23 +519,24 @@ class BaseRawIO:
         signal_streams = self.header["signal_streams"]
         signal_channels = self.header["signal_channels"]
         if signal_streams.size > 0:
-            assert signal_channels.size > 0, "Signal stream but no signal_channels!!!"
+            if signal_channels.size < 1:
+                raise ValueError("Signal stream exists but there are no signal channels")
 
         for stream_index in range(signal_streams.size):
             stream_id = signal_streams[stream_index]["id"]
             mask = signal_channels["stream_id"] == stream_id
             characteristics = signal_channels[mask][_common_sig_characteristics]
             unique_characteristics = np.unique(characteristics)
-            assert unique_characteristics.size == 1, (
-                f"Some channels in stream_id {stream_id} "
-                f"do not have same {_common_sig_characteristics} {unique_characteristics}"
-            )
+            if unique_characteristics.size != 1:
+                raise ValueError(
+                    f"Some channels in stream_id {stream_id} "
+                    f"do not have the same {_common_sig_characteristics} {unique_characteristics}"
+                )
 
             # also check that channel_id is unique inside a stream
             channel_ids = signal_channels[mask]["id"]
-            assert (
-                np.unique(channel_ids).size == channel_ids.size
-            ), f"signal_channels do not have unique ids for stream {stream_index}"
+            if np.unique(channel_ids).size != channel_ids.size:
+                raise ValueError(f"signal_channels do not have unique ids for stream {stream_index}")
 
         self._several_channel_groups = signal_streams.size > 1
 
@@ -540,7 +563,8 @@ class BaseRawIO:
         mask = self.header["signal_channels"]["stream_id"] == stream_id
         signal_channels = self.header["signal_channels"][mask]
         chan_names = list(signal_channels["name"])
-        assert signal_channels.size == np.unique(chan_names).size, "Channel names not unique"
+        if signal_channels.size != np.unique(chan_names).size:
+            raise ValueError("Channel names are not unique")
         channel_indexes = np.array([chan_names.index(name) for name in channel_names])
         return channel_indexes
 
@@ -621,12 +645,12 @@ class BaseRawIO:
 
         """
         if stream_index_arg is None:
-            assert self.header["signal_streams"].size == 1, "stream_index must be given for multiple stream files"
+            if self.header["signal_streams"].size != 1:
+                raise ValueError("stream_index must be given for files with multiple streams")
             stream_index = 0
         else:
-            assert (
-                0 <= stream_index_arg < self.header["signal_streams"].size
-            ), f"stream_index must be between 0 and {self.header['signal_streams'].size}"
+            if stream_index_arg < 0 or stream_index_arg >= self.header["signal_streams"].size:
+                raise ValueError(f"stream_index must be between 0 and {self.header['signal_streams'].size}")
             stream_index = stream_index_arg
         return stream_index
 
@@ -651,6 +675,7 @@ class BaseRawIO:
 
         """
         stream_index = self._get_stream_index_from_arg(stream_index)
+
         return self._get_signal_size(block_index, seg_index, stream_index)
 
     def get_signal_t_start(self, block_index: int, seg_index: int, stream_index: int | None = None):
@@ -786,7 +811,11 @@ class BaseRawIO:
 
         if isinstance(channel_indexes, np.ndarray):
             if channel_indexes.dtype == "bool":
-                assert self.signal_channels_count(stream_index) == channel_indexes.size
+                if self.signal_channels_count(stream_index) != channel_indexes.size:
+                    raise ValueError(
+                        "If channel_indexes is a boolean it must have be the same length as the "
+                        f"number of channels {self.signal_channels_count(stream_index)}"
+                    )
                 (channel_indexes,) = np.nonzero(channel_indexes)
 
         if prefer_slice and isinstance(channel_indexes, np.ndarray):
@@ -1210,9 +1239,8 @@ class BaseRawIO:
         elif cache_path == "same_as_resource":
             dirname = os.path.dirname(resource_name)
         else:
-            assert os.path.exists(
-                cache_path
-            ), 'cache_path does not exists use "home" or "same_as_resource" to make this auto'
+            if not os.path.exists(cache_path):
+                raise ValueError("cache_path does not exist use 'home' or 'same_as_resource' to make this auto")
 
         # the hash of the resource (dir of file) is done with filename+datetime
         # TODO make something more sophisticated when rawmode='one-dir' that use all
@@ -1233,12 +1261,14 @@ class BaseRawIO:
             self.dump_cache()
 
     def add_in_cache(self, **kargs):
-        assert self.use_cache
+        if not self.use_cache:
+            raise ValueError("Can not use add_in_cache if not using cache")
         self._cache.update(kargs)
         self.dump_cache()
 
     def dump_cache(self):
-        assert self.use_cache
+        if not self.use_cache:
+            raise ValueError("Can not use dump_cache if not using cache")
         joblib.dump(self._cache, self.cache_filename)
 
     ##################
@@ -1294,7 +1324,6 @@ class BaseRawIO:
         -------
             array of samples, with each requested channel in a column
         """
-
         raise (NotImplementedError)
 
     ###
@@ -1333,10 +1362,157 @@ class BaseRawIO:
     def _rescale_epoch_duration(self, raw_duration: np.ndarray, dtype: np.dtype):
         raise (NotImplementedError)
 
+    ###
+    # buffer api zone
+    # must be implemented if has_buffer_description_api=True
+    def get_analogsignal_buffer_description(self, block_index: int = 0, seg_index: int = 0, buffer_id: str = None):
+        if not self.has_buffer_description_api:
+            raise ValueError("This reader do not support buffer_description API")
+        descr = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
+        return descr
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        raise (NotImplementedError)
+
+
+class BaseRawWithBufferApiIO(BaseRawIO):
+    """
+    Generic class for reader that support "buffer api".
+
+    In short reader that are internally based on:
+
+      * np.memmap
+      * hdf5
+
+    In theses cases _get_signal_size and _get_analogsignal_chunk are totaly generic and do not need to be implemented in the class.
+
+    For this class sub classes must implements theses two dict:
+       * self._buffer_descriptions[block_index][seg_index] = buffer_description
+       * self._stream_buffer_slice[buffer_id] = None or slicer o indices
+
+    """
+
+    def __init__(self, *arg, **kwargs):
+        super().__init__(*arg, **kwargs)
+        self._has_buffer_description_api = True
+
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
+        buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
+        # some hdf5 revert teh buffer
+        time_axis = buffer_desc.get("time_axis", 0)
+        return buffer_desc["shape"][time_axis]
+
+    def _get_analogsignal_chunk(
+        self,
+        block_index: int,
+        seg_index: int,
+        i_start: int | None,
+        i_stop: int | None,
+        stream_index: int,
+        channel_indexes: list[int] | None,
+    ):
+
+        stream_id = self.header["signal_streams"][stream_index]["id"]
+        buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
+
+        buffer_slice = self._stream_buffer_slice[stream_id]
+
+        buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
+
+        i_start = i_start or 0
+        i_stop = i_stop or buffer_desc["shape"][0]
+
+        if buffer_desc["type"] == "raw":
+
+            # open files on demand and keep reference to opened file
+            if not hasattr(self, "_memmap_analogsignal_buffers"):
+                self._memmap_analogsignal_buffers = {}
+            if block_index not in self._memmap_analogsignal_buffers:
+                self._memmap_analogsignal_buffers[block_index] = {}
+            if seg_index not in self._memmap_analogsignal_buffers[block_index]:
+                self._memmap_analogsignal_buffers[block_index][seg_index] = {}
+            if buffer_id not in self._memmap_analogsignal_buffers[block_index][seg_index]:
+                fid = open(buffer_desc["file_path"], mode="rb")
+                self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id] = fid
+            else:
+                fid = self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id]
+
+            num_channels = buffer_desc["shape"][1]
+
+            raw_sigs = get_memmap_chunk_from_opened_file(
+                fid,
+                num_channels,
+                i_start,
+                i_stop,
+                np.dtype(buffer_desc["dtype"]),
+                file_offset=buffer_desc["file_offset"],
+            )
+
+        elif buffer_desc["type"] == "hdf5":
+
+            # open files on demand and keep reference to opened file
+            if not hasattr(self, "_hdf5_analogsignal_buffers"):
+                self._hdf5_analogsignal_buffers = {}
+            if block_index not in self._hdf5_analogsignal_buffers:
+                self._hdf5_analogsignal_buffers[block_index] = {}
+            if seg_index not in self._hdf5_analogsignal_buffers[block_index]:
+                self._hdf5_analogsignal_buffers[block_index][seg_index] = {}
+            if buffer_id not in self._hdf5_analogsignal_buffers[block_index][seg_index]:
+                import h5py
+
+                h5file = h5py.File(buffer_desc["file_path"], mode="r")
+                self._hdf5_analogsignal_buffers[block_index][seg_index][buffer_id] = h5file
+            else:
+                h5file = self._hdf5_analogsignal_buffers[block_index][seg_index][buffer_id]
+
+            hdf5_path = buffer_desc["hdf5_path"]
+            full_raw_sigs = h5file[hdf5_path]
+
+            time_axis = buffer_desc.get("time_axis", 0)
+            if time_axis == 0:
+                raw_sigs = full_raw_sigs[i_start:i_stop, :]
+            elif time_axis == 1:
+                raw_sigs = full_raw_sigs[:, i_start:i_stop].T
+            else:
+                raise RuntimeError("Should never happen")
+
+            if buffer_slice is not None:
+                raw_sigs = raw_sigs[:, buffer_slice]
+
+        else:
+            raise NotImplementedError()
+
+        # this is a pre slicing when the stream do not contain all channels (for instance spikeglx when load_sync_channel=False)
+        if buffer_slice is not None:
+            raw_sigs = raw_sigs[:, buffer_slice]
+
+        # channel slice requested
+        if channel_indexes is not None:
+            raw_sigs = raw_sigs[:, channel_indexes]
+
+        return raw_sigs
+
+    def __del__(self):
+        if hasattr(self, "_memmap_analogsignal_buffers"):
+            for block_index in self._memmap_analogsignal_buffers.keys():
+                for seg_index in self._memmap_analogsignal_buffers[block_index].keys():
+                    for buffer_id, fid in self._memmap_analogsignal_buffers[block_index][seg_index].items():
+                        fid.close()
+            del self._memmap_analogsignal_buffers
+
+        if hasattr(self, "_hdf5_analogsignal_buffers"):
+            for block_index in self._hdf5_analogsignal_buffers.keys():
+                for seg_index in self._hdf5_analogsignal_buffers[block_index].keys():
+                    for buffer_id, h5_file in self._hdf5_analogsignal_buffers[block_index][seg_index].items():
+                        h5_file.close()
+            del self._hdf5_analogsignal_buffers
+
 
 def pprint_vector(vector, lim: int = 8):
     vector = np.asarray(vector)
-    assert vector.ndim == 1
+    if vector.ndim != 1:
+        raise ValueError(f"`vector` must have a dimension of 1 and not {vector.ndim}")
     if len(vector) > lim:
         part1 = ", ".join(e for e in vector[: lim // 2])
         part2 = " , ".join(e for e in vector[-lim // 2 :])

@@ -4,6 +4,7 @@ and handle relationships within the Neo Block-Segment-Data hierarchy.
 """
 
 import sys
+
 from neo.core.baseneo import BaseNeo
 
 
@@ -19,7 +20,8 @@ class ObjectList:
             self.allowed_contents = (allowed_contents,)
         else:
             for item in allowed_contents:
-                assert issubclass(item, BaseNeo)
+                if not issubclass(item, BaseNeo):
+                    raise TypeError("Each item in allowed_contents must be a subclass of BaseNeo")
             self.allowed_contents = tuple(allowed_contents)
         self._items = []
         self.parent = parent

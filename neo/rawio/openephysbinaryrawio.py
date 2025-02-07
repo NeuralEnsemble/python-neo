@@ -10,23 +10,25 @@ Author: Julia Sprenger, Samuel Garcia, and Alessio Buccino
 """
 
 import os
-import re
 import json
-
 from pathlib import Path
+from warnings import warn
 
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
 
+from .utils import get_memmap_shape
 
-class OpenEphysBinaryRawIO(BaseRawIO):
+
+class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     """
     Handle several Blocks and several Segments.
 
@@ -63,7 +65,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     rawmode = "one-dir"
 
     def __init__(self, dirname="", load_sync_channel=False, experiment_names=None):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
         if experiment_names is not None:
             if isinstance(experiment_names, str):
@@ -122,12 +124,14 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         for stream_index, stream_name in enumerate(sig_stream_names):
             # stream_index is the index in vector sytream names
             stream_id = str(stream_index)
+            buffer_id = stream_id
             info = self._sig_streams[0][0][stream_index]
             new_channels = []
             for chan_info in info["channels"]:
                 chan_id = chan_info["channel_name"]
                 if "SYNC" in chan_id and not self.load_sync_channel:
-                    continue
+                    # the channel is removed from stream but not the buffer
+                    stream_id = ""
                 if chan_info["units"] == "":
                     # in some cases for some OE version the unit is "", but the gain is to "uV"
                     units = "uV"
@@ -143,25 +147,43 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         chan_info["bit_volts"],
                         0.0,
                         stream_id,
+                        buffer_id,
                     )
                 )
             signal_channels.extend(new_channels)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         signal_streams = []
+        signal_buffers = []
         for stream_index, stream_name in enumerate(sig_stream_names):
             stream_id = str(stream_index)
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = str(stream_index)
+            signal_buffers.append((stream_name, buffer_id))
+            signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
         # create memmap for signals
+        self._buffer_descriptions = {}
+        self._stream_buffer_slice = {}
         for block_index in range(nb_block):
+            self._buffer_descriptions[block_index] = {}
             for seg_index in range(nb_segment_per_block[block_index]):
+                self._buffer_descriptions[block_index][seg_index] = {}
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(info["channels"])
-                    memmap_sigs = np.memmap(info["raw_filename"], info["dtype"], order="C", mode="r").reshape(
-                        -1, num_channels
-                    )
+                    stream_id = str(stream_index)
+                    buffer_id = str(stream_index)
+                    shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels, offset=0)
+                    self._buffer_descriptions[block_index][seg_index][buffer_id] = {
+                        "type": "raw",
+                        "file_path": str(info["raw_filename"]),
+                        "dtype": info["dtype"],
+                        "order": "C",
+                        "file_offset": 0,
+                        "shape": shape,
+                    }
+
                     has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
 
                     # check sync channel validity (only for AP and LF)
@@ -169,7 +191,11 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         raise ValueError(
                             "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
                         )
-                    info["memmap"] = memmap_sigs
+
+                    if has_sync_trace and not self.load_sync_channel:
+                        self._stream_buffer_slice[stream_id] = slice(None, -1)
+                    else:
+                        self._stream_buffer_slice[stream_id] = None
 
         # events zone
         # channel map: one channel one stream
@@ -191,7 +217,6 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         if name + "_npy" in info:
                             data = np.load(info[name + "_npy"], mmap_mode="r")
                             info[name] = data
-
                     # check that events have timestamps
                     assert "timestamps" in info, "Event stream does not have timestamps!"
                     # Updates for OpenEphys v0.6:
@@ -227,30 +252,64 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     # 'states' was introduced in OpenEphys v0.6. For previous versions, events used 'channel_states'
                     if "states" in info or "channel_states" in info:
                         states = info["channel_states"] if "channel_states" in info else info["states"]
+
                         if states.size > 0:
                             timestamps = info["timestamps"]
                             labels = info["labels"]
-                            rising = np.where(states > 0)[0]
-                            falling = np.where(states < 0)[0]
 
-                            # infer durations
+                            # Identify unique channels based on state values
+                            channels = np.unique(np.abs(states))
+
+                            rising_indices = []
+                            falling_indices = []
+
+                            # all channels are packed into the same `states` array.
+                            # So the states array includes positive and negative values for each channel:
+                            #  for example channel one rising would be +1 and channel one falling would be -1,
+                            # channel two rising would be +2 and channel two falling would be -2, etc.
+                            # This is the case for sure for version >= 0.6.x.
+                            for channel in channels:
+                                # Find rising and falling edges for each channel
+                                rising = np.where(states == channel)[0]
+                                falling = np.where(states == -channel)[0]
+
+                                # Ensure each rising has a corresponding falling
+                                if rising.size > 0 and falling.size > 0:
+                                    if rising[0] > falling[0]:
+                                        falling = falling[1:]
+                                    if rising.size > falling.size:
+                                        rising = rising[:-1]
+
+                                    # ensure that the number of rising and falling edges are the same:
+                                    if len(rising) != len(falling):
+                                        warn(
+                                            f"Channel {channel} has {len(rising)} rising edges and "
+                                            f"{len(falling)} falling edges. The number of rising and "
+                                            f"falling edges should be equal. Skipping events from this channel."
+                                        )
+                                        continue
+
+                                    rising_indices.extend(rising)
+                                    falling_indices.extend(falling)
+
+                            rising_indices = np.array(rising_indices)
+                            falling_indices = np.array(falling_indices)
+
+                            # Sort the indices to maintain chronological order
+                            sorted_order = np.argsort(rising_indices)
+                            rising_indices = rising_indices[sorted_order]
+                            falling_indices = falling_indices[sorted_order]
+
                             durations = None
-                            if len(states) > 0:
-                                # make sure first event is rising and last is falling
-                                if states[0] < 0:
-                                    falling = falling[1:]
-                                if states[-1] > 0:
-                                    rising = rising[:-1]
+                            # if len(rising_indices) == len(falling_indices):
+                            durations = timestamps[falling_indices] - timestamps[rising_indices]
+                            if not self._use_direct_evt_timestamps:
+                                timestamps = timestamps / info["sample_rate"]
+                                durations = durations / info["sample_rate"]
 
-                                if len(rising) == len(falling):
-                                    durations = timestamps[falling] - timestamps[rising]
-                                    if not self._use_direct_evt_timestamps:
-                                        timestamps = timestamps / info["sample_rate"]
-                                        durations = durations / info["sample_rate"]
-
-                            info["rising"] = rising
-                            info["timestamps"] = timestamps[rising]
-                            info["labels"] = labels[rising]
+                            info["rising"] = rising_indices
+                            info["timestamps"] = timestamps[rising_indices]
+                            info["labels"] = labels[rising_indices]
                             info["durations"] = durations
 
         # no spike read yet
@@ -270,7 +329,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 # loop over signals
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     t_start = info["t_start"]
-                    dur = info["memmap"].shape[0] / float(info["sample_rate"])
+                    stream_id = str(stream_index)
+                    buffer_id = str(stream_index)
+                    sig_size = self._buffer_descriptions[block_index][seg_index][buffer_id]["shape"][0]
+                    dur = sig_size / float(info["sample_rate"])
                     t_stop = t_start + dur
                     if global_t_start is None or global_t_start > t_start:
                         global_t_start = t_start
@@ -301,6 +363,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = nb_block
         self.header["nb_segment"] = nb_segment_per_block
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -367,25 +430,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         group_id = group_ids[0]
         return group_id
 
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-        return sigs.shape[0]
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         t_start = self._sig_streams[block_index][seg_index][stream_index]["t_start"]
         return t_start
-
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-        has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
-
-        if not self.load_sync_channel and has_sync_trace:
-            sigs = sigs[:, :-1]
-
-        sigs = sigs[i_start:i_stop, :]
-        if channel_indexes is not None:
-            sigs = sigs[:, channel_indexes]
-        return sigs
 
     def _spike_count(self, block_index, seg_index, unit_index):
         pass
@@ -443,6 +490,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         else:
             durations = raw_duration.astype(dtype)
         return durations
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
 _possible_event_stream_names = (
@@ -549,11 +599,20 @@ def explore_folder(dirname, experiment_names=None):
                 for info in rec_structure["continuous"]:
                     # when multi Record Node the stream name also contains
                     # the node name to make it unique
-                    oe_stream_name = Path(info["folder_name"]).name  # remove trailing slash
+                    oe_stream_name = info["folder_name"].split("/")[0]  # remove trailing slash
                     if len(node_name) > 0:
                         stream_name = node_name + "#" + oe_stream_name
                     else:
                         stream_name = oe_stream_name
+
+                    # skip streams if folder is on oebin, but doesn't exist
+                    if not (recording_folder / "continuous" / info["folder_name"]).is_dir():
+                        warn(
+                            f"For {recording_folder} the folder continuous/{info['folder_name']} is missing. "
+                            f"Skipping {stream_name} continuous stream."
+                        )
+                        continue
+
                     raw_filename = recording_folder / "continuous" / info["folder_name"] / "continuous.dat"
 
                     # Updates for OpenEphys v0.6:
@@ -580,8 +639,21 @@ def explore_folder(dirname, experiment_names=None):
             if (root / "events").exists() and len(rec_structure["events"]) > 0:
                 recording["streams"]["events"] = {}
                 for info in rec_structure["events"]:
-                    oe_stream_name = Path(info["folder_name"]).name  # remove trailing slash
-                    stream_name = node_name + "#" + oe_stream_name
+                    # when multi Record Node the stream name also contains
+                    # the node name to make it unique
+                    oe_stream_name = info["folder_name"].split("/")[0]  # remove trailing slash
+                    if len(node_name) > 0:
+                        stream_name = node_name + "#" + oe_stream_name
+                    else:
+                        stream_name = oe_stream_name
+
+                    # skip streams if folder is on oebin, but doesn't exist
+                    if not (recording_folder / "events" / info["folder_name"]).is_dir():
+                        warn(
+                            f"For {recording_folder} the folder events/{info['folder_name']} is missing. "
+                            f"Skipping {stream_name} event stream."
+                        )
+                        continue
 
                     event_stream = info.copy()
                     for name in _possible_event_stream_names:

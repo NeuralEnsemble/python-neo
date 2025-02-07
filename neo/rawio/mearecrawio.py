@@ -9,16 +9,18 @@ https://link.springer.com/article/10.1007/s12021-020-09467-7
 Author : Alessio Buccino
 """
 
+from copy import deepcopy
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-
-import numpy as np
-from copy import deepcopy
 
 
 class MEArecRawIO(BaseRawIO):
@@ -92,8 +94,10 @@ class MEArecRawIO(BaseRawIO):
         self._num_channels = self.channel_positions.shape[0]
         self._dtype = self.info_dict["recordings"]["dtype"]
 
-        signals = [("Signals", "0")] if self.load_analogsignal else []
-        signal_streams = np.array(signals, dtype=_signal_stream_dtype)
+        signal_buffers = [("Signals", "0")] if self.load_analogsignal else []
+        signal_streams = [("Signals", "0", "0")] if self.load_analogsignal else []
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
         sig_channels = []
         if self.load_analogsignal:
@@ -106,7 +110,8 @@ class MEArecRawIO(BaseRawIO):
                 gain = 1.0
                 offset = 0.0
                 stream_id = "0"
-                sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+                buffer_id = "0"
+                sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -134,6 +139,7 @@ class MEArecRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = sig_channels
         self.header["spike_channels"] = spike_channels
@@ -154,11 +160,13 @@ class MEArecRawIO(BaseRawIO):
         return all_stops[block_index][seg_index]
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return self._num_frames
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        assert stream_index == 0
+        if stream_index != 0:
+            raise ValueError("`stream_index` must be 0")
         return self._segment_t_start(block_index, seg_index)
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):

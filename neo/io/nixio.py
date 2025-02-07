@@ -27,7 +27,6 @@ import itertools
 from uuid import uuid4
 import warnings
 from packaging.version import Version
-from itertools import chain
 
 import quantities as pq
 import numpy as np
@@ -313,7 +312,8 @@ class NixIO(BaseIO):
                 neo_block.segments.append(newseg)
             elif grp.type == "neo.group":
                 newgrp, parent_name = self._nix_to_neo_group(grp)
-                assert parent_name is None
+                if parent_name is not None:
+                    raise ValueError(f"`parent_name` must be None and is {parent_name}")
                 neo_block.groups.append(newgrp)
             elif grp.type == "neo.subgroup":
                 newgrp, parent_name = self._nix_to_neo_group(grp)
@@ -788,7 +788,7 @@ class NixIO(BaseIO):
 
         # link signals and image sequences
         objnames = []
-        for obj in chain(
+        for obj in itertools.chain(
             neo_group.analogsignals,
             neo_group.irregularlysampledsignals,
             neo_group.imagesequences,
@@ -804,7 +804,7 @@ class NixIO(BaseIO):
 
         # link events, epochs and spiketrains
         objnames = []
-        for obj in chain(
+        for obj in itertools.chain(
             neo_group.events,
             neo_group.epochs,
             neo_group.spiketrains,

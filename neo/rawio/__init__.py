@@ -7,7 +7,7 @@ classes.
 
 Functions:
 
-.. autofunction:: neo.rawio.get_rawio_class
+.. autofunction:: neo.rawio.get_rawio
 
 
 Classes:
@@ -29,6 +29,7 @@ Classes:
 * :attr:`MicromedRawIO`
 * :attr:`NeuralynxRawIO`
 * :attr:`NeuroExplorerRawIO`
+* :attr:`NeuroNexusRawIO`
 * :attr:`NeuroScopeRawIO`
 * :attr:`NIXRawIO`
 * :attr:`OpenEphysRawIO`
@@ -114,6 +115,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.rawio.NeuroNexusRawIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.rawio.NeuroScopeRawIO
 
     .. autoattribute:: extensions
@@ -176,7 +181,8 @@ Classes:
 
 """
 
-import os
+from pathlib import Path
+from collections import Counter
 
 from neo.rawio.alphaomegarawio import AlphaOmegaRawIO
 from neo.rawio.axographrawio import AxographRawIO
@@ -196,6 +202,7 @@ from neo.rawio.medrawio import MedRawIO
 from neo.rawio.micromedrawio import MicromedRawIO
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
+from neo.rawio.neuronexusrawio import NeuroNexusRawIO
 from neo.rawio.neuroscoperawio import NeuroScopeRawIO
 from neo.rawio.nixrawio import NIXRawIO
 from neo.rawio.openephysrawio import OpenEphysRawIO
@@ -230,6 +237,7 @@ rawiolist = [
     MedRawIO,
     NeuralynxRawIO,
     NeuroExplorerRawIO,
+    NeuroNexusRawIO,
     NeuroScopeRawIO,
     NIXRawIO,
     OpenEphysRawIO,
@@ -255,23 +263,57 @@ def get_rawio_class(filename_or_dirname):
 
     import warnings
 
-    warnings.warn("get_rawio_class is deprecated. In the future please use get_rawio")
+    warnings.warn(
+        "get_rawio_class is deprecated and will be removed in 0.15.0. " "In the future please use `get_rawio`"
+    )
 
     return get_rawio(filename_or_dirname)
 
 
-def get_rawio(filename_or_dirname):
+def get_rawio(filename_or_dirname, exclusive_rawio: bool = True):
     """
     Return a neo.rawio class guess from file extension.
-    """
-    _, ext = os.path.splitext(filename_or_dirname)
-    ext = ext[1:]
-    possibles = []
-    for rawio in rawiolist:
-        if any(ext.lower() == ext2.lower() for ext2 in rawio.extensions):
-            possibles.append(rawio)
 
-    if len(possibles) == 1:
-        return possibles[0]
+    Parameters
+    ----------
+    filename_or_dirname : str | Path
+        The filename or directory name to check for file suffixes that
+        can be read by Neo. This can also be used to check whether a
+        rawio could read a not-yet written file
+    exclusive_rawio: bool, default: True
+        Whether to return a rawio if there is only one rawio capable of
+        reading the file. If this doesn't exist will return None.
+        If set to False it will return all possible rawios organized
+        by the most likely rawio.
+
+    Returns
+    -------
+    possibles: neo.RawIO | None | list[neo.RawIO]
+        If exclusive_rawio is True, returns the single RawIO that
+        can read a file/set of files or None. If exclusive_rawio is
+        False it will return all possible RawIOs (organized by most likely)
+        that could read the file or files.
+    """
+    filename_or_dirname = Path(filename_or_dirname)
+
+    # if filename_or_dirname doesn't exist then user may just be checking if
+    # neo can read their file or they give a real file
+    if not filename_or_dirname.exists() or filename_or_dirname.is_file():
+        ext = Path(filename_or_dirname).suffix
+        ext_list = [ext[1:]]
     else:
+        ext_list = list({filename.suffix[1:] for filename in filename_or_dirname.glob("*") if filename.is_file()})
+
+    possibles = []
+    for ext in ext_list:
+        for rawio in rawiolist:
+            if any(ext.lower() == ext2.lower() for ext2 in rawio.extensions):
+                possibles.append(rawio)
+
+    if len(possibles) == 1 and exclusive_rawio:
+        return possibles[0]
+    elif exclusive_rawio:
         return None
+    else:
+        possibles = [io[0] for io in Counter(possibles).most_common()]
+        return possibles

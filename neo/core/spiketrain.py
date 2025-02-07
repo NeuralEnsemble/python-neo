@@ -17,10 +17,7 @@ created by slicing. This is where attributes are copied over from
 the old object.
 """
 
-import neo
-import sys
-
-from copy import deepcopy, copy
+from copy import deepcopy
 import warnings
 
 import numpy as np
@@ -28,11 +25,22 @@ import quantities as pq
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
 
+# need this to avoid circular import issue
+import neo
 
-def check_has_dimensions_time(*values):
+
+def check_has_dimensions_time(*values) -> None:
     """
     Verify that all arguments have a dimensionality that is compatible
     with time.
+
+    Raises
+    ------
+    ValueError if any value is not compatible with time
+
+    Returns
+    -------
+    None: indicating that each value in values has the dimension time
     """
     errmsgs = []
     for value in values:
@@ -43,14 +51,33 @@ def check_has_dimensions_time(*values):
         raise ValueError("\n".join(errmsgs))
 
 
-def _check_time_in_range(value, t_start, t_stop, view=False):
+def _check_time_in_range(value, t_start, t_stop, view=False) -> None:
     """
-    Verify that all times in :attr:`value` are between :attr:`t_start`
-    and :attr:`t_stop` (inclusive.
+    Verify that all times in `value` are between `t_start`
+    and `t_stop` (inclusive)
 
-    If :attr:`view` is True, vies are used for the test.
-    Using drastically increases the speed, but is only safe if you are
-    certain that the dtype and units are the same
+    Parameters
+    ----------
+    value: array-like
+        An array-like object with times
+    t_start: float
+        The starting time
+    t_stop: float
+        The stopping time
+    view: bool, default: False
+        If true views are used for the test. This increases speed but
+        is only safe if certain that the dtype and units are the same.
+
+    Raises
+    ------
+    ValueError
+        * If t_stop < t_start
+        * value.min() < t_start
+        * value.max() > t_start
+
+    Returns
+    -------
+    None: If check passes
     """
 
     if t_start > t_stop:
@@ -70,10 +97,24 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
         raise ValueError(f"The last spike ({value}) is after t_stop ({t_stop})")
 
 
-def _check_waveform_dimensions(spiketrain):
+def _check_waveform_dimensions(spiketrain) -> None:
     """
     Verify that waveform is compliant with the waveform definition as
     quantity array 3D (spike, channel, time)
+
+    Parameters
+    ----------
+    spiketrain: neo.core.SpikeTrain
+        The neo.core.SpikeTrain to check for waveforms
+
+    Raises
+    ------
+    ValueError
+        * number of waveforms doesn't match the number of spikes
+
+    Returns
+    -------
+    None if test passes or no waveforms present
     """
 
     if not spiketrain.size:
@@ -97,7 +138,7 @@ def _new_spiketrain(
     t_stop,
     units=None,
     dtype=None,
-    copy=True,
+    copy=None,
     sampling_rate=1.0 * pq.Hz,
     t_start=0.0 * pq.s,
     waveforms=None,
@@ -117,19 +158,19 @@ def _new_spiketrain(
     if annotations is None:
         annotations = {}
     obj = SpikeTrain(
-        signal,
-        t_stop,
-        units,
-        dtype,
-        copy,
-        sampling_rate,
-        t_start,
-        waveforms,
-        left_sweep,
-        name,
-        file_origin,
-        description,
-        array_annotations,
+        times=signal,
+        t_stop=t_stop,
+        units=units,
+        dtype=dtype,
+        copy=copy,
+        sampling_rate=sampling_rate,
+        t_start=t_start,
+        waveforms=waveforms,
+        left_sweep=left_sweep,
+        name=name,
+        file_origin=file_origin,
+        description=description,
+        array_annotations=array_annotations,
         **annotations,
     )
     obj.segment = segment
@@ -137,7 +178,7 @@ def _new_spiketrain(
     return obj
 
 
-def normalize_times_array(times, units=None, dtype=None, copy=True):
+def normalize_times_array(times, units=None, dtype=None, copy=None):
     """
     Return a quantity array with the correct units.
     There are four scenarios:
@@ -151,6 +192,15 @@ def normalize_times_array(times, units=None, dtype=None, copy=True):
     In scenario C, we rescale the original array to match `units`
     In scenario D, we raise a ValueError
     """
+
+    if copy is not None:
+        raise ValueError(
+            "`copy` is now deprecated in Neo due to removal in Quantites to support Numpy 2.0. "
+            "In order to facilitate the deprecation copy can be set to None but will raise an "
+            "error if set to True/False since this will silently do nothing. This argument will be completely "
+            "removed in Neo 0.15.0. Please update your code base as necessary."
+        )
+
     if dtype is None:
         if not hasattr(times, "dtype"):
             dtype = float
@@ -170,20 +220,21 @@ def normalize_times_array(times, units=None, dtype=None, copy=True):
             if times.dimensionality.items() == dim.items():
                 units = None  # units will be taken from times, avoids copying
             else:
-                if not copy:
-                    raise ValueError("cannot rescale and return view")
-                else:
-                    # this is needed because of a bug in python-quantities
-                    # see issue # 65 in python-quantities github
-                    # remove this if it is fixed
-                    times = times.rescale(dim)
+                raise ValueError("cannot rescale and return view")
 
     # check to make sure the units are time
     # this approach is orders of magnitude faster than comparing the
     # reference dimensionality
     if len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0], pq.UnitTime):
         ValueError(f"Units have dimensions {dim.simplified}, not [time]")
-    return pq.Quantity(times, units=units, dtype=dtype, copy=copy), dim
+    return (
+        pq.Quantity(
+            times,
+            units=units,
+            dtype=dtype,
+        ),
+        dim,
+    )
 
 
 class SpikeTrain(DataObject):
@@ -193,78 +244,56 @@ class SpikeTrain(DataObject):
     It is an ensemble of action potentials (spikes) emitted by the same unit
     in a period of time.
 
-    *Usage*::
+    Parameters
+    ----------
+    times: quantity array 1D | numpy array 1D | list
+        The times of each spike.
+    t_stop: quantity scalar | numpy scalar |float
+        Time at which the SpikeTrain ended. This will be converted to the same units as `times`.
+        This argument is required because it specifies the period of time over which spikes could have occurred.
+        Note that :attr:`t_start` is highly recommended for the same reason.
+    units: (quantity units) | None, default: None
+        Required if `times` is a list or numpy.ndarray`
+        Not required if times is a quantities.Quantity
+    dtype: numpy dtype | str | None, default: None
+        Due to change in `copy` behavior this argument is also deprecated during construction
+    copy: bool, default: None
+        Deprecated in order to support NumPy 2.0 and will be removed.
+    sampling_rate: quantity scalar, default: 1.0 pq.Hz
+        Number of samples per unit time for the waveforms.
+    t_start: quantity scalar | numpy scalar | float
+        Time at which the`SpikeTrain` began. This will be converted to the same units as `times`.
+    waveforms: quantity array 3D (n_spikes, n_channels, n_time) | None, default: None
+        The waveforms of each spike if given must be of the correct shape
+         None indicates no waveforms
+    left_sweep: (quantity array 1D) | None, default: None
+        Time from the beginning of the waveform to the trigger time of the spike.
+    name: str | None, default: None
+        A label for the dataset.
+    description: str | None, default: None
+        A text description of this dataset
+    file_origin: str | Filesystem path | URL | None, default: None
+        The path or location of the original data file.
+    array_annotations: dict
+        A dictonary mapping of strings to numpy arrays containing annotations for all data points
+    annotations: dict
+        Other user defined metadata given as a dict
 
-        >>> from neo.core import SpikeTrain
-        >>> from quantities import s
-        >>>
-        >>> train = SpikeTrain([3, 4, 5]*s, t_stop=10.0)
-        >>> train2 = train[1:3]
-        >>>
-        >>> train.t_start
-        array(0.0) * s
-        >>> train.t_stop
-        array(10.0) * s
-        >>> train
-        <SpikeTrain(array([ 3.,  4.,  5.]) * s, [0.0 s, 10.0 s])>
-        >>> train2
-        <SpikeTrain(array([ 4.,  5.]) * s, [0.0 s, 10.0 s])>
+    Notes
+    -----
+    Useful properties of a SpikeTrain
 
-
-    *Required attributes/properties*:
-        :times: (quantity array 1D, numpy array 1D, or list) The times of
-            each spike.
-        :units: (quantity units) Required if :attr:`times` is a list or
-                :class:`~numpy.ndarray`, not if it is a
-                :class:`~quantities.Quantity`.
-        :t_stop: (quantity scalar, numpy scalar, or float) Time at which
-            :class:`SpikeTrain` ended. This will be converted to the
-            same units as :attr:`times`. This argument is required because it
-            specifies the period of time over which spikes could have occurred.
-            Note that :attr:`t_start` is highly recommended for the same
-            reason.
-
-    Note: If :attr:`times` contains values outside of the
-    range [t_start, t_stop], an Exception is raised.
-
-    *Recommended attributes/properties*:
-        :name: (str) A label for the dataset.
-        :description: (str) Text description.
-        :file_origin: (str) Filesystem path or URL of the original data file.
-        :t_start: (quantity scalar, numpy scalar, or float) Time at which
-            :class:`SpikeTrain` began. This will be converted to the
-            same units as :attr:`times`.
-            Default: 0.0 seconds.
-        :waveforms: (quantity array 3D (spike, channel, time))
-            The waveforms of each spike.
-        :sampling_rate: (quantity scalar) Number of samples per unit time
-            for the waveforms.
-        :left_sweep: (quantity array 1D) Time from the beginning
-            of the waveform to the trigger time of the spike.
-        :sort: (bool) If True, the spike train will be sorted by time.
-
-    *Optional attributes/properties*:
-        :dtype: (numpy dtype or str) Override the dtype of the signal array.
-        :copy: (bool) Whether to copy the times array.  True by default.
-            Must be True when you request a change of units or dtype.
-        :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
-                                   for all data points
-
-    Note: Any other additional arguments are assumed to be user-specific
-    metadata and stored in :attr:`annotations`.
-
-    *Properties available on this object*:
-        :sampling_period: (quantity scalar) Interval between two samples.
-            (1/:attr:`sampling_rate`)
-        :duration: (quantity scalar) Duration over which spikes can occur,
-            read-only.
-            (:attr:`t_stop` - :attr:`t_start`)
-        :spike_duration: (quantity scalar) Duration of a waveform, read-only.
-            (:attr:`waveform`.shape[2] * :attr:`sampling_period`)
-        :right_sweep: (quantity scalar) Time from the trigger times of the
-            spikes to the end of the waveforms, read-only.
-            (:attr:`left_sweep` + :attr:`spike_duration`)
-        :times: (quantity array 1D) Returns the :class:`SpikeTrain` as a quantity array.
+     * sampling_period: quantity scalar
+            Interval between two samples (1/`sampling_rate`)
+     * duration: quantity scalar
+            Duration over which spikes can occur read-only (`t_stop` - `t_start`)
+     * spike_duration: quantity scalar
+            Duration of a waveform, read-only (`waveform`.shape[2] * `sampling_period`)
+     * right_sweep: quantity scalar
+            Time from the trigger times of the spikes to the end of the waveforms, read-only
+            (`left_sweep` + `spike_duration`)
+     * times: quantity array 1D
+            Returns the :class:`SpikeTrain` as a quantity array.
 
     *Slicing*:
         :class:`SpikeTrain` objects can be sliced. When this occurs, a new
@@ -272,6 +301,24 @@ class SpikeTrain(DataObject):
         metadata, except that :attr:`waveforms` is also sliced in the same way
         (along dimension 0). Note that t_start and t_stop are not changed
         automatically, although you can still manually change them.
+
+    Examples
+    --------
+
+    >>> from neo.core import SpikeTrain
+    >>> from quantities import s
+    >>>
+    >>> train = SpikeTrain([3, 4, 5]*s, t_stop=10.0)
+    >>> train2 = train[1:3]
+    >>>
+    >>> train.t_start
+    array(0.0) * s
+    >>> train.t_stop
+    array(10.0) * s
+    >>> train
+    <SpikeTrain(array([ 3.,  4.,  5.]) * s, [0.0 s, 10.0 s])>
+    >>> train2
+    <SpikeTrain(array([ 4.,  5.]) * s, [0.0 s, 10.0 s])>
 
     """
 
@@ -291,7 +338,7 @@ class SpikeTrain(DataObject):
         t_stop,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         sampling_rate=1.0 * pq.Hz,
         t_start=0.0 * pq.s,
         waveforms=None,
@@ -308,13 +355,20 @@ class SpikeTrain(DataObject):
         This is called whenever a new :class:`SpikeTrain` is created from the
         constructor, but not when slicing.
         """
+        if copy is not None:
+            raise ValueError(
+                "`copy` is now deprecated in Neo due to removal in Quantites to support Numpy 2.0. "
+                "In order to facilitate the deprecation copy can be set to None but will raise an "
+                "error if set to True/False since this will silently do nothing. This argument will be completely "
+                "removed in Neo 0.15.0. Please update your code base as necessary."
+            )
+
         if len(times) != 0 and waveforms is not None and len(times) != waveforms.shape[0]:
             # len(times)!=0 has been used to workaround a bug occurring during neo import
             raise ValueError("the number of waveforms should be equal to the number of spikes")
 
         if dtype is not None and hasattr(times, "dtype") and times.dtype != dtype:
-            if not copy:
-                raise ValueError("cannot change dtype and return view")
+            raise ValueError("cannot change dtype during construction due to change in copy behavior")
 
             # if t_start.dtype or t_stop.dtype != times.dtype != dtype,
             # _check_time_in_range can have problems, so we set the t_start
@@ -381,7 +435,7 @@ class SpikeTrain(DataObject):
         t_stop,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         sampling_rate=1.0 * pq.Hz,
         t_start=0.0 * pq.s,
         waveforms=None,
@@ -455,7 +509,7 @@ class SpikeTrain(DataObject):
             self.t_stop,
             self.units,
             self.dtype,
-            True,
+            None,
             self.sampling_rate,
             self.t_start,
             self.waveforms,
@@ -699,7 +753,8 @@ class SpikeTrain(DataObject):
         else:
             units = pq.quantity.validate_dimensionality(units)
 
-        new_st = self.__class__(signal, t_start=t_start, t_stop=t_stop, waveforms=waveforms, units=units)
+        signal = deepcopy(signal)
+        new_st = SpikeTrain(signal, t_start=t_start, t_stop=t_stop, waveforms=waveforms, units=units)
         new_st._copy_data_complement(self, deep_copy=deep_copy)
 
         # Note: Array annotations are not copied here, because length of data could change
@@ -759,8 +814,23 @@ class SpikeTrain(DataObject):
             New instance of a :class:`SpikeTrain` object starting at t_shift later than the
             original :class:`SpikeTrain` (the original :class:`SpikeTrain` is not modified).
         """
-        new_st = self.duplicate_with_new_data(
-            signal=self.times.view(pq.Quantity) + t_shift, t_start=self.t_start + t_shift, t_stop=self.t_stop + t_shift
+        # We need new to make a new SpikeTrain
+        times = self.times.copy() + t_shift
+        t_stop = self.t_stop + t_shift
+        t_start = self.t_start + t_shift
+        new_st = SpikeTrain(
+            times=times,
+            t_stop=t_stop,
+            units=self.unit,
+            sampling_rate=self.sampling_rate,
+            t_start=t_start,
+            waveforms=self.waveforms,
+            left_sweep=self.left_sweep,
+            name=self.name,
+            file_origin=self.file_origin,
+            description=self.description,
+            array_annotations=deepcopy(self.array_annotations),
+            **self.annotations,
         )
 
         # Here we can safely copy the array annotations since we know that
@@ -806,7 +876,7 @@ class SpikeTrain(DataObject):
             raise MergeError("Cannot merge signal with waveform and signal " "without waveform.")
         stack = np.concatenate([np.asarray(st) for st in all_spiketrains])
         sorting = np.argsort(stack)
-        stack = stack[sorting]
+        sorted_stack = stack[sorting]
 
         kwargs = {}
 
@@ -861,10 +931,10 @@ class SpikeTrain(DataObject):
         kwargs.update(merged_annotations)
 
         train = SpikeTrain(
-            stack,
+            sorted_stack,
             units=self.units,
             dtype=self.dtype,
-            copy=False,
+            copy=None,
             t_start=self.t_start,
             t_stop=self.t_stop,
             sampling_rate=self.sampling_rate,
@@ -891,8 +961,8 @@ class SpikeTrain(DataObject):
         the spikes.
         :return Merged array_annotations
         """
-
-        assert sorting is not None, "The order of the merged spikes must be known"
+        if sorting is None:
+            raise ValueError("The order of the merged spikes must be known")
 
         merged_array_annotations = {}
 
@@ -917,7 +987,7 @@ class SpikeTrain(DataObject):
 
         omitted_keys_other = [
             key
-            for key in np.unique([key for other in others for key in other.array_annotations])
+            for key in set([key for other in others for key in other.array_annotations])
             if key not in self.array_annotations
         ]
 

@@ -14,6 +14,18 @@ written in Matlab (BSD-2-Clause licence) by :
 and available here:
 http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load
 
+
+The StringsSection parsing (parse_axon_soup) now relies on an idea
+presented in pyABF MIT License Copyright (c) 2018 Scott W Harden
+written by Scott Harden. His unofficial documentation for the formats
+is here:
+https://swharden.com/pyabf/abf2-file-format/
+strings section:
+[uModifierNameIndex, uCreatorNameIndex, uProtocolPathIndex, lFileComment, lADCCChannelNames, lADCUnitsIndex
+lDACChannelNameIndex, lDACUnitIndex, lDACFilePath, nLeakSubtractADC]
+['', 'Clampex', '', 'C:/path/protocol.pro', 'some comment', 'IN 0', 'mV', 'IN 1', 'mV', 'Cmd 0', 'pA', 
+'Cmd 1', 'pA', 'Cmd 2', 'mV', 'Cmd 3', 'mV']
+
 Information on abf 1 and 2 formats is available here:
 http://www.moleculardevices.com/pages/software/developer_info.html
 
@@ -34,25 +46,24 @@ reads abf files - would be good to cross-check
 
 """
 
-from .baserawio import (
-    BaseRawIO,
-    _signal_channel_dtype,
-    _signal_stream_dtype,
-    _spike_channel_dtype,
-    _event_channel_dtype,
-)
-
-import numpy as np
-
 import struct
 import datetime
-import os
 from io import open, BufferedReader
 
 import numpy as np
 
+from .baserawio import (
+    BaseRawWithBufferApiIO,
+    _signal_channel_dtype,
+    _signal_stream_dtype,
+    _signal_buffer_dtype,
+    _spike_channel_dtype,
+    _event_channel_dtype,
+)
+from neo.core import NeoReadWriteError
 
-class AxonRawIO(BaseRawIO):
+
+class AxonRawIO(BaseRawWithBufferApiIO):
     """
     Class for Class for reading data from pCLAMP and AxoScope files (.abf version 1 and 2)
 
@@ -81,7 +92,7 @@ class AxonRawIO(BaseRawIO):
     rawmode = "one-file"
 
     def __init__(self, filename=""):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.filename = filename
 
     def _parse_header(self):
@@ -104,15 +115,14 @@ class AxonRawIO(BaseRawIO):
             head_offset = info["sections"]["DataSection"]["uBlockIndex"] * BLOCKSIZE
             totalsize = info["sections"]["DataSection"]["llNumEntries"]
 
-        self._raw_data = np.memmap(self.filename, dtype=sig_dtype, mode="r", shape=(totalsize,), offset=head_offset)
-
         # 3 possible modes
         if version < 2.0:
             mode = info["nOperationMode"]
         elif version >= 2.0:
             mode = info["protocol"]["nOperationMode"]
 
-        assert mode in [1, 2, 3, 5], f"Mode {mode} is not supported"
+        if mode not in [1, 2, 3, 5]:
+            raise NeoReadWriteError(f"Mode {mode} is not currently supported in Neo")
         # event-driven variable-length mode (mode 1)
         # event-driven fixed-length mode (mode 2 or 5)
         # gap free mode (mode 3) can be in several episodes
@@ -130,7 +140,7 @@ class AxonRawIO(BaseRawIO):
             )
         else:
             episode_array = np.empty(1, [("offset", "i4"), ("len", "i4")])
-            episode_array[0]["len"] = self._raw_data.size
+            episode_array[0]["len"] = totalsize
             episode_array[0]["offset"] = 0
 
         # sampling_rate
@@ -142,9 +152,14 @@ class AxonRawIO(BaseRawIO):
         # one sweep = one segment
         nb_segment = episode_array.size
 
+        stream_id = "0"
+        buffer_id = "0"
+
         # Get raw data by segment
-        self._raw_signals = {}
+        # self._raw_signals = {}
         self._t_starts = {}
+        self._buffer_descriptions = {0: {}}
+        self._stream_buffer_slice = {stream_id: None}
         pos = 0
         for seg_index in range(nb_segment):
             length = episode_array[seg_index]["len"]
@@ -157,7 +172,15 @@ class AxonRawIO(BaseRawIO):
             if (fSynchTimeUnit != 0) and (mode == 1):
                 length /= fSynchTimeUnit
 
-            self._raw_signals[seg_index] = self._raw_data[pos : pos + length].reshape(-1, nbchannel)
+            self._buffer_descriptions[0][seg_index] = {}
+            self._buffer_descriptions[0][seg_index][buffer_id] = {
+                "type": "raw",
+                "file_path": str(self.filename),
+                "dtype": str(sig_dtype),
+                "order": "C",
+                "file_offset": head_offset + pos * sig_dtype.itemsize,
+                "shape": (int(length // nbchannel), int(nbchannel)),
+            }
             pos += length
 
             t_start = float(episode_array[seg_index]["offset"])
@@ -215,13 +238,16 @@ class AxonRawIO(BaseRawIO):
                     offset -= info["listADCInfo"][chan_id]["fSignalOffset"]
             else:
                 gain, offset = 1.0, 0.0
-            stream_id = "0"
-            signal_channels.append((name, str(chan_id), self._sampling_rate, sig_dtype, units, gain, offset, stream_id))
+
+            signal_channels.append(
+                (name, str(chan_id), self._sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+            )
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        # one unique signal stream
-        signal_streams = np.array([("Signals", "0")], dtype=_signal_stream_dtype)
+        # one unique signal stream and buffer
+        signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
+        signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
 
         # only one events channel : tag
         # In ABF timstamps are not attached too any particular segment
@@ -247,6 +273,7 @@ class AxonRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -278,21 +305,15 @@ class AxonRawIO(BaseRawIO):
         return self._t_starts[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._t_starts[seg_index] + self._raw_signals[seg_index].shape[0] / self._sampling_rate
+        sig_size = self.get_signal_size(block_index, seg_index, 0)
+        t_stop = self._t_starts[seg_index] + sig_size / self._sampling_rate
         return t_stop
-
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        shape = self._raw_signals[seg_index].shape
-        return shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return self._t_starts[seg_index]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_indexes]
-        return raw_signals
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._raw_ev_timestamps.size
@@ -461,21 +482,21 @@ def parse_axon_soup(filename):
             # strings sections
             # hack for reading channels names and units
             # this section is not very detailed and so the code
-            # not very robust. The idea is to remove the first
-            # part by finding one of th following KEY
-            # unfortunately the later part contains a the file
-            # that can contain by accident also one of theses keys...
+            # not very robust.
             f.seek(sections["StringsSection"]["uBlockIndex"] * BLOCKSIZE)
             big_string = f.read(sections["StringsSection"]["uBytes"])
-            goodstart = -1
-            for key in [b"AXENGN", b"clampex", b"Clampex", b"EDR3", b"CLAMPEX", b"axoscope", b"AxoScope", b"Clampfit"]:
-                # goodstart = big_string.lower().find(key)
-                goodstart = big_string.find(b"\x00" + key)
-                if goodstart != -1:
-                    break
-            assert goodstart != -1, "This file does not contain clampex, axoscope or clampfit in the header"
-            big_string = big_string[goodstart + 1 :]
-            strings = big_string.split(b"\x00")
+            # this idea comes from pyABF https://github.com/swharden/pyABF
+            # previously we searched for clampex, Clampex etc, but this was
+            # brittle. pyABF believes that looking for the \x00\x00 is more
+            # robust. We find these values, replace mu->u, then split into
+            # a set of strings
+            indexed_string = big_string[big_string.rfind(b"\x00\x00") :]
+            # replace mu -> u for easy display
+            indexed_string = indexed_string.replace(b"\xb5", b"\x75")
+            # we need to remove one of the \x00 to have the indices be
+            # the correct order
+            indexed_string = indexed_string.split(b"\x00")[1:]
+            strings = indexed_string
 
             # ADC sections
             header["listADCInfo"] = []
@@ -489,8 +510,8 @@ def parse_axon_soup(filename):
                         ADCInfo[key] = val[0]
                     else:
                         ADCInfo[key] = np.array(val)
-                ADCInfo["ADCChNames"] = strings[ADCInfo["lADCChannelNameIndex"] - 1]
-                ADCInfo["ADCChUnits"] = strings[ADCInfo["lADCUnitsIndex"] - 1]
+                ADCInfo["ADCChNames"] = strings[ADCInfo["lADCChannelNameIndex"]]
+                ADCInfo["ADCChUnits"] = strings[ADCInfo["lADCUnitsIndex"]]
                 header["listADCInfo"].append(ADCInfo)
 
             # protocol sections
@@ -503,7 +524,7 @@ def parse_axon_soup(filename):
                 else:
                     protocol[key] = np.array(val)
             header["protocol"] = protocol
-            header["sProtocolPath"] = strings[header["uProtocolPathIndex"] - 1]
+            header["sProtocolPath"] = strings[header["uProtocolPathIndex"]]
 
             # tags
             listTag = []
@@ -532,8 +553,8 @@ def parse_axon_soup(filename):
                         DACInfo[key] = val[0]
                     else:
                         DACInfo[key] = np.array(val)
-                DACInfo["DACChNames"] = strings[DACInfo["lDACChannelNameIndex"] - 1]
-                DACInfo["DACChUnits"] = strings[DACInfo["lDACChannelUnitsIndex"] - 1]
+                DACInfo["DACChNames"] = strings[DACInfo["lDACChannelNameIndex"]]
+                DACInfo["DACChUnits"] = strings[DACInfo["lDACChannelUnitsIndex"]]
 
                 header["listDACInfo"].append(DACInfo)
 

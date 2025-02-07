@@ -14,7 +14,6 @@ weren't set. Consider removing those annotations if they are redundant.
 """
 
 import re
-import glob
 import logging
 from pathlib import Path
 import shutil
@@ -22,10 +21,8 @@ import shutil
 # note neo.core need only numpy and quantities
 import numpy as np
 
-
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
-
 from neo.core import Block, Segment, Group, SpikeTrain
 
 # Pasted version of feature file format spec
@@ -200,7 +197,7 @@ class KlustaKwikIO(BaseIO):
             names.append("spike_time")
 
         # Load into recarray
-        data = np.recfromtxt(fetfilename, names=names, skip_header=1, delimiter=" ")
+        data = np.genfromtxt(fetfilename, names=names, skip_header=1, delimiter=" ")
 
         # get features
         features = np.array([data[f"fet{n}"] for n in range(nbFeatures)])

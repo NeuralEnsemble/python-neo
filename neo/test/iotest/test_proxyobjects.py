@@ -6,6 +6,7 @@ import unittest
 
 import numpy as np
 import quantities as pq
+from neo.core import NeoReadWriteError
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
 
@@ -63,7 +64,7 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig.shape == (30000, 8)
 
         # buggy time slice
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             anasig = proxy_anasig.load(time_slice=(2.0 * pq.s, 15 * pq.s))
         anasig = proxy_anasig.load(time_slice=(2.0 * pq.s, 15 * pq.s), strict_slicing=False)
         assert proxy_anasig.t_stop == 10 * pq.s
@@ -135,7 +136,7 @@ class TestSpikeTrainProxy(BaseProxyTest):
         assert_same_attributes(proxy_sptr.time_slice(250 * pq.ms, 500 * pq.ms), sptr)
 
         # buggy time slice
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             sptr = proxy_sptr.load(time_slice=(2.0 * pq.s, 15 * pq.s))
         sptr = proxy_sptr.load(time_slice=(2.0 * pq.s, 15 * pq.s), strict_slicing=False)
         assert sptr.t_stop == 10 * pq.s
@@ -192,7 +193,7 @@ class TestEventProxy(BaseProxyTest):
         assert_same_attributes(proxy_event.time_slice(1 * pq.s, 2 * pq.s), event)
 
         # buggy time slice
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             event = proxy_event.load(time_slice=(2 * pq.s, 15 * pq.s))
         event = proxy_event.load(time_slice=(2 * pq.s, 15 * pq.s), strict_slicing=False)
 
@@ -223,7 +224,7 @@ class TestEpochProxy(BaseProxyTest):
         assert_same_attributes(proxy_epoch.time_slice(1 * pq.s, 4 * pq.s), epoch)
 
         # buggy time slice
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             epoch = proxy_epoch.load(time_slice=(2 * pq.s, 15 * pq.s))
         epoch = proxy_epoch.load(time_slice=(2 * pq.s, 15 * pq.s), strict_slicing=False)
 

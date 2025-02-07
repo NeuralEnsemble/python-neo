@@ -1,10 +1,10 @@
 [project]
 name = "neo"
-version = "0.13.1.dev"
+version = "0.15.0.dev0"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "BSD 3-Clause License"}
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -14,17 +14,18 @@ classifiers = [
     "Natural Language :: English",
     "Topic :: Scientific/Engineering",
     "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3 :: Only",
 ]
 
 dependencies = [
     "packaging",
-    "numpy>=1.19.5",
-    "quantities>=0.14.1"
+    "numpy>=1.22.4",
+    "quantities>=0.16.1"
 ]
 
 [project.urls]
@@ -45,10 +46,10 @@ iocache = [
 ]
 
 test = [
-    "dhn_med_py>=1.0.0",
+    # "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
     "pytest",
     "pytest-cov",
-    # datalad   # this dependency is covered by conda (environment_testing.yml)
+    # datalad   # this dependency is covered by conda (environment_testing.yml)-- maybe moving straight to ci
     "scipy>=1.0.0",
     "pyedflib",
     "h5py",
@@ -79,7 +80,9 @@ docs = [
     "ipython",
     "matplotlib",
     "nixio",
-    "pynwb"
+    "pynwb",
+    "igor2",
+    "numpy>=2.0"
 ]
 
 dev = [
@@ -92,20 +95,19 @@ igorproio = ["igor2"]
 kwikio = ["klusta"]
 neomatlabio = ["scipy>=1.0.0"]
 nixio = ["nixio>=1.5.0"]
-stimfitio = ["stfio"]
 tiffio = ["pillow"]
 edf = ["pyedflib"]
 ced = ["sonpy"]
 nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
-med = ["dhn_med_py>=1.0.0"]
+med = ["dhn_med_py<2.0"] # ci failing with 2.0 test future version when stable
 plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32'"]
 
 all = [
     "coverage",
     "coveralls",
-    "dhn_med_py>=1.0.0",
+    # "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
     "h5py",
     "igor2",
     "ipython",

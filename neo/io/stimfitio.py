@@ -30,7 +30,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal
+from neo.core import Block, Segment, AnalogSignal, NeoReadWriteError
 
 
 class StimfitIO(BaseIO):
@@ -106,7 +106,8 @@ class StimfitIO(BaseIO):
     def read_block(self, lazy=False):
         import stfio
 
-        assert not lazy, "Do not support lazy"
+        if lazy:
+            raise NeoReadWriteError("This IO does not support lazy reading")
 
         if self.filename is not None:
             self.stfio_rec = stfio.read(self.filename)

@@ -23,17 +23,20 @@ Author: Samuel Garcia, luc estebanez, mark hollenbeck
 
 """
 
+from collections import OrderedDict
+
+import numpy as np
+
 from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
 
-import numpy as np
-from collections import OrderedDict
-import datetime
+from neo.core import NeoReadWriteError
 
 
 class NeuroExplorerRawIO(BaseRawIO):
@@ -94,7 +97,8 @@ class NeuroExplorerRawIO(BaseRawIO):
                 gain = entity_header["ADtoMV"]
                 offset = entity_header["MVOffset"]
                 stream_id = str(_id)
-                sig_channels.append((name, _id, sampling_rate, dtype, units, gain, offset, stream_id))
+                buffer_id = ""
+                sig_channels.append((name, _id, sampling_rate, dtype, units, gain, offset, stream_id, buffer_id))
                 self._sig_lengths.append(entity_header["NPointsWave"])
                 # sig t_start is the first timestamp if datablock
                 offset = entity_header["offset"]
@@ -110,16 +114,19 @@ class NeuroExplorerRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # each signal channel has different groups that force reading
-        # them one by one
+        # them one by one so one stream per channel and no buffer
         sig_channels["stream_id"] = np.arange(sig_channels.size).astype("U")
         signal_streams = np.zeros(sig_channels.size, dtype=_signal_stream_dtype)
         signal_streams["name"] = sig_channels["name"]
         signal_streams["id"] = sig_channels["stream_id"]
+        signal_streams["buffer_id"] = ""
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # fill into header dict
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = sig_channels
         self.header["spike_channels"] = spike_channels
@@ -194,7 +201,8 @@ class NeuroExplorerRawIO(BaseRawIO):
         entity_header = self._entity_headers[entity_index]
         if entity_header["type"] == 0:
             return None
-        assert entity_header["type"] == 3
+        if entity_header["type"] != 3:
+            raise NeoReadWriteError(f"Neo requires the entity_header['type'] to be 3 not {entity_header['type']}")
 
         n = entity_header["n"]
         width = entity_header["NPointsWave"]

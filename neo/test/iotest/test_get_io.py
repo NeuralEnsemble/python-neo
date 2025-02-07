@@ -1,6 +1,15 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import platform
 from neo.io import get_io, list_candidate_ios, NixIO
+import pytest
+
+try:
+    import nixio
+
+    HAVE_NIX = True
+except:
+    HAVE_NIX = False
 
 
 def test_list_candidate_ios_non_existant_file():
@@ -29,6 +38,7 @@ def test_list_candidate_ios_filename_stub():
         assert NixIO in ios
 
 
+@pytest.mark.skipif(not HAVE_NIX or platform.system() == "Windows", reason="Need nixio in order to return NixIO class")
 def test_get_io_non_existant_file_writable_io():
     # use nixio for testing with writable io
     non_existant_file = Path("non_existant_file.nix")
@@ -38,4 +48,4 @@ def test_get_io_non_existant_file_writable_io():
     assert isinstance(io, NixIO)
 
     # cleanup
-    non_existant_file.unlink(missing_ok=True)
+    non_existant_file.unlink(missing_ok=True)  # cleanup will fail on Windows so need to skip

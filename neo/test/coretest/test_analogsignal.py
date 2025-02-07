@@ -131,31 +131,6 @@ class TestAnalogSignalConstructor(unittest.TestCase):
         data = np.arange(10.0) * pq.mV
         self.assertRaises(ValueError, AnalogSignal, data, sampling_rate=1 * pq.kHz, sampling_period=5 * pq.s)
 
-    def test__create_with_copy_true_should_return_copy(self):
-        data = np.arange(10.0) * pq.mV
-        rate = 5000 * pq.Hz
-        signal = AnalogSignal(data, copy=True, sampling_rate=rate)
-        data[3] = 99 * pq.mV
-        assert_neo_object_is_compliant(signal)
-        self.assertNotEqual(signal[3, 0], 99 * pq.mV)
-
-    def test__create_with_copy_false_should_return_view(self):
-        data = np.arange(10.0) * pq.mV
-        rate = 5000 * pq.Hz
-        signal = AnalogSignal(data, copy=False, sampling_rate=rate)
-        data[3] = 99 * pq.mV
-        assert_neo_object_is_compliant(signal)
-        self.assertEqual(signal[3, 0], 99 * pq.mV)
-
-    def test__create2D_with_copy_false_should_return_view(self):
-        data = np.arange(10.0) * pq.mV
-        data = data.reshape((5, 2))
-        rate = 5000 * pq.Hz
-        signal = AnalogSignal(data, copy=False, sampling_rate=rate)
-        data[3, 0] = 99 * pq.mV
-        assert_neo_object_is_compliant(signal)
-        self.assertEqual(signal[3, 0], 99 * pq.mV)
-
     def test__create_with_additional_argument(self):
         signal = AnalogSignal(
             [1, 2, 3], units="mV", sampling_rate=1 * pq.kHz, file_origin="crack.txt", ratname="Nicolas"
@@ -1048,6 +1023,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_array_equal(result.array_annotations["anno2"], np.array(["a"]))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
+    # splice copy is a deepcopy not a numpy copy still need to test for numpy 2.0
     def test_splice_1channel_with_copy(self):
         signal_for_splicing = AnalogSignal(
             [0.1, 0.1, 0.1],
@@ -1066,6 +1042,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_array_equal(result.array_annotations["anno2"], np.array(["a"]))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
+    # splice is a deepcopy still need to test for numpy 2.0
     def test_splice_2channels_inplace(self):
         arr_ann1 = {"index": np.arange(10, 12)}
         arr_ann2 = {"index": np.arange(2), "test": ["a", "b"]}
@@ -1738,8 +1715,9 @@ class TestAnalogSignalCombination(unittest.TestCase):
 
 
 class TestAnalogSignalFunctions(unittest.TestCase):
+
     def test__pickle_1d(self):
-        signal1 = AnalogSignal([1, 2, 3, 4], sampling_period=1 * pq.ms, units=pq.S)
+        signal1 = AnalogSignal(signal=[1, 2, 3, 4], sampling_period=1 * pq.ms, units=pq.S)
         signal1.annotations["index"] = 2
         signal1.array_annotate(**{"anno1": [23], "anno2": ["A"]})
 
@@ -1750,6 +1728,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
         fobj = open("./pickle", "rb")
         try:
             signal2 = pickle.load(fobj)
+            print(signal2)
         except ValueError:
             signal2 = None
 

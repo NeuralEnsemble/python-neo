@@ -9,6 +9,7 @@ Supported: Read
 Author: Julia Sprenger, Carlos Canova
 """
 
+import warnings
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.neuralynxrawio.neuralynxrawio import NeuralynxRawIO
 
@@ -29,12 +30,14 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
 
     def __init__(
         self,
-        dirname="",
-        filename="",
+        dirname,
         use_cache=False,
         cache_path="same_as_resource",
-        exclude_filename=None,
+        include_filenames=None,
+        exclude_filenames=None,
         keep_original_times=False,
+        filename=None,
+        exclude_filename=None,
     ):
         """
         Initialise IO instance
@@ -44,6 +47,7 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         dirname : str
             Directory containing data files
         filename : str
+            Deprecated and will be removed. Please use `include_filenames` instead
             Name of a single ncs, nse, nev, or ntt file to include in dataset. Will be ignored,
             if dirname is provided.
         use_cache : bool, optional
@@ -52,7 +56,11 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         cache_path : str, optional
             Folder path to use for cache files.
             Default: 'same_as_resource'
-        exclude_filename: str or list
+        exclude_filename: None,
+            Deprecated and will be removed. Please use `exclude_filenames` instead
+        include_filenames: str or list
+            Filename or list of filenames to be included. This can be absolute path or path relative to dirname.
+        exclude_filenames: str or list
             Filename or list of filenames to be excluded. Expects base filenames without
             directory path.
         keep_original_times : bool
@@ -60,16 +68,26 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             shifted to begin at t_start = 0*pq.second.
             Default: False
         """
+
+        if filename is not None:
+            warnings.warn("Deprecated and will be removed. Please use `include_filenames` instead")
+            include_filenames = [filename]
+
+        if exclude_filename is not None:
+            warnings.warn("Deprecated and will be removed. Please use `exclude_filenames` instead")
+            exclude_filenames = exclude_filename
+
         NeuralynxRawIO.__init__(
             self,
             dirname=dirname,
-            filename=filename,
+            include_filenames=include_filenames,
+            exclude_filenames=exclude_filenames,
+            keep_original_times=keep_original_times,
             use_cache=use_cache,
             cache_path=cache_path,
-            exclude_filename=exclude_filename,
-            keep_original_times=keep_original_times,
         )
-        if self.rawmode == "one-file":
-            BaseFromRaw.__init__(self, filename)
-        elif self.rawmode == "one-dir":
+
+        if self.rawmode == "one-dir":
             BaseFromRaw.__init__(self, dirname)
+        elif self.rawmode == "multiple-files":
+            BaseFromRaw.__init__(self, include_filenames=include_filenames)

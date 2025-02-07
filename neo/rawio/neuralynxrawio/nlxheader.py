@@ -120,7 +120,7 @@ class NlxHeader(OrderedDict):
             datetime2_regex=r"-TimeClosed (?P<date>\S+) (?P<time>\S+)",
             filename_regex=r'-OriginalFileName "?(?P<filename>\S+)"?',
             datetimeformat=r"%Y/%m/%d %H:%M:%S",
-            datetime2format=r"%Y/%m/%d %H:%M:%S.f",
+            datetime2format=r"%Y/%m/%d %H:%M:%S.%f",
         ),
         # Cheetah after v 5.6.4 and default for others such as Pegasus
         "def": dict(

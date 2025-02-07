@@ -8,8 +8,8 @@ https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Open-Ephys-form
 Author: Samuel Garcia
 """
 
-import os
 import re
+from pathlib import Path
 
 import numpy as np
 
@@ -17,9 +17,11 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from neo.core import NeoReadWriteError
 
 
 RECORD_SIZE = 1024
@@ -73,8 +75,8 @@ class OpenEphysRawIO(BaseRawIO):
       * Works only if all continuous channels have the same sampling rate, which is a reasonable
         hypothesis.
       * A recording can contain gaps due to USB stream loss when high CPU load when recording.
-        Theses gaps are checked channel per channel which make the parse_header() slow.
-        If gaps are detected then they are filled with zeros but the the reading will be much slower for getting signals.
+        These gaps are checked channel per channel which makes the parse_header() slow.
+        If gaps are detected then they are filled with zeros but then the reading will be much slower for getting signals.
 
     """
 
@@ -112,18 +114,24 @@ class OpenEphysRawIO(BaseRawIO):
             all_last_timestamps = []
             all_samplerate = []
             for chan_index, continuous_filename in enumerate(info["continuous"][oe_index]):
-                fullname = os.path.join(self.dirname, continuous_filename)
-                chan_info = read_file_header(fullname)
+                chan_info = read_file_header(continuous_filename)
 
-                s = continuous_filename.replace(".continuous", "").split("_")
-                processor_id, ch_name = s[0], s[1]
-                chan_str = re.split(r"(\d+)", s[1])[0]
+                s = continuous_filename.stem.split("_")
+                # Formats are ['processor_id', 'ch_name'] or  ['processor_id', 'name', 'ch_name']
+                if len(s) == 2:
+                    processor_id, ch_name = s[0], s[1]
+                    chan_str = re.split(r"(\d+)", s[1])[0]
+                else:
+                    processor_id, ch_name = s[0], s[2]
+                    chan_str = re.split(r"(\d+)", s[2])[0]
                 # note that chan_id is not unique in case of CH + AUX
                 chan_id = int(ch_name.replace(chan_str, ""))
 
-                filesize = os.stat(fullname).st_size
+                filesize = continuous_filename.stat().st_size
                 size = (filesize - HEADER_SIZE) // np.dtype(continuous_dtype).itemsize
-                data_chan = np.memmap(fullname, mode="r", offset=HEADER_SIZE, dtype=continuous_dtype, shape=(size,))
+                data_chan = np.memmap(
+                    continuous_filename, mode="r", offset=HEADER_SIZE, dtype=continuous_dtype, shape=(size,)
+                )
                 self._sigs_memmap[seg_index][chan_index] = data_chan
 
                 all_first_timestamps.append(data_chan[0]["timestamp"])
@@ -137,9 +145,17 @@ class OpenEphysRawIO(BaseRawIO):
 
                 if channel_has_gaps:
                     # protect against strange timestamp block like in file 'OpenEphys_SampleData_3' CH32
-                    assert (
-                        np.median(diff) == RECORD_SIZE
-                    ), f"This file has a non valid data block size for channel {chan_id}, this case cannot be handled"
+                    if not np.median(diff) == RECORD_SIZE:
+                        raise NeoReadWriteError(
+                            f"This file has a non valid data block size for channel {chan_id}, this case cannot be handled"
+                        )
+
+                channel_has_corrupted_timestamps = np.any(diff <= 0)
+                if channel_has_corrupted_timestamps:
+                    # protect against corrupted timestamp in channel
+                    raise ValueError(
+                        f"{ch_name} has timestamps with zero values or negative differences between consecutive timestamps, this file ({continuous_filename}) with corrupted timestamps needs to be moved away from the folder."
+                    )
 
                 if seg_index == 0:
                     # add in channel list
@@ -147,6 +163,8 @@ class OpenEphysRawIO(BaseRawIO):
                         units = "uV"
                     else:
                         units = "V"
+                    stream_id = processor_id
+                    buffer_id = ""
                     signal_channels.append(
                         (
                             ch_name,
@@ -156,7 +174,8 @@ class OpenEphysRawIO(BaseRawIO):
                             units,
                             chan_info["bitVolts"],
                             0.0,
-                            processor_id,
+                            stream_id,
+                            buffer_id,
                         )
                     )
 
@@ -189,7 +208,8 @@ class OpenEphysRawIO(BaseRawIO):
                 last = all_last_timestamps[0]
 
             # check unique sampling rate
-            assert all(all_samplerate[0] == e for e in all_samplerate), "Not all signals have the same sample rate"
+            if not all(all_samplerate[0] == e for e in all_samplerate):
+                raise NeoReadWriteError("Not all signals have the same sample rate")
 
             self._sig_length[seg_index] = last - first
             self._sig_timestamp0[seg_index] = first
@@ -205,10 +225,13 @@ class OpenEphysRawIO(BaseRawIO):
             # and create streams channels (keep natural order 'CH' first)
             stream_ids, order = np.unique(chan_stream_ids, return_index=True)
             stream_ids = stream_ids[np.argsort(order)]
-            signal_streams = [(f"Signals {stream_id}", f"{stream_id}") for stream_id in stream_ids]
-            signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+            signal_streams = [(f"Signals {stream_id}", f"{stream_id}", "") for stream_id in stream_ids]
         else:
-            signal_streams = np.array([])
+            signal_streams = []
+        signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # no buffer handling in this format because one channel per file
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
+
         # scan for spikes files
         spike_channels = []
 
@@ -220,16 +243,15 @@ class OpenEphysRawIO(BaseRawIO):
             for seg_index, oe_index in enumerate(oe_indices_spk):
                 self._spikes_memmap[seg_index] = {}
                 for spike_filename in info["spikes"][oe_index]:
-                    fullname = os.path.join(self.dirname, spike_filename)
-                    spike_info = read_file_header(fullname)
-                    spikes_dtype = make_spikes_dtype(fullname)
+                    spike_info = read_file_header(spike_filename)
+                    spikes_dtype = make_spikes_dtype(spike_filename)
 
                     # "STp106.0n0_2.spikes" to "STp106.0n0"
-                    name = spike_filename.replace(".spikes", "")
+                    name = spike_filename.stem
                     if seg_index > 0:
                         name = name.replace("_" + str(seg_index + 1), "")
 
-                    data_spike = np.memmap(fullname, mode="r", offset=HEADER_SIZE, dtype=spikes_dtype)
+                    data_spike = np.memmap(spike_filename, mode="r", offset=HEADER_SIZE, dtype=spikes_dtype)
                     self._spikes_memmap[seg_index][name] = data_spike
 
                     self._first_spk_timestamps.append(data_spike[0]["timestamp"])
@@ -239,14 +261,14 @@ class OpenEphysRawIO(BaseRawIO):
             # so need to scan file for all segment to get units
             self._spike_sampling_rate = None
             for spike_filename_seg0 in info["spikes"][0]:
-                name = spike_filename_seg0.replace(".spikes", "")
+                name = spike_filename_seg0.stem
 
-                fullname = os.path.join(self.dirname, spike_filename_seg0)
-                spike_info = read_file_header(fullname)
+                spike_info = read_file_header(spike_filename_seg0)
                 if self._spike_sampling_rate is None:
                     self._spike_sampling_rate = spike_info["sampleRate"]
                 else:
-                    assert self._spike_sampling_rate == spike_info["sampleRate"], "mismatch in spike sampling rate"
+                    if self._spike_sampling_rate != spike_info["sampleRate"]:
+                        raise ValueError("There is a mismatch in spike sampling rate")
 
                 # scan all to detect several all unique(sorted_ids)
                 all_sorted_ids = []
@@ -273,23 +295,39 @@ class OpenEphysRawIO(BaseRawIO):
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
         # event file are:
-        #    * all_channel.events (header + binray)  -->  event 0
+        #    * all_channel.events (header + binary)  -->  event 0
+        #    * n_RhythmData-a.events (header + binary) --> event 0 (maybe a new naming convention? )
         # and message.events (text based)      --> event 1 not implemented yet
         event_channels = []
         self._events_memmap = {}
-        for seg_index, oe_index in enumerate(oe_indices):
-            if oe_index == 0:
-                event_filename = "all_channels.events"
-            else:
-                event_filename = f"all_channels_{oe_index + 1}.events"
+        event_files = list(
+            [
+                event_file
+                for event_file in Path(self.dirname).glob("**/*.events")
+                if event_file.name != "messages.events"
+            ]
+        )
+        event_files.sort()  # sort should put the xx.events first followed by xx_x.events
+        # only run if we have actual potential event files
+        if len(event_files) > 0:
+            event_file_name_0 = event_files[0].stem  # this should always be the file without a '_n' appended
+            for seg_index, oe_index in enumerate(oe_indices):
+                if oe_index == 0:
+                    event_filename = Path(self.dirname) / (event_file_name_0 + ".events")
+                else:
+                    event_filename = Path(self.dirname) / (event_file_name_0 + f"_{oe_index + 1}.events")
 
-            fullname = os.path.join(self.dirname, event_filename)
-            event_info = read_file_header(fullname)
-            self._event_sampling_rate = event_info["sampleRate"]
-            data_event = np.memmap(fullname, mode="r", offset=HEADER_SIZE, dtype=events_dtype)
-            self._events_memmap[seg_index] = data_event
-
-        event_channels.append(("all_channels", "", "event"))
+                event_info = read_file_header(event_filename)
+                # event files can exist, but just not have data
+                try:
+                    self._event_sampling_rate = event_info["sampleRate"]
+                except KeyError:
+                    break
+                data_event = np.memmap(event_filename, mode="r", offset=HEADER_SIZE, dtype=events_dtype)
+                self._events_memmap[seg_index] = data_event
+        # only append event channels if they actually exist & have data
+        if len(self._events_memmap.keys()) > 0:
+            event_channels.append((event_filename.stem, "", "event"))
         # event_channels.append(('message', '', 'event')) # not implemented
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
@@ -297,6 +335,7 @@ class OpenEphysRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -308,7 +347,7 @@ class OpenEphysRawIO(BaseRawIO):
         for seg_index, oe_index in enumerate(oe_indices):
             seg_ann = bl_ann["segments"][seg_index]
             if len(info["continuous"]) > 0:
-                fullname = os.path.join(self.dirname, info["continuous"][oe_index][0])
+                fullname = info["continuous"][oe_index][0]
                 chan_info = read_file_header(fullname)
                 seg_ann["openephys_version"] = chan_info["version"]
                 bl_ann["openephys_version"] = chan_info["version"]
@@ -531,7 +570,7 @@ def make_spikes_dtype(filename):
 
     # so we need to read the very first spike
     # but it will fail when 0 spikes (too bad)
-    filesize = os.stat(filename).st_size
+    filesize = filename.stat().st_size
     if filesize >= (HEADER_SIZE + 23):
         with open(filename, mode="rb") as f:
             # M and N is at 1024 + 19 bytes
@@ -561,8 +600,11 @@ def explore_folder(dirname):
     "100_CH0.continuous" ---> seg_index 0
     "100_CH0_2.continuous" ---> seg_index 1
     "100_CH0_N.continuous" ---> seg_index N-1
+
+    Newer formats follow similar rules but have an addition
+    "100_RhythmData-A_CH0.continuous" ----> seg_index 0
     """
-    filenames = os.listdir(dirname)
+    filenames = [filename for filename in Path(dirname).glob("**/*") if filename.is_file()]
     filenames.sort()
 
     info = {}
@@ -570,19 +612,21 @@ def explore_folder(dirname):
     info["continuous"] = {}
     info["spikes"] = {}
     for filename in filenames:
-        if filename.endswith(".continuous"):
-            s = filename.replace(".continuous", "").split("_")
-            if len(s) == 2:
+        if filename.suffix == ".continuous":
+            s = filename.stem.split("_")
+            # For continuous files we check if the last value is an int indicating that a new segment should be
+            # generated and if it is not an int then this must be same segment
+            try:
+                seg_index = int(s[-1]) - 1
+            except ValueError:
                 seg_index = 0
-            else:
-                seg_index = int(s[2]) - 1
             if seg_index not in info["continuous"].keys():
                 info["continuous"][seg_index] = []
             info["continuous"][seg_index].append(filename)
             if (seg_index + 1) > info["nb_segment"]:
                 info["nb_segment"] += 1
-        elif filename.endswith(".spikes"):
-            s = re.findall(r"(_\d+)$", filename.replace(".spikes", ""))
+        elif filename.suffix == ".spikes":
+            s = re.findall(r"(_\d+)$", filename.stem)
             if s:
                 seg_index = int(s[0][1:]) - 1
             else:
@@ -599,9 +643,15 @@ def explore_folder(dirname):
         chan_ids_by_type = {}
         filenames_by_type = {}
         for continuous_filename in continuous_filenames:
-            s = continuous_filename.replace(".continuous", "").split("_")
-            processor_id, ch_name = s[0], s[1]
-            chan_type = re.split(r"(\d+)", s[1])[0]
+            s = continuous_filename.stem.split("_")
+            # new format includes putting a name between e.g. ['124', 'RhythmData', 'CH1']
+            # old format would just be ['124', 'CH1']
+            if len(s) == 2:
+                processor_id, ch_name = s[0], s[1]
+                chan_type = re.split(r"(\d+)", s[1])[0]
+            else:
+                processor_id, ch_name = s[0], s[2]
+                chan_type = re.split(r"(\d+)", s[2])[0]
             chan_id = int(ch_name.replace(chan_type, ""))
             if chan_type in chan_ids_by_type.keys():
                 chan_ids_by_type[chan_type].append(chan_id)
@@ -627,7 +677,7 @@ def explore_folder(dirname):
     for seg_index, spike_filenames in info["spikes"].items():
         names = []
         for spike_filename in spike_filenames:
-            name = spike_filename.replace(".spikes", "")
+            name = spike_filename.stem
             if seg_index > 0:
                 name = name.replace("_" + str(seg_index + 1), "")
             names.append(name)

@@ -180,20 +180,21 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         block = nio.read_block(signal_group_mode="group-by-same-units")
         self.assertEqual(len(block.groups), 1)
 
-    def test_read_single_file(self):
+    def test_include_filenames(self):
         filename = self.get_local_path("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs")
-        nio = NeuralynxIO(filename=filename, use_cache=False)
+        dirname, filename = os.path.split(filename)
+        nio = NeuralynxIO(dirname=dirname, include_filenames=filename, use_cache=False)
         block = nio.read_block()
         self.assertTrue(len(block.segments[0].analogsignals) > 0)
         self.assertTrue((len(block.segments[0].spiketrains)) == 0)
         self.assertTrue((len(block.segments[0].events)) == 0)
         self.assertTrue((len(block.segments[0].epochs)) == 0)
 
-    def test_exclude_filename(self):
+    def test_exclude_filenames(self):
         dname = self.get_local_path("neuralynx/Cheetah_v5.7.4/original_data/")
 
         # exclude a single file
-        nio = NeuralynxIO(dirname=dname, exclude_filename="CSC1.ncs", use_cache=False)
+        nio = NeuralynxIO(dirname=dname, exclude_filenames="CSC1.ncs", use_cache=False)
         block = nio.read_block()
         self.assertTrue(len(block.segments[0].analogsignals) > 0)
         self.assertTrue((len(block.segments[0].spiketrains)) >= 0)
@@ -202,7 +203,7 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
 
         # exclude all ncs files from session
         exclude_files = [f"CSC{i}.ncs" for i in range(6)]
-        nio = NeuralynxIO(dirname=dname, exclude_filename=exclude_files, use_cache=False)
+        nio = NeuralynxIO(dirname=dname, exclude_filenames=exclude_files, use_cache=False)
         block = nio.read_block()
         self.assertTrue(len(block.segments[0].analogsignals) == 0)
         self.assertTrue((len(block.segments[0].spiketrains)) >= 0)

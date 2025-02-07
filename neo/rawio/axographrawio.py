@@ -158,6 +158,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -552,7 +553,8 @@ class AxographRawIO(BaseRawIO):
             # - starting with AxoGraph X, the identifier is 'axgx'
             header_id = f.read(4).decode("utf-8")
             self.info["header_id"] = header_id
-            assert header_id in ["AxGr", "axgx"], f'not an AxoGraph binary file! "{self.filename}"'
+            if header_id not in ["AxGr", "axgx"]:
+                raise NeoReadWriteError(f'File "{self.filename}" is not an AxoGraph binary file! Use other neo reader')
 
             self.logger.debug(f"{header_id=}")
 
@@ -564,14 +566,16 @@ class AxographRawIO(BaseRawIO):
             #   format version 3
             if header_id == "AxGr":
                 format_ver, n_cols = f.read_f("HH")
-                assert format_ver == 1 or format_ver == 2, (
-                    f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
-                )
+                if format_ver != 1 and format_ver != 2:
+                    raise ValueError(
+                        f'Mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                    )
             elif header_id == "axgx":
                 format_ver, n_cols = f.read_f("ll")
-                assert format_ver >= 3, (
-                    f'mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
-                )
+                if format_ver < 3:
+                    raise ValueError(
+                        f'Mismatch between header identifier "{header_id}" and format ' f'version "{format_ver}"!'
+                    )
             else:
                 raise NotImplementedError(f'unimplemented file header identifier "{header_id}"!')
             self.info["format_ver"] = format_ver
@@ -808,7 +812,19 @@ class AxographRawIO(BaseRawIO):
                     self.logger.debug("initial data: {array[:5] * gain + offset}")
 
                     # channel_info will be cast to _signal_channel_dtype
-                    channel_info = (name, str(i), 1 / sampling_period, f.byte_order + dtype, units, gain, offset, "0")
+                    buffer_id = ""
+                    stream_id = "0"
+                    channel_info = (
+                        name,
+                        str(i),
+                        1 / sampling_period,
+                        f.byte_order + dtype,
+                        units,
+                        gain,
+                        offset,
+                        stream_id,
+                        buffer_id,
+                    )
 
                     self.logger.debug("channel_info: {channel_info}")
                     self.logger.debug("")
@@ -907,7 +923,8 @@ class AxographRawIO(BaseRawIO):
                 n_groups = f.read_f("l")
                 self.info["n_groups"] = n_groups
                 group_ids = np.sort(list(set(group_ids)))  # remove duplicates and sort
-                assert n_groups == len(group_ids), f"expected group_ids to have length {n_groups}: {group_ids}"
+                if n_groups != len(group_ids):
+                    raise ValueError(f"expected group_ids to have length {n_groups}: {group_ids}")
 
                 self.logger.debug(f"n_groups: {n_groups}")
                 self.logger.debug(f"group_ids: {group_ids}")
@@ -1054,13 +1071,14 @@ class AxographRawIO(BaseRawIO):
                     # represent this switch, but it seems they were
                     # - setting1 could contain other undeciphered data as a
                     #   bitmask, like setting2
-                    assert font_settings_info["setting1"] in [
+                    if font_settings_info["setting1"] not in [
                         FONT_BOLD,
                         FONT_NOT_BOLD,
-                    ], (
-                        f"expected setting1 ({ font_settings_info['setting1']}) to have value FONT_BOLD "
-                        f"({FONT_BOLD}) or FONT_NOT_BOLD ({FONT_NOT_BOLD})"
-                    )
+                    ]:
+                        raise ValueError(
+                            f"expected setting1 ({ font_settings_info['setting1']}) to have value FONT_BOLD "
+                            f"({FONT_BOLD}) or FONT_NOT_BOLD ({FONT_NOT_BOLD})"
+                        )
 
                     # size is stored 10 times bigger than real value
                     font_settings_info["size"] = font_settings_info["size"] / 10.0
@@ -1225,13 +1243,15 @@ class AxographRawIO(BaseRawIO):
         event_channels.append(("AxoGraph Intervals", "", "epoch"))
 
         if len(sig_channels) > 0:
-            signal_streams = [("Signals", "0")]
+            signal_streams = [("Signals", "0", "")]
         else:
             signal_streams = []
+        signal_buffers = []
 
         # organize header
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = np.array(signal_buffers, dtype=_signal_buffer_dtype)
         self.header["signal_streams"] = np.array(signal_streams, dtype=_signal_stream_dtype)
         self.header["signal_channels"] = np.array(sig_channels, dtype=_signal_channel_dtype)
         self.header["event_channels"] = np.array(event_channels, dtype=_event_channel_dtype)

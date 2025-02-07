@@ -11,6 +11,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.blackrockio import BlackrockIO
+from neo.core import NeoReadWriteError
 
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import assert_neo_object_is_compliant
@@ -78,7 +79,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # this is valid in read_segment
         seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=False)
         # this raise an error
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=True)
 
         lenb = len(seg.analogsignals[0])
@@ -130,7 +131,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # This is valid in read_segment
         seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=False)
         # this raise error
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=True)
 
         lenb = len(seg.analogsignals[0])
@@ -287,7 +288,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         warnings.simplefilter("always", UserWarning)
 
         # This fails, because in the nev there is no way to separate two segments
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(NeoReadWriteError):
             reader = BlackrockIO(filename=filename, nsx_to_load=2, nev_override=filename_nev_fail)
 
         # The correct file will issue a warning because a reset has occurred

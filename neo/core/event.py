@@ -5,7 +5,7 @@ This module defines :class:`Event`, an array of events.
 :module:`neo.core.baseneo`.
 """
 
-from copy import deepcopy, copy
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
@@ -47,39 +47,45 @@ def _new_event(
 
 class Event(DataObject):
     """
-    Array of events.
+    Array of events which are the start times of events along with the labels
+    of the events
 
-    *Usage*::
+    Parameters
+    ----------
+    times: quantity array 1d | list
+        The times of the events
+    labels: numpy.ndarray 1d dtype='U' | list
+        Names or labels for the events
+    units: quantity units | None, default: None
+        If times are list the units of the times
+        If times is a quantity array this is ignored
+    name: str | None, default: None
+        An optional label for the dataset
+    description: str | None, default: None
+        An optional text descriptoin of the dataset
+    file_orgin: str | None, default: None
+        The filesystem path or url of the original data file
+    array_annotations: dict | None, default: None
+        Dict mapping strings to numpy arrays containing annotations for all data points
+    **annotations: dict
+        Additional user specified metadata stored in the annotations attribue
 
-        >>> from neo.core import Event
-        >>> from quantities import s
-        >>> import numpy as np
-        >>>
-        >>> evt = Event(np.arange(0, 30, 10)*s,
-        ...             labels=np.array(['trig0', 'trig1', 'trig2'],
-        ...                             dtype='U'))
-        >>>
-        >>> evt.times
-        array([  0.,  10.,  20.]) * s
-        >>> evt.labels
-        array(['trig0', 'trig1', 'trig2'],
+    Examples
+    --------
+
+    >>> from neo.core import Event
+    >>> from quantities import s
+    >>> import numpy as np
+    >>>
+    >>> evt = Event(np.arange(0, 30, 10)*s,
+    ...             labels=np.array(['trig0', 'trig1', 'trig2'],
+    ...                             dtype='U'))
+    >>>
+    >>> evt.times
+    array([  0.,  10.,  20.]) * s
+    >>> evt.labels
+    array(['trig0', 'trig1', 'trig2'],
               dtype='<U5')
-
-    *Required attributes/properties*:
-        :times: (quantity array 1D) The time of the events.
-        :labels: (numpy.array 1D dtype='U' or list) Names or labels for the events.
-
-    *Recommended attributes/properties*:
-        :name: (str) A label for the dataset.
-        :description: (str) Text description.
-        :file_origin: (str) Filesystem path or URL of the original data file.
-
-    *Optional attributes/properties*:
-        :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
-                                   for all data points
-
-    Note: Any other additional arguments are assumed to be user-specific
-    metadata and stored in :attr:`annotations`.
 
     """
 
@@ -212,9 +218,24 @@ class Event(DataObject):
     def rescale(self, units, dtype=None):
         """
         Return a copy of the :class:`Event` converted to the specified units
+
+        Parameters
+        ----------
+        units: quantity units
+            The units to convert the Event to
+        dtype: None
+            Exists for backward compatiblity within quantities see Notes for more info
+
+        Returns
+        -------
+        obj: neo.core.Event
+            A copy of the event with the specified units
+
+        Notes
+        -----
         The `dtype` argument exists only for backward compatibility within quantities, see
         https://github.com/python-quantities/python-quantities/pull/204
-        :return: Copy of self with specified units
+
         """
         # Use simpler functionality, if nothing will be changed
         dim = pq.quantity.validate_dimensionality(units)
@@ -235,12 +256,19 @@ class Event(DataObject):
 
     def merge(self, other):
         """
-        Merge the another :class:`Event` into this one.
+        Merge another :class:`Event` into this one.
 
-        The :class:`Event` objects are concatenated horizontally
+        Parameter
+        ---------
+        other: neo.core.Event
+            The `Event` to merge into this one
+
+        Notes
+        -----
+        * The :class:`Event` objects are concatenated horizontally
         (column-wise), :func:`np.hstack`).
 
-        If the attributes of the two :class:`Event` are not
+        * If the attributes of the two :class:`Event` are not
         compatible, and Exception is raised.
         """
         othertimes = other.times.rescale(self.times.units)
@@ -319,10 +347,22 @@ class Event(DataObject):
 
     def time_slice(self, t_start, t_stop):
         """
-        Creates a new :class:`Event` corresponding to the time slice of
-        the original :class:`Event` between (and including) times
-        :attr:`t_start` and :attr:`t_stop`. Either parameter can also be None
-        to use infinite endpoints for the time interval.
+        Creates a new `Event` corresponding to the time slice of the original `Event` between (and including) times
+        `t_start` and `t_stop`.
+
+        Parameters
+        ----------
+        t_start: float | None
+            The starting time of the time slice
+            If None will use -np.inf for the starting time
+        t_stop: float | None
+            The stopping time of the time slice
+            If None will use np.inf for the stopping time
+
+        Returns
+        -------
+        new_evt: neo.core.Event
+            The new `Event` limited by the time points
         """
         _t_start = t_start
         _t_stop = t_stop
