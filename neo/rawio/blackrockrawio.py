@@ -1076,7 +1076,7 @@ class BlackrockRawIO(BaseRawIO):
             offset = self.__nsx_data_header[nsx_nb][data_bl]["offset_to_data_block"]
 
             # read data
-            data[data_bl] = np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")
+            data[data_bl] = np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r+")
 
         return data
 
