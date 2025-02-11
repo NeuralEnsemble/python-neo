@@ -692,11 +692,16 @@ class NicoletRawIO(BaseRawIO):
     
     def _create_signal_channels(self, dtype):
         signal_channels = []   
+        signal_streams = {}
+        stream_id = 0
         for channel in self.channel_properties:
             signal = next((item for item in self.signal_properties if item["name"] == channel['sensor']), None)
             timestream = next((item for item in self.ts_properties if item["label"].split('-')[0] == channel['sensor']), None)
             if signal is None or timestream is None:
                 continue
+            if channel['sampling_rate'] not in signal_streams.keys():
+                signal_streams[channel['sampling_rate']] = stream_id
+                stream_id += 1
             signal_channels.append((
                 channel['sensor'],
                 channel['l_input_id'],
@@ -705,16 +710,23 @@ class NicoletRawIO(BaseRawIO):
                 signal['transducer'],
                 timestream['resolution'],
                 timestream['eeg_offset'],
-                0,
+                signal_streams[timestream['sampling_rate']],
                 0,))
+        self.signal_streams = signal_streams
+
         return np.array(signal_channels, dtype = dtype)
     
     def _create_signal_channels_no_channel_props(self, dtype):
         signal_channels = []
+        signal_streams = {}
+        stream_id = 0
         for i, timestream in enumerate(self.ts_properties):
             signal = next((item for item in self.signal_properties if item["name"] == timestream['label'].split('-')[0]), None)
             if signal is None:
                 continue
+            if timestream['sampling_rate'] not in signal_streams.keys():
+                signal_streams[timestream['sampling_rate']] = stream_id
+                stream_id += 1
             signal_channels.append((
                 timestream['label'].split('-')[0],
                 i,
@@ -723,8 +735,9 @@ class NicoletRawIO(BaseRawIO):
                 signal['transducer'],
                 timestream['resolution'],
                 timestream['eeg_offset'],
-                0,
+                signal_streams[timestream['sampling_rate']],
                 0))
+        self.signal_streams = signal_streams
         return np.array(signal_channels, dtype = dtype)
     
     def _generate_additional_annotations(self):
