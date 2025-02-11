@@ -161,7 +161,7 @@ class NicoletRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [len(self.segments_properties)]
-        self.header["signal_buffers"] = np.array([("Signals", "0")],
+        self.header["signal_buffers"] = np.array([],
                                                  dtype=_signal_buffer_dtype)
         self.header["signal_streams"] = np.array([("Signals", "0", "0")],
                                                  dtype=_signal_stream_dtype)
