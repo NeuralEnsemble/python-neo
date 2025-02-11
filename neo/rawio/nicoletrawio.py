@@ -911,6 +911,8 @@ def read_as_dict(fid, dtype):
 
 def read_as_list(fid, dtype):
     dt = np.dtype(dtype)
+    if dt.itemsize == 0:
+        return []
     h = np.frombuffer(fid.read(dt.itemsize), dt)[0][0]
     h = _process_bytes(h, dt[0])
     return h
