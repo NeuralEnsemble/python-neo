@@ -659,10 +659,10 @@ class NicoletRawIO(BaseRawIO):
         self.montages = montages
         self.display = display
         
-    def get_nr_samples(self, block_index = 0, seg_index = 0):
+    def get_nr_samples(self, block_index = 0, seg_index = 0, stream_index = 0):
         try:
             duration = self.segments_properties[seg_index]['duration'].total_seconds()
-            return([int(sampling_rate * duration) for sampling_rate in self.segments_properties[seg_index]['sampling_rates']])
+            return([int(sampling_rate * duration) for sampling_rate in self.segments_properties[seg_index]['sampling_rates'] if self.signal_streams[sampling_rate] == stream_index])
         except IndexError as error:
             print(str(error) + ': Incorrect segment argument; seg_index must be an integer representing segment index, starting from 0.')
         pass
@@ -789,19 +789,19 @@ class NicoletRawIO(BaseRawIO):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = max(self.get_nr_samples(seg_index))
-        if i_start < 0 or i_stop > max(self.get_nr_samples(seg_index)):
+            i_stop = max(self.get_nr_samples(seg_index = seg_index, stream_index = stream_index))
+        if i_start < 0 or i_stop > max(self.get_nr_samples(seg_index = seg_index, stream_index = stream_index)): #Get the maximum number of samples for the respective sampling rate
             raise IndexError("Start or Stop Index out of bounds")
         eeg_sampling_rate = max(self.segments_properties[seg_index]['sampling_rates'])
         current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][channel_indexes[0]]
         cum_segment_duration = [0] +  list(np.cumsum([(segment['duration'].total_seconds()) for segment in self.segments_properties])) 
         data = np.empty([i_stop - i_start, self.segments_properties[0]['sampling_rates'].count(current_samplingrate)])
-        for i in channel_indexes:
+        for i, channel_index  in enumerate(channel_indexes):
             print('Current Channel: ' + str(i))
             current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][i]
             multiplicator = self.segments_properties[seg_index]['scale'][i]
-            if current_samplingrate != eeg_sampling_rate: # Only keeps the channels with the eeg sampling rate, all others get skipped
-                continue
+            #if current_samplingrate != eeg_sampling_rate: # Only keeps the channels with the eeg sampling rate, all others get skipped
+            #    continue
             [tag_idx] = [tag['index'] for tag in self.tags if tag['tag'] == str(i)]
             all_sections = [j for j, idx_id in enumerate(self.all_section_ids) if idx_id == tag_idx]
             section_lengths = [int(index['section_l']/2) for j, index in enumerate(self.main_index) if j in all_sections]
@@ -815,7 +815,7 @@ class NicoletRawIO(BaseRawIO):
             first_section = _get_relevant_section(cum_section_lengths, i_start - 1)
             last_section = _get_relevant_section(cum_section_lengths, i_stop + 1) - 1
             if last_section > last_section_for_seg:
-                raise IndexError(f'Index out of range for channel {i}')
+                raise IndexError(f'Index out of range for channel {channel_index}')
             use_sections = all_sections[first_section:last_section]
             use_sections_length = section_lengths[first_section:last_section]
             np_idx = 0
@@ -825,7 +825,6 @@ class NicoletRawIO(BaseRawIO):
                 stop = start + section_length
                 data[np_idx:(np_idx + section_length), i] = multiplicator*self.raw_signal[slice(start, stop)]
                 np_idx += section_length
-
         return data
         
     def _segment_t_start(self, block_index: int, seg_index: int):
@@ -854,7 +853,8 @@ class NicoletRawIO(BaseRawIO):
     
     def _get_signal_size(self, block_index: int = 0, seg_index: int = 0, stream_index: int = 0):
         return max(self.get_nr_samples(block_index = block_index,
-                                       seg_index = seg_index))
+                                       seg_index = seg_index,
+                                       stream_index = stream_index))
     
     def _get_signal_t_start(self, block_index: int = 0, seg_index: int = 0, stream_index: int = 0):
         return self._segment_t_start(block_index, seg_index)
