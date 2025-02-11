@@ -163,9 +163,9 @@ class NicoletRawIO(BaseRawIO):
         self.header["nb_segment"] = [len(self.segments_properties)]
         self.header["signal_buffers"] = np.array([],
                                                  dtype=_signal_buffer_dtype)
-        self.header["signal_streams"] = np.array([("Signals", "0", "0")],
-                                                 dtype=_signal_stream_dtype)
         self.header["signal_channels"] = self._create_signal_channels(_signal_channel_dtype) if self.channel_properties else self._create_signal_channels_no_channel_props(_signal_channel_dtype)
+        self.header["signal_streams"] = np.array([(f"Signals {signal_id}", signal_id, "0") for signal_id in self.signal_streams.values()],
+                                                 dtype=_signal_stream_dtype)
         self.header["spike_channels"] = np.array([],
                                                  dtype= _spike_channel_dtype)
         self.header["event_channels"] = np.array([("Events", "0", "event"),
@@ -774,16 +774,16 @@ class NicoletRawIO(BaseRawIO):
         if seg_index >= self.header['nb_segment'][block_index]:
             raise IndexError(f"Segment Index out of range. There are {self.header['nb_segment'][block_index]} segments for block {block_index}")
         if channel_indexes is None:
-            channel_indexes = list(range(0,len(self.ts_properties)))
+            channel_indexes = [i for i, channel in enumerate(self.header['signal_channels']) if channel['stream_id'] == str(stream_index)]
             nb_chan = len(channel_indexes)
         elif isinstance(channel_indexes, slice):
-            channel_indexes = np.arange(len(self.ts_properties), dtype="int")[channel_indexes]
+            channel_indexes = np.arange(self.header['signal_channels'].shape[0], dtype="int")[channel_indexes]
             nb_chan = len(channel_indexes)
         else:
             channel_indexes = np.asarray(channel_indexes)
             if any(channel_indexes < 0):
                 raise IndexError("Channel Indices cannot be negative")
-            if any(channel_indexes >= len(self.ts_properties)):
+            if any(channel_indexes >= len(self.header['signal_channels'].shape[0])):
                 raise IndexError("Channel Indices out of range")
             nb_chan = len(channel_indexes)
         if i_start is None:
@@ -793,13 +793,14 @@ class NicoletRawIO(BaseRawIO):
         if i_start < 0 or i_stop > max(self.get_nr_samples(seg_index)):
             raise IndexError("Start or Stop Index out of bounds")
         eeg_sampling_rate = max(self.segments_properties[seg_index]['sampling_rates'])
+        current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][channel_indexes[0]]
         cum_segment_duration = [0] +  list(np.cumsum([(segment['duration'].total_seconds()) for segment in self.segments_properties])) 
-        data = np.empty([i_stop - i_start, self.segments_properties[0]['sampling_rates'].count(eeg_sampling_rate)])
+        data = np.empty([i_stop - i_start, self.segments_properties[0]['sampling_rates'].count(current_samplingrate)])
         for i in channel_indexes:
             print('Current Channel: ' + str(i))
             current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][i]
             multiplicator = self.segments_properties[seg_index]['scale'][i]
-            if current_samplingrate != eeg_sampling_rate:
+            if current_samplingrate != eeg_sampling_rate: # Only keeps the channels with the eeg sampling rate, all others get skipped
                 continue
             [tag_idx] = [tag['index'] for tag in self.tags if tag['tag'] == str(i)]
             all_sections = [j for j, idx_id in enumerate(self.all_section_ids) if idx_id == tag_idx]
