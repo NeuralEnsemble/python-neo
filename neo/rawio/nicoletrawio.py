@@ -530,7 +530,7 @@ class NicoletRawIO(BaseRawIO):
     def _get_events(self):
         events = []
         event_packet_guid = '{B799F680-72A4-11D3-93D3-00500400C148}'
-        event_instances = self._get_index_instances(tag = 'Events')
+        event_instances = _ensure_list(self._get_index_instances(tag = 'Events'))
         for instance in event_instances:
             offset = instance['offset']
             with open(self.filepath, "rb") as fid:
@@ -968,3 +968,12 @@ def _get_relevant_section(lengths_list, to_compare):
     except ValueError:
         segment = len(lengths_list)
     return(segment)
+
+def _ensure_list(output):
+    """
+    Ensure the output is a list. If it is a single element, wrap it in a list.
+    If it is already a list, return it as is.
+    """
+    if not isinstance(output, list):
+        return [output]
+    return output
