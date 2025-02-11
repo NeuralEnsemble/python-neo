@@ -28,3 +28,12 @@ class NicoletIO(NicoletRawIO, BaseFromRaw):
     def __init__(self, filepath=""):
         NicoletRawIO.__init__(self, filepath=filepath)
         BaseFromRaw.__init__(self, filepath)
+
+
+if __name__ == '__main__':
+    
+    #file = NicoletRawIO(r'\\fsnph01\NPH_Research\xxx_PythonShare\nicolet_parser\data\janbrogger.e')
+    #file = NicoletRawIO(r'\\fsnph01\NPH_Research\xxx_PythonShare\nicolet_parser\data\Routine6t1.e')
+    #file = NicoletRawIO(r'\\fsnph01\NPH_Archiv\LTM\Band0299\58795\9140.e')
+    file = NicoletIO(r'C:\temp\Patient1_ABLEIT53_t2.e')
+    segment = file.read_segment()
