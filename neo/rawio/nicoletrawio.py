@@ -314,13 +314,14 @@ class NicoletRawIO(BaseRawIO):
                 else:
                     value = 0
                 patient_info[self.INFO_PROPS[int(id_temp) - 1]] = value
-            str_setup = read_as_list(fid,
-                                     [('setup', 'uint64', int(patient_info['n_bstr']*2))])
-            for i in range(0, int(patient_info['n_bstr']*2), 2):
-                id_temp = str_setup[i]
-                value = ''.join([read_as_list(fid,
-                                    [('value', 'S2')]) for _ in range(int(str_setup[i + 1]) + 1)]).strip()
-                patient_info[self.INFO_PROPS[int(id_temp) - 1]] = value
+            if patient_info['n_bstr'] != 0:
+                str_setup = read_as_list(fid,
+                                        [('setup', 'uint64', int(patient_info['n_bstr']*2))])
+                for i in range(0, int(patient_info['n_bstr']*2), 2):
+                    id_temp = str_setup[i]
+                    value = ''.join([read_as_list(fid,
+                                        [('value', 'S2')]) for _ in range(int(str_setup[i + 1]) + 1)]).strip()
+                    patient_info[self.INFO_PROPS[int(id_temp) - 1]] = value
         
         for prop in self.INFO_PROPS:
             if prop not in patient_info.keys():
