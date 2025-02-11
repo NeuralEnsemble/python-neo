@@ -15,18 +15,18 @@ import quantities as pq
 import numpy as np
 
 
-# This run standart tests, this is mandatory for all IO
-class TestNicoletIO(
+class TestExampleIO(
     BaseTestIO,
     unittest.TestCase,
 ):
     ioclass = NicoletIO
-    entities_to_download = ['nicolet']
-    entities_to_test = ["nicolet/File_nicolet_1.TRC"]
+    entities_to_download = ["nicolet"]
+    entities_to_test = [
+        "nicolet/e_files/test_nicolet.e",
+    ]
 
     def setUp(self):
         super().setUp()
-        # ensure fake test files exist before running common tests
         for entity in self.entities_to_test:
             full_path = get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir)
             pathlib.Path(full_path).touch()
@@ -37,12 +37,7 @@ class TestNicoletIO(
             full_path = get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir)
             pathlib.Path(full_path).unlink(missing_ok=True)
 
-
-# This is the minimal variables that are required
-# to run the common IO tests.  IO specific tests
-# can be added here and will be run automatically
-# in addition to the common tests.
-class Specific_NicoletIO(unittest.TestCase):
+class TestNicoletIO(unittest.TestCase):
     def test_read_segment_lazy(self):
         r = NicoletIO(filename=None)
         seg = r.read_segment(lazy=True)

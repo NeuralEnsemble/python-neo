@@ -29,6 +29,7 @@ Classes:
 * :attr:`MicromedRawIO`
 * :attr:`NeuralynxRawIO`
 * :attr:`NeuroExplorerRawIO`
+* :attr:`NeuroNexusRawIO`
 * :attr:`NeuroScopeRawIO`
 * :attr:`NIXRawIO`
 * :attr:`OpenEphysRawIO`
@@ -111,6 +112,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.NeuroExplorerRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.NeuroNexusRawIO
 
     .. autoattribute:: extensions
 
@@ -197,6 +202,7 @@ from neo.rawio.medrawio import MedRawIO
 from neo.rawio.micromedrawio import MicromedRawIO
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
+from neo.rawio.neuronexusrawio import NeuroNexusRawIO
 from neo.rawio.neuroscoperawio import NeuroScopeRawIO
 from neo.rawio.nixrawio import NIXRawIO
 from neo.rawio.openephysrawio import OpenEphysRawIO
@@ -231,6 +237,7 @@ rawiolist = [
     MedRawIO,
     NeuralynxRawIO,
     NeuroExplorerRawIO,
+    NeuroNexusRawIO,
     NeuroScopeRawIO,
     NIXRawIO,
     OpenEphysRawIO,

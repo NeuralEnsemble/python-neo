@@ -18,6 +18,7 @@ class TestPlexonIO(
         "plexon/File_plexon_1.plx",
         "plexon/File_plexon_2.plx",
         "plexon/File_plexon_3.plx",
+        "plexon/4chDemoPLX.plx",
     ]
 
 
