@@ -52,7 +52,7 @@ def _new_AnalogSignalArray(
     signal,
     units=None,
     dtype=None,
-    copy=True,
+    copy=None,
     t_start=0 * pq.s,
     sampling_rate=None,
     sampling_period=None,
@@ -180,7 +180,7 @@ class AnalogSignal(BaseSignal):
         signal,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         t_start=0 * pq.s,
         sampling_rate=None,
         sampling_period=None,
@@ -198,14 +198,22 @@ class AnalogSignal(BaseSignal):
 
         __array_finalize__ is called on the new object.
         """
+        if copy is not None:
+            raise ValueError(
+                "`copy` is now deprecated in Neo due to removal in Quantites to support Numpy 2.0. "
+                "In order to facilitate the deprecation copy can be set to None but will raise an "
+                "error if set to True/False since this will silently do nothing. This argument will be completely "
+                "removed in Neo 0.15.0. Please update your code base as necessary."
+            )
+
         signal = cls._rescale(signal, units=units)
-        obj = pq.Quantity(signal, units=units, dtype=dtype, copy=copy).view(cls)
+        obj = pq.Quantity(signal, units=units, dtype=dtype).view(cls)
 
         if obj.ndim == 1:
             obj.shape = (-1, 1)
 
         if t_start is None:
-            raise ValueError("t_start cannot be None")
+            raise ValueError("`t_start` cannot be None")
         obj._t_start = t_start
 
         obj._sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
@@ -218,7 +226,7 @@ class AnalogSignal(BaseSignal):
         signal,
         units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         t_start=0 * pq.s,
         sampling_rate=None,
         sampling_period=None,
@@ -257,7 +265,7 @@ class AnalogSignal(BaseSignal):
             np.array(self),
             self.units,
             self.dtype,
-            True,
+            None,
             self.t_start,
             self.sampling_rate,
             self.sampling_period,
@@ -547,6 +555,7 @@ class AnalogSignal(BaseSignal):
 
         return new_sig
 
+    # copy in splice is a deepcopy not a numpy copy so we can keep
     def splice(self, signal, copy=False):
         """
         Replace part of the current signal by a new piece of signal.

@@ -9,7 +9,7 @@ from neo.io import AxographIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 import numpy as np
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_almost_equal
 import quantities as pq
 from neo.test.rawiotest.test_axographrawio import TestAxographRawIO
 
@@ -35,9 +35,9 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         target = np.array([[-5.5078130], [-3.1171880], [+1.6640626], [+1.6640626], [+4.0546880]], dtype=np.float32)
         assert_equal(arr, target)
 
-        assert_equal(sig.t_start, 0.0005000000237487257 * pq.s)
+        assert_almost_equal(sig.t_start, 0.0005000000237487257 * pq.s, decimal=9)
 
-        assert_equal(sig.sampling_period, 0.0005000010132789612 * pq.s)
+        assert_almost_equal(sig.sampling_period, 0.0005000010132789612 * pq.s, decimal=9)
 
     def test_version_2(self):
         """Test reading a version 2 AxoGraph file"""
@@ -87,9 +87,9 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         target = np.array([[0.3125], [9.6875], [9.6875], [9.6875], [9.3750]], dtype=np.float32)
         assert_equal(arr, target)
 
-        assert_equal(sig.t_start, 0.00009999999747378752 * pq.s)
+        assert_almost_equal(sig.t_start, 0.00009999999747378752 * pq.s, decimal=9)
 
-        assert_equal(sig.sampling_period, 0.00009999999747378750 * pq.s)
+        assert_almost_equal(sig.sampling_period, 0.00009999999747378750 * pq.s, decimal=9)
 
     def test_version_5(self):
         """Test reading a version 5 AxoGraph file"""
@@ -169,7 +169,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         assert_equal(sig.t_start, 0 * pq.s)
 
-        assert_equal(sig.sampling_period, 0.009999999999999787 * pq.s)
+        assert_almost_equal(sig.sampling_period, 0.009999999999999787 * pq.s, decimal=9)
 
     def test_file_with_corrupt_comment(self):
         """Test reading a file with a corrupt comment"""

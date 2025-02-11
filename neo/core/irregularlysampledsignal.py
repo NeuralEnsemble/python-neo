@@ -38,7 +38,7 @@ def _new_IrregularlySampledSignal(
     units=None,
     time_units=None,
     dtype=None,
-    copy=True,
+    copy=None,
     name=None,
     file_origin=None,
     description=None,
@@ -93,8 +93,8 @@ class IrregularlySampledSignal(BaseSignal):
     dtype: numpy dtype | string | None, default: None
         Overrides the signal array dtype
         Does not affect the dtype of the times which must be floats
-    copy: bool, default: True
-        Whether copy should be set to True when making the quantity array
+    copy: bool | None, default: None
+        deprecated and no longer used (for NumPy 2.0 support). Will be removed.
     name: str | None, default: None
         An optional label for the dataset
     description: str | None, default: None
@@ -103,7 +103,7 @@ class IrregularlySampledSignal(BaseSignal):
         The filesystem path or url of the orginal data
     array_annotations: dict | None, default: None
         Dict mapping strings to numpy arrays containing annotations for all data points
-    **annotations: dict
+    annotations: dict
         Optional additional metadata supplied by the user as a dict. Will be stored in
         the annotations attribute of the object
 
@@ -158,7 +158,7 @@ class IrregularlySampledSignal(BaseSignal):
         units=None,
         time_units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         name=None,
         file_origin=None,
         description=None,
@@ -171,6 +171,15 @@ class IrregularlySampledSignal(BaseSignal):
         This is called whenever a new :class:`IrregularlySampledSignal` is
         created from the constructor, but not when slicing.
         """
+
+        if copy is not None:
+            raise ValueError(
+                "`copy` is now deprecated in Neo due to removal in Quantites to support Numpy 2.0. "
+                "In order to facilitate the deprecation copy can be set to None but will raise an "
+                "error if set to True/False since this will silently do nothing. This argument will be completely "
+                "removed in Neo 0.15.0. Please update your code base as necessary."
+            )
+
         signal = cls._rescale(signal, units=units)
         if time_units is None:
             if hasattr(times, "units"):
@@ -199,7 +208,7 @@ class IrregularlySampledSignal(BaseSignal):
         units=None,
         time_units=None,
         dtype=None,
-        copy=True,
+        copy=None,
         name=None,
         file_origin=None,
         description=None,
@@ -231,7 +240,7 @@ class IrregularlySampledSignal(BaseSignal):
             self.units,
             self.times.units,
             self.dtype,
-            True,
+            None,
             self.name,
             self.file_origin,
             self.description,
@@ -544,6 +553,9 @@ class IrregularlySampledSignal(BaseSignal):
             (the original :class:`IrregularlySampledSignal` is not modified).
         """
         new_sig = deepcopy(self)
+        # As of numpy 2.0/quantities 0.16 we need to copy the array itself
+        # in order to be able to time_shift
+        new_sig.times = self.times.copy()
 
         new_sig.times += t_shift
 
@@ -588,7 +600,7 @@ class IrregularlySampledSignal(BaseSignal):
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
-        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype, copy=False, **kwargs)
+        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype, copy=None, **kwargs)
         signal.segment = self.segment
         signal.array_annotate(**self._merge_array_annotations(other))
 
@@ -681,7 +693,7 @@ class IrregularlySampledSignal(BaseSignal):
             times=new_times[sorting],
             units=self.units,
             dtype=self.dtype,
-            copy=False,
+            copy=None,
             t_start=t_start,
             t_stop=t_stop,
             **kwargs,

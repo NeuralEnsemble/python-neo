@@ -20,6 +20,7 @@ import numpy as np
 from neo.rawio.baserawio import (
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
     _common_sig_characteristics,
@@ -47,6 +48,12 @@ def header_is_total(reader):
     assert "nb_segment" in h, "`nb_segment`missing in header"
     assert len(h["nb_segment"]) == h["nb_block"]
 
+    assert "signal_buffers" in h, "signal_buffers missing in header"
+    if h["signal_buffers"] is not None:
+        dt = h["signal_buffers"].dtype
+        for k, _ in _signal_buffer_dtype:
+            assert k in dt.fields, f"{k} not in _signal_buffers.dtype"
+
     assert "signal_streams" in h, "signal_streams missing in header"
     if h["signal_streams"] is not None:
         dt = h["signal_streams"].dtype
@@ -70,6 +77,34 @@ def header_is_total(reader):
         dt = h["event_channels"].dtype
         for k, _ in _event_channel_dtype:
             assert k in dt.fields, f"{k} not in event_channels.dtype"
+
+
+def check_signal_stream_buffer_hierachy(reader):
+    # rules:
+    #  * a channel always belong to a stream
+    #  * a channel optionaly belong to a buffer
+    #  * a stream optionaly belong to a buffer
+    #  * buffer_ids and channel_ids are unique
+
+    h = reader.header
+
+    for stream in h["signal_streams"]:
+        if stream["buffer_id"] != "":
+            assert stream["buffer_id"] in h["signal_buffers"]["id"]
+
+    for channel in h["signal_channels"]:
+        if channel["stream_id"] != "":
+            assert channel["stream_id"] in h["signal_streams"]["id"]
+        if channel["buffer_id"] != "":
+            assert channel["buffer_id"] in h["signal_buffers"]["id"]
+
+    stream_ids = h["signal_streams"]["id"]
+    if stream_ids.size > 0:
+        assert stream_ids.size == np.unique(stream_ids).size
+
+    buffer_ids = h["signal_buffers"]["id"]
+    if buffer_ids.size > 0:
+        assert buffer_ids.size == np.unique(buffer_ids).size
 
 
 def count_element(reader):
@@ -98,15 +133,15 @@ def count_element(reader):
             for stream_index in range(nb_stream):
                 sig_size = reader.get_signal_size(block_index, seg_index, stream_index=stream_index)
 
-                for spike_channel_index in range(nb_unit):
-                    nb_spike = reader.spike_count(
-                        block_index=block_index, seg_index=seg_index, spike_channel_index=spike_channel_index
-                    )
+            for spike_channel_index in range(nb_unit):
+                nb_spike = reader.spike_count(
+                    block_index=block_index, seg_index=seg_index, spike_channel_index=spike_channel_index
+                )
 
-                for event_channel_index in range(nb_event_channel):
-                    nb_event = reader.event_count(
-                        block_index=block_index, seg_index=seg_index, event_channel_index=event_channel_index
-                    )
+            for event_channel_index in range(nb_event_channel):
+                nb_event = reader.event_count(
+                    block_index=block_index, seg_index=seg_index, event_channel_index=event_channel_index
+                )
 
 
 def iter_over_sig_chunks(reader, stream_index, channel_indexes, chunksize=1024):
@@ -118,7 +153,10 @@ def iter_over_sig_chunks(reader, stream_index, channel_indexes, chunksize=1024):
         for seg_index in range(nb_seg):
             sig_size = reader.get_signal_size(block_index, seg_index, stream_index)
 
-            nb = sig_size // chunksize + 1
+            nb = int(np.floor(sig_size / chunksize))
+            if sig_size % chunksize > 0:
+                nb += 1
+
             for i in range(nb):
                 i_start = i * chunksize
                 i_stop = min((i + 1) * chunksize, sig_size)
@@ -172,7 +210,7 @@ def read_analogsignals(reader):
         channel_names = signal_channels["name"][mask]
         channel_ids = signal_channels["id"][mask]
 
-        # acces by channel inde/ids/names should give the same chunk
+        # acces by channel index/ids/names should give the same chunk
         channel_indexes2 = channel_indexes[::2]
         channel_names2 = channel_names[::2]
         channel_ids2 = channel_ids[::2]
@@ -213,6 +251,29 @@ def read_analogsignals(reader):
                 channel_names=channel_names2,
             )
             np.testing.assert_array_equal(raw_chunk0, raw_chunk1)
+
+        # test slice(None). This should return the same array as giving
+        # all channel indexes or using None as an argument in `get_analogsignal_chunk`
+        # see https://github.com/NeuralEnsemble/python-neo/issues/1533
+
+        raw_chunk_slice_none = reader.get_analogsignal_chunk(
+            block_index=block_index,
+            seg_index=seg_index,
+            i_start=i_start,
+            i_stop=i_stop,
+            stream_index=stream_index,
+            channel_indexes=slice(None),
+        )
+        raw_chunk_channel_indexes = reader.get_analogsignal_chunk(
+            block_index=block_index,
+            seg_index=seg_index,
+            i_start=i_start,
+            i_stop=i_stop,
+            stream_index=stream_index,
+            channel_indexes=channel_indexes,
+        )
+
+        np.testing.assert_array_equal(raw_chunk_slice_none, raw_chunk_channel_indexes)
 
         # test prefer_slice=True/False
         if nb_chan >= 3:
@@ -420,3 +481,34 @@ def read_events(reader):
 
 def has_annotations(reader):
     assert hasattr(reader, "raw_annotations"), "raw_annotation are not set"
+
+
+def check_buffer_api(reader):
+    buffer_ids = reader.header["signal_buffers"]["id"]
+
+    nb_block = reader.block_count()
+    nb_event_channel = reader.event_channels_count()
+
+    for block_index in range(nb_block):
+        nb_seg = reader.segment_count(block_index)
+        for seg_index in range(nb_seg):
+            for buffer_id in buffer_ids:
+                descr = reader.get_analogsignal_buffer_description(
+                    block_index=block_index, seg_index=seg_index, buffer_id=buffer_id
+                )
+                assert descr["type"] in ("raw", "hdf5"), "buffer_description type uncorrect"
+
+                try:
+                    import xarray
+
+                    HAVE_XARRAY = True
+                except ImportError:
+                    HAVE_XARRAY = False
+
+                if HAVE_XARRAY:
+                    # this test quickly the experimental xaray_utils.py if xarray is present on the system
+                    # this is not the case for the CI
+                    from neo.rawio.xarray_utils import to_xarray_dataset
+
+                    ds = to_xarray_dataset(reader, block_index=block_index, seg_index=seg_index, buffer_id=buffer_id)
+                    assert isinstance(ds, xarray.Dataset)

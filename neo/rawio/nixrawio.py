@@ -13,6 +13,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -77,7 +78,8 @@ class NIXRawIO(BaseRawIO):
                             stream_ids.append(stream_id)
                         gain = 1
                         offset = 0.0
-                        signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+                        buffer_id = ""
+                        signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
                 # only read structure of first segment and assume the same
                 # across segments
                 break
@@ -86,6 +88,9 @@ class NIXRawIO(BaseRawIO):
         signal_streams = np.zeros(len(stream_ids), dtype=_signal_stream_dtype)
         signal_streams["id"] = stream_ids
         signal_streams["name"] = ""
+        signal_streams["buffer_id"] = ""
+        # potentially nix support buffer but because we use the python module API and not h5py then no buffer
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         spike_channels = []
         unit_name = ""
@@ -194,6 +199,7 @@ class NIXRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = len(self.file.blocks)
         self.header["nb_segment"] = [len(seg_groups) for bl in self.file.blocks]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
