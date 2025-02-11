@@ -890,12 +890,12 @@ class NicoletRawIO(BaseRawIO):
             idx_instance = [entry for entry, match in zip(self.main_index, matching_idx) if match]
         except:
             warnings.warn(f'No entries for instance "{id_str}" found', BytesWarning)
-            idx_instance = {
+            idx_instance = [{
                 'section_idx': 0,
                 'offset' : 0,
                 'block_l': 0,
                 'section_l': 0
-            }
+            }]
         return(idx_instance)
 
 def read_as_dict(fid, dtype):
