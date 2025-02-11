@@ -19,6 +19,7 @@ from neo.rawio.baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -160,7 +161,9 @@ class NicoletRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [len(self.segments_properties)]
-        self.header["signal_streams"] = np.array([("Signals", "0")],
+        self.header["signal_buffers"] = np.array([("Signals", "0")],
+                                                 dtype=_signal_buffer_dtype)
+        self.header["signal_streams"] = np.array([("Signals", "0", "0")],
                                                  dtype=_signal_stream_dtype)
         self.header["signal_channels"] = self._create_signal_channels(_signal_channel_dtype) if self.channel_properties else self._create_signal_channels_no_channel_props(_signal_channel_dtype)
         self.header["spike_channels"] = np.array([],
@@ -702,7 +705,8 @@ class NicoletRawIO(BaseRawIO):
                 signal['transducer'],
                 timestream['resolution'],
                 timestream['eeg_offset'],
-                0))
+                0,
+                0,))
         return np.array(signal_channels, dtype = dtype)
     
     def _create_signal_channels_no_channel_props(self, dtype):
@@ -719,6 +723,7 @@ class NicoletRawIO(BaseRawIO):
                 signal['transducer'],
                 timestream['resolution'],
                 timestream['eeg_offset'],
+                0,
                 0))
         return np.array(signal_channels, dtype = dtype)
     
