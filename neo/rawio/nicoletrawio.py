@@ -46,7 +46,7 @@ class NicoletRawIO(BaseRawIO):
     TSLABELSIZE = 64
     UNITSIZE = 16
     ITEMNAMESIZE = 64
-    UNIX_TIME_CONVERSION = 2209161600
+    UNIX_TIME_CONVERSION = 2209161600+10800 #Dates are saved with an Origin of 1899-12-31 in .e files, but python datetime requires unix time. Also, dates are in UTC+3, so add 3 hours to UNIX (i.e. start 3 hours later) to get UTC
     SEC_PER_DAY = 86400
     
     TAGS_DICT = {
@@ -956,7 +956,7 @@ def _convert_to_guid(hex_list,
     dec_list = [f'{nr:x}'.upper().rjust(2, '0') for nr in hex_list]
     return('{' + guid_format.format(*dec_list) + '}') 
 
-def _convert_to_date(data_float, origin = '30-12-1899'): #Set Origin to 1 day back to account for something
+def _convert_to_date(data_float, origin = '30-12-1899'): #Set Origin to 1 day back to account for 1 day offset
     return(datetime.strptime(origin, '%d-%m-%Y') 
             + timedelta(seconds = int(data_float*24*60*60)))
 
