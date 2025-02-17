@@ -577,7 +577,7 @@ class NicoletRawIO(BaseRawIO):
                             id_str = self.HC_EVENT[event['guid']]
                         except:
                             id_str = 'UNKNOWN'
-                        if id_str == 'Annotation':
+                        if id_str == 'Annotation' or id_str == 'Event Comment':
                             fid.seek(31, 1)
                             annotation = read_as_list(fid,
                                                     [('annotation', 'S2', event['text_length'])])
