@@ -25,6 +25,6 @@ class NicoletIO(NicoletRawIO, BaseFromRaw):
     #   'group-by-same-units' : one 2D AnalogSignal for each group of channel with same units
     _prefered_signal_group_mode = "group-by-same-units"
 
-    def __init__(self, filepath=""):
-        NicoletRawIO.__init__(self, filepath=filepath)
-        BaseFromRaw.__init__(self, filepath)
+    def __init__(self, filename=""):
+        NicoletRawIO.__init__(self, filename=filename)
+        BaseFromRaw.__init__(self, filename)

@@ -31,7 +31,7 @@ class NicoletRawIO(BaseRawIO):
     
     Parameters
     ----------
-    filepath: str | Path
+    filename: str | Path
         The path to the .e file. Will be transformed into a WindowsPath object
         
     Notes
@@ -171,12 +171,12 @@ class NicoletRawIO(BaseRawIO):
         '{8CB92AA7-A886-4013-8D52-6CD1C71C72B4}' : 'ETP',
         }
     
-    def __init__(self, filepath = ""):
+    def __init__(self, filename = ""):
         BaseRawIO.__init__(self)
-        self.filepath = Path(filepath)
+        self.filename = Path(filename)
         
     def _source_name(self):
-        return self.filepath
+        return self.filename
     
     def _parse_header(self):
         self._extract_header_information() 
@@ -202,7 +202,7 @@ class NicoletRawIO(BaseRawIO):
             ('index', 'uint32'),
             ]
         
-        with open(self.filepath, "rb") as fid:
+        with open(self.filename, "rb") as fid:
             fid.seek(172)
             n_tags = read_as_list(fid,
                                   [('n_tags', 'uint32')])
@@ -225,7 +225,7 @@ class NicoletRawIO(BaseRawIO):
             ('l_qi', 'uint64'),
             ('first_idx', 'uint64', self.n_tags),
             ]
-        with open(self.filepath, "rb") as fid:
+        with open(self.filename, "rb") as fid:
             fid.seek(172208)
             qi = read_as_dict(fid, 
                               qi_structure)
@@ -235,7 +235,7 @@ class NicoletRawIO(BaseRawIO):
         main_index = []
         current_index = 0
         next_index_pointer = self.qi['index_idx']
-        with open(self.filepath, "rb") as fid:
+        with open(self.filename, "rb") as fid:
             while current_index < self.qi['n_entries']:
                 fid.seek(next_index_pointer)
                 nr_index = read_as_list(fid, 
@@ -268,7 +268,7 @@ class NicoletRawIO(BaseRawIO):
         [dynamic_packets_instace] = self._get_index_instances(id_str = 'InfoChangeStream')
         offset = dynamic_packets_instace['offset']
         self.n_dynamic_packets = int(dynamic_packets_instace['section_l']/48)
-        with open(self.filepath, "rb") as fid:
+        with open(self.filename, "rb") as fid:
             fid.seek(offset)
             for i in range(self.n_dynamic_packets):
                 guid_offset = offset + (i+1)*48
@@ -288,7 +288,7 @@ class NicoletRawIO(BaseRawIO):
         self.dynamic_packets = dynamic_packets
 
     def _get_dynamic_packets_data(self):
-        with open(self.filepath, "rb") as fid:
+        with open(self.filename, "rb") as fid:
             for i in range(self.n_dynamic_packets):
                 data = []
                 dynamic_packet_instances = self._get_index_instances(tag = self.dynamic_packets[i]['guid_as_str'])
@@ -321,7 +321,7 @@ class NicoletRawIO(BaseRawIO):
             ('n_values', 'uint64'),
             ('n_bstr', 'uint64'),
             ]
-        with open(self.filepath, "rb") as fid:
+        with open(self.filename, "rb") as fid:
             fid.seek(idx_instance['offset'])
             patient_info = read_as_dict(fid,
                                         patient_info_structure
@@ -370,7 +370,7 @@ class NicoletRawIO(BaseRawIO):
             ]
         idx_instances = self._get_index_instances('SIGNALINFOGUID')
         for instance in idx_instances:
-            with open(self.filepath, "rb") as fid:
+            with open(self.filename, "rb") as fid:
                 fid.seek(instance['offset'])
                 signal_structure = read_as_dict(fid,
                                                 signal_structure_segment)
@@ -401,7 +401,7 @@ class NicoletRawIO(BaseRawIO):
             ],
             ]
         idx_instance = self._get_index_instances('CHANNELGUID')[0]
-        with open(self.filepath, "rb") as fid:
+        with open(self.filename, "rb") as fid:
             fid.seek(idx_instance['offset'])
             channel_structure = read_as_dict(fid, 
                                              channel_structure_structure[0])
@@ -529,7 +529,7 @@ class NicoletRawIO(BaseRawIO):
         segments_properties = []
         [segment_instance] = self._get_index_instances('SegmentStream')
         n_segments = int(segment_instance['section_l']/152)
-        with open(self.filepath, "rb") as fid:
+        with open(self.filename, "rb") as fid:
             fid.seek(segment_instance['offset'], 0)
             for i in range(n_segments):
                 segment_info =  {}
@@ -559,7 +559,7 @@ class NicoletRawIO(BaseRawIO):
         event_instances = _ensure_list(self._get_index_instances(tag = 'Events'))
         for instance in event_instances:
             offset = instance['offset']
-            with open(self.filepath, "rb") as fid:
+            with open(self.filename, "rb") as fid:
                 pkt_structure = [
                     ('guid', 'uint8', 16),
                     ('len', 'uint64'),
@@ -632,7 +632,7 @@ class NicoletRawIO(BaseRawIO):
     def _get_montage(self):
         montages = []
         montage_instances = self._get_index_instances(id_str = 'DERIVATIONGUID')
-        with open(self.filepath, "rb") as fid:
+        with open(self.filename, "rb") as fid:
             montage_info_structure = [
                 [('name', 'S2', 32),
                  ],
@@ -693,7 +693,7 @@ class NicoletRawIO(BaseRawIO):
         earliest_signal_index = [tag['tag'] for tag in self.tags].index('0')
         offset = [index['offset'] for index in self.main_index if index['section_idx'] == earliest_signal_index][0]
         
-        raw_signal = np.memmap(self.filepath, dtype="i2", offset = offset, mode="r")
+        raw_signal = np.memmap(self.filename, dtype="i2", offset = offset, mode="r")
         self.signal_data_offset = offset
         self.raw_signal = raw_signal
     
