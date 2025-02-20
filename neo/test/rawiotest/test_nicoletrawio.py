@@ -12,7 +12,7 @@ class TestExampleRawIO(
     rawioclass = NicoletRawIO
     entities_to_download = ['nicolet']
 
-    entities_to_test = ["nicolet/e_files/test_nicolet.e"]
+    entities_to_test = ["nicolet/e_files/test.e"]
     
 if __name__ == "__main__":
     unittest.main()
