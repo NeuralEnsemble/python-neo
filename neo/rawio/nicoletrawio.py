@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from neo.rawio.baserawio import (
@@ -46,9 +46,6 @@ class NicoletRawIO(BaseRawIO):
     TSLABELSIZE = 64
     UNITSIZE = 16
     ITEMNAMESIZE = 64
-    UNIX_TIME_CONVERSION = 2209161600+10800 #Dates are saved with an Origin of 1899-12-31 in .e files, but python datetime requires unix time. Also, dates are in UTC+3, so add 3 hours to UNIX (i.e. start 3 hours later) to get UTC
-    SEC_PER_DAY = 86400
-    
     TAGS_DICT = {
         'ExtraDataTags' : 'ExtraDataTags',
         'SegmentStream' : 'SegmentStream',
@@ -543,7 +540,7 @@ class NicoletRawIO(BaseRawIO):
                 segment_info['ref_names'] = [info['ref_sensor'] for info in self.ts_properties]
                 segment_info['sampling_rates'] = [info['sampling_rate'] for info in self.ts_properties]
                 segment_info['scale'] = [info['resolution'] for info in self.ts_properties]
-                date_str = datetime.fromtimestamp(segment_info['date_ole']*self.SEC_PER_DAY - self.UNIX_TIME_CONVERSION)
+                date_str = self._convert_ole_to_datetime(segment_info['date_ole'])
                 start_date = date_str.date()
                 start_time = date_str.time()
                 segment_info['date'] = date_str
@@ -592,7 +589,7 @@ class NicoletRawIO(BaseRawIO):
                         fid.seek(16, 1)
                         event = event | read_as_dict(fid,
                                                     event_structure[2])
-                        event['date'] = datetime.fromtimestamp(event['date_ole']*self.SEC_PER_DAY + event['date_fraction'] - self.UNIX_TIME_CONVERSION)
+                        event['date'] = self._convert_ole_to_datetime(event['date_ole'], event['date_fraction'])
                         event['timestamp'] = (event['date'] - self.segments_properties[0]['date']).total_seconds()
                         event['guid'] = _convert_to_guid(event['guid'])
                         try:
@@ -627,7 +624,10 @@ class NicoletRawIO(BaseRawIO):
         self.events = events
         pass
     
-    
+    def _convert_ole_to_datetime(self, date_ole, date_fraction = 0):
+        '''Date is saved as OLE with the timezone offset integrated in the file. Transform this to datetime object and add the date_fraction if provided'''
+        return datetime.fromtimestamp((date_ole - 25569) * 24 * 3600 + date_fraction,
+                                      tz = timezone.utc) 
     
     def _get_montage(self):
         montages = []
@@ -978,7 +978,7 @@ def _convert_to_guid(hex_list,
     dec_list = [f'{nr:x}'.upper().rjust(2, '0') for nr in hex_list]
     return('{' + guid_format.format(*dec_list) + '}') 
 
-def _convert_to_date(data_float, origin = '30-12-1899'): #Set Origin to 1 day back to account for 1 day offset
+def _convert_to_date(data_float, origin = '30-12-1899'): #Set Origin to 1 day back to account for OLE considering 1900 as a leap year
     return(datetime.strptime(origin, '%d-%m-%Y') 
             + timedelta(seconds = int(data_float*24*60*60)))
 
