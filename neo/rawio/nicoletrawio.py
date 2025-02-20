@@ -170,7 +170,7 @@ class NicoletRawIO(BaseRawIO):
     
     def __init__(self, filename = ""):
         BaseRawIO.__init__(self)
-        self.filename = Path(filename)
+        self.filename = filename
         
     def _source_name(self):
         return self.filename
