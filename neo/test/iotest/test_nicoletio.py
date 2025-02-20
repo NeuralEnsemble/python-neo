@@ -22,7 +22,7 @@ class TestExampleIO(
     ioclass = NicoletIO
     entities_to_download = ["nicolet"]
     entities_to_test = [
-        "nicolet/e_files/test_nicolet.e",
+        "nicolet/e_files/test.e",
     ]
 
     def setUp(self):
