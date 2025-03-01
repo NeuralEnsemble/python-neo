@@ -46,13 +46,18 @@ class CSVIO(BaseIO):
         BaseIO.__init__(self)
 
         self.filename = filename
-        self.dataset, self.channels, self.num_sweeps = load_csv_file(
+
+        self.dataset, self.channels, self.num_sweeps, time_units = load_csv_file(
             filename, ordered_datatype, ordered_units, interleaved_or_consecutive, row_or_column, has_header, has_index, time_from_sampling_rate
         )
         self.header = {}
 
+        assert time_units in ["s", "ms"], "time must be 's' or 'ms'."
+        self.pq_time_unit = pq.s if time_units == "s" else pq.ms
+
     def read_block(self, lazy=False):
         assert not lazy, 'Do not support lazy'
+
 
         bl = Block()
         self.fill_header()
@@ -65,11 +70,11 @@ class CSVIO(BaseIO):
             # iterate over channels:
             for chan_idx, recsig in enumerate(self.header["signal_channels"]):
 
-                unit = self.header["signal_channels"]["units"][chan_idx]  # revisit if we can loose the indexing
+                unit = self.header["signal_channels"]["units"][chan_idx]  # revisit if we can lose the indexing
                 name = self.header["signal_channels"]["name"][chan_idx]
-                sampling_rate = self.header["signal_channels"]["sampling_rate"][chan_idx] * 1 / pq.s
+                sampling_rate = self.header["signal_channels"]["sampling_rate"][chan_idx] * 1 / self.pq_time_unit
 
-                t_start = self.dataset["time"][seg_index] * pq.s
+                t_start = self.dataset["time"][seg_index] * self.pq_time_unit
                 recdata = self.dataset[name][:, seg_index]
 
                 if unit in ["pV", "fA"]:  # Quantity does not support
@@ -95,7 +100,7 @@ class CSVIO(BaseIO):
             ch_name = chan["name"]
             ch_units = chan["unit"]
             dtype = chan["dtype"]
-            sampling_rate = 1 / chan["sampling_step"] * 1 / pq.s
+            sampling_rate = 1 / chan["sampling_step"] * 1 / self.pq_time_unit
             gain = 1
             offset = 0
             stream_id = "0"
@@ -216,9 +221,11 @@ def load_csv_file(
         sampling_step = 1 / time_from_fs["value"]
         first_rec_samples = np.arange(num_recs) * num_samples * sampling_step
         results["time"] = first_rec_samples
+        time_units = "s"
     else:
         sampling_step = results["time"][1][0] - results["time"][0][0]
         results["time"] = results["time"][0, :]
+        time_units = ordered_units[ordered_datatypes.index("time")]
 
     # Save channel information for Neo
     channels = []
@@ -226,4 +233,4 @@ def load_csv_file(
         if name != "time":
             channels.append({"name": name, "unit": unit, "dtype": np.dtype("f8"), "sampling_step": sampling_step})
 
-    return results, channels, num_recs
+    return results, channels, num_recs, time_units

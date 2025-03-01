@@ -42,7 +42,7 @@ class HekaIO(BaseIO):
 
     mode = 'file'
 
-    def __init__(self, filename, group_idx, series_idx):
+    def __init__(self, filename, group_idx, series_idx, add_zero_offset, stimulus_experimental_mode):
         """
         Assumes HEKA file units is A and V for data and stimulus. This is enforced in LoadHeka level.
         """
@@ -56,13 +56,15 @@ class HekaIO(BaseIO):
         self.header = {}
         self.group_idx = group_idx
         self.series_idx = series_idx
+        self.add_zero_offset = add_zero_offset
+        self.stimulus_experimental_mode = stimulus_experimental_mode
         self.num_sweeps = None
         self.series_data = None
 
     def read_block(self, lazy=False):
         assert not lazy, 'Do not support lazy'
 
-        self.heka = LoadHeka(self.filename, only_load_header=True)
+        self.heka = LoadHeka(self.filename)
 
         bl = Block()
 
@@ -150,7 +152,13 @@ class HekaIO(BaseIO):
         for ch_idx in range(self.orig_num_channels):
             series_data.append(
                 self.heka.get_series_data(
-                    self.group_idx, self.series_idx, ch_idx, include_stim_protocol=True, fill_with_mean=True
+                    self.group_idx,
+                    self.series_idx,
+                    ch_idx,
+                    include_stim_protocol="experimental" if self.stimulus_experimental_mode else True,
+                    add_zero_offset=self.add_zero_offset,
+                    fill_with_mean=True,
+                    stim_channel_idx=None,
                 )
             )
         return series_data
@@ -166,6 +174,10 @@ class HekaIO(BaseIO):
     def make_header(self):
 
         signal_channels = []
+        heka_metadata = {
+            "add_zero_offset": self.add_zero_offset,
+            "zero_offsets": [],
+        }
         for ch_idx, chan_data in enumerate(self.series_data):
             ch_id = ch_idx + 1
             ch_name = chan_data["name"]
@@ -176,6 +188,11 @@ class HekaIO(BaseIO):
             offset = 0
             stream_id = "0"
             signal_channels.append((ch_name, ch_id, sampling_rate, dtype, ch_units, gain, offset, stream_id))  # turned into numpy array after stim channel added
+
+            # zero offsets will not exist for stim data
+            heka_metadata["zero_offsets"].append(
+                chan_data["zero_offsets"] if "zero_offsets" in chan_data else None
+            )
 
         # Spike Channels (no spikes)
         spike_channels = []
@@ -195,6 +212,7 @@ class HekaIO(BaseIO):
         self.header['signal_channels'] = np.array(signal_channels, dtype=_signal_channel_dtype)
         self.header['spike_channels'] = spike_channels
         self.header['event_channels'] = event_channels
+        self.header["heka_metadata"] = heka_metadata
 
         self.check_channel_sampling_rate_and_channel_order()
 
