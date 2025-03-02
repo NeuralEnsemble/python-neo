@@ -167,7 +167,7 @@ Classes:
 .. autoclass:: neo.io.MaxwellIO
 
     .. autoattribute:: extensions
-    
+
 .. autoclass:: neo.io.MedIO
 
     .. autoattribute:: extensions
