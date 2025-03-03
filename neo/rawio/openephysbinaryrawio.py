@@ -292,8 +292,8 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                                     rising_indices.extend(rising)
                                     falling_indices.extend(falling)
 
-                            rising_indices = np.array(rising_indices, dtype=np.intp)
-                            falling_indices = np.array(falling_indices, dtype=np.intp)
+                            rising_indices = np.array(rising_indices, dtype=np.int64)
+                            falling_indices = np.array(falling_indices, dtype=np.int64)
 
                             # Sort the indices to maintain chronological order
                             sorted_order = np.argsort(rising_indices)
