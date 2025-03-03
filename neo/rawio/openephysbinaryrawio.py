@@ -300,8 +300,6 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             rising_indices = rising_indices[sorted_order]
                             falling_indices = falling_indices[sorted_order]
 
-                            # durations = None
-                            # if len(rising_indices) == len(falling_indices):
                             durations = timestamps[falling_indices] - timestamps[rising_indices]
                             if not self._use_direct_evt_timestamps:
                                 timestamps = timestamps / info["sample_rate"]
