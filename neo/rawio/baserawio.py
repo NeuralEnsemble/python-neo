@@ -429,7 +429,7 @@ class BaseRawIO:
             nb_seg = [self.segment_count(i) for i in range(nb_block)]
             html.append(f'<p><strong>nb_segment:</strong> {nb_seg}</p>')
             
-            # CSS for tables
+            # CSS for tables - using only black, white, and gray colors
             html.append('''
             <style>
                 table.neo-table {
@@ -437,37 +437,42 @@ class BaseRawIO:
                     width: 100%;
                     margin-bottom: 20px;
                     font-size: 14px;
+                    color: #000;
+                    background-color: #fff;
                 }
                 table.neo-table th, table.neo-table td {
-                    border: 1px solid #ddd;
+                    border: 1px solid #ccc;
                     padding: 8px;
                     text-align: left;
                 }
                 table.neo-table th {
-                    background-color: #f2f2f2;
+                    background-color: #f5f5f5;
                     color: #333;
                 }
                 table.neo-table tr:nth-child(even) {
-                    background-color: #f9f9f9;
+                    background-color: #fafafa;
                 }
                 details {
                     margin-bottom: 15px;
-                    border: 1px solid #ddd;
+                    border: 1px solid #ccc;
                     border-radius: 4px;
                     overflow: hidden;
+                    background-color: #fff;
                 }
                 summary {
                     padding: 10px;
-                    background-color: #f2f2f2;
+                    background-color: #f5f5f5;
                     cursor: pointer;
                     font-weight: bold;
+                    color: #333;
                 }
                 details[open] summary {
-                    border-bottom: 1px solid #ddd;
+                    border-bottom: 1px solid #ccc;
                 }
                 .table-container {
                     padding: 10px;
                     overflow-x: auto;
+                    background-color: #fff;
                 }
             </style>
             ''')
