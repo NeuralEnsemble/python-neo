@@ -358,16 +358,14 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                                     rising_indices.extend(rising)
                                     falling_indices.extend(falling)
 
-                            rising_indices = np.array(rising_indices)
-                            falling_indices = np.array(falling_indices)
+                            rising_indices = np.array(rising_indices, dtype=np.int64)
+                            falling_indices = np.array(falling_indices, dtype=np.int64)
 
                             # Sort the indices to maintain chronological order
                             sorted_order = np.argsort(rising_indices)
                             rising_indices = rising_indices[sorted_order]
                             falling_indices = falling_indices[sorted_order]
 
-                            durations = None
-                            # if len(rising_indices) == len(falling_indices):
                             durations = timestamps[falling_indices] - timestamps[rising_indices]
                             if not self._use_direct_evt_timestamps:
                                 timestamps = timestamps / info["sample_rate"]
