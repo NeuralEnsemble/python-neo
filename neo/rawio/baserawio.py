@@ -254,7 +254,7 @@ class BaseRawIO:
         # Header
         html.append(f'<h3 style="color: #2c3e50;">{self.__class__.__name__}: {self.source_name()}</h3>')
 
-        if self.header is not None:
+        if self.is_header_parsed:
             # Basic info
             nb_block = self.block_count()
             html.append(f"<p><strong>nb_block:</strong> {nb_block}</p>")
