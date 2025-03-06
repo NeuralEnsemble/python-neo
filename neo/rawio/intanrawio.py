@@ -530,6 +530,26 @@ class IntanRawIO(BaseRawIO):
             output[:, channel_index] = demultiplex_data[i_start:i_stop].flatten()
 
         return output
+    
+    def get_intan_timestamps(self):
+        """
+        
+        Retrieves the timestamps from the Intan raw data based on the file format.
+        Returns
+        -------
+        timestamps: ndarray
+            The flattened array of timestamps.
+        """
+        if self.file_format == "header-attached":
+            timestamps = self._raw_data["timestamp"]
+
+        # timestamps are always last stream for headerless binary files
+        elif self.file_format == "one-file-per-signal":
+            timestamps = self._raw_data["timestamp"]
+        elif self.file_format == "one-file-per-channel":
+            timestamps = self._raw_data["timestamp"][0]
+
+        return timestamps.flatten() if timestamps.ndim > 1 else timestamps
 
     def _assert_timestamp_continuity(self):
         """
@@ -555,16 +575,9 @@ class IntanRawIO(BaseRawIO):
         * **one-file-per-channel:** Timestamps are retrieved from the first channel of the last stream.
         """
         # check timestamp continuity
-        if self.file_format == "header-attached":
-            timestamp = self._raw_data["timestamp"].flatten()
+        timestamps = self.get_intan_timestamps()
 
-        # timestamps are always last stream for headerless binary files
-        elif self.file_format == "one-file-per-signal":
-            timestamp = self._raw_data["timestamp"]
-        elif self.file_format == "one-file-per-channel":
-            timestamp = self._raw_data["timestamp"][0]
-
-        discontinuous_timestamps = np.diff(timestamp) != 1
+        discontinuous_timestamps = np.diff(timestamps) != 1
         timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
         if timestamps_are_not_contiguous:
             # Mark a flag that can be checked after parsing the header to see if the timestamps are continuous or not
@@ -582,8 +595,8 @@ class IntanRawIO(BaseRawIO):
 
                 amplifier_sampling_rate = self._global_info["sampling_rate"]
                 for discontinuity_index in np.where(discontinuous_timestamps)[0]:
-                    prev_ts = timestamp[discontinuity_index]
-                    next_ts = timestamp[discontinuity_index + 1]
+                    prev_ts = timestamps[discontinuity_index]
+                    next_ts = timestamps[discontinuity_index + 1]
                     time_diff = (next_ts - prev_ts) / amplifier_sampling_rate
 
                     error_msg += (
