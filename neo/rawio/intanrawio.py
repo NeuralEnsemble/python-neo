@@ -554,8 +554,7 @@ class IntanRawIO(BaseRawIO):
             
         Notes
         -----
-        - Sample indices can be converted to seconds by dividing by the sampling rate.
-        - These are relative timestamps (sample indices) and not absolute time.
+        - Sample indices can be converted to seconds by dividing by the sampling rate of the amplifier stream.
         - The function automatically handles different file formats:
         * header-attached: Timestamps are extracted directly from the timestamp field
         * one-file-per-signal: Timestamps are read from the timestamp stream
@@ -574,11 +573,9 @@ class IntanRawIO(BaseRawIO):
         elif self.file_format == "one-file-per-channel":
             timestamps = self._raw_data["timestamp"][0]
 
-        # Apply flattening if needed
-        if timestamps.ndim > 1:
-            timestamps = timestamps.flatten()
+        # TODO if possible ensure that timestamps memmaps are always of correct shape to avoid memory copy here.
+        timestamps = timestamps.flatten() if timestamps.ndim > 1 else timestamps
         
-        # Apply range slicing
         if i_stop is None:
             return timestamps[i_start:]
         else:
