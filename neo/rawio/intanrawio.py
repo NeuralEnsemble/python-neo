@@ -531,13 +531,14 @@ class IntanRawIO(BaseRawIO):
 
         return output
     
-    def get_intan_sample_indices(self, i_start=None, i_stop=None):
+    def get_intan_timestamps(self, i_start=None, i_stop=None):
         """
         Retrieves the sample indices from the Intan raw data within a specified range.
         
-        This function extracts the sample index timestamps from Intan files, which represent 
-        relative time points in sample units (not absolute time). These indices can be 
-        particularly useful when working with recordings that have discontinuities.
+        Note that sample indices are called timestamps in the Intan format but they are 
+        in fact just sample indices. This function extracts the sample index timestamps 
+        from Intan files, which represent  relative time points in sample units (not absolute time).
+        These indices can be  particularly useful when working with recordings that have discontinuities.
         
         Parameters
         ----------
@@ -597,7 +598,7 @@ class IntanRawIO(BaseRawIO):
             The error message includes a table detailing the discontinuities found.
         """
         # check timestamp continuity
-        timestamps = self.get_intan_sample_indices()
+        timestamps = self.get_intan_timestamps()
 
         discontinuous_timestamps = np.diff(timestamps) != 1
         timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
