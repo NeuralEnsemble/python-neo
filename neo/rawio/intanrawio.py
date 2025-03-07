@@ -531,25 +531,58 @@ class IntanRawIO(BaseRawIO):
 
         return output
     
-    def get_intan_timestamps(self):
+    def get_intan_sample_indices(self, i_start=None, i_stop=None):
         """
+        Retrieves the sample indices from the Intan raw data within a specified range.
         
-        Retrieves the timestamps from the Intan raw data based on the file format.
+        This function extracts the sample index timestamps from Intan files, which represent 
+        relative time points in sample units (not absolute time). These indices can be 
+        particularly useful when working with recordings that have discontinuities.
+        
+        Parameters
+        ----------
+        i_start : int, optional
+            The starting index from which to retrieve sample indices. If None, starts from 0.
+        i_stop : int, optional
+            The stopping index up to which to retrieve sample indices (exclusive). 
+            If None, retrieves all available indices from i_start onward.
+        
         Returns
         -------
-        timestamps: ndarray
-            The flattened array of timestamps.
+        timestamps : ndarray
+            The flattened array of sample indices within the specified range.
+            
+        Notes
+        -----
+        - Sample indices can be converted to seconds by dividing by the sampling rate.
+        - These are relative timestamps (sample indices) and not absolute time.
+        - The function automatically handles different file formats:
+        * header-attached: Timestamps are extracted directly from the timestamp field
+        * one-file-per-signal: Timestamps are read from the timestamp stream
+        * one-file-per-channel: Timestamps are read from the first channel in the timestamp stream
+        - When recordings have discontinuities (indicated by the `discontinuous_timestamps` 
+        attribute being True), these indices allow for proper temporal alignment of the data.
         """
+        if i_start is None:
+            i_start = 0
+        
+        # Get the timestamps based on file format
         if self.file_format == "header-attached":
             timestamps = self._raw_data["timestamp"]
-
-        # timestamps are always last stream for headerless binary files
         elif self.file_format == "one-file-per-signal":
             timestamps = self._raw_data["timestamp"]
         elif self.file_format == "one-file-per-channel":
             timestamps = self._raw_data["timestamp"][0]
 
-        return timestamps.flatten() if timestamps.ndim > 1 else timestamps
+        # Apply flattening if needed
+        if timestamps.ndim > 1:
+            timestamps = timestamps.flatten()
+        
+        # Apply range slicing
+        if i_stop is None:
+            return timestamps[i_start:]
+        else:
+            return timestamps[i_start:i_stop]
 
     def _assert_timestamp_continuity(self):
         """
@@ -565,14 +598,6 @@ class IntanRawIO(BaseRawIO):
         NeoReadWriteError
             If timestamps are not continuous and `ignore_integrity_checks` is False.
             The error message includes a table detailing the discontinuities found.
-
-        Notes
-        -----
-        The method extracts timestamps from the raw data based on the file format:
-
-        * **header-attached:** Timestamps are extracted from a 'timestamp' field in the raw data.
-        * **one-file-per-signal:** Timestamps are taken from the last stream.
-        * **one-file-per-channel:** Timestamps are retrieved from the first channel of the last stream.
         """
         # check timestamp continuity
         timestamps = self.get_intan_timestamps()
