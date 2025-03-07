@@ -597,7 +597,7 @@ class IntanRawIO(BaseRawIO):
             The error message includes a table detailing the discontinuities found.
         """
         # check timestamp continuity
-        timestamps = self.get_intan_timestamps()
+        timestamps = self.get_intan_sample_indices()
 
         discontinuous_timestamps = np.diff(timestamps) != 1
         timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
