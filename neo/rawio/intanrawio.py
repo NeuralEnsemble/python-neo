@@ -530,29 +530,29 @@ class IntanRawIO(BaseRawIO):
             output[:, channel_index] = demultiplex_data[i_start:i_stop].flatten()
 
         return output
-    
+
     def get_intan_timestamps(self, i_start=None, i_stop=None):
         """
         Retrieves the sample indices from the Intan raw data within a specified range.
-        
-        Note that sample indices are called timestamps in the Intan format but they are 
-        in fact just sample indices. This function extracts the sample index timestamps 
+
+        Note that sample indices are called timestamps in the Intan format but they are
+        in fact just sample indices. This function extracts the sample index timestamps
         from Intan files, which represent  relative time points in sample units (not absolute time).
         These indices can be  particularly useful when working with recordings that have discontinuities.
-        
+
         Parameters
         ----------
         i_start : int, optional
             The starting index from which to retrieve sample indices. If None, starts from 0.
         i_stop : int, optional
-            The stopping index up to which to retrieve sample indices (exclusive). 
+            The stopping index up to which to retrieve sample indices (exclusive).
             If None, retrieves all available indices from i_start onward.
-        
+
         Returns
         -------
         timestamps : ndarray
             The flattened array of sample indices within the specified range.
-            
+
         Notes
         -----
         - Sample indices can be converted to seconds by dividing by the sampling rate of the amplifier stream.
@@ -560,12 +560,12 @@ class IntanRawIO(BaseRawIO):
         * header-attached: Timestamps are extracted directly from the timestamp field
         * one-file-per-signal: Timestamps are read from the timestamp stream
         * one-file-per-channel: Timestamps are read from the first channel in the timestamp stream
-        - When recordings have discontinuities (indicated by the `discontinuous_timestamps` 
+        - When recordings have discontinuities (indicated by the `discontinuous_timestamps`
         attribute being True), these indices allow for proper temporal alignment of the data.
         """
         if i_start is None:
             i_start = 0
-        
+
         # Get the timestamps based on file format
         if self.file_format == "header-attached":
             timestamps = self._raw_data["timestamp"]
@@ -576,7 +576,7 @@ class IntanRawIO(BaseRawIO):
 
         # TODO if possible ensure that timestamps memmaps are always of correct shape to avoid memory copy here.
         timestamps = timestamps.flatten() if timestamps.ndim > 1 else timestamps
-        
+
         if i_stop is None:
             return timestamps[i_start:]
         else:
