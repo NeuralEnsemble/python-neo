@@ -52,8 +52,8 @@ For example, given a segment:
 filled with other NEO structures:
 
 >>> import numpy as np
->>> import quantities as pq
->>> a = AnalogSignal( signal=np.random.rand(300), t_start=42*pq.ms)
+>>> import neo.units
+>>> a = AnalogSignal( signal=np.random.rand(300), t_start=42*neo.units.ms)
 >>> s.analogsignals.append( a )
 
 and added to a newly created NEO Block:
