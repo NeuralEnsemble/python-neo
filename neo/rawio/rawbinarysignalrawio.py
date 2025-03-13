@@ -38,7 +38,7 @@ class RawBinarySignalRawIO(BaseRawWithBufferApiIO):
     Parameters
     ----------
     filename: str, default: ''
-        The *.raw, *.bin, or *.dat binary file to load
+        The .raw, .bin, or .dat binary file to load
     dtype: np.dtype, default: 'int16'
         The dtype that the data is stored with. Must be acceptable by the numpy.dtype constructor
     sampling_rate: float, default: 10000.0

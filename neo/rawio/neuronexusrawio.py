@@ -6,13 +6,13 @@ The format involves 3 files:
   * The *.xdat.json metadata file
   * The *_data.xdat binary file of all raw data
   * The *_timestamps.xdat binary file of the timestamp data
-  
+
 Based on sample data is appears that the binary file is always a float32 format
 Other information can be found within the metadata json file
 
 
 The metadata file has a pretty complicated structure as far as I can tell
-a lot of which is dedicated to probe information, which won't be handle at the 
+a lot of which is dedicated to probe information, which won't be handle at the
 the Neo level.
 
 It appears that the metadata['status'] provides most of the information necessary
@@ -73,6 +73,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
             * The *.xdat.json metadata file
             * The *_data.xdat binary file of all raw data
             * The *_timestamps.xdat binary file of the timestamp data
+
         From the metadata the other two files are located within the same directory
         and loaded.
 

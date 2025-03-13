@@ -46,7 +46,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
     ----------
 
     filename: str, default: ''
-        The *.h5 file to be loaded
+        The .h5 file to be loaded
     rec_name: str | None, default: None
         If the file has multiple recordings, specify the one to read.
         For 24-well plates, the rec_name needs to be specified since different well
