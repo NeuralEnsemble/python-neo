@@ -300,21 +300,47 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             channel = dig_ch[event_channel_index]
             ch_idx = 7 - int(channel[2:])  # They are in the reverse order
             this_stream = event_data[:, ch_idx]
-            this_rising = np.where(np.diff(this_stream) == 1)[0] + 1
-            this_falling = (
-                np.where(np.diff(this_stream) == 255)[0] + 1
-            )  # because the data is in unsigned 8 bit, -1 = 255!
-            if len(this_rising) > 0:
-                timestamps.extend(this_rising)
-                labels.extend([f"{channel} ON"] * len(this_rising))
-            if len(this_falling) > 0:
-                timestamps.extend(this_falling)
-                labels.extend([f"{channel} OFF"] * len(this_falling))
+            timestamps, durations, labels = self._find_events_in_channel(this_stream, channel)
         timestamps = np.asarray(timestamps)
         if len(labels) == 0:
             labels = np.asarray(labels, dtype="U1")
         else:
             labels = np.asarray(labels)
+
+        return timestamps, durations, labels
+    
+    def _get_sync_events(self, stream_index):
+        #find sync events in the 'SY0' channel of imec streams
+        channel = 'SY0'
+        sync_data = self.get_analogsignal_chunk(channel_names = [channel], stream_index = stream_index)
+        #uint16 word to uint8 bytes to bits
+        sync_data_uint8 = sync_data.view(np.uint8)
+        unpacked_sync_data = np.unpackbits(sync_data_uint8, axis=1)
+        #sync line is the 6th bit (so 1st bit because reversed order)
+        #https://billkarsh.github.io/SpikeGLX/Sgl_help/Metadata_30.html
+        sync_line = unpacked_sync_data[:,1]
+        raise NotImplementedError("Work in progress")
+        return self._find_events_in_channel(sync_line, "SY0")
+
+    def _find_events_in_channel(self, channel_data, channel_name):
+
+        timestamps, durations, labels = [], None, []
+
+        this_rising = np.where(np.diff(channel_data) == 1)[0] + 1
+        this_falling = (
+            np.where(np.diff(channel_data) == 255)[0] + 1
+        )  # because the data is in unsigned 8 bit, -1 = 255!
+        if len(this_rising) > 0:
+            timestamps.extend(this_rising)
+            labels.extend([f"{channel_name} ON"] * len(this_rising))
+        if len(this_falling) > 0:
+            timestamps.extend(this_falling)
+            labels.extend([f"{channel_name} OFF"] * len(this_falling))
+        timestamps = np.asarray(timestamps)
+        if len(labels) == 0:
+            labels = np.asarray(labels, dtype="U1")
+        else:
+            labels = np.asarray(labels) 
         return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
