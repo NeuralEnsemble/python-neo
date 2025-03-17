@@ -78,7 +78,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
         signal_streams = []
         if int(version) == 20160704:
             self._old_format = True
-            signal_streams.append(("well000", "well000"))
+            signal_streams.append(("well000", "well000", ""))
         elif int(version) > 20160704:
             # multi stream stream (one well is one stream)
             self._old_format = False
@@ -106,7 +106,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
             for well_name in well_ids:
                 rec_names = list(h5file["wells"][well_name].keys())
                 if self.rec_name in rec_names:
-                    signal_streams.append((well_name, well_name, well_name))
+                    signal_streams.append((well_name, well_name, well_name, ""))
         else:
             raise NotImplementedError(f"This version {version} is not supported")
 
