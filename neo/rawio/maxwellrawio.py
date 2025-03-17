@@ -106,7 +106,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
             for well_name in well_ids:
                 rec_names = list(h5file["wells"][well_name].keys())
                 if self.rec_name in rec_names:
-                    signal_streams.append((well_name, well_name, well_name, ""))
+                    signal_streams.append((well_name, well_name, ""))
         else:
             raise NotImplementedError(f"This version {version} is not supported")
 
