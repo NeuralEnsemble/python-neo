@@ -17,9 +17,9 @@ class TiffIO(BaseIO):
 
     *Usage*:
         >>> from neo import io
-        >>> import quantities as pq
-        >>> r = io.TiffIO("dir_tiff",spatial_scale=1.0*pq.mm, units='V',
-        ...               sampling_rate=1.0*pq.Hz)
+        >>> import neo.units
+        >>> r = io.TiffIO("dir_tiff",spatial_scale=1.0*neo.units.mm, units='V',
+        ...               sampling_rate=1.0*neo.units.Hz)
         >>> block = r.read_block()
         read block
         creating segment
