@@ -204,6 +204,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         # This is true only in case of 'nidq' stream
         for stream_name in stream_names:
             if "nidq" in stream_name:
+             #TODO: loop over all segments to add nidq events to _events_memmap
                 info = self.signals_info_dict[0, stream_name]
                 if len(info["digital_channels"]) > 0:
                     # add event channels
@@ -292,6 +293,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         return timestamps.size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start=None, t_stop=None):
+        #TODO: fix seg_index usage, currently hardcoded for first segment
         timestamps, durations, labels = [], None, []
         info = self.signals_info_dict[0, "nidq"]  # There are no events that are not in the nidq stream
         dig_ch = info["digital_channels"]
@@ -312,17 +314,23 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     def _get_sync_events(self, stream_index, seg_index = 0):
         '''
         Find sync events in the stream.
-        For imec streams, the sync events are found in the 'SY0' channel, 
-        which should be the 6th bit in the last 'analog' channel in the stream.
+        
+        For imec streams, the sync events are found in the 6th bit 
+        of the'SY0' channel, which should be the last 'analog' channel in the stream.
+        
         For nidq streams, the sync events are found in the channel specified by the metadata fields
         'syncNiChanType' and 'syncNiChan'.
 
         Meta file descriptions taken from:
         https://billkarsh.github.io/SpikeGLX/Sgl_help/Metadata_30.html
 
-        Returns timestamps, durations, labels of rising or falling edges in these channels
+        Returns (timestamps, labels)
+         timestamps in samples of each edge
+         labels is a list of ('channel_name ON') or OFF for rising or falling edges
         '''
-
+        if stream_index > len(self.header["signal_streams"]):
+            raise ValueError("stream_index out of range")
+       
         stream_name = self.header["signal_streams"][stream_index]["name"]
         info = self.signals_info_dict[seg_index, stream_name] 
 
@@ -342,14 +350,14 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             sync_data_uint8 = sync_data.view(np.uint8)
             unpacked_sync_data = np.unpackbits(sync_data_uint8, axis=1)
             sync_line = unpacked_sync_data[:,1]
-            return self._find_events_in_channel(sync_line, channel)
-        elif 'nidq' in self.header['signal_streams'][stream_index]['name']:
+            timestamps, _, labels = self._find_events_in_channel(sync_line, channel)
+        elif 'nidq' in stream_name:
             #find channel from metafile
             meta = info['meta']
             niChanType = int(meta['syncNiChanType'])
             niChan = int(meta['syncNiChan'])
-            if niChanType == 0: #digital channel
-                return self._get_event_timestamps(0, seg_index, niChan)
+            if niChanType == 0: #digital channel          
+                timestamps, _, labels = self._get_event_timestamps(0, seg_index, niChan)
             elif niChanType == 1: #analog channel
                 niThresh = float(meta['syncNiThresh']) #volts
                 sync_line = self.get_analogsignal_chunk(channel_names = [f'XA{niChan}'],
@@ -358,12 +366,16 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                 #Does this need to be scaled by channel gain before threshold?
                 sync_line = sync_line > niThresh
                 raise NotImplementedError("Analog sync events not yet implemented")
-                return self._find_events_in_channel(sync_line, f'XA{niChan}')
+                timestamps, _, labels = self._find_events_in_channel(sync_line, f'XA{niChan}')
         else:
-            raise ValueError("Unknown stream type, cannot find sync events")
-
+            raise ValueError(f"Unknown stream type '{stream_name}', cannot find sync events")
+        return (timestamps, labels)
 
     def _find_events_in_channel(self, channel_data, channel_name):
+        '''
+        Finds rising and falling edges in channel_data and returns
+        timestamps (in samples), duration (not implemented) and label with channel_name
+        '''
 
         timestamps, durations, labels = [], None, []
 
