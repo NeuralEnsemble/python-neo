@@ -524,6 +524,7 @@ def extract_stream_info(meta_file, meta):
         # NIDQ case
         has_sync_trace = False
 
+    # This is the original name that the file had. It might not match the current name if the user changed it
     bin_file_path = meta["fileName"]
     fname = Path(bin_file_path).stem
 
