@@ -534,6 +534,7 @@ class IntanRawIO(BaseRawIO):
             output = self._demultiplex_digital_data(raw_data, channel_ids, i_start, i_stop)
         elif stream_is_stim:
             output = self._demultiplex_stim_data(raw_data, i_start, i_stop)
+            output = output[:, channel_indexes]
         else:
             output = raw_data[i_start:i_stop, channel_indexes]
 
