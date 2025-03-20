@@ -546,7 +546,7 @@ class IntanRawIO(BaseRawIO):
         
         According to the Intan format, digital input/output data is stored with all 16 channels
         encoded bit-by-bit in each 16-bit word. This method extracts the specified digital channels
-        from the packed format into separate boolean arrays.
+        from the packed format into separate uint16 arrays of 0 and 1.
         
         Parameters
         ----------
