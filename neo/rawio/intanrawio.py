@@ -620,7 +620,8 @@ class IntanRawIO(BaseRawIO):
         - Bit 16 (MSB): Compliance limit flag (1 = limit reached)
         
         The actual current value in amperes is obtained by multiplying the
-        output by the 'stim_step_size' parameter from the file header.
+        output by the 'stim_step_size' parameter from the file header. These scaled values can be 
+        obtained with the `rescale_signal_raw_to_float` function.
         """
         # Get the relevant portion of the data
         data = raw_stim_data[i_start:i_stop]
