@@ -564,7 +564,7 @@ class IntanRawIO(BaseRawIO):
         -------
         ndarray
             Demultiplexed digital data with shape (i_stop-i_start, len(channel_ids)), 
-            containing boolean values for each requested channel.
+            containing 0 or 1 values for each requested channel.
         
         Notes
         -----
