@@ -376,26 +376,12 @@ def scan_files(dirname):
     for info in info_list:
         info["seg_index"] = segment_tuple_to_segment_index[get_segment_tuple(info)]
 
-    # Probe index calculation
-    # The calculation is ordered by slot, port, dock in that order, this is the number that appears in the filename
-    # after imec when using native names (e.g. imec0, imec1, etc.)
-    def get_probe_tuple(info):
-        slot = normalize(info.get("probe_slot"))
-        port = normalize(info.get("probe_port"))
-        dock = normalize(info.get("probe_dock"))
-        return (slot, port, dock)
-
-    # TODO: handle one box case
-    info_list_imec = [info for info in info_list if info.get("device") != "nidq"]
-    unique_probe_tuples = {get_probe_tuple(info) for info in info_list_imec}
-    sorted_probe_keys = sorted(unique_probe_tuples)
-    probe_tuple_to_probe_index = {key: idx for idx, key in enumerate(sorted_probe_keys)}
 
     for info in info_list:
-        if info.get("device") == "nidq":
-            info["device_index"] = ""  # TODO: Handle multi nidq case, maybe use meta["typeNiEnabled"]
+        if info.get("device_kind") == "imec":
+            info["device_index"] = info["device"].split("imec")[-1]
         else:
-            info["device_index"] = probe_tuple_to_probe_index[get_probe_tuple(info)]
+            info["device_index"] = ""  # TODO: Handle multi nidq case, maybe use meta["typeNiEnabled"]
 
     # Define stream base on device [imec|nidq], device_index and stream_kind [ap|lf] for imec
     for info in info_list:
