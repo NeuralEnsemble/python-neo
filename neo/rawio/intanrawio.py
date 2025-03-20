@@ -443,6 +443,7 @@ class IntanRawIO(BaseRawIO):
 
         stream_name = self.header["signal_streams"][stream_index]["name"][:]
         stream_is_digital = stream_name in digital_stream_names
+        stream_is_stim = stream_name == "Stim channel"
 
         field_name = stream_name if stream_is_digital else channel_ids[0]
 
@@ -462,7 +463,18 @@ class IntanRawIO(BaseRawIO):
             sl1 = sl0 + (i_stop - i_start)
 
         # For all streams raw_data is a structured memmap with a field for each channel_id
-        if not stream_is_digital:
+        if stream_is_stim:
+            # For stim data, we need to extract the raw data first, then demultiplex it
+            stim_data = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
+            for chunk_index, channel_id in enumerate(channel_ids):
+                data_chan = self._raw_data[channel_id]
+                if multiple_samples_per_block:
+                    stim_data[:, chunk_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
+                else:
+                    stim_data[:, chunk_index] = data_chan[i_start:i_stop]
+            # Now demultiplex the stim data
+            sigs_chunk = self._demultiplex_stim_data(stim_data, 0, stim_data.shape[0])
+        elif not stream_is_digital:
             sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
 
             for chunk_index, channel_id in enumerate(channel_ids):
@@ -480,6 +492,8 @@ class IntanRawIO(BaseRawIO):
 
         stream_name = self.header["signal_streams"][stream_index]["name"][:]
         signal_data_memmap_list = self._raw_data[stream_name]
+        stream_is_stim = stream_name == "Stim channel"
+        
         channel_indexes_are_slice = isinstance(channel_indexes, slice)
         if channel_indexes_are_slice:
             num_channels = len(signal_data_memmap_list)
@@ -496,6 +510,10 @@ class IntanRawIO(BaseRawIO):
         for chunk_index, channel_index in enumerate(channel_indexes):
             channel_memmap = signal_data_memmap_list[channel_index]
             sigs_chunk[:, chunk_index] = channel_memmap[i_start:i_stop]
+            
+        # If this is stim data, we need to demultiplex it
+        if stream_is_stim:
+            sigs_chunk = self._demultiplex_stim_data(sigs_chunk, 0, sigs_chunk.shape[0])
 
         return sigs_chunk
 
@@ -505,6 +523,8 @@ class IntanRawIO(BaseRawIO):
         raw_data = self._raw_data[stream_name]
 
         stream_is_digital = stream_name in digital_stream_names
+        stream_is_stim = stream_name == "Stim channel"
+        
         if stream_is_digital:
             stream_id = self.header["signal_streams"][stream_index]["id"]
             mask = self.header["signal_channels"]["stream_id"] == stream_id
@@ -512,7 +532,8 @@ class IntanRawIO(BaseRawIO):
             channel_ids = signal_channels["id"][channel_indexes]
 
             output = self._demultiplex_digital_data(raw_data, channel_ids, i_start, i_stop)
-
+        elif stream_is_stim:
+            output = self._demultiplex_stim_data(raw_data, i_start, i_stop)
         else:
             output = raw_data[i_start:i_stop, channel_indexes]
 
@@ -530,6 +551,42 @@ class IntanRawIO(BaseRawIO):
             output[:, channel_index] = demultiplex_data[i_start:i_stop].flatten()
 
         return output
+        
+    def _demultiplex_stim_data(self, raw_stim_data, i_start, i_stop):
+        """
+        Demultiplexes the stim data stream.
+        
+        Parameters
+        ----------
+        raw_stim_data : ndarray
+            The raw stim data
+        i_start : int
+            Start index
+        i_stop : int
+            Stop index
+            
+        Returns
+        -------
+        output : ndarray
+            Demultiplexed stim data containing only the current values, preserving channel dimensions
+        """
+        # Get the relevant portion of the data
+        data = raw_stim_data[i_start:i_stop]
+        
+        # Extract current value (bits 0-8)
+        magnitude = np.bitwise_and(data, 0xFF)  # Extract lowest 8 bits
+        sign_bit = np.bitwise_and(np.right_shift(data, 8), 0x01)  # Extract 9th bit for sign
+        
+        # Apply sign to current values
+        current = np.where(sign_bit == 1, -magnitude, magnitude)
+        
+        # Note: If needed, other flag bits could be extracted as follows:
+        # compliance_flag = np.bitwise_and(np.right_shift(data, 15), 0x01).astype(bool)  # Bit 16 (MSB)
+        # charge_recovery_flag = np.bitwise_and(np.right_shift(data, 14), 0x01).astype(bool)  # Bit 15
+        # amp_settle_flag = np.bitwise_and(np.right_shift(data, 13), 0x01).astype(bool)  # Bit 14
+        # These could be returned as a structured array or dictionary if needed
+        
+        return current
 
     def get_intan_timestamps(self, i_start=None, i_stop=None):
         """
@@ -857,8 +914,8 @@ def read_rhs(filename, file_format: str):
             chan_info_stim["sampling_rate"] = sr
             # stim channel are complicated because they are coded
             # with bits, they do not fit the gain/offset rawio strategy
-            chan_info_stim["units"] = ""
-            chan_info_stim["gain"] = 1.0
+            chan_info_stim["units"] = "A"  # Amps
+            chan_info_stim["gain"] = global_info["stim_step_size"]
             chan_info_stim["offset"] = 0.0
             chan_info_stim["signal_type"] = 11  # put it in another group
             chan_info_stim["dtype"] = "uint16"
