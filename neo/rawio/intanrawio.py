@@ -16,7 +16,7 @@ See:
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
   * http://intantech.com/files/Intan_RHS2000_data_file_formats.pdf
 
-  
+
 Author: Samuel Garcia (Initial), Zach McKenzie & Heberto Mayorquin (Updates)
 
 """
