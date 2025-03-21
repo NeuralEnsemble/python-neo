@@ -462,28 +462,22 @@ class IntanRawIO(BaseRawIO):
             sl0 = i_start % block_size
             sl1 = sl0 + (i_stop - i_start)
 
-        # For all streams raw_data is a structured memmap with a field for each channel_id
-        if stream_is_stim:
-            # For stim data, we need to extract the raw data first, then demultiplex it
-            stim_data = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
+        if not stream_is_digital:
+            # For all streams raw_data is a structured memmap with a field for each channel_id        
+            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)            
             for chunk_index, channel_id in enumerate(channel_ids):
                 data_chan = self._raw_data[channel_id]
-                if multiple_samples_per_block:
-                    stim_data[:, chunk_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
-                else:
-                    stim_data[:, chunk_index] = data_chan[i_start:i_stop]
-            # Now demultiplex the stim data
-            sigs_chunk = self._decode_current_from_stim_data(stim_data, 0, stim_data.shape[0])
-        elif not stream_is_digital:
-            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
-
-            for chunk_index, channel_id in enumerate(channel_ids):
-                data_chan = self._raw_data[channel_id]
+                
                 if multiple_samples_per_block:
                     sigs_chunk[:, chunk_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
                 else:
                     sigs_chunk[:, chunk_index] = data_chan[i_start:i_stop]
-        else:  # For digital data the channels come interleaved in a single field so we need to demultiplex
+
+            if stream_is_stim:
+                sigs_chunk = self._decode_current_from_stim_data(sigs_chunk, 0, sigs_chunk.shape[0])
+
+        else: 
+             # For digital data the channels come interleaved in a single field so we need to demultiplex
             digital_raw_data = self._raw_data[field_name].flatten()
             sigs_chunk = self._demultiplex_digital_data(digital_raw_data, channel_ids, i_start, i_stop)
         return sigs_chunk
@@ -493,7 +487,7 @@ class IntanRawIO(BaseRawIO):
         stream_name = self.header["signal_streams"][stream_index]["name"][:]
         signal_data_memmap_list = self._raw_data[stream_name]
         stream_is_stim = stream_name == "Stim channel"
-        
+
         channel_indexes_are_slice = isinstance(channel_indexes, slice)
         if channel_indexes_are_slice:
             num_channels = len(signal_data_memmap_list)
@@ -510,8 +504,8 @@ class IntanRawIO(BaseRawIO):
         for chunk_index, channel_index in enumerate(channel_indexes):
             channel_memmap = signal_data_memmap_list[channel_index]
             sigs_chunk[:, chunk_index] = channel_memmap[i_start:i_stop]
-            
-        # If this is stim data, we need to demultiplex it
+
+        # If this is stim data, we need to decode the current values
         if stream_is_stim:
             sigs_chunk = self._decode_current_from_stim_data(sigs_chunk, 0, sigs_chunk.shape[0])
 
@@ -524,7 +518,7 @@ class IntanRawIO(BaseRawIO):
 
         stream_is_digital = stream_name in digital_stream_names
         stream_is_stim = stream_name == "Stim channel"
-        
+
         if stream_is_digital:
             stream_id = self.header["signal_streams"][stream_index]["id"]
             mask = self.header["signal_channels"]["stream_id"] == stream_id
@@ -543,11 +537,11 @@ class IntanRawIO(BaseRawIO):
     def _demultiplex_digital_data(self, raw_digital_data, channel_ids, i_start, i_stop):
         """
         Demultiplex digital data by extracting individual channel values from packed 16-bit format.
-        
+
         According to the Intan format, digital input/output data is stored with all 16 channels
         encoded bit-by-bit in each 16-bit word. This method extracts the specified digital channels
         from the packed format into separate uint16 arrays of 0 and 1.
-        
+
         Parameters
         ----------
         raw_digital_data : ndarray
@@ -559,19 +553,19 @@ class IntanRawIO(BaseRawIO):
             Starting sample index for demultiplexing.
         i_stop : int
             Ending sample index for demultiplexing (exclusive).
-            
+
         Returns
         -------
         ndarray
-            Demultiplexed digital data with shape (i_stop-i_start, len(channel_ids)), 
+            Demultiplexed digital data with shape (i_stop-i_start, len(channel_ids)),
             containing 0 or 1 values for each requested channel.
-        
+
         Notes
         -----
         In the Intan format, digital channels are packed into 16-bit words where each bit position
         corresponds to a specific channel number. For example, with digital inputs 0, 4, and 5
         set high and the rest low, the 16-bit word would be 2^0 + 2^4 + 2^5 = 1 + 16 + 32 = 49.
-        
+
         The native_order property for each channel corresponds to its bit position in the packed word.
         """
         dtype = np.uint16  # We fix this to match the memmap dtype
@@ -584,15 +578,15 @@ class IntanRawIO(BaseRawIO):
             output[:, channel_index] = demultiplex_data[i_start:i_stop].flatten()
 
         return output
-        
+
     def _decode_current_from_stim_data(self, raw_stim_data, i_start, i_stop):
         """
         Demultiplex stimulation data by extracting current values from packed 16-bit format.
-        
+
         According to the Intan RHS data format, stimulation current is stored in the lower 9 bits
         of each 16-bit word: 8 bits for magnitude and 1 bit for sign. The upper bits contain
         flags for compliance limit, charge recovery, and amplifier settle.
-        
+
         Parameters
         ----------
         raw_stim_data : ndarray
@@ -601,14 +595,14 @@ class IntanRawIO(BaseRawIO):
             Starting sample index for demultiplexing.
         i_stop : int
             Ending sample index for demultiplexing (exclusive).
-            
+
         Returns
         -------
         ndarray
             Demultiplexed stimulation current values in amperes, preserving the original
             array dimensions. The output values need to be multiplied by the stim_step_size
             parameter (from header) to obtain the actual current in amperes.
-        
+
         Notes
         -----
         Bit structure of each 16-bit stimulation word:
@@ -616,32 +610,32 @@ class IntanRawIO(BaseRawIO):
         - Bit 8: Sign bit (1 = negative current)
         - Bits 9-13: Unused (always zero)
         - Bit 14: Amplifier settle flag (1 = activated)
-        - Bit 15: Charge recovery flag (1 = activated) 
+        - Bit 15: Charge recovery flag (1 = activated)
         - Bit 16 (MSB): Compliance limit flag (1 = limit reached)
-        
+
         The actual current value in amperes is obtained by multiplying the
-        output by the 'stim_step_size' parameter from the file header. These scaled values can be 
+        output by the 'stim_step_size' parameter from the file header. These scaled values can be
         obtained with the `rescale_signal_raw_to_float` function.
         """
         # Get the relevant portion of the data
         data = raw_stim_data[i_start:i_stop]
-        
+
         # Extract current value (bits 0-8)
         magnitude = np.bitwise_and(data, 0xFF)
         sign_bit = np.bitwise_and(np.right_shift(data, 8), 0x01)  # Shift right by 8 bits to get the sign bit
-        
+
         # Apply sign to current values
         # We need to cast to int16 to handle negative values correctly
         # The max value of 8 bits is 255 so the casting is safe as there are non-negative values
         magnitude = magnitude.astype(np.int16)
         current = np.where(sign_bit == 1, -magnitude, magnitude)
-        
+
         # Note: If needed, other flag bits could be extracted as follows:
         # compliance_flag = np.bitwise_and(np.right_shift(data, 15), 0x01).astype(bool)  # Bit 16 (MSB)
         # charge_recovery_flag = np.bitwise_and(np.right_shift(data, 14), 0x01).astype(bool)  # Bit 15
         # amp_settle_flag = np.bitwise_and(np.right_shift(data, 13), 0x01).astype(bool)  # Bit 14
         # These could be returned as a structured array or dictionary if needed
-        
+
         return current
 
     def get_intan_timestamps(self, i_start=None, i_stop=None):
@@ -974,8 +968,12 @@ def read_rhs(filename, file_format: str):
             chan_info_stim["gain"] = global_info["stim_step_size"]
             chan_info_stim["offset"] = 0.0
             chan_info_stim["signal_type"] = 11  # put it in another group
-            chan_info_stim["dtype"] = "uint16"
+            chan_info_stim["dtype"] = "int16"
             ordered_channel_info.append(chan_info_stim)
+            
+            # Note that the data on disk is uint16 but the data is 
+            # then decoded as int16 so the chan_info is int16
+            memmap_dtype = "uint16"
             if file_format == "header-attached":
                 memmap_data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
             else:
