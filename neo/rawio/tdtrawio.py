@@ -205,7 +205,7 @@ class TdtRawIO(BaseRawIO):
         keep = info_channel_groups["TankEvType"] & EVTYPE_MASK == EVTYPE_STREAM
         missing_sev_channels = []
         for stream_index, info in enumerate(info_channel_groups[keep]):
-            stream_index = int(stream_index)  # This transforms numpy scalar to python native int  
+            stream_index = int(stream_index)  # This transforms numpy scalar to python native int
             self._sig_sample_per_chunk[stream_index] = info["NumPoints"]
 
             stream_name_bytes = info["StoreName"]
@@ -226,8 +226,12 @@ class TdtRawIO(BaseRawIO):
                     tsq = self._tsq[seg_index]
                     # Filter TSQ events to find all data chunks belonging to the current stream and channel
                     # This identifies which parts of the TEV/SEV files contain our signal data
-                    is_stream_event = (tsq["evtype"] & EVTYPE_MASK) == EVTYPE_STREAM  # Get only stream events (continuous data)
-                    matches_store_name = tsq["evname"] == stream_name_bytes  # Match the 4-char store name (e.g., 'RSn1')
+                    is_stream_event = (
+                        tsq["evtype"] & EVTYPE_MASK
+                    ) == EVTYPE_STREAM  # Get only stream events (continuous data)
+                    matches_store_name = (
+                        tsq["evname"] == stream_name_bytes
+                    )  # Match the 4-char store name (e.g., 'RSn1')
                     matches_channel = tsq["channel"] == chan_id  # Match the specific channel number
 
                     # Combine all conditions - we want events that satisfy all three criteria
