@@ -224,15 +224,18 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
                         )
 
+
+
                     # Check if ADC and non-ADC channels are contiguous
                     is_channel_adc = ["ADC" in ch["channel_name"] for ch in info["channels"]]
-                    first_adc_index = is_channel_adc.index(True) if any(is_channel_adc) else len(is_channel_adc)
-                    non_adc_channels_after_adc_channels = [not flag for flag in is_channel_adc[first_adc_index:]]
-                    if any(non_adc_channels_after_adc_channels):
-                        raise ValueError(
-                            "Interleaved ADC and non-ADC channels are not supported. "
-                            "ADC channels must be contiguous. Open an issue in python-neo to request this feature."
-                        )
+                    if any(is_channel_adc):
+                        first_adc_index = is_channel_adc.index(True)
+                        non_adc_channels_after_adc_channels = [not is_adc for is_adc in is_channel_adc[first_adc_index:]]
+                        if any(non_adc_channels_after_adc_channels):
+                            raise ValueError(
+                                "Interleaved ADC and non-ADC channels are not supported. "
+                                "ADC channels must be contiguous. Open an issue in python-neo to request this feature."
+                            )
 
                     # Find sync channel and verify it's the last channel
                     sync_index = next(
@@ -244,10 +247,12 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             "SYNC channel must be the last channel in the buffer. Open an issue in python-neo to request this feature."
                         )
 
-                    num_neural_channels = sum(1 for ch_info in info["channels"] if "ADC" not in ch_info["channel_name"])
-                    num_non_neural_channels = sum(1 for ch_info in info["channels"] if "ADC" in ch_info["channel_name"])
+                    neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
+                    adc_channels = [ch for ch in info["channels"] if "ADC" in ch["channel_name"]]
+                    num_neural_channels = len(neural_channels)
+                    num_adc_channels = len(adc_channels)
 
-                    if num_non_neural_channels == 0:
+                    if num_adc_channels == 0:
                         if has_sync_trace and not self.load_sync_channel:
                             self._stream_buffer_slice[stream_id] = slice(None, -1)
                         else:
@@ -460,10 +465,9 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
                             if has_sync_trace:
                                 values = values[:-1]
-
-                            num_neural_channels = sum(
-                                1 for ch_info in info["channels"] if "ADC" not in ch_info["channel_name"]
-                            )
+                            
+                            neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
+                            num_neural_channels = len(neural_channels)
                             if is_neural_stream:
                                 values = values[:num_neural_channels]
                             else:
