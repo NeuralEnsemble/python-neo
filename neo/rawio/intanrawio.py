@@ -631,6 +631,9 @@ class IntanRawIO(BaseRawIO):
         sign_bit = np.bitwise_and(np.right_shift(data, 8), 0x01)  # Shift right by 8 bits to get the sign bit
         
         # Apply sign to current values
+        # We need to cast to int16 to handle negative values correctly
+        # The max value of 8 bits is 255 so the casting is safe as there are non-negative values
+        magnitude = magnitude.astype(np.int16)
         current = np.where(sign_bit == 1, -magnitude, magnitude)
         
         # Note: If needed, other flag bits could be extracted as follows:
