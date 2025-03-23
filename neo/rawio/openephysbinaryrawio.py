@@ -144,12 +144,12 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     # the channel is removed from stream but not the buffer
                     stream_id = ""
 
-                if "ADC" in chan_id:  
+                if "ADC" in chan_id:
                     # These are non-neural channels and their stream should be separated
                     # We defined their stream_id as the stream_index of neural data plus the number of neural streams
                     # This is to not break backwards compatbility with the stream_id numbering
                     stream_id = str(stream_index + len(sig_stream_names))
-                    
+
                 gain = float(chan_info["bit_volts"])
                 sampling_rate = float(info["sample_rate"])
                 offset = 0.0
@@ -224,13 +224,13 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
                         )
 
-
-
                     # Check if ADC and non-ADC channels are contiguous
                     is_channel_adc = ["ADC" in ch["channel_name"] for ch in info["channels"]]
                     if any(is_channel_adc):
                         first_adc_index = is_channel_adc.index(True)
-                        non_adc_channels_after_adc_channels = [not is_adc for is_adc in is_channel_adc[first_adc_index:]]
+                        non_adc_channels_after_adc_channels = [
+                            not is_adc for is_adc in is_channel_adc[first_adc_index:]
+                        ]
                         if any(non_adc_channels_after_adc_channels):
                             raise ValueError(
                                 "Interleaved ADC and non-ADC channels are not supported. "
@@ -463,7 +463,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
                             if has_sync_trace:
                                 values = values[:-1]
-                            
+
                             neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
                             num_neural_channels = len(neural_channels)
                             if is_neural_stream:

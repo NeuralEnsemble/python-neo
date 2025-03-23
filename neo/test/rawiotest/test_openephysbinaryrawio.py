@@ -16,7 +16,7 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
         "openephysbinary/v0.6.x_neuropixels_with_sync",
         "openephysbinary/v0.6.x_neuropixels_missing_folders",
-        "openephysbinary/neural_and_non_neural_data_mixed"
+        "openephysbinary/neural_and_non_neural_data_mixed",
     ]
 
     def test_sync(self):
@@ -87,7 +87,6 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         # Check that the non-neural data stream is correctly separated
         assert len(rawio.header["signal_streams"]["name"]) == 2
         assert rawio.header["signal_streams"]["name"].tolist() == ["Rhythm_FPGA-100.0", "Rhythm_FPGA-100.0_ADC"]
-
 
 
 if __name__ == "__main__":
