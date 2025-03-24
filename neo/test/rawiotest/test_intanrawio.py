@@ -89,6 +89,7 @@ class TestIntanRawIO(
 
 
     def test_correct_decoding_of_stimulus_current(self):
+        # See https://github.com/NeuralEnsemble/python-neo/pull/1660 for discussion
         
         file_path = Path(self.get_local_path("intan/rhs_stim_data_single_file_format/intanTestFile.rhs"))
         intan_reader = IntanRawIO(filename=file_path)
@@ -116,25 +117,23 @@ class TestIntanRawIO(
         # Check that negative pulse is leading
         argmin = np.argmin(data_to_test)
         argmax = np.argmax(data_to_test)
-
         assert argmin < argmax
-
-
+        
         # Check that the negative pulse is 200 us long
         negative_pulse_frames = np.where(data_to_test > 0)[0]
         number_of_negative_frames = negative_pulse_frames.size
         duration_of_negative_pulse = number_of_negative_frames / sampling_rate
 
         expected_duration = 200 * 1e-6  # 400 microseconds / 2 
-
-        assert np.isclose(duration_of_negative_pulse, expected_duration, rtol=1e-05, atol=1e-08)
-
+        assert np.isclose(duration_of_negative_pulse, expected_duration)
+        
+        # Check that the positive pulse is 200 us long
         positive_pulse_frames = np.where(data_to_test > 0)[0]
         number_of_positive_frames = positive_pulse_frames.size
         duration_of_positive_pulse = number_of_positive_frames / sampling_rate
         expected_duration = 200 * 1e-6  # 400 microseconds / 2
 
-        assert np.isclose(duration_of_positive_pulse, expected_duration, rtol=1e-05, atol=1e-08)
+        assert np.isclose(duration_of_positive_pulse, expected_duration)
 
 
 if __name__ == "__main__":
