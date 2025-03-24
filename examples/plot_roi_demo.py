@@ -15,7 +15,7 @@ import numpy as np
 from neo.core import CircularRegionOfInterest, RectangularRegionOfInterest, PolygonRegionOfInterest, ImageSequence
 from numpy.random import rand
 import random
-import quantities as pq
+import neo.units
 
 ##################################################################
 # First we create our image_sequence. Let's generate some data
@@ -32,7 +32,7 @@ for frame in range(50):
             l[frame][y].append(random.randint(0, 50))
 
 # make an ImageSquence in Neo
-image_seq = ImageSequence(l, sampling_rate=500 * pq.Hz, spatial_scale="m", units="V")
+image_seq = ImageSequence(l, sampling_rate=500 * neo.units.Hz, spatial_scale="m", units="V")
 
 
 #################################################################

@@ -11,7 +11,7 @@ Demonstration of lazy load and proxy objects
 
 import urllib
 import neo
-import quantities as pq
+import neo.units
 import numpy as np
 
 
@@ -68,8 +68,8 @@ def apply_my_fancy_average(sig_list):
 # Let's set our limits for both cases. We will
 # use quantities to include time dimensions.
 
-lim_start = -20 * pq.ms  # 20 milliseconds before
-lim_end = +20 * pq.ms  # 20 milliseconds after
+lim_start = -20 * neo.units.ms  # 20 milliseconds before
+lim_end = +20 * neo.units.ms  # 20 milliseconds after
 
 ##################################################
 # We start with eager (where `lazy=False`.) Everything
