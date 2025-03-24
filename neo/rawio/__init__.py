@@ -117,7 +117,7 @@ Classes:
 
 .. autoclass:: neo.rawio.NeuroNexusRawIO
 
-    .. autoattributes:: extensions
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.NeuroScopeRawIO
 

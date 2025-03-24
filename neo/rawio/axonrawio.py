@@ -23,7 +23,7 @@ https://swharden.com/pyabf/abf2-file-format/
 strings section:
 [uModifierNameIndex, uCreatorNameIndex, uProtocolPathIndex, lFileComment, lADCCChannelNames, lADCUnitsIndex
 lDACChannelNameIndex, lDACUnitIndex, lDACFilePath, nLeakSubtractADC]
-['', 'Clampex', '', 'C:/path/protocol.pro', 'some comment', 'IN 0', 'mV', 'IN 1', 'mV', 'Cmd 0', 'pA', 
+['', 'Clampex', '', 'C:/path/protocol.pro', 'some comment', 'IN 0', 'mV', 'IN 1', 'mV', 'Cmd 0', 'pA',
 'Cmd 1', 'pA', 'Cmd 2', 'mV', 'Cmd 3', 'mV']
 
 Information on abf 1 and 2 formats is available here:

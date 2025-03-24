@@ -103,7 +103,7 @@ class IrregularlySampledSignal(BaseSignal):
         The filesystem path or url of the orginal data
     array_annotations: dict | None, default: None
         Dict mapping strings to numpy arrays containing annotations for all data points
-    **annotations: dict
+    annotations: dict
         Optional additional metadata supplied by the user as a dict. Will be stored in
         the annotations attribute of the object
 
@@ -174,7 +174,10 @@ class IrregularlySampledSignal(BaseSignal):
 
         if copy is not None:
             raise ValueError(
-                "`copy` is now deprecated in Neo due to removal in NumPy 2.0 and will be removed in 0.15.0."
+                "`copy` is now deprecated in Neo due to removal in Quantites to support Numpy 2.0. "
+                "In order to facilitate the deprecation copy can be set to None but will raise an "
+                "error if set to True/False since this will silently do nothing. This argument will be completely "
+                "removed in Neo 0.15.0. Please update your code base as necessary."
             )
 
         signal = cls._rescale(signal, units=units)

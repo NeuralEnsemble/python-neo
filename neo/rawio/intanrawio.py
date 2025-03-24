@@ -11,9 +11,11 @@ RHD supported version  1.0 1.1 1.2 1.3 2.0 3.0, 3.1
 RHD headerless binary support 3.x
 RHS headerless binary support 3.x
 
+
 See:
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
   * http://intantech.com/files/Intan_RHS2000_data_file_formats.pdf
+
 
 Author: Samuel Garcia (Initial), Zach McKenzie & Heberto Mayorquin (Updates)
 
@@ -50,23 +52,25 @@ class IntanRawIO(BaseRawIO):
         check we perform is that timestamps are continuous. Setting this to True will ignore this check and set
         the attribute `discontinuous_timestamps` to True if the timestamps are not continous. This attribute can be checked
         after parsing the header to see if the timestamps are continuous or not.
+
     Notes
     -----
     * The Intan reader can handle two file formats 'rhd' and 'rhs'. It will automatically
-    check for the file extension and will gather the header information based on the
-    extension. Additionally it functions with RHS v 1.0 and v 3.x and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
-    3.x files.
+      check for the file extension and will gather the header information based on the
+      extension. Additionally it functions with RHS v 1.0 and v 3.x and RHD 1.0, 1.1, 1.2, 1.3, 2.0,
+      3.x files.
 
     * The Intan reader can also handle the headerless binary formats 'one-file-per-signal' and
-    'one-file-per-channel' which have a header file called 'info.rhd' or 'info.rhs' and a series
-    of binary files with the '.dat' suffix
+      'one-file-per-channel' which have a header file called 'info.rhd' or 'info.rhs' and a series
+      of binary files with the '.dat' suffix
 
     * The reader can handle three file formats 'header-attached', 'one-file-per-signal' and
-    'one-file-per-channel'.
+      'one-file-per-channel'.
 
     * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
-    depending on the port in which they were recorded along with the following
-    additional streams.
+      depending on the port in which they were recorded along with the following
+      additional streams.
+
     0: 'RHD2000' amplifier channel
     1: 'RHD2000 auxiliary input channel',
     2: 'RHD2000 supply voltage channel',
@@ -85,8 +89,9 @@ class IntanRawIO(BaseRawIO):
     11: 'Stim channel',
 
     * For the "header-attached" and "one-file-per-signal" formats, the structure of the digital input and output channels is
-    one long vector, which must be post-processed to extract individual digital channel information.
-    See the intantech website for more information on performing this post-processing.
+      one long vector, which must be post-processed to extract individual digital channel information.
+      See the intantech website for more information on performing this post-processing.
+
 
     Examples
     --------
@@ -526,6 +531,57 @@ class IntanRawIO(BaseRawIO):
 
         return output
 
+    def get_intan_timestamps(self, i_start=None, i_stop=None):
+        """
+        Retrieves the sample indices from the Intan raw data within a specified range.
+
+        Note that sample indices are called timestamps in the Intan format but they are
+        in fact just sample indices. This function extracts the sample index timestamps
+        from Intan files, which represent  relative time points in sample units (not absolute time).
+        These indices can be  particularly useful when working with recordings that have discontinuities.
+
+        Parameters
+        ----------
+        i_start : int, optional
+            The starting index from which to retrieve sample indices. If None, starts from 0.
+        i_stop : int, optional
+            The stopping index up to which to retrieve sample indices (exclusive).
+            If None, retrieves all available indices from i_start onward.
+
+        Returns
+        -------
+        timestamps : ndarray
+            The flattened array of sample indices within the specified range.
+
+        Notes
+        -----
+        - Sample indices can be converted to seconds by dividing by the sampling rate of the amplifier stream.
+        - The function automatically handles different file formats:
+        * header-attached: Timestamps are extracted directly from the timestamp field
+        * one-file-per-signal: Timestamps are read from the timestamp stream
+        * one-file-per-channel: Timestamps are read from the first channel in the timestamp stream
+        - When recordings have discontinuities (indicated by the `discontinuous_timestamps`
+        attribute being True), these indices allow for proper temporal alignment of the data.
+        """
+        if i_start is None:
+            i_start = 0
+
+        # Get the timestamps based on file format
+        if self.file_format == "header-attached":
+            timestamps = self._raw_data["timestamp"]
+        elif self.file_format == "one-file-per-signal":
+            timestamps = self._raw_data["timestamp"]
+        elif self.file_format == "one-file-per-channel":
+            timestamps = self._raw_data["timestamp"][0]
+
+        # TODO if possible ensure that timestamps memmaps are always of correct shape to avoid memory copy here.
+        timestamps = timestamps.flatten() if timestamps.ndim > 1 else timestamps
+
+        if i_stop is None:
+            return timestamps[i_start:]
+        else:
+            return timestamps[i_start:i_stop]
+
     def _assert_timestamp_continuity(self):
         """
         Asserts the continuity of timestamps in the data.
@@ -540,26 +596,11 @@ class IntanRawIO(BaseRawIO):
         NeoReadWriteError
             If timestamps are not continuous and `ignore_integrity_checks` is False.
             The error message includes a table detailing the discontinuities found.
-
-        Notes
-        -----
-        The method extracts timestamps from the raw data based on the file format:
-
-        * **header-attached:** Timestamps are extracted from a 'timestamp' field in the raw data.
-        * **one-file-per-signal:** Timestamps are taken from the last stream.
-        * **one-file-per-channel:** Timestamps are retrieved from the first channel of the last stream.
         """
         # check timestamp continuity
-        if self.file_format == "header-attached":
-            timestamp = self._raw_data["timestamp"].flatten()
+        timestamps = self.get_intan_timestamps()
 
-        # timestamps are always last stream for headerless binary files
-        elif self.file_format == "one-file-per-signal":
-            timestamp = self._raw_data["timestamp"]
-        elif self.file_format == "one-file-per-channel":
-            timestamp = self._raw_data["timestamp"][0]
-
-        discontinuous_timestamps = np.diff(timestamp) != 1
+        discontinuous_timestamps = np.diff(timestamps) != 1
         timestamps_are_not_contiguous = np.any(discontinuous_timestamps)
         if timestamps_are_not_contiguous:
             # Mark a flag that can be checked after parsing the header to see if the timestamps are continuous or not
@@ -577,8 +618,8 @@ class IntanRawIO(BaseRawIO):
 
                 amplifier_sampling_rate = self._global_info["sampling_rate"]
                 for discontinuity_index in np.where(discontinuous_timestamps)[0]:
-                    prev_ts = timestamp[discontinuity_index]
-                    next_ts = timestamp[discontinuity_index + 1]
+                    prev_ts = timestamps[discontinuity_index]
+                    next_ts = timestamps[discontinuity_index + 1]
                     time_diff = (next_ts - prev_ts) / amplifier_sampling_rate
 
                     error_msg += (

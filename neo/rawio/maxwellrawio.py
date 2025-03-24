@@ -46,7 +46,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
     ----------
 
     filename: str, default: ''
-        The *.h5 file to be loaded
+        The .h5 file to be loaded
     rec_name: str | None, default: None
         If the file has multiple recordings, specify the one to read.
         For 24-well plates, the rec_name needs to be specified since different well
@@ -78,7 +78,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
         signal_streams = []
         if int(version) == 20160704:
             self._old_format = True
-            signal_streams.append(("well000", "well000"))
+            signal_streams.append(("well000", "well000", "well000"))
         elif int(version) > 20160704:
             # multi stream stream (one well is one stream)
             self._old_format = False

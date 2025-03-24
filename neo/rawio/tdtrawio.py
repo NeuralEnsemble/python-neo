@@ -205,16 +205,18 @@ class TdtRawIO(BaseRawIO):
         keep = info_channel_groups["TankEvType"] & EVTYPE_MASK == EVTYPE_STREAM
         missing_sev_channels = []
         for stream_index, info in enumerate(info_channel_groups[keep]):
+            stream_index = int(stream_index)  # This transforms numpy scalar to python native int
             self._sig_sample_per_chunk[stream_index] = info["NumPoints"]
 
-            stream_name = str(info["StoreName"])
+            stream_name_bytes = info["StoreName"]
+            stream_name = info["StoreName"].decode("utf-8")
             stream_id = f"{stream_index}"
             buffer_id = ""
             signal_streams.append((stream_name, stream_id, buffer_id))
 
-            for c in range(info["NumChan"]):
+            for channel_index in range(info["NumChan"]):
                 global_chan_index = len(signal_channels)
-                chan_id = c + 1  # several StoreName can have same chan_id: this is ok
+                chan_id = channel_index + 1
 
                 # loop over segment to get sampling_rate/data_index/data_buffer
                 sampling_rate = None
@@ -222,11 +224,18 @@ class TdtRawIO(BaseRawIO):
                 for seg_index, segment_name in enumerate(segment_names):
                     # get data index
                     tsq = self._tsq[seg_index]
-                    mask = (
-                        (tsq["evtype"] & EVTYPE_MASK == EVTYPE_STREAM)
-                        & (tsq["evname"] == info["StoreName"])
-                        & (tsq["channel"] == chan_id)
-                    )
+                    # Filter TSQ events to find all data chunks belonging to the current stream and channel
+                    # This identifies which parts of the TEV/SEV files contain our signal data
+                    is_stream_event = (
+                        tsq["evtype"] & EVTYPE_MASK
+                    ) == EVTYPE_STREAM  # Get only stream events (continuous data)
+                    matches_store_name = (
+                        tsq["evname"] == stream_name_bytes
+                    )  # Match the 4-char store name (e.g., 'RSn1')
+                    matches_channel = tsq["channel"] == chan_id  # Match the specific channel number
+
+                    # Combine all conditions - we want events that satisfy all three criteria
+                    mask = is_stream_event & matches_store_name & matches_channel
                     data_index = tsq[mask].copy()
                     self._sigs_index[seg_index][global_chan_index] = data_index
 
@@ -252,11 +261,11 @@ class TdtRawIO(BaseRawIO):
                     # sampling_rate and dtype
                     if len(data_index):
                         _sampling_rate = float(data_index["frequency"][0])
-                        _dtype = data_formats[data_index["dataformat"][0]]
+                        _dtype = data_formats_map[data_index["dataformat"][0]]
                     else:
                         # if no signal present use dummy values
                         _sampling_rate = 1.0
-                        _dtype = int
+                        _dtype = "int"
                     if sampling_rate is None:
                         sampling_rate = _sampling_rate
                         dtype = _dtype
@@ -277,17 +286,15 @@ class TdtRawIO(BaseRawIO):
                     # path = self.dirname / segment_name
                     if self.tdt_block_mode == "multi":
                         # for multi block datasets the names of sev files are fixed
-                        store = info["StoreName"].decode("ascii")
-                        sev_stem = f"{tankname}_{segment_name}_{store}_ch{chan_id}"
+                        sev_stem = f"{tankname}_{segment_name}_{stream_name}_ch{chan_id}"
                         sev_filename = (path / sev_stem).with_suffix(".sev")
                     else:
-                        # for single block datasets the exact name of sev files in not known
+                        # for single block datasets the exact name of sev files is not known
                         sev_regex = f"*_[cC]h{chan_id}.sev"
                         sev_filename = list(self.dirname.parent.glob(str(sev_regex)))
                         # in case multiple sev files are found, try to find the one for current stream
                         if len(sev_filename) > 1:
-                            store = info["StoreName"].decode("ascii")
-                            sev_regex = f"*_{store}_Ch{chan_id}.sev"
+                            sev_regex = f"*_{stream_name}_Ch{chan_id}.sev"
                             sev_filename = list(self.dirname.parent.glob(str(sev_regex)))
 
                         # in case non or multiple sev files are found for current stream + channel
@@ -305,14 +312,14 @@ class TdtRawIO(BaseRawIO):
                         raise NeoReadWriteError("no TEV nor SEV data to read")
                     self._sigs_data_buf[seg_index][global_chan_index] = data
 
-                chan_name = f"{info['StoreName']} {c + 1}"
+                channel_name = f"{stream_name} {channel_index + 1}"
                 sampling_rate = sampling_rate
                 units = "uV"  # see https://github.com/NeuralEnsemble/python-neo/issues/1369
                 gain = 1.0
                 offset = 0.0
                 buffer_id = ""
                 signal_channels.append(
-                    (chan_name, str(chan_id), sampling_rate, dtype, units, gain, offset, stream_id, buffer_id)
+                    (channel_name, str(chan_id), sampling_rate, dtype, units, gain, offset, stream_id, buffer_id)
                 )
 
         if missing_sev_channels:
@@ -354,7 +361,7 @@ class TdtRawIO(BaseRawIO):
                     )
 
                     self._waveforms_size.append(info["NumPoints"])
-                    self._waveforms_dtype.append(np.dtype(data_formats[info["DataFormat"]]))
+                    self._waveforms_dtype.append(np.dtype(data_formats_map[info["DataFormat"]]))
 
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
 
@@ -417,13 +424,13 @@ class TdtRawIO(BaseRawIO):
         global_chan_indexes = global_chan_indexes[channel_indexes]
         signal_channels = signal_channels[channel_indexes]
 
-        dt = self._sig_dtype_by_group[stream_index]
-        raw_signals = np.zeros((i_stop - i_start, signal_channels.size), dtype=dt)
+        dtype = self._sig_dtype_by_group[stream_index]
+        raw_signals = np.zeros((i_stop - i_start, signal_channels.size), dtype=dtype)
 
         sample_per_chunk = self._sig_sample_per_chunk[stream_index]
         bl0 = i_start // sample_per_chunk
         bl1 = int(np.ceil(i_stop / sample_per_chunk))
-        chunk_nb_bytes = sample_per_chunk * dt.itemsize
+        chunk_nb_bytes = sample_per_chunk * dtype.itemsize
 
         for c, global_index in enumerate(global_chan_indexes):
             data_index = self._sigs_index[seg_index][global_index]
@@ -434,7 +441,7 @@ class TdtRawIO(BaseRawIO):
             for bl in range(bl0, bl1):
                 ind0 = data_index[bl]["offset"]
                 ind1 = ind0 + chunk_nb_bytes
-                data = data_buf[ind0:ind1].view(dt)
+                data = data_buf[ind0:ind1].view(dtype)
 
                 if bl == bl1 - 1:
                     # right border
@@ -620,7 +627,7 @@ EVTYPE_INVALID_MASK = int("FFFF0000", 16)  # 4294901760
 EVMARK_STARTBLOCK = int("0001", 16)  # 1
 EVMARK_STOPBLOCK = int("0002", 16)  # 2
 
-data_formats = {
+data_formats_map = {
     0: "float32",
     1: "int32",
     2: "int16",

@@ -1,6 +1,6 @@
 [project]
 name = "neo"
-version = "0.14.0.dev0"
+version = "0.15.0.dev0"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3 :: Only",
 ]
 
@@ -48,7 +49,7 @@ test = [
     # "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
     "pytest",
     "pytest-cov",
-    # datalad   # this dependency is covered by conda (environment_testing.yml)
+    # datalad   # this dependency is covered by conda (environment_testing.yml)-- maybe moving straight to ci
     "scipy>=1.0.0",
     "pyedflib",
     "h5py",
@@ -81,7 +82,7 @@ docs = [
     "nixio",
     "pynwb",
     "igor2",
-    "numpy<2.0" # https://github.com/NeuralEnsemble/python-neo/pull/1612
+    "numpy>=2.0"
 ]
 
 dev = [

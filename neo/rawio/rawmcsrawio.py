@@ -34,7 +34,7 @@ class RawMCSRawIO(BaseRawWithBufferApiIO):
     Parameters
     ----------
     filename: str, default: ''
-        The *.raw MCS file to be loaded
+        The .raw MCS file to be loaded
 
     """
 
