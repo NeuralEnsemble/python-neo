@@ -21,6 +21,7 @@ class TestIntanRawIO(
         "intan/intan_fpc_rhs_test_240329_091637/info.rhs",  # Format one-file-per-channel
         "intan/intan_fps_rhs_test_240329_091536/info.rhs",  # Format one-file-per-signal
         "intan/rhd_fpc_multistim_240514_082044/info.rhd",  # Multiple digital channels one-file-per-channel rhd
+        "intan/rhs_stim_data_single_file_format/intanTestFile.rhs", # header-attached rhs data with stimulus current 
     ]
 
     def test_annotations(self):
@@ -85,6 +86,55 @@ class TestIntanRawIO(
             data_raw = np.fromfile(amplifier_file_path, dtype=np.int16).squeeze()
             data_from_neo = intan_reader.get_analogsignal_chunk(channel_ids=[channel_name], stream_index=0).squeeze()
             np.testing.assert_allclose(data_raw, data_from_neo)
+
+
+    def test_correct_decoding_of_stimulus_current(self):
+        
+        file_path = Path(self.get_local_path("intan/rhs_stim_data_single_file_format/intanTestFile.rhs"))
+        intan_reader = IntanRawIO(filename=file_path)
+        intan_reader.parse_header()
+        
+        signal_streams = intan_reader.header['signal_streams']
+        stream_ids = signal_streams['id'].tolist()
+        stream_index = stream_ids.index('11')
+        sampling_rate = intan_reader.get_signal_sampling_rate(stream_index=stream_index)
+        sig_chunk = intan_reader.get_analogsignal_chunk(stream_index=stream_index, channel_ids=["D-016_STIM"])
+        final_stim = intan_reader.rescale_signal_raw_to_float(sig_chunk, stream_index=stream_index, channel_ids=["D-016_STIM"])
+
+        # This contains only the first pulse and I got this by visual inspection
+        data_to_test = final_stim[200:250]
+        
+        positive_pulse_size = np.max(data_to_test).item()
+        negative_pulse_size = np.min(data_to_test).item()
+
+        expected_value = 60 * 1e-6# 60 microamperes
+
+        # Assert is close float
+        assert np.isclose(positive_pulse_size, expected_value)
+        assert np.isclose(negative_pulse_size, -expected_value)
+
+        # Check that negative pulse is leading
+        argmin = np.argmin(data_to_test)
+        argmax = np.argmax(data_to_test)
+
+        assert argmin < argmax
+
+
+        # Check that the negative pulse is 200 us long
+        negative_pulse_frames = np.where(data_to_test > 0)[0]
+        number_of_negative_frames = negative_pulse_frames.size
+        duration_of_negative_pulse = number_of_negative_frames / sampling_rate
+
+        expected_duration = 200 * 1e-6  # 400 microseconds / 2 
+
+        assert np.isclose(duration_of_negative_pulse, expected_duration, rtol=1e-05, atol=1e-08)
+
+        positive_pulse_frames = np.where(data_to_test > 0)[0]
+        number_of_positive_frames = positive_pulse_frames.size
+        duration_of_positive_pulse = number_of_positive_frames / sampling_rate
+        expected_duration = 200 * 1e-6  # 400 microseconds / 2
+
+        assert np.isclose(duration_of_positive_pulse, expected_duration, rtol=1e-05, atol=1e-08)
 
 
 if __name__ == "__main__":
