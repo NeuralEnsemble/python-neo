@@ -19,7 +19,7 @@ class TestSpikeGadgetsRawIO(
 
 class TestSpikeGadgetsRawIOHeaderOnly(unittest.TestCase):
     def setUp(self):
-        filename = "/Volumes/T7/CatalystNeuro/Jadhav/stubbed_files/SL18_D19_S01_F01_BOX_SLP_20230503_112642_stubbed.rec"
+        filename = "spikegadgets/SL18_D19_S01_F01_BOX_SLP_20230503_112642_stubbed.rec"
         self.rawio = SpikeGadgetsRawIO(filename=filename)
     
     def test_parse_header(self):
