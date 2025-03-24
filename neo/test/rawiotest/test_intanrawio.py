@@ -90,6 +90,8 @@ class TestIntanRawIO(
 
     def test_correct_decoding_of_stimulus_current(self):
         # See https://github.com/NeuralEnsemble/python-neo/pull/1660 for discussion
+        # See https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/intan/README.md#rhs_stim_data_single_file_format 
+        # For a description of the data 
         
         file_path = Path(self.get_local_path("intan/rhs_stim_data_single_file_format/intanTestFile.rhs"))
         intan_reader = IntanRawIO(filename=file_path)
