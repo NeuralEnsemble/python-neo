@@ -27,6 +27,8 @@ import itertools
 from uuid import uuid4
 import warnings
 from packaging.version import Version
+import importlib.util
+import importlib.metadata
 
 import quantities as pq
 import numpy as np
@@ -122,17 +124,15 @@ def dt_from_nix(nixdt, annotype):
 
 
 def check_nix_version():
-    try:
-        import nixio
-    except ImportError:
-        raise Exception(
+    nixio_spec = importlib.util.find_spec("nixio")
+    if nixio_spec is None:
+        raise ImportError(
             "Failed to import NIX. "
             "The NixIO requires the Python package for NIX "
             "(nixio on PyPi). Try `pip install nixio`."
         )
 
-    # nixio version numbers have a 'v' prefix which breaks the comparison
-    nixverstr = nixio.__version__.lstrip("v")
+    nixverstr = importlib.metadata.version("nixio")
     try:
         nixver = Version(nixverstr)
     except ValueError:
