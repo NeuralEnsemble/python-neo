@@ -1,5 +1,4 @@
 """
-
 Support for intan tech rhd and rhs files.
 
 These 2 formats are more or less the same but:
