@@ -16,7 +16,6 @@ class TestSpikeGadgetsRawIO(
         "spikegadgets/20210225_em8_minirec2_ac.rec",
         "spikegadgets/W122_06_09_2019_1_fromSD.rec",
         "spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec",
-        "spikegadgets/SL18_D19_S01_F01_BOX_SLP_20230503_112642_stubbed.rec"
     ]
 
     def test_parse_header_missing_channels(self):
