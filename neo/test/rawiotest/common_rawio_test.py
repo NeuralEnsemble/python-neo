@@ -33,7 +33,9 @@ if datalad_spec is not None:
     HAVE_DATALAD = True
 else:
     HAVE_DATALAD = False
-    warnings.warn("datalad failure")
+    # pytest skip doesn't explain why we are skipping. 
+    # warnings are easy to skip for users that don't want to have to read them.
+    warnings.warn("datalad failure. Please see installation instructions to run io-testing")
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
 repo_for_test = default_testing_repo

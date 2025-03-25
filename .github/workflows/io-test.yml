@@ -81,6 +81,7 @@ jobs:
         # conda env update --name neo-test-env-${{ matrix.python-version }} --file environment_testing.yml --prune
 
       - name: Install git-annex
+        # this is the trick from the spikeinterface repo for getting git-annex to work with datalad
         shell: bash
         run: |
           pip install datalad-installer
