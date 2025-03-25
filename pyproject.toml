@@ -36,7 +36,7 @@ download = "http://pypi.python.org/pypi/neo"
 
 
 [build-system]
-requires = ["setuptools>=62.0"]
+requires = ["setuptools>=78.0.2"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
