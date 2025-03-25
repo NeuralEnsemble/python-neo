@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from neo.rawio.spikegadgetsrawio import SpikeGadgetsRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -15,17 +16,17 @@ class TestSpikeGadgetsRawIO(
         "spikegadgets/20210225_em8_minirec2_ac.rec",
         "spikegadgets/W122_06_09_2019_1_fromSD.rec",
         "spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec",
+        "spikegadgets/SL18_D19_S01_F01_BOX_SLP_20230503_112642_stubbed.rec"
     ]
 
-class TestSpikeGadgetsRawIOHeaderOnly(unittest.TestCase):
-    def setUp(self):
-        filename = "spikegadgets/SL18_D19_S01_F01_BOX_SLP_20230503_112642_stubbed.rec"
-        self.rawio = SpikeGadgetsRawIO(filename=filename)
-    
-    def test_parse_header(self):
-        self.rawio.parse_header()
+    def test_parse_header_missing_channels(self):
+
+        file_path = Path(self.get_local_path("spikegadgets/SL18_D19_S01_F01_BOX_SLP_20230503_112642_stubbed.rec"))
+        reader = SpikeGadgetsRawIO(filename = file_path)
+        reader.parse_header()
+
         assert_array_equal(
-            self.rawio.header['signal_channels']['id'],
+            reader.header['signal_channels']['id'],
             [
                 'ECU_Ain1', 'ECU_Ain2', 'ECU_Ain3', 'ECU_Ain4', 'ECU_Ain5', 'ECU_Ain6',
                 'ECU_Ain7', 'ECU_Ain8', 'ECU_Aout1', 'ECU_Aout2', 'ECU_Aout3', 'ECU_Aout4', '0',
@@ -49,6 +50,3 @@ class TestSpikeGadgetsRawIOHeaderOnly(unittest.TestCase):
                 '255',
             ]
         )
-
-if __name__ == "__main__":
-    unittest.main()
