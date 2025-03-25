@@ -76,7 +76,7 @@ jobs:
         # restore-key hits should result in `cache-hit` == 'false'
         #if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
-          conda install pip numpy=${{ matrix.numpy-version }} -c conda-forge
+          conda install datalad pip numpy=${{ matrix.numpy-version }} -c conda-forge
         # this command is for updating cache. We are resting removal.
         # conda env update --name neo-test-env-${{ matrix.python-version }} --file environment_testing.yml --prune
 
@@ -85,20 +85,6 @@ jobs:
           git config --global user.email "neo_ci@fake_mail.com"
           git config --global user.name "neo CI"
 
-      - name: Install git-annex
-        shell: bash
-        run: |
-          pip install datalad-installer
-          wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
-          mkdir /home/runner/work/installation
-          mv git-annex-standalone-amd64.tar.gz /home/runner/work/installation/
-          workdir=$(pwd)
-          cd /home/runner/work/installation
-          tar xvzf git-annex-standalone-amd64.tar.gz
-          echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
-          cd $workdir
-          git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
-          
       - name: Python version
         run: |
           which python
