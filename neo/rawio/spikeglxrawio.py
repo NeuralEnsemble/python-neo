@@ -378,13 +378,14 @@ def scan_files(dirname):
 
 
     for info in info_list:
-        # we have two main device types `imec` and `nidq` that the user has control of enabling
+        # device_kind is imec, nidq
         if info.get("device_kind") == "imec":
             info["device_index"] = info["device"].split("imec")[-1]
         else:
             info["device_index"] = ""  # TODO: Handle multi nidq case, maybe use meta["typeNiEnabled"]
 
-    # Define stream base on device [imec|nidq], device_index and stream_kind [ap|lf] for imec
+    # Define stream base on device_kind [imec|nidq], device_index and stream_kind [ap|lf] for imec
+    # Stream format is "{device_kind}{device_index}.{stream_kind}"
     for info in info_list:
         device_kind = info["device_kind"]
         device_index = info["device_index"]
