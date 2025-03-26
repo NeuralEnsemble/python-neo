@@ -129,7 +129,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         # signals zone
         # create signals channel map: several channel per stream
         signal_channels = []
-        sync_stream_id_to_buffer = {}
+        sync_stream_id_to_buffer_id = {}
         for stream_index, stream_name in enumerate(sig_stream_names):
             # stream_index is the index in vector stream names
             stream_id = str(stream_index)
@@ -149,7 +149,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 if "SYNC" in chan_id and not self.load_sync_channel:
                     # Every stream sync channel is added as its own stream
                     stream_id = chan_id
-                    sync_stream_id_to_buffer[stream_id] = buffer_id
+                    sync_stream_id_to_buffer_id[stream_id] = buffer_id
 
                 if "ADC" in chan_id:
                     # These are non-neural channels and their stream should be separated
@@ -182,13 +182,16 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
         unique_streams_ids = np.unique(signal_channels["stream_id"])
         
+        # This is getting too complicated, we probably should just have a table which would be easier to read
+        # And for users to understand
         for stream_id in unique_streams_ids:
             
             # Handle sync channel on a special way
             if "SYNC" in stream_id:
                 # This is a sync channel and should not be added to the signal streams
-                sync_stream_buffer = sync_stream_id_to_buffer[stream_id]
-                signal_streams.append((stream_id, stream_id, sync_stream_buffer))
+                buffer_id = sync_stream_id_to_buffer_id[stream_id]
+                stream_name = stream_id
+                signal_streams.append((stream_name, stream_id, buffer_id))
                 continue
             
             # Neural signal
