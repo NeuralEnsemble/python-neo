@@ -276,7 +276,10 @@ class BlackrockRawIO(BaseRawIO):
             self.internal_unit_ids = []  # pair of chan['packet_id'], spikes['unit_class_nb']
             for i in range(len(self.__nev_ext_header[b"NEUEVWAV"])):
 
-                channel_id = self.__nev_ext_header[b"NEUEVWAV"]["electrode_id"][i]
+                # electrode_id values are stored at uint16 which can be overflowed when 
+                # multiplying by 1000 below. We convert to a regular pyton into which 
+                # won't overflow
+                channel_id = int(self.__nev_ext_header[b"NEUEVWAV"]["electrode_id"][i])
 
                 chan_mask = spikes["packet_id"] == channel_id
                 chan_spikes = spikes[chan_mask]
