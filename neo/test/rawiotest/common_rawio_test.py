@@ -21,6 +21,7 @@ import logging
 import unittest
 import importlib.util
 import warnings
+import os
 
 from neo.utils.datasets import download_dataset, get_local_testing_data_folder, default_testing_repo
 
@@ -34,8 +35,11 @@ if datalad_spec is not None:
 else:
     HAVE_DATALAD = False
     # pytest skip doesn't explain why we are skipping. 
-    # warnings are easy to skip for users that don't want to have to read them.
-    warnings.warn("datalad failure. Please see installation instructions to run io-testing")
+    # raise error if in CI to prevent tests from spuriously skipping and appearing
+    # as passing.
+    if os.environ.get("GITHUB_ACTIONS") == 'true':
+        raise RuntimeError("Datalad is required for running the CI.")
+    
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
 repo_for_test = default_testing_repo
