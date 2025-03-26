@@ -283,8 +283,12 @@ class BlackrockRawIO(BaseRawIO):
 
                 chan_mask = spikes["packet_id"] == channel_id
                 chan_spikes = spikes[chan_mask]
+
+                # all `unit_class_nb` is uint8. Also will have issues with overflow
+                # cast this to python int
                 all_unit_id = np.unique(chan_spikes["unit_class_nb"])
                 for u, unit_id in enumerate(all_unit_id):
+                    unit_id = int(unit_id)
                     self.internal_unit_ids.append((channel_id, unit_id))
                     name = f"ch{channel_id}#{unit_id}"
                     _id = f"Unit {1000 * channel_id + unit_id}"
