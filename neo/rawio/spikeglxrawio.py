@@ -378,6 +378,7 @@ def scan_files(dirname):
 
 
     for info in info_list:
+        # we have two main device types `imec` and `nidq` that the user has control of enabling
         if info.get("device_kind") == "imec":
             info["device_index"] = info["device"].split("imec")[-1]
         else:
