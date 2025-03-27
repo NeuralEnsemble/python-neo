@@ -392,7 +392,7 @@ def decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames):
 
     return data
 
-def generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames): #, std=None):
+def generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames):
     # Source: Documentation by 3Brain
     # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/biocam/documentation_brw_4.x_bxr_3.x_bcmp_1.x_in_brainwave_5.x_v1.1.3.pdf
     # collect the TOCs
@@ -418,10 +418,8 @@ def generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames): #, std
     # obtain the noise info at the start position
     noise_ch_idx = rf[well_ID]["NoiseChIdxs"][noise_start_pos:noise_end_pos]
     noise_mean = rf[well_ID]["NoiseMean"][noise_start_pos:noise_end_pos]
-    # if std is None:
     noise_std = rf[well_ID]["NoiseStdDev"][noise_start_pos:noise_end_pos]
-    # else:
-    #     noise_std = np.repeat(std, noise_end_pos - noise_start_pos)
+
     noise_length = noise_end_pos - noise_start_pos
     noise_info = {}
     mean_collection = []
