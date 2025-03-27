@@ -969,7 +969,7 @@ def read_rhs(filename, file_format: str):
     # based on what Heberto and I read in the docs
     for chan_info in stream_name_to_channel_info_list["RHS2000 amplifier channel"]:
         # we see which stim were activated
-        if file_format == "header-attached" or any(
+        if file_format != "one-file-per-channel" or any(
             [chan_info["native_channel_name"] in stim_file.stem for stim_file in raw_file_paths_dict["Stim channel"]]
         ):
             chan_info_stim = dict(chan_info)
