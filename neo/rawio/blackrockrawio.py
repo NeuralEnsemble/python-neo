@@ -979,7 +979,7 @@ class BlackrockRawIO(BaseRawIO):
             # use of `int` avoids overflow problem
             data_size = int(dh["nb_data_points"]) * int(self.__nsx_basic_header[nsx_nb]["channel_count"]) * 2
             # define new offset (to possible next data block)
-            offset = data_header[index]["offset_to_data_block"] + data_size
+            offset = int(data_header[index]["offset_to_data_block"]) + data_size
 
             index += 1
 
