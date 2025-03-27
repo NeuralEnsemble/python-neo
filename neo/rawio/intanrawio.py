@@ -906,6 +906,7 @@ def read_rhs(filename, file_format: str):
         channel_number_dict["DC Amplifier channel"] = channel_number_dict["RHS2000 amplifier channel"]
         if file_format != "one-file-per-channel":
             channel_number_dict["Stim channel"] = channel_number_dict["RHS2000 amplifier channel"]
+            raw_file_paths_dict = create_one_file_per_signal_dict_rhs(dirname=filename.parent)
         else:
             raw_file_paths_dict = create_one_file_per_channel_dict_rhs(dirname=filename.parent)
             channel_number_dict["Stim channel"] = len(raw_file_paths_dict["Stim channel"])
