@@ -462,11 +462,11 @@ class IntanRawIO(BaseRawIO):
             sl1 = sl0 + (i_stop - i_start)
 
         if not stream_is_digital:
-            # For all streams raw_data is a structured memmap with a field for each channel_id        
-            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)            
+            # For all streams raw_data is a structured memmap with a field for each channel_id
+            sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
             for chunk_index, channel_id in enumerate(channel_ids):
                 data_chan = self._raw_data[channel_id]
-                
+
                 if multiple_samples_per_block:
                     sigs_chunk[:, chunk_index] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
                 else:
@@ -475,8 +475,8 @@ class IntanRawIO(BaseRawIO):
             if stream_is_stim:
                 sigs_chunk = self._decode_current_from_stim_data(sigs_chunk, 0, sigs_chunk.shape[0])
 
-        else: 
-             # For digital data the channels come interleaved in a single field so we need to demultiplex
+        else:
+            # For digital data the channels come interleaved in a single field so we need to demultiplex
             digital_raw_data = self._raw_data[field_name].flatten()
             sigs_chunk = self._demultiplex_digital_data(digital_raw_data, channel_ids, i_start, i_stop)
         return sigs_chunk
@@ -969,7 +969,9 @@ def read_rhs(filename, file_format: str):
     # based on what Heberto and I read in the docs
     for chan_info in stream_name_to_channel_info_list["RHS2000 amplifier channel"]:
         # we see which stim were activated
-        if any([chan_info["native_channel_name"] in stim_file.stem for stim_file in raw_file_paths_dict['Stim channel']]):
+        if file_format == "header-attached" or any(
+            [chan_info["native_channel_name"] in stim_file.stem for stim_file in raw_file_paths_dict["Stim channel"]]
+        ):
             chan_info_stim = dict(chan_info)
             name = chan_info["native_channel_name"]
             chan_info_stim["native_channel_name"] = name + "_STIM"
@@ -980,9 +982,9 @@ def read_rhs(filename, file_format: str):
             chan_info_stim["gain"] = global_info["stim_step_size"]
             chan_info_stim["offset"] = 0.0
             chan_info_stim["signal_type"] = 11  # put it in another group
-            chan_info_stim["dtype"] = "int16" # this change is due to bit decoding see note below
+            chan_info_stim["dtype"] = "int16"  # this change is due to bit decoding see note below
             ordered_channel_info.append(chan_info_stim)
-            # Note that the data on disk is uint16 but the data is 
+            # Note that the data on disk is uint16 but the data is
             # then decoded as int16 so the chan_info is int16
             if file_format == "header-attached":
                 memmap_data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
@@ -1453,7 +1455,6 @@ stream_name_to_file_prefix_rhs = {
     "USB board ADC output channel": "board-ANALOG-OUT",
     "USB board digital input channel": "board-DIGITAL-IN",
     "USB board digital output channel": "board-DIGITAL-OUT",
-    'Stim channel': "stim"
 }
 
 
