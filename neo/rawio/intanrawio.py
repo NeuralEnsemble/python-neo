@@ -63,14 +63,12 @@ class IntanRawIO(BaseRawIO):
       'one-file-per-channel' which have a header file called 'info.rhd' or 'info.rhs' and a series
       of binary files with the '.dat' suffix
 
-    * The reader can handle three file formats 'header-attached', 'one-file-per-signal' and
-      'one-file-per-channel'.
-
-    * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D'
-      depending on the port in which they were recorded along with the following
+    * Intan files contain amplifier channels labeled 'A', 'B' 'C' or 'D' for the 512 recorder
+      or 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H' for the 1024 recorder system
+      depending on the port in which they were recorded along (stored in stream_id '0') with the following
       additional streams.
 
-    0: 'RHD2000' amplifier channel
+    0: 'RHD2000 amplifier channel'
     1: 'RHD2000 auxiliary input channel',
     2: 'RHD2000 supply voltage channel',
     3: 'USB board ADC input channel',
@@ -87,9 +85,11 @@ class IntanRawIO(BaseRawIO):
     10: 'DC Amplifier channel',
     11: 'Stim channel',
 
-    * For the "header-attached" and "one-file-per-signal" formats, the structure of the digital input and output channels is
-      one long vector, which must be post-processed to extract individual digital channel information.
-      See the intantech website for more information on performing this post-processing.
+    * We currently implement digital data demultiplexing so that if digital streams are requested they are
+      returned as arrays of 1s and 0s.
+
+    * We also do stim data decoding which returns the stim data as an int16 of appropriate magnitude. Please
+      use `rescale_signal_raw_to_float` to obtain stim data in amperes.
 
 
     Examples
@@ -954,31 +954,33 @@ def read_rhs(filename, file_format: str):
                 memmap_data_dtype["DC Amplifier channel"] = "uint16"
 
     # I can't seem to get stim files to generate for one-file-per-channel
-    # so let's skip for now and can be given on request
-    if file_format != "one-file-per-channel":
-        for chan_info in stream_name_to_channel_info_list["RHS2000 amplifier channel"]:
-            chan_info_stim = dict(chan_info)
-            name = chan_info["native_channel_name"]
-            chan_info_stim["native_channel_name"] = name + "_STIM"
-            chan_info_stim["sampling_rate"] = sr
-            # stim channel are complicated because they are coded
-            # with bits, they do not fit the gain/offset rawio strategy
-            chan_info_stim["units"] = "A"  # Amps
-            chan_info_stim["gain"] = global_info["stim_step_size"]
-            chan_info_stim["offset"] = 0.0
-            chan_info_stim["signal_type"] = 11  # put it in another group
-            chan_info_stim["dtype"] = "int16"
-            ordered_channel_info.append(chan_info_stim)
-            
-            # Note that the data on disk is uint16 but the data is 
-            # then decoded as int16 so the chan_info is int16
-            memmap_dtype = "uint16"
-            if file_format == "header-attached":
-                memmap_data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
-            else:
-                memmap_data_dtype["Stim channel"] = "uint16"
-    else:
-        warnings.warn("Stim not implemented for `one-file-per-channel` due to lack of test files")
+    # so ideally at some point we need test data to confirm this is true
+    # based on what Heberto and I read in the docs
+    for chan_info in stream_name_to_channel_info_list["RHS2000 amplifier channel"]:
+        chan_info_stim = dict(chan_info)
+        name = chan_info["native_channel_name"]
+        chan_info_stim["native_channel_name"] = name + "_STIM"
+        chan_info_stim["sampling_rate"] = sr
+        # stim channel are complicated because they are coded
+        # with bits, they do not fit the gain/offset rawio strategy
+        chan_info_stim["units"] = "A"  # Amps
+        chan_info_stim["gain"] = global_info["stim_step_size"]
+        chan_info_stim["offset"] = 0.0
+        chan_info_stim["signal_type"] = 11  # put it in another group
+        chan_info_stim["dtype"] = "int16" # this change is due to bit decoding see note below
+        ordered_channel_info.append(chan_info_stim)
+        # Note that the data on disk is uint16 but the data is 
+        # then decoded as int16 so the chan_info is int16
+        if file_format == "header-attached":
+            memmap_data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
+        else:
+            memmap_data_dtype["Stim channel"] = "uint16"
+        if file_format == "one-file-per-channel":
+            warning_msg = ("Stim decoding for `one-file-per-channel` is based on a reading of the documention "
+                           "and we would appreciate test data to ensure we've implemented this format "
+                           "appropriately. If you use the stim data please verify it is as you expected "
+                           "and if it is not then open an issue on the python-neo repo")
+            warnings.warn(warning_msg)
 
     # No supply or aux for rhs files (ie no stream_id 1 and 2)
     # We have an error above that requests test files to help if the spec is changed
