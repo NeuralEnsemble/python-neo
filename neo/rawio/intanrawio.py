@@ -1446,6 +1446,7 @@ stream_name_to_file_prefix_rhs = {
     "USB board ADC output channel": "board-ANALOG-OUT",
     "USB board digital input channel": "board-DIGITAL-IN",
     "USB board digital output channel": "board-DIGITAL-OUT",
+    'Stim channel': "stim"
 }
 
 
