@@ -227,7 +227,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
             if num_ephy_channels % num_chan_per_chip == 0:
                 all_hw_chans = [int(schan.attrib["hwChan"]) for trode in sconf for schan in trode]
                 missing_hw_chans = set(range(num_ephy_channels)) - set(all_hw_chans)
-                channel_ids = self._produce_ephys_channel_ids(num_ephy_channels_xml, num_chan_per_chip, missing_hw_chans)
+                channel_ids = self._produce_ephys_channel_ids(
+                    num_ephy_channels_xml, num_chan_per_chip, missing_hw_chans
+                )
                 raw_channel_ids = False
             else:
                 raw_channel_ids = True
