@@ -912,6 +912,7 @@ def read_rhs(filename, file_format: str):
         else:
             channel_number_dict["Stim channel"] = channel_number_dict["RHS2000 amplifier channel"]
 
+
         header_size = f.tell()
 
     sr = global_info["sampling_rate"]
