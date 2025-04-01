@@ -951,6 +951,7 @@ def read_rhs(filename, file_format: str):
             chan_info_dc = dict(chan_info)
             name = chan_info["native_channel_name"]
             chan_info_dc["native_channel_name"] = name + "_DC"
+            chan_info_dc["custom_channel_name"] = chan_info_dc["custom_channel_name"] + "_DC"
             chan_info_dc["sampling_rate"] = sr
             chan_info_dc["units"] = "mV"
             chan_info_dc["gain"] = 19.23
@@ -984,6 +985,7 @@ def read_rhs(filename, file_format: str):
         chan_info_stim = dict(chan_info)
         name = chan_info["native_channel_name"]
         chan_info_stim["native_channel_name"] = name + "_STIM"
+        chan_info_stim["custom_channel_name"] = chan_info_stim["custom_channel_name"] + "_STIM"
         chan_info_stim["sampling_rate"] = sr
         chan_info_stim["units"] = "A"  # Amps
         chan_info_stim["gain"] = global_info["stim_step_size"]

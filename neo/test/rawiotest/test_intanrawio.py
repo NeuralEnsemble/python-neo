@@ -23,7 +23,7 @@ class TestIntanRawIO(
         "intan/rhd_fpc_multistim_240514_082044/info.rhd",  # Multiple digital channels one-file-per-channel rhd
         "intan/rhs_stim_data_single_file_format/intanTestFile.rhs", # header-attached rhs data with stimulus current
         "intan/test_fcs_dc_250327_154333/info.rhs", # this is an example of only having dc amp rather than amp files
-        #"intan/test_fpc_stim_250327_151617/info.rhs", # wrong files Heberto will fix
+        "intan/test_fpc_stim_250327_151617/info.rhs", # wrong files Heberto will fix
     ]
 
     def test_annotations(self):
@@ -70,7 +70,7 @@ class TestIntanRawIO(
         )
         np.testing.assert_array_equal(signal_array_annotations["board_stream_num"][:10], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
-    def test_correct_reading_one_file_per_channel(self):
+    def test_correct_reading_one_file_per_channel_amplifiers(self):
         "Issue: https://github.com/NeuralEnsemble/python-neo/issues/1599"
         # Test reading of one-file-per-channel format file. The channels should match the raw files
         file_path = Path(self.get_local_path("intan/intan_fpc_test_231117_052630/info.rhd"))
@@ -84,10 +84,33 @@ class TestIntanRawIO(
         amplifier_file_paths = [path for path in folder_path.iterdir() if "amp" in path.name]
         channel_names = [path.name[4:-4] for path in amplifier_file_paths]
 
+        amplifier_stream_index = 0
         for channel_name, amplifier_file_path in zip(channel_names, amplifier_file_paths):
             data_raw = np.fromfile(amplifier_file_path, dtype=np.int16).squeeze()
-            data_from_neo = intan_reader.get_analogsignal_chunk(channel_ids=[channel_name], stream_index=0).squeeze()
+            data_from_neo = intan_reader.get_analogsignal_chunk(channel_ids=[channel_name], stream_index=amplifier_stream_index).squeeze()
             np.testing.assert_allclose(data_raw, data_from_neo)
+
+    def test_correct_reading_one_file_per_channel_rhs_stim(self):
+        "Zach request for testing that the channel order is correct"
+        # Test reading of one-file-per-channel format file. The channels should match the raw files
+        file_path = Path(self.get_local_path("intan/test_fpc_stim_250327_151617/info.rhs"))
+        intan_reader = IntanRawIO(filename=file_path)
+        intan_reader.parse_header()
+
+        # This should be the folder where the files of all the channels are stored
+        folder_path = file_path.parent
+
+        # The paths for the stim channels are stim-A-000.dat, stim-A-001.dat, stim-A-002.dat, 
+        # Whereas the ids are A-001_STIM, A-002_STIM, A-003_STIM, etc
+        stim_file_paths = [path for path in folder_path.iterdir() if "stim" in path.name]
+        channel_ids = [f"{p.stem[5:]}_STIM" for p in stim_file_paths]
+        
+        stim_stream_index  = 2
+        for channel_id, amplifier_file_path in zip(channel_ids, stim_file_paths):
+            data_raw = np.fromfile(amplifier_file_path, dtype=np.uint16)
+            decoded_data = intan_reader._decode_current_from_stim_data(data_raw, 0, data_raw.shape[0])
+            data_from_neo = intan_reader.get_analogsignal_chunk(channel_ids=[channel_id], stream_index=stim_stream_index).squeeze()
+            np.testing.assert_allclose(decoded_data, data_from_neo)
 
 
     def test_correct_decoding_of_stimulus_current(self):
