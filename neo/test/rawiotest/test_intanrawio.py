@@ -23,7 +23,8 @@ class TestIntanRawIO(
         "intan/rhd_fpc_multistim_240514_082044/info.rhd",  # Multiple digital channels one-file-per-channel rhd
         "intan/rhs_stim_data_single_file_format/intanTestFile.rhs", # header-attached rhs data with stimulus current
         "intan/test_fcs_dc_250327_154333/info.rhs", # this is an example of only having dc amp rather than amp files
-        "intan/test_fpc_stim_250327_151617/info.rhs", # wrong files Heberto will fix
+        "intan/test_fpc_stim_250327_151617/info.rhs", # wrong files names Heberto will fix naimgin in the future
+
     ]
 
     def test_annotations(self):
@@ -111,6 +112,56 @@ class TestIntanRawIO(
             decoded_data = intan_reader._decode_current_from_stim_data(data_raw, 0, data_raw.shape[0])
             data_from_neo = intan_reader.get_analogsignal_chunk(channel_ids=[channel_id], stream_index=stim_stream_index).squeeze()
             np.testing.assert_allclose(decoded_data, data_from_neo)
+
+
+    def test_correct_decoding_of_stimulus_current(self):
+        # See https://github.com/NeuralEnsemble/python-neo/pull/1660 for discussion
+        # See https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/intan/README.md#rhs_stim_data_single_file_format 
+        # For a description of the data 
+        
+        file_path = Path(self.get_local_path("intan/rhs_stim_data_single_file_format/intanTestFile.rhs"))
+        intan_reader = IntanRawIO(filename=file_path)
+        intan_reader.parse_header()
+        
+        signal_streams = intan_reader.header['signal_streams']
+        stream_ids = signal_streams['id'].tolist()
+        stream_index = stream_ids.index('11')
+        sampling_rate = intan_reader.get_signal_sampling_rate(stream_index=stream_index)
+        sig_chunk = intan_reader.get_analogsignal_chunk(stream_index=stream_index, channel_ids=["D-016_STIM"])
+        final_stim = intan_reader.rescale_signal_raw_to_float(sig_chunk, stream_index=stream_index, channel_ids=["D-016_STIM"])
+
+        # This contains only the first pulse and I got this by visual inspection
+        data_to_test = final_stim[200:250]
+        
+        positive_pulse_size = np.max(data_to_test).item()
+        negative_pulse_size = np.min(data_to_test).item()
+
+        expected_value = 60 * 1e-6# 60 microamperes
+
+        # Assert is close float
+        assert np.isclose(positive_pulse_size, expected_value)
+        assert np.isclose(negative_pulse_size, -expected_value)
+
+        # Check that negative pulse is leading
+        argmin = np.argmin(data_to_test)
+        argmax = np.argmax(data_to_test)
+        assert argmin < argmax
+        
+        # Check that the negative pulse is 200 us long
+        negative_pulse_frames = np.where(data_to_test > 0)[0]
+        number_of_negative_frames = negative_pulse_frames.size
+        duration_of_negative_pulse = number_of_negative_frames / sampling_rate
+
+        expected_duration = 200 * 1e-6  # 400 microseconds / 2 
+        assert np.isclose(duration_of_negative_pulse, expected_duration)
+        
+        # Check that the positive pulse is 200 us long
+        positive_pulse_frames = np.where(data_to_test > 0)[0]
+        number_of_positive_frames = positive_pulse_frames.size
+        duration_of_positive_pulse = number_of_positive_frames / sampling_rate
+        expected_duration = 200 * 1e-6  # 400 microseconds / 2
+
+        assert np.isclose(duration_of_positive_pulse, expected_duration)
 
 
     def test_correct_decoding_of_stimulus_current(self):

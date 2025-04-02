@@ -566,6 +566,7 @@ class IntanRawIO(BaseRawIO):
         set high and the rest low, the 16-bit word would be 2^0 + 2^4 + 2^5 = 1 + 16 + 32 = 49.
 
         The native_order property for each channel corresponds to its bit position in the packed word.
+        
         """
         dtype = np.uint16  # We fix this to match the memmap dtype
         output = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
@@ -903,14 +904,15 @@ def read_rhs(filename, file_format: str):
         channel_number_dict["DC Amplifier channel"] = channel_number_dict["RHS2000 amplifier channel"]
         
         if file_format == "one-file-per-channel":
-            # There is a way to switch off amplifier and only keep the DC amplifier,
+            # There is a way to shut off saving amplifier data and only keeping the DC amplifier or shutting off all amplifier file saving,
             # so we need to count the number of files we find instead of relying on the header.
             raw_file_paths_dict = create_one_file_per_channel_dict_rhs(dirname=filename.parent)
             channel_number_dict["Stim channel"] = len(raw_file_paths_dict["Stim channel"])
-            # Moreover, even if the amplifier channels are on the header their files are dropped
+            # Moreover, even if the amplifier channels are in the header their files are dropped
             channel_number_dict["RHS2000 amplifier channel"] = len(raw_file_paths_dict["RHS2000 amplifier channel"])
         else:
             channel_number_dict["Stim channel"] = channel_number_dict["RHS2000 amplifier channel"]
+
 
         header_size = f.tell()
 
@@ -970,8 +972,7 @@ def read_rhs(filename, file_format: str):
 
     # Add stim channels
     for chan_info in stream_name_to_channel_info_list["RHS2000 amplifier channel"]:
-        # stim channels are not always present in the header
-
+        # stim channel presence is not indicated in the header so for some formats each amplifier channel has a stim channel, but for other formats this isn't the case.
         if file_format == "one-file-per-channel":
             # Some amplifier channels don't have a corresponding stim channel,
             # so we need to make sure we don't add channel info for stim channels that don't exist.
