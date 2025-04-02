@@ -899,19 +899,19 @@ def read_rhs(filename, file_format: str):
         names_to_count = [name for name in stream_names if name not in special_cases_for_counting]
         channel_number_dict = {name: len(stream_name_to_channel_info_list[name]) for name in names_to_count}
 
-        # Both DC Amplifier and Stim streams have the same number of channels as the amplifier stream
-        # if using the `header-attached` or `one-file-per-signal` formats
-        # the amplifier data is stored in the same place in the header so no matter what the DC amp
-        # uses the same info as the RHS amp.
+        # Each DC amplifier channel has a corresponding RHS2000 amplifier channel
         channel_number_dict["DC Amplifier channel"] = channel_number_dict["RHS2000 amplifier channel"]
-        if file_format != "one-file-per-channel":
-            channel_number_dict["Stim channel"] = channel_number_dict["RHS2000 amplifier channel"]
-            raw_file_paths_dict = create_one_file_per_signal_dict_rhs(dirname=filename.parent)
-        else:
+        
+        if file_format == "one-file-per-channel":
+            # There is a way to shut off saving amplifier data and only keeping the DC amplifier or shutting off all amplifier file saving,
+            # so we need to count the number of files we find instead of relying on the header.
             raw_file_paths_dict = create_one_file_per_channel_dict_rhs(dirname=filename.parent)
             channel_number_dict["Stim channel"] = len(raw_file_paths_dict["Stim channel"])
-            # but the user can shut off the normal amplifier and only save dc amplifier
+            # Moreover, even if the amplifier channels are in the header their files are dropped
             channel_number_dict["RHS2000 amplifier channel"] = len(raw_file_paths_dict["RHS2000 amplifier channel"])
+        else:
+            channel_number_dict["Stim channel"] = channel_number_dict["RHS2000 amplifier channel"]
+
 
         header_size = f.tell()
 
@@ -925,7 +925,7 @@ def read_rhs(filename, file_format: str):
         memmap_data_dtype["timestamp"] = "int32"
         channel_number_dict["timestamp"] = 1
 
-    if file_format != "one-file-per-channel" or channel_number_dict["RHS2000 amplifier channel"] > 0:
+    if channel_number_dict["RHS2000 amplifier channel"] > 0:
         for chan_info in stream_name_to_channel_info_list["RHS2000 amplifier channel"]:
             chan_info["sampling_rate"] = sr
             chan_info["units"] = "uV"
@@ -967,29 +967,37 @@ def read_rhs(filename, file_format: str):
     # I can't seem to get stim files to generate for one-file-per-channel
     # so ideally at some point we need test data to confirm this is true
     # based on what Heberto and I read in the docs
+
+    # Add stim channels
     for chan_info in stream_name_to_channel_info_list["RHS2000 amplifier channel"]:
-        # we see which stim were activated
-        if file_format != "one-file-per-channel" or any(
-            [chan_info["native_channel_name"] in stim_file.stem for stim_file in raw_file_paths_dict["Stim channel"]]
-        ):
-            chan_info_stim = dict(chan_info)
-            name = chan_info["native_channel_name"]
-            chan_info_stim["native_channel_name"] = name + "_STIM"
-            chan_info_stim["sampling_rate"] = sr
-            # stim channel are complicated because they are coded
-            # with bits, they do not fit the gain/offset rawio strategy
-            chan_info_stim["units"] = "A"  # Amps
-            chan_info_stim["gain"] = global_info["stim_step_size"]
-            chan_info_stim["offset"] = 0.0
-            chan_info_stim["signal_type"] = 11  # put it in another group
-            chan_info_stim["dtype"] = "int16"  # this change is due to bit decoding see note below
-            ordered_channel_info.append(chan_info_stim)
-            # Note that the data on disk is uint16 but the data is
-            # then decoded as int16 so the chan_info is int16
-            if file_format == "header-attached":
-                memmap_data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
-            else:
-                memmap_data_dtype["Stim channel"] = "uint16"
+        # stim channel presence is not indicated in the header so for some formats each amplifier channel has a stim channel, but for other formats this isn't the case.
+
+        if file_format == "one-file-per-channel":
+            # Some amplifier channels don't have a corresponding stim channel,
+            # so we need to make sure we don't add channel info for stim channels that don't exist.
+            # In this case, if the stim channel has no data, there won't be a file for it.
+            stim_file_paths = raw_file_paths_dict["Stim channel"]
+            amplifier_native_name = chan_info["native_channel_name"]
+            stim_file_exists = any([amplifier_native_name in stim_file.stem for stim_file in stim_file_paths])
+            if not stim_file_exists:
+                continue
+
+        chan_info_stim = dict(chan_info)
+        name = chan_info["native_channel_name"]
+        chan_info_stim["native_channel_name"] = name + "_STIM"
+        chan_info_stim["sampling_rate"] = sr
+        chan_info_stim["units"] = "A"  # Amps
+        chan_info_stim["gain"] = global_info["stim_step_size"]
+        chan_info_stim["offset"] = 0.0
+        chan_info_stim["signal_type"] = 11  # put it in another group
+        chan_info_stim["dtype"] = "int16"  # this change is due to bit decoding see note below
+        ordered_channel_info.append(chan_info_stim)
+        # Note that the data on disk is uint16 but the data is
+        # then decoded as int16 so the chan_info is int16
+        if file_format == "header-attached":
+            memmap_data_dtype += [(name + "_STIM", "uint16", BLOCK_SIZE)]
+        else:
+            memmap_data_dtype["Stim channel"] = "uint16"
 
     # No supply or aux for rhs files (ie no stream_id 1 and 2)
     # We have an error above that requests test files to help if the spec is changed
