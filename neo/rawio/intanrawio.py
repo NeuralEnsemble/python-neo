@@ -903,11 +903,11 @@ def read_rhs(filename, file_format: str):
         channel_number_dict["DC Amplifier channel"] = channel_number_dict["RHS2000 amplifier channel"]
         
         if file_format == "one-file-per-channel":
-            # There is a way to switch off amplifier and only keep the DC amplifier,
+            # There is a way to shut off saving amplifier data and only keeping the DC amplifier or shutting off all amplifier file saving,
             # so we need to count the number of files we find instead of relying on the header.
             raw_file_paths_dict = create_one_file_per_channel_dict_rhs(dirname=filename.parent)
             channel_number_dict["Stim channel"] = len(raw_file_paths_dict["Stim channel"])
-            # Moreover, even if the amplifier channels are on the header their files are dropped
+            # Moreover, even if the amplifier channels are in the header their files are dropped
             channel_number_dict["RHS2000 amplifier channel"] = len(raw_file_paths_dict["RHS2000 amplifier channel"])
         else:
             channel_number_dict["Stim channel"] = channel_number_dict["RHS2000 amplifier channel"]
@@ -970,7 +970,7 @@ def read_rhs(filename, file_format: str):
 
     # Add stim channels
     for chan_info in stream_name_to_channel_info_list["RHS2000 amplifier channel"]:
-        # stim channels are not always present in the header
+        # stim channel presence is not indicated in the header so for some formats each amplifier channel has a stim channel, but for other formats this isn't the case.
 
         if file_format == "one-file-per-channel":
             # Some amplifier channels don't have a corresponding stim channel,
