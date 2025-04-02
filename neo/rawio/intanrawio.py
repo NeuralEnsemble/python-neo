@@ -566,6 +566,7 @@ class IntanRawIO(BaseRawIO):
         set high and the rest low, the 16-bit word would be 2^0 + 2^4 + 2^5 = 1 + 16 + 32 = 49.
 
         The native_order property for each channel corresponds to its bit position in the packed word.
+        
         """
         dtype = np.uint16  # We fix this to match the memmap dtype
         output = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
@@ -952,6 +953,7 @@ def read_rhs(filename, file_format: str):
             chan_info_dc = dict(chan_info)
             name = chan_info["native_channel_name"]
             chan_info_dc["native_channel_name"] = name + "_DC"
+            chan_info_dc["custom_channel_name"] = chan_info_dc["custom_channel_name"] + "_DC"
             chan_info_dc["sampling_rate"] = sr
             chan_info_dc["units"] = "mV"
             chan_info_dc["gain"] = 19.23
@@ -971,7 +973,6 @@ def read_rhs(filename, file_format: str):
     # Add stim channels
     for chan_info in stream_name_to_channel_info_list["RHS2000 amplifier channel"]:
         # stim channel presence is not indicated in the header so for some formats each amplifier channel has a stim channel, but for other formats this isn't the case.
-
         if file_format == "one-file-per-channel":
             # Some amplifier channels don't have a corresponding stim channel,
             # so we need to make sure we don't add channel info for stim channels that don't exist.
@@ -985,6 +986,7 @@ def read_rhs(filename, file_format: str):
         chan_info_stim = dict(chan_info)
         name = chan_info["native_channel_name"]
         chan_info_stim["native_channel_name"] = name + "_STIM"
+        chan_info_stim["custom_channel_name"] = chan_info_stim["custom_channel_name"] + "_STIM"
         chan_info_stim["sampling_rate"] = sr
         chan_info_stim["units"] = "A"  # Amps
         chan_info_stim["gain"] = global_info["stim_step_size"]
