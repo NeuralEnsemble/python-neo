@@ -192,6 +192,7 @@ class NicoletRawIO(BaseRawIO):
                                                  dtype = _event_channel_dtype)
         self._generate_minimal_annotations()
         self._generate_additional_annotations()
+        self._get_buffer_descriptions()
             
     def _get_tags(self):
         tags_structure = [
@@ -697,6 +698,28 @@ class NicoletRawIO(BaseRawIO):
         self.signal_data_offset = offset
         self.raw_signal = raw_signal
     
+    def _get_buffer_descriptions(self):
+        '''
+        Get the descriptions of raw signal buffers
+        
+        TODO: File offset
+        TODO: Support for multiple signal streams
+        '''
+        buffer_id = 0
+        self._buffer_descriptions = {0: {}}
+        for seg_index, segment in enumerate(self.segments_properties):
+            self._buffer_descriptions[0][seg_index] = {}    
+            shape = (max(self.get_nr_samples(seg_index = seg_index)), 
+                    segment['sampling_rates'].count(segment['sampling_rates'][0]))
+            self._buffer_descriptions[0][seg_index][buffer_id] = {
+                    "type": "raw",
+                    "file_path": str(self.filename),
+                    "dtype": 'i2',
+                    "order": "C",
+                    #"file_offset": file_offset,
+                    "shape": shape,
+                }
+    
     def _extract_header_information(self):
         self._get_tags()       
         self._get_qi()       
@@ -939,6 +962,9 @@ class NicoletRawIO(BaseRawIO):
                 'section_l': 0
             }]
         return(idx_instance)
+    
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 def read_as_dict(fid, dtype):
     info = dict()  
