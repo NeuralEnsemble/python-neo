@@ -376,7 +376,6 @@ def scan_files(dirname):
     for info in info_list:
         info["seg_index"] = segment_tuple_to_segment_index[get_segment_tuple(info)]
 
-
     for info in info_list:
         # device_kind is imec, nidq
         if info.get("device_kind") == "imec":

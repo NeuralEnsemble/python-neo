@@ -165,7 +165,7 @@ def random_segment():
         rec_datetime=random_datetime(),
         **random_annotations(4),
     )
-    
+
     n_sigs = random.randint(0, 5)
     for i in range(n_sigs):
         seg.analogsignals.append(random_signal())

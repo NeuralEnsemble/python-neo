@@ -21,11 +21,12 @@ class TestSpikeGadgetsRawIO(
     def test_parse_header_missing_channels(self):
 
         file_path = Path(self.get_local_path("spikegadgets/SL18_D19_S01_F01_BOX_SLP_20230503_112642_stubbed.rec"))
-        reader = SpikeGadgetsRawIO(filename = file_path)
+        reader = SpikeGadgetsRawIO(filename=file_path)
         reader.parse_header()
 
         assert_array_equal(
-            reader.header['signal_channels']['id'],
+            reader.header["signal_channels"]["id"],
+            # fmt: off
             [
                 'ECU_Ain1', 'ECU_Ain2', 'ECU_Ain3', 'ECU_Ain4', 'ECU_Ain5', 'ECU_Ain6',
                 'ECU_Ain7', 'ECU_Ain8', 'ECU_Aout1', 'ECU_Aout2', 'ECU_Aout3', 'ECU_Aout4', '0',
@@ -46,6 +47,7 @@ class TestSpikeGadgetsRawIO(
                 '218', '250', '27', '59', '91', '123', '155', '187', '219', '251', '28', '60', '92',
                 '156', '188', '220', '252', '29', '61', '93', '125', '157', '189', '221', '253', '30',
                 '62', '94', '158', '190', '222', '254', '31', '63', '95', '127', '159', '191', '223',
-                '255',
+                '255'
             ]
+            # fmt: on
         )
