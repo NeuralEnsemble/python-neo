@@ -33,11 +33,12 @@ class BiocamRawIO(BaseRawIO):
     ----------
     filename: str, default: ''
         The *.h5 file to be read
-    fill_gaps_strategy: "zeros" | "synthetic_noise", default: "zeros"
+    fill_gaps_strategy: "zeros" | "synthetic_noise" | None, default: None
         The strategy to fill the gaps in the data when using event-based
-        compression. If "zeros", the gaps are filled with 0s. If "synthetic_noise",
-        the gaps are filled with synthetic noise. This is only relevant for
-        event-based compression.
+        compression. If None and the file is event-based compressed, 
+        you need to specify a fill gaps strategy. 
+        If "zeros", the gaps are filled with 0s.
+        If "synthetic_noise", the gaps are filled with synthetic noise.
 
     Examples
     --------
@@ -61,16 +62,7 @@ class BiocamRawIO(BaseRawIO):
     def __init__(self, filename="", fill_gaps_strategy="zeros"):
         BaseRawIO.__init__(self)
         self.filename = filename
-
-        if fill_gaps_strategy == "synthetic_noise":
-            warnings.warn("Event-based compression : gaps will be filled with synthetic noise."
-                          " Set use_synthetic_noise to False for raw traces.")
-            self.use_synthetic_noise = True
-        elif fill_gaps_strategy == "zeros":
-            warnings.warn("Event-based compression : gaps will be filled with 0s.")
-            self.use_synthetic_noise = False
-        else:
-            raise ValueError("sparse_missing_data_strategy must be 'zeros' or 'synthetic_noise'")
+        self._fill_gaps_strategy = fill_gaps_strategy
 
     def _source_name(self):
         return self.filename
@@ -150,8 +142,21 @@ class BiocamRawIO(BaseRawIO):
 
         # read functions are different based on the version of biocam
         if self._read_function is readHDF5t_brw4_sparse:
+            if self._fill_gaps_strategy is None:
+                raise ValueError(
+                    "Please set `fill_gaps_strategy` to 'zeros' or 'synthetic_noise'."
+                )
+            if self._fill_gaps_strategy == "synthetic_noise":
+                warnings.warn("Event-based compression : gaps will be filled with synthetic noise. "
+                              "Set `fill_gaps_strategy` to 'zeros' to fill gaps with 0s.")
+                use_synthetic_noise = True
+            elif self._fill_gaps_strategy == "zeros":
+                use_synthetic_noise = False
+            else:
+                raise ValueError("`fill_gaps_strategy` must be 'zeros' or 'synthetic_noise'")
+
             data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels,
-                                       use_synthetic_noise=self.use_synthetic_noise)
+                                       use_synthetic_noise=use_synthetic_noise)
         else:
             data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
 
