@@ -275,7 +275,8 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             
                             # Add a buffer slice for the sync channel
                             sync_channel_name = info["channels"][-1]["channel_name"]
-                            self._stream_buffer_slice[sync_channel_name] = slice(-1, None)
+                            stream_name = f"{sync_channel_name}-{str(stream_id)}"
+                            self._stream_buffer_slice[stream_name] = slice(-1, None)
                         else:
                             self._stream_buffer_slice[stream_id] = None
                     else:
