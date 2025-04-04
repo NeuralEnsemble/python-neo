@@ -263,7 +263,7 @@ class NeuralynxRawIO(BaseRawIO):
                         t_start = copy.copy(file_mmap[0][0])
                     else:  # empty file
                         t_start = 0
-                    stream_prop = (info["sampling_rate"], n_packets, t_start)
+                    stream_prop = (float(info["sampling_rate"]), int(n_packets), float(t_start))
                     if stream_prop not in stream_props:
                         stream_props[stream_prop] = {"stream_id": len(stream_props), "filenames": [filename]}
                     else:
