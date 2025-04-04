@@ -148,7 +148,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 # Special cases for stream
                 if "SYNC" in chan_id and not self.load_sync_channel:
                     # Every stream sync channel is added as its own stream
-                    stream_id = chan_id
+                    stream_id = f"{chan_id}-{str(stream_index)}"
                     sync_stream_id_to_buffer_id[stream_id] = buffer_id
 
                 if "ADC" in chan_id:
