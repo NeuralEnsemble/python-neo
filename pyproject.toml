@@ -24,7 +24,7 @@ classifiers = [
 
 dependencies = [
     "packaging",
-    "numpy>=1.22.4",
+    "numpy>=1.24.4",
     "quantities>=0.16.1"
 ]
 
