@@ -33,6 +33,11 @@ class BiocamRawIO(BaseRawIO):
     ----------
     filename: str, default: ''
         The *.h5 file to be read
+    fill_gaps_strategy: "zeros" | "synthetic_noise", default: "zeros"
+        The strategy to fill the gaps in the data when using event-based
+        compression. If "zeros", the gaps are filled with 0s. If "synthetic_noise",
+        the gaps are filled with synthetic noise. This is only relevant for
+        event-based compression.
 
     Examples
     --------
@@ -53,15 +58,19 @@ class BiocamRawIO(BaseRawIO):
     extensions = ["h5", "brw"]
     rawmode = "one-file"
 
-    def __init__(self, filename="", true_zeroes=False, use_synthetic_noise=False):
+    def __init__(self, filename="", fill_gaps_strategy="zeros"):
         BaseRawIO.__init__(self)
         self.filename = filename
-        self.true_zeroes = true_zeroes
-        self.use_synthetic_noise = use_synthetic_noise
 
-        if self.use_synthetic_noise:
+        if fill_gaps_strategy == "synthetic_noise":
             warnings.warn("Event-based compression : gaps will be filled with synthetic noise."
                           " Set use_synthetic_noise to False for raw traces.")
+            self.use_synthetic_noise = True
+        elif fill_gaps_strategy == "zeros":
+            warnings.warn("Event-based compression : gaps will be filled with 0s.")
+            self.use_synthetic_noise = False
+        else:
+            raise ValueError("sparse_missing_data_strategy must be 'zeros' or 'synthetic_noise'")
 
     def _source_name(self):
         return self.filename
@@ -142,7 +151,7 @@ class BiocamRawIO(BaseRawIO):
         # read functions are different based on the version of biocam
         if self._read_function is readHDF5t_brw4_sparse:
             data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels,
-                                       self.true_zeroes, self.use_synthetic_noise)
+                                       use_synthetic_noise=self.use_synthetic_noise)
         else:
             data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
 
@@ -329,7 +338,7 @@ def readHDF5t_brw4(rf, t0, t1, nch):
             return rf[key]["Raw"][nch * t0 : nch * t1]
 
 
-def readHDF5t_brw4_sparse(rf, t0, t1, nch, true_zeroes=False, use_synthetic_noise=False):
+def readHDF5t_brw4_sparse(rf, t0, t1, nch, use_synthetic_noise=False):
 
     # noise_std = None
     start_frame = t0
@@ -339,11 +348,11 @@ def readHDF5t_brw4_sparse(rf, t0, t1, nch, true_zeroes=False, use_synthetic_nois
             break
     # initialize an empty (fill with zeros) data collection
     data = np.zeros((nch, num_frames), dtype=np.int16)
-    if not true_zeroes:
+    if not use_synthetic_noise:
         # Will read as 0s after 12 bits signed conversion
         data.fill(2048)
     # fill the data collection with Gaussian noise if requested
-    if use_synthetic_noise:
+    else:
         data = generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames) #, std=noise_std)
     # fill the data collection with the decoded event based sparse raw data
     data = decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames)
