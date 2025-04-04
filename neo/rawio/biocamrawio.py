@@ -36,9 +36,10 @@ class BiocamRawIO(BaseRawIO):
     fill_gaps_strategy: "zeros" | "synthetic_noise" | None, default: None
         The strategy to fill the gaps in the data when using event-based
         compression. If None and the file is event-based compressed, 
-        you need to specify a fill gaps strategy. 
-        If "zeros", the gaps are filled with 0s.
-        If "synthetic_noise", the gaps are filled with synthetic noise.
+        you need to specify a fill gaps strategy:
+
+        * "zeros": the gaps are filled with 0s.
+        * "synthetic_noise": the gaps are filled with synthetic noise.
 
     Examples
     --------
@@ -352,12 +353,12 @@ def readHDF5t_brw4_sparse(rf, t0, t1, nch, use_synthetic_noise=False):
         if well_ID.startswith("Well_"):
             break
     # initialize an empty (fill with zeros) data collection
-    data = np.zeros((nch, num_frames), dtype=np.int16)
+    data = np.zeros((nch, num_frames), dtype=np.uint16)
     if not use_synthetic_noise:
         # Will read as 0s after 12 bits signed conversion
         data.fill(2048)
-    # fill the data collection with Gaussian noise if requested
     else:
+        # fill the data collection with Gaussian noise if requested
         data = generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames) #, std=noise_std)
     # fill the data collection with the decoded event based sparse raw data
     data = decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames)
@@ -384,15 +385,15 @@ def decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames):
     binary_data_length = len(binary_data)
     pos = 0
     while pos < binary_data_length:
-        ch_idx = int.from_bytes(binary_data[pos:pos + 4], byteorder="little", signed=True)
+        ch_idx = int.from_bytes(binary_data[pos:pos + 4], byteorder="little")
         pos += 4
-        ch_data_length = int.from_bytes(binary_data[pos:pos + 4], byteorder="little", signed=True)
+        ch_data_length = int.from_bytes(binary_data[pos:pos + 4], byteorder="little")
         pos += 4
         ch_data_pos = pos
         while pos < ch_data_pos + ch_data_length:
-            from_inclusive = int.from_bytes(binary_data[pos:pos + 8], byteorder="little", signed=True)
+            from_inclusive = int.from_bytes(binary_data[pos:pos + 8], byteorder="little")
             pos += 8
-            to_exclusive = int.from_bytes(binary_data[pos:pos + 8], byteorder="little", signed=True)
+            to_exclusive = int.from_bytes(binary_data[pos:pos + 8], byteorder="little")
             pos += 8
             range_data_pos = pos
             for j in range(from_inclusive, to_exclusive):
@@ -400,7 +401,7 @@ def decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames):
                     break
                 if j >= start_frame:
                     data[ch_idx][j - start_frame] = int.from_bytes(
-                            binary_data[range_data_pos:range_data_pos + 2], byteorder="little", signed=True)
+                            binary_data[range_data_pos:range_data_pos + 2], byteorder="little")
                 range_data_pos += 2
             pos += (to_exclusive - from_inclusive) * 2
 
@@ -450,9 +451,9 @@ def generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames):
     for ch_idx in range(len(data)):
         if ch_idx in noise_info:
             data[ch_idx] = np.array(np.random.normal(noise_info[ch_idx][0], noise_info[ch_idx][1],
-                num_frames), dtype=np.int16)
+                num_frames), dtype=np.uint16)
         else:
             data[ch_idx] = np.array(np.random.normal(median_mean, median_std, num_frames),
-                    dtype=np.int16)
+                    dtype=np.uint16)
 
     return data
