@@ -239,6 +239,184 @@ class BaseRawIO:
 
         return txt
 
+    def _repr_html_(self):
+        """
+        HTML representation for the raw recording base.
+
+        Returns
+        -------
+        html : str
+            The HTML representation as a string.
+        """
+        html = []
+        html.append('<div style="font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto;">')
+
+        # Header
+        html.append(f'<h3 style="color: #2c3e50;">{self.__class__.__name__}: {self.source_name()}</h3>')
+
+        if self.is_header_parsed:
+            # Basic info
+            nb_block = self.block_count()
+            html.append(f"<p><strong>nb_block:</strong> {nb_block}</p>")
+            nb_seg = [self.segment_count(i) for i in range(nb_block)]
+            html.append(f"<p><strong>nb_segment:</strong> {nb_seg}</p>")
+
+            # CSS for tables - using only black, white, and gray colors
+            html.append(
+                """
+            <style>
+                #{unique_id} table.neo-table {{
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin-bottom: 20px;
+                    font-size: 14px;
+                    color: inherit;
+                    background-color: transparent;
+                }}
+                #{unique_id} table.neo-table th,
+                #{unique_id} table.neo-table td {{
+                    border: 1px solid #888;
+                    padding: 8px;
+                    text-align: left;
+                }}
+                #{unique_id} table.neo-table th {{
+                    background-color: rgba(128,128,128,0.2);
+                }}
+                #{unique_id} table.neo-table tr:nth-child(even) {{
+                    background-color: rgba(128,128,128,0.1);
+                }}
+                #{unique_id} details {{
+                    margin-bottom: 15px;
+                    border: 1px solid rgba(128,128,128,0.3);
+                    border-radius: 4px;
+                    overflow: hidden;
+                    background-color: transparent;
+                }}
+                #{unique_id} summary {{
+                    padding: 10px;
+                    background-color: rgba(128,128,128,0.2);
+                    cursor: pointer;
+                    font-weight: bold;
+                    color: inherit;
+                }}
+                #{unique_id} details[open] summary {{
+                    border-bottom: 1px solid rgba(128,128,128,0.3);
+                }}
+                #{unique_id} .table-container {{
+                    padding: 10px;
+                    overflow-x: auto;
+                    background-color: transparent;
+                }}
+            </style>
+            """
+            )
+
+            # Signal Streams
+            signal_streams = self.header["signal_streams"]
+            if signal_streams.size > 0:
+                html.append("<details>")
+                html.append("<summary>Signal Streams</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append("<thead><tr><th>Name</th><th>ID</th><th>Buffer ID</th><th>Channel Count</th></tr></thead>")
+                html.append("<tbody>")
+
+                for i, stream in enumerate(signal_streams):
+                    html.append("<tr>")
+                    html.append(f'<td>{stream["name"]}</td>')
+                    html.append(f'<td>{stream["id"]}</td>')
+                    html.append(f'<td>{stream["buffer_id"]}</td>')
+                    html.append(f"<td>{self.signal_channels_count(i)}</td>")
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+
+            # Signal Channels
+            signal_channels = self.header["signal_channels"]
+            if signal_channels.size > 0:
+                html.append("<details>")
+                html.append("<summary>Signal Channels</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append(
+                    "<thead><tr><th>Name</th><th>ID</th><th>Sampling Rate</th><th>Data Type</th><th>Units</th><th>Gain</th><th>Offset</th><th>Stream ID</th><th>Buffer ID</th></tr></thead>"
+                )
+                html.append("<tbody>")
+
+                for channel in signal_channels:
+                    html.append("<tr>")
+                    html.append(f'<td>{channel["name"]}</td>')
+                    html.append(f'<td>{channel["id"]}</td>')
+                    html.append(f'<td>{channel["sampling_rate"]}</td>')
+                    html.append(f'<td>{channel["dtype"]}</td>')
+                    html.append(f'<td>{channel["units"]}</td>')
+                    html.append(f'<td>{channel["gain"]}</td>')
+                    html.append(f'<td>{channel["offset"]}</td>')
+                    html.append(f'<td>{channel["stream_id"]}</td>')
+                    html.append(f'<td>{channel["buffer_id"]}</td>')
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+
+            # Spike Channels
+            spike_channels = self.header["spike_channels"]
+            if spike_channels.size > 0:
+                html.append("<details>")
+                html.append("<summary>Spike Channels</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append(
+                    "<thead><tr><th>Name</th><th>ID</th><th>WF Units</th><th>WF Gain</th><th>WF Offset</th><th>WF Left Sweep</th><th>WF Sampling Rate</th></tr></thead>"
+                )
+                html.append("<tbody>")
+
+                for channel in spike_channels:
+                    html.append("<tr>")
+                    html.append(f'<td>{channel["name"]}</td>')
+                    html.append(f'<td>{channel["id"]}</td>')
+                    html.append(f'<td>{channel["wf_units"]}</td>')
+                    html.append(f'<td>{channel["wf_gain"]}</td>')
+                    html.append(f'<td>{channel["wf_offset"]}</td>')
+                    html.append(f'<td>{channel["wf_left_sweep"]}</td>')
+                    html.append(f'<td>{channel["wf_sampling_rate"]}</td>')
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+
+            # Event Channels
+            event_channels = self.header["event_channels"]
+            if event_channels.size > 0:
+                html.append("<details>")
+                html.append("<summary>Event Channels</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append("<thead><tr><th>Name</th><th>ID</th><th>Type</th></tr></thead>")
+                html.append("<tbody>")
+
+                for channel in event_channels:
+                    html.append("<tr>")
+                    html.append(f'<td>{channel["name"]}</td>')
+                    html.append(f'<td>{channel["id"]}</td>')
+                    html.append(
+                        f'<td>{channel["type"].decode("utf-8") if isinstance(channel["type"], bytes) else channel["type"]}</td>'
+                    )
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+        else:
+            html.append("<p><em>Call <code>parse_header()</code> to load the reader data.</p>")
+
+        html.append("</div>")
+        return "\n".join(html)
+
     def _generate_minimal_annotations(self):
         """
         Helper function that generates a nested dict for annotations.

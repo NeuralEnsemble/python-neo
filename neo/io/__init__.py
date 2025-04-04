@@ -45,7 +45,7 @@ Classes:
 * :attr:`NestIO`
 * :attr:`NeuralynxIO`
 * :attr:`NeuroExplorerIO`
-* :attr:`NeuroNexusIO
+* :attr:`NeuroNexusIO`
 * :attr:`NeuroScopeIO`
 * :attr:`NeuroshareIO`
 * :attr:`NixIO`
@@ -167,7 +167,7 @@ Classes:
 .. autoclass:: neo.io.MaxwellIO
 
     .. autoattribute:: extensions
-    
+
 .. autoclass:: neo.io.MedIO
 
     .. autoattribute:: extensions
@@ -193,6 +193,7 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.NeuroNexusIO
+
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.NeuroScopeIO
@@ -279,24 +280,17 @@ Classes:
 
 import pathlib
 from collections import Counter
+import importlib.util
 
-# try to import the neuroshare library.
+# check if neuroshare library exists
 # if it is present, use the neuroshareapiio to load neuroshare files
 # if it is not present, use the neurosharectypesio to load files
-try:
-    import neuroshare as ns
-except ModuleNotFoundError as err:
-    from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
 
-    # print("\n neuroshare library not found, loading data with ctypes" )
-    # print("\n to use the API be sure to install the library found at:")
-    # print("\n www.http://pythonhosted.org/neuroshare/")
-
-else:
+neuroshare_spec = importlib.util.find_spec("neuroshare")
+if neuroshare_spec is not None:
     from neo.io.neuroshareapiio import NeuroshareapiIO as NeuroshareIO
-
-    # print("neuroshare library successfully imported")
-    # print("\n loading with API...")
+else:
+    from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
 
 from neo.io.alphaomegaio import AlphaOmegaIO
 from neo.io.asciiimageio import AsciiImageIO

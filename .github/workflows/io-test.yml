@@ -13,12 +13,13 @@ concurrency:  # Cancel previous workflows on the same pull request
 
 jobs:
   build-and-test:
-    name: Test on (${{ inputs.os }}) (${{ matrix.python-version}})
+    name: Test on (${{ inputs.os }}) (${{ matrix.python-version}}) (${{ matrix.numpy-version }})
     runs-on: ${{ inputs.os }}
     strategy:
       fail-fast: true
       matrix:
-        python-version: ['3.9', '3.11.9']
+        python-version: ['3.9', '3.12']
+        numpy-version: ['1.26', '2.0']
     defaults:
       # by default run in bash mode (required for conda usage)
       run:
@@ -26,7 +27,7 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get current year-month
         id: date
@@ -38,7 +39,7 @@ jobs:
         run: |
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache/restore@v3
+      - uses: actions/cache/restore@v4
         # Loading cache of ephys_testing_dataset
         id: cache-datasets
         with:
@@ -48,34 +49,51 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
-          activate-environment: neo-test-env
+          activate-environment: neo-test-env-${{ matrix.python-version }}
           python-version: "${{ matrix.python-version }}"
+      
+      # TEST NOT USING CACHE
+      #- name: Get current dependencies hash
+      #  id: dependencies
+      #  run: |
+      #    echo "hash=${{hashFiles('**/pyproject.toml', '**/environment_testing.yml')}}" >> $GITHUB_OUTPUT
 
-      - name: Get current dependencies hash
-        id: dependencies
-        run: |
-          echo "hash=${{hashFiles('**/pyproject.toml', '**/environment_testing.yml')}}" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache/restore@v3
+      #- uses: actions/cache/restore@v3
         # the cache for python package is reset:
         #   * every month
         #   * when package dependencies change
-        id: cache-conda-env
-        with:
-          path: /usr/share/miniconda/envs/neo-test-env
-          key: ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
+      #  id: cache-conda-env
+      #  with:
+      #    path: /usr/share/miniconda/envs/neo-test-env-${{ matrix.python-version }}
+      #    key: ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
           # restore-keys match any key that starts with the restore-key
-          restore-keys: |
-            ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-
-            ${{ runner.os }}-conda-env-
+       #   restore-keys: |
+       #     ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-
+       #     ${{ runner.os }}-conda-env-
 
       - name: Install testing dependencies
         # testing environment is only created from yml if no cache was found
         # restore-key hits should result in `cache-hit` == 'false'
-        if: steps.cache-conda-env.outputs.cache-hit != 'true'
+        #if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
-          conda env update --name neo-test-env --file environment_testing.yml --prune
-          conda install python=${{ matrix.python-version }}
+          conda install pip numpy=${{ matrix.numpy-version }} -c conda-forge
+        # this command is for updating cache. We are resting removal.
+        # conda env update --name neo-test-env-${{ matrix.python-version }} --file environment_testing.yml --prune
+
+      - name: Install git-annex
+        # this is the trick from the spikeinterface repo for getting git-annex to work with datalad
+        shell: bash
+        run: |
+          pip install datalad-installer
+          wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
+          mkdir /home/runner/work/installation
+          mv git-annex-standalone-amd64.tar.gz /home/runner/work/installation/
+          workdir=$(pwd)
+          cd /home/runner/work/installation
+          tar xvzf git-annex-standalone-amd64.tar.gz
+          echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
+          cd $workdir
+          git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
 
       - name: Configure git
         run: |
@@ -90,16 +108,17 @@ jobs:
       - name: Install neo including dependencies
         # installation with dependencies is only required if no cache was found
         # restore-key hits should result in `cache-hit` == 'false'
-        if: steps.cache-conda-env.outputs.cache-hit != 'true'
+        # if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
           pip install --upgrade -e .
           pip install .[test]
 
-      - name: Install neo without dependencies
+      # TEST NOT USING CACHE
+      #- name: Install neo without dependencies
         # only installing neo version to test as dependencies should be in cached conda env already
-        if: steps.cache-conda-env.outputs.cache-hit == 'true'
-        run: |
-          pip install --no-dependencies -e .
+      #  if: steps.cache-conda-env.outputs.cache-hit == 'true'
+      #  run: |
+      #    pip install --no-dependencies -e .
 
       - name: Install wine
         run: |
