@@ -90,7 +90,7 @@ class TiffIO(BaseIO):
         units=None,
         sampling_rate=None,
         spatial_scale=None,
-        origin='top-left',
+        origin="top-left",
         **kwargs,
     ):
         # this block is because people might be confused about the PIL -> pillow change
@@ -99,8 +99,8 @@ class TiffIO(BaseIO):
             import PIL
         except ImportError:
             raise ImportError("To use TiffIO you must first `pip install pillow`")
-        
-        if origin != 'top-left' and origin != 'bottom-left':
+
+        if origin != "top-left" and origin != "bottom-left":
             raise ValueError("`origin` must be either `top-left` or `bottom-left`")
 
         BaseIO.__init__(self, directory_path, **kwargs)
