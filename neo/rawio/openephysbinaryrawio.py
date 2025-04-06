@@ -74,7 +74,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         self.load_sync_channel = load_sync_channel
         if load_sync_channel:
             warn(
-                "The load_sync_channel=True option is deprecated and will be removed in a future version. "
+                "The load_sync_channel=True option is deprecated and will be removed in version 0.15. "
                 "Use load_sync_channel=False instead, which will add sync channels as separate streams.",
                 DeprecationWarning, stacklevel=2
             )
