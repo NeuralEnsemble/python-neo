@@ -41,14 +41,14 @@ class TestTiffIO(unittest.TestCase):
             units="V",
             sampling_rate=1.0 * pq.Hz,
             spatial_scale=1.0 * pq.micrometer,
-            origin='bottom-left',
+            origin="bottom-left",
         )
         blck_bl_origin = ioclass_bl_origin.read_block()
 
         self.assertAlmostEqual(
-            blck.segments[0].imagesequences[0][0][0,0].magnitude,
-            blck_bl_origin.segments[0].imagesequences[0][0][49,0].magnitude, # since flipped over y, [0,0] == [49,0]
-            places=3, 
+            blck.segments[0].imagesequences[0][0][0, 0].magnitude,
+            blck_bl_origin.segments[0].imagesequences[0][0][49, 0].magnitude,  # since flipped over y, [0,0] == [49,0]
+            places=3,
         )
 
         # end of directory

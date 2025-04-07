@@ -566,7 +566,7 @@ class IntanRawIO(BaseRawIO):
         set high and the rest low, the 16-bit word would be 2^0 + 2^4 + 2^5 = 1 + 16 + 32 = 49.
 
         The native_order property for each channel corresponds to its bit position in the packed word.
-        
+
         """
         dtype = np.uint16  # We fix this to match the memmap dtype
         output = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
@@ -902,7 +902,7 @@ def read_rhs(filename, file_format: str):
 
         # Each DC amplifier channel has a corresponding RHS2000 amplifier channel
         channel_number_dict["DC Amplifier channel"] = channel_number_dict["RHS2000 amplifier channel"]
-        
+
         if file_format == "one-file-per-channel":
             # There is a way to shut off saving amplifier data and only keeping the DC amplifier or shutting off all amplifier file saving,
             # so we need to count the number of files we find instead of relying on the header.
@@ -912,7 +912,6 @@ def read_rhs(filename, file_format: str):
             channel_number_dict["RHS2000 amplifier channel"] = len(raw_file_paths_dict["RHS2000 amplifier channel"])
         else:
             channel_number_dict["Stim channel"] = channel_number_dict["RHS2000 amplifier channel"]
-
 
         header_size = f.tell()
 
