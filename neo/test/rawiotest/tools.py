@@ -18,7 +18,7 @@ def can_use_network():
     # env variable for local dev
     if os.environ.get("NEO_TESTS_NO_NETWORK", False):
         return False
-    
+
     # check for datalad presence
     datalad_spec = importlib.util.find_spec("datalad")
     if datalad_spec is not None:
@@ -28,5 +28,5 @@ def can_use_network():
 
     if not HAVE_DATALAD:
         return False
-    
+
     return True
