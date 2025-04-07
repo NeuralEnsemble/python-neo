@@ -38,7 +38,8 @@ class BiocamRawIO(BaseRawIO):
         compression. If None and the file is event-based compressed, 
         you need to specify a fill gaps strategy:
 
-        * "zeros": the gaps are filled with 0s.
+        * "zeros": the gaps are filled with unsigned 0s (2048). This value is the "0" of the unsigned 12 bits
+                   representation of the data.
         * "synthetic_noise": the gaps are filled with synthetic noise.
 
     Examples
