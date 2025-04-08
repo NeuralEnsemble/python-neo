@@ -129,7 +129,7 @@ class BlackrockRawIO(BaseRawIO):
     extensions = ["ns" + str(_) for _ in range(1, 7)]
     extensions.extend(["nev", "sif", "ccf"])  # 'sif', 'ccf' not yet supported
     rawmode = "multi-file"
-    # At the moment, this is used as the frequency of the spike channels
+
     # We need to document the origin of this value
     main_sampling_rate = 30000.0
 
@@ -395,7 +395,7 @@ class BlackrockRawIO(BaseRawIO):
                     _data_reader_fun = self.__nsx_data_reader[spec]
                 self.nsx_datas[nsx_nb] = _data_reader_fun(nsx_nb)
 
-                sr = float(main_sampling_rate / self.__nsx_basic_header[nsx_nb]["period"])
+                sr = float(self.main_sampling_rate / self.__nsx_basic_header[nsx_nb]["period"])
                 self.sig_sampling_rates[nsx_nb] = sr
 
                 if spec in ["2.2", "2.3", "3.0"]:
