@@ -129,6 +129,10 @@ class BlackrockRawIO(BaseRawIO):
     extensions = ["ns" + str(_) for _ in range(1, 7)]
     extensions.extend(["nev", "sif", "ccf"])  # 'sif', 'ccf' not yet supported
     rawmode = "multi-file"
+    # At the moment, this is used as the frequency of the spike channels
+    # We need to document the origin of this value
+    main_sampling_rate = 30000.0
+
 
     def __init__(
         self, filename=None, nsx_override=None, nev_override=None, nsx_to_load=None, load_nev=True, verbose=False
@@ -250,7 +254,6 @@ class BlackrockRawIO(BaseRawIO):
 
     def _parse_header(self):
 
-        main_sampling_rate = 30000.0
 
         event_channels = []
         spike_channels = []
@@ -298,7 +301,7 @@ class BlackrockRawIO(BaseRawIO):
                     # TODO: Double check if this is the correct assumption (10 samples)
                     # default value: threshold crossing after 10 samples of waveform
                     wf_left_sweep = 10
-                    wf_sampling_rate = main_sampling_rate
+                    wf_sampling_rate = self.main_sampling_rate
                     spike_channels.append((name, _id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
 
             # scan events
