@@ -6,7 +6,7 @@ class BiocamIO(BiocamRawIO, BaseFromRaw):
     __doc__ = BiocamRawIO.__doc__
     mode = "file"
 
-    def __init__(self, filename, true_zeroes=False, use_synthetic_noise=False):
-        BiocamRawIO.__init__(self, filename=filename, true_zeroes=true_zeroes,
-                             use_synthetic_noise=use_synthetic_noise)
+    def __init__(self, filename, fill_gaps_strategy="zeros"):
+        BiocamRawIO.__init__(self, filename=filename,
+                             fill_gaps_strategy=fill_gaps_strategy)
         BaseFromRaw.__init__(self, filename)
