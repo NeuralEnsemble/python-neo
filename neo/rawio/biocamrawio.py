@@ -35,7 +35,7 @@ class BiocamRawIO(BaseRawIO):
         The *.h5 file to be read
     fill_gaps_strategy: "zeros" | "synthetic_noise" | None, default: None
         The strategy to fill the gaps in the data when using event-based
-        compression. If None and the file is event-based compressed, 
+        compression. If None and the file is event-based compressed,
         you need to specify a fill gaps strategy:
 
         * "zeros": the gaps are filled with unsigned 0s (2048). This value is the "0" of the unsigned 12 bits
