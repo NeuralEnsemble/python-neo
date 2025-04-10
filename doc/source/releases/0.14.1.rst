@@ -2,7 +2,7 @@
 Neo 0.14.1 release notes
 ========================
 
-xxCHANGE MExx April 25
+11 April 25
 
 This release of Neo includes many bug fixes in various IOs, a new HTML based repr, and fixes to the CI all with an eye toward our 1.0 release.
 
@@ -13,12 +13,13 @@ Updated dependencies
 --------------------
 
 setuptools >= 78.0.2
+numpy >= 1.24.4
 
 Import improvements
 -------------------
 
 As part of our ongoing effort to improve the speed of importing Neo we have moved the library over to using :code:`importlib.util.find_spec`
-rather than eagerly importing packages.
+rather than eagerly importing packages in :code:`try-except` blocks.
 
 CI Improvements
 ---------------
@@ -37,13 +38,14 @@ Bug fixes and improvements in IO modules
 ----------------------------------------
 
 Bug fixes and/or improvements have been made to :code:`BlackRockIO`, :code:`SpikeGLXIO`, :code:`MaxwellIO`, :code:`IntanIO`, :code:`TdtIO`,
-:code:`OpenEphysBinaryIO`, :code:`NeoMatlabIO`, :code:`EdfIO`, and :code:`SpikeGadgetsIO`.
+:code:`OpenEphysBinaryIO`, :code:`NeoMatlabIO`, :code:`EdfIO`, :code:`Neuralynx`, and :code:`SpikeGadgetsIO`.
 
 
 Acknowledgements
 ----------------
 
-Thanks to Heberto Mayorquin, Zach McKenzie, Andrew Davison, Alessio Buccino, Rémi Proville, Paul Adkisson, Tommaso Lambresa, and Nina Kudryashova
+Thanks to Heberto Mayorquin, Zach McKenzie, Andrew Davison, Alessio Buccino, Rémi Proville, Paul Adkisson, Baptiste Grimaud, 
+Robert Wolff, Tommaso Lambresa, and Nina Kudryashova.
 
 
 
