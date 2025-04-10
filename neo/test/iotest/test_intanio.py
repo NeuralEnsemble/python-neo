@@ -23,6 +23,9 @@ class TestIntanIO(
         "intan/intan_fpc_rhs_test_240329_091637/info.rhs",  # Format one-file-per-channel
         "intan/intan_fps_rhs_test_240329_091536/info.rhs",  # Format one-file-per-signal
         "intan/rhd_fpc_multistim_240514_082044/info.rhd",  # Multiple digital channels one-file-per-channel rhd
+        "intan/rhs_stim_data_single_file_format/intanTestFile.rhs",  # header-attached rhs data with stimulus current
+        "intan/test_fcs_dc_250327_154333/info.rhs",  # this is an example of only having dc amp rather than amp files
+        # "intan/test_fpc_stim_250327_151617/info.rhs", # wrong files Heberto will fix
     ]
 
 

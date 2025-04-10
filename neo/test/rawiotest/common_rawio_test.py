@@ -34,12 +34,12 @@ if datalad_spec is not None:
     HAVE_DATALAD = True
 else:
     HAVE_DATALAD = False
-    # pytest skip doesn't explain why we are skipping. 
+    # pytest skip doesn't explain why we are skipping.
     # raise error if in CI to prevent tests from spuriously skipping and appearing
     # as passing.
-    if os.environ.get("GITHUB_ACTIONS") == 'true':
+    if os.environ.get("GITHUB_ACTIONS") == "true":
         raise RuntimeError("Datalad is required for running the CI.")
-    
+
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
 repo_for_test = default_testing_repo
