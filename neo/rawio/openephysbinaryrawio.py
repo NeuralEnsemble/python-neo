@@ -130,6 +130,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         # create signals channel map: several channel per stream
         signal_channels = []
         sync_stream_id_to_buffer_id = {}
+        normal_stream_id_to_sync_stream_id = {}
         for stream_index, stream_name in enumerate(sig_stream_names):
             # stream_index is the index in vector stream names
             stream_id = str(stream_index)
@@ -140,6 +141,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 chan_id = chan_info["channel_name"]
 
                 units = chan_info["units"]
+                channel_stream_id = stream_id
                 if units == "":
                     # When units are not provided they are microvolts for neural channels and volts for ADC channels
                     # See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#continuous
@@ -148,14 +150,19 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 # Special cases for stream
                 if "SYNC" in chan_id and not self.load_sync_channel:
                     # Every stream sync channel is added as its own stream
-                    stream_id = f"{chan_id}-{str(stream_index)}"
-                    sync_stream_id_to_buffer_id[stream_id] = buffer_id
+                    sync_stream_id = f"{stream_name}SYNC"
+                    sync_stream_id_to_buffer_id[sync_stream_id] = buffer_id
+                    
+                    # We save this mapping for the buffer description protocol
+                    normal_stream_id_to_sync_stream_id[stream_id] = sync_stream_id
+                    # We then set the stream_id to the sync stream id
+                    channel_stream_id = sync_stream_id
 
                 if "ADC" in chan_id:
                     # These are non-neural channels and their stream should be separated
                     # We defined their stream_id as the stream_index of neural data plus the number of neural streams
                     # This is to not break backwards compatbility with the stream_id numbering
-                    stream_id = str(stream_index + len(sig_stream_names))
+                    channel_stream_id = str(stream_index + len(sig_stream_names))
 
                 gain = float(chan_info["bit_volts"])
                 sampling_rate = float(info["sample_rate"])
@@ -169,7 +176,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         units,
                         gain,
                         offset,
-                        stream_id,
+                        channel_stream_id,
                         buffer_id,
                     )
                 )
@@ -274,9 +281,8 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             self._stream_buffer_slice[stream_id] = slice(None, -1)
                             
                             # Add a buffer slice for the sync channel
-                            sync_channel_name = info["channels"][-1]["channel_name"]
-                            stream_name = f"{sync_channel_name}-{str(stream_id)}"
-                            self._stream_buffer_slice[stream_name] = slice(-1, None)
+                            sync_stream_id = normal_stream_id_to_sync_stream_id[stream_id]                            
+                            self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
                         else:
                             self._stream_buffer_slice[stream_id] = None
                     else:
@@ -290,8 +296,8 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, -1)
                             
                             # Add a buffer slice for the sync channel
-                            sync_channel_name = info["channels"][-1]["channel_name"]
-                            self._stream_buffer_slice[sync_channel_name] = slice(-1, None)
+                            sync_stream_id = normal_stream_id_to_sync_stream_id[stream_id]                            
+                            self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
                         else:
                             self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, None)
 
