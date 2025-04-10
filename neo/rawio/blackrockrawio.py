@@ -130,6 +130,10 @@ class BlackrockRawIO(BaseRawIO):
     extensions.extend(["nev", "sif", "ccf"])  # 'sif', 'ccf' not yet supported
     rawmode = "multi-file"
 
+    # We need to document the origin of this value
+    main_sampling_rate = 30000.0
+
+
     def __init__(
         self, filename=None, nsx_override=None, nev_override=None, nsx_to_load=None, load_nev=True, verbose=False
     ):
@@ -250,7 +254,6 @@ class BlackrockRawIO(BaseRawIO):
 
     def _parse_header(self):
 
-        main_sampling_rate = 30000.0
 
         event_channels = []
         spike_channels = []
@@ -298,7 +301,7 @@ class BlackrockRawIO(BaseRawIO):
                     # TODO: Double check if this is the correct assumption (10 samples)
                     # default value: threshold crossing after 10 samples of waveform
                     wf_left_sweep = 10
-                    wf_sampling_rate = main_sampling_rate
+                    wf_sampling_rate = self.main_sampling_rate
                     spike_channels.append((name, _id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
 
             # scan events
@@ -392,7 +395,7 @@ class BlackrockRawIO(BaseRawIO):
                     _data_reader_fun = self.__nsx_data_reader[spec]
                 self.nsx_datas[nsx_nb] = _data_reader_fun(nsx_nb)
 
-                sr = float(main_sampling_rate / self.__nsx_basic_header[nsx_nb]["period"])
+                sr = float(self.main_sampling_rate / self.__nsx_basic_header[nsx_nb]["period"])
                 self.sig_sampling_rates[nsx_nb] = sr
 
                 if spec in ["2.2", "2.3", "3.0"]:
