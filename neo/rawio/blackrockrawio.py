@@ -133,7 +133,6 @@ class BlackrockRawIO(BaseRawIO):
     # We need to document the origin of this value
     main_sampling_rate = 30000.0
 
-
     def __init__(
         self, filename=None, nsx_override=None, nev_override=None, nsx_to_load=None, load_nev=True, verbose=False
     ):
@@ -253,7 +252,6 @@ class BlackrockRawIO(BaseRawIO):
         }
 
     def _parse_header(self):
-
 
         event_channels = []
         spike_channels = []

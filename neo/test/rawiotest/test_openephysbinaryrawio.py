@@ -43,26 +43,26 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
             block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
         )
         assert chunk.shape[1] == 384
-        
+
     def test_sync_channel_access(self):
         """Test that sync channels can be accessed as separate streams when load_sync_channel=False."""
         rawio = OpenEphysBinaryRawIO(
             self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"), load_sync_channel=False
         )
         rawio.parse_header()
-        
+
         # Find sync channel streams
         sync_stream_names = [s_name for s_name in rawio.header["signal_streams"]["name"] if "SYNC" in s_name]
         assert len(sync_stream_names) > 0, "No sync channel streams found"
-        
+
         # Get the stream index for the first sync channel
         sync_stream_index = list(rawio.header["signal_streams"]["name"]).index(sync_stream_names[0])
-        
+
         # Check that we can access the sync channel data
         chunk = rawio.get_analogsignal_chunk(
             block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=sync_stream_index
         )
-        
+
         # Sync channel should have only one channel
         assert chunk.shape[1] == 1, f"Expected sync channel to have 1 channel, got {chunk.shape[1]}"
 
