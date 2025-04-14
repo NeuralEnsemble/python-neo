@@ -2,7 +2,7 @@
 Neo 0.14.1 release notes
 ========================
 
-11 April 25
+14 April 25
 
 This release of Neo includes many bug fixes in various IOs, a new HTML based repr, and fixes to the CI all with an eye toward our 1.0 release.
 
