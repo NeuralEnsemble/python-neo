@@ -1078,10 +1078,10 @@ class BlackrockRawIO(BaseRawIO):
         for data_bl in self.__nsx_data_header[nsx_nb].keys():
             # get shape and offset of data
             shape = (
-                self.__nsx_data_header[nsx_nb][data_bl]["nb_data_points"],
-                self.__nsx_basic_header[nsx_nb]["channel_count"],
+                int(self.__nsx_data_header[nsx_nb][data_bl]["nb_data_points"]),
+                int(self.__nsx_basic_header[nsx_nb]["channel_count"]),
             )
-            offset = self.__nsx_data_header[nsx_nb][data_bl]["offset_to_data_block"]
+            offset = int(self.__nsx_data_header[nsx_nb][data_bl]["offset_to_data_block"])
 
             # read data
             data[data_bl] = np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")
@@ -1828,10 +1828,10 @@ class BlackrockRawIO(BaseRawIO):
         """
         filebuf = open(filename, "rb")
         filebuf.seek(0, os.SEEK_END)
-        file_size = filebuf.tell()
+        file_size = int(filebuf.tell())
         filebuf.close()
 
-        return int(file_size)
+        return file_size
 
     def __get_min_time(self):
         """
