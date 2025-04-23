@@ -1058,8 +1058,8 @@ class BlackrockRawIO(BaseRawIO):
         filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         # get shape of data
-        shape = (self.__nsx_params["2.1"](nsx_nb)["nb_data_points"], self.__nsx_basic_header[nsx_nb]["channel_count"])
-        offset = self.__nsx_params["2.1"](nsx_nb)["bytes_in_headers"]
+        shape = (int(self.__nsx_params["2.1"](nsx_nb)["nb_data_points"]), int(self.__nsx_basic_header[nsx_nb]["channel_count"]))
+        offset = int(self.__nsx_params["2.1"](nsx_nb)["bytes_in_headers"])
 
         # read nsx data
         # store as dict for compatibility with higher file specs
@@ -1831,7 +1831,7 @@ class BlackrockRawIO(BaseRawIO):
         file_size = filebuf.tell()
         filebuf.close()
 
-        return file_size
+        return int(file_size)
 
     def __get_min_time(self):
         """
@@ -2007,8 +2007,8 @@ class BlackrockRawIO(BaseRawIO):
 
         nsx_parameters = {
             "nb_data_points": int(
-                (self.__get_file_size(filename) - bytes_in_headers)
-                / (2 * self.__nsx_basic_header[nsx_nb]["channel_count"])
+                (int(self.__get_file_size(filename)) - int(bytes_in_headers))
+                / int(2 * self.__nsx_basic_header[nsx_nb]["channel_count"])
                 - 1
             ),
             "labels": labels,
