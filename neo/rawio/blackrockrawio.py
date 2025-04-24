@@ -133,7 +133,6 @@ class BlackrockRawIO(BaseRawIO):
     # We need to document the origin of this value
     main_sampling_rate = 30000.0
 
-
     def __init__(
         self, filename=None, nsx_override=None, nev_override=None, nsx_to_load=None, load_nev=True, verbose=False
     ):
@@ -253,7 +252,6 @@ class BlackrockRawIO(BaseRawIO):
         }
 
     def _parse_header(self):
-
 
         event_channels = []
         spike_channels = []
@@ -1060,8 +1058,8 @@ class BlackrockRawIO(BaseRawIO):
         filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         # get shape of data
-        shape = (self.__nsx_params["2.1"](nsx_nb)["nb_data_points"], self.__nsx_basic_header[nsx_nb]["channel_count"])
-        offset = self.__nsx_params["2.1"](nsx_nb)["bytes_in_headers"]
+        shape = (int(self.__nsx_params["2.1"](nsx_nb)["nb_data_points"]), int(self.__nsx_basic_header[nsx_nb]["channel_count"]))
+        offset = int(self.__nsx_params["2.1"](nsx_nb)["bytes_in_headers"])
 
         # read nsx data
         # store as dict for compatibility with higher file specs
@@ -1080,10 +1078,10 @@ class BlackrockRawIO(BaseRawIO):
         for data_bl in self.__nsx_data_header[nsx_nb].keys():
             # get shape and offset of data
             shape = (
-                self.__nsx_data_header[nsx_nb][data_bl]["nb_data_points"],
-                self.__nsx_basic_header[nsx_nb]["channel_count"],
+                int(self.__nsx_data_header[nsx_nb][data_bl]["nb_data_points"]),
+                int(self.__nsx_basic_header[nsx_nb]["channel_count"]),
             )
-            offset = self.__nsx_data_header[nsx_nb][data_bl]["offset_to_data_block"]
+            offset = int(self.__nsx_data_header[nsx_nb][data_bl]["offset_to_data_block"])
 
             # read data
             data[data_bl] = np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")
@@ -1830,7 +1828,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         filebuf = open(filename, "rb")
         filebuf.seek(0, os.SEEK_END)
-        file_size = filebuf.tell()
+        file_size = int(filebuf.tell())
         filebuf.close()
 
         return file_size
@@ -2009,8 +2007,8 @@ class BlackrockRawIO(BaseRawIO):
 
         nsx_parameters = {
             "nb_data_points": int(
-                (self.__get_file_size(filename) - bytes_in_headers)
-                / (2 * self.__nsx_basic_header[nsx_nb]["channel_count"])
+                (int(self.__get_file_size(filename)) - int(bytes_in_headers))
+                / int(2 * self.__nsx_basic_header[nsx_nb]["channel_count"])
                 - 1
             ),
             "labels": labels,

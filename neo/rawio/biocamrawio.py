@@ -145,20 +145,21 @@ class BiocamRawIO(BaseRawIO):
         # read functions are different based on the version of biocam
         if self._read_function is readHDF5t_brw4_sparse:
             if self._fill_gaps_strategy is None:
-                raise ValueError(
-                    "Please set `fill_gaps_strategy` to 'zeros' or 'synthetic_noise'."
-                )
+                raise ValueError("Please set `fill_gaps_strategy` to 'zeros' or 'synthetic_noise'.")
             if self._fill_gaps_strategy == "synthetic_noise":
-                warnings.warn("Event-based compression : gaps will be filled with synthetic noise. "
-                              "Set `fill_gaps_strategy` to 'zeros' to fill gaps with 0s.")
+                warnings.warn(
+                    "Event-based compression : gaps will be filled with synthetic noise. "
+                    "Set `fill_gaps_strategy` to 'zeros' to fill gaps with 0s."
+                )
                 use_synthetic_noise = True
             elif self._fill_gaps_strategy == "zeros":
                 use_synthetic_noise = False
             else:
                 raise ValueError("`fill_gaps_strategy` must be 'zeros' or 'synthetic_noise'")
 
-            data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels,
-                                       use_synthetic_noise=use_synthetic_noise)
+            data = self._read_function(
+                self._filehandle, i_start, i_stop, self._num_channels, use_synthetic_noise=use_synthetic_noise
+            )
         else:
             data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
 
@@ -273,7 +274,7 @@ def open_biocam_file_header(filename) -> dict:
         min_digital = experiment_settings["ValueConverter"]["MinDigitalValue"]
         scale_factor = experiment_settings["ValueConverter"]["ScaleFactor"]
         sampling_rate = experiment_settings["TimeConverter"]["FrameRate"]
-        num_frames = rf['TOC'][-1,-1]
+        num_frames = rf["TOC"][-1, -1]
 
         num_channels = None
         well_ID = None
@@ -282,7 +283,9 @@ def open_biocam_file_header(filename) -> dict:
                 num_channels = len(rf[well_ID]["StoredChIdxs"])
                 if "Raw" in rf[well_ID]:
                     if len(rf[well_ID]["Raw"]) % num_channels:
-                        raise NeoReadWriteError(f"Length of raw data array is not multiple of channel number in {well_ID}")
+                        raise NeoReadWriteError(
+                            f"Length of raw data array is not multiple of channel number in {well_ID}"
+                        )
                     num_frames = len(rf[well_ID]["Raw"]) // num_channels
                     break
                 elif "EventsBasedSparseRaw" in rf[well_ID]:
@@ -360,7 +363,7 @@ def readHDF5t_brw4_sparse(rf, t0, t1, nch, use_synthetic_noise=False):
         data.fill(2048)
     else:
         # fill the data collection with Gaussian noise if requested
-        data = generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames) #, std=noise_std)
+        data = generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames)  # , std=noise_std)
     # fill the data collection with the decoded event based sparse raw data
     data = decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames)
 
@@ -376,9 +379,7 @@ def decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames):
     # from the given start position and duration in frames, localize the corresponding event positions
     # using the TOC
     toc_start_idx = np.searchsorted(toc[:, 1], start_frame)
-    toc_end_idx = min(
-            np.searchsorted(toc[:, 1], start_frame + num_frames, side="right") + 1,
-            len(toc) - 1)
+    toc_end_idx = min(np.searchsorted(toc[:, 1], start_frame + num_frames, side="right") + 1, len(toc) - 1)
     events_start_pos = events_toc[toc_start_idx]
     events_end_pos = events_toc[toc_end_idx]
     # decode all data for the given well ID and time interval
@@ -386,15 +387,15 @@ def decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames):
     binary_data_length = len(binary_data)
     pos = 0
     while pos < binary_data_length:
-        ch_idx = int.from_bytes(binary_data[pos:pos + 4], byteorder="little")
+        ch_idx = int.from_bytes(binary_data[pos : pos + 4], byteorder="little")
         pos += 4
-        ch_data_length = int.from_bytes(binary_data[pos:pos + 4], byteorder="little")
+        ch_data_length = int.from_bytes(binary_data[pos : pos + 4], byteorder="little")
         pos += 4
         ch_data_pos = pos
         while pos < ch_data_pos + ch_data_length:
-            from_inclusive = int.from_bytes(binary_data[pos:pos + 8], byteorder="little")
+            from_inclusive = int.from_bytes(binary_data[pos : pos + 8], byteorder="little")
             pos += 8
-            to_exclusive = int.from_bytes(binary_data[pos:pos + 8], byteorder="little")
+            to_exclusive = int.from_bytes(binary_data[pos : pos + 8], byteorder="little")
             pos += 8
             range_data_pos = pos
             for j in range(from_inclusive, to_exclusive):
@@ -402,11 +403,13 @@ def decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames):
                     break
                 if j >= start_frame:
                     data[ch_idx][j - start_frame] = int.from_bytes(
-                            binary_data[range_data_pos:range_data_pos + 2], byteorder="little")
+                        binary_data[range_data_pos : range_data_pos + 2], byteorder="little"
+                    )
                 range_data_pos += 2
             pos += (to_exclusive - from_inclusive) * 2
 
     return data
+
 
 def generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames):
     # Source: Documentation by 3Brain
@@ -451,10 +454,10 @@ def generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames):
     # fill with Gaussian noise
     for ch_idx in range(len(data)):
         if ch_idx in noise_info:
-            data[ch_idx] = np.array(np.random.normal(noise_info[ch_idx][0], noise_info[ch_idx][1],
-                num_frames), dtype=np.uint16)
+            data[ch_idx] = np.array(
+                np.random.normal(noise_info[ch_idx][0], noise_info[ch_idx][1], num_frames), dtype=np.uint16
+            )
         else:
-            data[ch_idx] = np.array(np.random.normal(median_mean, median_std, num_frames),
-                    dtype=np.uint16)
+            data[ch_idx] = np.array(np.random.normal(median_mean, median_std, num_frames), dtype=np.uint16)
 
     return data
