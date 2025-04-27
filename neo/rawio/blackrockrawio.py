@@ -1058,7 +1058,10 @@ class BlackrockRawIO(BaseRawIO):
         filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         # get shape of data
-        shape = (int(self.__nsx_params["2.1"](nsx_nb)["nb_data_points"]), int(self.__nsx_basic_header[nsx_nb]["channel_count"]))
+        shape = (
+            int(self.__nsx_params["2.1"](nsx_nb)["nb_data_points"]),
+            int(self.__nsx_basic_header[nsx_nb]["channel_count"]),
+        )
         offset = int(self.__nsx_params["2.1"](nsx_nb)["bytes_in_headers"])
 
         # read nsx data
