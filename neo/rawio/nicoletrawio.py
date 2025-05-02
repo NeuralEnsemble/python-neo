@@ -708,15 +708,22 @@ class NicoletRawIO(BaseRawIO):
         buffer_id = 0
         self._buffer_descriptions = {0: {}}
         for seg_index, segment in enumerate(self.segments_properties):
-            self._buffer_descriptions[0][seg_index] = {}    
+            current_samplingrate = segment['sampling_rates'][0] #Non signal-stream specific, just take the sampling rate of the first channel
+            skip_values = ([0] +  list(np.cumsum([(segment['duration'].total_seconds()) for segment in self.segments_properties])))[seg_index]  * current_samplingrate
+            [tag_idx] = [tag['index'] for tag in self.tags if tag['tag'] == '0']
+            all_sections = [j for j, idx_id in enumerate(self.all_section_ids) if idx_id == tag_idx]
+            section_lengths = [0] +  list(np.cumsum([int(index['section_l']/2) for j, index in enumerate(self.main_index) if j in all_sections]))
+            first_section_for_seg = _get_relevant_section(section_lengths, skip_values) - 1
+            offset = self.main_index[all_sections[first_section_for_seg]]['offset']
             shape = (max(self.get_nr_samples(seg_index = seg_index)), 
                     segment['sampling_rates'].count(segment['sampling_rates'][0]))
+            self._buffer_descriptions[0][seg_index] = {}
             self._buffer_descriptions[0][seg_index][buffer_id] = {
                     "type": "raw",
                     "file_path": str(self.filename),
                     "dtype": 'i2',
                     "order": "C",
-                    #"file_offset": file_offset,
+                    "file_offset": offset,
                     "shape": shape,
                 }
     
