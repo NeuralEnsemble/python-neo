@@ -57,7 +57,7 @@ class HekaIO(BaseIO):
         self.group_idx = group_idx
         self.series_idx = series_idx
         self.add_zero_offset = add_zero_offset
-        self.stimulus_experimental_mode = stimulus_experimental_mode
+        self.stimulus_experimental_mode = stimulus_experimental_mode  # `True`, `False`, "experimental"
         self.num_sweeps = None
         self.series_data = None
 
@@ -155,7 +155,7 @@ class HekaIO(BaseIO):
                     self.group_idx,
                     self.series_idx,
                     ch_idx,
-                    include_stim_protocol="experimental" if self.stimulus_experimental_mode else True,
+                    include_stim_protocol=self.stimulus_experimental_mode,
                     add_zero_offset=self.add_zero_offset,
                     fill_with_mean=True,
                     stim_channel_idx=None,
