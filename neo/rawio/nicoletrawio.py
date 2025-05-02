@@ -192,6 +192,7 @@ class NicoletRawIO(BaseRawIO):
                                                  dtype = _event_channel_dtype)
         self._generate_minimal_annotations()
         self._generate_additional_annotations()
+        self._get_buffer_descriptions()
             
     def _get_tags(self):
         tags_structure = [
@@ -697,6 +698,35 @@ class NicoletRawIO(BaseRawIO):
         self.signal_data_offset = offset
         self.raw_signal = raw_signal
     
+    def _get_buffer_descriptions(self):
+        '''
+        Get the descriptions of raw signal buffers
+        
+        TODO: File offset
+        TODO: Support for multiple signal streams
+        '''
+        buffer_id = 0
+        self._buffer_descriptions = {0: {}}
+        for seg_index, segment in enumerate(self.segments_properties):
+            current_samplingrate = segment['sampling_rates'][0] #Non signal-stream specific, just take the sampling rate of the first channel
+            skip_values = ([0] +  list(np.cumsum([(segment['duration'].total_seconds()) for segment in self.segments_properties])))[seg_index]  * current_samplingrate
+            [tag_idx] = [tag['index'] for tag in self.tags if tag['tag'] == '0']
+            all_sections = [j for j, idx_id in enumerate(self.all_section_ids) if idx_id == tag_idx]
+            section_lengths = [0] +  list(np.cumsum([int(index['section_l']/2) for j, index in enumerate(self.main_index) if j in all_sections]))
+            first_section_for_seg = _get_relevant_section(section_lengths, skip_values) - 1
+            offset = self.main_index[all_sections[first_section_for_seg]]['offset']
+            shape = (max(self.get_nr_samples(seg_index = seg_index)), 
+                    segment['sampling_rates'].count(segment['sampling_rates'][0]))
+            self._buffer_descriptions[0][seg_index] = {}
+            self._buffer_descriptions[0][seg_index][buffer_id] = {
+                    "type": "raw",
+                    "file_path": str(self.filename),
+                    "dtype": 'i2',
+                    "order": "C",
+                    "file_offset": offset,
+                    "shape": shape,
+                }
+    
     def _extract_header_information(self):
         self._get_tags()       
         self._get_qi()       
@@ -797,33 +827,27 @@ class NicoletRawIO(BaseRawIO):
             raise IndexError(f"Segment Index out of range. There are {self.header['nb_segment'][block_index]} segments for block {block_index}")
         if channel_indexes is None:
             channel_indexes = [i for i, channel in enumerate(self.header['signal_channels']) if channel['stream_id'] == str(stream_index)]
-            nb_chan = len(channel_indexes)
         elif isinstance(channel_indexes, slice):
             channel_indexes = np.arange(self.header['signal_channels'].shape[0], dtype="int")[channel_indexes]
-            nb_chan = len(channel_indexes)
         else:
             channel_indexes = np.asarray(channel_indexes)
             if any(channel_indexes < 0):
                 raise IndexError("Channel Indices cannot be negative")
             if any(channel_indexes >= len(self.header['signal_channels'].shape[0])):
                 raise IndexError("Channel Indices out of range")
-            nb_chan = len(channel_indexes)
         if i_start is None:
             i_start = 0
         if i_stop is None:
             i_stop = max(self.get_nr_samples(seg_index = seg_index, stream_index = stream_index))
         if i_start < 0 or i_stop > max(self.get_nr_samples(seg_index = seg_index, stream_index = stream_index)): #Get the maximum number of samples for the respective sampling rate
             raise IndexError("Start or Stop Index out of bounds")
-        eeg_sampling_rate = max(self.segments_properties[seg_index]['sampling_rates'])
-        current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][channel_indexes[0]]
+        current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][channel_indexes[0]] #Non signal-stream specific, just take the sampling rate of the first channel
         cum_segment_duration = [0] +  list(np.cumsum([(segment['duration'].total_seconds()) for segment in self.segments_properties])) 
-        data = np.empty([i_stop - i_start, self.segments_properties[0]['sampling_rates'].count(current_samplingrate)])
+        data = np.empty([i_stop - i_start, self.segments_properties[seg_index]['sampling_rates'].count(current_samplingrate)])
         for i, channel_index  in enumerate(channel_indexes):
             print('Current Channel: ' + str(i))
             current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][i]
             multiplicator = self.segments_properties[seg_index]['scale'][i]
-            #if current_samplingrate != eeg_sampling_rate: # Only keeps the channels with the eeg sampling rate, all others get skipped
-            #    continue
             [tag_idx] = [tag['index'] for tag in self.tags if tag['tag'] == str(i)]
             all_sections = [j for j, idx_id in enumerate(self.all_section_ids) if idx_id == tag_idx]
             section_lengths = [int(index['section_l']/2) for j, index in enumerate(self.main_index) if j in all_sections]
@@ -833,13 +857,8 @@ class NicoletRawIO(BaseRawIO):
             last_section_for_seg = _get_relevant_section(cum_section_lengths, 
                                                               current_samplingrate*
                                                               self.segments_properties[seg_index]['duration'].total_seconds()) - 1 + first_section_for_seg
-            offset_section_lengths = [length - cum_section_lengths[first_section_for_seg] for length in cum_section_lengths]
-            first_section = _get_relevant_section(cum_section_lengths, i_start - 1)
-            last_section = _get_relevant_section(cum_section_lengths, i_stop + 1) - 1
-            if last_section > last_section_for_seg:
-                raise IndexError(f'Index out of range for channel {channel_index}')
-            use_sections = all_sections[first_section:last_section]
-            use_sections_length = section_lengths[first_section:last_section]
+            use_sections = all_sections[first_section_for_seg:last_section_for_seg]
+            use_sections_length = section_lengths[first_section_for_seg:last_section_for_seg]
             np_idx = 0
             for section_idx, section_length in zip(use_sections, use_sections_length):
                 cur_sec = self.main_index[section_idx]
@@ -939,6 +958,9 @@ class NicoletRawIO(BaseRawIO):
                 'section_l': 0
             }]
         return(idx_instance)
+    
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 def read_as_dict(fid, dtype):
     info = dict()  
