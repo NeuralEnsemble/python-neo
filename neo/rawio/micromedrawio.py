@@ -148,11 +148,11 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
 
                 # this skips the filtering info done with the machine
                 f.seek(8, 1) 
-                
+
                 #(sampling_rate,) = f.read_f("H")
                 # sampling_rate is actually the rate_coefficient which is multipled by the 
                 # Rate_Min which is the sampling_rate
-                sampling_rate = struct.unpack("H", f.read(struct.calcsize("H")))
+                sampling_rate = struct.unpack("H", f.read(struct.calcsize("H")))[0]
                 sampling_rate *= Rate_Min
                 chan_id = str(c)
                 signal_channels.append(
