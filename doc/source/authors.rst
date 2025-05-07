@@ -137,7 +137,7 @@ and may not be the current affiliation of a contributor.
 39. Massachusetts General Hospital, Department of Molecular Biology
 40. Plexon Inc.
 41. Paris Brain Institute
-42. Fondazione Istituto Italiano di Tecnologia (IIT), Genoa, Italy
+42. Istituto Italiano di Tecnologia (IIT), Genoa, Italy
 43. University of Genoa, Italy
 44. AquiNeuro, SAS
 
