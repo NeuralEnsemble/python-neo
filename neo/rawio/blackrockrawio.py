@@ -323,19 +323,21 @@ class BlackrockRawIO(BaseRawIO):
         self.__nsx_data_header = {}
 
         for nsx_nb in self._avail_nsx:
-            spec = self.__nsx_spec[nsx_nb] = self.__extract_nsx_file_spec(nsx_nb)
+            spec_version = self.__nsx_spec[nsx_nb] = self.__extract_nsx_file_spec(nsx_nb)
             # read nsx headers
-            self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = self.__nsx_header_reader[spec](nsx_nb)
+            nsx_header_reader = self.__nsx_header_reader[spec_version]
+            self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = nsx_header_reader(nsx_nb)
 
-            # The only way to know if it is the PTP-variant of file spec 3.0
+            # The only way to know if it is the peak-to-peak-variant of file spec 3.0
             # is to check for nanosecond timestamp resolution.
-            if (
+            is_ptp_variant = (
                 "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names
                 and self.__nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000
-            ):
+            )
+            if is_ptp_variant:
                 nsx_dataheader_reader = self.__nsx_dataheader_reader["3.0-ptp"]
             else:
-                nsx_dataheader_reader = self.__nsx_dataheader_reader[spec]
+                nsx_dataheader_reader = self.__nsx_dataheader_reader[spec_version]
             # for nsxdef get_analogsignal_shape(self, block_index, seg_index):
             self.__nsx_data_header[nsx_nb] = nsx_dataheader_reader(nsx_nb)
 
@@ -355,8 +357,12 @@ class BlackrockRawIO(BaseRawIO):
         else:
             raise (ValueError("nsx_to_load is wrong"))
 
-        if not all(nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load):
-            raise FileNotFoundError(f"nsx_to_load does not match available nsx list")
+        missing_nsx_files = [nsx_nb for nsx_nb in self.nsx_to_load if nsx_nb not in self._avail_nsx]
+        if missing_nsx_files:
+            missing_list = ", ".join(f"ns{nsx_nb}" for nsx_nb in missing_nsx_files)
+            raise FileNotFoundError(
+                f"Requested NSX file(s) not found: {missing_list}. Available NSX files: {self._avail_nsx}"
+            )
 
         # check that all files come from the same specification
         all_spec = [self.__nsx_spec[nsx_nb] for nsx_nb in self.nsx_to_load]
@@ -377,31 +383,33 @@ class BlackrockRawIO(BaseRawIO):
             for nsx_nb in self.nsx_to_load:
                 self.__match_nsx_and_nev_segment_ids(nsx_nb)
 
-        self.nsx_datas = {}
+        self.nsx_data = {}
         self.sig_sampling_rates = {}
         if len(self.nsx_to_load) > 0:
             for nsx_nb in self.nsx_to_load:
-                spec = self.__nsx_spec[nsx_nb]
-                # The only way to know if it is the PTP-variant of file spec 3.0
+                basic_header = self.__nsx_basic_header[nsx_nb]
+                spec_version = self.__nsx_spec[nsx_nb]
+                # The only way to know if it is the peak-to-peak-variant of file spec 3.0
                 # is to check for nanosecond timestamp resolution.
-                if (
-                    "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names
-                    and self.__nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000
-                ):
+                is_ptp_variant = (
+                    "timestamp_resolution" in basic_header.dtype.names
+                    and basic_header["timestamp_resolution"] == 1_000_000_000
+                )
+                if is_ptp_variant:
                     _data_reader_fun = self.__nsx_data_reader["3.0-ptp"]
                 else:
-                    _data_reader_fun = self.__nsx_data_reader[spec]
-                self.nsx_datas[nsx_nb] = _data_reader_fun(nsx_nb)
+                    _data_reader_fun = self.__nsx_data_reader[spec_version]
+                self.nsx_data[nsx_nb] = _data_reader_fun(nsx_nb)
 
-                sr = float(self.main_sampling_rate / self.__nsx_basic_header[nsx_nb]["period"])
+                sr = float(self.main_sampling_rate / basic_header["period"])
                 self.sig_sampling_rates[nsx_nb] = sr
 
-                if spec in ["2.2", "2.3", "3.0"]:
+                if spec_version in ["2.2", "2.3", "3.0"]:
                     ext_header = self.__nsx_ext_header[nsx_nb]
-                elif spec == "2.1":
+                elif spec_version == "2.1":
                     ext_header = []
                     keys = ["labels", "units", "min_analog_val", "max_analog_val", "min_digital_val", "max_digital_val"]
-                    params = self.__nsx_params[spec](nsx_nb)
+                    params = self.__nsx_params[spec_version](nsx_nb)
                     for i in range(len(params["labels"])):
                         d = {}
                         for key in keys:
@@ -438,7 +446,7 @@ class BlackrockRawIO(BaseRawIO):
                     signal_channels.append((ch_name, ch_id, sr, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
             # check nb segment per nsx
-            nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]
+            nb_segments_for_nsx = [len(self.nsx_data[nsx_nb]) for nsx_nb in self.nsx_to_load]
             if not all(nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx):
                 raise NeoReadWriteError("Segment nb not consistent across nsX files")
             self._nb_segment = nb_segments_for_nsx[0]
@@ -460,7 +468,7 @@ class BlackrockRawIO(BaseRawIO):
                         ts_res = 30_000
                     period = self.__nsx_basic_header[nsx_nb]["period"]
                     sec_per_samp = period / 30_000  # Maybe 30_000 should be ['sample_resolution']
-                    length = self.nsx_datas[nsx_nb][data_bl].shape[0]
+                    length = self.nsx_data[nsx_nb][data_bl].shape[0]
                     if self.__nsx_data_header[nsx_nb] is None:
                         t_start = 0.0
                         t_stop = max(t_stop, length / self.sig_sampling_rates[nsx_nb])
@@ -631,7 +639,7 @@ class BlackrockRawIO(BaseRawIO):
     def _get_signal_size(self, block_index, seg_index, stream_index):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
-        memmap_data = self.nsx_datas[nsx_nb][seg_index]
+        memmap_data = self.nsx_data[nsx_nb][seg_index]
         return memmap_data.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
@@ -642,7 +650,7 @@ class BlackrockRawIO(BaseRawIO):
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
-        memmap_data = self.nsx_datas[nsx_nb][seg_index]
+        memmap_data = self.nsx_data[nsx_nb][seg_index]
         if channel_indexes is None:
             channel_indexes = slice(None)
         sig_chunk = memmap_data[i_start:i_stop, channel_indexes]
@@ -802,7 +810,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract file specification from an .nsx file.
         """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
         # Header structure of files specification 2.2 and higher. For files 2.1
         # and lower, the entries ver_major and ver_minor are not supported.
@@ -822,7 +830,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract file specification from an .nev file
         """
-        filename = ".".join([self._filenames["nev"], "nev"])
+        filename = f"{self._filenames['nev']}.nev"
         # Header structure of files specification 2.2 and higher. For files 2.1
         # and lower, the entries ver_major and ver_minor are not supported.
         dt0 = [("file_id", "S8"), ("ver_major", "uint8"), ("ver_minor", "uint8")]
@@ -872,7 +880,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract nsx header information from a 2.2 or 2.3 .nsx file
         """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
         # basic header (file_id: NEURALCD)
         dt0 = [
@@ -885,6 +893,8 @@ class BlackrockRawIO(BaseRawIO):
             # label of the sampling group (e.g., "1 kS/s" or "LFP low")
             ("label", "S16"),
             ("comment", "S256"),
+            # ("application_to_create_file", "S52"), # A 52-character string labeling the program which created the file. Trellis will also include its revision number in this label.
+            # ("processor_timestamp", "uint32"), # The processor timestamp (in 30 kHz clock cycles) at which the data in the file were collected.
             ("period", "uint32"),
             ("timestamp_resolution", "uint32"),
             # time origin: 2byte uint16 values for ...
@@ -904,7 +914,7 @@ class BlackrockRawIO(BaseRawIO):
 
         # extended header (type: CC)
         offset_dt0 = np.dtype(dt0).itemsize
-        shape = nsx_basic_header["channel_count"]
+        shape = int(nsx_basic_header["channel_count"])
         dt1 = [
             ("type", "S2"),
             ("electrode_id", "uint16"),
@@ -923,11 +933,11 @@ class BlackrockRawIO(BaseRawIO):
             # filter settings used to create nsx from source signal
             ("hi_freq_corner", "uint32"),
             ("hi_freq_order", "uint32"),
-            ("hi_freq_type", "uint16"),  # 0=None, 1=Butterworth
+            ("hi_freq_type", "uint16"),  # 0=None, 1=Butterworth, 2=Chebyshev
             ("lo_freq_corner", "uint32"),
             ("lo_freq_order", "uint32"),
             ("lo_freq_type", "uint16"),
-        ]  # 0=None, 1=Butterworth
+        ]  # 0=None, 1=Butterworth, -2-Chebyshev
 
         nsx_ext_header = np.memmap(filename, shape=shape, offset=offset_dt0, dtype=dt1, mode="r")
 
@@ -937,14 +947,17 @@ class BlackrockRawIO(BaseRawIO):
         """
         Reads data header following the given offset of an nsx file.
         """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
-        ts_size = "uint64" if self.__nsx_basic_header[nsx_nb]["ver_major"] >= 3 else "uint32"
+        major_version = self.__nsx_basic_header[nsx_nb]["ver_major"]
+        ts_size = "uint64" if major_version >= 3 else "uint32"
+        #ts_size = "uint64"
+        # dtypes data header, the header flag is always set to 1
+        dt2 = [("header_flag", "uint8"), ("timestamp", ts_size), ("nb_data_points", "uint32")]
 
-        # dtypes data header
-        dt2 = [("header", "uint8"), ("timestamp", ts_size), ("nb_data_points", "uint32")]
+        packet_header = np.memmap(filename, dtype=dt2, shape=1, offset=offset, mode="r")[0]
 
-        return np.memmap(filename, dtype=dt2, shape=1, offset=offset, mode="r")[0]
+        return packet_header
 
     def __read_nsx_dataheader_variant_a(self, nsx_nb, filesize=None, offset=None):
         """
@@ -964,32 +977,37 @@ class BlackrockRawIO(BaseRawIO):
         Reads the nsx data header for each data block following the offset of
         file spec 2.2, 2.3, and 3.0.
         """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
         filesize = self.__get_file_size(filename)
 
         data_header = {}
-        index = 0
 
-        if offset is None:
-            offset = self.__nsx_basic_header[nsx_nb]["bytes_in_headers"]
+        offset_to_first_data_block = offset or int(self.__nsx_basic_header[nsx_nb]["bytes_in_headers"])
 
+        channel_count = int(self.__nsx_basic_header[nsx_nb]["channel_count"])
+        offset = offset_to_first_data_block
+        data_block_index = 0
         while offset < filesize:
-            dh = self.__read_nsx_dataheader(nsx_nb, offset)
-            data_header[index] = {
-                "header": dh["header"],
-                "timestamp": dh["timestamp"],
-                "nb_data_points": dh["nb_data_points"],
-                "offset_to_data_block": offset + dh.dtype.itemsize,
+            packet_header = self.__read_nsx_dataheader(nsx_nb, offset)
+            header_flag = packet_header["header_flag"]
+            assert header_flag == 1, f"Invalid header flag: {header_flag}"
+            timestamp = packet_header["timestamp"]
+            offset_to_data_block_start = offset + packet_header.dtype.itemsize
+            num_data_points = int(packet_header["nb_data_points"])
+                
+            data_header[data_block_index] = {
+                "header": header_flag,
+                "timestamp": timestamp,
+                "nb_data_points": num_data_points,
+                "offset_to_data_block": offset_to_data_block_start,
             }
 
-            # data size = number of data points * (2bytes * number of channels)
-            # use of `int` avoids overflow problem
-            data_size = int(dh["nb_data_points"]) * int(self.__nsx_basic_header[nsx_nb]["channel_count"]) * 2
-            # define new offset (to possible next data block)
-            offset = int(data_header[index]["offset_to_data_block"]) + data_size
+            data_array_size = num_data_points * channel_count * np.dtype("int16").itemsize
+            # Jump to the next data block
+            offset = offset_to_data_block_start + data_array_size
 
-            index += 1
+            data_block_index += 1
 
         return data_header
 
@@ -1075,19 +1093,20 @@ class BlackrockRawIO(BaseRawIO):
         Extract nsx data (blocks) from a 2.2, 2.3, or 3.0 .nsx file.
         Blocks can arise if the recording was paused by the user.
         """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
         data = {}
-        for data_bl in self.__nsx_data_header[nsx_nb].keys():
+        data_header = self.__nsx_data_header[nsx_nb]
+        number_of_channels = int(self.__nsx_basic_header[nsx_nb]["channel_count"])
+
+        for data_block in data_header.keys():
             # get shape and offset of data
-            shape = (
-                int(self.__nsx_data_header[nsx_nb][data_bl]["nb_data_points"]),
-                int(self.__nsx_basic_header[nsx_nb]["channel_count"]),
-            )
-            offset = int(self.__nsx_data_header[nsx_nb][data_bl]["offset_to_data_block"])
+            number_of_samples = int(data_header[data_block]["nb_data_points"])
+            shape = (number_of_samples, number_of_channels)
+            offset = int(data_header[data_block]["offset_to_data_block"])
 
             # read data
-            data[data_bl] = np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")
+            data[data_block] = np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")
 
         return data
 
@@ -2117,13 +2136,13 @@ class BlackrockRawIO(BaseRawIO):
         for data_bl in range(self._nb_segment):
             keep_seg = True
             for nsx_nb in self.nsx_to_load:
-                length = self.nsx_datas[nsx_nb][data_bl].shape[0]
+                length = self.nsx_data[nsx_nb][data_bl].shape[0]
                 keep_seg = keep_seg and (length >= 2)
 
             if not keep_seg:
                 removed_seg.append(data_bl)
                 for nsx_nb in self.nsx_to_load:
-                    self.nsx_datas[nsx_nb].pop(data_bl)
+                    self.nsx_data[nsx_nb].pop(data_bl)
                     self.__nsx_data_header[nsx_nb].pop(data_bl)
 
         # Keys need to be increasing from 0 to maximum in steps of 1
@@ -2132,8 +2151,8 @@ class BlackrockRawIO(BaseRawIO):
             for j in range(i + 1, self._nb_segment):
                 # remap nsx seg index
                 for nsx_nb in self.nsx_to_load:
-                    data = self.nsx_datas[nsx_nb].pop(j)
-                    self.nsx_datas[nsx_nb][j - 1] = data
+                    data = self.nsx_data[nsx_nb].pop(j)
+                    self.nsx_data[nsx_nb][j - 1] = data
 
                     data_header = self.__nsx_data_header[nsx_nb].pop(j)
                     self.__nsx_data_header[nsx_nb][j - 1] = data_header
