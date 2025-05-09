@@ -65,6 +65,18 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
 
     def _source_name(self):
         return self.filename
+    
+    def _get_ids_and_electrodes(self, version, stream_id, h5file, mapping):
+        if int(version) == 20160704:
+            ids = np.array(mapping["channel"])
+            els = np.array(mapping["electrode"])
+        else:
+            ids = np.array(h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["channels"])
+            els = np.array(mapping["electrode"])
+        ids = ids[ids >= 0]
+        mask = np.isin(np.array(mapping["channel"]), ids)
+        return ids, els[mask]
+
 
     def _parse_header(self):
         import h5py
@@ -175,11 +187,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
             }
             self._stream_buffer_slice[stream_id] = slice(None)
 
-            channel_ids = np.array(mapping["channel"])
-            electrode_ids = np.array(mapping["electrode"])
-            mask = channel_ids >= 0
-            channel_ids = channel_ids[mask]
-            electrode_ids = electrode_ids[mask]
+            channel_ids, electrode_ids = self._get_ids_and_electrodes(version, stream_id, h5file, mapping)
 
             for i, chan_id in enumerate(channel_ids):
                 elec_id = electrode_ids[i]
