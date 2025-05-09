@@ -74,7 +74,8 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
             ids = np.array(h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]["channels"])
             els = np.array(mapping["electrode"])
         ids = ids[ids >= 0]
-        mask = np.isin(np.array(mapping["channel"]), ids)
+        mask = np.unique(mapping["channel"][np.isin(np.array(mapping["channel"]), ids)],
+                         return_index=True)[1]
         return ids, els[mask]
 
 
