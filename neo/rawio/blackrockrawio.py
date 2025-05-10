@@ -1254,7 +1254,18 @@ class BlackrockRawIO(BaseRawIO):
         # read all raw data packets and markers
         dt0 = [("timestamp", ts_format), ("packet_id", "uint16"), ("value", f"S{data_size - header_skip}")]
 
-        raw_data = np.memmap(filename, offset=header_size, dtype=dt0, mode="r")
+        # expected number of data packets
+        n_packets = int(
+            (self.__get_file_size(filename) - header_size) / data_size
+        )
+
+        raw_data = np.memmap(
+            filename,
+            offset=header_size,
+            dtype=dt0,
+            shape=(n_packets,),
+            mode="r",
+        )
 
         masks = self.__nev_data_masks(raw_data["packet_id"])
         types = self.__nev_data_types(data_size)
