@@ -38,7 +38,7 @@ The current maintainers are:
 - Julia Sprenger (`@JuliaSprenger`_)
 - Michael Denker (`@mdenker`_)
 - Alessio Buccino (`@alejoe91`_)
-_ Zach McKenzie (`@zm711`_)
+- Zach McKenzie (`@zm711`_)
 
 
 .. _`Neo maintainers team`: https://github.com/orgs/NeuralEnsemble/teams/neo-maintainers
