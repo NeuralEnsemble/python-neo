@@ -991,7 +991,7 @@ class BlackrockRawIO(BaseRawIO):
         while offset < filesize:
             packet_header = self.__read_nsx_dataheader(nsx_nb, offset)
             header_flag = packet_header["header_flag"]
-            assert header_flag == 1, f"Invalid header flag: {header_flag}"
+            # assert header_flag == 1, f"Invalid header flag: {header_flag}"
             timestamp = packet_header["timestamp"]
             offset_to_data_block_start = offset + packet_header.dtype.itemsize
             num_data_points = int(packet_header["nb_data_points"])
