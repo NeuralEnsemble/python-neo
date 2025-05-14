@@ -43,6 +43,24 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/multi_trigger_multi_gate/CatGT/Supercat-A",
     ]
 
+    def test_loading_only_one_probe_in_multi_probe_scenario(self):
+        from pathlib import Path
+
+        local_path_multi_probe_path = Path(
+            self.get_local_path("spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI0")
+        )
+        gate_folder_path = local_path_multi_probe_path / "5-19-2022-CI0_g0"
+        probe_folder_path = gate_folder_path / "5-19-2022-CI0_g0_imec1"
+
+        rawio = SpikeGLXRawIO(probe_folder_path)
+        rawio.parse_header()
+
+        expected_stream_names = ["imec1.ap", "imec1.lf"]
+        actual_stream_names = rawio.header["signal_streams"]["name"].tolist()
+        assert (
+            actual_stream_names == expected_stream_names
+        ), f"Expected {expected_stream_names}, but got {actual_stream_names}"
+
     def test_with_location(self):
         rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/Noise4Sam_g0"), load_channel_location=True)
         rawio.parse_header()
