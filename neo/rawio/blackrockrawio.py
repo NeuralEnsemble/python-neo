@@ -1254,7 +1254,9 @@ class BlackrockRawIO(BaseRawIO):
         # read all raw data packets and markers
         dt0 = [("timestamp", ts_format), ("packet_id", "uint16"), ("value", f"S{data_size - header_skip}")]
 
-        # expected number of data packets
+        # expected number of data packets. We are not sure why, but it seems we can get partial data packets
+        # based on blackrock's own code this is okay so applying an int to round down is necessary to obtain the
+        # memory map of full packets and toss the partial packet.
         n_packets = int(
             (self.__get_file_size(filename) - header_size) / data_size
         )
