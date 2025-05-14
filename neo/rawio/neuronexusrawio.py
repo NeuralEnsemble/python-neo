@@ -167,24 +167,27 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         signal_channels = []
         channel_info = self.metadata["sapiens_base"]["biointerface_map"]
 
-        # as per dicussion with the Neo/SpikeInterface teams stream_id will become buffer_id
-        # and because all data is stored in the same buffer stream for the moment all channels
-        # will be in stream_id = 0. In the future this will be split into sub_streams based on
-        # type but for now it will be the end-users responsability for this.
-        stream_id = "0"  # hard-coded see note above
+        # NeuroNexus uses a single buffer for all file types. Now that we buffer API
+        # we divide each Allego signal into it's appropriate stream for the end-user
         buffer_id = "0"
         for channel_index, channel_name in enumerate(channel_info["chan_name"]):
             channel_id = channel_info["ntv_chan_name"][channel_index]
             # 'ai0' indicates analog data which is stored as microvolts
             if channel_info["chan_type"][channel_index] == "ai0":
                 units = "uV"
+                stream_id = "0"
             # 'd' means digital. Per discussion with neuroconv users the use of
             # 'a.u.' makes the units clearer
-            elif channel_info["chan_type"][channel_index][0] == "d":
+            elif channel_info["chan_type"][channel_index][:2] == "di":
                 units = "a.u."
-            # aux channel
+                stream_id = "1"
+            elif channel_info["chan_type"][channel_index][:2] == "do":
+                # aux channel
+                units = "a.u."
+                stream_id = "2"
             else:
                 units = "V"
+                stream_id = "3"
 
             signal_channels.append(
                 (
@@ -297,4 +300,9 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
 # this is pretty useless right now, but I think after a
 # refactor with sub streams we could adapt this for the sub-streams
 # so let's leave this here for now :)
-stream_id_to_stream_name = {"0": "Neuronexus Allego Data"}
+stream_id_to_stream_name = {
+    "0": "Neuronexus Allego Analog (pri) Data",
+    "1": "NeuroNexus Allego Digital-in (din) Data",
+    "2": "NeuroNexus Allego Digital-out (dout) Data",
+    "3": "NeuroNexus Allego Auxiliary (aux) Data",
+}
