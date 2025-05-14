@@ -1808,7 +1808,7 @@ class BlackrockRawIO(BaseRawIO):
                 hour=self.__nev_basic_header["hour"],
                 minute=self.__nev_basic_header["minute"],
                 second=self.__nev_basic_header["second"],
-                microsecond=self.__nev_basic_header["millisecond"],
+                microsecond=self.__nev_basic_header["millisecond"] * 1000,
             ),
             "max_res": self.__nev_basic_header["timestamp_resolution"],
             "channel_ids": self.__nev_ext_header[b"NEUEVWAV"]["electrode_id"],
