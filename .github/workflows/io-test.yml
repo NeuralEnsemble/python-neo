@@ -19,10 +19,10 @@ jobs:
       fail-fast: true
       matrix:
         python-version: ['3.9', '3.13']
-        numpy-version: ['1.26', '2.2']
+        numpy-version: ['1.26', '2.1']
         exclude:
            - python-version: '3.9'
-             numpy-version: '2.2'
+             numpy-version: '2.1'
            - python-version: '3.13'
              numpy-version: '1.26'
     defaults:
