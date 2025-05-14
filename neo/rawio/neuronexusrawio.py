@@ -297,9 +297,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
-# this is pretty useless right now, but I think after a
-# refactor with sub streams we could adapt this for the sub-streams
-# so let's leave this here for now :)
+# here we map the stream_id to the more descriptive stream_name
 stream_id_to_stream_name = {
     "0": "Neuronexus Allego Analog (pri) Data",
     "1": "NeuroNexus Allego Digital-in (din) Data",
