@@ -299,7 +299,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
 
 # here we map the stream_id to the more descriptive stream_name
 stream_id_to_stream_name = {
-    "0": "Neuronexus Allego Analog (pri) Data",
+    "0": "NeuroNexus Allego Analog (pri) Data",
     "1": "NeuroNexus Allego Digital-in (din) Data",
     "2": "NeuroNexus Allego Digital-out (dout) Data",
     "3": "NeuroNexus Allego Auxiliary (aux) Data",
