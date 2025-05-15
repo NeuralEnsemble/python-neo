@@ -103,7 +103,7 @@ class Plexon2RawIO(BaseRawIO):
 
         # note that this filename is used in self._source_name
         self.filename = pathlib.Path(filename)
-        if (self.filename.is_symlink()):
+        if self.filename.is_symlink():
             self.filename = self.filename.resolve()
 
         if (not self.filename.exists()) or (not self.filename.is_file()):
