@@ -78,8 +78,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         The spikeglx folder containing meta/bin files
     load_sync_channel: bool, default: False
         Can be used to load the synch stream as the last channel of the neural data.
-        From versions higher than 0.14.1 the sync channel is always loaded as a separate stream.
         This option is deprecated and will be removed in version 0.15. 
+        From versions higher than 0.14.1 the sync channel is always loaded as a separate stream.
     load_channel_location: bool, default: False
         If True probeinterface is used to load the channel locations from the directory
 
