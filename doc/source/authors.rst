@@ -72,7 +72,7 @@ and may not be the current affiliation of a contributor.
 * Divyansh Gupta [31]
 * Nate Dolensek [3]
 * Philipp Hornauer [32]
-* Robert Wolff
+* Robert Wolff [42]
 * Jules Lebert [33]
 * Benjamin Heasly
 * Baptiste Grimaud [34]
@@ -93,6 +93,8 @@ and may not be the current affiliation of a contributor.
 * Tommaso Lambresa [43]
 * Nina Kudryashova [37]
 * Rémi Proville [44]
+* Paul Adkisson [24]
+* Luiz Tauffer [24]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Université Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -135,7 +137,7 @@ and may not be the current affiliation of a contributor.
 39. Massachusetts General Hospital, Department of Molecular Biology
 40. Plexon Inc.
 41. Paris Brain Institute
-42. Istituto Italiano di Tecnologia (IIT), Italy
+42. Istituto Italiano di Tecnologia (IIT), Genoa, Italy
 43. University of Genoa, Italy
 44. AquiNeuro, SAS
 
