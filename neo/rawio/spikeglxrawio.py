@@ -115,7 +115,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         if load_sync_channel:
             warn(
                 "The load_sync_channel=True option is deprecated and will be removed in version 0.15 \n"
-                "The sync channel is now loaded as a separate stream by default and should be accessed as such. "
+                "The sync channel is now loaded as a separate stream by default and should be accessed as such. ",
                 DeprecationWarning, stacklevel=2
             )
         self.load_channel_location = load_channel_location
