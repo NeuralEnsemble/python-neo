@@ -1258,9 +1258,7 @@ class BlackrockRawIO(BaseRawIO):
         # based on blackrock's own code this is okay so applying an int to round down is necessary to obtain the
         # memory map of full packets and toss the partial packet.
         # See reference: https://github.com/BlackrockNeurotech/Python-Utilities/blob/fa75aa671680306788e10d3d8dd625f9da4ea4f6/brpylib/brpylib.py#L580-L587
-        n_packets = int(
-            (self.__get_file_size(filename) - header_size) / data_size
-        )
+        n_packets = int((self.__get_file_size(filename) - header_size) / data_size)
 
         raw_data = np.memmap(
             filename,
