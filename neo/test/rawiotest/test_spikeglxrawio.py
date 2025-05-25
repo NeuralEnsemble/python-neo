@@ -137,22 +137,26 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         # Test with load_sync_channel=False (default)
         rawio_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=False)
         rawio_no_sync.parse_header()
-        
+
         # Get stream names
         stream_names = rawio_no_sync.header["signal_streams"]["name"].tolist()
-        
+
         # Check if there's a sync channel stream (should contain "SY0" or "SYNC" in the name)
         sync_streams = [name for name in stream_names if "SY0" in name or "SYNC" in name]
         assert len(sync_streams) > 0, "No sync channel stream found when load_sync_channel=False"
-        
+
         # Test deprecation warning when load_sync_channel=True
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             rawio_with_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=True)
-            
+
             # Check if deprecation warning was raised
-            assert any(issubclass(warning.category, DeprecationWarning) for warning in w), "No deprecation warning raised"
-            assert any("will be removed in version 0.15" in str(warning.message) for warning in w), "Deprecation warning message is incorrect"
+            assert any(
+                issubclass(warning.category, DeprecationWarning) for warning in w
+            ), "No deprecation warning raised"
+            assert any(
+                "will be removed in version 0.15" in str(warning.message) for warning in w
+            ), "Deprecation warning message is incorrect"
 
     def test_t_start_reading(self):
         """Test that t_start values are correctly read for all streams and segments."""
