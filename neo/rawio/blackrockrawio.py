@@ -73,7 +73,6 @@ from .baserawio import (
     _signal_channel_dtype,
     _signal_stream_dtype,
     _signal_buffer_dtype,
-    _spike_channel_dtype,
     _event_channel_dtype,
 )
 
@@ -132,6 +131,19 @@ class BlackrockRawIO(BaseRawIO):
 
     # We need to document the origin of this value
     main_sampling_rate = 30000.0
+
+    # Override spike channel dtype to include unit_class field specific to Blackrock
+    _spike_channel_dtype = [
+        ("name", "U64"),
+        ("id", "U64"),
+        # for waveform
+        ("wf_units", "U64"),
+        ("wf_gain", "float64"),
+        ("wf_offset", "float64"),
+        ("wf_left_sweep", "int64"),
+        ("wf_sampling_rate", "float64"),
+        ("unit_class", "U64"),
+    ]
 
     def __init__(
         self, filename=None, nsx_override=None, nev_override=None, nsx_to_load=None, load_nev=True, verbose=False
@@ -300,7 +312,21 @@ class BlackrockRawIO(BaseRawIO):
                     # default value: threshold crossing after 10 samples of waveform
                     wf_left_sweep = 10
                     wf_sampling_rate = self.main_sampling_rate
-                    spike_channels.append((name, _id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
+
+                    # Map unit_class_nb to unit classification string
+                    if unit_id == 0:
+                        unit_class = "unclassified"
+                        warnings.warn(f"Unit {unit_id} for channel {channel_id} is unclassified events!")
+                    elif 1 <= unit_id <= 16:
+                        unit_class = "sorted"
+                    elif unit_id == 255:
+                        unit_class = "noise"
+                        warnings.warn(f"Unit {unit_id} for channel {channel_id} is noisy events!")
+                    else:  # 17-254 are reserved but treated as "non-spike-events"
+                        unit_class = "non-spike-events"
+                        warnings.warn(f"Unit {unit_id} for channel {channel_id} is non-spike events!")
+
+                    spike_channels.append((name, _id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate, unit_class))
 
             # scan events
             # NonNeural: serial and digital input
@@ -520,7 +546,7 @@ class BlackrockRawIO(BaseRawIO):
             self._sigs_t_starts = [None] * self._nb_segment
 
         # finalize header
-        spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
+        spike_channels = np.array(spike_channels, dtype=self._spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
