@@ -316,15 +316,12 @@ class BlackrockRawIO(BaseRawIO):
                     # Map unit_class_nb to unit classification string
                     if unit_id == 0:
                         unit_class = "unclassified"
-                        warnings.warn(f"Unit {unit_id} for channel {channel_id} is unclassified events!")
                     elif 1 <= unit_id <= 16:
                         unit_class = "sorted"
                     elif unit_id == 255:
                         unit_class = "noise"
-                        warnings.warn(f"Unit {unit_id} for channel {channel_id} is noisy events!")
                     else:  # 17-254 are reserved but treated as "non-spike-events"
                         unit_class = "non-spike-events"
-                        warnings.warn(f"Unit {unit_id} for channel {channel_id} is non-spike events!")
 
                     spike_channels.append((name, _id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate, unit_class))
 
