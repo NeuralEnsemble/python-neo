@@ -177,14 +177,14 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             stream_id = stream_name
 
             signal_streams.append((stream_name, stream_id, buffer_id))
-            signal_channel_names = info["analog_channels"] if info["device_kind"] in ["obx", "nidq"] else info["channel_names"]
-            # add channels to global list
-            for local_channel_index, channel_name in enumerate(signal_channel_names):
-                # This should be unique across all streams
-                chan_id = f"{stream_name}#{channel_name}"
+
+            # add channels to signal channel header
+            for local_channel_index in range(info["num_chan"]):
+                chan_name = info["channel_names"][local_channel_index]
+                chan_id = f"{stream_name}#{chan_name}"
 
                 # Separate sync channel in its own stream
-                is_sync_channel = "SY0" in channel_name  and not self.load_sync_channel
+                is_sync_channel = "SY" in chan_name  and not self.load_sync_channel
                 if is_sync_channel :
                     # This is a sync channel and should be added as its own stream
                     sync_stream_id = f"{stream_name}-SYNC"
@@ -196,7 +196,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
                 signal_channels.append(
                     (
-                        channel_name,
+                        chan_name,
                         chan_id,
                         info["sampling_rate"],
                         "int16",
