@@ -386,14 +386,7 @@ def scan_files(dirname):
             if not file.endswith(".meta"):
                 continue
             meta_filename = Path(root) / file
-            
-            # Handle both regular .bin files and OneBox .obx.bin files
-            if file.endswith(".obx.meta"):
-                # OneBox case: .obx.meta -> .obx.bin
-                bin_filename = meta_filename.with_suffix(".bin")
-            else:
-                # Regular case: .meta -> .bin
-                bin_filename = meta_filename.with_suffix(".bin")
+            bin_filename = meta_filename.with_suffix(".bin")
                 
             if meta_filename.exists() and bin_filename.exists():
                 meta = read_meta_file(meta_filename)
