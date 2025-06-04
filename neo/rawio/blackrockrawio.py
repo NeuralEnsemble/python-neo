@@ -597,10 +597,17 @@ class BlackrockRawIO(BaseRawIO):
             for c in range(spike_channels.size):
                 st_ann = seg_ann["spikes"][c]
                 channel_id, unit_id = self.internal_unit_ids[c]
-                unit_tag = {0: "unclassified", 255: "noise"}.get(unit_id, str(unit_id))
                 st_ann["channel_id"] = channel_id
                 st_ann["unit_id"] = unit_id
-                st_ann["unit_tag"] = unit_tag
+                if unit_id == 0:
+                    st_ann["unit_classification"] = "unclassified"
+                elif 1 <= unit_id <= 16:
+                    st_ann["unit_classification"] = "sorted"
+                elif unit_id == 255:
+                    st_ann["unit_classification"] = "noise"
+                else:  # 17-254 are reserved
+                    st_ann["unit_classification"] = "reserved"
+                st_ann["unit_tag"] = st_ann["unit_classification"]
                 st_ann["description"] = f"SpikeTrain channel_id: {channel_id}, unit_id: {unit_id}"
                 st_ann["file_origin"] = self._filenames["nev"] + ".nev"
 
@@ -1258,9 +1265,7 @@ class BlackrockRawIO(BaseRawIO):
         # based on blackrock's own code this is okay so applying an int to round down is necessary to obtain the
         # memory map of full packets and toss the partial packet.
         # See reference: https://github.com/BlackrockNeurotech/Python-Utilities/blob/fa75aa671680306788e10d3d8dd625f9da4ea4f6/brpylib/brpylib.py#L580-L587
-        n_packets = int(
-            (self.__get_file_size(filename) - header_size) / data_size
-        )
+        n_packets = int((self.__get_file_size(filename) - header_size) / data_size)
 
         raw_data = np.memmap(
             filename,
