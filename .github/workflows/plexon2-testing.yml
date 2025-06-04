@@ -5,9 +5,6 @@ on:
     schedule:
       - cron: "0 12 * * 0" # weekly at noon UTC on Sundays
 
-concurrency:  # Cancel previous workflows on the same pull request
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   build-and-test:
@@ -105,7 +102,7 @@ jobs:
       - name: Test with pytest
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_local_plugin_path
-          PLEXON2_TEST: True
+          PLEXON2_TEST: true
         run: |
           # only neo.rawio and neo.io
           pytest --cov=neo neo/test/rawiotest
