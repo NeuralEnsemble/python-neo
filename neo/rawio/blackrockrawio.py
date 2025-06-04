@@ -607,7 +607,7 @@ class BlackrockRawIO(BaseRawIO):
                     st_ann["unit_classification"] = "noise"
                 else:  # 17-254 are reserved
                     st_ann["unit_classification"] = "reserved"
-                st_ann['unit_tag'] = st_ann['unit_classification']
+                st_ann["unit_tag"] = st_ann["unit_classification"]
                 st_ann["description"] = f"SpikeTrain channel_id: {channel_id}, unit_id: {unit_id}"
                 st_ann["file_origin"] = self._filenames["nev"] + ".nev"
 
