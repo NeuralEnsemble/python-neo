@@ -1,6 +1,6 @@
 """
 Class for reading MED (Multiscale Electrophysiology Data) Format.
-    
+
 Uses the dhn-med-py python package, created by Dark Horse Neuro, Inc.
 
 Authors: Dan Crepeau, Matt Stead

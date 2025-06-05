@@ -76,9 +76,18 @@ jobs:
         # restore-key hits should result in `cache-hit` == 'false'
         #if: steps.cache-conda-env.outputs.cache-hit != 'true'
         run: |
-          conda install datalad pip numpy=${{ matrix.numpy-version }} -c conda-forge
+          conda install pip numpy=${{ matrix.numpy-version }} -c conda-forge
         # this command is for updating cache. We are resting removal.
         # conda env update --name neo-test-env-${{ matrix.python-version }} --file environment_testing.yml --prune
+
+      - name: Install git-annex
+        # this is the trick from the spikeinterface repo for getting git-annex to work with datalad
+        # see https://github.com/SpikeInterface/spikeinterface/pull/3877 for more info
+        shell: bash
+        run: |
+          pip install datalad-installer
+          datalad-installer --sudo ok git-annex --method datalad/packages
+          git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
 
       - name: Configure git
         run: |
