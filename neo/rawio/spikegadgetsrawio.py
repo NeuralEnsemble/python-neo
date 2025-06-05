@@ -81,7 +81,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
 
-    def _produce_ephys_channel_ids(self, n_total_channels, n_channels_per_chip):
+    def _produce_ephys_channel_ids(self, n_total_channels, n_channels_per_chip, missing_hw_chans):
         """Compute the channel ID labels for subset of spikegadgets recordings
         The ephys channels in the .rec file are stored in the following order:
         hwChan ID of channel 0 of first chip, hwChan ID of channel 0 of second chip, ..., hwChan ID of channel 0 of Nth chip,
@@ -94,14 +94,18 @@ class SpikeGadgetsRawIO(BaseRawIO):
         This doesn't work for all types of spikegadgets
         see: https://github.com/NeuralEnsemble/python-neo/issues/1517
 
+        If there are any missing hardware channels, they must be specified in missing_hw_chans.
+        See: https://github.com/NeuralEnsemble/python-neo/issues/1592
         """
         ephys_channel_ids_list = []
-        for hw_channel in range(n_channels_per_chip):
-            hw_channel_list = [
-                hw_channel + chip * n_channels_per_chip for chip in range(int(n_total_channels / n_channels_per_chip))
-            ]
-            ephys_channel_ids_list.append(hw_channel_list)
-        return [channel for channel_list in ephys_channel_ids_list for channel in channel_list]
+        for local_hw_channel in range(n_channels_per_chip):
+            n_chips = int(n_total_channels / n_channels_per_chip)
+            for chip in range(n_chips):
+                global_hw_chan = local_hw_channel + chip * n_channels_per_chip
+                if global_hw_chan in missing_hw_chans:
+                    continue
+                ephys_channel_ids_list.append(local_hw_channel + chip * n_channels_per_chip)
+        return ephys_channel_ids_list
 
     def _parse_header(self):
         # parse file until "</Configuration>"
@@ -126,7 +130,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
         sconf = root.find("SpikeConfiguration")
 
         self._sampling_rate = float(hconf.attrib["samplingRate"])
-        num_ephy_channels = int(hconf.attrib["numChannels"])
+        num_ephy_channels_xml = int(hconf.attrib["numChannels"])
+        num_ephy_channels = num_ephy_channels_xml
 
         # check for agreement with number of channels in xml
         sconf_channels = np.sum([len(x) for x in sconf])
@@ -220,7 +225,11 @@ class SpikeGadgetsRawIO(BaseRawIO):
             # we can only produce these channels for a subset of spikegadgets setup. If this criteria isn't
             # true then we should just use the raw_channel_ids and let the end user sort everything out
             if num_ephy_channels % num_chan_per_chip == 0:
-                channel_ids = self._produce_ephys_channel_ids(num_ephy_channels, num_chan_per_chip)
+                all_hw_chans = [int(schan.attrib["hwChan"]) for trode in sconf for schan in trode]
+                missing_hw_chans = set(range(num_ephy_channels)) - set(all_hw_chans)
+                channel_ids = self._produce_ephys_channel_ids(
+                    num_ephy_channels_xml, num_chan_per_chip, missing_hw_chans
+                )
                 raw_channel_ids = False
             else:
                 raw_channel_ids = True

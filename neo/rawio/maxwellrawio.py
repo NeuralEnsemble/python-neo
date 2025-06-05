@@ -78,7 +78,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
         signal_streams = []
         if int(version) == 20160704:
             self._old_format = True
-            signal_streams.append(("well000", "well000"))
+            signal_streams.append(("well000", "well000", "well000"))
         elif int(version) > 20160704:
             # multi stream stream (one well is one stream)
             self._old_format = False
@@ -242,18 +242,20 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
             raise (e)
 
 
-_hdf_maxwell_error = """Maxwell file format is based on HDF5.
-The internal compression requires a custom plugin!!!
-This is a big pain for the end user.
-You, as a end user, should ask Maxwell company to change this.
-Please visit this page and install the missing decompression libraries:
-https://share.mxwbio.com/d/4742248b2e674a85be97/
-Then, link the decompression library by setting the `HDF5_PLUGIN_PATH` to your
-installation location, e.g. via
+_hdf_maxwell_error = """The MaxWell file compression requires a custom plugin.
+You can use the auto_install_maxwell_hdf5_compression_plugin() function or 
+(if it fails) install it manually:
+Download the missing decompression library:
+https://share.mxwbio.com/d/7f2d1e98a1724a1b8b35
+Then, link the decompression library by setting the `HDF5_PLUGIN_PATH` to its location, 
+e.g. directly in Python via:
 os.environ['HDF5_PLUGIN_PATH'] = '/path/to/custom/hdf5/plugin/'
-
-Alternatively, you can use the auto_install_maxwell_hdf5_compression_plugin() below
-function that do it automagically.
+or in your shell via:
+export HDF5_PLUGIN_PATH=/path/to/custom/hdf5/plugin/
+You can also set the `HDF5_PLUGIN_PATH` environment variable in your shell
+configuration file (e.g. .bashrc, .bash_profile, .zshrc, etc.) to make it
+permanent. 
+See https://mxw.bio/MxW_Doc_Installing_Decompression_Library_to_load_MaxLab_Live_Recordings for more details.
 """
 
 
@@ -267,13 +269,17 @@ def auto_install_maxwell_hdf5_compression_plugin(hdf5_plugin_path=None, force_do
     hdf5_plugin_path.mkdir(exist_ok=True)
 
     if platform.system() == "Linux":
-        remote_lib = "https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FLinux%2Flibcompression.so&dl=1"
+        remote_lib = "https://share.mxwbio.com/d/7f2d1e98a1724a1b8b35/files/?p=%2FLinux%2Flibcompression.so&dl=1"
         local_lib = hdf5_plugin_path / "libcompression.so"
     elif platform.system() == "Darwin":
-        remote_lib = "https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FMacOS%2Flibcompression.dylib&dl=1"
+        if platform.machine() == "arm64":
+            remote_lib = "https://share.mxwbio.com/d/7f2d1e98a1724a1b8b35/files/?p=%2FMacOS%2FMac_arm64%2Flibcompression.dylib&dl=1"
+        else:
+            # Assuming x86_64 for MacOS
+            remote_lib = "https://share.mxwbio.com/d/7f2d1e98a1724a1b8b35/files/?p=%2FMacOS%2FMac_x86_64%2Flibcompression.dylib&dl=1"
         local_lib = hdf5_plugin_path / "libcompression.dylib"
     elif platform.system() == "Windows":
-        remote_lib = "https://share.mxwbio.com/d/4742248b2e674a85be97/files/?p=%2FWindows%2Fcompression.dll&dl=1"
+        remote_lib = "https://share.mxwbio.com/d/7f2d1e98a1724a1b8b35/files/?p=%2FWindows%2Fcompression.dll&dl=1"
         local_lib = hdf5_plugin_path / "compression.dll"
 
     if not force_download and local_lib.is_file():

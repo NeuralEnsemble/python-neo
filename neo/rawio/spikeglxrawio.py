@@ -53,6 +53,7 @@ Some functions are copied from Graham Findlay
 from pathlib import Path
 import os
 import re
+from warnings import warn
 
 import numpy as np
 
@@ -76,7 +77,9 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     dirname: str, default: ''
         The spikeglx folder containing meta/bin files
     load_sync_channel: bool, default: False
-        The last channel (SY0) of each stream is a fake channel used for synchronisation
+        Can be used to load the synch stream as the last channel of the neural data.
+        This option is deprecated and will be removed in version 0.15.
+        From versions higher than 0.14.1 the sync channel is always loaded as a separate stream.
     load_channel_location: bool, default: False
         If True probeinterface is used to load the channel locations from the directory
 
@@ -109,6 +112,13 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
         self.load_sync_channel = load_sync_channel
+        if load_sync_channel:
+            warn(
+                "The load_sync_channel=True option is deprecated and will be removed in version 0.15 \n"
+                "The sync channel is now loaded as a separate stream by default and should be accessed as such. ",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self.load_channel_location = load_channel_location
 
     def _source_name(self):
@@ -152,6 +162,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         signal_buffers = []
         signal_streams = []
         signal_channels = []
+        sync_stream_id_to_buffer_id = {}
+
         for stream_name in stream_names:
             # take first segment
             info = self.signals_info_dict[0, stream_name]
@@ -168,6 +180,21 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             for local_chan in range(info["num_chan"]):
                 chan_name = info["channel_names"][local_chan]
                 chan_id = f"{stream_name}#{chan_name}"
+
+                # Sync channel
+                if (
+                    "nidq" not in stream_name
+                    and "SY0" in chan_name
+                    and not self.load_sync_channel
+                    and local_chan == info["num_chan"] - 1
+                ):
+                    # This is a sync channel and should be added as its own stream
+                    sync_stream_id = f"{stream_name}-SYNC"
+                    sync_stream_id_to_buffer_id[sync_stream_id] = buffer_id
+                    stream_id_for_chan = sync_stream_id
+                else:
+                    stream_id_for_chan = stream_id
+
                 signal_channels.append(
                     (
                         chan_name,
@@ -177,25 +204,33 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         info["units"],
                         info["channel_gains"][local_chan],
                         info["channel_offsets"][local_chan],
-                        stream_id,
+                        stream_id_for_chan,
                         buffer_id,
                     )
                 )
 
-            # all channel by dafult unless load_sync_channel=False
+            # all channel by default unless load_sync_channel=False
             self._stream_buffer_slice[stream_id] = None
+
             # check sync channel validity
             if "nidq" not in stream_name:
                 if not self.load_sync_channel and info["has_sync_trace"]:
-                    # the last channel is remove from the stream but not from the buffer
-                    last_chan = signal_channels[-1]
-                    last_chan = last_chan[:-2] + ("", buffer_id)
-                    signal_channels = signal_channels[:-1] + [last_chan]
+                    # the last channel is removed from the stream but not from the buffer
                     self._stream_buffer_slice[stream_id] = slice(0, -1)
+
+                    # Add a buffer slice for the sync channel
+                    sync_stream_id = f"{stream_name}-SYNC"
+                    self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
+
                 if self.load_sync_channel and not info["has_sync_trace"]:
                     raise ValueError("SYNC channel is not present in the recording. " "Set load_sync_channel to False")
 
         signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
+
+        # Add sync channels as their own streams
+        for sync_stream_id, buffer_id in sync_stream_id_to_buffer_id.items():
+            signal_streams.append((sync_stream_id, sync_stream_id, buffer_id))
+
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
@@ -237,6 +272,14 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                 t_start = frame_start / sampling_frequency
 
                 self._t_starts[stream_name][seg_index] = t_start
+
+                # This need special logic because sync not present in stream_names
+                if f"{stream_name}-SYNC" in signal_streams["name"]:
+                    sync_stream_name = f"{stream_name}-SYNC"
+                    if sync_stream_name not in self._t_starts:
+                        self._t_starts[sync_stream_name] = {}
+                    self._t_starts[sync_stream_name][seg_index] = t_start
+
                 t_stop = info["sample_length"] / info["sampling_rate"]
                 self._t_stops[seg_index] = max(self._t_stops[seg_index], t_stop)
 
@@ -265,6 +308,10 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                 if self.load_channel_location:
                     # need probeinterface to be installed
                     import probeinterface
+
+                    # Skip for sync streams
+                    if "SYNC" in stream_name:
+                        continue
 
                     info = self.signals_info_dict[seg_index, stream_name]
                     if "imroTbl" in info["meta"] and info["stream_kind"] == "ap":
@@ -376,28 +423,15 @@ def scan_files(dirname):
     for info in info_list:
         info["seg_index"] = segment_tuple_to_segment_index[get_segment_tuple(info)]
 
-    # Probe index calculation
-    # The calculation is ordered by slot, port, dock in that order, this is the number that appears in the filename
-    # after imec when using native names (e.g. imec0, imec1, etc.)
-    def get_probe_tuple(info):
-        slot = normalize(info.get("probe_slot"))
-        port = normalize(info.get("probe_port"))
-        dock = normalize(info.get("probe_dock"))
-        return (slot, port, dock)
-
-    # TODO: handle one box case
-    info_list_imec = [info for info in info_list if info.get("device") != "nidq"]
-    unique_probe_tuples = {get_probe_tuple(info) for info in info_list_imec}
-    sorted_probe_keys = sorted(unique_probe_tuples)
-    probe_tuple_to_probe_index = {key: idx for idx, key in enumerate(sorted_probe_keys)}
-
     for info in info_list:
-        if info.get("device") == "nidq":
-            info["device_index"] = ""  # TODO: Handle multi nidq case, maybe use meta["typeNiEnabled"]
+        # device_kind is imec, nidq
+        if info.get("device_kind") == "imec":
+            info["device_index"] = info["device"].split("imec")[-1]
         else:
-            info["device_index"] = probe_tuple_to_probe_index[get_probe_tuple(info)]
+            info["device_index"] = ""  # TODO: Handle multi nidq case, maybe use meta["typeNiEnabled"]
 
-    # Define stream base on device [imec|nidq], device_index and stream_kind [ap|lf] for imec
+    # Define stream base on device_kind [imec|nidq], device_index and stream_kind [ap|lf] for imec
+    # Stream format is "{device_kind}{device_index}.{stream_kind}"
     for info in info_list:
         device_kind = info["device_kind"]
         device_index = info["device_index"]
@@ -524,6 +558,7 @@ def extract_stream_info(meta_file, meta):
         # NIDQ case
         has_sync_trace = False
 
+    # This is the original name that the file had. It might not match the current name if the user changed it
     bin_file_path = meta["fileName"]
     fname = Path(bin_file_path).stem
 
@@ -541,7 +576,7 @@ def extract_stream_info(meta_file, meta):
         if (
             "imDatPrb_type" not in meta
             or meta["imDatPrb_type"] == "0"
-            or meta["imDatPrb_type"] in ("1015", "1016", "1022", "1030", "1031", "1032", "1100", "1121", "1300")
+            or meta["imDatPrb_type"] in ("1015", "1016", "1022", "1030", "1031", "1032", "1100", "1121", "1123","1300")
         ):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md

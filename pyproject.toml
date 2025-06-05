@@ -24,7 +24,7 @@ classifiers = [
 
 dependencies = [
     "packaging",
-    "numpy>=1.22.4",
+    "numpy>=1.24.4",
     "quantities>=0.16.1"
 ]
 
@@ -36,7 +36,7 @@ download = "http://pypi.python.org/pypi/neo"
 
 
 [build-system]
-requires = ["setuptools>=62.0"]
+requires = ["setuptools>=78.0.2"]
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
@@ -49,7 +49,7 @@ test = [
     # "dhn_med_py<2.0", # ci failing with 2.0 test future version when stable
     "pytest",
     "pytest-cov",
-    # datalad   # this dependency is covered by conda (environment_testing.yml)-- maybe moving straight to ci
+    "datalad",
     "scipy>=1.0.0",
     "pyedflib",
     "h5py",

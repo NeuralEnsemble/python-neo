@@ -18,6 +18,10 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+
+import numpy as np
+import json
+import warnings
 from neo.core import NeoReadWriteError
 
 
@@ -29,6 +33,14 @@ class BiocamRawIO(BaseRawIO):
     ----------
     filename: str, default: ''
         The *.h5 file to be read
+    fill_gaps_strategy: "zeros" | "synthetic_noise" | None, default: None
+        The strategy to fill the gaps in the data when using event-based
+        compression. If None and the file is event-based compressed,
+        you need to specify a fill gaps strategy:
+
+        * "zeros": the gaps are filled with unsigned 0s (2048). This value is the "0" of the unsigned 12 bits
+                   representation of the data.
+        * "synthetic_noise": the gaps are filled with synthetic noise.
 
     Examples
     --------
@@ -49,9 +61,10 @@ class BiocamRawIO(BaseRawIO):
     extensions = ["h5", "brw"]
     rawmode = "one-file"
 
-    def __init__(self, filename=""):
+    def __init__(self, filename="", fill_gaps_strategy="zeros"):
         BaseRawIO.__init__(self)
         self.filename = filename
+        self._fill_gaps_strategy = fill_gaps_strategy
 
     def _source_name(self):
         return self.filename
@@ -130,7 +143,25 @@ class BiocamRawIO(BaseRawIO):
             i_stop = self._num_frames
 
         # read functions are different based on the version of biocam
-        data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
+        if self._read_function is readHDF5t_brw4_sparse:
+            if self._fill_gaps_strategy is None:
+                raise ValueError("Please set `fill_gaps_strategy` to 'zeros' or 'synthetic_noise'.")
+            if self._fill_gaps_strategy == "synthetic_noise":
+                warnings.warn(
+                    "Event-based compression : gaps will be filled with synthetic noise. "
+                    "Set `fill_gaps_strategy` to 'zeros' to fill gaps with 0s."
+                )
+                use_synthetic_noise = True
+            elif self._fill_gaps_strategy == "zeros":
+                use_synthetic_noise = False
+            else:
+                raise ValueError("`fill_gaps_strategy` must be 'zeros' or 'synthetic_noise'")
+
+            data = self._read_function(
+                self._filehandle, i_start, i_stop, self._num_channels, use_synthetic_noise=use_synthetic_noise
+            )
+        else:
+            data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
 
         # older style data returns array of (n_samples, n_channels), should be a view
         # but if memory issues come up we should doublecheck out how the file is being stored
@@ -243,15 +274,23 @@ def open_biocam_file_header(filename) -> dict:
         min_digital = experiment_settings["ValueConverter"]["MinDigitalValue"]
         scale_factor = experiment_settings["ValueConverter"]["ScaleFactor"]
         sampling_rate = experiment_settings["TimeConverter"]["FrameRate"]
+        num_frames = rf["TOC"][-1, -1]
 
         num_channels = None
-        for key in rf:
-            if key[:5] == "Well_":
-                num_channels = len(rf[key]["StoredChIdxs"])
-                if len(rf[key]["Raw"]) % num_channels:
-                    raise NeoReadWriteError(f"Length of raw data array is not multiple of channel number in {key}")
-                num_frames = len(rf[key]["Raw"]) // num_channels
-                break
+        well_ID = None
+        for well_ID in rf:
+            if well_ID.startswith("Well_"):
+                num_channels = len(rf[well_ID]["StoredChIdxs"])
+                if "Raw" in rf[well_ID]:
+                    if len(rf[well_ID]["Raw"]) % num_channels:
+                        raise NeoReadWriteError(
+                            f"Length of raw data array is not multiple of channel number in {well_ID}"
+                        )
+                    num_frames = len(rf[well_ID]["Raw"]) // num_channels
+                    break
+                elif "EventsBasedSparseRaw" in rf[well_ID]:
+                    # Not sure how to check for this with sparse data
+                    pass
 
         if num_channels is not None:
             num_channels_x = num_channels_y = int(np.sqrt(num_channels))
@@ -264,7 +303,10 @@ def open_biocam_file_header(filename) -> dict:
 
         gain = scale_factor * (max_uv - min_uv) / (max_digital - min_digital)
         offset = min_uv
-        read_function = readHDF5t_brw4
+        if "Raw" in rf[well_ID]:
+            read_function = readHDF5t_brw4
+        elif "EventsBasedSparseRaw" in rf[well_ID]:
+            read_function = readHDF5t_brw4_sparse
 
         return dict(
             file_handle=rf,
@@ -302,5 +344,120 @@ def readHDF5t_101_i(rf, t0, t1, nch):
 
 def readHDF5t_brw4(rf, t0, t1, nch):
     for key in rf:
-        if key[:5] == "Well_":
+        if key.startswith("Well_"):
             return rf[key]["Raw"][nch * t0 : nch * t1]
+
+
+def readHDF5t_brw4_sparse(rf, t0, t1, nch, use_synthetic_noise=False):
+
+    # noise_std = None
+    start_frame = t0
+    num_frames = t1 - t0
+    for well_ID in rf:
+        if well_ID.startswith("Well_"):
+            break
+    # initialize an empty (fill with zeros) data collection
+    data = np.zeros((nch, num_frames), dtype=np.uint16)
+    if not use_synthetic_noise:
+        # Will read as 0s after 12 bits signed conversion
+        data.fill(2048)
+    else:
+        # fill the data collection with Gaussian noise if requested
+        data = generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames)  # , std=noise_std)
+    # fill the data collection with the decoded event based sparse raw data
+    data = decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames)
+
+    return data.T
+
+
+def decode_event_based_raw_data(rf, data, well_ID, start_frame, num_frames):
+    # Source: Documentation by 3Brain
+    # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/biocam/documentation_brw_4.x_bxr_3.x_bcmp_1.x_in_brainwave_5.x_v1.1.3.pdf
+    # collect the TOCs
+    toc = np.array(rf["TOC"])
+    events_toc = np.array(rf[well_ID]["EventsBasedSparseRawTOC"])
+    # from the given start position and duration in frames, localize the corresponding event positions
+    # using the TOC
+    toc_start_idx = np.searchsorted(toc[:, 1], start_frame)
+    toc_end_idx = min(np.searchsorted(toc[:, 1], start_frame + num_frames, side="right") + 1, len(toc) - 1)
+    events_start_pos = events_toc[toc_start_idx]
+    events_end_pos = events_toc[toc_end_idx]
+    # decode all data for the given well ID and time interval
+    binary_data = rf[well_ID]["EventsBasedSparseRaw"][events_start_pos:events_end_pos]
+    binary_data_length = len(binary_data)
+    pos = 0
+    while pos < binary_data_length:
+        ch_idx = int.from_bytes(binary_data[pos : pos + 4], byteorder="little")
+        pos += 4
+        ch_data_length = int.from_bytes(binary_data[pos : pos + 4], byteorder="little")
+        pos += 4
+        ch_data_pos = pos
+        while pos < ch_data_pos + ch_data_length:
+            from_inclusive = int.from_bytes(binary_data[pos : pos + 8], byteorder="little")
+            pos += 8
+            to_exclusive = int.from_bytes(binary_data[pos : pos + 8], byteorder="little")
+            pos += 8
+            range_data_pos = pos
+            for j in range(from_inclusive, to_exclusive):
+                if j >= start_frame + num_frames:
+                    break
+                if j >= start_frame:
+                    data[ch_idx][j - start_frame] = int.from_bytes(
+                        binary_data[range_data_pos : range_data_pos + 2], byteorder="little"
+                    )
+                range_data_pos += 2
+            pos += (to_exclusive - from_inclusive) * 2
+
+    return data
+
+
+def generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames):
+    # Source: Documentation by 3Brain
+    # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/biocam/documentation_brw_4.x_bxr_3.x_bcmp_1.x_in_brainwave_5.x_v1.1.3.pdf
+    # collect the TOCs
+    toc = np.array(rf["TOC"])
+    noise_toc = np.array(rf[well_ID]["NoiseTOC"])
+    # from the given start position in frames, localize the corresponding noise positions
+    # using the TOC
+    toc_start_idx = np.searchsorted(toc[:, 1], start_frame)
+    noise_start_pos = noise_toc[toc_start_idx]
+    noise_end_pos = noise_start_pos
+    for i in range(toc_start_idx + 1, len(noise_toc)):
+        next_pos = noise_toc[i]
+        if next_pos > noise_start_pos:
+            noise_end_pos = next_pos
+        break
+    if noise_end_pos == noise_start_pos:
+        for i in range(toc_start_idx - 1, 0, -1):
+            previous_pos = noise_toc[i]
+            if previous_pos < noise_start_pos:
+                noise_end_pos = noise_start_pos
+                noise_start_pos = previous_pos
+                break
+    # obtain the noise info at the start position
+    noise_ch_idx = rf[well_ID]["NoiseChIdxs"][noise_start_pos:noise_end_pos]
+    noise_mean = rf[well_ID]["NoiseMean"][noise_start_pos:noise_end_pos]
+    noise_std = rf[well_ID]["NoiseStdDev"][noise_start_pos:noise_end_pos]
+
+    noise_length = noise_end_pos - noise_start_pos
+    noise_info = {}
+    mean_collection = []
+    std_collection = []
+    for i in range(1, noise_length):
+        noise_info[noise_ch_idx[i]] = [noise_mean[i], noise_std[i]]
+        mean_collection.append(noise_mean[i])
+        std_collection.append(noise_std[i])
+    # calculate the median mean and standard deviation of all channels to be used for
+    # invalid channels
+    median_mean = np.median(mean_collection)
+    median_std = np.median(std_collection)
+    # fill with Gaussian noise
+    for ch_idx in range(len(data)):
+        if ch_idx in noise_info:
+            data[ch_idx] = np.array(
+                np.random.normal(noise_info[ch_idx][0], noise_info[ch_idx][1], num_frames), dtype=np.uint16
+            )
+        else:
+            data[ch_idx] = np.array(np.random.normal(median_mean, median_std, num_frames), dtype=np.uint16)
+
+    return data
