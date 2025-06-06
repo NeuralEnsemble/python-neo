@@ -35,7 +35,7 @@ from .baserawio import (
     _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
-) 
+)
 
 
 class IntanRawIO(BaseRawIO):

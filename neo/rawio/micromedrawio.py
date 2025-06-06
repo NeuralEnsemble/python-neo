@@ -51,7 +51,6 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
         self.filename = filename
 
     def _parse_header(self):
-
         with open(self.filename, "rb") as fid:
             f = StructFile(fid)
 
@@ -133,7 +132,11 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
             sig_grounds = []
             for c in range(Num_Chan):
                 zname2, pos, length = zones["LABCOD"]
-                f.seek(pos + code[c] * 128 + 2, 0)
+                # Force code[c] which is currently a uint16 (or u2) into a int to prevent integer overflow
+                # for the following operation -- code[c] * 128 + 2.
+                # An integer overflow below may have side - effects including but not limited
+                # to having repeated channel names.
+                f.seek(pos + int(code[c]) * 128 + 2, 0)
 
                 chan_name = f.read(6).strip(b"\x00").decode("ascii")
                 ground = f.read(6).strip(b"\x00").decode("ascii")
@@ -274,7 +277,6 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
         return n
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-
         raw_event = self._raw_events[event_channel_index][seg_index]
 
         # important : all events timing are related to the first segment t_start

@@ -597,10 +597,17 @@ class BlackrockRawIO(BaseRawIO):
             for c in range(spike_channels.size):
                 st_ann = seg_ann["spikes"][c]
                 channel_id, unit_id = self.internal_unit_ids[c]
-                unit_tag = {0: "unclassified", 255: "noise"}.get(unit_id, str(unit_id))
                 st_ann["channel_id"] = channel_id
                 st_ann["unit_id"] = unit_id
-                st_ann["unit_tag"] = unit_tag
+                if unit_id == 0:
+                    st_ann["unit_classification"] = "unclassified"
+                elif 1 <= unit_id <= 16:
+                    st_ann["unit_classification"] = "sorted"
+                elif unit_id == 255:
+                    st_ann["unit_classification"] = "noise"
+                else:  # 17-254 are reserved
+                    st_ann["unit_classification"] = "reserved"
+                st_ann["unit_tag"] = st_ann["unit_classification"]
                 st_ann["description"] = f"SpikeTrain channel_id: {channel_id}, unit_id: {unit_id}"
                 st_ann["file_origin"] = self._filenames["nev"] + ".nev"
 
@@ -1058,7 +1065,10 @@ class BlackrockRawIO(BaseRawIO):
         filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
         # get shape of data
-        shape = (int(self.__nsx_params["2.1"](nsx_nb)["nb_data_points"]), int(self.__nsx_basic_header[nsx_nb]["channel_count"]))
+        shape = (
+            int(self.__nsx_params["2.1"](nsx_nb)["nb_data_points"]),
+            int(self.__nsx_basic_header[nsx_nb]["channel_count"]),
+        )
         offset = int(self.__nsx_params["2.1"](nsx_nb)["bytes_in_headers"])
 
         # read nsx data
@@ -1251,7 +1261,19 @@ class BlackrockRawIO(BaseRawIO):
         # read all raw data packets and markers
         dt0 = [("timestamp", ts_format), ("packet_id", "uint16"), ("value", f"S{data_size - header_skip}")]
 
-        raw_data = np.memmap(filename, offset=header_size, dtype=dt0, mode="r")
+        # expected number of data packets. We are not sure why, but it seems we can get partial data packets
+        # based on blackrock's own code this is okay so applying an int to round down is necessary to obtain the
+        # memory map of full packets and toss the partial packet.
+        # See reference: https://github.com/BlackrockNeurotech/Python-Utilities/blob/fa75aa671680306788e10d3d8dd625f9da4ea4f6/brpylib/brpylib.py#L580-L587
+        n_packets = int((self.__get_file_size(filename) - header_size) / data_size)
+
+        raw_data = np.memmap(
+            filename,
+            offset=header_size,
+            dtype=dt0,
+            shape=(n_packets,),
+            mode="r",
+        )
 
         masks = self.__nev_data_masks(raw_data["packet_id"])
         types = self.__nev_data_types(data_size)
@@ -1794,7 +1816,7 @@ class BlackrockRawIO(BaseRawIO):
                 hour=self.__nev_basic_header["hour"],
                 minute=self.__nev_basic_header["minute"],
                 second=self.__nev_basic_header["second"],
-                microsecond=self.__nev_basic_header["millisecond"],
+                microsecond=int(self.__nev_basic_header["millisecond"]) * 1000,
             ),
             "max_res": self.__nev_basic_header["timestamp_resolution"],
             "channel_ids": self.__nev_ext_header[b"NEUEVWAV"]["electrode_id"],
