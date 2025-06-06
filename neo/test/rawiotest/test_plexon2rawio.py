@@ -1,14 +1,13 @@
 """
-Tests of neo.rawio.mearecrawio
+Tests of neo.rawio.plexon2
 
 """
 
 import unittest
+import os
 
 from neo.rawio.plexon2rawio import Plexon2RawIO
-
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
-
 from numpy.testing import assert_equal
 
 try:
@@ -18,8 +17,9 @@ try:
 except (ImportError, TimeoutError):
     HAVE_PYPL2 = False
 
+TEST_PLEXON2 = bool(os.getenv("PLEXON2_TEST"))
 
-@unittest.skipUnless(HAVE_PYPL2, "requires pypl package and all its dependencies")
+@unittest.skipUnless(HAVE_PYPL2 and TEST_PLEXON2, "requires pypl package and all its dependencies")
 class TestPlexon2RawIO(
     BaseTestRawIO,
     unittest.TestCase,
