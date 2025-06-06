@@ -41,6 +41,8 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-D",
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-E",
         "spikeglx/multi_trigger_multi_gate/CatGT/Supercat-A",
+        # One Box"
+        "spikeglx/onebox/run_with_only_adc",
     ]
 
     def test_loading_only_one_probe_in_multi_probe_scenario(self):
