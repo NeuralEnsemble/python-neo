@@ -475,47 +475,82 @@ def parse_spikeglx_fname(fname):
     stream_kind: str or None
         The data type identifier, "lf", "ap", "obx", or None
     """
-    re_standard = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*).(ap|lf)", fname)
-    re_tcat = re.findall(r"(\S*)_g(\d*)_tcat.(\S*).(ap|lf)", fname)
-    re_nidq = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*)", fname)
-    re_obx = re.findall(r"(\S*)_g(\d*)_t(\d*)\.(\S*)\.obx", fname)
     
-    if len(re_standard) == 1:
-        # standard case with probe
-        run_name, gate_num, trigger_num, device, stream_kind = re_standard[0]
-    elif len(re_tcat) == 1:
-        # tcat case
-        run_name, gate_num, device, stream_kind = re_tcat[0]
-        trigger_num = "cat"
-    elif len(re_obx) == 1:
-        # OneBox case
-        run_name, gate_num, trigger_num, device = re_obx[0]
-        stream_kind = "obx"
-    elif len(re_nidq) == 1:
-        # case for nidaq
-        run_name, gate_num, trigger_num, device = re_nidq[0]
-        stream_kind = None
-    else:
-        # the naming do not correspond lets try something more easy
-        # example: sglx_xxx.imec0.ap or sglx_xxx.obx0.obx
-        re_else = re.findall(r"(\S*)\.(\S*).(ap|lf)", fname)
-        re_else_nidq = re.findall(r"(\S*)\.(\S*)", fname)
-        if len(re_else) == 1:
-            run_name, device, stream_kind = re_else[0]
-            gate_num, trigger_num = None, None
-        elif len(re_else_nidq) == 1:
-            # easy case for nidaq, example: sglx_xxx.nidq
-            run_name, device = re_else_nidq[0]
-            gate_num, trigger_num, stream_kind = None, None, None
-        else:
-            raise ValueError(f"Cannot parse filename {fname}")
+    # Standard case: contains gate, trigger, device, and stream kind
+    # Example: Noise4Sam_g0_t0.imec0.ap
+    # Format:  {run_name}_g{gate_num}_t{trigger_num}.{device}.{stream_kind}
+    # Regex tokens:
+    #   \S+         → one or more non-whitespace characters
+    #   \d+         → one or more digits
+    #   ap|lf       → either 'ap' or 'lf'
+    regex = r"(?P<run_name>\S+)_g(?P<gate_num>\d+)_t(?P<trigger_num>\d+)\.(?P<device>\S+)\.(?P<stream_kind>ap|lf)"
+    match = re.match(regex, fname)
+    if match:
+        gd = match.groupdict()
+        return gd["run_name"], int(gd["gate_num"]), int(gd["trigger_num"]), gd["device"], gd["stream_kind"]
 
-    if gate_num is not None:
-        gate_num = int(gate_num)
-    if trigger_num is not None and trigger_num != "cat":
-        trigger_num = int(trigger_num)
+    # CatGT case: trigger renamed to 'tcat'
+    # Example: Noise4Sam_g0_tcat.imec0.ap
+    # Format:  {run_name}_g{gate_num}_tcat.{device}.{stream_kind}
+    # Regex tokens:
+    #   \S+         → one or more non-whitespace characters
+    #   \d+         → one or more digits
+    #   ap|lf       → either 'ap' or 'lf'
+    regex = r"(?P<run_name>\S+)_g(?P<gate_num>\d+)_tcat\.(?P<device>\S+)\.(?P<stream_kind>ap|lf)"
+    match = re.match(regex, fname)
+    if match:
+        gd = match.groupdict()
+        return gd["run_name"], int(gd["gate_num"]), "cat", gd["device"], gd["stream_kind"]
 
-    return (run_name, gate_num, trigger_num, device, stream_kind)
+    # OneBox case: ends in .obx 
+    # Example: myRun_g0_t0.obx0.obx
+    # Format:  {run_name}_g{gate_num}_t{trigger_num}.{device}.obx
+    # Regex tokens:
+    #   \S+         → one or more non-whitespace characters
+    #   \d+         → one or more digits
+    regex = r"(?P<run_name>\S+)_g(?P<gate_num>\d+)_t(?P<trigger_num>\d+)\.(?P<device>\S+)\.obx"
+    match = re.match(regex, fname)
+    if match:
+        gd = match.groupdict()
+        return gd["run_name"], int(gd["gate_num"]), int(gd["trigger_num"]), gd["device"], "obx"
+
+    # NIDQ case no stream kind (not ap or lf)
+    # Example: Noise4Sam_g0_t0.nidq
+    # Format:  {run_name}_g{gate_num}_t{trigger_num}.{device}
+    # Regex tokens:
+    #   \S+         → one or more non-whitespace characters
+    #   \d+         → one or more digits
+    regex = r"(?P<run_name>\S+)_g(?P<gate_num>\d+)_t(?P<trigger_num>\d+)\.(?P<device>\S+)"
+    match = re.match(regex, fname)
+    if match:
+        gd = match.groupdict()
+        return gd["run_name"], int(gd["gate_num"]), int(gd["trigger_num"]), gd["device"], None
+
+    # Fallback case 1): no gate/trigger, includes device and stream kind
+    # Example: sglx_name.imec0.ap
+    # Format:  {run_name}.{device}.{stream_kind}
+    # Regex tokens:
+    #   \S+         → one or more non-whitespace characters
+    #   ap|lf       → either 'ap' or 'lf'
+    regex = r"(?P<run_name>\S+)\.(?P<device>\S+)\.(?P<stream_kind>ap|lf)"
+    match = re.match(regex, fname)
+    if match:
+        gd = match.groupdict()
+        return gd["run_name"], None, None, gd["device"], gd["stream_kind"]
+
+    # Fallback NIDQ-style: no stream kind
+    # Example: sglx_name.nidq
+    # Format:  {run_name}.{device}
+    # Regex tokens:
+    #   \S+         → one or more non-whitespace characters
+    regex = r"(?P<run_name>\S+)\.(?P<device>\S+)"
+    match = re.match(regex, fname)
+    if match:
+        gd = match.groupdict()
+        return gd["run_name"], None, None, gd["device"], None
+
+    # No known pattern matched
+    raise ValueError(f"Cannot parse filename {fname}")
 
 
 def read_meta_file(meta_file):
