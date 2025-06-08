@@ -115,6 +115,7 @@ class SpikeTrainList(ObjectList):
         self._spiketrain_metadata = {}
 
         from .segment import Segment  # import here rather than at the top to avoid circular import
+
         if parent is not None and not isinstance(parent, Segment):
             raise AttributeError("If provided, the parent class must be a Segment")
         self.segment = parent
