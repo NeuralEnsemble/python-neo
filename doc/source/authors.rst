@@ -95,6 +95,7 @@ and may not be the current affiliation of a contributor.
 * Rémi Proville [44]
 * Paul Adkisson [24]
 * Luiz Tauffer [24]
+* Akshaj Verma [46]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Université Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -141,6 +142,7 @@ and may not be the current affiliation of a contributor.
 43. University of Genoa, Italy
 44. AquiNeuro, SAS
 45. Maxwell Biosystems AG
+46. Brain Center, University Medical Center Utrecht, Utrecht University, The Netherlands
 
 
 
