@@ -19,6 +19,7 @@ except (ImportError, TimeoutError):
 
 TEST_PLEXON2 = bool(os.getenv("PLEXON2_TEST"))
 
+
 @unittest.skipUnless(HAVE_PYPL2 and TEST_PLEXON2, "requires pypl package and all its dependencies")
 class TestPlexon2RawIO(
     BaseTestRawIO,

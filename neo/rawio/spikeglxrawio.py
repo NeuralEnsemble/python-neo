@@ -576,7 +576,7 @@ def extract_stream_info(meta_file, meta):
         if (
             "imDatPrb_type" not in meta
             or meta["imDatPrb_type"] == "0"
-            or meta["imDatPrb_type"] in ("1015", "1016", "1022", "1030", "1031", "1032", "1100", "1121", "1123","1300")
+            or meta["imDatPrb_type"] in ("1015", "1016", "1022", "1030", "1031", "1032", "1100", "1121", "1123", "1300")
         ):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
