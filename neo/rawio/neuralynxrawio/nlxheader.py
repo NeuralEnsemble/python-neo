@@ -3,6 +3,7 @@ from packaging.version import Version
 import os
 import re
 from collections import OrderedDict
+import warnings
 
 
 class NlxHeader(OrderedDict):
@@ -304,10 +305,11 @@ class NlxHeader(OrderedDict):
         if "datetime2_regex" in hpd:
             sr = re.search(hpd["datetime2_regex"], txt_header)
             if not sr:
-                raise IOError(
-                    f"No matching header close date/time for application {an} "
-                    + f"version {av}. Please contact developers."
-                )
+                warnings.warn(f"No matching header close date/time for application {an} version {av}. Please contact developers. Downstream behavior may be affected.")
+            #    raise IOError(
+            #        f"No matching header close date/time for application {an} "
+            #        + f"version {av}. Please contact developers."
+            #    )
             else:
                 try:
                     dt2 = sr.groupdict()
