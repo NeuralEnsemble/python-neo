@@ -9,6 +9,7 @@ Author: Samuel Garcia
 """
 
 import struct
+import datetime
 
 import numpy as np
 
@@ -80,6 +81,7 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
                 header[key] = val
 
             nb_segment = header["NR"]
+            rec_datetime = datetime.datetime.strptime(header["RTIME"], "%d/%m/%Y %H:%M:%S")
             all_sampling_interval = []
             # loop for record number
             for seg_index in range(header["NR"]):
@@ -164,10 +166,12 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
         self.header["event_channels"] = event_channels
+        self.header["rec_datetime"] = rec_datetime
 
         # insert some annotation at some place
         self._generate_minimal_annotations()
-
+        bl_annotations = self.raw_annotations["blocks"][0]
+        bl_annotations["rec_datetime"] = rec_datetime
     def _segment_t_start(self, block_index, seg_index):
         return 0.0
 
