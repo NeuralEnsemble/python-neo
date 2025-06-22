@@ -560,7 +560,7 @@ class AxonaRawIO(BaseRawIO):
                     tetrode_id = int(key.strip("collectMask_"))
                     active_tetrodes.append(tetrode_id)
         return active_tetrodes
-    
+
     def _get_active_channels(self):
         """
         Returns the ID numbers of the active channels as a list.
@@ -568,11 +568,11 @@ class AxonaRawIO(BaseRawIO):
         """
         active_tetrodes = self.get_active_tetrode()
         active_channels = []
-        
+
         for tetrode in active_tetrodes:
             chans = self._get_channel_from_tetrode(tetrode)
             active_channels.append(chans)
-        
+
         return np.concatenate(active_channels)
 
     def _get_channel_from_tetrode(self, tetrode):
@@ -645,7 +645,7 @@ class AxonaRawIO(BaseRawIO):
         gain_list = self._get_channel_gain()
         offset = 0  # What is the offset?
 
-        first_channel = (active_tetrode_set[0] - 1)*elec_per_tetrode
+        first_channel = (active_tetrode_set[0] - 1) * elec_per_tetrode
         sig_channels = []
         for itetr in range(num_active_tetrode):
 
