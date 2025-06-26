@@ -172,7 +172,6 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
         self.header["event_channels"] = event_channels
-        self.header["rec_datetime"] = rec_datetime
 
         # insert some annotation at some place
         self._generate_minimal_annotations()
