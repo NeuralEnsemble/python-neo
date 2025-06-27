@@ -711,6 +711,12 @@ class BaseRawIO:
                     f"do not have the same {_common_sig_characteristics} {unique_characteristics}"
                 )
 
+            # if stream has duplicate channel_id assignments, correct this
+            seen = set()        
+            uniqid = [i for i,x in enumerate(signal_channels[mask]["id"]) if x not in seen and not seen.add(x)]
+            signal_channels = signal_channels[uniqid]
+            mask = signal_channels["stream_id"] == stream_id
+            
             # also check that channel_id is unique inside a stream
             channel_ids = signal_channels[mask]["id"]
             if np.unique(channel_ids).size != channel_ids.size:
