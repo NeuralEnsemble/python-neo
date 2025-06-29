@@ -97,6 +97,7 @@ and may not be the current affiliation of a contributor.
 * Luiz Tauffer [24]
 * Akshaj Verma [46]
 * Letizia Signorelli [47]
+* Daniel Parthier [48]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Université Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -145,6 +146,7 @@ and may not be the current affiliation of a contributor.
 45. Maxwell Biosystems AG
 46. Brain Center, University Medical Center Utrecht, Utrecht University, The Netherlands
 47. Centre for Molecular Medicine Norway (NCMM), University of Oslo, Norway
+48. Charité - Universitätmedizin Berlin, Freie Universität Berlin and Humboldt Universität zu Berlin
 
 
 
