@@ -177,6 +177,7 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
         self._generate_minimal_annotations()
         bl_annotations = self.raw_annotations["blocks"][0]
         bl_annotations["rec_datetime"] = rec_datetime
+
     def _segment_t_start(self, block_index, seg_index):
         return 0.0
 
