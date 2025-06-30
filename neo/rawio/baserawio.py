@@ -72,6 +72,7 @@ from __future__ import annotations
 
 import logging
 import numpy as np
+import pandas as pd
 import warnings
 import os
 import sys
@@ -704,20 +705,6 @@ class BaseRawIO:
         for stream_index in range(signal_streams.size):
             stream_id = signal_streams[stream_index]["id"]
             mask = signal_channels["stream_id"] == stream_id
-            characteristics = signal_channels[mask][_common_sig_characteristics]
-            unique_characteristics = np.unique(characteristics)
-            if unique_characteristics.size != 1:
-                raise ValueError(
-                    f"Some channels in stream_id {stream_id} "
-                    f"do not have the same {_common_sig_characteristics} {unique_characteristics}"
-                )
-
-            # if stream has duplicate channel_id assignments, correct this
-            seen = set()        
-            uniqid = [i for i,x in enumerate(signal_channels[mask]["id"]) if x not in seen and not seen.add(x)]
-            signal_channels = signal_channels[uniqid]
-            mask = signal_channels["stream_id"] == stream_id
-
             characteristics = signal_channels[mask][_common_sig_characteristics]
             unique_characteristics = np.unique(characteristics)
             if unique_characteristics.size != 1:
