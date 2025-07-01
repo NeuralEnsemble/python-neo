@@ -712,11 +712,11 @@ class BaseRawIO:
                     f"do not have the same {_common_sig_characteristics} {unique_characteristics}"
                 )
             
-            # also check that channel_id is unique inside a stream
-            channel_ids = signal_channels[mask]["id"]
-            if np.unique(channel_ids).size != channel_ids.size:
-                warnings.warn(f"signal_channels do not have unique ids for stream {stream_index}", RuntimeWarning)
-
+            # also check that channel_names are unique inside a stream
+            channel_names = signal_channels[mask]["name"]
+            if np.unique(channel_names).size != channel_names.size:
+                raise ValueError(f"signal_channels do not have unique names for stream {stream_index}")
+        
         self._several_channel_groups = signal_streams.size > 1
 
     def channel_name_to_index(self, stream_index: int, channel_names: list[str]):
