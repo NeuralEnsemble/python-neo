@@ -9,6 +9,7 @@ Author: Samuel Garcia
 """
 
 import struct
+import datetime
 
 import numpy as np
 
@@ -61,6 +62,7 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
                     continue
                 key, val = line.split("=")
                 if key in [
+                    "VER",
                     "NC",
                     "NR",
                     "NBH",
@@ -80,6 +82,12 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
                 header[key] = val
 
             nb_segment = header["NR"]
+
+            # get rec_datetime when WCP data file version is later than 8
+            if header["VER"] > 8:
+                rec_datetime = datetime.datetime.strptime(header["RTIME"], "%d/%m/%Y %H:%M:%S")
+            else:
+                rec_datetime = None
             all_sampling_interval = []
             # loop for record number
             for seg_index in range(header["NR"]):
@@ -167,6 +175,8 @@ class WinWcpRawIO(BaseRawWithBufferApiIO):
 
         # insert some annotation at some place
         self._generate_minimal_annotations()
+        bl_annotations = self.raw_annotations["blocks"][0]
+        bl_annotations["rec_datetime"] = rec_datetime
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.0
