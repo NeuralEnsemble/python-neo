@@ -810,10 +810,7 @@ class NicoletRawIO(BaseRawIO):
                     seg_annotations['name'] = self.patient_info['altID']
                 seg_annotations['date'] = self.segments_properties[i]['date']
                 seg_annotations['duration'] = self.segments_properties[i]['duration'].total_seconds()
-                for event_types in seg_annotations['events']:
-                    event_types['__array_annotations__']['nb_events'] = len([event for event in self.events 
-                                                                        if event['seg_index'] == i and event['type'] == event_types['id']])
-
+                
     def _get_analogsignal_chunk(self,
                                 block_index: int = 0,
                                 seg_index: int = 0,
