@@ -10,10 +10,8 @@ Author: Murezi Capaul <murezi.capaul@kliniklengg.ch>
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import warnings
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 from neo.rawio.baserawio import (
     BaseRawIO,
