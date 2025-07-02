@@ -383,7 +383,7 @@ class BlackrockRawIO(BaseRawIO):
             for nsx_nb in self.nsx_to_load:
                 self.__match_nsx_and_nev_segment_ids(nsx_nb)
 
-        self.nsx_data = {}
+        self.nsx_datas = {}
         self.sig_sampling_rates = {}
         if len(self.nsx_to_load) > 0:
             for nsx_nb in self.nsx_to_load:
@@ -399,7 +399,7 @@ class BlackrockRawIO(BaseRawIO):
                     _data_reader_fun = self.__nsx_data_reader["3.0-ptp"]
                 else:
                     _data_reader_fun = self.__nsx_data_reader[spec_version]
-                self.nsx_data[nsx_nb] = _data_reader_fun(nsx_nb)
+                self.nsx_datas[nsx_nb] = _data_reader_fun(nsx_nb)
 
                 sr = float(self.main_sampling_rate / basic_header["period"])
                 self.sig_sampling_rates[nsx_nb] = sr
@@ -446,7 +446,7 @@ class BlackrockRawIO(BaseRawIO):
                     signal_channels.append((ch_name, ch_id, sr, sig_dtype, units, gain, offset, stream_id, buffer_id))
 
             # check nb segment per nsx
-            nb_segments_for_nsx = [len(self.nsx_data[nsx_nb]) for nsx_nb in self.nsx_to_load]
+            nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]
             if not all(nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx):
                 raise NeoReadWriteError("Segment nb not consistent across nsX files")
             self._nb_segment = nb_segments_for_nsx[0]
@@ -468,7 +468,7 @@ class BlackrockRawIO(BaseRawIO):
                         ts_res = 30_000
                     period = self.__nsx_basic_header[nsx_nb]["period"]
                     sec_per_samp = period / 30_000  # Maybe 30_000 should be ['sample_resolution']
-                    length = self.nsx_data[nsx_nb][data_bl].shape[0]
+                    length = self.nsx_datas[nsx_nb][data_bl].shape[0]
                     if self.__nsx_data_header[nsx_nb] is None:
                         t_start = 0.0
                         t_stop = max(t_stop, length / self.sig_sampling_rates[nsx_nb])
@@ -646,7 +646,7 @@ class BlackrockRawIO(BaseRawIO):
     def _get_signal_size(self, block_index, seg_index, stream_index):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
-        memmap_data = self.nsx_data[nsx_nb][seg_index]
+        memmap_data = self.nsx_datas[nsx_nb][seg_index]
         return memmap_data.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
@@ -657,7 +657,7 @@ class BlackrockRawIO(BaseRawIO):
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
-        memmap_data = self.nsx_data[nsx_nb][seg_index]
+        memmap_data = self.nsx_datas[nsx_nb][seg_index]
         if channel_indexes is None:
             channel_indexes = slice(None)
         sig_chunk = memmap_data[i_start:i_stop, channel_indexes]
@@ -2155,13 +2155,13 @@ class BlackrockRawIO(BaseRawIO):
         for data_bl in range(self._nb_segment):
             keep_seg = True
             for nsx_nb in self.nsx_to_load:
-                length = self.nsx_data[nsx_nb][data_bl].shape[0]
+                length = self.nsx_datas[nsx_nb][data_bl].shape[0]
                 keep_seg = keep_seg and (length >= 2)
 
             if not keep_seg:
                 removed_seg.append(data_bl)
                 for nsx_nb in self.nsx_to_load:
-                    self.nsx_data[nsx_nb].pop(data_bl)
+                    self.nsx_datas[nsx_nb].pop(data_bl)
                     self.__nsx_data_header[nsx_nb].pop(data_bl)
 
         # Keys need to be increasing from 0 to maximum in steps of 1
@@ -2170,8 +2170,8 @@ class BlackrockRawIO(BaseRawIO):
             for j in range(i + 1, self._nb_segment):
                 # remap nsx seg index
                 for nsx_nb in self.nsx_to_load:
-                    data = self.nsx_data[nsx_nb].pop(j)
-                    self.nsx_data[nsx_nb][j - 1] = data
+                    data = self.nsx_datas[nsx_nb].pop(j)
+                    self.nsx_datas[nsx_nb][j - 1] = data
 
                     data_header = self.__nsx_data_header[nsx_nb].pop(j)
                     self.__nsx_data_header[nsx_nb][j - 1] = data_header
