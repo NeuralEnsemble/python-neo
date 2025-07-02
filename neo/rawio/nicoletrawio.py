@@ -842,7 +842,6 @@ class NicoletRawIO(BaseRawIO):
         cum_segment_duration = [0] +  list(np.cumsum([(segment['duration'].total_seconds()) for segment in self.segments_properties])) 
         data = np.empty([i_stop - i_start, len(channel_indexes)])
         for i, channel_index  in enumerate(channel_indexes):
-            print('Current Channel: ' + str(i))
             current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][i]
             multiplicator = self.segments_properties[seg_index]['scale'][i]
             [tag_idx] = [tag['index'] for tag in self.tags if tag['tag'] == str(i)]
