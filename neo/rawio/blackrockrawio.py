@@ -423,11 +423,11 @@ class BlackrockRawIO(BaseRawIO):
                     signal_buffers.append((stream_name, buffer_id))
                     signal_streams.append((stream_name, stream_id, buffer_id))
                 for i, chan in enumerate(ext_header):
-                    if spec in ["2.2", "2.3", "3.0"]:
+                    if spec_version in ["2.2", "2.3", "3.0"]:
                         ch_name = chan["electrode_label"].decode()
                         ch_id = str(chan["electrode_id"])
                         units = chan["units"].decode()
-                    elif spec == "2.1":
+                    elif spec_version == "2.1":
                         ch_name = chan["labels"]
                         ch_id = str(self.__nsx_ext_header[nsx_nb][i]["electrode_id"])
                         units = chan["units"]
