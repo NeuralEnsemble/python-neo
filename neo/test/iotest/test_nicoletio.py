@@ -15,7 +15,7 @@ import quantities as pq
 import numpy as np
 
 
-class TestExampleIO(
+class TestNicoletIO(
     BaseTestIO,
     unittest.TestCase,
 ):
