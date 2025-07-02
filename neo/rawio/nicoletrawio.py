@@ -914,8 +914,9 @@ class NicoletRawIO(BaseRawIO):
         return None
     
     def _event_count(self, block_index: int = 0, seg_index: int = 0, event_channel_index: int = 0):
-        return self.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][event_channel_index]['__array_annotations__']['nb_events']
-    
+        return len([event for event in self.events if (event['block_index'] == block_index
+                                                       and event['seg_index'] == seg_index
+                                                       and event['type'] == str(event_channel_index))])
     
     def _get_event_timestamps(
         self, block_index: int = 0, seg_index: int = 0, event_channel_index: int = 0, t_start: float =  None, t_stop: float = None
