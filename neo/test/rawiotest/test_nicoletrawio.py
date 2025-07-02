@@ -5,7 +5,7 @@ from neo.rawio.nicoletrawio import NicoletRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
-class TestExampleRawIO(
+class TestNicoletRawIO(
     BaseTestRawIO,
     unittest.TestCase,
 ):
