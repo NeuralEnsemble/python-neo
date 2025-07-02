@@ -1,4 +1,3 @@
-import dateutil
 from packaging.version import Version
 import os
 import re
@@ -317,7 +316,7 @@ class NlxHeader(OrderedDict):
         """
         Read time and date from text of header
         """
-
+        import dateutil
         # opening time
         sr = NlxHeader._openDatetime1_pat.search(txt_header)
         if not sr: sr=NlxHeader._openDatetime2_pat.search(txt_header)
