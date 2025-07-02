@@ -900,8 +900,6 @@ class BlackrockRawIO(BaseRawIO):
             # label of the sampling group (e.g., "1 kS/s" or "LFP low")
             ("label", "S16"),
             ("comment", "S256"),
-            # ("application_to_create_file", "S52"), # A 52-character string labeling the program which created the file. Trellis will also include its revision number in this label.
-            # ("processor_timestamp", "uint32"), # The processor timestamp (in 30 kHz clock cycles) at which the data in the file were collected.
             ("period", "uint32"),
             ("timestamp_resolution", "uint32"),
             # time origin: 2byte uint16 values for ...
@@ -921,7 +919,6 @@ class BlackrockRawIO(BaseRawIO):
 
         # extended header (type: CC)
         offset_dt0 = np.dtype(dt0).itemsize
-        shape = int(nsx_basic_header["channel_count"])
         dt1 = [
             ("type", "S2"),
             ("electrode_id", "uint16"),
@@ -946,7 +943,8 @@ class BlackrockRawIO(BaseRawIO):
             ("lo_freq_type", "uint16"),
         ]  # 0=None, 1=Butterworth, -2-Chebyshev
 
-        nsx_ext_header = np.memmap(filename, shape=shape, offset=offset_dt0, dtype=dt1, mode="r")
+        channel_count = int(nsx_basic_header["channel_count"])
+        nsx_ext_header = np.memmap(filename, shape=channel_count, offset=offset_dt0, dtype=dt1, mode="r")
 
         return nsx_basic_header, nsx_ext_header
 
@@ -958,7 +956,7 @@ class BlackrockRawIO(BaseRawIO):
 
         major_version = self.__nsx_basic_header[nsx_nb]["ver_major"]
         ts_size = "uint64" if major_version >= 3 else "uint32"
-        #ts_size = "uint64"
+        
         # dtypes data header, the header flag is always set to 1
         dt2 = [("header_flag", "uint8"), ("timestamp", ts_size), ("nb_data_points", "uint32")]
 
@@ -998,11 +996,18 @@ class BlackrockRawIO(BaseRawIO):
         while offset < filesize:
             packet_header = self.__read_nsx_dataheader(nsx_nb, offset)
             header_flag = packet_header["header_flag"]
-            # assert header_flag == 1, f"Invalid header flag: {header_flag}"
+            # NSX data blocks must have header_flag = 1, other values indicate file corruption
+            if header_flag != 1:
+                raise ValueError(
+                    f"Invalid NSX data block header at offset {offset:#x} in ns{nsx_nb} file. "
+                    f"Expected header_flag=1, got {header_flag}. "
+                    f"This may indicate file corruption or unsupported NSX format variant. "
+                    f"Block index: {data_block_index}, File size: {filesize} bytes"
+                )
             timestamp = packet_header["timestamp"]
             offset_to_data_block_start = offset + packet_header.dtype.itemsize
             num_data_points = int(packet_header["nb_data_points"])
-                
+
             data_header[data_block_index] = {
                 "header": header_flag,
                 "timestamp": timestamp,
@@ -1010,9 +1015,9 @@ class BlackrockRawIO(BaseRawIO):
                 "offset_to_data_block": offset_to_data_block_start,
             }
 
-            data_array_size = num_data_points * channel_count * np.dtype("int16").itemsize
             # Jump to the next data block
-            offset = offset_to_data_block_start + data_array_size
+            data_block_size = num_data_points * channel_count * np.dtype("int16").itemsize
+            offset = offset_to_data_block_start + data_block_size
 
             data_block_index += 1
 
