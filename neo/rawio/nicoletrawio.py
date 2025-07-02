@@ -840,7 +840,7 @@ class NicoletRawIO(BaseRawIO):
             raise IndexError("Start or Stop Index out of bounds")
         current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][channel_indexes[0]] #Non signal-stream specific, just take the sampling rate of the first channel
         cum_segment_duration = [0] +  list(np.cumsum([(segment['duration'].total_seconds()) for segment in self.segments_properties])) 
-        data = np.empty([i_stop - i_start, self.segments_properties[seg_index]['sampling_rates'].count(current_samplingrate)])
+        data = np.empty([i_stop - i_start, len(channel_indexes)])
         for i, channel_index  in enumerate(channel_indexes):
             print('Current Channel: ' + str(i))
             current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][i]
@@ -857,10 +857,15 @@ class NicoletRawIO(BaseRawIO):
             use_sections = all_sections[first_section_for_seg:last_section_for_seg]
             use_sections_length = section_lengths[first_section_for_seg:last_section_for_seg]
             np_idx = 0
-            for section_idx, section_length in zip(use_sections, use_sections_length):
+            for j, (section_idx, section_length) in enumerate(zip(use_sections, use_sections_length)):
                 cur_sec = self.main_index[section_idx]
-                start = int((cur_sec['offset'] - self.signal_data_offset)/2) 
-                stop = start + section_length
+                start = int((cur_sec['offset'] - self.signal_data_offset)/2)
+                if (i_start > start):
+                    start = i_start
+                if (i_stop - i_start) < (section_length*(j+1)):
+                    stop = start + (i_stop - i_start - section_length*j)
+                else:
+                    stop = start + section_length                 
                 data[np_idx:(np_idx + section_length), i] = multiplicator*self.raw_signal[slice(start, stop)]
                 np_idx += section_length
         return data
