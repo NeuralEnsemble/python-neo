@@ -825,6 +825,8 @@ class NicoletRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = [i for i, channel in enumerate(self.header['signal_channels']) if channel['stream_id'] == str(stream_index)]
         elif isinstance(channel_indexes, slice):
+            if channel_indexes == slice(None):
+                channel_indexes = [i for i, channel in enumerate(self.header['signal_channels']) if channel['stream_id'] == str(stream_index)]
             channel_indexes = np.arange(self.header['signal_channels'].shape[0], dtype="int")[channel_indexes]
         else:
             channel_indexes = np.asarray(channel_indexes)
