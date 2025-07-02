@@ -23,6 +23,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -82,15 +83,14 @@ class EDFRawIO(BaseRawIO):
             # or continuous EDF+ files ('EDF+C' in header)
             if ("EDF+" in file_version_header) and ("EDF+C" not in file_version_header):
                 raise ValueError("Only continuous EDF+ files are currently supported.")
-
-        self.edf_reader = EdfReader(self.filename)
+        self._open_reader()
         # load headers, signal information and
         self.edf_header = self.edf_reader.getHeader()
         self.signal_headers = self.edf_reader.getSignalHeaders()
 
         # add annotations to header
-        annotations = self.edf_reader.readAnnotations()
-        self.signal_annotations = [[s, d, a] for s, d, a in zip(*annotations)]
+        self._edf_annotations = self.edf_reader.readAnnotations()
+        self.signal_annotations = [[s, d, a] for s, d, a in zip(*self._edf_annotations)]
 
         # 1 stream = 1 sampling rate
         stream_characteristics = []
@@ -100,7 +100,8 @@ class EDFRawIO(BaseRawIO):
         for ch_idx, sig_dict in enumerate(self.signal_headers):
             ch_name = sig_dict["label"]
             chan_id = ch_idx
-            sr = sig_dict["sample_rate"]  # Hz
+            # pyedf >= 0.1.39 uses sample_frequency, pyedf < 0.1.39 uses sample_rate
+            sr = sig_dict.get("sample_frequency") or sig_dict.get("sample_rate")  # Hz
             dtype = "int16"  # assume general int16 based on edf documentation
             units = sig_dict["dimension"]
             physical_range = sig_dict["physical_max"] - sig_dict["physical_min"]
@@ -115,16 +116,18 @@ class EDFRawIO(BaseRawIO):
 
             stream_id = stream_characteristics.index((sr,))
             self.stream_idx_to_chidx.setdefault(stream_id, []).append(ch_idx)
-
-            signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+            buffer_id = ""
+            signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
 
         # convert channel index lists to arrays for indexing
-        self.stream_idx_to_chidx = {k: np.array(v) for k, v in self.stream_idx_to_chidx.items()}
+        self.stream_idx_to_chidx = {k: np.asarray(v) for k, v in self.stream_idx_to_chidx.items()}
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        signal_streams = [(f"stream ({sr} Hz)", i) for i, sr in enumerate(stream_characteristics)]
+        signal_streams = [(f"stream ({sr} Hz)", i, "") for i, sr in enumerate(stream_characteristics)]
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # no buffer handling here
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # no unit/epoch information contained in edf
         spike_channels = []
@@ -138,6 +141,7 @@ class EDFRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]  # we only accept continuous edf files
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -157,6 +161,7 @@ class EDFRawIO(BaseRawIO):
             "label",
             "dimension",
             "sample_rate",
+            "sample_frequency",
             "physical_min",
             "physical_max",
             "digital_min",
@@ -171,6 +176,18 @@ class EDFRawIO(BaseRawIO):
             array_anno = {array_key: [h[array_key] for h in self.signal_headers]}
         seg_ann["signals"].append({"__array_annotations__": array_anno})
 
+        # We store the following attributes for rapid access without needing the reader
+
+        self._t_stop = self.edf_reader.datarecord_duration * self.edf_reader.datarecords_in_file
+        # use sample count of first signal in stream
+        self._stream_index_samples = {
+            stream_index: self.edf_reader.getNSamples()[chidx][0]
+            for stream_index, chidx in self.stream_idx_to_chidx.items()
+        }
+        self._number_of_events = len(self.edf_reader.readAnnotations()[0])
+
+        self.close()
+
     def _get_stream_channels(self, stream_index):
         return self.header["signal_channels"][self.stream_idx_to_chidx[stream_index]]
 
@@ -179,14 +196,11 @@ class EDFRawIO(BaseRawIO):
         return 0.0  # in seconds
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self.edf_reader.datarecord_duration * self.edf_reader.datarecords_in_file
         # this must return an float scale in second
-        return t_stop
+        return self._t_stop
 
     def _get_signal_size(self, block_index, seg_index, stream_index):
-        chidx = self.stream_idx_to_chidx[stream_index][0]
-        # use sample count of first signal in stream
-        return self.edf_reader.getNSamples()[chidx]
+        return self._stream_index_samples[stream_index]
 
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
         return 0.0  # EDF does not provide temporal offset information
@@ -215,12 +229,13 @@ class EDFRawIO(BaseRawIO):
 
         # load data into numpy array buffer
         data = []
+        self._open_reader()
         for i, channel_idx in enumerate(selected_channel_idxs):
             # use int32 for compatibility with pyedflib
             buffer = np.empty(n, dtype=np.int32)
             self.edf_reader.read_digital_signal(channel_idx, i_start, n, buffer)
             data.append(buffer)
-
+        self._close_reader()
         # downgrade to int16 as this is what is used in the edf file format
         # use fortran (column major) order to be more efficient after transposing
         data = np.asarray(data, dtype=np.int16, order="F")
@@ -243,11 +258,11 @@ class EDFRawIO(BaseRawIO):
         return None
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        return len(self.edf_reader.readAnnotations()[0])
+        return self._number_of_events
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         # these time should be already in seconds
-        timestamps, durations, labels = self.edf_reader.readAnnotations()
+        timestamps, durations, labels = self._edf_annotations
         if t_start is None:
             t_start = self.segment_t_start(block_index, seg_index)
         if t_stop is None:
@@ -276,6 +291,9 @@ class EDFRawIO(BaseRawIO):
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
         return np.asarray(raw_duration, dtype=dtype)
+
+    def _open_reader(self):
+        self.edf_reader = EdfReader(self.filename)
 
     def __enter__(self):
         return self

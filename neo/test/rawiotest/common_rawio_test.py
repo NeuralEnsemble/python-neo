@@ -19,6 +19,9 @@ __test__ = False
 
 import logging
 import unittest
+import importlib.util
+import warnings
+import os
 
 from neo.utils.datasets import download_dataset, get_local_testing_data_folder, default_testing_repo
 
@@ -26,12 +29,17 @@ from neo.test.rawiotest.tools import can_use_network
 
 from neo.test.rawiotest import rawio_compliance as compliance
 
-try:
-    import datalad
-
+datalad_spec = importlib.util.find_spec("datalad")
+if datalad_spec is not None:
     HAVE_DATALAD = True
-except:
+else:
     HAVE_DATALAD = False
+    # pytest skip doesn't explain why we are skipping.
+    # raise error if in CI to prevent tests from spuriously skipping and appearing
+    # as passing.
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        raise RuntimeError("Datalad is required for running the CI.")
+
 
 # url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
 repo_for_test = default_testing_repo
@@ -112,6 +120,7 @@ class BaseTestRawIO:
 
             # lanch a series of test compliance
             compliance.header_is_total(reader)
+            compliance.check_signal_stream_buffer_hierachy(reader)
             compliance.count_element(reader)
             compliance.read_analogsignals(reader)
             compliance.read_spike_times(reader)
@@ -124,3 +133,7 @@ class BaseTestRawIO:
             logging.getLogger().setLevel(logging.INFO)
             compliance.benchmark_speed_read_signals(reader)
             logging.getLogger().setLevel(level)
+
+            # buffer api
+            if reader.has_buffer_description_api():
+                compliance.check_buffer_api(reader)

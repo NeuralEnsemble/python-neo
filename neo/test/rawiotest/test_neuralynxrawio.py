@@ -374,9 +374,10 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
 
         hdr = NlxHeader(filename, props_only=True)
 
-        self.assertEqual(len(hdr), 11) # 9 properties plus channel_ids and channel_names
-        self.assertEqual(hdr['ApplicationName'], 'Pegasus')
-        self.assertEqual(hdr['FileType'], 'Event')
+        self.assertEqual(len(hdr), 11)  # 9 properties plus channel_ids and channel_names
+        self.assertEqual(hdr["ApplicationName"], "Pegasus")
+        self.assertEqual(hdr["FileType"], "Event")
+
 
     def test_neuraview2(self):
         filename = self.get_local_path("neuralynx/Neuraview_v2/original_data/NeuraviewEventMarkers-sample.nev")

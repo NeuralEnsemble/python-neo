@@ -197,7 +197,7 @@ class KlustaKwikIO(BaseIO):
             names.append("spike_time")
 
         # Load into recarray
-        data = np.recfromtxt(fetfilename, names=names, skip_header=1, delimiter=" ")
+        data = np.genfromtxt(fetfilename, names=names, skip_header=1, delimiter=" ")
 
         # get features
         features = np.array([data[f"fet{n}"] for n in range(nbFeatures)])

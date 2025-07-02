@@ -1,6 +1,4 @@
-"""
-
-"""
+""" """
 
 import unittest
 
@@ -20,6 +18,7 @@ class TestBrainVisionRawIO(
         "brainvision/File_brainvision_3_float32.vhdr",
         "brainvision/File_brainvision_3_int16.vhdr",
         "brainvision/File_brainvision_3_int32.vhdr",
+        "brainvision/File_brainvision_4_float32.vhdr",
     ]
 
     entities_to_download = ["brainvision"]

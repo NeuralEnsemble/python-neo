@@ -26,6 +26,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -40,7 +41,7 @@ class Spike2RawIO(BaseRawIO):
     Parameters
     ----------
     filename: str, default: ''
-        The *.smr file to be loaded
+        The .smr file to be loaded
     take_ideal_sampling_rate: bool, default: False
         If True takes the `ideal_rate` from info
     ced_units: bool, default: True
@@ -254,7 +255,10 @@ class Spike2RawIO(BaseRawIO):
                     offset = 0.0
                     sig_dtype = "float32"
                 stream_id = "0"  # set it after the loop
-                signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id))
+                buffer_id = ""
+                signal_channels.append(
+                    (name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+                )
 
             elif chan_info["kind"] in [2, 3, 4, 5, 8]:
                 # Event
@@ -297,6 +301,8 @@ class Spike2RawIO(BaseRawIO):
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
+
         if len(signal_channels) > 0:
             if self.try_signal_grouping:
                 # try to group signals channel if same sampling_rate/dtype/...
@@ -324,7 +330,8 @@ class Spike2RawIO(BaseRawIO):
                                 "Signal channel in groups do not have same size, use try_signal_grouping=False"
                             )
                     self._sig_dtypes[stream_id] = np.dtype(charact["dtype"])
-                    signal_streams.append((f"Signal stream {stream_id}", stream_id))
+                    buffer_id = ""
+                    signal_streams.append((f"Signal stream {stream_id}", stream_id, buffer_id))
                 signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
             else:
                 # if try_signal_grouping fail the user can try to split each channel in
@@ -333,6 +340,7 @@ class Spike2RawIO(BaseRawIO):
                 signal_streams = np.zeros(signal_channels.size, dtype=_signal_stream_dtype)
                 signal_streams["id"] = signal_channels["stream_id"]
                 signal_streams["name"] = signal_channels["name"]
+                signal_streams["buffer_id"] = ""
                 self._sig_dtypes = {s["stream_id"]: np.dtype(s["dtype"]) for s in signal_channels}
         else:
             signal_streams = np.array([], dtype=_signal_stream_dtype)
@@ -341,6 +349,7 @@ class Spike2RawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [nb_segment]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

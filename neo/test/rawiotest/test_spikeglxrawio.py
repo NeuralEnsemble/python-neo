@@ -32,6 +32,8 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/NP2_subset_with_sync",
         # NP-ultra
         "spikeglx/np_ultra_stub",
+        # Filename changed by the user, multi-dock
+        "spikeglx/multi_probe_multi_dock_multi_shank_filename_without_info",
         # CatGT
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-A",
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-B",
@@ -40,6 +42,24 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-E",
         "spikeglx/multi_trigger_multi_gate/CatGT/Supercat-A",
     ]
+
+    def test_loading_only_one_probe_in_multi_probe_scenario(self):
+        from pathlib import Path
+
+        local_path_multi_probe_path = Path(
+            self.get_local_path("spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI0")
+        )
+        gate_folder_path = local_path_multi_probe_path / "5-19-2022-CI0_g0"
+        probe_folder_path = gate_folder_path / "5-19-2022-CI0_g0_imec1"
+
+        rawio = SpikeGLXRawIO(probe_folder_path)
+        rawio.parse_header()
+
+        expected_stream_names = ["imec1.ap", "imec1.lf", "imec1.ap-SYNC", "imec1.lf-SYNC"]
+        actual_stream_names = rawio.header["signal_streams"]["name"].tolist()
+        assert (
+            actual_stream_names == expected_stream_names
+        ), f"Expected {expected_stream_names}, but got {actual_stream_names}"
 
     def test_with_location(self):
         rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/Noise4Sam_g0"), load_channel_location=True)
@@ -109,6 +129,70 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         on_diff = np.diff(on_ts_scaled)
         atol = 0.001
         assert np.allclose(on_diff, 1, atol=atol)
+
+    def test_sync_channel_as_separate_stream(self):
+        """Test that sync channel is added as its own stream when load_sync_channel=False."""
+        import warnings
+
+        # Test with load_sync_channel=False (default)
+        rawio_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=False)
+        rawio_no_sync.parse_header()
+
+        # Get stream names
+        stream_names = rawio_no_sync.header["signal_streams"]["name"].tolist()
+
+        # Check if there's a sync channel stream (should contain "SY0" or "SYNC" in the name)
+        sync_streams = [name for name in stream_names if "SY0" in name or "SYNC" in name]
+        assert len(sync_streams) > 0, "No sync channel stream found when load_sync_channel=False"
+
+        # Test deprecation warning when load_sync_channel=True
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            rawio_with_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=True)
+
+            # Check if deprecation warning was raised
+            assert any(
+                issubclass(warning.category, DeprecationWarning) for warning in w
+            ), "No deprecation warning raised"
+            assert any(
+                "will be removed in version 0.15" in str(warning.message) for warning in w
+            ), "Deprecation warning message is incorrect"
+
+    def test_t_start_reading(self):
+        """Test that t_start values are correctly read for all streams and segments."""
+
+        # Expected t_start values for each stream and segment
+        expected_t_starts = {
+            "imec0.ap": {0: 15.319535472007237, 1: 15.339535431281986, 2: 21.284723325294053, 3: 21.3047232845688},
+            "imec1.ap": {0: 15.319554693264516, 1: 15.339521518106308, 2: 21.284735282142822, 3: 21.304702106984614},
+            "imec0.lf": {0: 15.3191688060872, 1: 15.339168765361949, 2: 21.284356659374016, 3: 21.304356618648765},
+            "imec1.lf": {0: 15.319321358082725, 1: 15.339321516521915, 2: 21.284568614155827, 3: 21.30456877259502},
+        }
+
+        # Initialize the RawIO
+        rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI4"))
+        rawio.parse_header()
+
+        # Get list of stream names
+        stream_names = rawio.header["signal_streams"]["name"]
+
+        # Test t_start for each stream and segment
+        for stream_name, expected_values in expected_t_starts.items():
+            # Get stream index
+            stream_index = list(stream_names).index(stream_name)
+
+            # Check each segment
+            for seg_index, expected_t_start in expected_values.items():
+                actual_t_start = rawio.get_signal_t_start(block_index=0, seg_index=seg_index, stream_index=stream_index)
+
+                # Use numpy.testing for proper float comparison
+                np.testing.assert_allclose(
+                    actual_t_start,
+                    expected_t_start,
+                    rtol=1e-9,
+                    atol=1e-9,
+                    err_msg=f"Mismatch in t_start for stream '{stream_name}', segment {seg_index}",
+                )
 
 
 if __name__ == "__main__":

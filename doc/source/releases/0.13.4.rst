@@ -1,0 +1,111 @@
+========================
+Neo 0.13.4 release notes
+========================
+
+21 October 2024
+
+This release of Neo contains bug fixes across many IOs, a new IO for :code:`NeuroNexus`, drop of Python 3.8, NumPy 1.20 & 1.21, still with a focus on the planned 1.0 release.
+Additionally Neo now supports Quantities >=16.1 which brings us closer to support for NumPy 2.0 +. At the :code:`RawIO` level a new :code:`buffer api` has been introduced 
+with the goal of better grouping streams of data together. This is an ongoing effort to provide better access to streams of data that are typically analyzed together without
+changes to the public API.
+
+This point release will be the last release to not support Python 3.13 and NumPy > 2.0.
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+
+Updated dependencies
+--------------------
+
+Neo has a limit of NumPy >= 1.22.4, < 2.0.0
+Neo now supports Python >= 3.9, <3.13
+Neo has a limit of Quantities >= 16.1
+Neo has a limit of dhn_med_py < 2.0.0 (for reading MED format)
+
+Deprecations
+------------
+
+As Quantities has dropped support for the :code:`copy` argument when making Quantities arrays to be NumPy 2.0 compatible, the :code:`copy` argument
+has also been deprecated in all Neo core objects (e.g. :code:`SpikeTrain`, etc.). For this version and the next version the default is now :code:`copy=None`.
+If :code:`copy=True` or :code:`copy=False` are used an error will be raised. This also means that some functionality for rescaling and dtype conversion, which
+required :code:`copy=True` are no longer possible. Appropriate errors are raised if the user tries these now impossible behaviors at construction.
+
+Additional changes that occurred in Quantities can be viewed at their changelog:
+https://github.com/python-quantities/python-quantities/blob/master/CHANGES.txt
+
+Currently acceptable construction patterns can be found in the Neo test folder:
+https://github.com/NeuralEnsemble/python-neo/blob/master/neo/test/coretest
+
+Many previous behaviors can still be achieved by using additional lines of code, e.g.:
+
+.. code-block:: python
+
+    >>> import quantities as pq
+    >>> import neo
+
+    # if we want to get a spiketrain in seconds, but we entered our times in ms
+    # we used to be able to autoconvert by specifying units. But now this will 
+    # raise an error!
+    >>> times = [1,2,3] * 1 * pq.ms
+    >>> t_stop = 1 * pq.s
+    >>> spiketrain = neo.SpikeTrain(times, t_stop=t_stop, units='s')
+    ValueError: cannot rescale and return view
+    # so instead we need to rescale in a second step
+    >>> spiketrain = neo.SpikeTrain(times, t_stop=t_stop)
+    >>> spiketrain
+    <SpikeTrain(array[1, 2, 3] * ms, [0.0 ms, 1000.0 ms])>
+    >>> rescaled_spiketrain = spiketrain.rescale('s')
+    >>> rescaled_spiketrain
+    <SpikeTrain(array[0.001, 0.002, 0.003] * s, [0.0 s, 10.0 s])>
+
+
+CI Additions/Changes
+--------------------
+
+Neo has sped up the testing suite by ~15% and added additional testing for IOs: :class:`NeuralynxIO` and
+:class:`Plexon2IO`.
+
+Testing around :code:`copy` was removed from the core testing, since this argument is no longer possible.
+
+
+Addition of a New IO module
+---------------------------
+
+Neo now has support for reading NeuroNexus :code:`.xdat` files with the new :class:`NeuroNexusIO`.
+
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+Bug fixes and/or improvements have been made to :class:`MaxwellIO`, :class:`NeuroNexusIO`,
+:class:`IntanIO`, :class:`Plexon2IO`, :class:`IgorIO`, :class:`SpikeGadgetsIO`, :class:`PlexonIO`,
+and :class:`BrainVisionRawIO`, and :class:`EDFIO`
+
+Buffer API
+----------
+
+The motivation for this :code:`RawIO` was that many IOs have buffers of data (memmaps/hdf5) files, which allow for multiple unrelated streams of data to be packaged
+together. This has led to some inconsistencies in how IOs access streams of data. For example, the :code:`PlexonIO` stores WideBand and Filtered versions of the same
+data, but the end user likely wouldn't want to analyze them both at the same time as that would be duplication of information. :code:`SpikeGLX` also makes use of a sync
+channel which is stored with the electrophysiological channels, but should not be analyzed as an ephys channel. The Buffer API will be an ongoing set of PRs at the
+:code:`RawIO` level to better clarify how data enters and is mapped in Neo versus how the end-user might request streams of data. We hope that this process will allow
+the end-user better access to the data they want without having unrelated data mixed in. Importantly the public API is not being affected by this process at all. The end-user
+will still request their desired stream using :code:`stream_index` argument when interacting with a :code:`RawIO`.
+
+In this release, each IO was divided into whether it would fit with the buffer api requirements or not and the initial :code:`buffer_id` was applied to all IOs. This step 
+has not changed any behavior in Neo. But the :code:`RawIO.header` information will now have an additional field that will be used in future releases of Neo under-the-hood.
+
+We want to emphasize this is not a public API change and over the next version we hope to fully implement this new schema to allow for better interaction with data at the
+:code:`RawIO` and :code:`IO` levels of Neo.
+
+This project has largely been spearheaded by Samuel Garcia and we thank him for his herculean efforts. 
+
+Acknowledgements
+----------------
+
+Thanks to Zach McKenzie, Heberto Mayorquin, Samuel Garcia, Andrew Davison, Alessio Buccino, Nikhil Chandra, and Peter Steinmetz for their contributions to this release.
+
+
+.. _`pull requests`: https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+milestone%3A0.13.4
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+is%3Aclosed+milestone%3A0.13.4

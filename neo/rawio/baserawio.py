@@ -77,6 +77,8 @@ import sys
 
 from neo import logging_handler
 
+from .utils import get_memmap_chunk_from_opened_file
+
 
 possible_raw_modes = [
     "one-file",
@@ -86,9 +88,18 @@ possible_raw_modes = [
 
 error_header = "Header is not read yet, do parse_header() first"
 
+_signal_buffer_dtype = [
+    ("name", "U64"),  # not necessarily unique
+    ("id", "U64"),  # must be unique
+]
+# To be left an empty array if the concept of buffer is undefined for a reader.
 _signal_stream_dtype = [
     ("name", "U64"),  # not necessarily unique
     ("id", "U64"),  # must be unique
+    (
+        "buffer_id",
+        "U64",
+    ),  # should be "" (empty string) when the stream is not nested under a buffer or the buffer is undefined for some reason.
 ]
 
 _signal_channel_dtype = [
@@ -100,6 +111,7 @@ _signal_channel_dtype = [
     ("gain", "float64"),
     ("offset", "float64"),
     ("stream_id", "U64"),
+    ("buffer_id", "U64"),
 ]
 
 # TODO for later: add t_start and length in _signal_channel_dtype
@@ -172,6 +184,15 @@ class BaseRawIO:
         self.header = None
         self.is_header_parsed = False
 
+        self._has_buffer_description_api = False
+
+    def has_buffer_description_api(self) -> bool:
+        """
+        Return if the reader handle the buffer API.
+        If True then the reader support internally `get_analogsignal_buffer_description()`
+        """
+        return self._has_buffer_description_api
+
     def parse_header(self):
         """
         Parses the header of the file(s) to allow for faster computations
@@ -181,6 +202,7 @@ class BaseRawIO:
         # this must create
         # self.header['nb_block']
         # self.header['nb_segment']
+        # self.header['signal_buffers']
         # self.header['signal_streams']
         # self.header['signal_channels']
         # self.header['spike_channels']
@@ -216,6 +238,184 @@ class BaseRawIO:
                 txt += f"{k}: {v}\n"
 
         return txt
+
+    def _repr_html_(self):
+        """
+        HTML representation for the raw recording base.
+
+        Returns
+        -------
+        html : str
+            The HTML representation as a string.
+        """
+        html = []
+        html.append('<div style="font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto;">')
+
+        # Header
+        html.append(f'<h3 style="color: #2c3e50;">{self.__class__.__name__}: {self.source_name()}</h3>')
+
+        if self.is_header_parsed:
+            # Basic info
+            nb_block = self.block_count()
+            html.append(f"<p><strong>nb_block:</strong> {nb_block}</p>")
+            nb_seg = [self.segment_count(i) for i in range(nb_block)]
+            html.append(f"<p><strong>nb_segment:</strong> {nb_seg}</p>")
+
+            # CSS for tables - using only black, white, and gray colors
+            html.append(
+                """
+            <style>
+                #{unique_id} table.neo-table {{
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin-bottom: 20px;
+                    font-size: 14px;
+                    color: inherit;
+                    background-color: transparent;
+                }}
+                #{unique_id} table.neo-table th,
+                #{unique_id} table.neo-table td {{
+                    border: 1px solid #888;
+                    padding: 8px;
+                    text-align: left;
+                }}
+                #{unique_id} table.neo-table th {{
+                    background-color: rgba(128,128,128,0.2);
+                }}
+                #{unique_id} table.neo-table tr:nth-child(even) {{
+                    background-color: rgba(128,128,128,0.1);
+                }}
+                #{unique_id} details {{
+                    margin-bottom: 15px;
+                    border: 1px solid rgba(128,128,128,0.3);
+                    border-radius: 4px;
+                    overflow: hidden;
+                    background-color: transparent;
+                }}
+                #{unique_id} summary {{
+                    padding: 10px;
+                    background-color: rgba(128,128,128,0.2);
+                    cursor: pointer;
+                    font-weight: bold;
+                    color: inherit;
+                }}
+                #{unique_id} details[open] summary {{
+                    border-bottom: 1px solid rgba(128,128,128,0.3);
+                }}
+                #{unique_id} .table-container {{
+                    padding: 10px;
+                    overflow-x: auto;
+                    background-color: transparent;
+                }}
+            </style>
+            """
+            )
+
+            # Signal Streams
+            signal_streams = self.header["signal_streams"]
+            if signal_streams.size > 0:
+                html.append("<details>")
+                html.append("<summary>Signal Streams</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append("<thead><tr><th>Name</th><th>ID</th><th>Buffer ID</th><th>Channel Count</th></tr></thead>")
+                html.append("<tbody>")
+
+                for i, stream in enumerate(signal_streams):
+                    html.append("<tr>")
+                    html.append(f'<td>{stream["name"]}</td>')
+                    html.append(f'<td>{stream["id"]}</td>')
+                    html.append(f'<td>{stream["buffer_id"]}</td>')
+                    html.append(f"<td>{self.signal_channels_count(i)}</td>")
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+
+            # Signal Channels
+            signal_channels = self.header["signal_channels"]
+            if signal_channels.size > 0:
+                html.append("<details>")
+                html.append("<summary>Signal Channels</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append(
+                    "<thead><tr><th>Name</th><th>ID</th><th>Sampling Rate</th><th>Data Type</th><th>Units</th><th>Gain</th><th>Offset</th><th>Stream ID</th><th>Buffer ID</th></tr></thead>"
+                )
+                html.append("<tbody>")
+
+                for channel in signal_channels:
+                    html.append("<tr>")
+                    html.append(f'<td>{channel["name"]}</td>')
+                    html.append(f'<td>{channel["id"]}</td>')
+                    html.append(f'<td>{channel["sampling_rate"]}</td>')
+                    html.append(f'<td>{channel["dtype"]}</td>')
+                    html.append(f'<td>{channel["units"]}</td>')
+                    html.append(f'<td>{channel["gain"]}</td>')
+                    html.append(f'<td>{channel["offset"]}</td>')
+                    html.append(f'<td>{channel["stream_id"]}</td>')
+                    html.append(f'<td>{channel["buffer_id"]}</td>')
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+
+            # Spike Channels
+            spike_channels = self.header["spike_channels"]
+            if spike_channels.size > 0:
+                html.append("<details>")
+                html.append("<summary>Spike Channels</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append(
+                    "<thead><tr><th>Name</th><th>ID</th><th>WF Units</th><th>WF Gain</th><th>WF Offset</th><th>WF Left Sweep</th><th>WF Sampling Rate</th></tr></thead>"
+                )
+                html.append("<tbody>")
+
+                for channel in spike_channels:
+                    html.append("<tr>")
+                    html.append(f'<td>{channel["name"]}</td>')
+                    html.append(f'<td>{channel["id"]}</td>')
+                    html.append(f'<td>{channel["wf_units"]}</td>')
+                    html.append(f'<td>{channel["wf_gain"]}</td>')
+                    html.append(f'<td>{channel["wf_offset"]}</td>')
+                    html.append(f'<td>{channel["wf_left_sweep"]}</td>')
+                    html.append(f'<td>{channel["wf_sampling_rate"]}</td>')
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+
+            # Event Channels
+            event_channels = self.header["event_channels"]
+            if event_channels.size > 0:
+                html.append("<details>")
+                html.append("<summary>Event Channels</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append("<thead><tr><th>Name</th><th>ID</th><th>Type</th></tr></thead>")
+                html.append("<tbody>")
+
+                for channel in event_channels:
+                    html.append("<tr>")
+                    html.append(f'<td>{channel["name"]}</td>')
+                    html.append(f'<td>{channel["id"]}</td>')
+                    html.append(
+                        f'<td>{channel["type"].decode("utf-8") if isinstance(channel["type"], bytes) else channel["type"]}</td>'
+                    )
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+        else:
+            html.append("<p><em>Call <code>parse_header()</code> to load the reader data.</p>")
+
+        html.append("</div>")
+        return "\n".join(html)
 
     def _generate_minimal_annotations(self):
         """
@@ -653,6 +853,7 @@ class BaseRawIO:
 
         """
         stream_index = self._get_stream_index_from_arg(stream_index)
+
         return self._get_signal_size(block_index, seg_index, stream_index)
 
     def get_signal_t_start(self, block_index: int, seg_index: int, stream_index: int | None = None):
@@ -1301,7 +1502,6 @@ class BaseRawIO:
         -------
             array of samples, with each requested channel in a column
         """
-
         raise (NotImplementedError)
 
     ###
@@ -1339,6 +1539,152 @@ class BaseRawIO:
 
     def _rescale_epoch_duration(self, raw_duration: np.ndarray, dtype: np.dtype):
         raise (NotImplementedError)
+
+    ###
+    # buffer api zone
+    # must be implemented if has_buffer_description_api=True
+    def get_analogsignal_buffer_description(self, block_index: int = 0, seg_index: int = 0, buffer_id: str = None):
+        if not self.has_buffer_description_api:
+            raise ValueError("This reader do not support buffer_description API")
+        descr = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
+        return descr
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        raise (NotImplementedError)
+
+
+class BaseRawWithBufferApiIO(BaseRawIO):
+    """
+    Generic class for reader that support "buffer api".
+
+    In short reader that are internally based on:
+
+      * np.memmap
+      * hdf5
+
+    In theses cases _get_signal_size and _get_analogsignal_chunk are totaly generic and do not need to be implemented in the class.
+
+    For this class sub classes must implements theses two dict:
+       * self._buffer_descriptions[block_index][seg_index] = buffer_description
+       * self._stream_buffer_slice[buffer_id] = None or slicer o indices
+
+    """
+
+    def __init__(self, *arg, **kwargs):
+        super().__init__(*arg, **kwargs)
+        self._has_buffer_description_api = True
+
+    def _get_signal_size(self, block_index, seg_index, stream_index):
+        buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
+        buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
+        # some hdf5 revert teh buffer
+        time_axis = buffer_desc.get("time_axis", 0)
+        return buffer_desc["shape"][time_axis]
+
+    def _get_analogsignal_chunk(
+        self,
+        block_index: int,
+        seg_index: int,
+        i_start: int | None,
+        i_stop: int | None,
+        stream_index: int,
+        channel_indexes: list[int] | None,
+    ):
+
+        stream_id = self.header["signal_streams"][stream_index]["id"]
+        buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
+
+        buffer_slice = self._stream_buffer_slice[stream_id]
+
+        buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
+
+        i_start = i_start or 0
+        i_stop = i_stop or buffer_desc["shape"][0]
+
+        if buffer_desc["type"] == "raw":
+
+            # open files on demand and keep reference to opened file
+            if not hasattr(self, "_memmap_analogsignal_buffers"):
+                self._memmap_analogsignal_buffers = {}
+            if block_index not in self._memmap_analogsignal_buffers:
+                self._memmap_analogsignal_buffers[block_index] = {}
+            if seg_index not in self._memmap_analogsignal_buffers[block_index]:
+                self._memmap_analogsignal_buffers[block_index][seg_index] = {}
+            if buffer_id not in self._memmap_analogsignal_buffers[block_index][seg_index]:
+                fid = open(buffer_desc["file_path"], mode="rb")
+                self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id] = fid
+            else:
+                fid = self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id]
+
+            num_channels = buffer_desc["shape"][1]
+
+            raw_sigs = get_memmap_chunk_from_opened_file(
+                fid,
+                num_channels,
+                i_start,
+                i_stop,
+                np.dtype(buffer_desc["dtype"]),
+                file_offset=buffer_desc["file_offset"],
+            )
+
+        elif buffer_desc["type"] == "hdf5":
+
+            # open files on demand and keep reference to opened file
+            if not hasattr(self, "_hdf5_analogsignal_buffers"):
+                self._hdf5_analogsignal_buffers = {}
+            if block_index not in self._hdf5_analogsignal_buffers:
+                self._hdf5_analogsignal_buffers[block_index] = {}
+            if seg_index not in self._hdf5_analogsignal_buffers[block_index]:
+                self._hdf5_analogsignal_buffers[block_index][seg_index] = {}
+            if buffer_id not in self._hdf5_analogsignal_buffers[block_index][seg_index]:
+                import h5py
+
+                h5file = h5py.File(buffer_desc["file_path"], mode="r")
+                self._hdf5_analogsignal_buffers[block_index][seg_index][buffer_id] = h5file
+            else:
+                h5file = self._hdf5_analogsignal_buffers[block_index][seg_index][buffer_id]
+
+            hdf5_path = buffer_desc["hdf5_path"]
+            full_raw_sigs = h5file[hdf5_path]
+
+            time_axis = buffer_desc.get("time_axis", 0)
+            if time_axis == 0:
+                raw_sigs = full_raw_sigs[i_start:i_stop, :]
+            elif time_axis == 1:
+                raw_sigs = full_raw_sigs[:, i_start:i_stop].T
+            else:
+                raise RuntimeError("Should never happen")
+
+            if buffer_slice is not None:
+                raw_sigs = raw_sigs[:, buffer_slice]
+
+        else:
+            raise NotImplementedError()
+
+        # this is a pre slicing when the stream do not contain all channels (for instance spikeglx when load_sync_channel=False)
+        if buffer_slice is not None:
+            raw_sigs = raw_sigs[:, buffer_slice]
+
+        # channel slice requested
+        if channel_indexes is not None:
+            raw_sigs = raw_sigs[:, channel_indexes]
+
+        return raw_sigs
+
+    def __del__(self):
+        if hasattr(self, "_memmap_analogsignal_buffers"):
+            for block_index in self._memmap_analogsignal_buffers.keys():
+                for seg_index in self._memmap_analogsignal_buffers[block_index].keys():
+                    for buffer_id, fid in self._memmap_analogsignal_buffers[block_index][seg_index].items():
+                        fid.close()
+            del self._memmap_analogsignal_buffers
+
+        if hasattr(self, "_hdf5_analogsignal_buffers"):
+            for block_index in self._hdf5_analogsignal_buffers.keys():
+                for seg_index in self._hdf5_analogsignal_buffers[block_index].keys():
+                    for buffer_id, h5_file in self._hdf5_analogsignal_buffers[block_index][seg_index].items():
+                        h5_file.close()
+            del self._hdf5_analogsignal_buffers
 
 
 def pprint_vector(vector, lim: int = 8):

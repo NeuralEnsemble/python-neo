@@ -2,19 +2,18 @@
 Class for reading data from CED (Cambridge Electronic Design)
 http://ced.co.uk/
 
-This read *.smrx (and *.smr) from spike2 and signal software.
+This reads *.smrx (and *.smr) from spike2 and signal software.
 
 Note Spike2RawIO/Spike2IO is the old implementation in neo.
 It still works without any dependency and should be faster.
 Spike2IO only works for smr (32 bit) and not for smrx (64 bit) files.
 
-This implementation depends on the SONPY package:
-https://pypi.org/project/sonpy/
+This implementation depends on the SONPY package: https://pypi.org/project/sonpy/
 
 Please note that the SONPY package:
   * is NOT open source
   * internally uses a list instead of numpy.ndarray, potentially causing slow data reading
-  *  is maintained by CED
+  * is maintained by CED
 
 
 Author : Samuel Garcia
@@ -26,6 +25,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -38,7 +38,7 @@ class CedRawIO(BaseRawIO):
     Parameters
     ----------
     filename: str, default: ''
-        The *.smr or *.smrx file to load
+        The .smr or .smrx file to load
     take_ideal_sampling_rate: bool, default: False
         If true use the `GetIdealRate` function from sonpy package
 
@@ -102,7 +102,8 @@ class CedRawIO(BaseRawIO):
                 dtype = "int16"
                 # set later after grouping
                 stream_id = "0"
-                signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+                buffer_id = ""
+                signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
 
             elif chan_type == sonpy.lib.DataType.AdcMark:
                 # spike and waveforms : only spike times is used here
@@ -142,8 +143,11 @@ class CedRawIO(BaseRawIO):
             signal_channels["stream_id"][mask] = stream_id
             num_chans = np.sum(mask)
             stream_name = f"{stream_id} {num_chans}chans"
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        # buffer is unknown because using a close source API
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         # spike channels not handled
         spike_channels = np.array(spike_channels, dtype=_spike_channel_dtype)
@@ -162,6 +166,7 @@ class CedRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

@@ -12,19 +12,23 @@ Author: Julia Sprenger, Samuel Garcia, and Alessio Buccino
 import os
 import json
 from pathlib import Path
+from warnings import warn
 
 import numpy as np
 
 from .baserawio import (
-    BaseRawIO,
+    BaseRawWithBufferApiIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
 
+from .utils import get_memmap_shape
 
-class OpenEphysBinaryRawIO(BaseRawIO):
+
+class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     """
     Handle several Blocks and several Segments.
 
@@ -61,13 +65,20 @@ class OpenEphysBinaryRawIO(BaseRawIO):
     rawmode = "one-dir"
 
     def __init__(self, dirname="", load_sync_channel=False, experiment_names=None):
-        BaseRawIO.__init__(self)
+        BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
         if experiment_names is not None:
             if isinstance(experiment_names, str):
                 experiment_names = [experiment_names]
         self.experiment_names = experiment_names
         self.load_sync_channel = load_sync_channel
+        if load_sync_channel:
+            warn(
+                "The load_sync_channel=True option is deprecated and will be removed in version 0.15. "
+                "Use load_sync_channel=False instead, which will add sync channels as separate streams.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self.folder_structure = None
         self._use_direct_evt_timestamps = None
 
@@ -91,6 +102,8 @@ class OpenEphysBinaryRawIO(BaseRawIO):
             event_stream_names = sorted(list(all_streams[0][0]["events"].keys()))
         else:
             event_stream_names = []
+
+        self._num_of_signal_streams = len(sig_stream_names)
 
         # first loop to reassign stream by "stream_index" instead of "stream_name"
         self._sig_streams = {}
@@ -117,49 +130,116 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         # signals zone
         # create signals channel map: several channel per stream
         signal_channels = []
+        sync_stream_id_to_buffer_id = {}
+        normal_stream_id_to_sync_stream_id = {}
         for stream_index, stream_name in enumerate(sig_stream_names):
-            # stream_index is the index in vector sytream names
+            # stream_index is the index in vector stream names
             stream_id = str(stream_index)
+            buffer_id = stream_id
             info = self._sig_streams[0][0][stream_index]
             new_channels = []
             for chan_info in info["channels"]:
                 chan_id = chan_info["channel_name"]
+
+                units = chan_info["units"]
+                channel_stream_id = stream_id
+                if units == "":
+                    # When units are not provided they are microvolts for neural channels and volts for ADC channels
+                    # See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#continuous
+                    units = "uV" if "ADC" not in chan_id else "V"
+
+                # Special cases for stream
                 if "SYNC" in chan_id and not self.load_sync_channel:
-                    continue
-                if chan_info["units"] == "":
-                    # in some cases for some OE version the unit is "", but the gain is to "uV"
-                    units = "uV"
-                else:
-                    units = chan_info["units"]
+                    # Every stream sync channel is added as its own stream
+                    sync_stream_id = f"{stream_name}SYNC"
+                    sync_stream_id_to_buffer_id[sync_stream_id] = buffer_id
+
+                    # We save this mapping for the buffer description protocol
+                    normal_stream_id_to_sync_stream_id[stream_id] = sync_stream_id
+                    # We then set the stream_id to the sync stream id
+                    channel_stream_id = sync_stream_id
+
+                if "ADC" in chan_id:
+                    # These are non-neural channels and their stream should be separated
+                    # We defined their stream_id as the stream_index of neural data plus the number of neural streams
+                    # This is to not break backwards compatbility with the stream_id numbering
+                    channel_stream_id = str(stream_index + len(sig_stream_names))
+
+                gain = float(chan_info["bit_volts"])
+                sampling_rate = float(info["sample_rate"])
+                offset = 0.0
                 new_channels.append(
                     (
                         chan_info["channel_name"],
                         chan_id,
-                        float(info["sample_rate"]),
+                        sampling_rate,
                         info["dtype"],
                         units,
-                        chan_info["bit_volts"],
-                        0.0,
-                        stream_id,
+                        gain,
+                        offset,
+                        channel_stream_id,
+                        buffer_id,
                     )
                 )
             signal_channels.extend(new_channels)
+
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
         signal_streams = []
-        for stream_index, stream_name in enumerate(sig_stream_names):
-            stream_id = str(stream_index)
-            signal_streams.append((stream_name, stream_id))
+        signal_buffers = []
+
+        unique_streams_ids = np.unique(signal_channels["stream_id"])
+
+        # This is getting too complicated, we probably should just have a table which would be easier to read
+        # And for users to understand
+        for stream_id in unique_streams_ids:
+
+            # Handle sync channel on a special way
+            if "SYNC" in stream_id:
+                # This is a sync channel and should not be added to the signal streams
+                buffer_id = sync_stream_id_to_buffer_id[stream_id]
+                stream_name = stream_id
+                signal_streams.append((stream_name, stream_id, buffer_id))
+                continue
+
+            # Neural signal
+            stream_index = int(stream_id)
+            if stream_index < self._num_of_signal_streams:
+                stream_name = sig_stream_names[stream_index]
+                buffer_id = stream_id
+                # We add the buffers here as both the neural and the ADC channels are in the same buffer
+                signal_buffers.append((stream_name, buffer_id))
+            else:  # This names the ADC streams
+                neural_stream_index = stream_index - self._num_of_signal_streams
+                neural_stream_name = sig_stream_names[neural_stream_index]
+                stream_name = f"{neural_stream_name}_ADC"
+                buffer_id = str(neural_stream_index)
+            signal_streams.append((stream_name, stream_id, buffer_id))
+
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
+        signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
         # create memmap for signals
+        self._buffer_descriptions = {}
+        self._stream_buffer_slice = {}
         for block_index in range(nb_block):
+            self._buffer_descriptions[block_index] = {}
             for seg_index in range(nb_segment_per_block[block_index]):
+                self._buffer_descriptions[block_index][seg_index] = {}
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     num_channels = len(info["channels"])
-                    memmap_sigs = np.memmap(info["raw_filename"], info["dtype"], order="C", mode="r").reshape(
-                        -1, num_channels
-                    )
+                    stream_id = str(stream_index)
+                    buffer_id = str(stream_index)
+                    shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels, offset=0)
+                    self._buffer_descriptions[block_index][seg_index][buffer_id] = {
+                        "type": "raw",
+                        "file_path": str(info["raw_filename"]),
+                        "dtype": info["dtype"],
+                        "order": "C",
+                        "file_offset": 0,
+                        "shape": shape,
+                    }
+
                     has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
 
                     # check sync channel validity (only for AP and LF)
@@ -167,7 +247,60 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         raise ValueError(
                             "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
                         )
-                    info["memmap"] = memmap_sigs
+
+                    # Check if ADC and non-ADC channels are contiguous
+                    is_channel_adc = ["ADC" in ch["channel_name"] for ch in info["channels"]]
+                    if any(is_channel_adc):
+                        first_adc_index = is_channel_adc.index(True)
+                        non_adc_channels_after_adc_channels = [
+                            not is_adc for is_adc in is_channel_adc[first_adc_index:]
+                        ]
+                        if any(non_adc_channels_after_adc_channels):
+                            raise ValueError(
+                                "Interleaved ADC and non-ADC channels are not supported. "
+                                "ADC channels must be contiguous. Open an issue in python-neo to request this feature."
+                            )
+
+                    # Find sync channel and verify it's the last channel
+                    sync_index = next(
+                        (index for index, ch in enumerate(info["channels"]) if ch["channel_name"].endswith("_SYNC")),
+                        None,
+                    )
+                    if sync_index is not None and sync_index != num_channels - 1:
+                        raise ValueError(
+                            "SYNC channel must be the last channel in the buffer. Open an issue in python-neo to request this feature."
+                        )
+
+                    neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
+                    adc_channels = [ch for ch in info["channels"] if "ADC" in ch["channel_name"]]
+                    num_neural_channels = len(neural_channels)
+                    num_adc_channels = len(adc_channels)
+
+                    if num_adc_channels == 0:
+                        if has_sync_trace and not self.load_sync_channel:
+                            # Exclude the sync channel from the main stream
+                            self._stream_buffer_slice[stream_id] = slice(None, -1)
+
+                            # Add a buffer slice for the sync channel
+                            sync_stream_id = normal_stream_id_to_sync_stream_id[stream_id]
+                            self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
+                        else:
+                            self._stream_buffer_slice[stream_id] = None
+                    else:
+                        stream_id_neural = stream_id
+                        stream_id_non_neural = str(int(stream_id) + self._num_of_signal_streams)
+
+                        self._stream_buffer_slice[stream_id_neural] = slice(0, num_neural_channels)
+
+                        if has_sync_trace and not self.load_sync_channel:
+                            # Exclude the sync channel from the non-neural stream
+                            self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, -1)
+
+                            # Add a buffer slice for the sync channel
+                            sync_stream_id = normal_stream_id_to_sync_stream_id[stream_id]
+                            self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
+                        else:
+                            self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, None)
 
         # events zone
         # channel map: one channel one stream
@@ -189,7 +322,6 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                         if name + "_npy" in info:
                             data = np.load(info[name + "_npy"], mmap_mode="r")
                             info[name] = data
-
                     # check that events have timestamps
                     assert "timestamps" in info, "Event stream does not have timestamps!"
                     # Updates for OpenEphys v0.6:
@@ -225,30 +357,62 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                     # 'states' was introduced in OpenEphys v0.6. For previous versions, events used 'channel_states'
                     if "states" in info or "channel_states" in info:
                         states = info["channel_states"] if "channel_states" in info else info["states"]
+
                         if states.size > 0:
                             timestamps = info["timestamps"]
                             labels = info["labels"]
-                            rising = np.where(states > 0)[0]
-                            falling = np.where(states < 0)[0]
 
-                            # infer durations
-                            durations = None
-                            if len(states) > 0:
-                                # make sure first event is rising and last is falling
-                                if states[0] < 0:
-                                    falling = falling[1:]
-                                if states[-1] > 0:
-                                    rising = rising[:-1]
+                            # Identify unique channels based on state values
+                            channels = np.unique(np.abs(states))
 
-                                if len(rising) == len(falling):
-                                    durations = timestamps[falling] - timestamps[rising]
-                                    if not self._use_direct_evt_timestamps:
-                                        timestamps = timestamps / info["sample_rate"]
-                                        durations = durations / info["sample_rate"]
+                            rising_indices = []
+                            falling_indices = []
 
-                            info["rising"] = rising
-                            info["timestamps"] = timestamps[rising]
-                            info["labels"] = labels[rising]
+                            # all channels are packed into the same `states` array.
+                            # So the states array includes positive and negative values for each channel:
+                            #  for example channel one rising would be +1 and channel one falling would be -1,
+                            # channel two rising would be +2 and channel two falling would be -2, etc.
+                            # This is the case for sure for version >= 0.6.x.
+                            for channel in channels:
+                                # Find rising and falling edges for each channel
+                                rising = np.where(states == channel)[0]
+                                falling = np.where(states == -channel)[0]
+
+                                # Ensure each rising has a corresponding falling
+                                if rising.size > 0 and falling.size > 0:
+                                    if rising[0] > falling[0]:
+                                        falling = falling[1:]
+                                    if rising.size > falling.size:
+                                        rising = rising[:-1]
+
+                                    # ensure that the number of rising and falling edges are the same:
+                                    if len(rising) != len(falling):
+                                        warn(
+                                            f"Channel {channel} has {len(rising)} rising edges and "
+                                            f"{len(falling)} falling edges. The number of rising and "
+                                            f"falling edges should be equal. Skipping events from this channel."
+                                        )
+                                        continue
+
+                                    rising_indices.extend(rising)
+                                    falling_indices.extend(falling)
+
+                            rising_indices = np.array(rising_indices, dtype=np.int64)
+                            falling_indices = np.array(falling_indices, dtype=np.int64)
+
+                            # Sort the indices to maintain chronological order
+                            sorted_order = np.argsort(rising_indices)
+                            rising_indices = rising_indices[sorted_order]
+                            falling_indices = falling_indices[sorted_order]
+
+                            durations = timestamps[falling_indices] - timestamps[rising_indices]
+                            if not self._use_direct_evt_timestamps:
+                                timestamps = timestamps / info["sample_rate"]
+                                durations = durations / info["sample_rate"]
+
+                            info["rising"] = rising_indices
+                            info["timestamps"] = timestamps[rising_indices]
+                            info["labels"] = labels[rising_indices]
                             info["durations"] = durations
 
         # no spike read yet
@@ -268,7 +432,10 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 # loop over signals
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     t_start = info["t_start"]
-                    dur = info["memmap"].shape[0] / float(info["sample_rate"])
+                    stream_id = str(stream_index)
+                    buffer_id = str(stream_index)
+                    sig_size = self._buffer_descriptions[block_index][seg_index][buffer_id]["shape"][0]
+                    dur = sig_size / float(info["sample_rate"])
                     t_stop = t_start + dur
                     if global_t_start is None or global_t_start > t_start:
                         global_t_start = t_start
@@ -299,6 +466,7 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = nb_block
         self.header["nb_segment"] = nb_segment_per_block
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels
@@ -312,17 +480,32 @@ class OpenEphysBinaryRawIO(BaseRawIO):
                 seg_ann = bl_ann["segments"][seg_index]
 
                 # array annotations for signal channels
-                for stream_index, stream_name in enumerate(sig_stream_names):
+                for stream_index, stream_name in enumerate(self.header["signal_streams"]["name"]):
                     sig_ann = seg_ann["signals"][stream_index]
-                    info = self._sig_streams[block_index][seg_index][stream_index]
-                    has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
+                    if stream_index < self._num_of_signal_streams:
+                        _sig_stream_index = stream_index
+                        is_neural_stream = True
+                    else:
+                        _sig_stream_index = stream_index - self._num_of_signal_streams
+                        is_neural_stream = False
+                    info = self._sig_streams[block_index][seg_index][_sig_stream_index]
+                    has_sync_trace = self._sig_streams[block_index][seg_index][_sig_stream_index]["has_sync_trace"]
 
-                    for k in ("identifier", "history", "source_processor_index", "recorded_processor_index"):
-                        if k in info["channels"][0]:
-                            values = np.array([chan_info[k] for chan_info in info["channels"]])
+                    for key in ("identifier", "history", "source_processor_index", "recorded_processor_index"):
+                        if key in info["channels"][0]:
+                            values = np.array([chan_info[key] for chan_info in info["channels"]])
+
                             if has_sync_trace:
                                 values = values[:-1]
-                            sig_ann["__array_annotations__"][k] = values
+
+                            neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
+                            num_neural_channels = len(neural_channels)
+                            if is_neural_stream:
+                                values = values[:num_neural_channels]
+                            else:
+                                values = values[num_neural_channels:]
+
+                            sig_ann["__array_annotations__"][key] = values
 
                 # array annotations for event channels
                 # use other possible data in _possible_event_stream_names
@@ -365,25 +548,14 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         group_id = group_ids[0]
         return group_id
 
-    def _get_signal_size(self, block_index, seg_index, stream_index):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-        return sigs.shape[0]
-
     def _get_signal_t_start(self, block_index, seg_index, stream_index):
-        t_start = self._sig_streams[block_index][seg_index][stream_index]["t_start"]
+        if stream_index < self._num_of_signal_streams:
+            _sig_stream_index = stream_index
+        else:
+            _sig_stream_index = stream_index - self._num_of_signal_streams
+
+        t_start = self._sig_streams[block_index][seg_index][_sig_stream_index]["t_start"]
         return t_start
-
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        sigs = self._sig_streams[block_index][seg_index][stream_index]["memmap"]
-        has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
-
-        if not self.load_sync_channel and has_sync_trace:
-            sigs = sigs[:, :-1]
-
-        sigs = sigs[i_start:i_stop, :]
-        if channel_indexes is not None:
-            sigs = sigs[:, channel_indexes]
-        return sigs
 
     def _spike_count(self, block_index, seg_index, unit_index):
         pass
@@ -441,6 +613,9 @@ class OpenEphysBinaryRawIO(BaseRawIO):
         else:
             durations = raw_duration.astype(dtype)
         return durations
+
+    def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
+        return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
 _possible_event_stream_names = (
@@ -552,6 +727,15 @@ def explore_folder(dirname, experiment_names=None):
                         stream_name = node_name + "#" + oe_stream_name
                     else:
                         stream_name = oe_stream_name
+
+                    # skip streams if folder is on oebin, but doesn't exist
+                    if not (recording_folder / "continuous" / info["folder_name"]).is_dir():
+                        warn(
+                            f"For {recording_folder} the folder continuous/{info['folder_name']} is missing. "
+                            f"Skipping {stream_name} continuous stream."
+                        )
+                        continue
+
                     raw_filename = recording_folder / "continuous" / info["folder_name"] / "continuous.dat"
 
                     # Updates for OpenEphys v0.6:
@@ -585,6 +769,14 @@ def explore_folder(dirname, experiment_names=None):
                         stream_name = node_name + "#" + oe_stream_name
                     else:
                         stream_name = oe_stream_name
+
+                    # skip streams if folder is on oebin, but doesn't exist
+                    if not (recording_folder / "events" / info["folder_name"]).is_dir():
+                        warn(
+                            f"For {recording_folder} the folder events/{info['folder_name']} is missing. "
+                            f"Skipping {stream_name} event stream."
+                        )
+                        continue
 
                     event_stream = info.copy()
                     for name in _possible_event_stream_names:

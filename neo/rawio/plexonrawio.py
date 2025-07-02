@@ -39,6 +39,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -154,7 +155,9 @@ class PlexonRawIO(BaseRawIO):
         if self.progress_bar:
             progress_bar.close()
 
-        self._last_timestamps = bl_header["UpperByteOf5ByteTimestamp"] * 2**32 + bl_header["TimeStamp"]
+        upper_byte_of_5_byte_timestamp = int(bl_header["UpperByteOf5ByteTimestamp"])
+        bl_header_timestamp = int(bl_header["TimeStamp"])
+        self._last_timestamps = upper_byte_of_5_byte_timestamp * 2**32 + bl_header_timestamp
 
         # ... and finalize them in self._data_blocks
         # for a faster access depending on type (1, 4, 5)
@@ -206,7 +209,13 @@ class PlexonRawIO(BaseRawIO):
                 for index, pos in enumerate(positions):
                     bl_header = data[pos : pos + 16].view(DataBlockHeader)[0]
 
-                    timestamp = bl_header["UpperByteOf5ByteTimestamp"] * 2**32 + bl_header["TimeStamp"]
+                    # To avoid overflow errors when doing arithmetic operations on numpy scalars
+                    np_scalar_to_python_scalar = lambda x: x.item() if isinstance(x, np.generic) else x
+                    bl_header = {key: np_scalar_to_python_scalar(bl_header[key]) for key in bl_header.dtype.names}
+
+                    current_upper_byte_of_5_byte_timestamp = int(bl_header["UpperByteOf5ByteTimestamp"])
+                    current_bl_timestamp = int(bl_header["TimeStamp"])
+                    timestamp = current_upper_byte_of_5_byte_timestamp * 2**32 + current_bl_timestamp
                     n1 = bl_header["NumberOfWaveforms"]
                     n2 = bl_header["NumberOfWordsInWaveform"]
                     sample_count = n1 * n2
@@ -250,32 +259,48 @@ class PlexonRawIO(BaseRawIO):
         else:
             chan_loop = range(nb_sig_chan)
         for chan_index in chan_loop:
-            h = slowChannelHeaders[chan_index]
-            name = h["Name"].decode("utf8")
-            chan_id = h["Channel"]
+            slow_channel_headers = slowChannelHeaders[chan_index]
+
+            # To avoid overflow errors when doing arithmetic operations on numpy scalars
+            np_scalar_to_python_scalar = lambda x: x.item() if isinstance(x, np.generic) else x
+            slow_channel_headers = {
+                key: np_scalar_to_python_scalar(slow_channel_headers[key]) for key in slow_channel_headers.dtype.names
+            }
+
+            name = slow_channel_headers["Name"].decode("utf8")
+            chan_id = slow_channel_headers["Channel"]
             length = self._data_blocks[5][chan_id]["size"].sum() // 2
             if length == 0:
                 continue  # channel not added
-            source_id.append(h["SrcId"])
+            source_id.append(slow_channel_headers["SrcId"])
             channel_num_samples.append(length)
-            sampling_rate = float(h["ADFreq"])
+            sampling_rate = float(slow_channel_headers["ADFreq"])
             sig_dtype = "int16"
             units = ""  # I don't know units
             if global_header["Version"] in [100, 101]:
-                gain = 5000.0 / (2048 * h["Gain"] * 1000.0)
+                gain = 5000.0 / (2048 * slow_channel_headers["Gain"] * 1000.0)
             elif global_header["Version"] in [102]:
-                gain = 5000.0 / (2048 * h["Gain"] * h["PreampGain"])
+                gain = 5000.0 / (2048 * slow_channel_headers["Gain"] * slow_channel_headers["PreampGain"])
             elif global_header["Version"] >= 103:
                 gain = global_header["SlowMaxMagnitudeMV"] / (
-                    0.5 * (2 ** global_header["BitsPerSpikeSample"]) * h["Gain"] * h["PreampGain"]
+                    0.5
+                    * (2 ** global_header["BitsPerSpikeSample"])
+                    * slow_channel_headers["Gain"]
+                    * slow_channel_headers["PreampGain"]
                 )
             offset = 0.0
+
             channel_prefix = re.match(regex_prefix_pattern, name).group(0)
             stream_id = channel_prefix
-
-            signal_channels.append((name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id))
+            buffer_id = ""
+            signal_channels.append(
+                (name, str(chan_id), sampling_rate, sig_dtype, units, gain, offset, stream_id, buffer_id)
+            )
 
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
+
+        # no buffer here because block are splitted by channel
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
 
         if signal_channels.size == 0:
             signal_streams = np.array([], dtype=_signal_stream_dtype)
@@ -300,8 +325,10 @@ class PlexonRawIO(BaseRawIO):
                 # We are using the channel prefixes as ids
                 # The users of plexon can modify the prefix of the channel names (e.g. `my_prefix` instead of `WB`).
                 # In that case we use the channel prefix both as stream id and name
+                buffer_id = ""
                 stream_name = stream_id_to_stream_name.get(stream_id, stream_id)
-                signal_streams.append((stream_name, stream_id))
+                buffer_id = ""
+                signal_streams.append((stream_name, stream_id, buffer_id))
 
             signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
@@ -345,21 +372,24 @@ class PlexonRawIO(BaseRawIO):
             unit_loop = enumerate(self.internal_unit_ids)
 
         for unit_index, (chan_id, unit_id) in unit_loop:
-            c = np.nonzero(dspChannelHeaders["Channel"] == chan_id)[0][0]
-            h = dspChannelHeaders[c]
+            channel_index = np.nonzero(dspChannelHeaders["Channel"] == chan_id)[0][0]
+            dsp_channel_headers = dspChannelHeaders[channel_index]
 
-            name = h["Name"].decode("utf8")
+            name = dsp_channel_headers["Name"].decode("utf8")
             _id = f"ch{chan_id}#{unit_id}"
             wf_units = ""
             if global_header["Version"] < 103:
-                wf_gain = 3000.0 / (2048 * h["Gain"] * 1000.0)
+                wf_gain = 3000.0 / (2048 * dsp_channel_headers["Gain"] * 1000.0)
             elif 103 <= global_header["Version"] < 105:
                 wf_gain = global_header["SpikeMaxMagnitudeMV"] / (
-                    0.5 * 2.0 ** (global_header["BitsPerSpikeSample"]) * h["Gain"] * 1000.0
+                    0.5 * 2.0 ** (global_header["BitsPerSpikeSample"]) * dsp_channel_headers["Gain"] * 1000.0
                 )
             elif global_header["Version"] >= 105:
                 wf_gain = global_header["SpikeMaxMagnitudeMV"] / (
-                    0.5 * 2.0 ** (global_header["BitsPerSpikeSample"]) * h["Gain"] * global_header["SpikePreAmpGain"]
+                    0.5
+                    * 2.0 ** (global_header["BitsPerSpikeSample"])
+                    * dsp_channel_headers["Gain"]
+                    * global_header["SpikePreAmpGain"]
                 )
             wf_offset = 0.0
             wf_left_sweep = -1  # DONT KNOWN
@@ -384,6 +414,7 @@ class PlexonRawIO(BaseRawIO):
         self.header = {
             "nb_block": 1,
             "nb_segment": [1],
+            "signal_buffers": signal_buffers,
             "signal_streams": signal_streams,
             "signal_channels": signal_channels,
             "spike_channels": spike_channels,
@@ -562,7 +593,7 @@ def read_as_dict(fid, dtype, offset=None):
             v = v.replace("\x03", "")
             v = v.replace("\x00", "")
 
-        info[k] = v
+        info[k] = v.item() if isinstance(v, np.generic) else v
     return info
 
 

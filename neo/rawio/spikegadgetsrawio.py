@@ -28,6 +28,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -80,8 +81,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
 
-    def _produce_ephys_channel_ids(self, n_total_channels, n_channels_per_chip):
-        """Compute the channel ID labels
+    def _produce_ephys_channel_ids(self, n_total_channels, n_channels_per_chip, missing_hw_chans):
+        """Compute the channel ID labels for subset of spikegadgets recordings
         The ephys channels in the .rec file are stored in the following order:
         hwChan ID of channel 0 of first chip, hwChan ID of channel 0 of second chip, ..., hwChan ID of channel 0 of Nth chip,
         hwChan ID of channel 1 of first chip, hwChan ID of channel 1 of second chip, ..., hwChan ID of channel 1 of Nth chip,
@@ -89,14 +90,22 @@ class SpikeGadgetsRawIO(BaseRawIO):
         So if there are 32 channels per chip and 128 channels (4 chips), then the channel IDs are:
         0, 32, 64, 96, 1, 33, 65, 97, ..., 128
         See also: https://github.com/NeuralEnsemble/python-neo/issues/1215
+
+        This doesn't work for all types of spikegadgets
+        see: https://github.com/NeuralEnsemble/python-neo/issues/1517
+
+        If there are any missing hardware channels, they must be specified in missing_hw_chans.
+        See: https://github.com/NeuralEnsemble/python-neo/issues/1592
         """
         ephys_channel_ids_list = []
-        for hw_channel in range(n_channels_per_chip):
-            hw_channel_list = [
-                hw_channel + chip * n_channels_per_chip for chip in range(int(n_total_channels / n_channels_per_chip))
-            ]
-            ephys_channel_ids_list.append(hw_channel_list)
-        return [channel for channel_list in ephys_channel_ids_list for channel in channel_list]
+        for local_hw_channel in range(n_channels_per_chip):
+            n_chips = int(n_total_channels / n_channels_per_chip)
+            for chip in range(n_chips):
+                global_hw_chan = local_hw_channel + chip * n_channels_per_chip
+                if global_hw_chan in missing_hw_chans:
+                    continue
+                ephys_channel_ids_list.append(local_hw_channel + chip * n_channels_per_chip)
+        return ephys_channel_ids_list
 
     def _parse_header(self):
         # parse file until "</Configuration>"
@@ -121,7 +130,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
         sconf = root.find("SpikeConfiguration")
 
         self._sampling_rate = float(hconf.attrib["samplingRate"])
-        num_ephy_channels = int(hconf.attrib["numChannels"])
+        num_ephy_channels_xml = int(hconf.attrib["numChannels"])
+        num_ephy_channels = num_ephy_channels_xml
 
         # check for agreement with number of channels in xml
         sconf_channels = np.sum([len(x) for x in sconf])
@@ -129,9 +139,11 @@ class SpikeGadgetsRawIO(BaseRawIO):
             num_ephy_channels = sconf_channels
         if sconf_channels > num_ephy_channels:
             raise NeoReadWriteError(
-                "SpikeGadgets: the number of channels in the spike configuration is larger than the number of channels in the hardware configuration"
+                "SpikeGadgets: the number of channels in the spike configuration is larger "
+                "than the number of channels in the hardware configuration"
             )
 
+        # as spikegadgets change we should follow this
         try:
             num_chan_per_chip = int(sconf.attrib["chanPerChip"])
         except KeyError:
@@ -181,7 +193,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     if stream_id not in stream_ids:
                         stream_ids.append(stream_id)
                         stream_name = stream_id
-                        signal_streams.append((stream_name, stream_id))
+                        buffer_id = ""
+                        signal_streams.append((stream_name, stream_id, buffer_id))
                         self._mask_channels_bytes[stream_id] = []
 
                     name = channel.attrib["id"]
@@ -191,8 +204,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     units = ""
                     gain = 1.0
                     offset = 0.0
+                    buffer_id = ""
                     signal_channels.append(
-                        (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id)
+                        (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id)
                     )
 
                     num_bytes = stream_bytes[stream_id] + int(channel.attrib["startByte"])
@@ -204,12 +218,24 @@ class SpikeGadgetsRawIO(BaseRawIO):
         if num_ephy_channels > 0:
             stream_id = "trodes"
             stream_name = stream_id
-            signal_streams.append((stream_name, stream_id))
+            buffer_id = ""
+            signal_streams.append((stream_name, stream_id, buffer_id))
             self._mask_channels_bytes[stream_id] = []
 
-            channel_ids = self._produce_ephys_channel_ids(num_ephy_channels, num_chan_per_chip)
+            # we can only produce these channels for a subset of spikegadgets setup. If this criteria isn't
+            # true then we should just use the raw_channel_ids and let the end user sort everything out
+            if num_ephy_channels % num_chan_per_chip == 0:
+                all_hw_chans = [int(schan.attrib["hwChan"]) for trode in sconf for schan in trode]
+                missing_hw_chans = set(range(num_ephy_channels)) - set(all_hw_chans)
+                channel_ids = self._produce_ephys_channel_ids(
+                    num_ephy_channels_xml, num_chan_per_chip, missing_hw_chans
+                )
+                raw_channel_ids = False
+            else:
+                raw_channel_ids = True
+
             chan_ind = 0
-            self.is_scaleable = "spikeScalingToUv" in sconf[0].attrib
+            self.is_scaleable = all("spikeScalingToUv" in trode.attrib for trode in sconf)
             if not self.is_scaleable:
                 self.logger.warning(
                     "Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!"
@@ -224,12 +250,19 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     units = ""
 
                 for schan in trode:
-                    chan_id = str(channel_ids[chan_ind])
-                    name = "hwChan" + chan_id
+                    # Here we use raw ids if necessary for parsing (for some neuropixel recordings)
+                    # otherwise we default back to the raw hwChan IDs
+                    if raw_channel_ids:
+                        name = "trode" + trode.attrib["id"] + "chan" + schan.attrib["hwChan"]
+                        chan_id = schan.attrib["hwChan"]
+                    else:
+                        chan_id = str(channel_ids[chan_ind])
+                        name = "hwChan" + chan_id
 
                     offset = 0.0
+                    buffer_id = ""
                     signal_channels.append(
-                        (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id)
+                        (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id)
                     )
 
                     chan_mask = np.zeros(packet_size, dtype="bool")
@@ -250,7 +283,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
 
-        # remove some stream if no wanted
+        # no buffer concept here data are too fragmented
+        signal_buffers = np.array([], dtype=_signal_buffer_dtype)
+
+        # remove some stream if not wanted
         if self.selected_streams is not None:
             if isinstance(self.selected_streams, str):
                 self.selected_streams = [self.selected_streams]
@@ -277,6 +313,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = signal_buffers
         self.header["signal_streams"] = signal_streams
         self.header["signal_channels"] = signal_channels
         self.header["spike_channels"] = spike_channels

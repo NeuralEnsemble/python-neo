@@ -25,6 +25,7 @@ from .baserawio import (
     BaseRawIO,
     _signal_channel_dtype,
     _signal_stream_dtype,
+    _signal_buffer_dtype,
     _spike_channel_dtype,
     _event_channel_dtype,
 )
@@ -199,6 +200,7 @@ class AxonaRawIO(BaseRawIO):
         params["set"]["sampling_rate"] = int(set_dict["rawRate"])
 
         # SCAN BIN FILE
+        signal_buffers = []
         signal_streams = []
         signal_channels = []
         if self.bin_file:
@@ -289,6 +291,7 @@ class AxonaRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [1]
+        self.header["signal_buffers"] = np.array(signal_buffers, dtype=_signal_buffer_dtype)
         self.header["signal_streams"] = np.array(signal_streams, dtype=_signal_stream_dtype)
         self.header["signal_channels"] = np.array(signal_channels, dtype=_signal_channel_dtype)
         self.header["spike_channels"] = np.array(spike_channels, dtype=_spike_channel_dtype)
@@ -315,7 +318,7 @@ class AxonaRawIO(BaseRawIO):
 
     def _get_signal_streams_header(self):
         # create signals stream information (we always expect a single stream)
-        return np.array([("stream 0", "0")], dtype=_signal_stream_dtype)
+        return np.array([("stream 0", "0", "")], dtype=_signal_stream_dtype)
 
     def _segment_t_start(self, block_index, seg_index):
         return 0.0
@@ -374,8 +377,7 @@ class AxonaRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = [i for i in range(bin_dict["num_channels"])]
         elif isinstance(channel_indexes, slice):
-            channel_indexes_all = [i for i in range(bin_dict["num_channels"])]
-            channel_indexes = channel_indexes_all[channel_indexes]
+            channel_indexes = self._get_active_channels()
 
         num_samples = i_stop - i_start
 
@@ -559,6 +561,20 @@ class AxonaRawIO(BaseRawIO):
                     active_tetrodes.append(tetrode_id)
         return active_tetrodes
 
+    def _get_active_channels(self):
+        """
+        Returns the ID numbers of the active channels as a list.
+        E.g.: [20,21,22,23] for tetrode 6 active.
+        """
+        active_tetrodes = self.get_active_tetrode()
+        active_channels = []
+
+        for tetrode in active_tetrodes:
+            chans = self._get_channel_from_tetrode(tetrode)
+            active_channels.append(chans)
+
+        return np.concatenate(active_channels)
+
     def _get_channel_from_tetrode(self, tetrode):
         """
         This function will take the tetrode number and return the Axona
@@ -629,19 +645,21 @@ class AxonaRawIO(BaseRawIO):
         gain_list = self._get_channel_gain()
         offset = 0  # What is the offset?
 
+        first_channel = (active_tetrode_set[0] - 1) * elec_per_tetrode
         sig_channels = []
         for itetr in range(num_active_tetrode):
 
             for ielec in range(elec_per_tetrode):
-                cntr = (itetr * elec_per_tetrode) + ielec
-                ch_name = f"{itetr + 1}{letters[ielec]}"
+                cntr = (itetr * elec_per_tetrode) + ielec + first_channel
+                ch_name = f"{itetr + active_tetrode_set[0]}{letters[ielec]}"
                 chan_id = str(cntr)
                 gain = gain_list[cntr]
                 stream_id = "0"
+                buffer_id = ""
                 # the sampling rate information is stored in the set header
                 # and not in the bin file
                 sr = self.file_parameters["set"]["sampling_rate"]
-                sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id))
+                sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
 
         return np.array(sig_channels, dtype=_signal_channel_dtype)
 

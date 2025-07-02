@@ -165,6 +165,7 @@ def random_segment():
         rec_datetime=random_datetime(),
         **random_annotations(4),
     )
+
     n_sigs = random.randint(0, 5)
     for i in range(n_sigs):
         seg.analogsignals.append(random_signal())
@@ -184,6 +185,10 @@ def random_segment():
     for i in range(n_imgs):
         seg.imagesequences.append(random_image_sequence())
     # todo: add some and ROI objects
+
+    # if we generate a completely empty segment then test suite fails
+    if n_sigs + n_irrsigs + n_events + n_epochs + n_spiketrains + n_imgs == 0:
+        seg = random_segment()
 
     return seg
 
