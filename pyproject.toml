@@ -103,6 +103,7 @@ maxwell = ["h5py"]
 biocam = ["h5py"]
 med = ["dhn_med_py<2.0"] # ci failing with 2.0 test future version when stable
 plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32'"]
+neuralynx = ["python-dateutil"] 
 
 all = [
     "coverage",
@@ -126,6 +127,7 @@ all = [
     "tqdm",
     "wenv; sys_platform!='win32'",
     "zugbruecke>=0.2; sys_platform!='win32'",
+    "python-dateutil",
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable
 

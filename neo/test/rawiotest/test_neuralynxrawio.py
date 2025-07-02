@@ -1,5 +1,4 @@
 import datetime
-import dateutil
 import unittest
 
 import os
@@ -390,6 +389,7 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
 
     # left in for possible future header tests
     def check_dateutil_parse(self, hdrTxt, openPat, closePat, openDate, closeDate):
+        import dateutil
         mtch = openPat.search(hdrTxt)
         self.assertIsNotNone(mtch)
         dt = mtch.groupdict()
