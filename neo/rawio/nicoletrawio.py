@@ -180,7 +180,7 @@ class NicoletRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [len(self.segments_properties)]
-        self.header["signal_buffers"] = np.array([],
+        self.header["signal_buffers"] = np.array(['Signals', '0'],
                                                  dtype=_signal_buffer_dtype)
         self.header["signal_channels"] = self._create_signal_channels(_signal_channel_dtype) if self.channel_properties else self._create_signal_channels_no_channel_props(_signal_channel_dtype)
         self.header["signal_streams"] = np.array([(f"Signals {signal_id}", signal_id, "0") for signal_id in self.signal_streams.values()],
@@ -788,7 +788,7 @@ class NicoletRawIO(BaseRawIO):
                 timestream['resolution'],
                 timestream['eeg_offset'],
                 signal_streams[timestream['sampling_rate']],
-                0))
+                '0'))
         self.signal_streams = signal_streams
         return np.array(signal_channels, dtype = dtype)
     
