@@ -830,7 +830,7 @@ class NicoletRawIO(BaseRawIO):
             channel_indexes = np.asarray(channel_indexes)
             if any(channel_indexes < 0):
                 raise IndexError("Channel Indices cannot be negative")
-            if any(channel_indexes >= len(self.header['signal_channels'].shape[0])):
+            if any(channel_indexes >= self.header['signal_channels'].shape[0]):
                 raise IndexError("Channel Indices out of range")
         if i_start is None:
             i_start = 0
