@@ -941,7 +941,7 @@ class BlackrockRawIO(BaseRawIO):
             ("lo_freq_corner", "uint32"),
             ("lo_freq_order", "uint32"),
             ("lo_freq_type", "uint16"),
-        ]  # 0=None, 1=Butterworth, -2-Chebyshev
+        ]  # 0=None, 1=Butterworth, 2=Chebyshev
 
         channel_count = int(nsx_basic_header["channel_count"])
         nsx_ext_header = np.memmap(filename, shape=channel_count, offset=offset_dt0, dtype=dt1, mode="r")
