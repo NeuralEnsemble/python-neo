@@ -377,8 +377,7 @@ class AxonaRawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = [i for i in range(bin_dict["num_channels"])]
         elif isinstance(channel_indexes, slice):
-            channel_indexes_all = [i for i in range(bin_dict["num_channels"])]
-            channel_indexes = channel_indexes_all[channel_indexes]
+            channel_indexes = self._get_active_channels()
 
         num_samples = i_stop - i_start
 
@@ -562,6 +561,20 @@ class AxonaRawIO(BaseRawIO):
                     active_tetrodes.append(tetrode_id)
         return active_tetrodes
 
+    def _get_active_channels(self):
+        """
+        Returns the ID numbers of the active channels as a list.
+        E.g.: [20,21,22,23] for tetrode 6 active.
+        """
+        active_tetrodes = self.get_active_tetrode()
+        active_channels = []
+
+        for tetrode in active_tetrodes:
+            chans = self._get_channel_from_tetrode(tetrode)
+            active_channels.append(chans)
+
+        return np.concatenate(active_channels)
+
     def _get_channel_from_tetrode(self, tetrode):
         """
         This function will take the tetrode number and return the Axona
@@ -632,12 +645,13 @@ class AxonaRawIO(BaseRawIO):
         gain_list = self._get_channel_gain()
         offset = 0  # What is the offset?
 
+        first_channel = (active_tetrode_set[0] - 1) * elec_per_tetrode
         sig_channels = []
         for itetr in range(num_active_tetrode):
 
             for ielec in range(elec_per_tetrode):
-                cntr = (itetr * elec_per_tetrode) + ielec
-                ch_name = f"{itetr + 1}{letters[ielec]}"
+                cntr = (itetr * elec_per_tetrode) + ielec + first_channel
+                ch_name = f"{itetr + active_tetrode_set[0]}{letters[ielec]}"
                 chan_id = str(cntr)
                 gain = gain_list[cntr]
                 stream_id = "0"

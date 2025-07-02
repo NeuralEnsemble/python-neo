@@ -14,7 +14,10 @@ class TestRawBinarySignalIO(
 ):
     ioclass = WinWcpIO
     entities_to_download = ["winwcp"]
-    entities_to_test = ["winwcp/File_winwcp_1.wcp"]
+    entities_to_test = [
+        "winwcp/File_winwcp_1.wcp",
+        "winwcp/file_with_recording_time/File_winwcp_2.wcp",
+    ]
 
 
 if __name__ == "__main__":

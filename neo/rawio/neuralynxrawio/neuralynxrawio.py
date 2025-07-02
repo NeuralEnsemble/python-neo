@@ -53,7 +53,6 @@ from ..baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
-from operator import itemgetter
 import numpy as np
 import os
 import pathlib
