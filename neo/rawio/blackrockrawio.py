@@ -1015,7 +1015,7 @@ class BlackrockRawIO(BaseRawIO):
                 "offset_to_data_block": offset_to_data_block_start,
             }
 
-            # Jump to the next data block
+            # Jump to the next data block, the data is encoded as int16
             data_block_size_bytes = num_data_points * channel_count * np.dtype("int16").itemsize
             current_offset_bytes = offset_to_data_block_start + data_block_size_bytes
 
