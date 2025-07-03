@@ -987,8 +987,10 @@ class BlackrockRawIO(BaseRawIO):
         filesize_bytes = self.__get_file_size(filename)
 
         data_header = {}
-
-        offset_to_first_data_block = int(offset or self.__nsx_basic_header[nsx_nb]["bytes_in_headers"])
+        if offset is None:
+            offset_to_first_data_block = int(self.__nsx_basic_header[nsx_nb]["bytes_in_headers"])
+        else:
+            offset_to_first_data_block = int(offset)
 
         channel_count = int(self.__nsx_basic_header[nsx_nb]["channel_count"])
         current_offset_bytes = offset_to_first_data_block
