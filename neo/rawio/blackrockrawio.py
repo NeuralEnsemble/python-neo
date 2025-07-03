@@ -984,28 +984,28 @@ class BlackrockRawIO(BaseRawIO):
         """
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
-        filesize = self.__get_file_size(filename)
+        filesize_bytes = self.__get_file_size(filename)
 
         data_header = {}
 
         offset_to_first_data_block = int(offset or self.__nsx_basic_header[nsx_nb]["bytes_in_headers"])
 
         channel_count = int(self.__nsx_basic_header[nsx_nb]["channel_count"])
-        current_offset = offset_to_first_data_block
+        current_offset_bytes = offset_to_first_data_block
         data_block_index = 0
-        while current_offset < filesize:
-            packet_header = self.__read_nsx_dataheader(nsx_nb, current_offset)
+        while current_offset_bytes < filesize_bytes:
+            packet_header = self.__read_nsx_dataheader(nsx_nb, current_offset_bytes)
             header_flag = packet_header["header_flag"]
             # NSX data blocks must have header_flag = 1, other values indicate file corruption
             if header_flag != 1:
                 raise ValueError(
-                    f"Invalid NSX data block header at offset {current_offset:#x} in ns{nsx_nb} file. "
+                    f"Invalid NSX data block header at offset {current_offset_bytes:#x} in ns{nsx_nb} file. "
                     f"Expected header_flag=1, got {header_flag}. "
                     f"This may indicate file corruption or unsupported NSX format variant. "
                     f"Block index: {data_block_index}, File size: {filesize} bytes"
                 )
             timestamp = packet_header["timestamp"]
-            offset_to_data_block_start = current_offset + packet_header.dtype.itemsize
+            offset_to_data_block_start = current_offset_bytes + packet_header.dtype.itemsize
             num_data_points = int(packet_header["nb_data_points"])
 
             data_header[data_block_index] = {
@@ -1016,8 +1016,8 @@ class BlackrockRawIO(BaseRawIO):
             }
 
             # Jump to the next data block
-            data_block_size = num_data_points * channel_count * np.dtype("int16").itemsize
-            current_offset = offset_to_data_block_start + data_block_size
+            data_block_size_bytes = num_data_points * channel_count * np.dtype("int16").itemsize
+            current_offset_bytes = offset_to_data_block_start + data_block_size_bytes
 
             data_block_index += 1
 
