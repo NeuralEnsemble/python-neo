@@ -328,7 +328,7 @@ class BlackrockRawIO(BaseRawIO):
             nsx_header_reader = self.__nsx_header_reader[spec_version]
             self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = nsx_header_reader(nsx_nb)
 
-            # The only way to know if it is the peak-to-peak-variant of file spec 3.0
+            # The only way to know if it is the Precision Time Protocol of file spec 3.0
             # is to check for nanosecond timestamp resolution.
             is_ptp_variant = (
                 "timestamp_resolution" in self.__nsx_basic_header[nsx_nb].dtype.names
@@ -389,7 +389,7 @@ class BlackrockRawIO(BaseRawIO):
             for nsx_nb in self.nsx_to_load:
                 basic_header = self.__nsx_basic_header[nsx_nb]
                 spec_version = self.__nsx_spec[nsx_nb]
-                # The only way to know if it is the peak-to-peak-variant of file spec 3.0
+                # The only way to know if it is the Precision Time Protocol of file spec 3.0
                 # is to check for nanosecond timestamp resolution.
                 is_ptp_variant = (
                     "timestamp_resolution" in basic_header.dtype.names
