@@ -1002,11 +1002,11 @@ class BlackrockRawIO(BaseRawIO):
                     f"Invalid NSX data block header at offset {current_offset_bytes:#x} in ns{nsx_nb} file. "
                     f"Expected header_flag=1, got {header_flag}. "
                     f"This may indicate file corruption or unsupported NSX format variant. "
-                    f"Block index: {data_block_index}, File size: {filesize} bytes"
+                    f"Block index: {data_block_index}, File size: {filesize_bytes} bytes"
                 )
             timestamp = packet_header["timestamp"]
-            offset_to_data_block_start = current_offset_bytes + packet_header.dtype.itemsize
             num_data_points = int(packet_header["nb_data_points"])
+            offset_to_data_block_start = current_offset_bytes + packet_header.dtype.itemsize
 
             data_header[data_block_index] = {
                 "header": header_flag,
