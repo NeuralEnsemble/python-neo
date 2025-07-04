@@ -217,7 +217,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         signal_streams["buffer_id"] = buffer_id
         self._stream_buffer_slice = {}
         for stream_index, stream_id in enumerate(stream_ids):
-            name = stream_id_to_stream_name.get(int(stream_id), "")
+            name = stream_id_to_stream_name.get(stream_id, "")
             signal_streams["name"][stream_index] = name
             chan_inds = np.flatnonzero(signal_channels["stream_id"] == stream_id)
             self._stream_buffer_slice[stream_id] = chan_inds
