@@ -206,9 +206,9 @@ class NicoletRawIO(BaseRawIO):
         
         with open(self.filename, "rb") as fid:
             fid.seek(172)
-            n_tags = read_as_list(fid,
+            n_tags = self.read_as_list(fid,
                                   [('n_tags', 'uint32')])
-            tags = [read_as_dict(fid, 
+            tags = [self.read_as_dict(fid, 
                                  tags_structure) for _ in range(n_tags)]
             for entry in tags:
                 try:
@@ -232,7 +232,7 @@ class NicoletRawIO(BaseRawIO):
             ]
         with open(self.filename, "rb") as fid:
             fid.seek(172208)
-            qi = read_as_dict(fid, 
+            qi = self.read_as_dict(fid, 
                               qi_structure)
         self.qi = qi
     
@@ -246,10 +246,10 @@ class NicoletRawIO(BaseRawIO):
         with open(self.filename, "rb") as fid:
             while current_index < self.qi['n_entries']:
                 fid.seek(next_index_pointer)
-                nr_index = read_as_list(fid, 
+                nr_index = self.read_as_list(fid, 
                                         [('nr_index', 'uint64')]
                                         )
-                var = read_as_list(fid,
+                var = self.read_as_list(fid,
                                    [('var', 'uint64', int(3*nr_index))])
                 for i in range(nr_index):
                     main_index.append({
@@ -258,7 +258,7 @@ class NicoletRawIO(BaseRawIO):
                         'block_l' : int(var[3*(i)+2] % 2**32),
                         'section_l' : round(var[3*(i)+2]/(2**32)),
                         })
-                next_index_pointer = read_as_list(fid, 
+                next_index_pointer = self.read_as_list(fid, 
                                                   [('next_index_pointer', 'uint64')])
                 current_index = current_index + (i + 1)
         self.main_index = main_index
@@ -283,10 +283,10 @@ class NicoletRawIO(BaseRawIO):
             fid.seek(offset)
             for i in range(self.n_dynamic_packets):
                 guid_offset = offset + (i+1)*48
-                dynamic_packet = read_as_dict(fid,
+                dynamic_packet = self.read_as_dict(fid,
                                               dynamic_packet_structure)
-                dynamic_packet['date'] = _convert_to_date(dynamic_packet['date'])
-                guid_as_str = _convert_to_guid(dynamic_packet['guid_list'])
+                dynamic_packet['date'] = self._convert_to_date(dynamic_packet['date'])
+                guid_as_str = self._convert_to_guid(dynamic_packet['guid_list'])
                 if guid_as_str in list(self.TAGS_DICT.keys()):
                     id_str = self.TAGS_DICT[guid_as_str]
                 else:
@@ -319,7 +319,7 @@ class NicoletRawIO(BaseRawIO):
                         read_length = stop_at - start_at
                         file_pos_start = current_instance['offset'] + start_at - internal_offset
                         fid.seek(int(file_pos_start))
-                        data_part = read_as_list(fid,
+                        data_part = self.read_as_list(fid,
                                                  [('data', 'uint8', read_length)])
                         data  = data + list(data_part)
                         remaining_data_to_read = remaining_data_to_read - read_length
@@ -340,28 +340,28 @@ class NicoletRawIO(BaseRawIO):
             ]
         with open(self.filename, "rb") as fid:
             fid.seek(idx_instance['offset'])
-            patient_info = read_as_dict(fid,
+            patient_info = self.read_as_dict(fid,
                                         patient_info_structure
                                         )
             for i in range(patient_info['n_values']):
-                id_temp = read_as_list(fid,
+                id_temp = self.read_as_list(fid,
                                        [('value', 'uint64')])
                 if id_temp in [7, 8]:
-                    value = read_as_list(fid,
+                    value = self.read_as_list(fid,
                                          [('value', 'float64')])
-                    value = _convert_to_date(value)
+                    value = self._convert_to_date(value)
                 elif id_temp in [23, 24]:
-                    value = read_as_list(fid,
+                    value = self.read_as_list(fid,
                                          [('value', 'float64')])
                 else:
                     value = 0
                 patient_info[self.INFO_PROPS[int(id_temp) - 1]] = value
             if patient_info['n_bstr'] != 0:
-                str_setup = read_as_list(fid,
+                str_setup = self.read_as_list(fid,
                                         [('setup', 'uint64', int(patient_info['n_bstr']*2))])
                 for i in range(0, int(patient_info['n_bstr']*2), 2):
                     id_temp = str_setup[i]
-                    value = ''.join([read_as_list(fid,
+                    value = ''.join([self.read_as_list(fid,
                                         [('value', 'S2')]) for _ in range(int(str_setup[i + 1]) + 1)]).strip()
                     patient_info[self.INFO_PROPS[int(id_temp) - 1]] = value
         
@@ -392,19 +392,19 @@ class NicoletRawIO(BaseRawIO):
         for instance in idx_instances:
             with open(self.filename, "rb") as fid:
                 fid.seek(instance['offset'])
-                signal_structure = read_as_dict(fid,
+                signal_structure = self.read_as_dict(fid,
                                                 signal_structure_segment)
-                unknown = read_as_list(fid,
+                unknown = self.read_as_list(fid,
                                        [('unknown', 'S1', 152)])
                 fid.seek(512,1)
-                n_idx = read_as_dict(fid,
+                n_idx = self.read_as_dict(fid,
                                      [('n_idx', 'uint16'),
                                       ('misc1', 'uint16', 3)])
                 for i in range(n_idx['n_idx']):
-                    properties = read_as_dict(fid,
+                    properties = self.read_as_dict(fid,
                                               signal_properties_segment)
                     signal_properties.append(properties)
-                    reserved = read_as_list(fid,
+                    reserved = self.read_as_list(fid,
                                             [('reserved', 'S1', 256)])
         self.signal_structure = signal_structure
         self.signal_properties = signal_properties
@@ -426,13 +426,13 @@ class NicoletRawIO(BaseRawIO):
         idx_instance = self._get_index_instances('CHANNELGUID')[0]
         with open(self.filename, "rb") as fid:
             fid.seek(idx_instance['offset'])
-            channel_structure = read_as_dict(fid, 
+            channel_structure = self.read_as_dict(fid, 
                                              channel_structure_structure[0])
             fid.seek(152, 1)
-            channel_structure = channel_structure | read_as_dict(fid,
+            channel_structure = channel_structure | self.read_as_dict(fid,
                                                                  channel_structure_structure[1])
             fid.seek(488,1)
-            n_index = read_as_list(fid,
+            n_index = self.read_as_list(fid,
                                    [('n_index', 'int32', 2)])
             current_index = 0
             for i in range(n_index[1]):
@@ -443,7 +443,7 @@ class NicoletRawIO(BaseRawIO):
                     ('l_input_id', 'uint32'),
                     ('l_input_setting_id', 'uint32'),
                     ]
-                info = read_as_dict(fid,
+                info = self.read_as_dict(fid,
                                     channel_properties_structure)
                 fid.seek(128, 1)
                 if info['on']:
@@ -453,7 +453,7 @@ class NicoletRawIO(BaseRawIO):
                     index_id = -1
                 info['index_id'] = index_id
                 channel_properties.append(info)
-                reserved = read_as_list(fid,
+                reserved = self.read_as_list(fid,
                                         [('reserved', 'S1', 4)])
         self.channel_structure = channel_structure
         self.channel_properties = channel_properties
@@ -467,27 +467,27 @@ class NicoletRawIO(BaseRawIO):
         l_ts_packets = len(ts_packets)
         for ts_packet in ts_packets:
             ts_properties = []
-            elems = _typecast(ts_packet['data'][752:756])[0]
-            alloc = _typecast(ts_packet['data'][756:760])[0]
+            elems = self._typecast(ts_packet['data'][752:756])[0]
+            alloc = self._typecast(ts_packet['data'][756:760])[0]
             offset = 760
             for i in range(elems):
                 internal_offset = 0                
                 top_range = (offset + self.TSLABELSIZE)
-                label = _transform_ts_properties(ts_packet['data'][offset:top_range], np.uint16)
+                label = self._transform_ts_properties(ts_packet['data'][offset:top_range], np.uint16)
                 internal_offset += 2*self.TSLABELSIZE
                 top_range = offset + internal_offset + self.LABELSIZE
-                active_sensor = _transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
+                active_sensor = self._transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
                 internal_offset = internal_offset + self.TSLABELSIZE;
                 top_range = offset + internal_offset + 8
-                ref_sensor = _transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
+                ref_sensor = self._transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
                 internal_offset += 64
-                low_cut, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                high_cut, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                sampling_rate, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                resolution, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                mark, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
-                notch, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
-                eeg_offset, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                low_cut, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                high_cut, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                sampling_rate, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                resolution, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                mark, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
+                notch, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
+                eeg_offset, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
                 offset += 552
                 ts_properties.append({
                     'label' : label,
@@ -519,27 +519,27 @@ class NicoletRawIO(BaseRawIO):
             if l_ts_packets > 1:
                 warnings.warn(f'{l_ts_packets} TSinfo packets detected; using first instance for all segments. See documentation for info')
             ts_packet = ts_packets[ts_packet_index]
-            elems = _typecast(ts_packet['data'][752:756])[0]
-            alloc = _typecast(ts_packet['data'][756:760])[0]
+            elems = self._typecast(ts_packet['data'][752:756])[0]
+            alloc = self._typecast(ts_packet['data'][756:760])[0]
             offset = 760
             for i in range(elems):
                 internal_offset = 0                
                 top_range = (offset + self.TSLABELSIZE)
-                label = _transform_ts_properties(ts_packet['data'][offset:top_range], np.uint16)
+                label = self._transform_ts_properties(ts_packet['data'][offset:top_range], np.uint16)
                 internal_offset += 2*self.TSLABELSIZE
                 top_range = offset + internal_offset + self.LABELSIZE
-                active_sensor = _transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
+                active_sensor = self._transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
                 internal_offset = internal_offset + self.TSLABELSIZE;
                 top_range = offset + internal_offset + 8
-                ref_sensor = _transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
+                ref_sensor = self._transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
                 internal_offset += 64;
-                low_cut, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                high_cut, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                sampling_rate, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                resolution, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                mark, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
-                notch, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
-                eeg_offset, internal_offset = _read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                low_cut, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                high_cut, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                sampling_rate, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                resolution, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
+                mark, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
+                notch, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
+                eeg_offset, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
                 offset += 552
                 ts_properties.append({
                     'label' : label,
@@ -566,10 +566,10 @@ class NicoletRawIO(BaseRawIO):
             fid.seek(segment_instance['offset'], 0)
             for i in range(n_segments):
                 segment_info =  {}
-                segment_info['date_ole'] = read_as_list(fid,
+                segment_info['date_ole'] = self.read_as_list(fid,
                                                         [('date', 'float64')])
                 fid.seek(8,1)
-                segment_info['duration'] = read_as_list(fid,
+                segment_info['duration'] = self.read_as_list(fid,
                                                         [('duration', 'float64')])
                 fid.seek(128, 1)
                 segment_info['ch_names'] = [info['label'] for info in self.ts_properties]
@@ -592,7 +592,7 @@ class NicoletRawIO(BaseRawIO):
         '''
         events = []
         event_packet_guid = '{B799F680-72A4-11D3-93D3-00500400C148}'
-        event_instances = _ensure_list(self._get_index_instances(tag = 'Events'))
+        event_instances = self._ensure_list(self._get_index_instances(tag = 'Events'))
         for instance in event_instances:
             offset = instance['offset']
             with open(self.filename, "rb") as fid:
@@ -601,9 +601,9 @@ class NicoletRawIO(BaseRawIO):
                     ('len', 'uint64'),
                     ]
                 fid.seek(offset)
-                pkt = read_as_dict(fid,
+                pkt = self.read_as_dict(fid,
                                    pkt_structure)
-                pkt['guid'] = _convert_to_guid(pkt['guid'])
+                pkt['guid'] = self._convert_to_guid(pkt['guid'])
                 n_events = 0
                 while (pkt['guid'] == event_packet_guid):
                     event_structure = [
@@ -620,24 +620,24 @@ class NicoletRawIO(BaseRawIO):
                     n_events += 1
                     try:
                         fid.seek(8, 1)
-                        event = read_as_dict(fid,
+                        event = self.read_as_dict(fid,
                                             event_structure[0])
                         fid.seek(48, 1)
-                        event = event | read_as_dict(fid,
+                        event = event | self.read_as_dict(fid,
                                                     event_structure[1])
                         fid.seek(16, 1)
-                        event = event | read_as_dict(fid,
+                        event = event | self.read_as_dict(fid,
                                                     event_structure[2])
                         event['date'] = self._convert_ole_to_datetime(event['date_ole'], event['date_fraction'])
                         event['timestamp'] = (event['date'] - self.segments_properties[0]['date']).total_seconds()
-                        event['guid'] = _convert_to_guid(event['guid'])
+                        event['guid'] = self._convert_to_guid(event['guid'])
                         try:
                             id_str = self.HC_EVENT[event['guid']]
                         except:
                             id_str = 'UNKNOWN'
                         if id_str == 'Annotation' or id_str == 'Event Comment':
                             fid.seek(31, 1)
-                            annotation = read_as_list(fid,
+                            annotation = self.read_as_list(fid,
                                                     [('annotation', 'S2', event['text_length'])])
                         else:
                             annotation = ''
@@ -657,9 +657,9 @@ class NicoletRawIO(BaseRawIO):
                         break
                     offset += int(pkt['len'])
                     fid.seek(offset)
-                    pkt = read_as_dict(fid,
+                    pkt = self.read_as_dict(fid,
                                     pkt_structure)
-                    pkt['guid'] = _convert_to_guid(pkt['guid'])
+                    pkt['guid'] = self._convert_to_guid(pkt['guid'])
         self.events = events
         pass
     
@@ -687,14 +687,14 @@ class NicoletRawIO(BaseRawIO):
                  ],
                 ]
             fid.seek(int(montage_instances[0]['offset']) + 40)
-            montage_info = read_as_dict(fid,
+            montage_info = self.read_as_dict(fid,
                                    montage_info_structure[0])
             fid.seek(640, 1)
-            montage_info = montage_info | read_as_dict(fid,
+            montage_info = montage_info | self.read_as_dict(fid,
                                              montage_info_structure[1])
 
             for i in range(montage_info['n_derivations']):
-                montage = montage_info | read_as_dict(fid,
+                montage = montage_info | self.read_as_dict(fid,
                                                  montage_info_structure[2])
                 fid.seek(264, 1)
                 montages.append(montage)
@@ -707,16 +707,16 @@ class NicoletRawIO(BaseRawIO):
                 [('color', 'uint32')],
                 ]
             fid.seek(int(display_instances[0]['offset']) + 40)
-            display = read_as_dict(fid,
+            display = self.read_as_dict(fid,
                                    display_structure[0])
             fid.seek(640, 1)
-            display = display | read_as_dict(fid,
+            display = display | self.read_as_dict(fid,
                                              display_structure[1])
             if display['n_traces'] == montage_info['n_derivations']:
                 for i in range(display['n_traces']):
                     fid.seek(32, 1)
                     montages[i]['disp_name'] = display['name']
-                    montages[i]['color'] = read_as_list(fid,
+                    montages[i]['color'] = self.read_as_list(fid,
                                                         display_structure[2])
             else:
                 print('Could not match montage derivations with display color table')
@@ -760,7 +760,7 @@ class NicoletRawIO(BaseRawIO):
             [tag_idx] = [tag['index'] for tag in self.tags if tag['tag'] == '0']
             all_sections = [j for j, idx_id in enumerate(self.all_section_ids) if idx_id == tag_idx]
             section_lengths = [0] +  list(np.cumsum([int(index['section_l']/2) for j, index in enumerate(self.main_index) if j in all_sections]))
-            first_section_for_seg = _get_relevant_section(section_lengths, skip_values) - 1
+            first_section_for_seg = self._get_relevant_section(section_lengths, skip_values) - 1
             offset = self.main_index[all_sections[first_section_for_seg]]['offset']
             shape = (max(self.get_nr_samples(seg_index = seg_index)), 
                     segment['sampling_rates'].count(segment['sampling_rates'][0]))
@@ -884,8 +884,8 @@ class NicoletRawIO(BaseRawIO):
             section_lengths = [int(index['section_l']/2) for j, index in enumerate(self.main_index) if j in all_sections]
             cum_section_lengths = [0] +  list(np.cumsum(section_lengths))
             skip_values = cum_segment_duration[seg_index] * current_samplingrate
-            first_section_for_seg = _get_relevant_section(cum_section_lengths, skip_values) - 1
-            last_section_for_seg = _get_relevant_section(cum_section_lengths, 
+            first_section_for_seg = self._get_relevant_section(cum_section_lengths, skip_values) - 1
+            last_section_for_seg = self._get_relevant_section(cum_section_lengths, 
                                                               current_samplingrate*
                                                               self.segments_properties[seg_index]['duration'].total_seconds()) - 1 + first_section_for_seg
             use_sections = all_sections[first_section_for_seg:last_section_for_seg]
@@ -1020,119 +1020,120 @@ class NicoletRawIO(BaseRawIO):
         '''
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
-def read_as_dict(fid, dtype):
-    '''
-    Read bytes from the given binary file and return the results as a dictinary
-    '''
-    info = dict()  
-    dt = np.dtype(dtype)
-    h = np.frombuffer(fid.read(dt.itemsize), dt)[0]
-    for k in dt.names:
-        v = h[k]
-        v = _process_bytes(v, dt[k])
-        info[k] = v     
-    return info
+    def read_as_dict(self, fid, dtype):
+        '''
+        Read bytes from the given binary file and return the results as a dictinary
+        '''
+        info = dict()  
+        dt = np.dtype(dtype)
+        h = np.frombuffer(fid.read(dt.itemsize), dt)[0]
+        for k in dt.names:
+            v = h[k]
+            v = self._process_bytes(v, dt[k])
+            info[k] = v     
+        return info
 
-def read_as_list(fid, dtype):
-    '''
-    Read bytes from the given binary file and return the results as a list
-    '''
-    dt = np.dtype(dtype)
-    if dt.itemsize == 0:
-        return []
-    h = np.frombuffer(fid.read(dt.itemsize), dt)[0][0]
-    h = _process_bytes(h, dt[0])
-    return h
-    
-def _process_bytes(byte_data, data_type):
-    '''
-    Concatenate list of byte data into a single string and decode string data
-    '''
-    is_list_of_binaries = (type(byte_data) == np.ndarray and type(byte_data[0]) == np.bytes_)
-    byte_obj = b''.join(byte_data) if is_list_of_binaries else byte_data
-    bytes_decoded = _decode_string(byte_obj) if data_type.kind == "S" or is_list_of_binaries else byte_obj
-    return bytes_decoded
+    def read_as_list(self, fid, dtype):
+        '''
+        Read bytes from the given binary file and return the results as a list
+        '''
+        dt = np.dtype(dtype)
+        if dt.itemsize == 0:
+            return []
+        h = np.frombuffer(fid.read(dt.itemsize), dt)[0][0]
+        h = self._process_bytes(h, dt[0])
+        return h
+        
+    def _process_bytes(self, byte_data, data_type):
+        '''
+        Concatenate list of byte data into a single string and decode string data
+        '''
+        is_list_of_binaries = (type(byte_data) == np.ndarray and type(byte_data[0]) == np.bytes_)
+        byte_obj = b''.join(byte_data) if is_list_of_binaries else byte_data
+        bytes_decoded = self._decode_string(byte_obj) if data_type.kind == "S" or is_list_of_binaries else byte_obj
+        return bytes_decoded
 
-def _decode_string(string):
-    '''
-    Decode string data
-    '''
-    try:
-        string = string.decode("utf8")
-    except:
-        string = string.decode('latin_1')
-    string = string.replace("\x03", "")
-    string = string.replace("\x00", "")
-    return string
+    def _decode_string(self, string):
+        '''
+        Decode string data
+        '''
+        try:
+            string = string.decode("utf8")
+        except:
+            string = string.decode('latin_1')
+        string = string.replace("\x03", "")
+        string = string.replace("\x00", "")
+        return string
 
-def _convert_to_guid(hex_list, 
-                       guid_format = '{3}{2}{1}{0}-{5}{4}-{7}{6}-{8}{9}-{10}{11}{12}{13}{14}{15}'):
-    '''
-    Shuffel around a list of hexadecimal numbers into the given guid_format
-    '''
-    dec_list = [f'{nr:x}'.upper().rjust(2, '0') for nr in hex_list]
-    return('{' + guid_format.format(*dec_list) + '}') 
+    def _convert_to_guid(self,
+                         hex_list, 
+                        guid_format = '{3}{2}{1}{0}-{5}{4}-{7}{6}-{8}{9}-{10}{11}{12}{13}{14}{15}'):
+        '''
+        Shuffel around a list of hexadecimal numbers into the given guid_format
+        '''
+        dec_list = [f'{nr:x}'.upper().rjust(2, '0') for nr in hex_list]
+        return('{' + guid_format.format(*dec_list) + '}') 
 
-def _convert_to_date(data_float, origin = '30-12-1899'):
-    '''
-    Convert a OLE float to datetime.
-    Set Origin to 1 day back to account for OLE considering 1900 as a leap year
-    '''
-    return(datetime.strptime(origin, '%d-%m-%Y') 
-            + timedelta(seconds = int(data_float*24*60*60)))
+    def _convert_to_date(self, data_float, origin = '30-12-1899'):
+        '''
+        Convert a OLE float to datetime.
+        Set Origin to 1 day back to account for OLE considering 1900 as a leap year
+        '''
+        return(datetime.strptime(origin, '%d-%m-%Y') 
+                + timedelta(seconds = int(data_float*24*60*60)))
 
-def _typecast(data, dtype_in = np.uint8, dtype_out = np.uint32):
-    '''
-    Change the datatype of given data
-    '''
-    data = np.array(data, dtype = dtype_in)
-    return(data.view(dtype_out))
+    def _typecast(self, data, dtype_in = np.uint8, dtype_out = np.uint32):
+        '''
+        Change the datatype of given data
+        '''
+        data = np.array(data, dtype = dtype_in)
+        return(data.view(dtype_out))
 
-def _transform_ts_properties(data, dtype):
-    '''
-    For some timestream properties, if the list contains 1 floating-point number return it as a value.
-    Else, paste all entries it into a single string
-    '''
-    cast_list = list(_typecast(data, dtype_out = dtype))
-    if dtype == np.float64:
-        [cast_list] = cast_list
-        return(cast_list)
-    else:
-        return(_transform_char(cast_list))
-    
-def _transform_char(line):
-    '''
-    paste all entries in a given list together
-    '''
-    if type(line) != list: line = [line]
-    line = ''.join([chr(item) for item in line if chr(item) != '\x00'])
-    return line
+    def _transform_ts_properties(self, data, dtype):
+        '''
+        For some timestream properties, if the list contains 1 floating-point number return it as a value.
+        Else, paste all entries it into a single string
+        '''
+        cast_list = list(self._typecast(data, dtype_out = dtype))
+        if dtype == np.float64:
+            [cast_list] = cast_list
+            return(cast_list)
+        else:
+            return(self._transform_char(cast_list))
+        
+    def _transform_char(self, line):
+        '''
+        paste all entries in a given list together
+        '''
+        if type(line) != list: line = [line]
+        line = ''.join([chr(item) for item in line if chr(item) != '\x00'])
+        return line
 
-def _read_ts_properties(data, offset, internal_offset, dtype):
-    '''
-    Read timestream properties from some data, given an offset, and process the timestream properties
-    '''
-    offset_modifier = 8 if (dtype == np.float64) else 2
-    top_range = offset + internal_offset + offset_modifier
-    value = _transform_ts_properties(data[(offset + internal_offset):top_range], dtype)
-    internal_offset += offset_modifier
-    return(value, internal_offset)
+    def _read_ts_properties(self, data, offset, internal_offset, dtype):
+        '''
+        Read timestream properties from some data, given an offset, and process the timestream properties
+        '''
+        offset_modifier = 8 if (dtype == np.float64) else 2
+        top_range = offset + internal_offset + offset_modifier
+        value = self._transform_ts_properties(data[(offset + internal_offset):top_range], dtype)
+        internal_offset += offset_modifier
+        return(value, internal_offset)
 
-def _get_relevant_section(lengths_list, to_compare):
-    '''
-    Get the section that contains the given sampling point
-    '''
-    try:
-        segment = min([j for j, length in enumerate(lengths_list) if length > to_compare])
-    except ValueError:
-        segment = len(lengths_list)
-    return(segment)
+    def _get_relevant_section(self, lengths_list, to_compare):
+        '''
+        Get the section that contains the given sampling point
+        '''
+        try:
+            segment = min([j for j, length in enumerate(lengths_list) if length > to_compare])
+        except ValueError:
+            segment = len(lengths_list)
+        return(segment)
 
-def _ensure_list(output):
-    """
-    Ensure the output is a list. If it is a single element, wrap it in a list.
-    If it is already a list, return it as is.
-    """
-    if not isinstance(output, list):
-        return [output]
-    return output
+    def _ensure_list(self, output):
+        """
+        Ensure the output is a list. If it is a single element, wrap it in a list.
+        If it is already a list, return it as is.
+        """
+        if not isinstance(output, list):
+            return [output]
+        return output
