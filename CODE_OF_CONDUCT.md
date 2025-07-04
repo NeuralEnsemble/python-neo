@@ -1,5 +1,7 @@
 # [The NumFOCUS Code of Conduct](https://numfocus.org/code-of-conduct)
 
+Neo subscribes to the NumFOCUS Code of Conduct.
+
 ## The Short Version
 Be kind to others. Do not insult or put down others. Behave professionally. Remember that harassment and sexist, racist, or exclusionary jokes are not appropriate for NumFOCUS.
 
