@@ -132,10 +132,11 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         self._n_samples, self._n_channels = self.metadata["status"]["shape"]
         # Stored as a simple float32 binary file
         BINARY_DTYPE = "float32"
+        TIMESTAMP_DTYPE = "int64" # this is from the allego sample reader timestamps are np.int64
         binary_file = self.binary_file
         timestamp_file = self.timestamp_file
 
-        # the will cretae a memory map with teh generic mechanism
+        # the will cretae a memory map with the generic mechanism
         buffer_id = "0"
         self._buffer_descriptions = {0: {0: {}}}
         self._buffer_descriptions[0][0][buffer_id] = {
@@ -149,7 +150,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         # Make the memory map for timestamp
         self._timestamps = np.memmap(
             timestamp_file,
-            dtype=np.int64,  # this is from the allego sample reader timestamps are np.int64
+            dtype=TIMESTAMP_DTYPE,  
             mode="r",
             offset=0,  # headerless binary file
         )
@@ -173,21 +174,22 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         for channel_index, channel_name in enumerate(channel_info["chan_name"]):
             channel_id = channel_info["ntv_chan_name"][channel_index]
             # 'ai0' indicates analog data which is stored as microvolts
+            # sometimes also called the pri data for NeuroNexus terminology
             if channel_info["chan_type"][channel_index] == "ai0":
                 units = "uV"
-                stream_id = "0"
+                stream_id = "ai-pri"
             # 'd' means digital. Per discussion with neuroconv users the use of
             # 'a.u.' makes the units clearer
             elif channel_info["chan_type"][channel_index][:2] == "di":
                 units = "a.u."
-                stream_id = "1"
+                stream_id = "di"
             elif channel_info["chan_type"][channel_index][:2] == "do":
                 # aux channel
                 units = "a.u."
-                stream_id = "2"
+                stream_id = "do"
             else:
                 units = "V"
-                stream_id = "3"
+                stream_id = "aux"
 
             signal_channels.append(
                 (
@@ -299,8 +301,8 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
 
 # here we map the stream_id to the more descriptive stream_name
 stream_id_to_stream_name = {
-    "0": "NeuroNexus Allego Analog (pri) Data",
-    "1": "NeuroNexus Allego Digital-in (din) Data",
-    "2": "NeuroNexus Allego Digital-out (dout) Data",
-    "3": "NeuroNexus Allego Auxiliary (aux) Data",
+    "ai-pri": "NeuroNexus Allego Analog (pri) Data",
+    "di": "NeuroNexus Allego Digital-in (din) Data",
+    "do": "NeuroNexus Allego Digital-out (dout) Data",
+    "aux": "NeuroNexus Allego Auxiliary (aux) Data",
 }
