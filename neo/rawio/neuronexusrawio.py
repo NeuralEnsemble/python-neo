@@ -182,11 +182,11 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
             # 'a.u.' makes the units clearer
             elif channel_info["chan_type"][channel_index][:2] == "di":
                 units = "a.u."
-                stream_id = "di"
+                stream_id = "din"
             elif channel_info["chan_type"][channel_index][:2] == "do":
                 # aux channel
                 units = "a.u."
-                stream_id = "do"
+                stream_id = "dout"
             else:
                 units = "V"
                 stream_id = "aux"
@@ -302,7 +302,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
 # here we map the stream_id to the more descriptive stream_name
 stream_id_to_stream_name = {
     "ai-pri": "NeuroNexus Allego Analog (pri) Data",
-    "di": "NeuroNexus Allego Digital-in (din) Data",
-    "do": "NeuroNexus Allego Digital-out (dout) Data",
+    "din": "NeuroNexus Allego Digital-in (din) Data",
+    "dout": "NeuroNexus Allego Digital-out (dout) Data",
     "aux": "NeuroNexus Allego Auxiliary (aux) Data",
 }
