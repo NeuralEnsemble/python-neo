@@ -38,7 +38,7 @@ Bug fixes and improvements in IO modules
 ----------------------------------------
 
 Bug fixes and/or improvements have been made to :code:`BlackRockIO`, :code:`SpikeGLXIO`, :code:`MaxwellIO`, :code:`IntanIO`, :code:`TdtIO`,
-:code:`OpenEphysBinaryIO`, :code:`NeoMatlabIO`, :code:`EdfIO`, :code:`Neuralynx`, and :code:`SpikeGadgetsIO`.
+:code:`OpenEphysBinaryIO`, :code:`NeoMatlabIO`, :code:`EdfIO`, :code:`NeuralynxIO`, and :code:`SpikeGadgetsIO`.
 
 
 Acknowledgements
