@@ -51,6 +51,7 @@ class AcqType(IntEnum):
     ATLAS = auto()
     UNKNOWN = auto()
 
+
 class NcsSections:
     """
     Contains information regarding the contiguous sections of records in an Ncs file.
@@ -279,8 +280,13 @@ class NcsSectionsFactory:
             ncsSects.sampFreqUsed = sampFreqUsed
             ncsSects.microsPerSampUsed = microsPerSampUsed
 
-        elif acqType in [AcqType.DIGITALLYNX, AcqType.DIGITALLYNXSX, AcqType.CHEETAH64,
-                          AcqType.CHEETAH560, AcqType.RAWDATAFILE]:
+        elif acqType in [
+            AcqType.DIGITALLYNX,
+            AcqType.DIGITALLYNXSX,
+            AcqType.CHEETAH64,
+            AcqType.CHEETAH560,
+            AcqType.RAWDATAFILE,
+        ]:
             # digital lynx style with fractional frequency and micros per samp determined from block times
             if gapTolerance is None:
                 if strict_gap_mode:

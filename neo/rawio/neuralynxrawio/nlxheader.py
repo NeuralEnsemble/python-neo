@@ -84,11 +84,13 @@ class NlxHeader(OrderedDict):
     #
     # There are now separate patterns for the in header line and in properties cases which cover
     # the known variations in each case. They are compiled here once for efficiency.
-    _openDatetime1_pat = re.compile(r"## (Time|Date) Opened:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)"\
-                                      r"\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)")
+    _openDatetime1_pat = re.compile(
+        r"## (Time|Date) Opened:* \((m/d/y|mm/dd/yyy)\): (?P<date>\S+)" r"\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)"
+    )
     _openDatetime2_pat = re.compile(r"-TimeCreated (?P<date>\S+) (?P<time>\S+)")
-    _closeDatetime1_pat = re.compile(r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): " \
-                                        r"(?P<date>\S+)\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)")
+    _closeDatetime1_pat = re.compile(
+        r"## (Time|Date) Closed:* \((m/d/y|mm/dd/yyy)\): " r"(?P<date>\S+)\s+(\(h:m:s\.ms\)|At Time:) (?P<time>\S+)"
+    )
     _closeDatetime2_pat = re.compile(r"-TimeClosed (?P<date>\S+) (?P<time>\S+)")
 
     # Precompiled filename pattern
@@ -287,8 +289,9 @@ class NlxHeader(OrderedDict):
             if len(btm_entries) == 1:
                 btm_entries = btm_entries * len(self["channel_ids"])
             self["bit_to_microVolt"] = [float(e) * 1e6 for e in btm_entries]
-            assert len(self["bit_to_microVolt"]) == len( self["channel_ids"]), \
-                "Number of channel ids does not match bit_to_microVolt conversion factors."
+            assert len(self["bit_to_microVolt"]) == len(
+                self["channel_ids"]
+            ), "Number of channel ids does not match bit_to_microVolt conversion factors."
 
     def _setInputRanges(self, numChidEntries):
         if "InputRange" in self:
@@ -297,44 +300,48 @@ class NlxHeader(OrderedDict):
                 self["InputRange"] = [int(ir_entries[0])] * numChidEntries
             else:
                 self["InputRange"] = [int(e) for e in ir_entries]
-            assert len(self["InputRange"]) == numChidEntries, \
-                "Number of channel ids does not match input range values."
+            assert len(self["InputRange"]) == numChidEntries, "Number of channel ids does not match input range values."
 
     def _setFilenameProp(self, txt_header):
         """
         Add an OriginalFileName property if in header.
         """
-        if not 'OriginalFileName' in self.keys():
+        if not "OriginalFileName" in self.keys():
             fnm = NlxHeader._filename_pat.search(txt_header)
-            if not fnm: return
-            else: self['OriginalFileName'] = fnm.group(1).strip(' "\t\r\n')
+            if not fnm:
+                return
+            else:
+                self["OriginalFileName"] = fnm.group(1).strip(' "\t\r\n')
         else:
             # some file types quote the property so strip that also
-            self['OriginalFileName'] = self['OriginalFileName'].strip(' "\t\r\n')
+            self["OriginalFileName"] = self["OriginalFileName"].strip(' "\t\r\n')
 
     def _setTimeDate(self, txt_header):
         """
         Read time and date from text of header
         """
         import dateutil
+
         # opening time
         sr = NlxHeader._openDatetime1_pat.search(txt_header)
-        if not sr: sr=NlxHeader._openDatetime2_pat.search(txt_header)
+        if not sr:
+            sr = NlxHeader._openDatetime2_pat.search(txt_header)
         if not sr:
             raise IOError(
-                f"No matching header open date/time for application {self['ApplicationName']} " +
-                f"version {self['ApplicationVersion']}. Please contact developers."
+                f"No matching header open date/time for application {self['ApplicationName']} "
+                + f"version {self['ApplicationVersion']}. Please contact developers."
             )
         else:
             dt1 = sr.groupdict()
-            self['recording_opened'] = dateutil.parser.parse(f"{dt1['date']} {dt1['time']}")
+            self["recording_opened"] = dateutil.parser.parse(f"{dt1['date']} {dt1['time']}")
 
         # close time, if available
         sr = NlxHeader._closeDatetime1_pat.search(txt_header)
-        if not sr: sr=NlxHeader._closeDatetime2_pat.search(txt_header)
+        if not sr:
+            sr = NlxHeader._closeDatetime2_pat.search(txt_header)
         if sr:
             dt2 = sr.groupdict()
-            self['recording_closed'] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
+            self["recording_closed"] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
 
     def type_of_recording(self):
         """

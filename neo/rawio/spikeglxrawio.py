@@ -184,8 +184,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                 chan_id = f"{stream_name}#{chan_name}"
 
                 # Separate sync channel in its own stream
-                is_sync_channel = "SY" in chan_name  and not self.load_sync_channel
-                if is_sync_channel :
+                is_sync_channel = "SY" in chan_name and not self.load_sync_channel
+                if is_sync_channel:
                     # This is a sync channel and should be added as its own stream
                     sync_stream_id = f"{stream_name}-SYNC"
                     sync_stream_id_to_buffer_id[sync_stream_id] = buffer_id
@@ -387,7 +387,7 @@ def scan_files(dirname):
                 continue
             meta_filename = Path(root) / file
             bin_filename = meta_filename.with_suffix(".bin")
-                
+
             if meta_filename.exists() and bin_filename.exists():
                 meta = read_meta_file(meta_filename)
                 info = extract_stream_info(meta_filename, meta)
@@ -401,6 +401,7 @@ def scan_files(dirname):
 
     return info_list
 
+
 def _add_segment_order(info_list):
     """
     Uses gate and trigger numbers to construct a segment index (`seg_index`) for each signal in `info_list`.
@@ -413,7 +414,7 @@ def _add_segment_order(info_list):
     """
     # This sets non-integers values before integers
     normalize = lambda x: x if isinstance(x, int) else -1
-    
+
     # Segment index is determined by the gate_num and trigger_num in that order
     def get_segment_tuple(info):
         # Create a key from the normalized gate_num and trigger_num
@@ -475,7 +476,7 @@ def parse_spikeglx_fname(fname):
     stream_kind: str or None
         The data type identifier, "lf", "ap", "obx", or None
     """
-    
+
     # Standard case: contains gate, trigger, device, and stream kind
     # Example: Noise4Sam_g0_t0.imec0.ap
     # Format:  {run_name}_g{gate_num}_t{trigger_num}.{device}.{stream_kind}
@@ -502,7 +503,7 @@ def parse_spikeglx_fname(fname):
         gd = match.groupdict()
         return gd["run_name"], int(gd["gate_num"]), "cat", gd["device"], gd["stream_kind"]
 
-    # OneBox case: ends in .obx 
+    # OneBox case: ends in .obx
     # Example: myRun_g0_t0.obx0.obx
     # Format:  {run_name}_g{gate_num}_t{trigger_num}.{device}.obx
     # Regex tokens:
@@ -641,7 +642,7 @@ def extract_stream_info(meta_file, meta):
         device = fname.split(".")[-2] if "." in fname else device
         stream_kind = ""
         units = "V"
-        
+
         # OneBox gain calculation
         # V = i * Vmax / Imax where Imax = obMaxInt, Vmax = obAiRangeMax
         # See: https://billkarsh.github.io/SpikeGLX/Sgl_help/Metadata_30.html
@@ -669,7 +670,7 @@ def extract_stream_info(meta_file, meta):
     probe_slot = meta.get("imDatPrb_slot", None)
     probe_port = meta.get("imDatPrb_port", None)
     probe_dock = meta.get("imDatPrb_dock", None)
-    
+
     # OneBox specific metadata
     obx_slot = meta.get("imDatObx_slot", None)
 
@@ -697,10 +698,10 @@ def extract_stream_info(meta_file, meta):
     info["probe_port"] = int(probe_port) if probe_port else None
     info["probe_dock"] = int(probe_dock) if probe_dock else None
     info["obx_slot"] = int(obx_slot) if obx_slot else None
-    
+
     # Add device index
     if info.get("device_kind") == "imec":
-        info["device_index"]  = info["device"].split("imec")[-1]
+        info["device_index"] = info["device"].split("imec")[-1]
     elif info.get("device_kind") == "obx":
         info["device_index"] = info["device"].split("obx")[-1]
     else:
@@ -731,6 +732,5 @@ def extract_stream_info(meta_file, meta):
         # OneBox channel handling - focus on analog channels only as requested
         info["digital_channels"] = [channel for channel in info["channel_names"] if channel.startswith("XD")]
         info["analog_channels"] = [channel for channel in info["channel_names"] if channel.startswith("XA")]
-
 
     return info

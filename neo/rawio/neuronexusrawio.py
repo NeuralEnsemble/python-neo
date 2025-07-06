@@ -132,7 +132,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         self._n_samples, self._n_channels = self.metadata["status"]["shape"]
         # Stored as a simple float32 binary file
         BINARY_DTYPE = "float32"
-        TIMESTAMP_DTYPE = "int64" # this is from the allego sample reader timestamps are np.int64
+        TIMESTAMP_DTYPE = "int64"  # this is from the allego sample reader timestamps are np.int64
         binary_file = self.binary_file
         timestamp_file = self.timestamp_file
 
@@ -150,7 +150,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         # Make the memory map for timestamp
         self._timestamps = np.memmap(
             timestamp_file,
-            dtype=TIMESTAMP_DTYPE,  
+            dtype=TIMESTAMP_DTYPE,
             mode="r",
             offset=0,  # headerless binary file
         )
