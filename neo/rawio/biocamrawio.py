@@ -460,4 +460,4 @@ def generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames):
         else:
             data[ch_idx] = np.array(np.random.normal(median_mean, median_std, num_frames), dtype=np.uint16)
 
-    return data
+    return data + 2048
