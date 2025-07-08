@@ -458,26 +458,25 @@ class NicoletRawIO(BaseRawIO):
         self.channel_structure = channel_structure
         self.channel_properties = channel_properties
         
-    def _get_ts_properties_all(self):
+    def _get_ts_properties(self,  ts_packet_index = 0):
         '''
-        DEPECRATED
+        Read properties of every timestream.
+        Currently, only the first instance of the timestream is used for every segment
         '''
         ts_packets_properties = []
         ts_packets = [packet for packet in self.dynamic_packets if packet['id_str'] == 'TSGUID']
-        l_ts_packets = len(ts_packets)
         for ts_packet in ts_packets:
             ts_properties = []
             elems = self._typecast(ts_packet['data'][752:756])[0]
-            alloc = self._typecast(ts_packet['data'][756:760])[0]
             offset = 760
-            for i in range(elems):
+            for _ in range(elems):
                 internal_offset = 0                
                 top_range = (offset + self.TSLABELSIZE)
                 label = self._transform_ts_properties(ts_packet['data'][offset:top_range], np.uint16)
                 internal_offset += 2*self.TSLABELSIZE
                 top_range = offset + internal_offset + self.LABELSIZE
                 active_sensor = self._transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
-                internal_offset = internal_offset + self.TSLABELSIZE;
+                internal_offset = internal_offset + self.TSLABELSIZE
                 top_range = offset + internal_offset + 8
                 ref_sensor = self._transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
                 internal_offset += 64
@@ -504,56 +503,8 @@ class NicoletRawIO(BaseRawIO):
             ts_packets_properties.append(ts_properties)
         self.ts_packets = ts_packets    
         self.ts_packets_properties = ts_packets_properties
+        self.ts_properties = ts_packets_properties[ts_packet_index]
         pass
-    
-    def _get_ts_properties(self, ts_packet_index = 0):
-        '''
-        Read properties of every timestream.
-        So far, only the first instance of the timestream is used for every segment
-        '''
-        ts_properties = []
-        ts_packets = [packet for packet in self.dynamic_packets if packet['id_str'] == 'TSGUID']
-        l_ts_packets = len(ts_packets)
-        self.ts_packets = ts_packets
-        if l_ts_packets > 0:
-            if l_ts_packets > 1:
-                warnings.warn(f'{l_ts_packets} TSinfo packets detected; using first instance for all segments. See documentation for info')
-            ts_packet = ts_packets[ts_packet_index]
-            elems = self._typecast(ts_packet['data'][752:756])[0]
-            alloc = self._typecast(ts_packet['data'][756:760])[0]
-            offset = 760
-            for i in range(elems):
-                internal_offset = 0                
-                top_range = (offset + self.TSLABELSIZE)
-                label = self._transform_ts_properties(ts_packet['data'][offset:top_range], np.uint16)
-                internal_offset += 2*self.TSLABELSIZE
-                top_range = offset + internal_offset + self.LABELSIZE
-                active_sensor = self._transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
-                internal_offset = internal_offset + self.TSLABELSIZE;
-                top_range = offset + internal_offset + 8
-                ref_sensor = self._transform_ts_properties(ts_packet['data'][(offset + internal_offset):top_range], np.uint16)
-                internal_offset += 64;
-                low_cut, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                high_cut, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                sampling_rate, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                resolution, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                mark, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
-                notch, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.uint16)
-                eeg_offset, internal_offset = self._read_ts_properties(ts_packet['data'], offset, internal_offset, np.float64)
-                offset += 552
-                ts_properties.append({
-                    'label' : label,
-                    'active_sensor' : active_sensor,
-                    'ref_sensor' : ref_sensor,
-                    'low_cut' : low_cut,
-                    'high_cut' : high_cut,
-                    'sampling_rate' : sampling_rate,
-                    'resolution' : resolution,
-                    'notch' : notch,
-                    'mark' : mark,
-                    'eeg_offset' : eeg_offset,
-                    })
-        self.ts_properties = ts_properties
     
     def _get_segment_start_times(self):
         '''
