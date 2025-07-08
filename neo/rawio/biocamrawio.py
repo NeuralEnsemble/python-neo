@@ -460,4 +460,10 @@ def generate_synthetic_noise(rf, data, well_ID, start_frame, num_frames):
         else:
             data[ch_idx] = np.array(np.random.normal(median_mean, median_std, num_frames), dtype=np.uint16)
 
-    return data + 2048
+    # Assuming a 12-bit unsigned to signed conversion downstream, the baseline should read at 2048 raw
+    # However, synthetic noise is generated with a baseline of 0, which requires an offset of + 2048
+    # See issue #1743
+
+    data = data + 2048
+
+    return data
