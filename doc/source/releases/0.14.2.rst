@@ -2,9 +2,9 @@
 Neo 0.14.2 release notes
 ========================
 
-xx July 25
+08 July 25
 
-This release of Neo includes many bug fixes in various IOs, continued work on our CI, official adoption of the NumFocus Code of Conduct with an eye to a 1.0 release.
+This release of Neo includes many bug fixes in various IOs, continued work on our CI, and official adoption of the NumFocus Code of Conduct with an eye to a 1.0 release.
 
 See all `pull requests`_ included in this release and the `list of closed issues`_.
 
@@ -19,8 +19,13 @@ more information.
 CI Changes
 ----------
 
+We have transitioned IO testing to Python 3.9 and Python 3.13.
+
+We have also added NumPy 2.3.1 to our core testing matrix.
+
 We fixed our installation of datalad and git-annex.
-We changed our Plexon2 tests to be a cron job as conda-wine-plexon2 behavior was leading to flaky test results.
+
+We changed our :code:`Plexon2IO` tests to be a cron job as conda-wine-plexon2 behavior was leading to flaky test results.
 We hope to track the root of these issues and eventually transition :code:`Plexon2IO` back to main testing.
 
 
@@ -33,7 +38,7 @@ Bug fixes and/or improvements have been made to :code:`BlackRockIO`, :code:`Spik
 Acknowledgements
 ----------------
 
-Thanks to Zach McKenzie, Andrew Davison, Luiz Tauffer, Heberto Mayorquin, Daniel Parthier, Philipp Hornauer, Letizia Signorelli, and Akshaj Verma.
+Thanks to Zach McKenzie, Andrew Davison, Luiz Tauffer, Heberto Mayorquin, Julia Sprenger, Daniel Parthier, Philipp Hornauer, Letizia Signorelli, and Akshaj Verma.
 
 
 
