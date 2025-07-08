@@ -2,17 +2,18 @@ name: NeoPlexon2Test
 
 on:
   workflow_dispatch:
-    schedule:
-      - cron: "0 12 * * 0" # weekly at noon UTC on Sundays
+  schedule:
+    - cron: "0 12 * * 0" # weekly at noon UTC on Sundays
 
 
 jobs:
   build-and-test:
-    name: Test on (${{ inputs.os }}) (${{ matrix.python-version}}) (${{ matrix.numpy-version }})
-    runs-on: ${{ inputs.os }}
+    name: Test on (${{ matrix.os }}) (${{ matrix.python-version}}) (${{ matrix.numpy-version }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
+        os:  [ubuntu-latest]
         python-version: ['3.9', '3.12']
         numpy-version: ['1.26', '2.0']
     defaults:
