@@ -18,8 +18,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ['3.9', '3.12']
-        numpy-version: ['1.26', '2.0']
+        python-version: ['3.9', '3.13']
+        numpy-version: ['1.26', '2.3.1']
+        exclude:
+           - python-version: '3.9'
+             numpy-version: '2.3.1'
+           - python-version: '3.13'
+             numpy-version: '1.26'
     defaults:
       # by default run in bash mode (required for conda usage)
       run:

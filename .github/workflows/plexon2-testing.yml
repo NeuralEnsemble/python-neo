@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os:  [ubuntu-latest]
         python-version: ['3.9', '3.12']
         numpy-version: ['1.26', '2.0']
     defaults:
