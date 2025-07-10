@@ -179,7 +179,7 @@ class NicoletRawIO(BaseRawIO):
         self._extract_header_information() 
         self.header = {}
         self.header["nb_block"] = 1
-        self.header["nb_segment"] = [len(self.segments_properties)]
+        self.header["nb_segment"] = [int(self._get_index_instances('SegmentStream')[0]['section_l']/152)]
         self.header["signal_buffers"] = np.array(['Signals', '0'],
                                                  dtype=_signal_buffer_dtype)
         self.header["signal_channels"] = self._create_signal_channels(_signal_channel_dtype)
@@ -191,6 +191,11 @@ class NicoletRawIO(BaseRawIO):
         self.header["event_channels"] = np.array([("Events", "0", "event"),
                                                   ("Epochs", "1", "epoch")], 
                                                  dtype = _event_channel_dtype)
+        
+        self._get_segment_start_times()
+        self._get_events()
+        self._get_montage()
+        self._get_raw_signal()
         self._generate_minimal_annotations()
         self._generate_additional_annotations()
         self._get_buffer_descriptions()
@@ -519,17 +524,15 @@ class NicoletRawIO(BaseRawIO):
                 segment_info =  {}
                 segment_info['date_ole'] = self.read_as_list(fid,
                                                         [('date', 'float64')])
+                date_str = self._convert_ole_to_datetime(segment_info['date_ole'])
                 fid.seek(8,1)
                 segment_info['duration'] = self.read_as_list(fid,
                                                         [('duration', 'float64')])
                 fid.seek(128, 1)
-                segment_info['ch_names'] = [info['label'] for info in self.ts_properties]
-                segment_info['ref_names'] = [info['ref_sensor'] for info in self.ts_properties]
-                segment_info['sampling_rates'] = [info['sampling_rate'] for info in self.ts_properties]
-                segment_info['scale'] = [info['resolution'] for info in self.ts_properties]
-                date_str = self._convert_ole_to_datetime(segment_info['date_ole'])
-                start_date = date_str.date()
-                start_time = date_str.time()
+                segment_info['ch_names'] = [channel[0] for channel in self.header['signal_channels']]
+                #segment_info['ref_names'] = [info['ref_sensor'] for info in self.ts_properties]
+                segment_info['sampling_rates'] = [channel[2] for channel in self.header['signal_channels']]
+                segment_info['scale'] = [channel[5] for channel in self.header['signal_channels']]
                 segment_info['date'] = date_str
                 segment_info['start_date'] = date_str.date()
                 segment_info['start_time'] = date_str.time()
@@ -699,9 +702,6 @@ class NicoletRawIO(BaseRawIO):
     def _get_buffer_descriptions(self):
         '''
         Get the descriptions of raw signal buffers
-        
-        TODO: File offset
-        TODO: Support for multiple signal streams
         '''
         buffer_id = 0
         self._buffer_descriptions = {0: {}}
@@ -738,10 +738,6 @@ class NicoletRawIO(BaseRawIO):
         self._get_signal_properties()
         self._get_channel_info()
         self._get_ts_properties()
-        self._get_segment_start_times()
-        self._get_events()
-        self._get_montage()
-        self._get_raw_signal()
     
     def _create_signal_channels(self, dtype):
         '''
@@ -750,22 +746,24 @@ class NicoletRawIO(BaseRawIO):
         signal_channels = []
         signal_streams = {}
         stream_id = 0
-        for i, timestream in enumerate(self.ts_properties):
-            signal = next((item for item in self.signal_properties if item["name"] == timestream['label'].split('-')[0]), None)
+        for i, channel in enumerate(self.channel_properties):
+            signal = next((item for item in self.signal_properties if item['name'] == channel['sensor']), None)
+            timestream = next((item for item in self.ts_properties if item['label'] == channel['sensor']), None)
             if signal is None:
                 continue
-            if timestream['sampling_rate'] not in signal_streams.keys():
-                signal_streams[timestream['sampling_rate']] = stream_id
+            if channel['sampling_rate'] not in signal_streams.keys():
+                signal_streams[channel['sampling_rate']] = stream_id
                 stream_id += 1
+                channel['sampling_rate']
             signal_channels.append((
-                timestream['label'].split('-')[0],
+                channel['sensor'],
                 i,
-                int(timestream['sampling_rate']),
+                int(channel['sampling_rate']),
                 'int16',
                 signal['transducer'],
                 timestream['resolution'],
                 timestream['eeg_offset'],
-                signal_streams[timestream['sampling_rate']],
+                signal_streams[channel['sampling_rate']],
                 '0'))
         self.signal_streams = signal_streams
         return np.array(signal_channels, dtype = dtype)
@@ -804,8 +802,10 @@ class NicoletRawIO(BaseRawIO):
         '''
         if block_index >= self.header['nb_block']:
             raise IndexError(f"Block Index out of range. There are {self.header['nb_block']} blocks in the file")
+        
         if seg_index >= self.header['nb_segment'][block_index]:
             raise IndexError(f"Segment Index out of range. There are {self.header['nb_segment'][block_index]} segments for block {block_index}")
+        
         if channel_indexes is None:
             channel_indexes = [i for i, channel in enumerate(self.header['signal_channels']) if channel['stream_id'] == str(stream_index)]
         elif isinstance(channel_indexes, slice):
@@ -818,16 +818,19 @@ class NicoletRawIO(BaseRawIO):
                 raise IndexError("Channel Indices cannot be negative")
             if any(channel_indexes >= self.header['signal_channels'].shape[0]):
                 raise IndexError("Channel Indices out of range")
+        
         if i_start is None:
             i_start = 0
+        
         if i_stop is None:
             i_stop = max(self.get_nr_samples(seg_index = seg_index, stream_index = stream_index))
+        
         if i_start < 0 or i_stop > max(self.get_nr_samples(seg_index = seg_index, stream_index = stream_index)): #Get the maximum number of samples for the respective sampling rate
             raise IndexError("Start or Stop Index out of bounds")
-        current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][channel_indexes[0]] #Non signal-stream specific, just take the sampling rate of the first channel
+        
         cum_segment_duration = [0] +  list(np.cumsum([(segment['duration'].total_seconds()) for segment in self.segments_properties])) 
         data = np.empty([i_stop - i_start, len(channel_indexes)])
-        for i, channel_index  in enumerate(channel_indexes):
+        for i in range(len(channel_indexes)):
             current_samplingrate = self.segments_properties[seg_index]['sampling_rates'][i]
             multiplicator = self.segments_properties[seg_index]['scale'][i]
             [tag_idx] = [tag['index'] for tag in self.tags if tag['tag'] == str(i)]
