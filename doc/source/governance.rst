@@ -5,7 +5,8 @@ Governance
 Neo is a community-developed project,
 we welcome contributions from anyone who is interested in the project.
 The project maintainers are the members of the `Neo maintainers team`_.
-All contributors agree to abide by the Code of Conduct, see the file `CODE_OF_CONDUCT.md`_.
+All contributors agree to abide by the `NumFocus Code of Conduct`_,
+see the file `CODE_OF_CONDUCT.md`_.
 
 Contributions
 =============
@@ -49,3 +50,4 @@ The current maintainers are:
 .. _`@mdenker`: https://github.com/mdenker
 .. _`@alejoe91`: https://github.com/alejoe91
 .. _`@zm711`: https://github.com/zm711
+.. _`NumFocus Code of Conduct`: https://numfocus.org/code-of-conduct

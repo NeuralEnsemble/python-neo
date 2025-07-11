@@ -1,0 +1,51 @@
+========================
+Neo 0.14.2 release notes
+========================
+
+08 July 25
+
+This release of Neo includes many bug fixes in various IOs, continued work on our CI, and official adoption of the NumFocus Code of Conduct with an eye to a 1.0 release.
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+
+Code of Conduct 
+---------------
+
+As a NumFocus affiliated project, Neo has officially adopted the `NumFocus Code of Conduct`_. Please see `CODE_OF_CONDUCT.md`_ for 
+more information.
+
+
+CI Changes
+----------
+
+We have transitioned IO testing to Python 3.9 and Python 3.13.
+
+We have also added NumPy 2.3.1 to our core testing matrix.
+
+We fixed our installation of datalad and git-annex.
+
+We changed our :code:`Plexon2IO` tests to be a cron job as conda-wine-plexon2 behavior was leading to flaky test results.
+We hope to track the root of these issues and eventually transition :code:`Plexon2IO` back to main testing.
+
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+Bug fixes and/or improvements have been made to :code:`BlackRockIO`, :code:`SpikeGLXIO`, :code:`MaxwellIO`, :code:`NeuralynxIO`, :code:`WinwcprIO`, and :code:`AxonaIO`.
+
+
+Acknowledgements
+----------------
+
+Thanks to Zach McKenzie, Andrew Davison, Luiz Tauffer, Heberto Mayorquin, Julia Sprenger, Daniel Parthier, Philipp Hornauer, Letizia Signorelli, and Akshaj Verma.
+
+
+
+.. _`NumFocus Code of Conduct`: https://numfocus.org/code-of-conduct
+
+.. _`CODE_OF_CONDUCT.md` : https://github.com/NeuralEnsemble/python-neo/blob/master/CODE_OF_CONDUCT.md
+
+.. _`pull requests` : https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+milestone%3A0.14.2
+
+.. _`list of closed issues` : https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue%20state%3Aclosed%20milestone%3A0.14.2
