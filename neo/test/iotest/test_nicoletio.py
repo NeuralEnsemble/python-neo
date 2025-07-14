@@ -35,11 +35,13 @@ class TestNicoletIO(
         super().tearDown()
         for entity in self.entities_to_test:
             full_path = get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir)
-            #pathlib.Path(full_path).unlink(missing_ok=True)
+            pathlib.Path(full_path).unlink(missing_ok=True)
 
     def test_read_segment_lazy(self):
         for entity in self.entities_to_test:
-            r = NicoletIO(filename=get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir))
+            r = NicoletIO(
+                filename=get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir)
+            )
             seg = r.read_segment(lazy=True)
             for ana in seg.analogsignals:
                 assert isinstance(ana, AnalogSignalProxy)
@@ -61,12 +63,16 @@ class TestNicoletIO(
 
     def test_read_block(self):
         for entity in self.entities_to_test:
-            r = NicoletIO(filename=get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir))
+            r = NicoletIO(
+                filename=get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir)
+            )
             bl = r.read_block(lazy=True)
 
     def test_read_segment_with_time_slice(self):
         for entity in self.entities_to_test:
-            r = NicoletIO(filename=get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir))
+            r = NicoletIO(
+                filename=get_test_file_full_path(self.ioclass, filename=entity, directory=self.local_test_dir)
+            )
             seg = r.read_segment(time_slice=None)
             shape_full = seg.analogsignals[0].shape
             event_full = seg.events[0]
