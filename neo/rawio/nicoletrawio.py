@@ -387,13 +387,11 @@ class NicoletRawIO(BaseRawIO):
             with open(self.filename, "rb") as fid:
                 fid.seek(instance["offset"])
                 signal_structure = self.read_as_dict(fid, signal_structure_segment)
-                unknown = self.read_as_list(fid, [("unknown", "S1", 152)])
-                fid.seek(512, 1)
+                fid.seek(664, 1)
                 n_idx = self.read_as_dict(fid, [("n_idx", "uint16"), ("misc1", "uint16", 3)])
                 for i in range(n_idx["n_idx"]):
                     properties = self.read_as_dict(fid, signal_properties_segment)
                     signal_properties.append(properties)
-                    reserved = self.read_as_list(fid, [("reserved", "S1", 256)])
         self.signal_structure = signal_structure
         self.signal_properties = signal_properties
         pass
@@ -595,6 +593,7 @@ class NicoletRawIO(BaseRawIO):
                             if segment_time < event["date"]:
                                 seg_index += 1
                         event["seg_index"] = seg_index
+                        event["block_index"] = 0
                         events.append(event)
                         event["type"] = "0" if event["duration"] == 0 else "1"
                     except:
@@ -745,7 +744,7 @@ class NicoletRawIO(BaseRawIO):
 
     def _create_signal_channels(self, dtype):
         """
-        Create information for signal channels based on timestream and signal_properties
+        Create information for signal channels based on channel properties, timestream and signal_properties
         """
         signal_channels = []
         signal_streams = {}
@@ -848,7 +847,7 @@ class NicoletRawIO(BaseRawIO):
 
         if i_start < 0 or i_stop > max(
             self.get_nr_samples(seg_index=seg_index, stream_index=stream_index)
-        ):  # Get the maximum number of samples for the respective sampling rate
+        ):
             raise IndexError("Start or Stop Index out of bounds")
 
         cum_segment_duration = [0] + list(
@@ -970,7 +969,9 @@ class NicoletRawIO(BaseRawIO):
         events = [
             event
             for event in self.events
-            if event["type"] == str(event_channel_index) and event["seg_index"] == seg_index
+            if event["type"] == str(event_channel_index) 
+            and event["seg_index"] == seg_index 
+            and event["block_index"] == block_index
         ]
         timestamp = np.array([event["timestamp"] for event in events], dtype="float64")
         durations = np.array([event["duration"] for event in events], dtype="float64")
