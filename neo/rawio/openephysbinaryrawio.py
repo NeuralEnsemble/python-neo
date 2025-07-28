@@ -159,11 +159,14 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     # We then set the stream_id to the sync stream id
                     channel_stream_id = sync_stream_id
 
-                if "ADC" in chan_id:
-                    # These are non-neural channels and their stream should be separated
-                    # We defined their stream_id as the stream_index of neural data plus the number of neural streams
-                    # This is to not break backwards compatbility with the stream_id numbering
-                    channel_stream_id = str(stream_index + len(sig_stream_names))
+                if "OneBox" not in stream_name:
+                    # If recording system is not OneBox, which has already a separate stream for ADC channels,
+                    # we need to separate ADC channels from neural channels.
+                    if "ADC" in chan_id:
+                        # These are non-neural channels and their stream should be separated
+                        # We defined their stream_id as the stream_index of neural data plus the number of neural streams
+                        # This is to not break backwards compatbility with the stream_id numbering
+                        channel_stream_id = str(stream_index + len(sig_stream_names))
 
                 gain = float(chan_info["bit_volts"])
                 sampling_rate = float(info["sample_rate"])
