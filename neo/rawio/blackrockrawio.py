@@ -956,7 +956,7 @@ class BlackrockRawIO(BaseRawIO):
 
         major_version = self.__nsx_basic_header[nsx_nb]["ver_major"]
         ts_size = "uint64" if major_version >= 3 else "uint32"
-        
+
         # dtypes data header, the header flag is always set to 1
         dt2 = [("header_flag", "uint8"), ("timestamp", ts_size), ("nb_data_points", "uint32")]
 
