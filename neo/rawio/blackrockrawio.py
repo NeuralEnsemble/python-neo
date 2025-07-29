@@ -600,7 +600,7 @@ class BlackrockRawIO(BaseRawIO):
                             idx = list(nsx_header["electrode_id"]).index(chan_id)
                             values.append(nsx_header[key][idx])
                         values = np.array(values)
-                        sig_ann["_array_annotations__"][key] = values
+                        sig_ann["__array_annotations__"][key] = values
 
             for c in range(spike_channels.size):
                 st_ann = seg_ann["spikes"][c]
