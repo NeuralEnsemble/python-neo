@@ -1476,7 +1476,7 @@ class BlackrockRawIO(BaseRawIO):
             # replacing event ids by matched event ids in place
             for k, (data, ev_ids) in self.nev_data.items():
                 if len(ev_ids):
-                    ev_ids[:] = np.vectorize(new_nev_segment_id_mapping._getitem__)(ev_ids)
+                    ev_ids[:] = np.vectorize(new_nev_segment_id_mapping.__getitem__)(ev_ids)
 
     def _read_nev_data_variant_a(self):
         """
