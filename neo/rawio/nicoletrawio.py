@@ -797,6 +797,7 @@ class NicoletRawIO(BaseRawIO):
                     seg_annotations["name"] = self.patient_info["altID"]
                 seg_annotations["date"] = self.segments_properties[i]["date"]
                 seg_annotations["duration"] = self.segments_properties[i]["duration"].total_seconds()
+                seg_annotations["t_start"] = (self.segments_properties[i]["date"] - bl_annotations["date"]).seconds
 
     def _get_analogsignal_chunk(
         self,
@@ -891,31 +892,13 @@ class NicoletRawIO(BaseRawIO):
         """
         Get start time for a given segment
         """
-        all_starts = []
-        for block_index in range(self.header["nb_block"]):
-            bl_annotation = self.raw_annotations["blocks"][block_index]
-            block_starts = [0]
-            startime = 0
-            for seg_annotation in bl_annotation["segments"][1:]:
-                startime += seg_annotation["duration"]
-                block_starts.append(float(startime))
-            all_starts.append(block_starts)
-        return all_starts[block_index][seg_index]
+        return self.raw_annotations["blocks"][block_index]['segments'][seg_index]['t_start']
 
     def _segment_t_stop(self, block_index: int, seg_index: int):
         """
         Get stop time for a given segment
         """
-        all_stops = []
-        for block_index in range(self.header["nb_block"]):
-            bl_annotation = self.raw_annotations["blocks"][block_index]
-            block_stops = []
-            stoptime = 0
-            for seg_annotation in bl_annotation["segments"]:
-                stoptime += seg_annotation["duration"]
-                block_stops.append(float(stoptime))
-            all_stops.append(block_stops)
-        return all_stops[block_index][seg_index]
+        return self._segment_t_start(block_index, seg_index) +  self.raw_annotations["blocks"][block_index]['segments'][seg_index]['duration']
 
     def _get_signal_size(self, block_index: int = 0, seg_index: int = 0, stream_index: int = 0):
         """
