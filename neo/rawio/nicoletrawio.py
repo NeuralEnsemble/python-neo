@@ -864,14 +864,12 @@ class NicoletRawIO(BaseRawIO):
             ]
             cum_section_lengths = [0] + list(np.cumsum(section_lengths))
             skip_values = cum_segment_duration[seg_index] * current_samplingrate
-            first_section_for_seg = self._get_relevant_section(cum_section_lengths, skip_values) - 1
+            first_section_for_seg = self._get_relevant_section(cum_section_lengths, skip_values)
             last_section_for_seg = (
                 self._get_relevant_section(
                     cum_section_lengths,
-                    current_samplingrate * self.segments_properties[seg_index]["duration"].total_seconds(),
+                    skip_values + current_samplingrate * self.segments_properties[seg_index]["duration"].total_seconds(),
                 )
-                - 1
-                + first_section_for_seg
             )
             use_sections = all_sections[first_section_for_seg:last_section_for_seg]
             use_sections_length = section_lengths[first_section_for_seg:last_section_for_seg]
@@ -1122,7 +1120,7 @@ class NicoletRawIO(BaseRawIO):
             segment = min([j for j, length in enumerate(lengths_list) if length > to_compare])
         except ValueError:
             segment = len(lengths_list)
-        return segment
+        return segment -1
 
     def _ensure_list(self, output):
         """
