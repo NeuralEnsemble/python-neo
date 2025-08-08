@@ -563,7 +563,7 @@ class NicoletRawIO(BaseRawIO):
                             ("text_length", "uint64"),
                             ("guid", "uint8", 16),
                         ],
-                        [("label", "S2", 32)],
+                        [("status", "S2", 32)],
                     ]
                     n_events += 1
                     try:
@@ -577,16 +577,16 @@ class NicoletRawIO(BaseRawIO):
                         event["timestamp"] = (event["date"] - self.segments_properties[0]["date"]).total_seconds()
                         event["guid"] = self._convert_to_guid(event["guid"])
                         try:
-                            id_str = self.HC_EVENT[event["guid"]]
+                            event_str = self.HC_EVENT[event["guid"]]
                         except:
-                            id_str = "UNKNOWN"
-                        if id_str == "Annotation" or id_str == "Event Comment":
+                            event_str = "UNKNOWN"
+                        if event_str == "Annotation" or event_str == "Event Comment":
                             fid.seek(31, 1)
                             annotation = self.read_as_list(fid, [("annotation", "S2", event["text_length"])])
+                            event["label"] = annotation
                         else:
-                            annotation = ""
-                        event["id_str"] = id_str
-                        event["annotation"] = annotation
+                            event["label"] = event_str
+
                         event["block_index"] = 0
                         seg_index = 0
                         segment_time_range = [segment["date"] for segment in self.segments_properties]
@@ -956,7 +956,7 @@ class NicoletRawIO(BaseRawIO):
             ]
         timestamp = np.array([event["timestamp"] for event in events], dtype="float64")
         durations = np.array([event["duration"] for event in events], dtype="float64")
-        labels = np.array([event["id_str"] for event in events], dtype="U12")
+        labels = np.array([event["label"] for event in events], dtype="U")
         if t_start is not None:
             keep = timestamp >= t_start
             timestamp, durations, labels = timestamp[keep], durations[keep], labels[keep]
