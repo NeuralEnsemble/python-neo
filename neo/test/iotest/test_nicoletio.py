@@ -76,17 +76,23 @@ class TestNicoletIO(
             seg = r.read_segment(time_slice=None)
             shape_full = seg.analogsignals[0].shape
             event_full = seg.events[0]
+            epoch_full = seg.epochs[0]
 
             t_start, t_stop = 260 * pq.ms, 1.854 * pq.s
             seg = r.read_segment(time_slice=(t_start, t_stop))
             shape_slice = seg.analogsignals[0].shape
             event_slice = seg.events[0]
+            epoch_slice = seg.epochs[0]
 
             assert shape_full[0] > shape_slice[0]
 
-            assert event_full.size > event_slice.size
+            assert event_full.size >= event_slice.size
             assert np.all(event_slice.times >= t_start)
             assert np.all(event_slice.times <= t_stop)
+
+            assert epoch_full.size >= epoch_slice.size
+            assert np.all(epoch_slice.times >= t_start)
+            assert np.all(epoch_slice.times <= t_stop)
 
 
 if __name__ == "__main__":

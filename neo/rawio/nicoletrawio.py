@@ -188,7 +188,7 @@ class NicoletRawIO(BaseRawIO):
         )
         self.header["spike_channels"] = np.array([], dtype=_spike_channel_dtype)
         self.header["event_channels"] = np.array(
-            [("Events", "0", "event"), ("Epochs", "1", "epoch")], dtype=_event_channel_dtype
+            [("Event", "0", "event"), ("Epoch", "1", "epoch")], dtype=_event_channel_dtype
         )
 
         self._get_segment_start_times()
@@ -537,6 +537,7 @@ class NicoletRawIO(BaseRawIO):
         Read all events
         """
         events = []
+        epochs = []
         event_packet_guid = "{B799F680-72A4-11D3-93D3-00500400C148}"
         event_instances = self._ensure_list(self._get_index_instances(tag="Events"))
         for instance in event_instances:
@@ -594,7 +595,6 @@ class NicoletRawIO(BaseRawIO):
                                 seg_index += 1
                         event["seg_index"] = seg_index
                         event["block_index"] = 0
-                        events.append(event)
                         event["type"] = "0" if event["duration"] == 0 else "1"
                     except:
                         warnings.warn(
@@ -605,7 +605,15 @@ class NicoletRawIO(BaseRawIO):
                     fid.seek(offset)
                     pkt = self.read_as_dict(fid, pkt_structure)
                     pkt["guid"] = self._convert_to_guid(pkt["guid"])
-        self.events = events
+
+                    if event["duration"] == 0:
+                        event["type"] = "0"
+                        events.append(event)
+                    else:
+                        event["type"] = "1"
+                        epochs.append(event)
+                    
+        self.events = [events, epochs]
         pass
 
     def _convert_ole_to_datetime(self, date_ole, date_fraction=0):
@@ -925,14 +933,9 @@ class NicoletRawIO(BaseRawIO):
         Get the number of events for a given segment and event channel
         """
         return len(
-            [
-                event
-                for event in self.events
-                if (
-                    event["block_index"] == block_index
-                    and event["seg_index"] == seg_index
-                    and event["type"] == str(event_channel_index)
-                )
+            [event for event in self.events[event_channel_index] if ( 
+            event["block_index"] == block_index
+            and event["seg_index"] == seg_index)
             ]
         )
 
@@ -947,13 +950,10 @@ class NicoletRawIO(BaseRawIO):
         """
         Get timestamps of all events for a given segment and event channel. Optionally, provide a time range
         """
-        events = [
-            event
-            for event in self.events
-            if event["type"] == str(event_channel_index) 
-            and event["seg_index"] == seg_index 
-            and event["block_index"] == block_index
-        ]
+        events = [event for event in self.events[event_channel_index] if ( 
+                event["block_index"] == block_index
+                and event["seg_index"] == seg_index)
+            ]
         timestamp = np.array([event["timestamp"] for event in events], dtype="float64")
         durations = np.array([event["duration"] for event in events], dtype="float64")
         labels = np.array([event["id_str"] for event in events], dtype="U12")
