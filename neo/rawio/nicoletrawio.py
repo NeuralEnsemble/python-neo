@@ -613,7 +613,7 @@ class NicoletRawIO(BaseRawIO):
                     else:
                         event["type"] = "1"
                         epochs.append(event)
-                    
+
         self.events = [events, epochs]
         pass
 
@@ -855,9 +855,7 @@ class NicoletRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = max(self.get_nr_samples(seg_index=seg_index, stream_index=stream_index))
 
-        if i_start < 0 or i_stop > max(
-            self.get_nr_samples(seg_index=seg_index, stream_index=stream_index)
-        ):
+        if i_start < 0 or i_stop > max(self.get_nr_samples(seg_index=seg_index, stream_index=stream_index)):
             raise IndexError("Start or Stop Index out of bounds")
 
         cum_segment_duration = [0] + list(
@@ -874,11 +872,9 @@ class NicoletRawIO(BaseRawIO):
             cum_section_lengths = [0] + list(np.cumsum(section_lengths))
             skip_values = cum_segment_duration[seg_index] * current_samplingrate
             first_section_for_seg = self._get_relevant_section(cum_section_lengths, skip_values)
-            last_section_for_seg = (
-                self._get_relevant_section(
-                    cum_section_lengths,
-                    skip_values + current_samplingrate * self.segments_properties[seg_index]["duration"].total_seconds(),
-                )
+            last_section_for_seg = self._get_relevant_section(
+                cum_section_lengths,
+                skip_values + current_samplingrate * self.segments_properties[seg_index]["duration"].total_seconds(),
             )
             use_sections = all_sections[first_section_for_seg:last_section_for_seg]
             use_sections_length = section_lengths[first_section_for_seg:last_section_for_seg]
@@ -900,13 +896,16 @@ class NicoletRawIO(BaseRawIO):
         """
         Get start time for a given segment
         """
-        return self.raw_annotations["blocks"][block_index]['segments'][seg_index]['t_start']
+        return self.raw_annotations["blocks"][block_index]["segments"][seg_index]["t_start"]
 
     def _segment_t_stop(self, block_index: int, seg_index: int):
         """
         Get stop time for a given segment
         """
-        return self._segment_t_start(block_index, seg_index) +  self.raw_annotations["blocks"][block_index]['segments'][seg_index]['duration']
+        return (
+            self._segment_t_start(block_index, seg_index)
+            + self.raw_annotations["blocks"][block_index]["segments"][seg_index]["duration"]
+        )
 
     def _get_signal_size(self, block_index: int = 0, seg_index: int = 0, stream_index: int = 0):
         """
@@ -933,9 +932,10 @@ class NicoletRawIO(BaseRawIO):
         Get the number of events for a given segment and event channel
         """
         return len(
-            [event for event in self.events[event_channel_index] if ( 
-            event["block_index"] == block_index
-            and event["seg_index"] == seg_index)
+            [
+                event
+                for event in self.events[event_channel_index]
+                if (event["block_index"] == block_index and event["seg_index"] == seg_index)
             ]
         )
 
@@ -950,10 +950,11 @@ class NicoletRawIO(BaseRawIO):
         """
         Get timestamps of all events for a given segment and event channel. Optionally, provide a time range
         """
-        events = [event for event in self.events[event_channel_index] if ( 
-                event["block_index"] == block_index
-                and event["seg_index"] == seg_index)
-            ]
+        events = [
+            event
+            for event in self.events[event_channel_index]
+            if (event["block_index"] == block_index and event["seg_index"] == seg_index)
+        ]
         timestamp = np.array([event["timestamp"] for event in events], dtype="float64")
         durations = np.array([event["duration"] for event in events], dtype="float64")
         labels = np.array([event["label"] for event in events], dtype="U")
@@ -1103,7 +1104,7 @@ class NicoletRawIO(BaseRawIO):
             segment = min([j for j, length in enumerate(lengths_list) if length > to_compare])
         except ValueError:
             segment = len(lengths_list)
-        return segment -1
+        return segment - 1
 
     def _ensure_list(self, output):
         """
