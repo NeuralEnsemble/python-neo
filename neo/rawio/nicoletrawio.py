@@ -876,21 +876,44 @@ class NicoletRawIO(BaseRawIO):
                 cum_section_lengths,
                 skip_values + current_samplingrate * self.segments_properties[seg_index]["duration"].total_seconds(),
             )
-            use_sections = all_sections[first_section_for_seg:last_section_for_seg]
-            use_sections_length = section_lengths[first_section_for_seg:last_section_for_seg]
+            sections = all_sections[first_section_for_seg:last_section_for_seg]
+            sections_length = section_lengths[first_section_for_seg:last_section_for_seg]
+            
             np_idx = 0
-            for j, (section_idx, section_length) in enumerate(zip(use_sections, use_sections_length)):
-                cur_sec = self.main_index[section_idx]
-                start = int((cur_sec["offset"] - self.signal_data_offset) / 2)
-                if i_start > start:
-                    start = i_start
-                if (i_stop - i_start) < (section_length * (j + 1)):
-                    stop = start + (i_stop - i_start - section_length * j)
-                else:
-                    stop = start + section_length
-                data[np_idx : (np_idx + section_length), i] = self.raw_signal[slice(start, stop)]
-                np_idx += section_length
+            section_slices = self._get_section_slices(sections, sections_length, i_start, i_stop)
+            for section_slice in section_slices:
+                section_slice_range = section_slice.stop - section_slice.start
+                data[np_idx : (np_idx + section_slice_range), i] = self.raw_signal[section_slice]
+                np_idx += section_slice_range
+
         return data
+
+    def _get_section_slices(self, sections, sections_length, i_start, i_stop):
+        section_slices = []
+
+        cum_sections_length = [0] + list(np.cumsum(sections_length[:-1]))
+
+        for section_index, section_length, cum_section_length in zip(sections, sections_length, cum_sections_length):
+            offset = int((self.main_index[section_index]["offset"] - self.signal_data_offset) / 2)
+
+            if i_start >= (cum_section_length + section_length) or i_stop <= cum_section_length:
+                continue
+
+            if i_start <= (cum_section_length) and i_stop >= (cum_section_length + section_length):
+                section_slices.append(slice(offset, offset + section_length))
+
+            elif i_start > (cum_section_length) and i_stop >= (cum_section_length + section_length):
+                section_slices.append(slice(offset + i_start - cum_section_length, offset + section_length))
+
+            elif i_start <= cum_section_length and i_stop < (cum_section_length + section_length):
+                section_slices.append(slice(offset, offset + i_stop - cum_section_length))
+
+            elif i_start > cum_section_length and i_stop < (cum_section_length + section_length):
+                section_slices.append(
+                    slice(offset + i_start - cum_section_length, offset + i_stop - cum_section_length)
+                )
+
+        return section_slices
 
     def _segment_t_start(self, block_index: int, seg_index: int):
         """
