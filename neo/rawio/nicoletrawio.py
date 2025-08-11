@@ -592,7 +592,7 @@ class NicoletRawIO(BaseRawIO):
                         seg_index = 0
                         segment_time_range = [segment["date"] for segment in self.segments_properties]
                         for segment_time in segment_time_range[1:]:
-                            if segment_time < event["date"]:
+                            if segment_time <= event["date"]:
                                 seg_index += 1
                         event["seg_index"] = seg_index
                         event["block_index"] = 0
