@@ -865,7 +865,6 @@ class NicoletRawIO(BaseRawIO):
         data = np.empty([i_stop - i_start, len(channel_indexes)])
         for i in range(len(channel_indexes)):
             current_samplingrate = self.segments_properties[seg_index]["sampling_rates"][i]
-            multiplicator = self.segments_properties[seg_index]["scale"][i]
             [tag_idx] = [tag["index"] for tag in self.tags if tag["tag"] == str(i)]
             all_sections = [j for j, idx_id in enumerate(self.all_section_ids) if idx_id == tag_idx]
             section_lengths = [
@@ -892,7 +891,7 @@ class NicoletRawIO(BaseRawIO):
                     stop = start + (i_stop - i_start - section_length * j)
                 else:
                     stop = start + section_length
-                data[np_idx : (np_idx + section_length), i] = multiplicator * self.raw_signal[slice(start, stop)]
+                data[np_idx : (np_idx + section_length), i] = self.raw_signal[slice(start, stop)]
                 np_idx += section_length
         return data
 
