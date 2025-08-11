@@ -392,6 +392,7 @@ class NicoletRawIO(BaseRawIO):
                 for i in range(n_idx["n_idx"]):
                     properties = self.read_as_dict(fid, signal_properties_segment)
                     signal_properties.append(properties)
+                    fid.seek(256, 1)
         self.signal_structure = signal_structure
         self.signal_properties = signal_properties
         pass
