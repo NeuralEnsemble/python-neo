@@ -759,9 +759,15 @@ class NicoletRawIO(BaseRawIO):
         signal_streams = {}
         stream_id = 0
         for i, channel in enumerate(self.channel_properties):
+            if not channel['on']:
+                continue
             signal = next((item for item in self.signal_properties if item["name"] == channel["sensor"]), None)
             timestream = next((item for item in self.ts_properties if item["active_sensor"] == channel["sensor"]), None)
             if signal is None:
+                warnings.warn(f'No signal found for channel {channel['sensor']}. Skipping channel.')
+                continue
+            if timestream is None:
+                warnings.warn(f'No Scaling and EEG-Offset found for channel {channel['sensor']}. Skipping channel.')
                 continue
             if channel["sampling_rate"] not in signal_streams.keys():
                 signal_streams[channel["sampling_rate"]] = stream_id
