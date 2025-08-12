@@ -760,7 +760,7 @@ class NicoletRawIO(BaseRawIO):
         stream_id = 0
         for i, channel in enumerate(self.channel_properties):
             signal = next((item for item in self.signal_properties if item["name"] == channel["sensor"]), None)
-            timestream = next((item for item in self.ts_properties if item["label"] == channel["sensor"]), None)
+            timestream = next((item for item in self.ts_properties if item["active_sensor"] == channel["sensor"]), None)
             if signal is None:
                 continue
             if channel["sampling_rate"] not in signal_streams.keys():
