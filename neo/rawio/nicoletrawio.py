@@ -869,9 +869,10 @@ class NicoletRawIO(BaseRawIO):
         )
         data = np.empty([i_stop - i_start, len(channel_indexes)])
         section_slices = {}
-        for i in range(len(channel_indexes)):
-            current_samplingrate = self.segments_properties[seg_index]["sampling_rates"][i]
-            [tag_idx] = [tag["index"] for tag in self.tags if tag["tag"] == str(i)]
+        for i, channel_index in enumerate(channel_indexes):
+            current_samplingrate = self.segments_properties[seg_index]["sampling_rates"][channel_index]
+
+            [tag_idx] = [tag["index"] for tag in self.tags if tag["tag"] == str(channel_index)]
             all_sections = [j for j, idx_id in enumerate(self.all_section_ids) if idx_id == tag_idx]
             section_lengths = [
                 int(index["section_l"] / 2) for j, index in enumerate(self.main_index) if j in all_sections
@@ -889,16 +890,16 @@ class NicoletRawIO(BaseRawIO):
 
         full_data = np.empty([section_slices[i][-1].stop - section_slices[0][0].start])
         full_data[0:(section_slices[i][-1].stop - section_slices[0][0].start)] = self.raw_signal[slice(section_slices[0][0].start, section_slices[i][-1].stop)]
-        
         initial_offset = section_slices[0][0].start
-        for channel, slices in section_slices.items():
+
+        for column, slices in section_slices.items():
             np_idx = 0
             for single_slice in slices:
                 full_data_start = single_slice.start - initial_offset
                 full_data_stop = single_slice.stop - initial_offset
                 slice_length = single_slice.stop - single_slice.start
-                data[np_idx:(np_idx+slice_length),channel] = full_data[slice(full_data_start, full_data_stop)]
-                np_idx += slice_length
+                data[np_idx:(np_idx+slice_length),column] = full_data[slice(full_data_start, full_data_stop)]
+                np_idx += slice_length 
 
         return data
 
