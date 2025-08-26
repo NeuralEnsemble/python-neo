@@ -274,10 +274,22 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             "SYNC channel must be the last channel in the buffer. Open an issue in python-neo to request this feature."
                         )
 
-                    neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
-                    adc_channels = [ch for ch in info["channels"] if "ADC" in ch["channel_name"]]
-                    num_neural_channels = len(neural_channels)
-                    num_adc_channels = len(adc_channels)
+                    if "OneBox" not in info["stream_name"]:
+                        # If recording system is not OneBox, which has already a separate stream for ADC channels,
+                        # we need to separate ADC channels from neural channels.
+                        # We do this by defining different stream_ids for ADC and non-ADC channels
+                        # (see above when creating signal_channels and signal_streams)
+
+                        # Split neural and ADC channels
+                        # SYNC channel is handled separately below
+                        neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
+                        adc_channels = [ch for ch in info["channels"] if "ADC" in ch["channel_name"]]
+                        num_neural_channels = len(neural_channels)
+                        num_adc_channels = len(adc_channels) if "OneBox" not in info["stream_name"] else 0
+                    else:
+                        # OneBox already has a separate stream for ADC channels, so no need to split them here
+                        num_neural_channels = num_channels - 1 if has_sync_trace else num_channels
+                        num_adc_channels = 0
 
                     if num_adc_channels == 0:
                         if has_sync_trace and not self.load_sync_channel:
