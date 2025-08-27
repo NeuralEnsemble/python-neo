@@ -16,6 +16,7 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
         "openephysbinary/v0.6.x_neuropixels_with_sync",
         "openephysbinary/v0.6.x_neuropixels_missing_folders",
+        "openephysbinary/v0.6.x_onebox_neuropixels",
         "openephysbinary/neural_and_non_neural_data_mixed",
     ]
 
