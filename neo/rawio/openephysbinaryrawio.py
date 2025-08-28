@@ -513,12 +513,17 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             if has_sync_trace:
                                 values = values[:-1]
 
-                            neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
-                            num_neural_channels = len(neural_channels)
-                            if is_neural_stream:
-                                values = values[:num_neural_channels]
-                            else:
-                                values = values[num_neural_channels:]
+                            if "SYNC" in stream_name and not self.load_sync_channel:
+                                # This is the sync stream, we only keep the last value
+                                values = values[-1:]
+
+                            if "OneBox" not in info["stream_name"]:
+                                neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
+                                num_neural_channels = len(neural_channels)
+                                if is_neural_stream:
+                                    values = values[:num_neural_channels]
+                                else:
+                                    values = values[num_neural_channels:]
 
                             sig_ann["__array_annotations__"][key] = values
 
