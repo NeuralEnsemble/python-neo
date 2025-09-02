@@ -122,11 +122,11 @@ class SpikeGadgetsRawIO(BaseRawIO):
                 if b"</Configuration>" in line:
                     header_size = f.tell()
                     break
-                if line == "" and f.tell() == end_of_file:
+                if line == b"" and f.tell() == end_of_file:
                     break
 
             if header_size is None:
-                ValueError("SpikeGadgets: the xml header does not contain '</Configuration>'")
+                raise ValueError("SpikeGadgets: the xml header does not contain '</Configuration>'")
 
             f.seek(0)
             header_txt = f.read(header_size).decode("utf8")
