@@ -267,9 +267,11 @@ class BlackrockRawIO(BaseRawIO):
             self._nev_spec = self._extract_nev_file_spec()
 
             # read nev headers
-            self._nev_basic_header, self._nev_ext_header = self._nev_header_reader[self._nev_spec]()
+            header_reader_function = self._nev_header_reader[self._nev_spec]
+            self._nev_basic_header, self._nev_ext_header = header_reader_function()
 
-            self.nev_data = self._nev_data_reader[self._nev_spec]()
+            nev_reader_function = self._nev_data_reader[self._nev_spec]
+            self.nev_data = nev_reader_function()
             spikes, spike_segment_ids = self.nev_data["Spikes"]
 
             # scan all channel to get number of Unit
