@@ -188,67 +188,67 @@ class BlackrockRawIO(BaseRawIO):
         # revision of the nsx and nev files to one of the reading routines
         # NSX
         self._nsx_header_reader = {
-            "2.1": self._read_nsx_header_variant_a,
-            "2.2": self._read_nsx_header_variant_b,
-            "2.3": self._read_nsx_header_variant_b,
-            "3.0": self._read_nsx_header_variant_b,
+            "2.1": self._read_nsx_header_spec_v21,
+            "2.2": self._read_nsx_header_spec_v22_30,
+            "2.3": self._read_nsx_header_spec_v22_30,
+            "3.0": self._read_nsx_header_spec_v22_30,
         }
         self._nsx_dataheader_reader = {
-            "2.1": self._read_nsx_dataheader_variant_a,
-            "2.2": self._read_nsx_dataheader_variant_b,
-            "2.3": self._read_nsx_dataheader_variant_b,
-            "3.0": self._read_nsx_dataheader_variant_b,
-            "3.0-ptp": self._read_nsx_dataheader_variant_c,
+            "2.1": self._read_nsx_dataheader_spec_v21,
+            "2.2": self._read_nsx_dataheader_spec_v22_30,
+            "2.3": self._read_nsx_dataheader_spec_v22_30,
+            "3.0": self._read_nsx_dataheader_spec_v22_30,
+            "3.0-ptp": self._read_nsx_dataheader_spec_v30_ptp,
         }
         self._nsx_data_reader = {
-            "2.1": self._read_nsx_data_variant_a,
-            "2.2": self._read_nsx_data_variant_b,
-            "2.3": self._read_nsx_data_variant_b,
-            "3.0": self._read_nsx_data_variant_b,
-            "3.0-ptp": self._read_nsx_data_variant_c,
+            "2.1": self._read_nsx_data_spec_v21,
+            "2.2": self._read_nsx_data_spec_v22_30,
+            "2.3": self._read_nsx_data_spec_v22_30,
+            "3.0": self._read_nsx_data_spec_v22_30,
+            "3.0-ptp": self._read_nsx_data_spec_v30_ptp,
         }
         self._nsx_params = {
-            "2.1": self._get_nsx_param_variant_a,
-            "2.2": self._get_nsx_param_variant_b,
-            "2.3": self._get_nsx_param_variant_b,
-            "3.0": self._get_nsx_param_variant_b,
+            "2.1": self._get_nsx_param_spec_v21,
+            "2.2": self._get_nsx_param_spec_v22_30,
+            "2.3": self._get_nsx_param_spec_v22_30,
+            "3.0": self._get_nsx_param_spec_v22_30,
         }
         # NEV
         self._nev_header_reader = {
-            "2.1": self._read_nev_header_variant_a,
-            "2.2": self._read_nev_header_variant_b,
-            "2.3": self._read_nev_header_variant_c,
-            "3.0": self._read_nev_header_variant_c,
+            "2.1": self._read_nev_header_spec_v21,
+            "2.2": self._read_nev_header_spec_v22,
+            "2.3": self._read_nev_header_spec_v30_ptp,
+            "3.0": self._read_nev_header_spec_v30_ptp,
         }
         self._nev_data_reader = {
-            "2.1": self._read_nev_data_variant_a,
-            "2.2": self._read_nev_data_variant_a,
-            "2.3": self._read_nev_data_variant_b,
-            "3.0": self._read_nev_data_variant_c,
+            "2.1": self._read_nev_data_spec_v21_22,
+            "2.2": self._read_nev_data_spec_v21_22,
+            "2.3": self._read_nev_data_spec_v23,
+            "3.0": self._read_nev_data_spec_v30_ptp,
         }
         self._waveform_size = {
-            "2.1": self._get_waveform_size_variant_a,
-            "2.2": self._get_waveform_size_variant_a,
-            "2.3": self._get_waveform_size_variant_b,
-            "3.0": self._get_waveform_size_variant_b,
+            "2.1": self._get_waveform_size_spec_v21,
+            "2.2": self._get_waveform_size_spec_v21,
+            "2.3": self._get_waveform_size_spec_v22_30,
+            "3.0": self._get_waveform_size_spec_v22_30,
         }
         self._channel_labels = {
-            "2.1": self._get_channel_labels_variant_a,
-            "2.2": self._get_channel_labels_variant_b,
-            "2.3": self._get_channel_labels_variant_b,
-            "3.0": self._get_channel_labels_variant_b,
+            "2.1": self._get_channel_labels_spec_v21,
+            "2.2": self._get_channel_labels_spec_v22_30,
+            "2.3": self._get_channel_labels_spec_v22_30,
+            "3.0": self._get_channel_labels_spec_v22_30,
         }
         self._nonneural_evdicts = {
-            "2.1": self._get_nonneural_evdicts_variant_a,
-            "2.2": self._get_nonneural_evdicts_variant_a,
-            "2.3": self._get_nonneural_evdicts_variant_b,
-            "3.0": self._get_nonneural_evdicts_variant_b,
+            "2.1": self._get_nonneural_evdicts_spec_v21_22,
+            "2.2": self._get_nonneural_evdicts_spec_v21_22,
+            "2.3": self._get_nonneural_evdicts_spec_v23,
+            "3.0": self._get_nonneural_evdicts_spec_v23,
         }
         self._comment_evdict = {
-            "2.1": self._get_comment_evdict_variant_a,
-            "2.2": self._get_comment_evdict_variant_a,
-            "2.3": self._get_comment_evdict_variant_a,
-            "3.0": self._get_comment_evdict_variant_a,
+            "2.1": self._get_comment_evdict_spec_v21_22,
+            "2.2": self._get_comment_evdict_spec_v21_22,
+            "2.3": self._get_comment_evdict_spec_v21_22,
+            "3.0": self._get_comment_evdict_spec_v21_22,
         }
 
     def _parse_header(self):
@@ -852,7 +852,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return spec
 
-    def _read_nsx_header_variant_a(self, nsx_nb):
+    def _read_nsx_header_spec_v21(self, nsx_nb):
         """
         Extract nsx header information from a 2.1 .nsx file
         """
@@ -885,7 +885,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return nsx_basic_header, nsx_ext_header
 
-    def _read_nsx_header_variant_b(self, nsx_nb):
+    def _read_nsx_header_spec_v22_30(self, nsx_nb):
         """
         Extract nsx header information from a 2.2 or 2.3 .nsx file
         """
@@ -966,7 +966,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return packet_header
 
-    def _read_nsx_dataheader_variant_a(self, nsx_nb, filesize=None, offset=None):
+    def _read_nsx_dataheader_spec_v21(self, nsx_nb, filesize=None, offset=None):
         """
         Reads None for the nsx data header of file spec 2.1. Introduced to
         facilitate compatibility with higher file spec.
@@ -974,7 +974,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return None
 
-    def _read_nsx_dataheader_variant_b(
+    def _read_nsx_dataheader_spec_v22_30(
         self,
         nsx_nb,
         filesize=None,
@@ -1027,7 +1027,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return data_header
 
-    def _read_nsx_dataheader_variant_c(
+    def _read_nsx_dataheader_spec_v30_ptp(
         self,
         nsx_nb,
         filesize=None,
@@ -1058,7 +1058,7 @@ class BlackrockRawIO(BaseRawIO):
 
         if not np.all(struct_arr["num_data_points"] == 1):
             # some packets have more than 1 sample. Not actually ptp. Revert to non-ptp variant.
-            return self._read_nsx_dataheader_variant_b(nsx_nb, filesize=filesize, offset=offset)
+            return self._read_nsx_dataheader_spec_v22_30(nsx_nb, filesize=filesize, offset=offset)
 
         # It is still possible there was a data break and the file has multiple segments.
         # We can no longer rely on the presence of a header indicating a new segment,
@@ -1085,7 +1085,7 @@ class BlackrockRawIO(BaseRawIO):
             }
         return data_header
 
-    def _read_nsx_data_variant_a(self, nsx_nb):
+    def _read_nsx_data_spec_v21(self, nsx_nb):
         """
         Extract nsx data from a 2.1 .nsx file
         """
@@ -1104,7 +1104,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return data
 
-    def _read_nsx_data_variant_b(self, nsx_nb):
+    def _read_nsx_data_spec_v22_30(self, nsx_nb):
         """
         Extract nsx data (blocks) from a 2.2, 2.3, or 3.0 .nsx file.
         Blocks can arise if the recording was paused by the user.
@@ -1126,7 +1126,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return data
 
-    def _read_nsx_data_variant_c(self, nsx_nb):
+    def _read_nsx_data_spec_v30_ptp(self, nsx_nb):
         """
         Extract nsx data (blocks) from a 3.0 .nsx file with PTP timestamps
         yielding a timestamp per sample. Blocks can arise
@@ -1216,7 +1216,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return nev_basic_header, nev_ext_header
 
-    def _read_nev_header_variant_a(self):
+    def _read_nev_header_spec_v21(self):
         """
         Extract nev header information from a 2.1 .nev file
         """
@@ -1232,7 +1232,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return self._read_nev_header(ext_header_variants)
 
-    def _read_nev_header_variant_b(self):
+    def _read_nev_header_spec_v22(self):
         """
         Extract nev header information from a 2.2 .nev file
         """
@@ -1251,7 +1251,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return self._read_nev_header(ext_header_variants)
 
-    def _read_nev_header_variant_c(self):
+    def _read_nev_header_spec_v30_ptp(self):
         """
         Extract nev header information from a 2.3 .nev file
         """
@@ -1480,7 +1480,7 @@ class BlackrockRawIO(BaseRawIO):
                 if len(ev_ids):
                     ev_ids[:] = np.vectorize(new_nev_segment_id_mapping.__getitem__)(ev_ids)
 
-    def _read_nev_data_variant_a(self):
+    def _read_nev_data_spec_v21_22(self):
         """
         Extract nev data from a 2.1 & 2.2 .nev file
         """
@@ -1490,7 +1490,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return self._read_nev_data(nev_data_masks, nev_data_types)
 
-    def _read_nev_data_variant_b(self):
+    def _read_nev_data_spec_v23(self):
         """
         Extract nev data from a 2.3 .nev file
         """
@@ -1516,7 +1516,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return self._read_nev_data(nev_data_masks, nev_data_types)
 
-    def _read_nev_data_variant_c(self):
+    def _read_nev_data_spec_v30_ptp(self):
         """
         Extract nev data from a 3.0 .nev file
         """
@@ -1945,7 +1945,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return dtype_waveforms
 
-    def _get_channel_labels_variant_a(self):
+    def _get_channel_labels_spec_v21(self):
         """
         Returns labels for all channels for file spec 2.1
         """
@@ -1960,7 +1960,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return dict(zip(elids, labels))
 
-    def _get_channel_labels_variant_b(self):
+    def _get_channel_labels_spec_v22_30(self):
         """
         Returns labels for all channels for file spec 2.2 and 2.3
         """
@@ -1969,7 +1969,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return dict(zip(elids, labels)) if len(labels) > 0 else None
 
-    def _get_waveform_size_variant_a(self):
+    def _get_waveform_size_spec_v21(self):
         """
         Returns waveform sizes for all channels for file spec 2.1 and 2.2
         """
@@ -1980,7 +1980,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return wf_sizes
 
-    def _get_waveform_size_variant_b(self):
+    def _get_waveform_size_spec_v22_30(self):
         """
         Returns waveform sizes for all channels for file spec 2.3
         """
@@ -2010,7 +2010,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return wf_left_sweep
 
-    def _get_nsx_param_variant_a(self, nsx_nb):
+    def _get_nsx_param_spec_v21(self, nsx_nb):
         """
         Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
         2.1.
@@ -2076,7 +2076,7 @@ class BlackrockRawIO(BaseRawIO):
         # Returns complete dictionary because then it does not need to be called so often
         return nsx_parameters
 
-    def _get_nsx_param_variant_b(self, param_name, nsx_nb):
+    def _get_nsx_param_spec_v22_30(self, param_name, nsx_nb):
         """
         Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
         2.2 and 2.3.
@@ -2100,7 +2100,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return nsx_parameters[param_name]
 
-    def _get_nonneural_evdicts_variant_a(self, data):
+    def _get_nonneural_evdicts_spec_v21_22(self, data):
         """
         Defines event types and the necessary parameters to extract them from
         a 2.1 and 2.2 nev file.
@@ -2192,7 +2192,7 @@ class BlackrockRawIO(BaseRawIO):
 
             self._nb_segment -= 1
 
-    def _get_nonneural_evdicts_variant_b(self, data):
+    def _get_nonneural_evdicts_spec_v23(self, data):
         """
         Defines event types and the necessary parameters to extract them from
         a 2.3 nev file.
@@ -2220,7 +2220,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return event_types
 
-    def _get_comment_evdict_variant_a(self, data):
+    def _get_comment_evdict_spec_v21_22(self, data):
         return {
             "comments": {"name": "comments", "field": "comment", "mask": data["packet_id"] == 65535, "desc": "Comments"}
         }
