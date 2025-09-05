@@ -20,8 +20,12 @@ import os
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import Segment, SpikeTrain, AnalogSignal, Block, Group
+from neo.core import Segment, SpikeTrain, AnalogSignal, Block, Group, NeoReadWriteError
 
+import importlib.metadata
+from packaging.version import Version, parse
+
+numpy_version = parse(importlib.metadata.version('numpy'))
 
 class KwikIO(BaseIO):
     """
@@ -58,6 +62,12 @@ class KwikIO(BaseIO):
         Arguments:
             filename : the filename
         """
+
+        if numpy_version >= Version("2.3.0"):
+            deprecation_msg = ("As the kwik package is no longer actively maintained it only works with NumPy < 2.3.0 and your environment "
+            f"has {numpy_version}. Downgrade your NumPy version to use this IO")
+            raise NeoReadWriteError(deprecation_msg)
+        
         from klusta import kwik
 
         BaseIO.__init__(self)

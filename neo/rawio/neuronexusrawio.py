@@ -24,10 +24,7 @@ like channel_names, channel_ids, channel_types.
 
 An additional note on channels. It appears that analog channels are called `pri` or
 `ai0` within the metadata whereas digital channels are called `din0` or `dout0`.
-In this first implementation it is up to the user to do the appropriate channel slice
-to only get the data they want. This is a buffer-based approach that Sam likes.
-Eventually we will try to divide these channels into streams (analog vs digital) or
-we can come up with a work around if users open an issue requesting this.
+
 
 Zach McKenzie
 
@@ -159,7 +156,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         # given metadata
         if self._timestamps[0] != self.metadata["status"]["timestamp_range"][0]:
             metadata_start = self.metadata["status"]["timestamp_range"][0]
-            data_start = self._teimstamps[0]
+            data_start = self._timestamps[0]
             raise NeoReadWriteError(
                 f"The metadata indicates a different starting timestamp {metadata_start} than the data starting timestamp {data_start}"
             )
