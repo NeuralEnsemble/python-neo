@@ -1363,14 +1363,53 @@ def create_one_file_per_signal_dict_rhd(dirname):
     -------
     raw_files_paths_dict: dict
         A dict of all the file paths
+
+    Raises
+    ------
+    NeoReadWriteError
+        If any required files are missing
     """
 
     raw_file_paths_dict = {}
+    file_status = {}
+    
+    # Check for data files and always add paths to raw_file_paths_dict
     for stream_name, file_name in stream_name_to_file_name_rhd.items():
-        if Path(dirname / file_name).is_file():
-            raw_file_paths_dict[stream_name] = Path(dirname / file_name)
-
-    raw_file_paths_dict["timestamp"] = Path(dirname / "time.dat")
+        file_path = Path(dirname / file_name)
+        exists = file_path.is_file()
+        file_status[stream_name] = {"file": file_name, "exists": exists}
+        raw_file_paths_dict[stream_name] = file_path
+    
+    # Check for timestamp file (required)
+    time_dat_path = Path(dirname / "time.dat")
+    time_dat_exists = time_dat_path.is_file()
+    file_status["timestamp"] = {"file": "time.dat", "exists": time_dat_exists}
+    raw_file_paths_dict["timestamp"] = time_dat_path
+    
+    # Check if any file is missing by iterating through file_status
+    missing_files = any(not info["exists"] for info in file_status.values())
+    if missing_files:
+        # Create a detailed error message
+        error_msg = (
+            "Missing required files for one-file-per-signal format.\n"
+            "Python-neo does not support loading data where the output of the acquisition system "
+            "has been modified. \n Please use the original, unmodified output from the Intan acquisition system.\n\n"
+            "File Status:\n"
+            "+----------------------------------+------------------+----------+\n"
+            "| Stream                           | File             | Found    |\n"
+            "+----------------------------------+------------------+----------+\n"
+        )
+        
+        # Add timestamp first since it's required
+        error_msg += f"| {'timestamp':<32} | {'time.dat':<16} | {'✓' if time_dat_exists else '✗':<8} |\n"
+        
+        # Add all other streams
+        for stream_name, info in file_status.items():
+            if stream_name != "timestamp":  # Skip timestamp as we already added it
+                error_msg += f"| {stream_name:<32} | {info['file']:<16} | {'✓' if info['exists'] else '✗':<8} |\n"
+        
+        error_msg += "+----------------------------------+------------------+----------+\n"
+        raise NeoReadWriteError(error_msg)
 
     return raw_file_paths_dict
 
@@ -1398,18 +1437,64 @@ def create_one_file_per_signal_dict_rhs(dirname):
     -------
     raw_files_paths_dict: dict
         A dict of all the file paths
+
+    Raises
+    ------
+    NeoReadWriteError
+        If any required files are missing
     """
 
     raw_file_paths_dict = {}
+    file_status = {}
+    
+    # Check for data files and always add paths to raw_file_paths_dict
     for stream_name, file_name in stream_name_to_file_name_rhs.items():
-        if Path(dirname / file_name).is_file():
-            raw_file_paths_dict[stream_name] = Path(dirname / file_name)
-
-    raw_file_paths_dict["timestamp"] = Path(dirname / "time.dat")
-    if Path(dirname / "dcamplifier.dat").is_file():
-        raw_file_paths_dict["DC Amplifier channel"] = Path(dirname / "dcamplifier.dat")
-    if Path(dirname / "stim.dat").is_file():
-        raw_file_paths_dict["Stim channel"] = Path(dirname / "stim.dat")
+        file_path = Path(dirname / file_name)
+        exists = file_path.is_file()
+        file_status[stream_name] = {"file": file_name, "exists": exists}
+        raw_file_paths_dict[stream_name] = file_path
+    
+    # Check for timestamp file (required)
+    time_dat_path = Path(dirname / "time.dat")
+    time_dat_exists = time_dat_path.is_file()
+    file_status["timestamp"] = {"file": "time.dat", "exists": time_dat_exists}
+    raw_file_paths_dict["timestamp"] = time_dat_path
+    
+    # Check for optional files
+    dcamplifier_path = Path(dirname / "dcamplifier.dat")
+    dcamplifier_exists = dcamplifier_path.is_file()
+    file_status["DC Amplifier channel"] = {"file": "dcamplifier.dat", "exists": dcamplifier_exists}
+    raw_file_paths_dict["DC Amplifier channel"] = dcamplifier_path
+    
+    stim_path = Path(dirname / "stim.dat")
+    stim_exists = stim_path.is_file()
+    file_status["Stim channel"] = {"file": "stim.dat", "exists": stim_exists}
+    raw_file_paths_dict["Stim channel"] = stim_path
+    
+    # Check if any file is missing by iterating through file_status
+    missing_files = any(not info["exists"] for info in file_status.values())
+    if missing_files:
+        # Create a detailed error message
+        error_msg = (
+            "Missing required files for one-file-per-signal format.\n"
+            "Python-neo does not support loading data where the output of the acquisition system "
+            "has been modified. \n Please use the original, unmodified output from the Intan acquisition system.\n\n"
+            "File Status:\n"
+            "+----------------------------------+------------------+----------+\n"
+            "| Stream                           | File             | Found    |\n"
+            "+----------------------------------+------------------+----------+\n"
+        )
+        
+        # Add timestamp first since it's required
+        error_msg += f"| {'timestamp':<32} | {'time.dat':<16} | {'✓' if time_dat_exists else '✗':<8} |\n"
+        
+        # Add all other streams
+        for stream_name, info in file_status.items():
+            if stream_name != "timestamp":  # Skip timestamp as we already added it
+                error_msg += f"| {stream_name:<32} | {info['file']:<16} | {'✓' if info['exists'] else '✗':<8} |\n"
+        
+        error_msg += "+----------------------------------+------------------+----------+\n"
+        raise NeoReadWriteError(error_msg)
 
     return raw_file_paths_dict
 
