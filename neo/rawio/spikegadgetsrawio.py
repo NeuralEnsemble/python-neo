@@ -111,14 +111,22 @@ class SpikeGadgetsRawIO(BaseRawIO):
         # parse file until "</Configuration>"
         header_size = None
         with open(self.filename, mode="rb") as f:
+            # see https://github.com/NeuralEnsemble/python-neo/issues/1757 for bug with while loop
+            # instead we seek the end of the file so we know when we are at the end
+            # then readline returns an empty string at EOF so we confirm empty string + EOF location
+            f.seek(0,2)
+            end_of_file = f.tell()
+            f.seek(0)
             while True:
                 line = f.readline()
                 if b"</Configuration>" in line:
                     header_size = f.tell()
                     break
+                if line == b"" and f.tell() == end_of_file:
+                    break
 
             if header_size is None:
-                ValueError("SpikeGadgets: the xml header does not contain '</Configuration>'")
+                raise ValueError("SpikeGadgets: the xml header does not contain '</Configuration>'")
 
             f.seek(0)
             header_txt = f.read(header_size).decode("utf8")
