@@ -89,7 +89,7 @@ class RawBinarySignalRawIO(BaseRawWithBufferApiIO):
             self._buffer_descriptions[0][0][buffer_id] = {
                 "type": "raw",
                 "file_path": str(self.filename),
-                "dtype": "uint16",
+                "dtype": self.dtype,
                 "order": "C",
                 "file_offset": self.bytesoffset,
                 "shape": shape,
