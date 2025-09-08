@@ -159,11 +159,14 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     # We then set the stream_id to the sync stream id
                     channel_stream_id = sync_stream_id
 
-                if "ADC" in chan_id:
-                    # These are non-neural channels and their stream should be separated
-                    # We defined their stream_id as the stream_index of neural data plus the number of neural streams
-                    # This is to not break backwards compatbility with the stream_id numbering
-                    channel_stream_id = str(stream_index + len(sig_stream_names))
+                if "OneBox" not in stream_name:
+                    # If recording system is not OneBox, which has already a separate stream for ADC channels,
+                    # we need to separate ADC channels from neural channels.
+                    if "ADC" in chan_id:
+                        # These are non-neural channels and their stream should be separated
+                        # We defined their stream_id as the stream_index of neural data plus the number of neural streams
+                        # This is to not break backwards compatbility with the stream_id numbering
+                        channel_stream_id = str(stream_index + len(sig_stream_names))
 
                 gain = float(chan_info["bit_volts"])
                 sampling_rate = float(info["sample_rate"])
@@ -271,10 +274,22 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             "SYNC channel must be the last channel in the buffer. Open an issue in python-neo to request this feature."
                         )
 
-                    neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
-                    adc_channels = [ch for ch in info["channels"] if "ADC" in ch["channel_name"]]
-                    num_neural_channels = len(neural_channels)
-                    num_adc_channels = len(adc_channels)
+                    if "OneBox" not in info["stream_name"]:
+                        # If recording system is not OneBox, which has already a separate stream for ADC channels,
+                        # we need to separate ADC channels from neural channels.
+                        # We do this by defining different stream_ids for ADC and non-ADC channels
+                        # (see above when creating signal_channels and signal_streams)
+
+                        # Split neural and ADC channels
+                        # SYNC channel is handled separately below
+                        neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
+                        adc_channels = [ch for ch in info["channels"] if "ADC" in ch["channel_name"]]
+                        num_neural_channels = len(neural_channels)
+                        num_adc_channels = len(adc_channels) if "OneBox" not in info["stream_name"] else 0
+                    else:
+                        # OneBox already has a separate stream for ADC channels, so no need to split them here
+                        num_neural_channels = num_channels - 1 if has_sync_trace else num_channels
+                        num_adc_channels = 0
 
                     if num_adc_channels == 0:
                         if has_sync_trace and not self.load_sync_channel:
@@ -498,12 +513,17 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             if has_sync_trace:
                                 values = values[:-1]
 
-                            neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
-                            num_neural_channels = len(neural_channels)
-                            if is_neural_stream:
-                                values = values[:num_neural_channels]
-                            else:
-                                values = values[num_neural_channels:]
+                            if "SYNC" in stream_name and not self.load_sync_channel:
+                                # This is the sync stream, we only keep the last value
+                                values = values[-1:]
+
+                            if "OneBox" not in info["stream_name"]:
+                                neural_channels = [ch for ch in info["channels"] if "ADC" not in ch["channel_name"]]
+                                num_neural_channels = len(neural_channels)
+                                if is_neural_stream:
+                                    values = values[:num_neural_channels]
+                                else:
+                                    values = values[num_neural_channels:]
 
                             sig_ann["__array_annotations__"][key] = values
 

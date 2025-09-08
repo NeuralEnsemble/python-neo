@@ -16,14 +16,16 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
         "openephysbinary/v0.6.x_neuropixels_with_sync",
         "openephysbinary/v0.6.x_neuropixels_missing_folders",
+        "openephysbinary/v0.6.x_onebox_neuropixels",
         "openephysbinary/neural_and_non_neural_data_mixed",
     ]
 
     def test_sync(self):
-        rawio_with_sync = OpenEphysBinaryRawIO(
-            self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"), load_sync_channel=True
-        )
-        rawio_with_sync.parse_header()
+        with self.assertWarns(DeprecationWarning):
+            rawio_with_sync = OpenEphysBinaryRawIO(
+                self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync"), load_sync_channel=True
+            )
+            rawio_with_sync.parse_header()
         stream_name = [s_name for s_name in rawio_with_sync.header["signal_streams"]["name"] if "AP" in s_name][0]
         stream_index = list(rawio_with_sync.header["signal_streams"]["name"]).index(stream_name)
 
@@ -69,10 +71,12 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
     def test_no_sync(self):
         # requesting sync channel when there is none raises an error
         with self.assertRaises(ValueError):
-            rawio_no_sync = OpenEphysBinaryRawIO(
-                self.get_local_path("openephysbinary/v0.6.x_neuropixels_multiexp_multistream"), load_sync_channel=True
-            )
-            rawio_no_sync.parse_header()
+            with self.assertWarns(DeprecationWarning):
+                rawio_no_sync = OpenEphysBinaryRawIO(
+                    self.get_local_path("openephysbinary/v0.6.x_neuropixels_multiexp_multistream"),
+                    load_sync_channel=True,
+                )
+                rawio_no_sync.parse_header()
 
     def test_missing_folders(self):
         # missing folders should raise an error
