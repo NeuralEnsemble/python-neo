@@ -1081,8 +1081,8 @@ class BlackrockRawIO(BaseRawIO):
         # The raw timestamps are the indices of an ideal clock that ticks at `timestamp_resolution` times per second.
         # We convert this indices to actual timestamps in seconds
         raw_timestamps = struct_arr["timestamps"]
-        ideal_clock_rate = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]  # clocks per sec uint64 or uint32
-        timestamps_in_seconds = raw_timestamps / ideal_clock_rate
+        timestamps_rate = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]  # clocks per sec uint64 or uint32
+        timestamps_in_seconds = raw_timestamps / timestamps_rate
 
         time_differences = np.diff(timestamps_in_seconds)
         gap_sample_indices = np.argwhere(time_differences > segmentation_threshold).flatten()
