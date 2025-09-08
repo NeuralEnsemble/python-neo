@@ -73,7 +73,8 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         with self.assertRaises(ValueError):
             with self.assertWarns(DeprecationWarning):
                 rawio_no_sync = OpenEphysBinaryRawIO(
-                    self.get_local_path("openephysbinary/v0.6.x_neuropixels_multiexp_multistream"), load_sync_channel=True
+                    self.get_local_path("openephysbinary/v0.6.x_neuropixels_multiexp_multistream"),
+                    load_sync_channel=True,
                 )
                 rawio_no_sync.parse_header()
 
