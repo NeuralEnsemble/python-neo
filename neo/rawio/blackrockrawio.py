@@ -323,13 +323,25 @@ class BlackrockRawIO(BaseRawIO):
         self._nsx_basic_header = {}
         self._nsx_ext_header = {}
         self._nsx_data_header = {}
+        self._nsx_sampling_frequency = {}
 
+        # Read headers
         for nsx_nb in self._avail_nsx:
             spec_version = self._nsx_spec[nsx_nb] = self._extract_nsx_file_spec(nsx_nb)
             # read nsx headers
             nsx_header_reader = self._nsx_header_reader[spec_version]
             self._nsx_basic_header[nsx_nb], self._nsx_ext_header[nsx_nb] = nsx_header_reader(nsx_nb)
+            
+            # The Blackrock defines period as the number of  1/30_000 seconds between data points
+            # E.g. it is 1 for 30_000, 3 for 10_000, etc
+            nsx_period = self._nsx_basic_header[nsx_nb]["period"]
+            sampling_rate = 30_000.0 / nsx_period
+            self._nsx_sampling_frequency[nsx_nb] = sampling_rate
 
+        
+        # Parase data packages
+        for nsx_nb in self._avail_nsx:
+        
             # The only way to know if it is the Precision Time Protocol of file spec 3.0
             # is to check for nanosecond timestamp resolution.
             is_ptp_variant = (
@@ -1051,7 +1063,7 @@ class BlackrockRawIO(BaseRawIO):
             ("reserved", "uint8"),
             ("timestamps", "uint64"),
             ("num_data_points", "uint32"),
-            ("samples", "int16", self._nsx_basic_header[nsx_nb]["channel_count"]),
+            ("samples", "int16", (self._nsx_basic_header[nsx_nb]["channel_count"],)),
         ]
         npackets = int((filesize - offset) / np.dtype(ptp_dt).itemsize)
         struct_arr = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=offset, mode="r")
@@ -1060,24 +1072,58 @@ class BlackrockRawIO(BaseRawIO):
             # some packets have more than 1 sample. Not actually ptp. Revert to non-ptp variant.
             return self._read_nsx_dataheader_spec_v22_30(nsx_nb, filesize=filesize, offset=offset)
 
-        # It is still possible there was a data break and the file has multiple segments.
-        # We can no longer rely on the presence of a header indicating a new segment,
-        # so we look for timestamp differences greater than double the expected interval.
-        _period = self._nsx_basic_header[nsx_nb]["period"]  # 30_000 ^-1 s per sample
-        _nominal_rate = 30_000 / _period  # samples per sec;  maybe 30_000 should be ["sample_resolution"]
-        _clock_rate = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]  # clocks per sec
-        clk_per_samp = _clock_rate / _nominal_rate  # clk/sec / smp/sec = clk/smp
-        seg_thresh_clk = int(2 * clk_per_samp)
-        seg_starts = np.hstack((0, 1 + np.argwhere(np.diff(struct_arr["timestamps"]) > seg_thresh_clk).flatten()))
-        for seg_ix, seg_start_idx in enumerate(seg_starts):
-            if seg_ix < (len(seg_starts) - 1):
-                seg_stop_idx = seg_starts[seg_ix + 1]
+        
+        # Segment data At the moment, we segment, where the data has gaps that are longer 
+        # than twice the sampling period.
+        sampling_rate = self._nsx_sampling_frequency[nsx_nb]
+        segmentation_threshold = 2.0 / sampling_rate
+
+        # The raw timestamps are the indices of an ideal clock that ticks at `timestamp_resolution` times per second.
+        # We convert this indices to actual timestamps in seconds
+        raw_timestamps = struct_arr["timestamps"]
+        ideal_clock_rate = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]  # clocks per sec uint64 or uint32
+        timestamps_in_seconds = raw_timestamps / ideal_clock_rate
+
+        time_differences = np.diff(timestamps_in_seconds)
+        gap_sample_indices = np.argwhere(time_differences > segmentation_threshold).flatten()
+        segment_start_indices = np.hstack((0, 1 + gap_sample_indices))
+        
+        # Report gaps if any are found
+        if len(gap_sample_indices) > 0:
+            import warnings
+            threshold_ms = segmentation_threshold * 1000
+            
+            segmentation_report_message = (
+                f"\nFound {len(gap_sample_indices)} gaps where samples are farther apart than {threshold_ms:.3f} ms.\n"
+                f"Data will be segmented at these locations to create {len(segment_start_indices)} segments.\n\n"
+                "Gap Details:\n"
+                "+-----------------+-----------------------+-----------------------+\n"
+                "| Sample Index    | Sample at             | Gap Jump              |\n"
+                "|                 | (Seconds)             | (Milliseconds)        |\n"
+                "+-----------------+-----------------------+-----------------------+\n"
+            )
+            
+            for sample_index in gap_sample_indices:
+                gap_duration_seconds = time_differences[sample_index]  # Actual time difference between timestamps
+                gap_duration_ms = gap_duration_seconds * 1000
+                gap_position_seconds = timestamps_in_seconds[sample_index] - timestamps_in_seconds[0]  # Time position relative to start
+                
+                segmentation_report_message += (
+                    f"| {sample_index:>15,} | {gap_position_seconds:>21.6f} | {gap_duration_ms:>21.3f} |\n"
+                )
+            
+            segmentation_report_message += "+-----------------+-----------------------+-----------------------+\n"
+            warnings.warn(segmentation_report_message)
+        
+        for seg_index, seg_start_index in enumerate(segment_start_indices):
+            if seg_index < (len(segment_start_indices) - 1):
+                seg_stop_index = segment_start_indices[seg_index + 1]
             else:
-                seg_stop_idx = len(struct_arr) - 1
-            seg_offset = offset + seg_start_idx * struct_arr.dtype.itemsize
-            num_data_pts = seg_stop_idx - seg_start_idx
+                seg_stop_index = len(struct_arr) - 1
+            seg_offset = offset + seg_start_index * struct_arr.dtype.itemsize
+            num_data_pts = seg_stop_index - seg_start_index
             seg_struct_arr = np.memmap(filename, dtype=ptp_dt, shape=num_data_pts, offset=seg_offset, mode="r")
-            data_header[seg_ix] = {
+            data_header[seg_index] = {
                 "header": None,
                 "timestamp": seg_struct_arr["timestamps"],  # Note, this is an array, not a scalar
                 "nb_data_points": num_data_pts,
@@ -1089,7 +1135,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract nsx data from a 2.1 .nsx file
         """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
         # get shape of data
         shape = (
@@ -1132,7 +1178,7 @@ class BlackrockRawIO(BaseRawIO):
         yielding a timestamp per sample. Blocks can arise
         if the recording was paused by the user.
         """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
         ptp_dt = [
             ("reserved", "uint8"),
@@ -1161,7 +1207,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract nev header information from a of specific .nsx header variant
         """
-        filename = ".".join([self._filenames["nev"], "nev"])
+        filename = f"{self._filenames['nev']}.nev"
 
         # basic header
         dt0 = [
