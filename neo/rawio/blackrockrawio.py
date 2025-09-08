@@ -1072,8 +1072,8 @@ class BlackrockRawIO(BaseRawIO):
             # some packets have more than 1 sample. Not actually ptp. Revert to non-ptp variant.
             return self._read_nsx_dataheader_spec_v22_30(nsx_nb, filesize=filesize, offset=offset)
 
-        
-        # Segment data At the moment, we segment, where the data has gaps that are longer 
+
+        # Segment data, at the moment, we segment, where the data has gaps that are longer
         # than twice the sampling period.
         sampling_rate = self._nsx_sampling_frequency[nsx_nb]
         segmentation_threshold = 2.0 / sampling_rate
@@ -1187,7 +1187,7 @@ class BlackrockRawIO(BaseRawIO):
             ("samples", "int16", (self._nsx_basic_header[nsx_nb]["channel_count"],)),
         ]
 
-        data = {}
+        data = g
         for bl_id, bl_header in self._nsx_data_header[nsx_nb].items():
             struct_arr = np.memmap(
                 filename,
