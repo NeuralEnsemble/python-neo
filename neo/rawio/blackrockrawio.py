@@ -336,7 +336,7 @@ class BlackrockRawIO(BaseRawIO):
             # E.g. it is 1 for 30_000, 3 for 10_000, etc
             nsx_period = self._nsx_basic_header[nsx_nb]["period"]
             sampling_rate = 30_000.0 / nsx_period
-            self._nsx_sampling_frequency[nsx_nb] = sampling_rate
+            self._nsx_sampling_frequency[nsx_nb] = float(sampling_rate)
 
         
         # Parase data packages
@@ -398,7 +398,8 @@ class BlackrockRawIO(BaseRawIO):
                 self._match_nsx_and_nev_segment_ids(nsx_nb)
 
         self.nsx_datas = {}
-        self.sig_sampling_rates = {}
+        # Keep public attribute for backward compatibility but let's use the private one and maybe deprecate this at some point
+        self.sig_sampling_rates = {nsx_number: self._nsx_sampling_frequency[nsx_number] for nsx_number in self.nsx_to_load}
         if len(self.nsx_to_load) > 0:
             for nsx_nb in self.nsx_to_load:
                 basic_header = self._nsx_basic_header[nsx_nb]
@@ -415,8 +416,7 @@ class BlackrockRawIO(BaseRawIO):
                     _data_reader_fun = self._nsx_data_reader[spec_version]
                 self.nsx_datas[nsx_nb] = _data_reader_fun(nsx_nb)
 
-                sr = float(self.main_sampling_rate / basic_header["period"])
-                self.sig_sampling_rates[nsx_nb] = sr
+                sr = self._nsx_sampling_frequency[nsx_nb]
 
                 if spec_version in ["2.2", "2.3", "3.0"]:
                     ext_header = self._nsx_ext_header[nsx_nb]
@@ -485,7 +485,7 @@ class BlackrockRawIO(BaseRawIO):
                     length = self.nsx_datas[nsx_nb][data_bl].shape[0]
                     if self._nsx_data_header[nsx_nb] is None:
                         t_start = 0.0
-                        t_stop = max(t_stop, length / self.sig_sampling_rates[nsx_nb])
+                        t_stop = max(t_stop, length / self._nsx_sampling_frequency[nsx_nb])
                     else:
                         timestamps = self._nsx_data_header[nsx_nb][data_bl]["timestamp"]
                         if hasattr(timestamps, "size") and timestamps.size == length:
@@ -494,7 +494,7 @@ class BlackrockRawIO(BaseRawIO):
                             t_stop = max(t_stop, timestamps[-1] / ts_res + sec_per_samp)
                         else:
                             t_start = timestamps / ts_res
-                            t_stop = max(t_stop, t_start + length / self.sig_sampling_rates[nsx_nb])
+                            t_stop = max(t_stop, t_start + length / self._nsx_sampling_frequency[nsx_nb])
                     self._sigs_t_starts[nsx_nb].append(t_start)
 
                 if self._avail_files["nev"]:
@@ -1094,7 +1094,7 @@ class BlackrockRawIO(BaseRawIO):
             threshold_ms = segmentation_threshold * 1000
             
             segmentation_report_message = (
-                f"\nFound {len(gap_sample_indices)} gaps where samples are farther apart than {threshold_ms:.3f} ms.\n"
+                f"\nFound {len(gap_sample_indices)} gaps for nsx {nsx_nb} where samples are farther apart than {threshold_ms:.3f} ms.\n"
                 f"Data will be segmented at these locations to create {len(segment_start_indices)} segments.\n\n"
                 "Gap Details:\n"
                 "+-----------------+-----------------------+-----------------------+\n"
@@ -1184,7 +1184,7 @@ class BlackrockRawIO(BaseRawIO):
             ("reserved", "uint8"),
             ("timestamps", "uint64"),
             ("num_data_points", "uint32"),
-            ("samples", "int16", self._nsx_basic_header[nsx_nb]["channel_count"]),
+            ("samples", "int16", (self._nsx_basic_header[nsx_nb]["channel_count"],)),
         ]
 
         data = {}
