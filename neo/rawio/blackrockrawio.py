@@ -1263,7 +1263,7 @@ class BlackrockRawIO(BaseRawIO):
         )
 
         # Get packet identifiers and types directly from spec-based dictionaries
-        packet_identifiers = NEV_PACKET_IDENTIFIERS[spec]
+        packet_identifiers = NEV_PACKET_IDENTIFIERS_BY_SPEC[spec]
         data_types = NEV_PACKET_DATA_TYPES_BY_SPEC[spec]
 
         # Apply masks and create type definitions
@@ -1282,11 +1282,15 @@ class BlackrockRawIO(BaseRawIO):
 
         event_segment_ids = self._get_event_segment_ids(raw_data, masks, spec)
 
+        # Extract data for each packet type using view-then-mask pattern
+        # Strategy: reinterpret entire raw_data array with each packet type's structure, then filter
+        # All NEV data packets are fixed-width, so temporarily viewing "Spikes" data as "Comments"
+        # structure is safe - we immediately filter to keep only packets that actually match.
+        # This avoids creating copies of large data arrays during the parsing process.
         data = {}
         for data_type in packet_identifiers:
-            if data_type in masks:
-                mask = masks[data_type]
-                data[data_type] = (raw_data.view(types[data_type])[mask], event_segment_ids[mask])
+            mask = masks[data_type]
+            data[data_type] = (raw_data.view(types[data_type])[mask], event_segment_ids[mask])
 
         return data
 
@@ -2116,7 +2120,7 @@ NEV_EXT_HEADER_TYPES_BY_SPEC = {
 # Used to create masks that filter raw data packets by their packet ID field.
 # Single values indicate equality check, tuples (min, max) indicate range check.
 # According to NEV spec: packet IDs < 32768 identify channels, IDs >= 32768 are system events.
-NEV_PACKET_IDENTIFIERS = {
+NEV_PACKET_IDENTIFIERS_BY_SPEC = {
     "2.1": {
         "NonNeural": 0,
         "Spikes": (1, 255),  # Packet IDs in this range identify spike events on electrodes
