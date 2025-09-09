@@ -215,12 +215,6 @@ class BlackrockRawIO(BaseRawIO):
             "3.0": self._get_nsx_param_spec_v22_30,
         }
         # NEV
-        self._nev_data_reader = {
-            "2.1": self._read_nev_data_spec_v21_22,
-            "2.2": self._read_nev_data_spec_v21_22,
-            "2.3": self._read_nev_data_spec_v23,
-            "3.0": self._read_nev_data_spec_v30_ptp,
-        }
         self._waveform_size = {
             "2.1": self._get_waveform_size_spec_v21,
             "2.2": self._get_waveform_size_spec_v21,
@@ -265,8 +259,7 @@ class BlackrockRawIO(BaseRawIO):
             nev_filename = f"{self._filenames['nev']}.nev"
             self._nev_basic_header, self._nev_ext_header = self._read_nev_header(self._nev_spec, nev_filename)
 
-            nev_reader_function = self._nev_data_reader[self._nev_spec]
-            self.nev_data = nev_reader_function()
+            self.nev_data = self._read_nev_data(self._nev_spec, nev_filename)
             spikes, spike_segment_ids = self.nev_data["Spikes"]
 
             # scan all channel to get number of Unit
@@ -1230,12 +1223,18 @@ class BlackrockRawIO(BaseRawIO):
 
         return nev_basic_header, nev_ext_header
 
-    def _read_nev_data(self, nev_data_masks, nev_data_types):
+    def _read_nev_data(self, spec, filename):
         """
-        Extract nev data from a 2.1 or 2.2 .nev file
+        Extract nev data for any specification version.
+        
+        Parameters
+        ----------
+        spec : str
+            The specification version (e.g., "2.1", "2.2", "2.3", "3.0")
+        filename : str
+            The NEV filename to read from
         """
-        filename = ".".join([self._filenames["nev"], "nev"])
-        data_size = self._nev_basic_header["bytes_in_data_packets"]
+        packet_size_bytes = self._nev_basic_header["bytes_in_data_packets"]
         header_size = self._nev_basic_header["bytes_in_headers"]
 
         if self._nev_basic_header["ver_major"] >= 3:
@@ -1246,13 +1245,14 @@ class BlackrockRawIO(BaseRawIO):
             header_skip = 6
 
         # read all raw data packets and markers
-        dt0 = [("timestamp", ts_format), ("packet_id", "uint16"), ("value", f"S{data_size - header_skip}")]
+        dt0 = [("timestamp", ts_format), ("packet_id", "uint16"), ("value", f"S{packet_size_bytes - header_skip}")]
 
         # expected number of data packets. We are not sure why, but it seems we can get partial data packets
         # based on blackrock's own code this is okay so applying an int to round down is necessary to obtain the
         # memory map of full packets and toss the partial packet.
         # See reference: https://github.com/BlackrockNeurotech/Python-Utilities/blob/fa75aa671680306788e10d3d8dd625f9da4ea4f6/brpylib/brpylib.py#L580-L587
-        n_packets = int((self._get_file_size(filename) - header_size) / data_size)
+        data_packages_in_bytes = self._get_file_size(filename) - header_size
+        n_packets = int(data_packages_in_bytes / packet_size_bytes)
 
         raw_data = np.memmap(
             filename,
@@ -1262,46 +1262,66 @@ class BlackrockRawIO(BaseRawIO):
             mode="r",
         )
 
-        masks = self._nev_data_masks(raw_data["packet_id"])
-        types = self._nev_data_types(data_size)
+        # Get packet identifiers and types directly from spec-based dictionaries
+        packet_identifiers = NEV_PACKET_IDENTIFIERS[spec]
+        data_types = NEV_PACKET_DATA_TYPES_BY_SPEC[spec]
 
-        event_segment_ids = self._get_event_segment_ids(raw_data, masks, nev_data_masks)
+        # Apply masks and create type definitions
+        masks = {}
+        types = {}
+        for data_type, packet_id_spec in packet_identifiers.items():
+            if isinstance(packet_id_spec, tuple):
+                # Range check (min, max)
+                min_val, max_val = packet_id_spec
+                masks[data_type] = (min_val <= raw_data["packet_id"]) & (raw_data["packet_id"] <= max_val)
+            else:
+                # Equality check
+                masks[data_type] = (raw_data["packet_id"] == packet_id_spec)
+            
+            types[data_type] = data_types[data_type](packet_size_bytes)
+
+        event_segment_ids = self._get_event_segment_ids(raw_data, masks, spec)
 
         data = {}
-        for k, v in nev_data_masks.items():
-            mask = masks[k][v]
-            data[k] = (raw_data.view(types[k][nev_data_types[k]])[mask], event_segment_ids[mask])
+        for data_type in packet_identifiers:
+            if data_type in masks:
+                mask = masks[data_type]
+                data[data_type] = (raw_data.view(types[data_type])[mask], event_segment_ids[mask])
 
         return data
 
-    def _get_reset_event_mask(self, raw_event_data, masks, nev_data_masks):
+
+    def _get_reset_event_mask(self, raw_event_data, masks, spec):
         """
         Extract mask for reset comment events in 2.3 .nev file
         """
+        if "Comments" not in masks:
+            return np.zeros(len(raw_event_data), dtype=bool)
+            
         restart_mask = np.logical_and(
-            masks["Comments"][nev_data_masks["Comments"]],
+            masks["Comments"],
             raw_event_data["value"] == b"\x00\x00\x00\x00\x00\x00critical load restart",
         )
         # TODO: Fix hardcoded number of bytes
         return restart_mask
 
-    def _get_event_segment_ids(self, raw_event_data, masks, nev_data_masks):
+    def _get_event_segment_ids(self, raw_event_data, masks, spec):
         """
         Construct array of corresponding segment ids for each event for nev version 2.3
         """
 
-        if self._nev_spec in ["2.1", "2.2"]:
+        if spec in ["2.1", "2.2"]:
             # No pause or reset mechanism present for file version 2.1 and 2.2
             return np.zeros(len(raw_event_data), dtype=int)
 
-        elif self._nev_spec in ["2.3", "3.0"]:
-            reset_ev_mask = self._get_reset_event_mask(raw_event_data, masks, nev_data_masks)
+        elif spec in ["2.3", "3.0"]:
+            reset_ev_mask = self._get_reset_event_mask(raw_event_data, masks, spec)
             reset_ev_ids = np.where(reset_ev_mask)[0]
 
             # consistency check for monotone increasing time stamps
             # - Use logical comparator (instead of np.diff) to avoid unsigned dtype issues.
             # - Only consider handled/known event types.
-            mask_handled = np.any([value[nev_data_masks[key]] for key, value in masks.items()], axis=0)
+            mask_handled = np.any([mask for mask in masks.values()], axis=0)
             jump_ids_handled = (
                 np.where(
                     raw_event_data["timestamp"][mask_handled][1:] < raw_event_data["timestamp"][mask_handled][:-1]
@@ -1328,7 +1348,7 @@ class BlackrockRawIO(BaseRawIO):
             return event_segment_ids
 
         else:
-            raise ValueError(f"Unknown File Spec {self._nev_spec}")
+            raise ValueError(f"Unknown File Spec {spec}")
 
     def _match_nsx_and_nev_segment_ids(self, nsx_nb):
         """
@@ -1439,235 +1459,7 @@ class BlackrockRawIO(BaseRawIO):
                 if len(ev_ids):
                     ev_ids[:] = np.vectorize(new_nev_segment_id_mapping.__getitem__)(ev_ids)
 
-    def _read_nev_data_spec_v21_22(self):
-        """
-        Extract nev data from a 2.1 & 2.2 .nev file
-        """
-        nev_data_masks = {"NonNeural": "a", "Spikes": "a"}
 
-        nev_data_types = {"NonNeural": "a", "Spikes": "a"}
-
-        return self._read_nev_data(nev_data_masks, nev_data_types)
-
-    def _read_nev_data_spec_v23(self):
-        """
-        Extract nev data from a 2.3 .nev file
-        """
-        nev_data_masks = {
-            "NonNeural": "a",
-            "Spikes": "b",
-            "Comments": "a",
-            "VideoSync": "a",
-            "TrackingEvents": "a",
-            "ButtonTrigger": "a",
-            "ConfigEvent": "a",
-        }
-
-        nev_data_types = {
-            "NonNeural": "b",
-            "Spikes": "a",
-            "Comments": "a",
-            "VideoSync": "a",
-            "TrackingEvents": "a",
-            "ButtonTrigger": "a",
-            "ConfigEvent": "a",
-        }
-
-        return self._read_nev_data(nev_data_masks, nev_data_types)
-
-    def _read_nev_data_spec_v30_ptp(self):
-        """
-        Extract nev data from a 3.0 .nev file
-        """
-        nev_data_masks = {
-            "NonNeural": "a",
-            "Spikes": "b",
-            "Comments": "a",
-            "VideoSync": "a",
-            "TrackingEvents": "a",
-            "ButtonTrigger": "a",
-            "ConfigEvent": "a",
-        }
-
-        nev_data_types = {
-            "NonNeural": "c",
-            "Spikes": "b",
-            "Comments": "b",
-            "VideoSync": "b",
-            "TrackingEvents": "b",
-            "ButtonTrigger": "b",
-            "ConfigEvent": "b",
-        }
-
-        return self._read_nev_data(nev_data_masks, nev_data_types)
-
-    def _nev_data_masks(self, packet_ids):
-        """
-        Defines data masks for different .nev file specifications depending on
-        the given packet identifiers.
-        """
-        _nev_data_masks = {
-            "NonNeural": {"a": (packet_ids == 0)},
-            "Spikes": {
-                # Version 2.1 & 2.2
-                "a": (0 < packet_ids) & (packet_ids <= 255),
-                # Version>=2.3
-                "b": (0 < packet_ids) & (packet_ids <= 2048),
-            },
-            "Comments": {"a": (packet_ids == 0xFFFF)},
-            "VideoSync": {"a": (packet_ids == 0xFFFE)},
-            "TrackingEvents": {"a": (packet_ids == 0xFFFD)},
-            "ButtonTrigger": {"a": (packet_ids == 0xFFFC)},
-            "ConfigEvent": {"a": (packet_ids == 0xFFFB)},
-        }
-
-        return _nev_data_masks
-
-    def _nev_data_types(self, data_size):
-        """
-        Defines data types for different .nev file specifications depending on
-        the given packet identifiers.
-        """
-        _nev_data_types = {
-            "NonNeural": {
-                # Version 2.1 & 2.2
-                "a": [
-                    ("timestamp", "uint32"),
-                    ("packet_id", "uint16"),
-                    ("packet_insertion_reason", "uint8"),
-                    ("reserved", "uint8"),
-                    ("digital_input", "uint16"),
-                    ("analog_input_channel_1", "int16"),
-                    ("analog_input_channel_2", "int16"),
-                    ("analog_input_channel_3", "int16"),
-                    ("analog_input_channel_4", "int16"),
-                    ("analog_input_channel_5", "int16"),
-                    ("unused", f"S{data_size - 20}"),
-                ],
-                # Version=2.3
-                "b": [
-                    ("timestamp", "uint32"),
-                    ("packet_id", "uint16"),
-                    ("packet_insertion_reason", "uint8"),
-                    ("reserved", "uint8"),
-                    ("digital_input", "uint16"),
-                    ("unused", f"S{data_size - 10}"),
-                ],
-                # Version >= 3.0
-                "c": [
-                    ("timestamp", "uint64"),
-                    ("packet_id", "uint16"),
-                    ("packet_insertion_reason", "uint8"),
-                    ("dlen", "uint8"),
-                    ("digital_input", "uint16"),
-                    ("unused", f"S{data_size - 14}"),
-                ],
-            },
-            "Spikes": {
-                "a": [
-                    ("timestamp", "uint32"),
-                    ("packet_id", "uint16"),
-                    ("unit_class_nb", "uint8"),
-                    ("reserved", "uint8"),
-                    ("waveform", f"S{data_size - 8}"),
-                ],
-                "b": [
-                    ("timestamp", "uint64"),
-                    ("packet_id", "uint16"),
-                    ("unit_class_nb", "uint8"),
-                    ("dlen", "uint8"),
-                    ("waveform", f"S{data_size - 12}"),
-                ],
-            },
-            "Comments": {
-                "a": [
-                    ("timestamp", "uint32"),
-                    ("packet_id", "uint16"),
-                    ("char_set", "uint8"),
-                    ("flag", "uint8"),
-                    ("color", "uint32"),
-                    ("comment", f"S{data_size - 12}"),
-                ],
-                "b": [
-                    ("timestamp", "uint64"),
-                    ("packet_id", "uint16"),
-                    ("char_set", "uint8"),
-                    ("flag", "uint8"),
-                    ("color", "uint32"),
-                    ("comment", f"S{data_size - 16}"),
-                ],
-            },
-            "VideoSync": {
-                "a": [
-                    ("timestamp", "uint32"),
-                    ("packet_id", "uint16"),
-                    ("video_file_nb", "uint16"),
-                    ("video_frame_nb", "uint32"),
-                    ("video_elapsed_time", "uint32"),
-                    ("video_source_id", "uint32"),
-                    ("unused", "int8", (data_size - 20,)),
-                ],
-                "b": [
-                    ("timestamp", "uint64"),
-                    ("packet_id", "uint16"),
-                    ("video_file_nb", "uint16"),
-                    ("video_frame_nb", "uint32"),
-                    ("video_elapsed_time", "uint32"),
-                    ("video_source_id", "uint32"),
-                    ("unused", "int8", (data_size - 24,)),
-                ],
-            },
-            "TrackingEvents": {
-                "a": [
-                    ("timestamp", "uint32"),
-                    ("packet_id", "uint16"),
-                    ("parent_id", "uint16"),
-                    ("node_id", "uint16"),
-                    ("node_count", "uint16"),
-                    ("point_count", "uint16"),
-                    ("tracking_points", "uint16", ((data_size - 14) // 2,)),
-                ],
-                "b": [
-                    ("timestamp", "uint64"),
-                    ("packet_id", "uint16"),
-                    ("parent_id", "uint16"),
-                    ("node_id", "uint16"),
-                    ("node_count", "uint16"),
-                    ("point_count", "uint16"),
-                    ("tracking_points", "uint16", ((data_size - 18) // 2,)),
-                ],
-            },
-            "ButtonTrigger": {
-                "a": [
-                    ("timestamp", "uint32"),
-                    ("packet_id", "uint16"),
-                    ("trigger_type", "uint16"),
-                    ("unused", "int8", (data_size - 8,)),
-                ],
-                "b": [
-                    ("timestamp", "uint64"),
-                    ("packet_id", "uint16"),
-                    ("trigger_type", "uint16"),
-                    ("unused", "int8", (data_size - 12,)),
-                ],
-            },
-            "ConfigEvent": {
-                "a": [
-                    ("timestamp", "uint32"),
-                    ("packet_id", "uint16"),
-                    ("config_change_type", "uint16"),
-                    ("config_changed", f"S{data_size - 8}"),
-                ],
-                "b": [
-                    ("timestamp", "uint64"),
-                    ("packet_id", "uint16"),
-                    ("config_change_type", "uint16"),
-                    ("config_changed", f"S{data_size - 12}"),
-                ],
-            },
-        }
-
-        return _nev_data_types
 
     def _nev_params(self, param_name):
         """
@@ -2315,6 +2107,200 @@ NEV_EXT_HEADER_TYPES_BY_SPEC = {
             ("analog_channel_5_config", "uint8"),
             ("analog_channel_5_edge_detec_val", "uint16"),
             ("unused", "S6"),
+        ],
+    },
+}
+
+
+# Packet identifiers for different NEV file specifications
+# Used to create masks that filter raw data packets by their packet ID field.
+# Single values indicate equality check, tuples (min, max) indicate range check.
+# According to NEV spec: packet IDs < 32768 identify channels, IDs >= 32768 are system events.
+NEV_PACKET_IDENTIFIERS = {
+    "2.1": {
+        "NonNeural": 0,
+        "Spikes": (1, 255),  # Packet IDs in this range identify spike events on electrodes
+    },
+    "2.2": {
+        "NonNeural": 0,
+        "Spikes": (1, 255),  # Packet IDs in this range identify spike events on electrodes
+    },
+    "2.3": {
+        "NonNeural": 0,
+        "Spikes": (1, 2048),  # Packet IDs in this range identify spike events on electrodes
+        "Comments": 0xFFFF,
+        "VideoSync": 0xFFFE,
+        "TrackingEvents": 0xFFFD,
+        "ButtonTrigger": 0xFFFC,
+        "ConfigEvent": 0xFFFB,
+    },
+    "3.0": {
+        "NonNeural": 0,
+        "Spikes": (1, 2048),  # Packet IDs in this range identify spike events on electrodes
+        "Comments": 0xFFFF,
+        "VideoSync": 0xFFFE,
+        "TrackingEvents": 0xFFFD,
+        "ButtonTrigger": 0xFFFC,
+        "ConfigEvent": 0xFFFB,
+    },
+}
+
+
+# Data types for different NEV file specifications
+# Structure: {spec: {data_type: lambda function that returns dtype definition}}
+NEV_PACKET_DATA_TYPES_BY_SPEC = {
+    "2.1": {
+        "NonNeural": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("packet_insertion_reason", "uint8"),
+            ("reserved", "uint8"),
+            ("digital_input", "uint16"),
+            ("analog_input_channel_1", "int16"),
+            ("analog_input_channel_2", "int16"),
+            ("analog_input_channel_3", "int16"),
+            ("analog_input_channel_4", "int16"),
+            ("analog_input_channel_5", "int16"),
+            ("unused", f"S{packet_size_bytes - 20}"),
+        ],
+        "Spikes": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("unit_class_nb", "uint8"),
+            ("reserved", "uint8"),
+            ("waveform", f"S{packet_size_bytes - 8}"),
+        ],
+    },
+    "2.2": {
+        "NonNeural": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("packet_insertion_reason", "uint8"),
+            ("reserved", "uint8"),
+            ("digital_input", "uint16"),
+            ("analog_input_channel_1", "int16"),
+            ("analog_input_channel_2", "int16"),
+            ("analog_input_channel_3", "int16"),
+            ("analog_input_channel_4", "int16"),
+            ("analog_input_channel_5", "int16"),
+            ("unused", f"S{packet_size_bytes - 20}"),
+        ],
+        "Spikes": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("unit_class_nb", "uint8"),
+            ("reserved", "uint8"),
+            ("waveform", f"S{packet_size_bytes - 8}"),
+        ],
+    },
+    "2.3": {
+        "NonNeural": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("packet_insertion_reason", "uint8"),
+            ("reserved", "uint8"),
+            ("digital_input", "uint16"),
+            ("unused", f"S{packet_size_bytes - 10}"),
+        ],
+        "Spikes": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("unit_class_nb", "uint8"),
+            ("reserved", "uint8"),
+            ("waveform", f"S{packet_size_bytes - 8}"),
+        ],
+        "Comments": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("char_set", "uint8"),
+            ("flag", "uint8"),
+            ("color", "uint32"),
+            ("comment", f"S{packet_size_bytes - 12}"),
+        ],
+        "VideoSync": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("video_file_nb", "uint16"),
+            ("video_frame_nb", "uint32"),
+            ("video_elapsed_time", "uint32"),
+            ("video_source_id", "uint32"),
+            ("unused", "int8", (packet_size_bytes - 20,)),
+        ],
+        "TrackingEvents": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("parent_id", "uint16"),
+            ("node_id", "uint16"),
+            ("node_count", "uint16"),
+            ("point_count", "uint16"),
+            ("tracking_points", "uint16", ((packet_size_bytes - 14) // 2,)),
+        ],
+        "ButtonTrigger": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("trigger_type", "uint16"),
+            ("unused", "int8", (packet_size_bytes - 8,)),
+        ],
+        "ConfigEvent": lambda packet_size_bytes: [
+            ("timestamp", "uint32"),
+            ("packet_id", "uint16"),
+            ("config_change_type", "uint16"),
+            ("config_changed", f"S{packet_size_bytes - 8}"),
+        ],
+    },
+    "3.0": {
+        "NonNeural": lambda packet_size_bytes: [
+            ("timestamp", "uint64"),
+            ("packet_id", "uint16"),
+            ("packet_insertion_reason", "uint8"),
+            ("dlen", "uint8"),
+            ("digital_input", "uint16"),
+            ("unused", f"S{packet_size_bytes - 14}"),
+        ],
+        "Spikes": lambda packet_size_bytes: [
+            ("timestamp", "uint64"),
+            ("packet_id", "uint16"),
+            ("unit_class_nb", "uint8"),
+            ("dlen", "uint8"),
+            ("waveform", f"S{packet_size_bytes - 12}"),
+        ],
+        "Comments": lambda packet_size_bytes: [
+            ("timestamp", "uint64"),
+            ("packet_id", "uint16"),
+            ("char_set", "uint8"),
+            ("flag", "uint8"),
+            ("color", "uint32"),
+            ("comment", f"S{packet_size_bytes - 16}"),
+        ],
+        "VideoSync": lambda packet_size_bytes: [
+            ("timestamp", "uint64"),
+            ("packet_id", "uint16"),
+            ("video_file_nb", "uint16"),
+            ("video_frame_nb", "uint32"),
+            ("video_elapsed_time", "uint32"),
+            ("video_source_id", "uint32"),
+            ("unused", "int8", (packet_size_bytes - 24,)),
+        ],
+        "TrackingEvents": lambda packet_size_bytes: [
+            ("timestamp", "uint64"),
+            ("packet_id", "uint16"),
+            ("parent_id", "uint16"),
+            ("node_id", "uint16"),
+            ("node_count", "uint16"),
+            ("point_count", "uint16"),
+            ("tracking_points", "uint16", ((packet_size_bytes - 18) // 2,)),
+        ],
+        "ButtonTrigger": lambda packet_size_bytes: [
+            ("timestamp", "uint64"),
+            ("packet_id", "uint16"),
+            ("trigger_type", "uint16"),
+            ("unused", "int8", (packet_size_bytes - 12,)),
+        ],
+        "ConfigEvent": lambda packet_size_bytes: [
+            ("timestamp", "uint64"),
+            ("packet_id", "uint16"),
+            ("config_change_type", "uint16"),
+            ("config_changed", f"S{packet_size_bytes - 12}"),
         ],
     },
 }
