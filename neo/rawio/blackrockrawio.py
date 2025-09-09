@@ -1217,11 +1217,16 @@ class BlackrockRawIO(BaseRawIO):
 
         raw_ext_header = np.memmap(filename, offset=offset_dt0, dtype=dt1, shape=shape, mode="r")
 
+        # Parse extended headers by packet type
+        # Strategy: view() entire array first, then mask for efficiency
+        # Since all NEV extended header packets are fixed-width (32 bytes), temporarily
+        # interpreting a "NEUEVWAV" packet as "ARRAYNME" structure is safe - the raw bytes
+        # are just reinterpreted without copying. We immediately filter out mismatched packets
+        # with the mask, keeping only those that actually belong to the current packet type.
         nev_ext_header = {}
         for packet_id, dtype_def in header_types.items():
             mask = raw_ext_header["packet_id"] == packet_id
-            if np.any(mask):
-                nev_ext_header[packet_id] = raw_ext_header.view(dtype_def)[mask]
+            nev_ext_header[packet_id] = raw_ext_header.view(dtype_def)[mask]
 
         return nev_basic_header, nev_ext_header
 
