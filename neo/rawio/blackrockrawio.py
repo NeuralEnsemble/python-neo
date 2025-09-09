@@ -187,27 +187,6 @@ class BlackrockRawIO(BaseRawIO):
 
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
-        # NSX
-        self._nsx_header_reader = {
-            "2.1": self._read_nsx_header_spec_v21,
-            "2.2": self._read_nsx_header_spec_v22_30,
-            "2.3": self._read_nsx_header_spec_v22_30,
-            "3.0": self._read_nsx_header_spec_v22_30,
-        }
-        self._nsx_dataheader_reader = {
-            "2.1": self._read_nsx_dataheader_spec_v21,
-            "2.2": self._read_nsx_dataheader_spec_v22_30,
-            "2.3": self._read_nsx_dataheader_spec_v22_30,
-            "3.0": self._read_nsx_dataheader_spec_v22_30,
-            "3.0-ptp": self._read_nsx_dataheader_spec_v30_ptp,
-        }
-        self._nsx_data_reader = {
-            "2.1": self._read_nsx_data_spec_v21,
-            "2.2": self._read_nsx_data_spec_v22_30,
-            "2.3": self._read_nsx_data_spec_v22_30,
-            "3.0": self._read_nsx_data_spec_v22_30,
-            "3.0-ptp": self._read_nsx_data_spec_v30_ptp,
-        }
         self._nsx_params = {
             "2.1": self._get_nsx_param_spec_v21,
             "2.2": self._get_nsx_param_spec_v22_30,
@@ -315,8 +294,7 @@ class BlackrockRawIO(BaseRawIO):
         for nsx_nb in self._avail_nsx:
             spec_version = self._nsx_spec[nsx_nb] = self._extract_nsx_file_spec(nsx_nb)
             # read nsx headers
-            nsx_header_reader = self._nsx_header_reader[spec_version]
-            self._nsx_basic_header[nsx_nb], self._nsx_ext_header[nsx_nb] = nsx_header_reader(nsx_nb)
+            self._nsx_basic_header[nsx_nb], self._nsx_ext_header[nsx_nb] = self._read_nsx_header(spec_version, nsx_nb)
 
             # The only way to know if it is the Precision Time Protocol of file spec 3.0
             # is to check for nanosecond timestamp resolution.
@@ -325,11 +303,11 @@ class BlackrockRawIO(BaseRawIO):
                 and self._nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000
             )
             if is_ptp_variant:
-                nsx_dataheader_reader = self._nsx_dataheader_reader["3.0-ptp"]
+                data_header_spec = "3.0-ptp"
             else:
-                nsx_dataheader_reader = self._nsx_dataheader_reader[spec_version]
+                data_header_spec = spec_version
             # for nsxdef get_analogsignal_shape(self, block_index, seg_index):
-            self._nsx_data_header[nsx_nb] = nsx_dataheader_reader(nsx_nb)
+            self._nsx_data_header[nsx_nb] = self._read_nsx_dataheader_unified(data_header_spec, nsx_nb)
 
         # nsx_to_load can be either int, list, 'max', 'all' (aka None)
         # here make a list only
@@ -386,10 +364,10 @@ class BlackrockRawIO(BaseRawIO):
                     and basic_header["timestamp_resolution"] == 1_000_000_000
                 )
                 if is_ptp_variant:
-                    _data_reader_fun = self._nsx_data_reader["3.0-ptp"]
+                    data_spec = "3.0-ptp"
                 else:
-                    _data_reader_fun = self._nsx_data_reader[spec_version]
-                self.nsx_datas[nsx_nb] = _data_reader_fun(nsx_nb)
+                    data_spec = spec_version
+                self.nsx_datas[nsx_nb] = self._read_nsx_data(data_spec, nsx_nb)
 
                 sr = float(self.main_sampling_rate / basic_header["period"])
                 self.sig_sampling_rates[nsx_nb] = sr
@@ -840,134 +818,93 @@ class BlackrockRawIO(BaseRawIO):
 
         return spec
 
-    def _read_nsx_header_spec_v21(self, nsx_nb):
+    def _read_nsx_header(self, spec, nsx_nb):
         """
-        Extract nsx header information from a 2.1 .nsx file
+        Extract nsx header information for any specification version.
+        
+        Parameters
+        ----------
+        spec : str
+            The specification version (e.g., "2.1", "2.2", "2.3", "3.0")
+        nsx_nb : int
+            The NSX file number (e.g., 5 for ns5)
+        
+        Returns
+        -------
+        nsx_basic_header : numpy structured array
+            Basic header information
+        nsx_ext_header : numpy memmap
+            Extended header information
         """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
-
-        # basic header (file_id: NEURALCD)
-        dt0 = [
-            ("file_id", "S8"),
-            # label of sampling group (e.g. "1kS/s" or "LFP Low")
-            ("label", "S16"),
-            # number of 1/30000 seconds between data points
-            # (e.g., if sampling rate "1 kS/s", period equals "30")
-            ("period", "uint32"),
-            ("channel_count", "uint32"),
-        ]
-
-        nsx_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
-        # Note: it is not possible to use recfunctions to append_fields of 'timestamp_resolution',
-        #  because the size of this object is used as the header size in later read operations.
-
-        # "extended" header (last field of file_id: NEURALCD)
-        # (to facilitate compatibility with higher file specs)
-        offset_dt0 = np.dtype(dt0).itemsize
-        shape = nsx_basic_header["channel_count"]
-        # originally called channel_id in Blackrock user manual
-        # (to facilitate compatibility with higher file specs)
-        dt1 = [("electrode_id", "uint32")]
-
-        nsx_ext_header = np.memmap(filename, shape=shape, offset=offset_dt0, dtype=dt1, mode="r")
-
-        return nsx_basic_header, nsx_ext_header
-
-    def _read_nsx_header_spec_v22_30(self, nsx_nb):
-        """
-        Extract nsx header information from a 2.2 or 2.3 .nsx file
-        """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-
-        # basic header (file_id: NEURALCD)
-        dt0 = [
-            ("file_id", "S8"),  # achFileType
-            # file specification split into major and minor version number
-            ("ver_major", "uint8"),
-            ("ver_minor", "uint8"),
-            # bytes of basic & extended header
-            ("bytes_in_headers", "uint32"),
-            # label of the sampling group (e.g., "1 kS/s" or "LFP low")
-            ("label", "S16"),
-            ("comment", "S256"),
-            ("period", "uint32"),
-            ("timestamp_resolution", "uint32"),
-            # time origin: 2byte uint16 values for ...
-            ("year", "uint16"),
-            ("month", "uint16"),
-            ("weekday", "uint16"),
-            ("day", "uint16"),
-            ("hour", "uint16"),
-            ("minute", "uint16"),
-            ("second", "uint16"),
-            ("millisecond", "uint16"),
-            # number of channel_count match number of extended headers
-            ("channel_count", "uint32"),
-        ]
-
-        nsx_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
-
-        # extended header (type: CC)
-        offset_dt0 = np.dtype(dt0).itemsize
-        dt1 = [
-            ("type", "S2"),
-            ("electrode_id", "uint16"),
-            ("electrode_label", "S16"),
-            # used front-end amplifier bank (e.g., A, B, C, D)
-            ("physical_connector", "uint8"),
-            # used connector pin (e.g., 1-37 on bank A, B, C or D)
-            ("connector_pin", "uint8"),
-            # digital and analog value ranges of the signal
-            ("min_digital_val", "int16"),
-            ("max_digital_val", "int16"),
-            ("min_analog_val", "int16"),
-            ("max_analog_val", "int16"),
-            # units of the analog range values ("mV" or "uV")
-            ("units", "S16"),
-            # filter settings used to create nsx from source signal
-            ("hi_freq_corner", "uint32"),
-            ("hi_freq_order", "uint32"),
-            ("hi_freq_type", "uint16"),  # 0=None, 1=Butterworth, 2=Chebyshev
-            ("lo_freq_corner", "uint32"),
-            ("lo_freq_order", "uint32"),
-            ("lo_freq_type", "uint16"),
-        ]  # 0=None, 1=Butterworth, 2=Chebyshev
-
+        # Construct filename based on spec version
+        if spec == "2.1":
+            filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
+        else:  # 2.2, 2.3, 3.0
+            filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+        
+        # Get basic header structure for this spec
+        basic_header_dtype = NSX_BASIC_HEADER_TYPES[spec]
+        nsx_basic_header = np.fromfile(filename, count=1, dtype=basic_header_dtype)[0]
+        
+        # Get extended header structure for this spec  
+        ext_header_dtype = NSX_EXT_HEADER_TYPES[spec]
+        offset_dt0 = np.dtype(basic_header_dtype).itemsize
         channel_count = int(nsx_basic_header["channel_count"])
-        nsx_ext_header = np.memmap(filename, shape=channel_count, offset=offset_dt0, dtype=dt1, mode="r")
-
+        nsx_ext_header = np.memmap(filename, shape=channel_count, offset=offset_dt0, dtype=ext_header_dtype, mode="r")
+        
         return nsx_basic_header, nsx_ext_header
 
-    def _read_nsx_dataheader(self, nsx_nb, offset):
+    def _read_nsx_dataheader(self, spec, nsx_nb, offset):
         """
         Reads data header following the given offset of an nsx file.
+        
+        Parameters
+        ----------
+        spec : str
+            The specification version (e.g., "2.2", "2.3", "3.0")
+        nsx_nb : int
+            The NSX file number
+        offset : int
+            Offset position in the file
         """
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
-        major_version = self._nsx_basic_header[nsx_nb]["ver_major"]
-        ts_size = "uint64" if major_version >= 3 else "uint32"
-
-        # dtypes data header, the header flag is always set to 1
-        dt2 = [("header_flag", "uint8"), ("timestamp", ts_size), ("nb_data_points", "uint32")]
-
-        packet_header = np.memmap(filename, dtype=dt2, shape=1, offset=offset, mode="r")[0]
+        # Get data header structure for this spec
+        data_header_dtype = NSX_DATA_HEADER_TYPES[spec]
+        if data_header_dtype is None:
+            return None  # v2.1 has no data headers
+            
+        packet_header = np.memmap(filename, dtype=data_header_dtype, shape=1, offset=offset, mode="r")[0]
 
         return packet_header
 
-    def _read_nsx_dataheader_spec_v21(self, nsx_nb, filesize=None, offset=None):
+    def _read_nsx_dataheader_unified(self, spec, nsx_nb, filesize=None, offset=None):
         """
-        Reads None for the nsx data header of file spec 2.1. Introduced to
-        facilitate compatibility with higher file spec.
+        Reads nsx data header for any specification version.
+        
+        Parameters
+        ----------
+        spec : str
+            The specification version (e.g., "2.1", "2.2", "2.3", "3.0", "3.0-ptp")
+        nsx_nb : int
+            The NSX file number
+        filesize : int, optional
+            File size in bytes (used for PTP variant)
+        offset : int, optional
+            Offset to start reading from
         """
-
-        return None
-
-    def _read_nsx_dataheader_spec_v22_30(
-        self,
-        nsx_nb,
-        filesize=None,
-        offset=None,
-    ):
+        # Version 2.1 has no data headers
+        if spec == "2.1":
+            return None
+            
+        # Handle PTP variant specially
+        if spec == "3.0-ptp":
+            return self._read_nsx_dataheader_ptp(nsx_nb, filesize, offset)
+            
+        # Standard data header reading for versions 2.2, 2.3, 3.0
+        return self._read_nsx_dataheader_standard(spec, nsx_nb, filesize, offset)
+        
+    def _read_nsx_dataheader_standard(self, spec, nsx_nb, filesize=None, offset=None):
         """
         Reads the nsx data header for each data block following the offset of
         file spec 2.2, 2.3, and 3.0.
@@ -986,7 +923,7 @@ class BlackrockRawIO(BaseRawIO):
         current_offset_bytes = offset_to_first_data_block
         data_block_index = 0
         while current_offset_bytes < filesize_bytes:
-            packet_header = self._read_nsx_dataheader(nsx_nb, current_offset_bytes)
+            packet_header = self._read_nsx_dataheader(spec, nsx_nb, current_offset_bytes)
             header_flag = packet_header["header_flag"]
             # NSX data blocks must have header_flag = 1, other values indicate file corruption
             if header_flag != 1:
@@ -1015,12 +952,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return data_header
 
-    def _read_nsx_dataheader_spec_v30_ptp(
-        self,
-        nsx_nb,
-        filesize=None,
-        offset=None,
-    ):
+    def _read_nsx_dataheader_ptp(self, nsx_nb, filesize=None, offset=None):
         """
         Reads the nsx data header for each data block for file spec 3.0 with PTP timestamps
         """
@@ -1029,24 +961,20 @@ class BlackrockRawIO(BaseRawIO):
         filesize = self._get_file_size(filename)
 
         data_header = {}
-        index = 0
 
         if offset is None:
             # This is read as an uint32 numpy scalar from the header so we transform it to python int
             offset = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
 
-        ptp_dt = [
-            ("reserved", "uint8"),
-            ("timestamps", "uint64"),
-            ("num_data_points", "uint32"),
-            ("samples", "int16", self._nsx_basic_header[nsx_nb]["channel_count"]),
-        ]
+        # Use the dictionary for PTP data type
+        channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+        ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
         npackets = int((filesize - offset) / np.dtype(ptp_dt).itemsize)
         struct_arr = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=offset, mode="r")
 
         if not np.all(struct_arr["num_data_points"] == 1):
             # some packets have more than 1 sample. Not actually ptp. Revert to non-ptp variant.
-            return self._read_nsx_dataheader_spec_v22_30(nsx_nb, filesize=filesize, offset=offset)
+            return self._read_nsx_dataheader_standard("3.0", nsx_nb, filesize=filesize, offset=offset)
 
         # It is still possible there was a data break and the file has multiple segments.
         # We can no longer rely on the presence of a header indicating a new segment,
@@ -1073,7 +1001,30 @@ class BlackrockRawIO(BaseRawIO):
             }
         return data_header
 
-    def _read_nsx_data_spec_v21(self, nsx_nb):
+    def _read_nsx_data(self, spec, nsx_nb):
+        """
+        Extract nsx data for any specification version.
+        
+        Parameters
+        ----------
+        spec : str
+            The specification version (e.g., "2.1", "2.2", "2.3", "3.0", "3.0-ptp")
+        nsx_nb : int
+            The NSX file number
+            
+        Returns
+        -------
+        data : dict
+            Dictionary mapping block indices to data arrays
+        """
+        if spec == "2.1":
+            return self._read_nsx_data_v21(nsx_nb)
+        elif spec == "3.0-ptp":
+            return self._read_nsx_data_ptp(nsx_nb)
+        else:  # 2.2, 2.3, 3.0 standard
+            return self._read_nsx_data_standard(nsx_nb)
+            
+    def _read_nsx_data_v21(self, nsx_nb):
         """
         Extract nsx data from a 2.1 .nsx file
         """
@@ -1092,7 +1043,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return data
 
-    def _read_nsx_data_spec_v22_30(self, nsx_nb):
+    def _read_nsx_data_standard(self, nsx_nb):
         """
         Extract nsx data (blocks) from a 2.2, 2.3, or 3.0 .nsx file.
         Blocks can arise if the recording was paused by the user.
@@ -1114,7 +1065,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return data
 
-    def _read_nsx_data_spec_v30_ptp(self, nsx_nb):
+    def _read_nsx_data_ptp(self, nsx_nb):
         """
         Extract nsx data (blocks) from a 3.0 .nsx file with PTP timestamps
         yielding a timestamp per sample. Blocks can arise
@@ -1122,12 +1073,9 @@ class BlackrockRawIO(BaseRawIO):
         """
         filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
 
-        ptp_dt = [
-            ("reserved", "uint8"),
-            ("timestamps", "uint64"),
-            ("num_data_points", "uint32"),
-            ("samples", "int16", self._nsx_basic_header[nsx_nb]["channel_count"]),
-        ]
+        # Use the dictionary for PTP data type
+        channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+        ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
 
         data = {}
         for bl_id, bl_header in self._nsx_data_header[nsx_nb].items():
@@ -2307,4 +2255,152 @@ NEV_PACKET_DATA_TYPES_BY_SPEC = {
             ("config_changed", f"S{packet_size_bytes - 12}"),
         ],
     },
+}
+
+
+# Basic header types for different NSX file specifications
+NSX_BASIC_HEADER_TYPES = {
+    "2.1": [
+        ("file_id", "S8"),
+        ("label", "S16"),
+        ("period", "uint32"),
+        ("channel_count", "uint32"),
+    ],
+    "2.2": [
+        ("file_id", "S8"),
+        ("ver_major", "uint8"),
+        ("ver_minor", "uint8"),
+        ("bytes_in_headers", "uint32"),
+        ("label", "S16"),
+        ("comment", "S256"),
+        ("period", "uint32"),
+        ("timestamp_resolution", "uint32"),
+        ("year", "uint16"),
+        ("month", "uint16"),
+        ("weekday", "uint16"),
+        ("day", "uint16"),
+        ("hour", "uint16"),
+        ("minute", "uint16"),
+        ("second", "uint16"),
+        ("millisecond", "uint16"),
+        ("channel_count", "uint32"),
+    ],
+    "2.3": [
+        ("file_id", "S8"),
+        ("ver_major", "uint8"),
+        ("ver_minor", "uint8"),
+        ("bytes_in_headers", "uint32"),
+        ("label", "S16"),
+        ("comment", "S256"),
+        ("period", "uint32"),
+        ("timestamp_resolution", "uint32"),
+        ("year", "uint16"),
+        ("month", "uint16"),
+        ("weekday", "uint16"),
+        ("day", "uint16"),
+        ("hour", "uint16"),
+        ("minute", "uint16"),
+        ("second", "uint16"),
+        ("millisecond", "uint16"),
+        ("channel_count", "uint32"),
+    ],
+    "3.0": [
+        ("file_id", "S8"),
+        ("ver_major", "uint8"),
+        ("ver_minor", "uint8"),
+        ("bytes_in_headers", "uint32"),
+        ("label", "S16"),
+        ("comment", "S256"),
+        ("period", "uint32"),
+        ("timestamp_resolution", "uint32"),
+        ("year", "uint16"),
+        ("month", "uint16"),
+        ("weekday", "uint16"),
+        ("day", "uint16"),
+        ("hour", "uint16"),
+        ("minute", "uint16"),
+        ("second", "uint16"),
+        ("millisecond", "uint16"),
+        ("channel_count", "uint32"),
+    ],
+}
+
+
+# Extended header types for different NSX file specifications
+NSX_EXT_HEADER_TYPES = {
+    "2.1": [
+        ("electrode_id", "uint32"),
+    ],
+    "2.2": [
+        ("type", "S2"),
+        ("electrode_id", "uint16"),
+        ("electrode_label", "S16"),
+        ("physical_connector", "uint8"),
+        ("connector_pin", "uint8"),
+        ("min_digital_val", "int16"),
+        ("max_digital_val", "int16"),
+        ("min_analog_val", "int16"),
+        ("max_analog_val", "int16"),
+        ("units", "S16"),
+        ("hi_freq_corner", "uint32"),
+        ("hi_freq_order", "uint32"),
+        ("hi_freq_type", "uint16"),
+        ("lo_freq_corner", "uint32"),
+        ("lo_freq_order", "uint32"),
+        ("lo_freq_type", "uint16"),
+    ],
+    "2.3": [
+        ("type", "S2"),
+        ("electrode_id", "uint16"),
+        ("electrode_label", "S16"),
+        ("physical_connector", "uint8"),
+        ("connector_pin", "uint8"),
+        ("min_digital_val", "int16"),
+        ("max_digital_val", "int16"),
+        ("min_analog_val", "int16"),
+        ("max_analog_val", "int16"),
+        ("units", "S16"),
+        ("hi_freq_corner", "uint32"),
+        ("hi_freq_order", "uint32"),
+        ("hi_freq_type", "uint16"),
+        ("lo_freq_corner", "uint32"),
+        ("lo_freq_order", "uint32"),
+        ("lo_freq_type", "uint16"),
+    ],
+    "3.0": [
+        ("type", "S2"),
+        ("electrode_id", "uint16"),
+        ("electrode_label", "S16"),
+        ("physical_connector", "uint8"),
+        ("connector_pin", "uint8"),
+        ("min_digital_val", "int16"),
+        ("max_digital_val", "int16"),
+        ("min_analog_val", "int16"),
+        ("max_analog_val", "int16"),
+        ("units", "S16"),
+        ("hi_freq_corner", "uint32"),
+        ("hi_freq_order", "uint32"),
+        ("hi_freq_type", "uint16"),
+        ("lo_freq_corner", "uint32"),
+        ("lo_freq_order", "uint32"),
+        ("lo_freq_type", "uint16"),
+    ],
+}
+
+# NSX Data Header Types by specification version
+# These define the structure of data block headers within NSX files
+NSX_DATA_HEADER_TYPES = {
+    # Version 2.1 has no data headers - data is stored continuously after the main header
+    "2.1": None,
+    # Versions 2.2+ use data block headers with timestamp size based on major version
+    "2.2": [("header_flag", "uint8"), ("timestamp", "uint32"), ("nb_data_points", "uint32")],
+    "2.3": [("header_flag", "uint8"), ("timestamp", "uint32"), ("nb_data_points", "uint32")], 
+    "3.0": [("header_flag", "uint8"), ("timestamp", "uint64"), ("nb_data_points", "uint32")],
+    # PTP variant has a completely different structure with samples embedded
+    "3.0-ptp": lambda channel_count: [
+        ("reserved", "uint8"),
+        ("timestamps", "uint64"), 
+        ("num_data_points", "uint32"),
+        ("samples", "int16", channel_count)
+    ]
 }
