@@ -1054,10 +1054,8 @@ class BlackrockRawIO(BaseRawIO):
 
         data_header = {}
         index = 0
-
-        if offset is None:
-            # This is read as an uint32 numpy scalar from the header so we transform it to python int
-            offset = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
+        # This is read as an uint32 numpy scalar from the header so we transform it to python int
+        header_size = offset or int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
 
         ptp_dt = [
             ("reserved", "uint8"),
@@ -1065,12 +1063,12 @@ class BlackrockRawIO(BaseRawIO):
             ("num_data_points", "uint32"),
             ("samples", "int16", (self._nsx_basic_header[nsx_nb]["channel_count"],)),
         ]
-        npackets = int((filesize - offset) / np.dtype(ptp_dt).itemsize)
-        struct_arr = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=offset, mode="r")
+        npackets = int((filesize - header_size) / np.dtype(ptp_dt).itemsize)
+        struct_arr = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=header_size, mode="r")
 
         if not np.all(struct_arr["num_data_points"] == 1):
             # some packets have more than 1 sample. Not actually ptp. Revert to non-ptp variant.
-            return self._read_nsx_dataheader_spec_v22_30(nsx_nb, filesize=filesize, offset=offset)
+            return self._read_nsx_dataheader_spec_v22_30(nsx_nb, filesize=filesize, offset=header_size)
 
 
         # Segment data, at the moment, we segment, where the data has gaps that are longer
@@ -1085,45 +1083,51 @@ class BlackrockRawIO(BaseRawIO):
         timestamps_in_seconds = raw_timestamps / timestamps_sampling_rate
 
         time_differences = np.diff(timestamps_in_seconds)
-        gap_sample_indices = np.argwhere(time_differences > segmentation_threshold).flatten()
-        segment_start_indices = np.hstack((0, 1 + gap_sample_indices))
+        gap_indices = np.argwhere(time_differences > segmentation_threshold).flatten()
+        segment_starts = np.hstack((0, 1 + gap_indices))
         
         # Report gaps if any are found
-        if len(gap_sample_indices) > 0:
+        if len(gap_indices) > 0:
             import warnings
             threshold_ms = segmentation_threshold * 1000
             
+            # Calculate all gap details in vectorized operations
+            gap_durations_seconds = time_differences[gap_indices]
+            gap_durations_ms = gap_durations_seconds * 1000
+            gap_positions_seconds = timestamps_in_seconds[gap_indices] - timestamps_in_seconds[0]
+            
+            # Build gap detail lines all at once
+            gap_detail_lines = [
+                f"| {index:>15,} | {pos:>21.6f} | {dur:>21.3f} |\n"
+                for index, pos, dur in zip(gap_indices, gap_positions_seconds, gap_durations_ms)
+            ]
+            
             segmentation_report_message = (
-                f"\nFound {len(gap_sample_indices)} gaps for nsx {nsx_nb} where samples are farther apart than {threshold_ms:.3f} ms.\n"
-                f"Data will be segmented at these locations to create {len(segment_start_indices)} segments.\n\n"
+                f"\nFound {len(gap_indices)} gaps for nsx {nsx_nb} where samples are farther apart than {threshold_ms:.3f} ms.\n"
+                f"Data will be segmented at these locations to create {len(segment_starts)} segments.\n\n"
                 "Gap Details:\n"
                 "+-----------------+-----------------------+-----------------------+\n"
                 "| Sample Index    | Sample at             | Gap Jump              |\n"
                 "|                 | (Seconds)             | (Milliseconds)        |\n"
                 "+-----------------+-----------------------+-----------------------+\n"
+                + ''.join(gap_detail_lines) +
+                "+-----------------+-----------------------+-----------------------+\n"
             )
-            
-            for sample_index in gap_sample_indices:
-                gap_duration_seconds = time_differences[sample_index]  # Actual time difference between timestamps
-                gap_duration_ms = gap_duration_seconds * 1000
-                gap_position_seconds = timestamps_in_seconds[sample_index] - timestamps_in_seconds[0]  # Time position relative to start
-                
-                segmentation_report_message += (
-                    f"| {sample_index:>15,} | {gap_position_seconds:>21.6f} | {gap_duration_ms:>21.3f} |\n"
-                )
-            
-            segmentation_report_message += "+-----------------+-----------------------+-----------------------+\n"
             warnings.warn(segmentation_report_message)
         
-        for seg_index, seg_start_index in enumerate(segment_start_indices):
-            if seg_index < (len(segment_start_indices) - 1):
-                seg_stop_index = segment_start_indices[seg_index + 1]
-            else:
-                seg_stop_index = len(struct_arr) - 1
-            seg_offset = offset + seg_start_index * struct_arr.dtype.itemsize
-            num_data_pts = seg_stop_index - seg_start_index
+        # Calculate all segment boundaries and derived values in one operation
+        segment_boundaries = list(segment_starts) + [len(struct_arr) - 1]
+        segment_num_data_points = [segment_boundaries[i+1] - segment_boundaries[i] for i in range(len(segment_starts))]
+        
+        size_of_data_block = struct_arr.dtype.itemsize
+        segment_offsets = [header_size + pos * size_of_data_block for pos in segment_starts]
+
+        num_segments = len(segment_starts)
+        for segment_index in range(num_segments):
+            seg_offset = segment_offsets[segment_index]
+            num_data_pts = segment_num_data_points[segment_index]
             seg_struct_arr = np.memmap(filename, dtype=ptp_dt, shape=num_data_pts, offset=seg_offset, mode="r")
-            data_header[seg_index] = {
+            data_header[segment_index] = {
                 "header": None,
                 "timestamp": seg_struct_arr["timestamps"],  # Note, this is an array, not a scalar
                 "nb_data_points": num_data_pts,
