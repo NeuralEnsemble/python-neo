@@ -1053,9 +1053,11 @@ class BlackrockRawIO(BaseRawIO):
         filesize = self._get_file_size(filename)
 
         data_header = {}
-        index = 0
-        # This is read as an uint32 numpy scalar from the header so we transform it to python int
-        header_size = offset or int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
+        if offset is None:
+            # This is read as an uint32 numpy scalar from the header so we transform it to python int
+            header_size = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
+        else:
+            header_size = offset
 
         ptp_dt = [
             ("reserved", "uint8"),
