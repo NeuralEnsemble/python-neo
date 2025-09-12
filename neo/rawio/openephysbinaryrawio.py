@@ -50,6 +50,51 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     If this is not the case, you can select a subset of experiments with the `experiment_names`
     argument.
 
+    Expected OpenEphys Folder Structure:
+    dirname/
+    ├── Record Node 102/                  # Recording hardware node (optional, v5.x+)
+    │   ├── settings.xml                  # Main settings file
+    │   ├── settings_2.xml                # Additional experiment settings
+    │   ├── experiment1/                  # Experiment folder (Neo Block 0)
+    │   │   ├── recording1/               # Recording session (Neo Segment 0)
+    │   │   │   ├── structure.oebin       # Required: JSON metadata file
+    │   │   │   ├── continuous/           # Signal data streams
+    │   │   │   │   └── AP_band/          # Stream folder (becomes "Record Node 102#AP_band")
+    │   │   │   │       ├── continuous.dat      # Raw binary signal data
+    │   │   │   │       ├── timestamps.npy      # Sample timestamps (pre-v0.6)
+    │   │   │   │       └── sample_numbers.npy  # Sample numbers (v0.6+)
+    │   │   │   └── events/               # Event data streams (optional)
+    │   │   │       └── TTL_1/            # Event stream folder
+    │   │   │           ├── timestamps.npy
+    │   │   │           ├── channels.npy
+    │   │   │           └── states.npy
+    │   │   └── recording2/               # Recording session (Neo Segment 1)
+    │   │       └── [same structure as recording1]
+    │   └── experiment2/                  # Experiment folder (Neo Block 1)
+    │       └── [same structure as experiment1]
+    └── Record Node 103/                  # Second recording hardware node
+        ├── settings.xml                  # Must have identical experiment structure
+        ├── experiment1/                  # Same experiments as Record Node 102
+        │   └── recording1/               # Streams become "Record Node 103#AP_band"
+        │       └── [same structure]
+        └── experiment2/
+            └── [same structure]
+
+    Multi-Node Recording Behavior:
+    When multiple Record Nodes are present (e.g., "Record Node 102", "Record Node 103"):
+    - All nodes must have identical experiment/recording structure
+    - Streams from all nodes are merged into the same Neo blocks/segments
+    - Stream names are prefixed with node name: "Record Node 102#AP_band"
+    - This allows simultaneous recording from multiple hardware devices
+    - Example: Two Neuropixels probes recording synchronously
+
+    dirname Parameter Options:
+    - Point to root folder containing Record Nodes: Full multi-node, multi-experiment support
+    - Point to specific Record Node folder: Single node, multi-experiment support
+    - Point to specific experiment folder: Single experiment, multi-recording support
+    - Point to specific recording folder: Single recording session only
+    The reader will automatically detect the level and parse accordingly.
+
     # Correspondencies
     Neo          OpenEphys
     block[n-1]   experiment[n]    New device start/stop
