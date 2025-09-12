@@ -1096,24 +1096,6 @@ def explore_folder(dirname, experiment_names=None):
 
 
 def check_folder_consistency(folder_structure, possible_experiment_names=None):
-    """
-    Validate consistency of the discovered OpenEphys folder structure.
-
-    Ensures that multi-node recordings have consistent experiment/recording
-    structures and that streams are consistent across segments and blocks.
-
-    Parameters
-    ----------
-    folder_structure : dict
-        Folder structure from explore_folder()
-    possible_experiment_names : list, optional
-        Available experiment names for error messages
-
-    Raises
-    ------
-    ValueError
-        If folder structure is inconsistent
-    """
     # check that experiment names are the same for differend record nodes
     if len(folder_structure) > 1:
         experiments = None
