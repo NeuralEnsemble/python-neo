@@ -133,13 +133,13 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
     def _parse_header(self):
         # Use the static private methods directly
-        folder_structure, possible_experiments = OpenEphysBinaryRawIO._parse_open_ephys_folder_structure(self.dirname, self.experiment_names)
-        
-        check_folder_consistency(folder_structure, possible_experiments)
-        self.folder_structure = folder_structure
-        
+        folder_structure_dict, possible_experiments = OpenEphysBinaryRawIO._parse_folder_structure(self.dirname, self.experiment_names)
+
+        check_folder_consistency(folder_structure_dict, possible_experiments)
+        self.folder_structure = folder_structure_dict
+
         # Map folder structure to Neo indexing
-        all_streams, nb_block, nb_segment_per_block = OpenEphysBinaryRawIO._map_open_ephys_structure_to_neo_structure(folder_structure)
+        all_streams, nb_block, nb_segment_per_block = OpenEphysBinaryRawIO._map_folder_structure_to_neo(folder_structure_dict)
 
         # all streams are consistent across blocks and segments.
         # also checks that 'continuous' and 'events' folder are present
@@ -687,7 +687,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
     @staticmethod
-    def _parse_open_ephys_folder_structure(dirname, experiment_names=None):
+    def _parse_folder_structure(dirname, experiment_names=None):
         """
         Parse the OpenEphys folder structure by scanning for recordings.
         
@@ -843,9 +843,9 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         return folder_structure, possible_experiment_names
 
     @staticmethod
-    def _map_open_ephys_structure_to_neo_structure(open_ephys_folder_structure_dict):
+    def _map_folder_structure_to_neo(open_ephys_folder_structure_dict):
         """
-        Map discovered OpenEphys folder structure to Neo indexing system.
+        Map folder structure to Neo indexing system.
         
         Converts the hierarchical folder structure to a flattened dictionary
         organized by Neo's block_index (experiments) and seg_index (recordings).
@@ -853,7 +853,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         Parameters
         ----------
         open_ephys_folder_structure_dict : dict
-            Hierarchical folder structure from _parse_open_ephys_folder_structure()
+            Hierarchical folder structure from _parse_folder_structure()
             
         Returns
         -------
@@ -943,8 +943,8 @@ def explore_folder(dirname, experiment_names=None):
         List of all available experiments in the Open Ephys folder
     """
     # Use the static private methods for the implementation
-    folder_structure, possible_experiment_names = OpenEphysBinaryRawIO._parse_open_ephys_folder_structure(dirname, experiment_names)
-    all_streams, nb_block, nb_segment_per_block = OpenEphysBinaryRawIO._map_open_ephys_structure_to_neo_structure(folder_structure)
+    folder_structure, possible_experiment_names = OpenEphysBinaryRawIO._parse_folder_structure(dirname, experiment_names)
+    all_streams, nb_block, nb_segment_per_block = OpenEphysBinaryRawIO._map_folder_structure_to_neo(folder_structure)
 
     return folder_structure, all_streams, nb_block, nb_segment_per_block, possible_experiment_names
 
