@@ -133,13 +133,13 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
     def _parse_header(self):
         # Use the static private methods directly
-        folder_structure_dict, possible_experiments = OpenEphysBinaryRawIO._parse_folder_structure(self.dirname, self.experiment_names)
+        folder_structure_dict, possible_experiments = self._parse_folder_structure(self.dirname, self.experiment_names)
 
         check_folder_consistency(folder_structure_dict, possible_experiments)
         self.folder_structure = folder_structure_dict
 
         # Map folder structure to Neo indexing
-        all_streams, nb_block, nb_segment_per_block = OpenEphysBinaryRawIO._map_folder_structure_to_neo(folder_structure_dict)
+        all_streams, nb_block, nb_segment_per_block = self._map_folder_structure_to_neo(folder_structure_dict)
 
         # all streams are consistent across blocks and segments.
         # also checks that 'continuous' and 'events' folder are present
