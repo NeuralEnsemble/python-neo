@@ -130,16 +130,18 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     def _source_name(self):
         return self.dirname
 
-
     def _parse_header(self):
         # Use the static private methods directly
-        folder_structure_dict, possible_experiments = self._parse_folder_structure(self.dirname, self.experiment_names)
-
+        folder_structure_dict, possible_experiments = OpenEphysBinaryRawIO._parse_folder_structure(
+            self.dirname, self.experiment_names
+        )
         check_folder_consistency(folder_structure_dict, possible_experiments)
         self.folder_structure = folder_structure_dict
 
         # Map folder structure to Neo indexing
-        all_streams, nb_block, nb_segment_per_block = self._map_folder_structure_to_neo(folder_structure_dict)
+        all_streams, nb_block, nb_segment_per_block = OpenEphysBinaryRawIO._map_folder_structure_to_neo(
+            open_ephys_folder_structure_dict=folder_structure_dict
+        )
 
         # all streams are consistent across blocks and segments.
         # also checks that 'continuous' and 'events' folder are present
@@ -690,22 +692,91 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     def _parse_folder_structure(dirname, experiment_names=None):
         """
         Parse the OpenEphys folder structure by scanning for recordings.
-        
-        This is a private method that handles the core folder discovery logic.
-        
+
+        This method walks through the directory tree looking for structure.oebin files,
+        then builds a hierarchical dictionary that mirrors the OpenEphys folder organization.
+        It extracts metadata from each structure.oebin file and organizes it by hardware
+        nodes, experiments, and recordings.
+
         Parameters
         ----------
         dirname : str
             Root folder of the OpenEphys dataset
         experiment_names : str, list, or None
             If multiple experiments are available, select specific experiments.
-            
+            If None, all experiments are discovered and included.
+
         Returns
         -------
-        folder_structure : dict
+        open_ephys_folder_structure_dict : dict
             Hierarchical dictionary describing the raw OpenEphys folder structure.
-        possible_experiment_names : list
-            List of all available experiment names found in the folder
+            Structure: [node_name]["experiments"][exp_id]["recordings"][rec_id]["streams"][stream_type][stream_name] -> <parsed_oebin_info>
+
+            Where:
+            - node_name: str, e.g., "Record Node 102" or "" for single-node recordings
+            - exp_id: int, experiment number from folder name (1, 2, 3, ...)
+            - rec_id: int, recording number from folder name (1, 2, 3, ...)
+            - stream_type: str, either "continuous" or "events"
+            - stream_name: str, e.g., "AP_band", "LF_band", "TTL_1"
+            - <stream_metadata>: dict containing stream-specific metadata from structure.oebin plus added file paths
+
+            For continuous streams, includes:
+            {
+                "channels": [{"channel_name": "CH1", "bit_volts": 0.195, ...}, ...],
+                "sample_rate": 30000.0,
+                "raw_filename": "/path/to/continuous.dat",
+                "dtype": "int16",
+                "timestamp0": 123456,
+                "t_start": 0.0
+            }
+
+            For event streams, includes:
+            {
+                "channel_name": "TTL_1",
+                "timestamps_npy": "/path/to/timestamps.npy",
+                "channels_npy": "/path/to/channels.npy",
+                "sample_numbers_npy": "/path/to/sample_numbers.npy"
+            }
+
+        possible_experiment_names : list of str
+            List of all experiment folder names found, naturally sorted (e.g., ["experiment1", "experiment2"])
+
+        Examples
+        --------
+        For a typical multi-node Neuropixels recording:
+
+        ```python
+        open_ephys_folder_structure_dict, experiments = _parse_folder_structure("/path/to/data")
+
+        # Structure shape:
+        open_ephys_folder_structure_dict = {
+            "Record Node 102": {
+                "experiments": {
+                    1: {  # from "experiment1" folder
+                        "name": "experiment1",
+                        "settings_file": Path("/path/settings.xml"),
+                        "recordings": {
+                            1: {  # from "recording1" folder
+                                "name": "recording1",
+                                "streams": {
+                                    "continuous": {
+                                        "AP_band": <continuous_stream_metadata>,
+                                        "LF_band": <continuous_stream_metadata>
+                                    },
+                                    "events": {
+                                        "TTL_1": <event_stream_metadata>
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "Record Node 103": { ... }  # Same structure for additional nodes
+        }
+
+        experiments = ["experiment1", "experiment2"]
+        ```
         """
         folder_structure = {}
         possible_experiment_names = []
@@ -846,28 +917,101 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     def _map_folder_structure_to_neo(open_ephys_folder_structure_dict):
         """
         Map folder structure to Neo indexing system.
-        
-        Converts the hierarchical folder structure to a flattened dictionary
-        organized by Neo's block_index (experiments) and seg_index (recordings).
-        
+
+        This method transforms OpenEphys's native hierarchical organization into Neo's
+        flattened block/segment indexing system. OpenEphys organizes data by hardware
+        nodes, experiments, and recordings, while Neo uses a two-level structure
+        of blocks and segments with numerical indices.
+
         Parameters
         ----------
         open_ephys_folder_structure_dict : dict
             Hierarchical folder structure from _parse_folder_structure()
-            
+            Structure: [node_name]["experiments"][exp_id]["recordings"][rec_id][stream_type][stream_name]
+
         Returns
         -------
-        all_streams : dict
+        block_segment_streams_dict : dict
             Neo-indexed dictionary: [block_index][seg_index][stream_type][stream_name]
+            Where block_index maps to experiment numbers and seg_index maps to recording numbers
         nb_block : int
-            Number of blocks (experiments) 
+            Total number of blocks (experiments) available
         nb_segment_per_block : dict
-            Number of segments per block. Keys are block indices.
+            Number of segments per block. Keys are block indices, values are segment counts
+
+        Examples
+        --------
+        **Input OpenEphys folder_structure_dict:**
+
+        OpenEphys native organization with hardware nodes, experiments, and recordings:
+
+        ```python
+        {
+            "Record Node 102": {  # Hardware device 1
+                "experiments": {
+                    1: {  # experiment1 folder
+                        "recordings": {
+                            1: {"streams": {"continuous": {"AP_band": <continuous_stream_metadata>, "LF_band": <continuous_stream_metadata>}}},  # recording1
+                            2: {"streams": {"continuous": {"AP_band": <continuous_stream_metadata>, "LF_band": <continuous_stream_metadata>}}}   # recording2
+                        }
+                    },
+                    2: {  # experiment2 folder
+                        "recordings": {
+                            1: {"streams": {"continuous": {"AP_band": <continuous_stream_metadata>, "LF_band": <continuous_stream_metadata>}}}   # recording1
+                        }
+                    }
+                }
+            },
+            "Record Node 103": {  # Hardware device 2 (same structure)
+                "experiments": {
+                    1: {"recordings": {1: {"streams": {"continuous": {"AP_band": <continuous_stream_metadata>}}}}},
+                    2: {"recordings": {1: {"streams": {"continuous": {"AP_band": <continuous_stream_metadata>}}}}}
+                }
+            }
+        }
+        ```
+
+        **Output Neo block_segment_streams_dict:**
+
+        Neo's flattened block/segment organization with merged multi-node streams:
+
+        ```python
+        {
+            0: {  # block_index 0 (experiment1)
+                0: {  # seg_index 0 (recording1)
+                    "continuous": {
+                        "Record Node 102#AP_band": <continuous_stream_metadata>,  # Node prefix added
+                        "Record Node 102#LF_band": <continuous_stream_metadata>,
+                        "Record Node 103#AP_band": <continuous_stream_metadata>   # Streams from both nodes merged
+                    }
+                },
+                1: {  # seg_index 1 (recording2) - only exists for Record Node 102
+                    "continuous": {
+                        "Record Node 102#AP_band": <continuous_stream_metadata>,
+                        "Record Node 102#LF_band": <continuous_stream_metadata>
+                    }
+                }
+            },
+            1: {  # block_index 1 (experiment2)
+                0: {  # seg_index 0 (recording1)
+                    "continuous": {
+                        "Record Node 102#AP_band": <continuous_stream_metadata>,
+                        "Record Node 102#LF_band": <continuous_stream_metadata>,
+                        "Record Node 103#AP_band": <continuous_stream_metadata>
+                    }
+                }
+            }
+        }
+        ```
+
+        **Other outputs:**
+        - `nb_block`: 2 (two experiments total)
+        - `nb_segment_per_block`: {0: 2, 1: 1} (experiment1 has 2 recordings, experiment2 has 1)
         """
-        all_streams = {}
+        block_segment_streams_dict = {}
         nb_segment_per_block = {}
         record_node_names = list(open_ephys_folder_structure_dict.keys())
-        
+
         # Use first record node to determine number of blocks
         recording_node = open_ephys_folder_structure_dict[record_node_names[0]]
         nb_block = len(recording_node["experiments"])
@@ -878,21 +1022,21 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
             for block_index, _ in enumerate(exp_ids_sorted):
                 experiment = recording_node["experiments"][exp_ids_sorted[block_index]]
                 nb_segment_per_block[block_index] = len(experiment["recordings"])
-                if block_index not in all_streams:
-                    all_streams[block_index] = {}
+                if block_index not in block_segment_streams_dict:
+                    block_segment_streams_dict[block_index] = {}
 
                 rec_ids_sorted = sorted(list(experiment["recordings"].keys()))
                 for seg_index, _ in enumerate(rec_ids_sorted):
                     recording = experiment["recordings"][rec_ids_sorted[seg_index]]
-                    if seg_index not in all_streams[block_index]:
-                        all_streams[block_index][seg_index] = {}
+                    if seg_index not in block_segment_streams_dict[block_index]:
+                        block_segment_streams_dict[block_index][seg_index] = {}
                     for stream_type in recording["streams"]:
-                        if stream_type not in all_streams[block_index][seg_index]:
-                            all_streams[block_index][seg_index][stream_type] = {}
+                        if stream_type not in block_segment_streams_dict[block_index][seg_index]:
+                            block_segment_streams_dict[block_index][seg_index][stream_type] = {}
                         for stream_name, signal_stream in recording["streams"][stream_type].items():
-                            all_streams[block_index][seg_index][stream_type][stream_name] = signal_stream
+                            block_segment_streams_dict[block_index][seg_index][stream_type][stream_name] = signal_stream
 
-        return all_streams, nb_block, nb_segment_per_block
+        return block_segment_streams_dict, nb_block, nb_segment_per_block
 
 
 _possible_event_stream_names = (
@@ -943,7 +1087,9 @@ def explore_folder(dirname, experiment_names=None):
         List of all available experiments in the Open Ephys folder
     """
     # Use the static private methods for the implementation
-    folder_structure, possible_experiment_names = OpenEphysBinaryRawIO._parse_folder_structure(dirname, experiment_names)
+    folder_structure, possible_experiment_names = OpenEphysBinaryRawIO._parse_folder_structure(
+        dirname, experiment_names
+    )
     all_streams, nb_block, nb_segment_per_block = OpenEphysBinaryRawIO._map_folder_structure_to_neo(folder_structure)
 
     return folder_structure, all_streams, nb_block, nb_segment_per_block, possible_experiment_names
@@ -952,17 +1098,17 @@ def explore_folder(dirname, experiment_names=None):
 def check_folder_consistency(folder_structure, possible_experiment_names=None):
     """
     Validate consistency of the discovered OpenEphys folder structure.
-    
-    Ensures that multi-node recordings have consistent experiment/recording 
+
+    Ensures that multi-node recordings have consistent experiment/recording
     structures and that streams are consistent across segments and blocks.
-    
+
     Parameters
     ----------
     folder_structure : dict
         Folder structure from explore_folder()
     possible_experiment_names : list, optional
         Available experiment names for error messages
-        
+
     Raises
     ------
     ValueError
