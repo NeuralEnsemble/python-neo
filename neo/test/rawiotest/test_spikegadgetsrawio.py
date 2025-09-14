@@ -56,13 +56,13 @@ class TestSpikeGadgetsRawIO(
     def test_opening_gibberish_file(self):
         """Test that parsing a file without </Configuration> raises ValueError instead of infinite loop."""
         # Create a temporary file with gibberish content that doesn't have the required tag
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.rec') as temp_file:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".rec") as temp_file:
             # Write simple gibberish content without the required </Configuration> tag
             temp_file.write(b"gibberish\n")
             temp_file.flush()
-            
+
             reader = SpikeGadgetsRawIO(filename=temp_file.name)
             with self.assertRaises(ValueError) as cm:
                 reader.parse_header()
-            
+
             self.assertIn("xml header does not contain '</Configuration>'", str(cm.exception))
