@@ -1257,7 +1257,6 @@ class BlackrockRawIO(BaseRawIO):
 
         nev_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
 
-        # extended header reading
         shape = nev_basic_header["nb_ext_headers"]
         offset_dt0 = np.dtype(dt0).itemsize
 
