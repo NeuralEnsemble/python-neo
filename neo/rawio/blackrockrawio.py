@@ -1257,9 +1257,6 @@ class BlackrockRawIO(BaseRawIO):
 
         nev_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
 
-        # Get extended header types for this spec
-        header_types = NEV_EXT_HEADER_TYPES_BY_SPEC[spec]
-
         # extended header reading
         shape = nev_basic_header["nb_ext_headers"]
         offset_dt0 = np.dtype(dt0).itemsize
@@ -1269,6 +1266,10 @@ class BlackrockRawIO(BaseRawIO):
 
         raw_ext_header = np.memmap(filename, offset=offset_dt0, dtype=dt1, shape=shape, mode="r")
 
+
+        # Get extended header types for this spec
+        header_types = NEV_EXT_HEADER_TYPES_BY_SPEC[spec]
+        
         # Parse extended headers by packet type
         # Strategy: view() entire array first, then mask for efficiency
         # Since all NEV extended header packets are fixed-width (32 bytes), temporarily
