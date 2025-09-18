@@ -55,7 +55,13 @@ class NlxHeader(OrderedDict):
         ("DspHighCutNumTaps", "", None),
         ("DspHighCutFilterType", "", None),
         ("DspDelayCompensation", "", None),
-        ("DspFilterDelay_µs", "", None),
+        # DspFilterDelay key with flexible µ symbol matching
+        # Different Neuralynx versions encode the µ (micro) symbol differently:
+        # - Some files use single-byte encoding (latin-1): DspFilterDelay_µs (raw bytes: \xb5)
+        # - Other files use UTF-8 encoding: DspFilterDelay_µs (raw bytes: \xc2\xb5)
+        # When UTF-8 encoded µ (\xc2\xb5) is decoded with latin-1, it becomes "Âµ"
+        # This regex matches both variants: "µs" and "Âµs" but normalizes to "DspFilterDelay_µs"
+        (r"DspFilterDelay_[Â]?µs", "DspFilterDelay_µs", None),
         ("DisabledSubChannels", "", None),
         ("WaveformLength", "", int),
         ("AlignmentPt", "", None),
