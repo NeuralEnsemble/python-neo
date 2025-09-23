@@ -152,7 +152,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         if filename is not None:
             include_filenames = [filename]
-            warnings.warn("`filename` is deprecated and will be removed in v1.0. Please use `include_filenames` instead")
+            warnings.warn("`filename` is deprecated and will be removed in version 1.0. Please use `include_filenames` instead")
 
         if exclude_filename is not None:
             if isinstance(exclude_filename, str):
