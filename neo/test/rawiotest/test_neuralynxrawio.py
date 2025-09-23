@@ -31,6 +31,7 @@ class TestNeuralynxRawIO(
         "neuralynx/Cheetah_v5.6.3/original_data",
         "neuralynx/Cheetah_v5.7.4/original_data",
         "neuralynx/Cheetah_v6.3.2/incomplete_blocks",
+        "neuralynx/two_streams_different_header_encoding",
     ]
 
     def test_scan_ncs_files(self):

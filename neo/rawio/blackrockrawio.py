@@ -331,17 +331,16 @@ class BlackrockRawIO(BaseRawIO):
             # read nsx headers
             nsx_header_reader = self._nsx_header_reader[spec_version]
             self._nsx_basic_header[nsx_nb], self._nsx_ext_header[nsx_nb] = nsx_header_reader(nsx_nb)
-            
+
             # The Blackrock defines period as the number of  1/30_000 seconds between data points
             # E.g. it is 1 for 30_000, 3 for 10_000, etc
             nsx_period = self._nsx_basic_header[nsx_nb]["period"]
             sampling_rate = 30_000.0 / nsx_period
             self._nsx_sampling_frequency[nsx_nb] = float(sampling_rate)
 
-        
         # Parase data packages
         for nsx_nb in self._avail_nsx:
-        
+
             # The only way to know if it is the Precision Time Protocol of file spec 3.0
             # is to check for nanosecond timestamp resolution.
             is_ptp_variant = (
@@ -399,7 +398,9 @@ class BlackrockRawIO(BaseRawIO):
 
         self.nsx_datas = {}
         # Keep public attribute for backward compatibility but let's use the private one and maybe deprecate this at some point
-        self.sig_sampling_rates = {nsx_number: self._nsx_sampling_frequency[nsx_number] for nsx_number in self.nsx_to_load}
+        self.sig_sampling_rates = {
+            nsx_number: self._nsx_sampling_frequency[nsx_number] for nsx_number in self.nsx_to_load
+        }
         if len(self.nsx_to_load) > 0:
             for nsx_nb in self.nsx_to_load:
                 basic_header = self._nsx_basic_header[nsx_nb]
@@ -1072,7 +1073,6 @@ class BlackrockRawIO(BaseRawIO):
             # some packets have more than 1 sample. Not actually ptp. Revert to non-ptp variant.
             return self._read_nsx_dataheader_spec_v22_30(nsx_nb, filesize=filesize, offset=header_size)
 
-
         # Segment data, at the moment, we segment, where the data has gaps that are longer
         # than twice the sampling period.
         sampling_rate = self._nsx_sampling_frequency[nsx_nb]
@@ -1081,29 +1081,32 @@ class BlackrockRawIO(BaseRawIO):
         # The raw timestamps are the indices of an ideal clock that ticks at `timestamp_resolution` times per second.
         # We convert this indices to actual timestamps in seconds
         raw_timestamps = struct_arr["timestamps"]
-        timestamps_sampling_rate = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]  # clocks per sec uint64 or uint32
+        timestamps_sampling_rate = self._nsx_basic_header[nsx_nb][
+            "timestamp_resolution"
+        ]  # clocks per sec uint64 or uint32
         timestamps_in_seconds = raw_timestamps / timestamps_sampling_rate
 
         time_differences = np.diff(timestamps_in_seconds)
         gap_indices = np.argwhere(time_differences > segmentation_threshold).flatten()
         segment_starts = np.hstack((0, 1 + gap_indices))
-        
+
         # Report gaps if any are found
         if len(gap_indices) > 0:
             import warnings
+
             threshold_ms = segmentation_threshold * 1000
-            
+
             # Calculate all gap details in vectorized operations
             gap_durations_seconds = time_differences[gap_indices]
             gap_durations_ms = gap_durations_seconds * 1000
             gap_positions_seconds = timestamps_in_seconds[gap_indices] - timestamps_in_seconds[0]
-            
+
             # Build gap detail lines all at once
             gap_detail_lines = [
                 f"| {index:>15,} | {pos:>21.6f} | {dur:>21.3f} |\n"
                 for index, pos, dur in zip(gap_indices, gap_positions_seconds, gap_durations_ms)
             ]
-            
+
             segmentation_report_message = (
                 f"\nFound {len(gap_indices)} gaps for nsx {nsx_nb} where samples are farther apart than {threshold_ms:.3f} ms.\n"
                 f"Data will be segmented at these locations to create {len(segment_starts)} segments.\n\n"
@@ -1112,15 +1115,17 @@ class BlackrockRawIO(BaseRawIO):
                 "| Sample Index    | Sample at             | Gap Jump              |\n"
                 "|                 | (Seconds)             | (Milliseconds)        |\n"
                 "+-----------------+-----------------------+-----------------------+\n"
-                + ''.join(gap_detail_lines) +
-                "+-----------------+-----------------------+-----------------------+\n"
+                + "".join(gap_detail_lines)
+                + "+-----------------+-----------------------+-----------------------+\n"
             )
             warnings.warn(segmentation_report_message)
-        
+
         # Calculate all segment boundaries and derived values in one operation
         segment_boundaries = list(segment_starts) + [len(struct_arr) - 1]
-        segment_num_data_points = [segment_boundaries[i+1] - segment_boundaries[i] for i in range(len(segment_starts))]
-        
+        segment_num_data_points = [
+            segment_boundaries[i + 1] - segment_boundaries[i] for i in range(len(segment_starts))
+        ]
+
         size_of_data_block = struct_arr.dtype.itemsize
         segment_offsets = [header_size + pos * size_of_data_block for pos in segment_starts]
 
