@@ -231,7 +231,8 @@ class NeuralynxRawIO(BaseRawIO):
         else:  # one-dir mode
             # For one-dir mode, get all files from directory
             dir_path = Path(self.dirname)
-            file_paths = [item for item in sorted(dir_path.iterdir()) if item.is_file()]
+            file_paths = [p for p in dir_path.iterdir() if p.is_file()]
+            file_paths = sorted(file_paths, key=lambda p: p.name)
 
         # 2) Filter by exclude filenames
         file_paths = [fp for fp in file_paths if fp.name not in self.exclude_filenames]
