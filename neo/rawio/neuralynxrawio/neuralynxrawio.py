@@ -55,7 +55,6 @@ from ..baserawio import (
 )
 import numpy as np
 import os
-import pathlib
 from pathlib import Path
 import copy
 import warnings
@@ -588,7 +587,7 @@ class NeuralynxRawIO(BaseRawIO):
         Create memory maps when needed
         see also https://github.com/numpy/numpy/issues/19340
         """
-        filename = pathlib.Path(filename)
+        filename = Path(filename)
         suffix = filename.suffix.lower()[1:]
 
         if suffix == "ncs":
