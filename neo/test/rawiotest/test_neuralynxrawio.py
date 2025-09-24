@@ -176,6 +176,43 @@ class TestNeuralynxRawIO(
         self.assertEqual(len(rawio.header["spike_channels"]), 8)
         self.assertEqual(len(rawio.header["event_channels"]), 0)
 
+    def test_directory_in_data_folder(self):
+        """
+        Test that directories inside the data folder are properly ignored
+        and don't cause errors during parsing.
+        """
+        import tempfile
+        import shutil
+
+        # Use existing test data directory
+        dname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data/")
+
+        # Create a temporary copy to avoid modifying test data
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_data_dir = os.path.join(temp_dir, "test_data")
+            shutil.copytree(dname, temp_data_dir)
+
+            # Create a subdirectory inside the test data
+            test_subdir = os.path.join(temp_data_dir, "raw fscv data with all recorded ch")
+            os.makedirs(test_subdir, exist_ok=True)
+
+            # Create some files in the subdirectory to make it more realistic
+            with open(os.path.join(test_subdir, "some_file.txt"), "w") as f:
+                f.write("test file content")
+
+            # This should not raise an error despite the directory presence
+            rawio = NeuralynxRawIO(dirname=temp_data_dir)
+            rawio.parse_header()
+
+            # Verify that the reader still works correctly
+            self.assertEqual(rawio._nb_segment, 2)
+            self.assertEqual(len(rawio.ncs_filenames), 2)
+            self.assertEqual(len(rawio.nev_filenames), 1)
+            sigHdrs = rawio.header["signal_channels"]
+            self.assertEqual(sigHdrs.size, 2)
+            self.assertEqual(len(rawio.header["spike_channels"]), 8)
+            self.assertEqual(len(rawio.header["event_channels"]), 2)
+
 
 class TestNcsRecordingType(BaseTestRawIO, unittest.TestCase):
     """
