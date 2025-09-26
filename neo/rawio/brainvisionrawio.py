@@ -55,7 +55,7 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         marker_filename = self.filename.replace(bname, vhdr_header["Common Infos"]["MarkerFile"])
         binary_filename = self.filename.replace(bname, vhdr_header["Common Infos"]["DataFile"])
 
-        binary_filename = self._ensure_filename(binary_filename, "binary")
+        binary_filename = self._ensure_filename(binary_filename, "data")
         marker_filename = self._ensure_filename(marker_filename, "marker")
 
         if vhdr_header["Common Infos"]["DataFormat"] != "BINARY":
