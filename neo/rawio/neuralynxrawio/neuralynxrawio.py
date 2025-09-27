@@ -55,7 +55,7 @@ from ..baserawio import (
 )
 import numpy as np
 import os
-import pathlib
+from pathlib import Path
 import copy
 import warnings
 from collections import namedtuple, OrderedDict
@@ -151,7 +151,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         if filename is not None:
             include_filenames = [filename]
-            warnings.warn("`filename` is deprecated and will be removed. Please use `include_filenames` instead")
+            warnings.warn("`filename` is deprecated and will be removed in version 1.0. Please use `include_filenames` instead")
 
         if exclude_filename is not None:
             if isinstance(exclude_filename, str):
@@ -159,7 +159,7 @@ class NeuralynxRawIO(BaseRawIO):
             else:
                 exclude_filenames = exclude_filename
             warnings.warn(
-                "`exclude_filename` is deprecated and will be removed. Please use `exclude_filenames` instead"
+                "`exclude_filename` is deprecated and will be removed in version 1.0. Please use `exclude_filenames` instead"
             )
 
         if include_filenames is None:
@@ -214,30 +214,43 @@ class NeuralynxRawIO(BaseRawIO):
         unit_annotations = []
         event_annotations = []
 
-        if self.rawmode == "one-dir":
-            filenames = sorted(os.listdir(self.dirname))
-        else:
-            filenames = self.include_filenames
+        # 1) Get file paths based on mode and validate existence for multiple-files mode
+        if self.rawmode == "multiple-files":
+            # For multiple-files mode, validate that all explicitly provided files exist
+            file_paths = []
+            for filename in self.include_filenames:
+                full_path = Path(self.dirname) / filename
+                if not full_path.is_file():
+                    raise ValueError(
+                        f"Provided Filename is not a file: "
+                        f"{full_path}. If you want to provide a "
+                        f"directory use the `dirname` keyword"
+                    )
+                file_paths.append(full_path)
+        else:  # one-dir mode
+            # For one-dir mode, get all files from directory
+            dir_path = Path(self.dirname)
+            file_paths = [p for p in dir_path.iterdir() if p.is_file()]
+            file_paths = sorted(file_paths, key=lambda p: p.name)
 
-        filenames = [f for f in filenames if f not in self.exclude_filenames]
-        full_filenames = [os.path.join(self.dirname, f) for f in filenames]
+        # 2) Filter by exclude filenames
+        file_paths = [fp for fp in file_paths if fp.name not in self.exclude_filenames]
 
-        for filename in full_filenames:
-            if not os.path.isfile(filename):
-                raise ValueError(
-                    f"Provided Filename is not a file: "
-                    f"{filename}. If you want to provide a "
-                    f"directory use the `dirname` keyword"
-                )
+        # 3) Filter to keep only files with correct extensions
+        # Note: suffix[1:] removes the leading dot from file extension (e.g., ".ncs" -> "ncs")
+        valid_file_paths = [
+            fp for fp in file_paths
+            if fp.suffix[1:].lower() in self.extensions
+        ]
+
+        # Convert back to strings for backwards compatibility with existing code
+        full_filenames = [str(fp) for fp in valid_file_paths]
 
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
         for filename in full_filenames:
             _, ext = os.path.splitext(filename)
-            ext = ext[1:]  # remove dot
-            ext = ext.lower()  # make lower case for comparisons
-            if ext not in self.extensions:
-                continue
+            ext = ext[1:].lower()  # remove dot and make lower case
 
             # Skip Ncs files with only header. Other empty file types
             # will have an empty dataset constructed later.
@@ -574,7 +587,7 @@ class NeuralynxRawIO(BaseRawIO):
         Create memory maps when needed
         see also https://github.com/numpy/numpy/issues/19340
         """
-        filename = pathlib.Path(filename)
+        filename = Path(filename)
         suffix = filename.suffix.lower()[1:]
 
         if suffix == "ncs":
