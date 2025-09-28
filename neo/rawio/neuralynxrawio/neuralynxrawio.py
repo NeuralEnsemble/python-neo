@@ -151,7 +151,9 @@ class NeuralynxRawIO(BaseRawIO):
 
         if filename is not None:
             include_filenames = [filename]
-            warnings.warn("`filename` is deprecated and will be removed in version 1.0. Please use `include_filenames` instead")
+            warnings.warn(
+                "`filename` is deprecated and will be removed in version 1.0. Please use `include_filenames` instead"
+            )
 
         if exclude_filename is not None:
             if isinstance(exclude_filename, str):
@@ -238,10 +240,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         # 3) Filter to keep only files with correct extensions
         # Note: suffix[1:] removes the leading dot from file extension (e.g., ".ncs" -> "ncs")
-        valid_file_paths = [
-            fp for fp in file_paths
-            if fp.suffix[1:].lower() in self.extensions
-        ]
+        valid_file_paths = [fp for fp in file_paths if fp.suffix[1:].lower() in self.extensions]
 
         # Convert back to strings for backwards compatibility with existing code
         full_filenames = [str(fp) for fp in valid_file_paths]
