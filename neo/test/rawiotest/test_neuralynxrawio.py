@@ -213,6 +213,48 @@ class TestNeuralynxRawIO(
             self.assertEqual(len(rawio.header["spike_channels"]), 8)
             self.assertEqual(len(rawio.header["event_channels"]), 2)
 
+    def test_two_streams_different_header_encoding(self):
+        """
+        Test that streams are correctly differentiated based on filter parameters.
+        This dataset contains eye-tracking and ephys channels with different filter settings.
+        """
+        from pathlib import Path
+
+        # Get the path using the same machinery as other tests
+        dname = self.get_local_path("neuralynx/two_streams_different_header_encoding")
+
+        # Test with Path object (as shown in user's notebook)
+        rawio = NeuralynxRawIO(dirname=Path(dname))
+        rawio.parse_header()
+
+        # Should have 2 streams due to different filter configurations
+        self.assertEqual(rawio.signal_streams_count(), 2)
+
+        # Check stream names follow the new naming convention
+        stream_names = [rawio.header["signal_streams"][i][0] for i in range(rawio.signal_streams_count())]
+
+        # Stream names should include sampling rate (Hz), voltage range (mV), and filter ID
+        for stream_name in stream_names:
+            self.assertRegex(stream_name, r"stream\d+_\d+Hz_\d+mVRange_f\d+")
+
+        # Verify we have the expected streams:
+        # - Eye-tracking channels (CSC145, CSC146): 32000Hz, 100mV range, low-cut disabled
+        # - Ephys channel (csc23_100): 32000Hz, 1mV range, low-cut enabled
+        expected_names = {"stream0_32000Hz_100mVRange_f0", "stream1_32000Hz_1mVRange_f1"}
+        self.assertEqual(set(stream_names), expected_names)
+
+        # Verify filter configurations are stored privately
+        self.assertTrue(hasattr(rawio, "_filter_configurations"))
+        self.assertEqual(len(rawio._filter_configurations), 2)
+
+        # Verify filter 0 (eye-tracking): low-cut disabled
+        filter_0 = rawio._filter_configurations[0]
+        self.assertFalse(filter_0.get("DSPLowCutFilterEnabled", True))
+
+        # Verify filter 1 (ephys): low-cut enabled
+        filter_1 = rawio._filter_configurations[1]
+        self.assertTrue(filter_1.get("DSPLowCutFilterEnabled", False))
+
 
 class TestNcsRecordingType(BaseTestRawIO, unittest.TestCase):
     """

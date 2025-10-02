@@ -134,6 +134,20 @@ class NeuralynxRawIO(BaseRawIO):
         ("samples", "int16", NcsSection._RECORD_SIZE),
     ]
 
+    # Filter parameter keys used for stream differentiation
+    _filter_keys = [
+        "DSPLowCutFilterEnabled",
+        "DspLowCutFrequency",
+        "DspLowCutFilterType",
+        "DspLowCutNumTaps",
+        "DSPHighCutFilterEnabled",
+        "DspHighCutFrequency",
+        "DspHighCutFilterType",
+        "DspHighCutNumTaps",
+        "DspDelayCompensation",
+        "DspFilterDelay_µs",
+    ]
+
     def __init__(
         self,
         dirname="",
@@ -188,6 +202,61 @@ class NeuralynxRawIO(BaseRawIO):
 
     def _source_name(self):
         return self.dirname
+
+    def _build_stream_key(self, header_info, chan_index, gain):
+        """
+        Build stream key based on acquisition parameters only.
+
+        Stream keys are used to group channels that share the same acquisition
+        configuration. Channels with the same stream key will be placed in the
+        same stream and can be read together.
+
+        Parameters
+        ----------
+        header_info : dict
+            Header information from NlxHeader
+        chan_index : int
+            Channel index for multi-channel parameters
+        gain : float
+            Channel gain value (bit_to_microVolt)
+
+        Returns
+        -------
+        tuple
+            Hashable stream key containing acquisition parameters:
+            (sampling_rate, input_range, gain, input_inverted, filter_params_tuple)
+        """
+        # Core acquisition parameters (already normalized by NlxHeader)
+        sampling_rate = float(header_info["sampling_rate"])
+
+        # Get InputRange - could be int (single-channel) or list (multi-channel)
+        input_range = header_info.get("InputRange")
+        if isinstance(input_range, list):
+            # Multi-channel file: get value for this channel
+            input_range = input_range[chan_index] if chan_index < len(input_range) else input_range[0]
+        # Already converted to int by NlxHeader._normalize_types()
+
+        gain = float(gain)
+
+        input_inverted = header_info.get("input_inverted", False)
+
+        # Filter parameters (already normalized by NlxHeader)
+        filter_params = []
+        for key in self._filter_keys:
+            value = header_info.get(key)
+            if value is not None:
+                filter_params.append((key, value))
+
+        # Create hashable stream key
+        stream_key = (
+            sampling_rate,
+            input_range,
+            gain,
+            input_inverted,
+            tuple(sorted(filter_params)),
+        )
+
+        return stream_key
 
     def _parse_header(self):
 
@@ -268,26 +337,30 @@ class NeuralynxRawIO(BaseRawIO):
 
                 chan_uid = (chan_name, str(chan_id))
                 if ext == "ncs":
-                    file_mmap = self._get_file_map(filename)
-                    n_packets = copy.copy(file_mmap.shape[0])
-                    if n_packets:
-                        t_start = copy.copy(file_mmap[0][0])
-                    else:  # empty file
-                        t_start = 0
-                    stream_prop = (float(info["sampling_rate"]), int(n_packets), float(t_start))
-                    if stream_prop not in stream_props:
-                        stream_props[stream_prop] = {"stream_id": len(stream_props), "filenames": [filename]}
+                    # Calculate gain for this channel
+                    gain = info["bit_to_microVolt"][idx]
+                    if info.get("input_inverted", False):
+                        gain *= -1
+
+                    # Build stream key from acquisition parameters only
+                    stream_key = self._build_stream_key(info, idx, gain)
+
+                    if stream_key not in stream_props:
+                        stream_props[stream_key] = {
+                            "stream_id": len(stream_props),
+                            "filenames": [filename],
+                            "channels": set(),
+                        }
                     else:
-                        stream_props[stream_prop]["filenames"].append(filename)
-                    stream_id = stream_props[stream_prop]["stream_id"]
+                        stream_props[stream_key]["filenames"].append(filename)
+
+                    stream_id = stream_props[stream_key]["stream_id"]
+                    stream_props[stream_key]["channels"].add((chan_name, str(chan_id)))
                     # @zach @ramon : we need to discuss this split by channel buffer
                     buffer_id = ""
 
                     # a sampled signal channel
                     units = "uV"
-                    gain = info["bit_to_microVolt"][idx]
-                    if info.get("input_inverted", False):
-                        gain *= -1
                     offset = 0.0
                     signal_channels.append(
                         (
@@ -392,14 +465,50 @@ class NeuralynxRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         if signal_channels.size > 0:
-            # ordering streams according from high to low sampling rates
-            stream_props = {k: stream_props[k] for k in sorted(stream_props, reverse=True)}
-            stream_names = [f"Stream (rate,#packet,t0): {sp}" for sp in stream_props]
-            stream_ids = [stream_prop["stream_id"] for stream_prop in stream_props.values()]
-            buffer_ids = ["" for sp in stream_props]
+            # Build filter configuration registry
+            filter_configs = {}  # filter_params_tuple -> filter_id
+            _filter_configurations = {}  # filter_id -> filter parameters dict
+
+            for stream_key, stream_info in stream_props.items():
+                # Extract filter parameters from stream_key
+                # stream_key = (sampling_rate, input_range, gain, input_inverted, filter_params_tuple)
+                sampling_rate, input_range, gain, input_inverted, filter_params_tuple = stream_key
+
+                # Assign filter ID (deduplicated by filter_params_tuple)
+                if filter_params_tuple not in filter_configs:
+                    filter_id = len(filter_configs)
+                    filter_configs[filter_params_tuple] = filter_id
+                    # Convert filter_params_tuple to dict for storage
+                    _filter_configurations[filter_id] = dict(filter_params_tuple)
+
+            # Store filter configurations as private instance attribute
+            self._filter_configurations = _filter_configurations
+
+            # Order streams by sampling rate (high to low)
+            ordered_stream_keys = sorted(stream_props.keys(), reverse=True, key=lambda x: x[0])
+
+            stream_names = []
+            stream_ids = []
+            buffer_ids = []
+
+            for stream_key in ordered_stream_keys:
+                stream_info = stream_props[stream_key]
+                stream_id = stream_info["stream_id"]
+
+                # Unpack stream_key and format stream name
+                sampling_rate, input_range, gain, input_inverted, filter_params_tuple = stream_key
+                filter_id = filter_configs[filter_params_tuple]
+                voltage_mv = int(input_range / 1000) if input_range is not None else 0
+                stream_name = f"stream{stream_id}_{int(sampling_rate)}Hz_{voltage_mv}mVRange_f{filter_id}"
+
+                stream_names.append(stream_name)
+                stream_ids.append(stream_id)
+                buffer_ids.append("")
+
             signal_streams = list(zip(stream_names, stream_ids, buffer_ids))
         else:
             signal_streams = []
+            self._filter_configurations = {}
         signal_buffers = np.array([], dtype=_signal_buffer_dtype)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
