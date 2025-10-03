@@ -224,7 +224,7 @@ class NeuralynxRawIO(BaseRawIO):
         -------
         tuple
             Hashable stream key containing acquisition parameters:
-            (sampling_rate, input_range, gain, input_inverted, filter_params_tuple)
+            (sampling_rate, input_range, gain, filter_params_tuple)
         """
         # Core acquisition parameters (already normalized by NlxHeader)
         sampling_rate = float(header_info["sampling_rate"])
@@ -238,7 +238,6 @@ class NeuralynxRawIO(BaseRawIO):
 
         gain = float(gain)
 
-        input_inverted = header_info.get("input_inverted", False)
 
         # Build filter parameters tuple (already normalized by NlxHeader)
         filter_params = []
@@ -251,7 +250,6 @@ class NeuralynxRawIO(BaseRawIO):
             sampling_rate,
             input_range,
             gain,
-            input_inverted,
             tuple(sorted(filter_params)),
         )
 
@@ -465,20 +463,12 @@ class NeuralynxRawIO(BaseRawIO):
 
         if signal_channels.size > 0:
             # Build DSP filter configuration registry: filter_id -> filter parameters dict
-            # Use temporary dict to deduplicate filter configs while building
-            _dsp_filter_configurations = {}  # filter_id -> filter parameters dict
-            seen_filters = {}  # filter_params_tuple -> filter_id (temporary)
+            # Extract unique filter configurations from stream keys
+            unique_filter_tuples = {stream_key[3] for stream_key in stream_props.keys()}  # stream_key[3] is filter_params_tuple
+            _dsp_filter_configurations = {i: dict(filt) for i, filt in enumerate(sorted(unique_filter_tuples))}
 
-            for stream_key, stream_info in stream_props.items():
-                # Extract filter parameters from stream_key
-                # stream_key = (sampling_rate, input_range, gain, input_inverted, filter_params_tuple)
-                sampling_rate, input_range, gain, input_inverted, filter_params_tuple = stream_key
-
-                # Assign filter ID (deduplicated by filter_params_tuple)
-                if filter_params_tuple not in seen_filters:
-                    filter_id = len(_dsp_filter_configurations)
-                    seen_filters[filter_params_tuple] = filter_id
-                    _dsp_filter_configurations[filter_id] = dict(filter_params_tuple)
+            # Create reverse mapping for looking up filter IDs during stream name construction
+            seen_filters = {filt: i for i, filt in enumerate(sorted(unique_filter_tuples))}
 
             # Store DSP filter configurations as private instance attribute
             # Keeping private for now - may expose via annotations or public API in future
@@ -496,7 +486,7 @@ class NeuralynxRawIO(BaseRawIO):
                 stream_id = stream_info["stream_id"]
 
                 # Unpack stream_key and format stream name
-                sampling_rate, input_range, gain, input_inverted, filter_params_tuple = stream_key
+                sampling_rate, input_range, gain, filter_params_tuple = stream_key
                 dsp_filter_id = seen_filters[filter_params_tuple]
                 voltage_mv = int(input_range / 1000) if input_range is not None else 0
                 stream_name = f"stream{stream_id}_{int(sampling_rate)}Hz_{voltage_mv}mVRange_DSPFilter{dsp_filter_id}"
