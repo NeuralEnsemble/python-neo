@@ -481,10 +481,7 @@ class NeuralynxRawIO(BaseRawIO):
             stream_ids = []
             buffer_ids = []
 
-            for stream_key in ordered_stream_keys:
-                stream_info = stream_props[stream_key]
-                stream_id = stream_info["stream_id"]
-
+            for stream_id, stream_key in enumerate(ordered_stream_keys):
                 # Unpack stream_key and format stream name
                 sampling_rate, input_range, gain, filter_params_tuple = stream_key
                 dsp_filter_id = seen_filters[filter_params_tuple]
@@ -492,7 +489,7 @@ class NeuralynxRawIO(BaseRawIO):
                 stream_name = f"stream{stream_id}_{int(sampling_rate)}Hz_{voltage_mv}mVRange_DSPFilter{dsp_filter_id}"
 
                 stream_names.append(stream_name)
-                stream_ids.append(stream_id)
+                stream_ids.append(str(stream_id))
                 buffer_ids.append("")
 
             signal_streams = list(zip(stream_names, stream_ids, buffer_ids))
