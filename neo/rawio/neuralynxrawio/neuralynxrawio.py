@@ -206,56 +206,6 @@ class NeuralynxRawIO(BaseRawIO):
     def _source_name(self):
         return self.dirname
 
-    def _build_stream_key(self, header_info, chan_index):
-        """
-        Build stream key based on acquisition parameters only.
-
-        Stream keys are used to group channels that share the same acquisition
-        configuration. Channels with the same stream key will be placed in the
-        same stream and can be read together.
-
-        Parameters
-        ----------
-        header_info : dict
-            Header information from NlxHeader
-        chan_index : int
-            Channel index for multi-channel parameters
-
-        Returns
-        -------
-        StreamKey
-            Named tuple containing acquisition parameters:
-            (sampling_rate, input_range, filter_params)
-        """
-        # Core acquisition parameters (already normalized by NlxHeader)
-        sampling_rate = float(header_info["sampling_rate"])
-
-        # Get InputRange - could be int (single-channel) or list (multi-channel)
-        input_range = header_info.get("InputRange")
-        if isinstance(input_range, list):
-            # Multi-channel file: get value for this channel
-            input_range = input_range[chan_index] if chan_index < len(input_range) else input_range[0]
-        # Already converted to int by NlxHeader._normalize_types()
-
-        # Note: gain is not included in stream key as it's derived from InputRange (gain = InputRange / 32768)
-        # Note: input_inverted is not included in stream key as it's a whole-dataset property
-        # that never differentiates streams (all channels have the same value)
-
-        # Build filter parameters tuple (already normalized by NlxHeader)
-        filter_params = []
-        for key in self._filter_keys:
-            if key in header_info:
-                filter_params.append((key, header_info[key]))
-
-        # Create hashable stream key using namedtuple for readability
-        stream_key = StreamKey(
-            sampling_rate=sampling_rate,
-            input_range=input_range,
-            filter_params=tuple(sorted(filter_params)),
-        )
-
-        return stream_key
-
     def _parse_header(self):
 
         stream_channels = []
@@ -340,8 +290,27 @@ class NeuralynxRawIO(BaseRawIO):
                     if info.get("input_inverted", False):
                         gain *= -1
 
-                    # Build stream key from acquisition parameters only
-                    stream_key = self._build_stream_key(info, idx)
+                    # Build stream key from acquisition parameters
+                    sampling_rate = float(info["sampling_rate"])
+
+                    # Get InputRange for this specific channel
+                    # Normalized by NlxHeader to always be a list
+                    input_range = info.get("InputRange")
+                    if isinstance(input_range, list):
+                        input_range = input_range[idx] if idx < len(input_range) else input_range[0]
+
+                    # Build filter parameters tuple
+                    filter_params = []
+                    for key in self._filter_keys:
+                        if key in info:
+                            filter_params.append((key, info[key]))
+
+                    # Create stream key (channels with same key go in same stream)
+                    stream_key = StreamKey(
+                        sampling_rate=sampling_rate,
+                        input_range=input_range,
+                        filter_params=tuple(sorted(filter_params)),
+                    )
 
                     if stream_key not in stream_props:
                         stream_props[stream_key] = {
@@ -476,6 +445,7 @@ class NeuralynxRawIO(BaseRawIO):
             self._dsp_filter_configurations = _dsp_filter_configurations
 
             # Order streams by sampling rate (high to low)
+            # This is to keep some semblance of stability
             ordered_stream_keys = sorted(stream_props.keys(), reverse=True, key=lambda x: x.sampling_rate)
 
             stream_names = []
