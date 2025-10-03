@@ -243,16 +243,16 @@ class TestNeuralynxRawIO(
         expected_names = {"stream0_32000Hz_100mVRange_DSPFilter0", "stream1_32000Hz_1mVRange_DSPFilter1"}
         self.assertEqual(set(stream_names), expected_names)
 
-        # Verify filter configurations are stored privately
-        self.assertTrue(hasattr(rawio, "_filter_configurations"))
-        self.assertEqual(len(rawio._filter_configurations), 2)
+        # Verify DSP filter configurations are stored (private for now)
+        self.assertTrue(hasattr(rawio, "_dsp_filter_configurations"))
+        self.assertEqual(len(rawio._dsp_filter_configurations), 2)
 
         # Verify filter 0 (eye-tracking): low-cut disabled
-        filter_0 = rawio._filter_configurations[0]
+        filter_0 = rawio._dsp_filter_configurations[0]
         self.assertFalse(filter_0.get("DSPLowCutFilterEnabled", True))
 
         # Verify filter 1 (ephys): low-cut enabled
-        filter_1 = rawio._filter_configurations[1]
+        filter_1 = rawio._dsp_filter_configurations[1]
         self.assertTrue(filter_1.get("DSPLowCutFilterEnabled", False))
 
 

@@ -464,9 +464,9 @@ class NeuralynxRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         if signal_channels.size > 0:
-            # Build filter configuration registry: filter_id -> filter parameters dict
+            # Build DSP filter configuration registry: filter_id -> filter parameters dict
             # Use temporary dict to deduplicate filter configs while building
-            _filter_configurations = {}  # filter_id -> filter parameters dict
+            _dsp_filter_configurations = {}  # filter_id -> filter parameters dict
             seen_filters = {}  # filter_params_tuple -> filter_id (temporary)
 
             for stream_key, stream_info in stream_props.items():
@@ -476,12 +476,13 @@ class NeuralynxRawIO(BaseRawIO):
 
                 # Assign filter ID (deduplicated by filter_params_tuple)
                 if filter_params_tuple not in seen_filters:
-                    filter_id = len(_filter_configurations)
+                    filter_id = len(_dsp_filter_configurations)
                     seen_filters[filter_params_tuple] = filter_id
-                    _filter_configurations[filter_id] = dict(filter_params_tuple)
+                    _dsp_filter_configurations[filter_id] = dict(filter_params_tuple)
 
-            # Store filter configurations as private instance attribute
-            self._filter_configurations = _filter_configurations
+            # Store DSP filter configurations as private instance attribute
+            # Keeping private for now - may expose via annotations or public API in future
+            self._dsp_filter_configurations = _dsp_filter_configurations
 
             # Order streams by sampling rate (high to low)
             ordered_stream_keys = sorted(stream_props.keys(), reverse=True, key=lambda x: x[0])
