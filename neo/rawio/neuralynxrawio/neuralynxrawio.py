@@ -496,9 +496,9 @@ class NeuralynxRawIO(BaseRawIO):
 
                 # Unpack stream_key and format stream name
                 sampling_rate, input_range, gain, input_inverted, filter_params_tuple = stream_key
-                filter_id = seen_filters[filter_params_tuple]
+                dsp_filter_id = seen_filters[filter_params_tuple]
                 voltage_mv = int(input_range / 1000) if input_range is not None else 0
-                stream_name = f"stream{stream_id}_{int(sampling_rate)}Hz_{voltage_mv}mVRange_f{filter_id}"
+                stream_name = f"stream{stream_id}_{int(sampling_rate)}Hz_{voltage_mv}mVRange_DSPFilter{dsp_filter_id}"
 
                 stream_names.append(stream_name)
                 stream_ids.append(stream_id)

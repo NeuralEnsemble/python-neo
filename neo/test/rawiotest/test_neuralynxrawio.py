@@ -233,14 +233,14 @@ class TestNeuralynxRawIO(
         # Check stream names follow the new naming convention
         stream_names = [rawio.header["signal_streams"][i][0] for i in range(rawio.signal_streams_count())]
 
-        # Stream names should include sampling rate (Hz), voltage range (mV), and filter ID
+        # Stream names should include sampling rate (Hz), voltage range (mV), and DSP filter ID
         for stream_name in stream_names:
-            self.assertRegex(stream_name, r"stream\d+_\d+Hz_\d+mVRange_f\d+")
+            self.assertRegex(stream_name, r"stream\d+_\d+Hz_\d+mVRange_DSPFilter\d+")
 
         # Verify we have the expected streams:
         # - Eye-tracking channels (CSC145, CSC146): 32000Hz, 100mV range, low-cut disabled
-        # - Ephys channel (csc23_100): 32000Hz, 1mV range, low-cut enabled
-        expected_names = {"stream0_32000Hz_100mVRange_f0", "stream1_32000Hz_1mVRange_f1"}
+        # - Ephys channel (CSC76): 32000Hz, 1mV range, low-cut enabled
+        expected_names = {"stream0_32000Hz_100mVRange_DSPFilter0", "stream1_32000Hz_1mVRange_DSPFilter1"}
         self.assertEqual(set(stream_names), expected_names)
 
         # Verify filter configurations are stored privately
