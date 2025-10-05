@@ -254,7 +254,8 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
                 self.logger.warning(
                     f"The {kind} file {filename} was not found, but found a file whose "
                     f"prefix matched the .vhdr ({os.path.basename(alt_name)}). Using "
-                    f"this file instead.")
+                    f"this file instead."
+                )
                 filename = alt_name
             else:
                 # we neither found the file referenced in the .vhdr file nor a file of
@@ -267,18 +268,20 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
                 alt_bname = os.path.basename(alt_name)
                 if alt_bname != referenced_bname:
                     # this is only needed when the two candidate file names differ
-                    detail = (f" is named either as per the {entry_name}={referenced_bname} "
-                              f"line in the .vhdr file, or")
+                    detail = (
+                        f" is named either as per the {entry_name}={referenced_bname} " f"line in the .vhdr file, or"
+                    )
                 else:
                     # we omit it if we can to make it less confusing
                     detail = ""
                 self.logger.error(
-                    f"Did not find the {kind} file associated with .vhdr (header) " 
+                    f"Did not find the {kind} file associated with .vhdr (header) "
                     f"file {header_bname!r} in folder {header_dname!r}.\n  Please make "
                     f"sure the file{detail} is named the same way as the .vhdr file, but "
                     f"ending in {ext} (i.e. {alt_bname}).\n  The import will likely fail, "
                     f"but if it goes through, you can ignore this message (the check "
-                    f"can misfire on networked file systems).")
+                    f"can misfire on networked file systems)."
+                )
         return filename
 
 
