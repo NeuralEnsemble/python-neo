@@ -849,11 +849,8 @@ class BlackrockRawIO(BaseRawIO):
         nsx_ext_header : numpy memmap
             Extended header information
         """
-        # Construct filename based on spec version
-        if spec == "2.1":
-            filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
-        else:  # 2.2, 2.3, 3.0
-            filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+        # Construct filename
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
         
         # Get basic header structure for this spec
         basic_header_dtype = NSX_BASIC_HEADER_TYPES[spec]
