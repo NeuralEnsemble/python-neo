@@ -317,8 +317,6 @@ class BlackrockRawIO(BaseRawIO):
                 data_header_spec = "3.0-ptp"
             else:
                 data_header_spec = spec_version
-            # for nsxdef get_analogsignal_shape(self, block_index, seg_index):
-            self._nsx_data_header[nsx_nb] = self._read_nsx_dataheader_unified(data_header_spec, nsx_nb)
 
         # nsx_to_load can be either int, list, 'max', 'all' (aka None)
         # here make a list only
@@ -356,12 +354,6 @@ class BlackrockRawIO(BaseRawIO):
             # Remove if raw loading becomes possible
             # raise IOError("For loading Blackrock file version 2.1 .nev files are required!")
 
-        # This requires nsX to be parsed already
-        # Needs to be called when no nsX are available as well in order to warn the user
-        if self._avail_files["nev"]:
-            for nsx_nb in self.nsx_to_load:
-                self._match_nsx_and_nev_segment_ids(nsx_nb)
-
         self.nsx_datas = {}
         # Keep public attribute for backward compatibility but let's use the private one and maybe deprecate this at some point
         self.sig_sampling_rates = {
@@ -381,7 +373,26 @@ class BlackrockRawIO(BaseRawIO):
                     data_spec = "3.0-ptp"
                 else:
                     data_spec = spec_version
-                self.nsx_datas[nsx_nb] = self._read_nsx_data(data_spec, nsx_nb)
+
+                # Parse data blocks (creates memmap, extracts data+timestamps)
+                data_blocks = self._parse_nsx_data(data_spec, nsx_nb)
+
+                # Segment the data (analyzes gaps, reports issues)
+                segments = self._segment_nsx_data(data_blocks, nsx_nb)
+
+                # Store in existing structures for backward compatibility
+                self._nsx_data_header[nsx_nb] = {
+                    seg_idx: {k: v for k, v in seg.items() if k != 'data'}
+                    for seg_idx, seg in segments.items()
+                }
+                self.nsx_datas[nsx_nb] = {
+                    seg_idx: seg['data']
+                    for seg_idx, seg in segments.items()
+                }
+
+                # Match NSX and NEV segments for v2.3
+                if self._avail_files["nev"]:
+                    self._match_nsx_and_nev_segment_ids(nsx_nb)
 
                 sr = self._nsx_sampling_frequency[nsx_nb]
 
@@ -450,18 +461,19 @@ class BlackrockRawIO(BaseRawIO):
                     period = self._nsx_basic_header[nsx_nb]["period"]
                     sec_per_samp = period / 30_000  # Maybe 30_000 should be ['sample_resolution']
                     length = self.nsx_datas[nsx_nb][data_bl].shape[0]
-                    if self._nsx_data_header[nsx_nb] is None:
+                    timestamps = self._nsx_data_header[nsx_nb][data_bl]["timestamp"]
+                    if timestamps is None:
+                        # V2.1 format has no timestamps
                         t_start = 0.0
                         t_stop = max(t_stop, length / self._nsx_sampling_frequency[nsx_nb])
+                    elif hasattr(timestamps, "size") and timestamps.size == length:
+                        # FileSpec 3.0 with PTP -- use the per-sample timestamps
+                        t_start = timestamps[0] / ts_res
+                        t_stop = max(t_stop, timestamps[-1] / ts_res + sec_per_samp)
                     else:
-                        timestamps = self._nsx_data_header[nsx_nb][data_bl]["timestamp"]
-                        if hasattr(timestamps, "size") and timestamps.size == length:
-                            # FileSpec 3.0 with PTP -- use the per-sample timestamps
-                            t_start = timestamps[0] / ts_res
-                            t_stop = max(t_stop, timestamps[-1] / ts_res + sec_per_samp)
-                        else:
-                            t_start = timestamps / ts_res
-                            t_stop = max(t_stop, t_start + length / self._nsx_sampling_frequency[nsx_nb])
+                        # Standard format with scalar timestamp
+                        t_start = timestamps / ts_res
+                        t_stop = max(t_stop, t_start + length / self._nsx_sampling_frequency[nsx_nb])
                     self._sigs_t_starts[nsx_nb].append(t_start)
 
                 if self._avail_files["nev"]:
@@ -888,266 +900,435 @@ class BlackrockRawIO(BaseRawIO):
 
         return packet_header
 
-    def _read_nsx_dataheader_unified(self, spec, nsx_nb, filesize=None, offset=None):
+    def _parse_nsx_data(self, spec, nsx_nb):
         """
-        Reads nsx data header for any specification version.
-        
+        Parse NSX data blocks from file and extract data with timestamps.
+
+        This is the main router function for NSX data parsing. It creates a memory-mapped
+        view of the file internally and extracts data blocks with their associated timestamps.
+
+        The function handles three different NSX file format variants, each with different
+        internal structure for storing data and timestamps.
+
+        NSX FILE FORMAT VARIANTS
+        ========================
+
+        STANDARD FORMAT (v2.2, v2.3, v3.0 non-PTP)
+        ------------------------------------------
+        File structure:
+        ┌─────────────────────────────────────────────┐
+        │ BASIC HEADER (fixed size)                   │  ← File metadata
+        │ - file_id, version, period, etc.            │
+        ├─────────────────────────────────────────────┤
+        │ EXTENDED HEADER (per channel)               │  ← Channel info
+        │ - electrode_id, label, units, etc.          │
+        ├─────────────────────────────────────────────┤
+        │ DATA BLOCK 1 HEADER                         │  ← Block metadata
+        │ - header_flag=1                             │
+        │ - timestamp (scalar, e.g., 0)               │
+        │ - nb_data_points (e.g., 1000)               │
+        ├─────────────────────────────────────────────┤
+        │ DATA BLOCK 1 DATA                           │  ← Actual samples
+        │ - 1000 samples × N channels                 │
+        │ - int16 values                              │
+        ├─────────────────────────────────────────────┤
+        │ DATA BLOCK 2 HEADER                         │  ← Next block
+        │ - header_flag=1                             │
+        │ - timestamp (scalar, e.g., 30000)           │
+        │ - nb_data_points (e.g., 1000)               │
+        ├─────────────────────────────────────────────┤
+        │ DATA BLOCK 2 DATA                           │
+        │ - 1000 samples × N channels                 │
+        └─────────────────────────────────────────────┘
+
+        Key characteristics:
+        - Headers are EXPLICIT and SPARSE (only at block boundaries)
+        - Each block has ONE scalar timestamp for ALL samples in that block
+        - Reader LOOPS through file, finding headers
+        - Multiple blocks exist when recording was paused/resumed
+        - Timestamp indicates when each block started recording
+
+        PTP FORMAT (v3.0 with Precision Time Protocol)
+        -----------------------------------------------
+        File structure:
+        ┌─────────────────────────────────────────────┐
+        │ BASIC HEADER (fixed size)                   │
+        │ - timestamp_resolution = 1,000,000,000      │  ← Nanosecond precision!
+        ├─────────────────────────────────────────────┤
+        │ EXTENDED HEADER (per channel)               │
+        ├─────────────────────────────────────────────┤
+        │ PACKET 0:                                   │  ← Each sample = packet
+        │ - reserved (1 byte)                         │
+        │ - timestamp (8 bytes, e.g., 1000)           │
+        │ - num_data_points (always 1)                │
+        │ - samples (N channels × int16)              │
+        ├─────────────────────────────────────────────┤
+        │ PACKET 1:                                   │
+        │ - reserved                                  │
+        │ - timestamp (e.g., 1033)                    │
+        │ - num_data_points (1)                       │
+        │ - samples (N channels × int16)              │
+        ├─────────────────────────────────────────────┤
+        │ PACKET 2:                                   │
+        │ - reserved                                  │
+        │ - timestamp (e.g., 1066)                    │
+        │ - num_data_points (1)                       │
+        │ - samples (N channels × int16)              │
+        ├─────────────────────────────────────────────┤
+        │ ...thousands more packets...                │
+        │ PACKET 500:                                 │
+        │ - timestamp (e.g., 50000)                   │  ← BIG GAP!
+        │ ...                                         │
+        └─────────────────────────────────────────────┘
+
+        Key characteristics:
+        - NO separate headers and data - they're INTERLEAVED
+        - EVERY sample has its own timestamp (per-sample nanosecond precision)
+        - File is ONE CONTINUOUS ARRAY of uniform packets
+        - Segments must be INFERRED by detecting timestamp gaps
+        - Timestamp gap > 2× sampling period indicates segment boundary
+
+        V2.1 FORMAT
+        -----------
+        Simplest format:
+        - Single continuous data block
+        - No timestamps in data section
+        - No multiple blocks (no pause/resume support)
+
         Parameters
         ----------
         spec : str
-            The specification version (e.g., "2.1", "2.2", "2.3", "3.0", "3.0-ptp")
+            File specification version ("2.1", "2.2", "2.3", "3.0", "3.0-ptp")
         nsx_nb : int
-            The NSX file number
-        filesize : int, optional
-            File size in bytes (used for PTP variant)
-        offset : int, optional
-            Offset to start reading from
-        """
-        # Version 2.1 has no data headers
-        if spec == "2.1":
-            return None
-            
-        # Handle PTP variant specially
-        if spec == "3.0-ptp":
-            return self._read_nsx_dataheader_ptp(nsx_nb, filesize, offset)
-            
-        # Standard data header reading for versions 2.2, 2.3, 3.0
-        return self._read_nsx_dataheader_standard(spec, nsx_nb, filesize, offset)
-        
-    def _read_nsx_dataheader_standard(self, spec, nsx_nb, filesize=None, offset=None):
-        """
-        Reads the nsx data header for each data block following the offset of
-        file spec 2.2, 2.3, and 3.0.
-        """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+            NSX file number (e.g., 5 for ns5 file)
 
-        filesize_bytes = self._get_file_size(filename)
-
-        data_header = {}
-        if offset is None:
-            offset_to_first_data_block = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
-        else:
-            offset_to_first_data_block = int(offset)
-
-        channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-        current_offset_bytes = offset_to_first_data_block
-        data_block_index = 0
-        while current_offset_bytes < filesize_bytes:
-            packet_header = self._read_nsx_dataheader(spec, nsx_nb, current_offset_bytes)
-            header_flag = packet_header["header_flag"]
-            # NSX data blocks must have header_flag = 1, other values indicate file corruption
-            if header_flag != 1:
-                raise ValueError(
-                    f"Invalid NSX data block header at offset {current_offset_bytes:#x} in ns{nsx_nb} file. "
-                    f"Expected header_flag=1, got {header_flag}. "
-                    f"This may indicate file corruption or unsupported NSX format variant. "
-                    f"Block index: {data_block_index}, File size: {filesize_bytes} bytes"
-                )
-            timestamp = packet_header["timestamp"]
-            num_data_points = int(packet_header["nb_data_points"])
-            offset_to_data_block_start = current_offset_bytes + packet_header.dtype.itemsize
-
-            data_header[data_block_index] = {
-                "header": header_flag,
-                "timestamp": timestamp,
-                "nb_data_points": num_data_points,
-                "offset_to_data_block": offset_to_data_block_start,
-            }
-
-            # Jump to the next data block, the data is encoded as int16
-            data_block_size_bytes = num_data_points * channel_count * np.dtype("int16").itemsize
-            current_offset_bytes = offset_to_data_block_start + data_block_size_bytes
-
-            data_block_index += 1
-
-        return data_header
-
-    def _read_nsx_dataheader_ptp(self, nsx_nb, filesize=None, offset=None):
-        """
-        Reads the nsx data header for each data block for file spec 3.0 with PTP timestamps
-        """
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
-
-        filesize = self._get_file_size(filename)
-
-        data_header = {}
-
-        if offset is None:
-            # This is read as an uint32 numpy scalar from the header so we transform it to python int
-            header_size = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
-        else:
-            header_size = offset
-
-        # Use the dictionary for PTP data type
-        channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-        ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
-        npackets = int((filesize - header_size) / np.dtype(ptp_dt).itemsize)
-        struct_arr = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=header_size, mode="r")
-
-        if not np.all(struct_arr["num_data_points"] == 1):
-            # some packets have more than 1 sample. Not actually ptp. Revert to non-ptp variant.
-            return self._read_nsx_dataheader_standard("3.0", nsx_nb, filesize=filesize, offset=header_size)
-
-        # Segment data, at the moment, we segment, where the data has gaps that are longer
-        # than twice the sampling period.
-        sampling_rate = self._nsx_sampling_frequency[nsx_nb]
-        segmentation_threshold = 2.0 / sampling_rate
-
-        # The raw timestamps are the indices of an ideal clock that ticks at `timestamp_resolution` times per second.
-        # We convert this indices to actual timestamps in seconds
-        raw_timestamps = struct_arr["timestamps"]
-        timestamps_sampling_rate = self._nsx_basic_header[nsx_nb][
-            "timestamp_resolution"
-        ]  # clocks per sec uint64 or uint32
-        timestamps_in_seconds = raw_timestamps / timestamps_sampling_rate
-
-        time_differences = np.diff(timestamps_in_seconds)
-        gap_indices = np.argwhere(time_differences > segmentation_threshold).flatten()
-        segment_starts = np.hstack((0, 1 + gap_indices))
-
-        # Report gaps if any are found
-        if len(gap_indices) > 0:
-            import warnings
-
-            threshold_ms = segmentation_threshold * 1000
-
-            # Calculate all gap details in vectorized operations
-            gap_durations_seconds = time_differences[gap_indices]
-            gap_durations_ms = gap_durations_seconds * 1000
-            gap_positions_seconds = timestamps_in_seconds[gap_indices] - timestamps_in_seconds[0]
-
-            # Build gap detail lines all at once
-            gap_detail_lines = [
-                f"| {index:>15,} | {pos:>21.6f} | {dur:>21.3f} |\n"
-                for index, pos, dur in zip(gap_indices, gap_positions_seconds, gap_durations_ms)
-            ]
-
-            segmentation_report_message = (
-                f"\nFound {len(gap_indices)} gaps for nsx {nsx_nb} where samples are farther apart than {threshold_ms:.3f} ms.\n"
-                f"Data will be segmented at these locations to create {len(segment_starts)} segments.\n\n"
-                "Gap Details:\n"
-                "+-----------------+-----------------------+-----------------------+\n"
-                "| Sample Index    | Sample at             | Gap Jump              |\n"
-                "|                 | (Seconds)             | (Milliseconds)        |\n"
-                "+-----------------+-----------------------+-----------------------+\n"
-                + "".join(gap_detail_lines)
-                + "+-----------------+-----------------------+-----------------------+\n"
-            )
-            warnings.warn(segmentation_report_message)
-
-        # Calculate all segment boundaries and derived values in one operation
-        segment_boundaries = list(segment_starts) + [len(struct_arr) - 1]
-        segment_num_data_points = [
-            segment_boundaries[i + 1] - segment_boundaries[i] for i in range(len(segment_starts))
-        ]
-
-        size_of_data_block = struct_arr.dtype.itemsize
-        segment_offsets = [header_size + pos * size_of_data_block for pos in segment_starts]
-
-        num_segments = len(segment_starts)
-        for segment_index in range(num_segments):
-            seg_offset = segment_offsets[segment_index]
-            num_data_pts = segment_num_data_points[segment_index]
-            seg_struct_arr = np.memmap(filename, dtype=ptp_dt, shape=num_data_pts, offset=seg_offset, mode="r")
-            data_header[segment_index] = {
-                "header": None,
-                "timestamp": seg_struct_arr["timestamps"],  # Note, this is an array, not a scalar
-                "nb_data_points": num_data_pts,
-                "offset_to_data_block": seg_offset,
-            }
-        return data_header
-
-    def _read_nsx_data(self, spec, nsx_nb):
-        """
-        Extract nsx data for any specification version.
-        
-        Parameters
-        ----------
-        spec : str
-            The specification version (e.g., "2.1", "2.2", "2.3", "3.0", "3.0-ptp")
-        nsx_nb : int
-            The NSX file number
-            
         Returns
         -------
-        data : dict
-            Dictionary mapping block indices to data arrays
+        dict
+            Dictionary mapping block index to block information:
+            {
+                block_idx: {
+                    "data": np.ndarray,
+                        View into memory-mapped file with shape (samples, channels)
+                    "timestamps": scalar, np.ndarray, or None,
+                        - Standard format: scalar (one timestamp per block)
+                        - PTP format: array (one timestamp per sample)
+                        - v2.1 format: None (no timestamps)
+                    # Additional metadata as needed
+                },
+                ...
+            }
+
+        Notes
+        -----
+        - This function creates the file memmap internally
+        - Data views are created using np.ndarray with buffer parameter (memory efficient)
+        - Returned data is NOT YET SEGMENTED (segmentation happens in a separate step)
+        - For standard format, each block from the file is one dict entry
+        - For PTP format, all data is in a single block (block_idx=0)
         """
         if spec == "2.1":
-            return self._read_nsx_data_v21(nsx_nb)
+            return self._parse_nsx_data_v21(nsx_nb)
         elif spec == "3.0-ptp":
-            return self._read_nsx_data_ptp(nsx_nb)
+            return self._parse_nsx_data_v30_ptp(nsx_nb)
         else:  # 2.2, 2.3, 3.0 standard
-            return self._read_nsx_data_standard(nsx_nb)
-            
-    def _read_nsx_data_v21(self, nsx_nb):
+            return self._parse_nsx_data_v22_v30(spec, nsx_nb)
+
+    def _parse_nsx_data_v21(self, nsx_nb):
         """
-        Extract nsx data from a 2.1 .nsx file
+        Parse v2.1 NSX data blocks.
+
+        V2.1 format is the simplest:
+        - Single continuous data block
+        - No timestamps
+        - No pause/resume support
+
+        Returns
+        -------
+        dict
+            {0: {"data": np.ndarray, "timestamps": None}}
         """
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
-        # get shape of data
-        shape = (
-            int(self._nsx_params["2.1"](nsx_nb)["nb_data_points"]),
-            int(self._nsx_basic_header[nsx_nb]["channel_count"]),
+        # Create file memmap
+        file_memmap = np.memmap(filename, dtype='uint8', mode='r')
+
+        # Get parameters
+        params = self._nsx_params["2.1"](nsx_nb)
+        channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+        num_samples = int(params["nb_data_points"])
+        offset = int(params["bytes_in_headers"])
+
+        # Create data view into memmap
+        data = np.ndarray(
+            shape=(num_samples, channels),
+            dtype='int16',
+            buffer=file_memmap,
+            offset=offset
         )
-        offset = int(self._nsx_params["2.1"](nsx_nb)["bytes_in_headers"])
 
-        # read nsx data
-        # store as dict for compatibility with higher file specs
-        data = {0: np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")}
+        return {
+            0: {
+                "data": data,
+                "timestamps": None,
+            }
+        }
 
-        return data
-
-    def _read_nsx_data_standard(self, nsx_nb):
+    def _parse_nsx_data_v22_v30(self, spec, nsx_nb):
         """
-        Extract nsx data (blocks) from a 2.2, 2.3, or 3.0 .nsx file.
-        Blocks can arise if the recording was paused by the user.
-        """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+        Parse standard format NSX data blocks (v2.2, 2.3, 3.0).
 
-        data = {}
-        data_header = self._nsx_data_header[nsx_nb]
-        number_of_channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+        Standard format has:
+        - Explicit block headers in file
+        - Each block has scalar timestamp
+        - Multiple blocks when recording paused/resumed
 
-        for data_block in data_header.keys():
-            # get shape and offset of data
-            number_of_samples = int(data_header[data_block]["nb_data_points"])
-            shape = (number_of_samples, number_of_channels)
-            offset = int(data_header[data_block]["offset_to_data_block"])
-
-            # read data
-            data[data_block] = np.memmap(filename, dtype="int16", shape=shape, offset=offset, mode="r")
-
-        return data
-
-    def _read_nsx_data_ptp(self, nsx_nb):
-        """
-        Extract nsx data (blocks) from a 3.0 .nsx file with PTP timestamps
-        yielding a timestamp per sample. Blocks can arise
-        if the recording was paused by the user.
+        Returns
+        -------
+        dict
+            {block_idx: {"data": np.ndarray, "timestamps": scalar}, ...}
         """
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
-        # Use the dictionary for PTP data type
-        channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-        ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
+        # Create file memmap
+        file_memmap = np.memmap(filename, dtype='uint8', mode='r')
 
-        data = {}
-        for bl_id, bl_header in self._nsx_data_header[nsx_nb].items():
-            struct_arr = np.memmap(
-                filename,
-                dtype=ptp_dt,
-                shape=bl_header["nb_data_points"],
-                offset=bl_header["offset_to_data_block"],
-                mode="r",
+        # Get file parameters
+        filesize = self._get_file_size(filename)
+        channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+        current_offset = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
+
+        data_blocks = {}
+        block_idx = 0
+
+        # Loop through file, reading block headers
+        while current_offset < filesize:
+            # Read header at current position
+            header = self._read_nsx_dataheader(spec, nsx_nb, current_offset)
+
+            if header["header_flag"] != 1:
+                raise ValueError(
+                    f"Invalid NSX data block header at offset {current_offset:#x} "
+                    f"in ns{nsx_nb} file. Expected header_flag=1, got {header['header_flag']}."
+                )
+
+            num_samples = int(header["nb_data_points"])
+            data_offset = current_offset + header.dtype.itemsize
+            timestamp = header["timestamp"]
+
+            # Create data view into memmap for this block
+            data = np.ndarray(
+                shape=(num_samples, channels),
+                dtype='int16',
+                buffer=file_memmap,
+                offset=data_offset
             )
-            # Does this concretize the data?
-            # If yes then investigate np.ndarray with buffer=file,
-            # offset=offset+13, and strides that skips 13-bytes per row.
-            data[bl_id] = struct_arr["samples"]
 
-        return data
+            data_blocks[block_idx] = {
+                "data": data,
+                "timestamps": timestamp,
+            }
+
+            # Jump to next block
+            data_size_bytes = num_samples * channels * 2  # int16 = 2 bytes
+            current_offset = data_offset + data_size_bytes
+            block_idx += 1
+
+        return data_blocks
+
+    def _parse_nsx_data_v30_ptp(self, nsx_nb):
+        """
+        Parse PTP format NSX data (v3.0 with Precision Time Protocol).
+
+        PTP format has:
+        - Interleaved structure (timestamp + sample per packet)
+        - Array of timestamps (one per sample)
+        - Continuous data (segmentation inferred from timestamp gaps)
+
+        Returns
+        -------
+        dict
+            {0: {"data": np.ndarray, "timestamps": np.ndarray}}
+        """
+        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+
+        # Get file parameters
+        filesize = self._get_file_size(filename)
+        header_size = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
+        channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+
+        # Create structured memmap (timestamp + samples per packet)
+        ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
+        npackets = int((filesize - header_size) / np.dtype(ptp_dt).itemsize)
+        file_memmap = np.memmap(
+            filename,
+            dtype=ptp_dt,
+            shape=npackets,
+            offset=header_size,
+            mode='r'
+        )
+
+        # Verify this is truly PTP (all packets should have 1 sample)
+        if not np.all(file_memmap["num_data_points"] == 1):
+            # Not actually PTP! Fall back to standard format
+            return self._parse_nsx_data_v22_v30("3.0", nsx_nb)
+
+        # Extract data and timestamps from structured array
+        data = file_memmap["samples"]
+        timestamps = file_memmap["timestamps"]
+
+        return {
+            0: {
+                "data": data,
+                "timestamps": timestamps,
+            }
+        }
+
+    def _report_nsx_timestamp_gaps(self, gap_indices, timestamps_in_seconds, time_differences, threshold, nsx_nb):
+        """
+        Report detected timestamp gaps with detailed table.
+
+        This function generates a warning message with a detailed table showing
+        where gaps were detected in the timestamp sequence.
+
+        Parameters
+        ----------
+        gap_indices : np.ndarray
+            Indices where gaps were detected
+        timestamps_in_seconds : np.ndarray
+            All timestamps converted to seconds
+        time_differences : np.ndarray
+            Time differences between consecutive timestamps
+        threshold : float
+            Gap threshold in seconds
+        nsx_nb : int
+            NSX file number for the report
+        """
+        import warnings
+
+        threshold_ms = threshold * 1000
+        num_segments = len(gap_indices) + 1
+
+        # Calculate gap details
+        gap_durations_seconds = time_differences[gap_indices]
+        gap_durations_ms = gap_durations_seconds * 1000
+        gap_positions_seconds = timestamps_in_seconds[gap_indices] - timestamps_in_seconds[0]
+
+        # Build gap detail table
+        gap_detail_lines = [
+            f"| {index:>15,} | {pos:>21.6f} | {dur:>21.3f} |\n"
+            for index, pos, dur in zip(gap_indices, gap_positions_seconds, gap_durations_ms)
+        ]
+
+        segmentation_report_message = (
+            f"\nFound {len(gap_indices)} gaps for nsx {nsx_nb} where samples are farther apart than {threshold_ms:.3f} ms.\n"
+            f"Data will be segmented at these locations to create {num_segments} segments.\n\n"
+            "Gap Details:\n"
+            "+-----------------+-----------------------+-----------------------+\n"
+            "| Sample Index    | Sample at (Seconds)   | Gap Jump (ms)         |\n"
+            "+-----------------+-----------------------+-----------------------+\n"
+            + "".join(gap_detail_lines)
+            + "+-----------------+-----------------------+-----------------------+\n"
+        )
+        warnings.warn(segmentation_report_message)
+
+    def _segment_nsx_data(self, data_blocks_dict, nsx_nb):
+        """
+        Segment NSX data based on timestamp gaps.
+
+        Takes the data blocks returned by _parse_nsx_data() and creates segments.
+        Segmentation logic depends on the file format:
+
+        - Standard format (multiple blocks): Each block IS a segment
+        - PTP format (single block with timestamp array): Detect gaps in timestamps
+        - V2.1 format (no timestamps): Single segment
+
+        Parameters
+        ----------
+        data_blocks_dict : dict
+            Dictionary from _parse_nsx_data():
+            {block_idx: {"data": np.ndarray, "timestamps": scalar/array/None}}
+        nsx_nb : int
+            NSX file number
+
+        Returns
+        -------
+        dict
+            {
+                seg_idx: {
+                    "data": np.ndarray,
+                    "timestamps": scalar, array, or None,
+                    "nb_data_points": int,
+                    "header": int or None,
+                    "offset_to_data_block": None (deprecated but kept for compatibility)
+                },
+                ...
+            }
+        """
+        segments = {}
+
+        # Case 1: Multiple blocks (Standard format) - each block is a segment
+        if len(data_blocks_dict) > 1:
+            for block_idx, block_info in data_blocks_dict.items():
+                segments[block_idx] = {
+                    "data": block_info["data"],
+                    "timestamp": block_info["timestamps"],  # Use singular for backward compatibility
+                    "nb_data_points": block_info["data"].shape[0],
+                    "header": 1,  # Standard format has headers
+                    "offset_to_data_block": None,  # Not needed (have data directly)
+                }
+
+        # Case 2: Single block - check if PTP (array timestamps) or simple (no timestamps)
+        elif len(data_blocks_dict) == 1:
+            block_info = data_blocks_dict[0]
+            data = block_info["data"]
+            timestamps = block_info["timestamps"]
+
+            # PTP format: array of timestamps - need to detect gaps
+            if isinstance(timestamps, np.ndarray):
+                # Analyze timestamp gaps
+                sampling_rate = self._nsx_sampling_frequency[nsx_nb]
+                segmentation_threshold = 2.0 / sampling_rate
+
+                timestamps_sampling_rate = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
+                timestamps_in_seconds = timestamps / timestamps_sampling_rate
+
+                time_differences = np.diff(timestamps_in_seconds)
+                gap_indices = np.argwhere(time_differences > segmentation_threshold).flatten()
+
+                # Report gaps if found
+                if len(gap_indices) > 0:
+                    self._report_nsx_timestamp_gaps(
+                        gap_indices, timestamps_in_seconds, time_differences,
+                        segmentation_threshold, nsx_nb
+                    )
+
+                # Create segments based on gaps
+                segment_starts = np.hstack((0, gap_indices + 1))
+                segment_boundaries = list(segment_starts) + [len(data)]
+
+                for seg_idx, start in enumerate(segment_starts):
+                    end = segment_boundaries[seg_idx + 1]
+
+                    segments[seg_idx] = {
+                        "data": data[start:end],
+                        "timestamp": timestamps[start:end],  # Use singular for backward compatibility
+                        "nb_data_points": end - start,
+                        "header": None,  # PTP has no headers
+                        "offset_to_data_block": None,
+                    }
+
+            # V2.1 or single block standard format: no segmentation needed
+            else:
+                segments[0] = {
+                    "data": data,
+                    "timestamp": timestamps,  # Use singular for backward compatibility
+                    "nb_data_points": data.shape[0],
+                    "header": None,
+                    "offset_to_data_block": None,
+                }
+
+        return segments
 
     def _read_nev_header(self, spec, filename):
         """
@@ -1226,7 +1407,6 @@ class BlackrockRawIO(BaseRawIO):
             nev_ext_header[packet_id] = raw_ext_header.view(dtype_def)[mask]
 
         return nev_basic_header, nev_ext_header
-
     def _read_nev_data(self, spec, filename):
         """
         Extract nev data for any specification version.
