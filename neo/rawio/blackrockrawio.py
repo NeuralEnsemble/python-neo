@@ -187,12 +187,6 @@ class BlackrockRawIO(BaseRawIO):
 
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
-        self._nsx_params = {
-            "2.1": self._get_nsx_param_spec_v21,
-            "2.2": self._get_nsx_param_spec_v22_30,
-            "2.3": self._get_nsx_param_spec_v22_30,
-            "3.0": self._get_nsx_param_spec_v22_30,
-        }
         # NEV
         self._waveform_size = {
             "2.1": self._get_waveform_size_spec_v21,
@@ -399,14 +393,8 @@ class BlackrockRawIO(BaseRawIO):
                 if spec_version in ["2.2", "2.3", "3.0"]:
                     ext_header = self._nsx_ext_header[nsx_nb]
                 elif spec_version == "2.1":
-                    ext_header = []
-                    keys = ["labels", "units", "min_analog_val", "max_analog_val", "min_digital_val", "max_digital_val"]
-                    params = self._nsx_params[spec_version](nsx_nb)
-                    for i in range(len(params["labels"])):
-                        d = {}
-                        for key in keys:
-                            d[key] = params[key][i]
-                        ext_header.append(d)
+                    # v2.1 has no extended headers - construct from NEV digitization factors
+                    ext_header = self._build_nsx_v21_ext_header(nsx_nb)
 
                 if len(ext_header) > 0:
                     # in blackrock : one stream per buffer so same id
@@ -455,7 +443,7 @@ class BlackrockRawIO(BaseRawIO):
                     if "timestamp_resolution" in self._nsx_basic_header[nsx_nb].dtype.names:
                         ts_res = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
                     elif spec == "2.1":
-                        ts_res = self._nsx_params[spec](nsx_nb)["timestamp_resolution"]
+                        ts_res = 30_000  # v2.1 always uses 30kHz timestamp resolution
                     else:
                         ts_res = 30_000
                     period = self._nsx_basic_header[nsx_nb]["period"]
@@ -1053,12 +1041,15 @@ class BlackrockRawIO(BaseRawIO):
         # Create file memmap
         file_memmap = np.memmap(filename, dtype='uint8', mode='r')
 
-        # Get parameters
-        params = self._nsx_params["2.1"](nsx_nb)
+        # Calculate header size and data points for v2.1
         channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-        num_samples = int(params["nb_data_points"])
-        offset = int(params["bytes_in_headers"])
-
+        bytes_in_headers = (
+            self._nsx_basic_header[nsx_nb].dtype.itemsize
+            + self._nsx_ext_header[nsx_nb].dtype.itemsize * channels
+        )
+        filesize = self._get_file_size(filename)
+        num_samples = int((filesize - bytes_in_headers) / (2 * channels) - 1)
+        offset = bytes_in_headers
         # Create data view into memmap
         data = np.ndarray(
             shape=(num_samples, channels),
@@ -1329,6 +1320,52 @@ class BlackrockRawIO(BaseRawIO):
                 }
 
         return segments
+
+    def _build_nsx_v21_ext_header(self, nsx_nb):
+        """
+        Build extended header structure for v2.1 NSX files.
+
+        v2.1 NSX files don't have extended headers with analog/digital ranges.
+        We estimate these from the digitization factor in the NEV file.
+        dig_factor = max_analog_val / max_digital_val
+        We set max_digital_val = 1000, so max_analog_val = dig_factor
+        dig_factor is in nV, so units are uV.
+
+        Information from Kian Torab, Blackrock Microsystems.
+        """
+        ext_header = []
+
+        for i, elid in enumerate(self._nsx_ext_header[nsx_nb]["electrode_id"]):
+            # Get digitization factor from NEV
+            if self._avail_files["nev"]:
+                # Workaround for DigitalFactor overflow in buggy Cerebus systems
+                # Fix from NPMK toolbox (openNEV, line 464, git rev d0a25eac)
+                dig_factor = self._nev_params("digitization_factor")[elid]
+                if dig_factor == 21516:
+                    dig_factor = 152592.547
+                units = "uV"
+            else:
+                dig_factor = float("nan")
+                units = ""
+                if i == 0:  # Only warn once
+                    warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
+
+            # Generate label
+            if elid < 129:
+                label = f"chan{elid}"
+            else:
+                label = f"ainp{(elid - 129 + 1)}"
+
+            ext_header.append({
+                "labels": label,
+                "units": units,
+                "min_analog_val": -float(dig_factor),
+                "max_analog_val": float(dig_factor),
+                "min_digital_val": -1000,
+                "max_digital_val": 1000,
+            })
+
+        return ext_header
 
     def _read_nev_header(self, spec, filename):
         """
@@ -1607,9 +1644,8 @@ class BlackrockRawIO(BaseRawIO):
                     if len(data[mask_after_seg]) > 0:
                         # Warning if spikes are after last segment
                         if i == len(list_nonempty_nsx_segments) - 1:
-                            timestamp_resolution = self._nsx_params[self._nsx_spec[nsx_nb]](
-                                "timestamp_resolution", nsx_nb
-                            )
+                            # Get timestamp resolution from header (available for v2.2+)
+                            timestamp_resolution = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
                             time_after_seg = (
                                 data[mask_after_seg]["timestamp"][-1] - end_of_current_nsx_seg
                             ) / timestamp_resolution
@@ -1827,96 +1863,6 @@ class BlackrockRawIO(BaseRawIO):
         #     [(ch, (wf_size[ch] / 2) * wf_t_unit) for ch in all_ch])
 
         return wf_left_sweep
-
-    def _get_nsx_param_spec_v21(self, nsx_nb):
-        """
-        Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
-        2.1.
-        """
-        # Here, min/max_analog_val and min/max_digital_val are not available in
-        # the nsx, so that we must estimate these parameters from the
-        # digitization factor of the nev (information by Kian Torab, Blackrock
-        # Microsystems). Here dig_factor=max_analog_val/max_digital_val. We set
-        # max_digital_val to 1000, and max_analog_val=dig_factor. dig_factor is
-        # given in nV by definition, so the units turn out to be uV.
-        labels = []
-        dig_factor = []
-        for elid in self._nsx_ext_header[nsx_nb]["electrode_id"]:
-            if self._avail_files["nev"]:
-                # This is a workaround for the DigitalFactor overflow in NEV
-                # files recorded with buggy Cerebus system.
-                # Fix taken from: NMPK toolbox by Blackrock,
-                # file openNEV, line 464,
-                # git rev. d0a25eac902704a3a29fa5dfd3aed0744f4733ed
-                df = self._nev_params("digitization_factor")[elid]
-                if df == 21516:
-                    df = 152592.547
-                dig_factor.append(df)
-            else:
-                dig_factor.append(float("nan"))
-
-            if elid < 129:
-                labels.append(f"chan{elid}")
-            else:
-                labels.append(f"ainp{(elid - 129 + 1)}")
-
-        filename = ".".join([self._filenames["nsx"], f"ns{nsx_nb}"])
-
-        bytes_in_headers = (
-            self._nsx_basic_header[nsx_nb].dtype.itemsize
-            + self._nsx_ext_header[nsx_nb].dtype.itemsize * self._nsx_basic_header[nsx_nb]["channel_count"]
-        )
-
-        if np.isnan(dig_factor[0]):
-            units = ""
-            warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
-        else:
-            units = "uV"
-
-        nsx_parameters = {
-            "nb_data_points": int(
-                (int(self._get_file_size(filename)) - int(bytes_in_headers))
-                / int(2 * self._nsx_basic_header[nsx_nb]["channel_count"])
-                - 1
-            ),
-            "labels": labels,
-            "units": np.array([units] * self._nsx_basic_header[nsx_nb]["channel_count"]),
-            "min_analog_val": -1 * np.array(dig_factor, dtype="float"),
-            "max_analog_val": np.array(dig_factor, dtype="float"),
-            "min_digital_val": np.array([-1000] * self._nsx_basic_header[nsx_nb]["channel_count"]),
-            "max_digital_val": np.array([1000] * self._nsx_basic_header[nsx_nb]["channel_count"]),
-            "timestamp_resolution": 30000,
-            "bytes_in_headers": bytes_in_headers,
-            "sampling_rate": 30000 / self._nsx_basic_header[nsx_nb]["period"] * pq.Hz,
-            "time_unit": pq.CompoundUnit(f"1.0/{30000 / self._nsx_basic_header[nsx_nb]['period']}*s"),
-        }
-
-        # Returns complete dictionary because then it does not need to be called so often
-        return nsx_parameters
-
-    def _get_nsx_param_spec_v22_30(self, param_name, nsx_nb):
-        """
-        Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
-        2.2 and 2.3.
-        """
-        nsx_parameters = {
-            "labels": self._nsx_ext_header[nsx_nb]["electrode_label"],
-            "units": self._nsx_ext_header[nsx_nb]["units"],
-            "min_analog_val": self._nsx_ext_header[nsx_nb]["min_analog_val"],
-            "max_analog_val": self._nsx_ext_header[nsx_nb]["max_analog_val"],
-            "min_digital_val": self._nsx_ext_header[nsx_nb]["min_digital_val"],
-            "max_digital_val": self._nsx_ext_header[nsx_nb]["max_digital_val"],
-            "timestamp_resolution": self._nsx_basic_header[nsx_nb]["timestamp_resolution"],
-            "bytes_in_headers": self._nsx_basic_header[nsx_nb]["bytes_in_headers"],
-            "sampling_rate": self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
-            / self._nsx_basic_header[nsx_nb]["period"]
-            * pq.Hz,
-            "time_unit": pq.CompoundUnit(
-                f"1.0/{self._nsx_basic_header[nsx_nb]['timestamp_resolution'] / self._nsx_basic_header[nsx_nb]['period']}*s"
-            ),
-        }
-
-        return nsx_parameters[param_name]
 
     def _get_nonneural_evdicts_spec_v21_22(self, data):
         """
@@ -2630,7 +2576,7 @@ NSX_DATA_HEADER_TYPES = {
     "2.1": None,
     # Versions 2.2+ use data block headers with timestamp size based on major version
     "2.2": [("header_flag", "uint8"), ("timestamp", "uint32"), ("nb_data_points", "uint32")],
-    "2.3": [("header_flag", "uint8"), ("timestamp", "uint32"), ("nb_data_points", "uint32")], 
+    "2.3": [("header_flag", "uint8"), ("timestamp", "uint32"), ("nb_data_points", "uint32")],
     "3.0": [("header_flag", "uint8"), ("timestamp", "uint64"), ("nb_data_points", "uint32")],
     # PTP variant has a completely different structure with samples embedded
     "3.0-ptp": lambda channel_count: [
