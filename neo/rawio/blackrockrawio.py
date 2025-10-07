@@ -80,6 +80,7 @@ from .baserawio import (
 from neo.core import NeoReadWriteError
 
 
+
 class BlackrockRawIO(BaseRawIO):
     """
     Class for reading data in from a file set recorded by the Blackrock (Cerebus) recording system.
@@ -214,12 +215,6 @@ class BlackrockRawIO(BaseRawIO):
             "3.0": self._get_nsx_param_spec_v22_30,
         }
         # NEV
-        self._nev_header_reader = {
-            "2.1": self._read_nev_header_spec_v21,
-            "2.2": self._read_nev_header_spec_v22,
-            "2.3": self._read_nev_header_spec_v30_ptp,
-            "3.0": self._read_nev_header_spec_v30_ptp,
-        }
         self._nev_data_reader = {
             "2.1": self._read_nev_data_spec_v21_22,
             "2.2": self._read_nev_data_spec_v21_22,
@@ -267,8 +262,8 @@ class BlackrockRawIO(BaseRawIO):
             self._nev_spec = self._extract_nev_file_spec()
 
             # read nev headers
-            header_reader_function = self._nev_header_reader[self._nev_spec]
-            self._nev_basic_header, self._nev_ext_header = header_reader_function()
+            nev_filename = f"{self._filenames['nev']}.nev"
+            self._nev_basic_header, self._nev_ext_header = self._read_nev_header(self._nev_spec, nev_filename)
 
             nev_reader_function = self._nev_data_reader[self._nev_spec]
             self.nev_data = nev_reader_function()
@@ -1214,13 +1209,28 @@ class BlackrockRawIO(BaseRawIO):
 
         return data
 
-    def _read_nev_header(self, ext_header_variants):
+    def _read_nev_header(self, spec, filename):
         """
-        Extract nev header information from a of specific .nsx header variant
+        Extract nev header information for any specification version.
+        
+        Parameters
+        ----------
+        spec : str
+            The specification version (e.g., "2.1", "2.2", "2.3", "3.0")
+        filename : str
+            The NEV filename to read from
+        
+        Returns
+        -------
+        nev_basic_header : np.ndarray
+            Basic header information
+        nev_ext_header : dict
+            Extended header information by packet ID
         """
-        filename = f"{self._filenames['nev']}.nev"
-
-        # basic header
+        # Note: This function only uses the passed parameters, not self attributes
+        # This makes it easy to convert to @staticmethod later
+        
+        # basic header (same for all versions)
         dt0 = [
             # Set to "NEURALEV"
             ("file_type_id", "S8"),
@@ -1252,10 +1262,6 @@ class BlackrockRawIO(BaseRawIO):
 
         nev_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
 
-        # extended header
-        # this consist in N block with code 8bytes + 24 data bytes
-        # the data bytes depend on the code and need to be converted
-        # cafilename_nsx, segse by case
         shape = nev_basic_header["nb_ext_headers"]
         offset_dt0 = np.dtype(dt0).itemsize
 
@@ -1264,69 +1270,22 @@ class BlackrockRawIO(BaseRawIO):
 
         raw_ext_header = np.memmap(filename, offset=offset_dt0, dtype=dt1, shape=shape, mode="r")
 
-        nev_ext_header = {}
-        for packet_id in ext_header_variants.keys():
-            mask = raw_ext_header["packet_id"] == packet_id
-            dt2 = self._nev_ext_header_types()[packet_id][ext_header_variants[packet_id]]
 
-            nev_ext_header[packet_id] = raw_ext_header.view(dt2)[mask]
+        # Get extended header types for this spec
+        header_types = NEV_EXT_HEADER_TYPES_BY_SPEC[spec]
+        
+        # Parse extended headers by packet type
+        # Strategy: view() entire array first, then mask for efficiency
+        # Since all NEV extended header packets are fixed-width (32 bytes), temporarily
+        # interpreting a "NEUEVWAV" packet as "ARRAYNME" structure is safe - the raw bytes
+        # are just reinterpreted without copying. We immediately filter out mismatched packets
+        # with the mask, keeping only those that actually belong to the current packet type.
+        nev_ext_header = {}
+        for packet_id, dtype_def in header_types.items():
+            mask = raw_ext_header["packet_id"] == packet_id
+            nev_ext_header[packet_id] = raw_ext_header.view(dtype_def)[mask]
 
         return nev_basic_header, nev_ext_header
-
-    def _read_nev_header_spec_v21(self):
-        """
-        Extract nev header information from a 2.1 .nev file
-        """
-
-        ext_header_variants = {
-            b"NEUEVWAV": "a",
-            b"ARRAYNME": "a",
-            b"ECOMMENT": "a",
-            b"CCOMMENT": "a",
-            b"MAPFILE": "a",
-            b"NSASEXEV": "a",
-        }
-
-        return self._read_nev_header(ext_header_variants)
-
-    def _read_nev_header_spec_v22(self):
-        """
-        Extract nev header information from a 2.2 .nev file
-        """
-
-        ext_header_variants = {
-            b"NEUEVWAV": "b",
-            b"ARRAYNME": "a",
-            b"ECOMMENT": "a",
-            b"CCOMMENT": "a",
-            b"MAPFILE": "a",
-            b"NEUEVLBL": "a",
-            b"NEUEVFLT": "a",
-            b"DIGLABEL": "a",
-            b"NSASEXEV": "a",
-        }
-
-        return self._read_nev_header(ext_header_variants)
-
-    def _read_nev_header_spec_v30_ptp(self):
-        """
-        Extract nev header information from a 2.3 .nev file
-        """
-
-        ext_header_variants = {
-            b"NEUEVWAV": "b",
-            b"ARRAYNME": "a",
-            b"ECOMMENT": "a",
-            b"CCOMMENT": "a",
-            b"MAPFILE": "a",
-            b"NEUEVLBL": "a",
-            b"NEUEVFLT": "a",
-            b"DIGLABEL": "a",
-            b"VIDEOSYN": "a",
-            b"TRACKOBJ": "a",
-        }
-
-        return self._read_nev_header(ext_header_variants)
 
     def _read_nev_data(self, nev_data_masks, nev_data_types):
         """
@@ -1598,127 +1557,6 @@ class BlackrockRawIO(BaseRawIO):
         }
 
         return self._read_nev_data(nev_data_masks, nev_data_types)
-
-    def _nev_ext_header_types(self):
-        """
-        Defines extended header types for different .nev file specifications.
-        """
-        nev_ext_header_types = {
-            b"NEUEVWAV": {
-                # Version>=2.1
-                "a": [
-                    ("packet_id", "S8"),
-                    ("electrode_id", "uint16"),
-                    ("physical_connector", "uint8"),
-                    ("connector_pin", "uint8"),
-                    ("digitization_factor", "uint16"),
-                    ("energy_threshold", "uint16"),
-                    ("hi_threshold", "int16"),
-                    ("lo_threshold", "int16"),
-                    ("nb_sorted_units", "uint8"),
-                    # number of bytes per waveform sample
-                    ("bytes_per_waveform", "uint8"),
-                    ("unused", "S10"),
-                ],
-                # Version>=2.3
-                "b": [
-                    ("packet_id", "S8"),
-                    ("electrode_id", "uint16"),
-                    ("physical_connector", "uint8"),
-                    ("connector_pin", "uint8"),
-                    ("digitization_factor", "uint16"),
-                    ("energy_threshold", "uint16"),
-                    ("hi_threshold", "int16"),
-                    ("lo_threshold", "int16"),
-                    ("nb_sorted_units", "uint8"),
-                    # number of bytes per waveform sample
-                    ("bytes_per_waveform", "uint8"),
-                    # number of samples for each waveform
-                    ("spike_width", "uint16"),
-                    ("unused", "S8"),
-                ],
-            },
-            b"ARRAYNME": {"a": [("packet_id", "S8"), ("electrode_array_name", "S24")]},
-            b"ECOMMENT": {"a": [("packet_id", "S8"), ("extra_comment", "S24")]},
-            b"CCOMMENT": {"a": [("packet_id", "S8"), ("continued_comment", "S24")]},
-            b"MAPFILE": {"a": [("packet_id", "S8"), ("mapFile", "S24")]},
-            b"NEUEVLBL": {
-                "a": [
-                    ("packet_id", "S8"),
-                    ("electrode_id", "uint16"),
-                    # label of this electrode
-                    ("label", "S16"),
-                    ("unused", "S6"),
-                ]
-            },
-            b"NEUEVFLT": {
-                "a": [
-                    ("packet_id", "S8"),
-                    ("electrode_id", "uint16"),
-                    ("hi_freq_corner", "uint32"),
-                    ("hi_freq_order", "uint32"),
-                    # 0=None 1=Butterworth
-                    ("hi_freq_type", "uint16"),
-                    ("lo_freq_corner", "uint32"),
-                    ("lo_freq_order", "uint32"),
-                    # 0=None 1=Butterworth
-                    ("lo_freq_type", "uint16"),
-                    ("unused", "S2"),
-                ]
-            },
-            b"DIGLABEL": {
-                "a": [
-                    ("packet_id", "S8"),
-                    # Read name of digital
-                    ("label", "S16"),
-                    # 0=serial, 1=parallel
-                    ("mode", "uint8"),
-                    ("unused", "S7"),
-                ]
-            },
-            b"NSASEXEV": {
-                "a": [
-                    ("packet_id", "S8"),
-                    # Read frequency of periodic packet generation
-                    ("frequency", "uint16"),
-                    # Read if digital input triggers events
-                    ("digital_input_config", "uint8"),
-                    # Read if analog input triggers events
-                    ("analog_channel_1_config", "uint8"),
-                    ("analog_channel_1_edge_detec_val", "uint16"),
-                    ("analog_channel_2_config", "uint8"),
-                    ("analog_channel_2_edge_detec_val", "uint16"),
-                    ("analog_channel_3_config", "uint8"),
-                    ("analog_channel_3_edge_detec_val", "uint16"),
-                    ("analog_channel_4_config", "uint8"),
-                    ("analog_channel_4_edge_detec_val", "uint16"),
-                    ("analog_channel_5_config", "uint8"),
-                    ("analog_channel_5_edge_detec_val", "uint16"),
-                    ("unused", "S6"),
-                ]
-            },
-            b"VIDEOSYN": {
-                "a": [
-                    ("packet_id", "S8"),
-                    ("video_source_id", "uint16"),
-                    ("video_source", "S16"),
-                    ("frame_rate", "float32"),
-                    ("unused", "S2"),
-                ]
-            },
-            b"TRACKOBJ": {
-                "a": [
-                    ("packet_id", "S8"),
-                    ("trackable_type", "uint16"),
-                    ("trackable_id", "uint16"),
-                    ("point_count", "uint16"),
-                    ("video_source", "S16"),
-                    ("unused", "S2"),
-                ]
-            },
-        }
-
-        return nev_ext_header_types
 
     def _nev_data_masks(self, packet_ids):
         """
@@ -2288,3 +2126,252 @@ class BlackrockRawIO(BaseRawIO):
         array, an array will be returned.
         """
         return flag & (1 << pos) > 0
+
+
+# Extended header types for different NEV file specifications
+# Structure: {spec: {packet_id: data_type_definition}}
+NEV_EXT_HEADER_TYPES_BY_SPEC = {
+    "2.1": {
+        b"NEUEVWAV": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("physical_connector", "uint8"),
+            ("connector_pin", "uint8"),
+            ("digitization_factor", "uint16"),
+            ("energy_threshold", "uint16"),
+            ("hi_threshold", "int16"),
+            ("lo_threshold", "int16"),
+            ("nb_sorted_units", "uint8"),
+            ("bytes_per_waveform", "uint8"),
+            ("unused", "S10"),
+        ],
+        b"ARRAYNME": [("packet_id", "S8"), ("electrode_array_name", "S24")],
+        b"ECOMMENT": [("packet_id", "S8"), ("extra_comment", "S24")],
+        b"CCOMMENT": [("packet_id", "S8"), ("continued_comment", "S24")],
+        b"MAPFILE": [("packet_id", "S8"), ("mapFile", "S24")],
+        b"NSASEXEV": [
+            ("packet_id", "S8"),
+            ("frequency", "uint16"),
+            ("digital_input_config", "uint8"),
+            ("analog_channel_1_config", "uint8"),
+            ("analog_channel_1_edge_detec_val", "uint16"),
+            ("analog_channel_2_config", "uint8"),
+            ("analog_channel_2_edge_detec_val", "uint16"),
+            ("analog_channel_3_config", "uint8"),
+            ("analog_channel_3_edge_detec_val", "uint16"),
+            ("analog_channel_4_config", "uint8"),
+            ("analog_channel_4_edge_detec_val", "uint16"),
+            ("analog_channel_5_config", "uint8"),
+            ("analog_channel_5_edge_detec_val", "uint16"),
+            ("unused", "S6"),
+        ],
+    },
+    "2.2": {
+        b"NEUEVWAV": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("physical_connector", "uint8"),
+            ("connector_pin", "uint8"),
+            ("digitization_factor", "uint16"),
+            ("energy_threshold", "uint16"),
+            ("hi_threshold", "int16"),
+            ("lo_threshold", "int16"),
+            ("nb_sorted_units", "uint8"),
+            ("bytes_per_waveform", "uint8"),
+            ("spike_width", "uint16"),
+            ("unused", "S8"),
+        ],
+        b"ARRAYNME": [("packet_id", "S8"), ("electrode_array_name", "S24")],
+        b"ECOMMENT": [("packet_id", "S8"), ("extra_comment", "S24")],
+        b"CCOMMENT": [("packet_id", "S8"), ("continued_comment", "S24")],
+        b"MAPFILE": [("packet_id", "S8"), ("mapFile", "S24")],
+        b"NEUEVLBL": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("label", "S16"),
+            ("unused", "S6"),
+        ],
+        b"NEUEVFLT": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("hi_freq_corner", "uint32"),
+            ("hi_freq_order", "uint32"),
+            ("hi_freq_type", "uint16"),
+            ("lo_freq_corner", "uint32"),
+            ("lo_freq_order", "uint32"),
+            ("lo_freq_type", "uint16"),
+            ("unused", "S2"),
+        ],
+        b"DIGLABEL": [
+            ("packet_id", "S8"),
+            ("label", "S16"),
+            ("mode", "uint8"),
+            ("unused", "S7"),
+        ],
+        b"NSASEXEV": [
+            ("packet_id", "S8"),
+            ("frequency", "uint16"),
+            ("digital_input_config", "uint8"),
+            ("analog_channel_1_config", "uint8"),
+            ("analog_channel_1_edge_detec_val", "uint16"),
+            ("analog_channel_2_config", "uint8"),
+            ("analog_channel_2_edge_detec_val", "uint16"),
+            ("analog_channel_3_config", "uint8"),
+            ("analog_channel_3_edge_detec_val", "uint16"),
+            ("analog_channel_4_config", "uint8"),
+            ("analog_channel_4_edge_detec_val", "uint16"),
+            ("analog_channel_5_config", "uint8"),
+            ("analog_channel_5_edge_detec_val", "uint16"),
+            ("unused", "S6"),
+        ],
+    },
+    "2.3": {
+        b"NEUEVWAV": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("physical_connector", "uint8"),
+            ("connector_pin", "uint8"),
+            ("digitization_factor", "uint16"),
+            ("energy_threshold", "uint16"),
+            ("hi_threshold", "int16"),
+            ("lo_threshold", "int16"),
+            ("nb_sorted_units", "uint8"),
+            ("bytes_per_waveform", "uint8"),
+            ("spike_width", "uint16"),
+            ("unused", "S8"),
+        ],
+        b"ARRAYNME": [("packet_id", "S8"), ("electrode_array_name", "S24")],
+        b"ECOMMENT": [("packet_id", "S8"), ("extra_comment", "S24")],
+        b"CCOMMENT": [("packet_id", "S8"), ("continued_comment", "S24")],
+        b"MAPFILE": [("packet_id", "S8"), ("mapFile", "S24")],
+        b"NEUEVLBL": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("label", "S16"),
+            ("unused", "S6"),
+        ],
+        b"NEUEVFLT": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("hi_freq_corner", "uint32"),
+            ("hi_freq_order", "uint32"),
+            ("hi_freq_type", "uint16"),
+            ("lo_freq_corner", "uint32"),
+            ("lo_freq_order", "uint32"),
+            ("lo_freq_type", "uint16"),
+            ("unused", "S2"),
+        ],
+        b"DIGLABEL": [
+            ("packet_id", "S8"),
+            ("label", "S16"),
+            ("mode", "uint8"),
+            ("unused", "S7"),
+        ],
+        b"VIDEOSYN": [
+            ("packet_id", "S8"),
+            ("video_source_id", "uint16"),
+            ("video_source", "S16"),
+            ("frame_rate", "float32"),
+            ("unused", "S2"),
+        ],
+        b"TRACKOBJ": [
+            ("packet_id", "S8"),
+            ("trackable_type", "uint16"),
+            ("trackable_id", "uint16"),
+            ("point_count", "uint16"),
+            ("video_source", "S16"),
+            ("unused", "S2"),
+        ],
+        b"NSASEXEV": [
+            ("packet_id", "S8"),
+            ("frequency", "uint16"),
+            ("digital_input_config", "uint8"),
+            ("analog_channel_1_config", "uint8"),
+            ("analog_channel_1_edge_detec_val", "uint16"),
+            ("analog_channel_2_config", "uint8"),
+            ("analog_channel_2_edge_detec_val", "uint16"),
+            ("analog_channel_3_config", "uint8"),
+            ("analog_channel_3_edge_detec_val", "uint16"),
+            ("analog_channel_4_config", "uint8"),
+            ("analog_channel_4_edge_detec_val", "uint16"),
+            ("analog_channel_5_config", "uint8"),
+            ("analog_channel_5_edge_detec_val", "uint16"),
+            ("unused", "S6"),
+        ],
+    },
+    "3.0": {
+        # Version 3.0 uses the same structure as 2.3
+        b"NEUEVWAV": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("physical_connector", "uint8"),
+            ("connector_pin", "uint8"),
+            ("digitization_factor", "uint16"),
+            ("energy_threshold", "uint16"),
+            ("hi_threshold", "int16"),
+            ("lo_threshold", "int16"),
+            ("nb_sorted_units", "uint8"),
+            ("bytes_per_waveform", "uint8"),
+            ("spike_width", "uint16"),
+            ("unused", "S8"),
+        ],
+        b"ARRAYNME": [("packet_id", "S8"), ("electrode_array_name", "S24")],
+        b"ECOMMENT": [("packet_id", "S8"), ("extra_comment", "S24")],
+        b"CCOMMENT": [("packet_id", "S8"), ("continued_comment", "S24")],
+        b"MAPFILE": [("packet_id", "S8"), ("mapFile", "S24")],
+        b"NEUEVLBL": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("label", "S16"),
+            ("unused", "S6"),
+        ],
+        b"NEUEVFLT": [
+            ("packet_id", "S8"),
+            ("electrode_id", "uint16"),
+            ("hi_freq_corner", "uint32"),
+            ("hi_freq_order", "uint32"),
+            ("hi_freq_type", "uint16"),
+            ("lo_freq_corner", "uint32"),
+            ("lo_freq_order", "uint32"),
+            ("lo_freq_type", "uint16"),
+            ("unused", "S2"),
+        ],
+        b"DIGLABEL": [
+            ("packet_id", "S8"),
+            ("label", "S16"),
+            ("mode", "uint8"),
+            ("unused", "S7"),
+        ],
+        b"VIDEOSYN": [
+            ("packet_id", "S8"),
+            ("video_source_id", "uint16"),
+            ("video_source", "S16"),
+            ("frame_rate", "float32"),
+            ("unused", "S2"),
+        ],
+        b"TRACKOBJ": [
+            ("packet_id", "S8"),
+            ("trackable_type", "uint16"),
+            ("trackable_id", "uint16"),
+            ("point_count", "uint16"),
+            ("video_source", "S16"),
+            ("unused", "S2"),
+        ],
+        b"NSASEXEV": [
+            ("packet_id", "S8"),
+            ("frequency", "uint16"),
+            ("digital_input_config", "uint8"),
+            ("analog_channel_1_config", "uint8"),
+            ("analog_channel_1_edge_detec_val", "uint16"),
+            ("analog_channel_2_config", "uint8"),
+            ("analog_channel_2_edge_detec_val", "uint16"),
+            ("analog_channel_3_config", "uint8"),
+            ("analog_channel_3_edge_detec_val", "uint16"),
+            ("analog_channel_4_config", "uint8"),
+            ("analog_channel_4_edge_detec_val", "uint16"),
+            ("analog_channel_5_config", "uint8"),
+            ("analog_channel_5_edge_detec_val", "uint16"),
+            ("unused", "S6"),
+        ],
+    },
+}
