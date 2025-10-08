@@ -906,9 +906,9 @@ class BlackrockRawIO(BaseRawIO):
         if data_header_dtype is None:
             return None  # v2.1 has no data headers
             
-        packet_header = np.memmap(filename, dtype=data_header_dtype, shape=1, offset=offset, mode="r")[0]
+        nsx_basic_header = np.memmap(filename, dtype=data_header_dtype, shape=1, offset=offset, mode="r")[0]
 
-        return packet_header
+        return nsx_basic_header
 
     def _parse_nsx_data(self, spec, nsx_nb):
         """
@@ -1369,7 +1369,7 @@ class BlackrockRawIO(BaseRawIO):
             # Get digitization factor from NEV
             if self._avail_files["nev"]:
                 # Workaround for DigitalFactor overflow in buggy Cerebus systems
-                # Fix from NPMK toolbox (openNEV, line 464, git rev d0a25eac)
+                # Fix from NPMK toolbox (openNEV, line 464, git rev d0a25eac902704a3a29fa5dfd3aed0744f4733ed)
                 dig_factor = self._nev_params("digitization_factor")[elid]
                 if dig_factor == 21516:
                     dig_factor = 152592.547
