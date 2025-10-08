@@ -81,7 +81,6 @@ from .baserawio import (
 from neo.core import NeoReadWriteError
 
 
-
 class BlackrockRawIO(BaseRawIO):
     """
     Class for reading data in from a file set recorded by the Blackrock (Cerebus) recording system.
@@ -157,8 +156,14 @@ class BlackrockRawIO(BaseRawIO):
     main_sampling_rate = 30000.0
 
     def __init__(
-        self, filename=None, nsx_override=None, nev_override=None, nsx_to_load=None, load_nev=True,
-        verbose=False, gap_tolerance_ms=None
+        self,
+        filename=None,
+        nsx_override=None,
+        nev_override=None,
+        nsx_to_load=None,
+        load_nev=True,
+        verbose=False,
+        gap_tolerance_ms=None,
     ):
         BaseRawIO.__init__(self)
 
@@ -398,13 +403,9 @@ class BlackrockRawIO(BaseRawIO):
 
                 # Store in existing structures for backward compatibility
                 self._nsx_data_header[nsx_nb] = {
-                    seg_idx: {k: v for k, v in seg.items() if k != 'data'}
-                    for seg_idx, seg in segments.items()
+                    seg_idx: {k: v for k, v in seg.items() if k != "data"} for seg_idx, seg in segments.items()
                 }
-                self.nsx_datas[nsx_nb] = {
-                    seg_idx: seg['data']
-                    for seg_idx, seg in segments.items()
-                }
+                self.nsx_datas[nsx_nb] = {seg_idx: seg["data"] for seg_idx, seg in segments.items()}
 
                 # Match NSX and NEV segments for v2.3
                 if self._avail_files["nev"]:
@@ -856,14 +857,14 @@ class BlackrockRawIO(BaseRawIO):
     def _read_nsx_header(self, spec, nsx_nb):
         """
         Extract nsx header information for any specification version.
-        
+
         Parameters
         ----------
         spec : str
             The specification version (e.g., "2.1", "2.2", "2.3", "3.0")
         nsx_nb : int
             The NSX file number (e.g., 5 for ns5)
-        
+
         Returns
         -------
         nsx_basic_header : numpy structured array
@@ -873,23 +874,23 @@ class BlackrockRawIO(BaseRawIO):
         """
         # Construct filename
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-        
+
         # Get basic header structure for this spec
         basic_header_dtype = NSX_BASIC_HEADER_TYPES[spec]
         nsx_basic_header = np.fromfile(filename, count=1, dtype=basic_header_dtype)[0]
-        
-        # Get extended header structure for this spec  
+
+        # Get extended header structure for this spec
         ext_header_dtype = NSX_EXT_HEADER_TYPES[spec]
         offset_dt0 = np.dtype(basic_header_dtype).itemsize
         channel_count = int(nsx_basic_header["channel_count"])
         nsx_ext_header = np.memmap(filename, shape=channel_count, offset=offset_dt0, dtype=ext_header_dtype, mode="r")
-        
+
         return nsx_basic_header, nsx_ext_header
 
     def _read_nsx_dataheader(self, spec, nsx_nb, offset):
         """
         Reads data header following the given offset of an nsx file.
-        
+
         Parameters
         ----------
         spec : str
@@ -905,7 +906,7 @@ class BlackrockRawIO(BaseRawIO):
         data_header_dtype = NSX_DATA_HEADER_TYPES[spec]
         if data_header_dtype is None:
             return None  # v2.1 has no data headers
-            
+
         nsx_basic_header = np.memmap(filename, dtype=data_header_dtype, shape=1, offset=offset, mode="r")[0]
 
         return nsx_basic_header
@@ -1057,24 +1058,18 @@ class BlackrockRawIO(BaseRawIO):
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
         # Create file memmap
-        file_memmap = np.memmap(filename, dtype='uint8', mode='r')
+        file_memmap = np.memmap(filename, dtype="uint8", mode="r")
 
         # Calculate header size and data points for v2.1
         channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
         bytes_in_headers = (
-            self._nsx_basic_header[nsx_nb].dtype.itemsize
-            + self._nsx_ext_header[nsx_nb].dtype.itemsize * channels
+            self._nsx_basic_header[nsx_nb].dtype.itemsize + self._nsx_ext_header[nsx_nb].dtype.itemsize * channels
         )
         filesize = self._get_file_size(filename)
         num_samples = int((filesize - bytes_in_headers) / (2 * channels) - 1)
         offset = bytes_in_headers
         # Create data view into memmap
-        data = np.ndarray(
-            shape=(num_samples, channels),
-            dtype='int16',
-            buffer=file_memmap,
-            offset=offset
-        )
+        data = np.ndarray(shape=(num_samples, channels), dtype="int16", buffer=file_memmap, offset=offset)
 
         return {
             0: {
@@ -1100,7 +1095,7 @@ class BlackrockRawIO(BaseRawIO):
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
         # Create file memmap
-        file_memmap = np.memmap(filename, dtype='uint8', mode='r')
+        file_memmap = np.memmap(filename, dtype="uint8", mode="r")
 
         # Get file parameters
         filesize = self._get_file_size(filename)
@@ -1126,12 +1121,7 @@ class BlackrockRawIO(BaseRawIO):
             timestamp = header["timestamp"]
 
             # Create data view into memmap for this block
-            data = np.ndarray(
-                shape=(num_samples, channels),
-                dtype='int16',
-                buffer=file_memmap,
-                offset=data_offset
-            )
+            data = np.ndarray(shape=(num_samples, channels), dtype="int16", buffer=file_memmap, offset=data_offset)
 
             data_blocks[block_idx] = {
                 "data": data,
@@ -1169,13 +1159,7 @@ class BlackrockRawIO(BaseRawIO):
         # Create structured memmap (timestamp + samples per packet)
         ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
         npackets = int((filesize - header_size) / np.dtype(ptp_dt).itemsize)
-        file_memmap = np.memmap(
-            filename,
-            dtype=ptp_dt,
-            shape=npackets,
-            offset=header_size,
-            mode='r'
-        )
+        file_memmap = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=header_size, mode="r")
 
         # Verify this is truly PTP (all packets should have 1 sample)
         if not np.all(file_memmap["num_data_points"] == 1):
@@ -1303,9 +1287,7 @@ class BlackrockRawIO(BaseRawIO):
 
                 # If gaps found, check user's tolerance
                 if len(gap_indices) > 0:
-                    gap_report = self._format_gap_report(
-                        gap_indices, timestamps_in_seconds, time_differences, nsx_nb
-                    )
+                    gap_report = self._format_gap_report(gap_indices, timestamps_in_seconds, time_differences, nsx_nb)
 
                     # Error by default - user must opt-in to segmentation
                     if self.gap_tolerance_ms is None:
@@ -1386,28 +1368,30 @@ class BlackrockRawIO(BaseRawIO):
             else:
                 label = f"ainp{(elid - 129 + 1)}"
 
-            ext_header.append({
-                "labels": label,
-                "units": units,
-                "min_analog_val": -float(dig_factor),
-                "max_analog_val": float(dig_factor),
-                "min_digital_val": -1000,
-                "max_digital_val": 1000,
-            })
+            ext_header.append(
+                {
+                    "labels": label,
+                    "units": units,
+                    "min_analog_val": -float(dig_factor),
+                    "max_analog_val": float(dig_factor),
+                    "min_digital_val": -1000,
+                    "max_digital_val": 1000,
+                }
+            )
 
         return ext_header
 
     def _read_nev_header(self, spec, filename):
         """
         Extract nev header information for any specification version.
-        
+
         Parameters
         ----------
         spec : str
             The specification version (e.g., "2.1", "2.2", "2.3", "3.0")
         filename : str
             The NEV filename to read from
-        
+
         Returns
         -------
         nev_basic_header : np.ndarray
@@ -1417,7 +1401,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         # Note: This function only uses the passed parameters, not self attributes
         # This makes it easy to convert to @staticmethod later
-        
+
         # basic header (same for all versions)
         dt0 = [
             # Set to "NEURALEV"
@@ -1458,10 +1442,9 @@ class BlackrockRawIO(BaseRawIO):
 
         raw_ext_header = np.memmap(filename, offset=offset_dt0, dtype=dt1, shape=shape, mode="r")
 
-
         # Get extended header types for this spec
         header_types = NEV_EXT_HEADER_TYPES_BY_SPEC[spec]
-        
+
         # Parse extended headers by packet type
         # Strategy: view() entire array first, then mask for efficiency
         # Since all NEV extended header packets are fixed-width (32 bytes), temporarily
@@ -1474,10 +1457,11 @@ class BlackrockRawIO(BaseRawIO):
             nev_ext_header[packet_id] = raw_ext_header.view(dtype_def)[mask]
 
         return nev_basic_header, nev_ext_header
+
     def _read_nev_data(self, spec, filename):
         """
         Extract nev data for any specification version.
-        
+
         Parameters
         ----------
         spec : str
@@ -1527,8 +1511,8 @@ class BlackrockRawIO(BaseRawIO):
                 masks[data_type] = (min_val <= raw_data["packet_id"]) & (raw_data["packet_id"] <= max_val)
             else:
                 # Equality check
-                masks[data_type] = (raw_data["packet_id"] == packet_id_spec)
-            
+                masks[data_type] = raw_data["packet_id"] == packet_id_spec
+
             types[data_type] = data_types[data_type](packet_size_bytes)
 
         event_segment_ids = self._get_event_segment_ids(raw_data, masks, spec)
@@ -1545,14 +1529,13 @@ class BlackrockRawIO(BaseRawIO):
 
         return data
 
-
     def _get_reset_event_mask(self, raw_event_data, masks, spec):
         """
         Extract mask for reset comment events in 2.3 .nev file
         """
         if "Comments" not in masks:
             return np.zeros(len(raw_event_data), dtype=bool)
-            
+
         restart_mask = np.logical_and(
             masks["Comments"],
             raw_event_data["value"] == b"\x00\x00\x00\x00\x00\x00critical load restart",
@@ -1712,8 +1695,6 @@ class BlackrockRawIO(BaseRawIO):
             for k, (data, ev_ids) in self.nev_data.items():
                 if len(ev_ids):
                     ev_ids[:] = np.vectorize(new_nev_segment_id_mapping.__getitem__)(ev_ids)
-
-
 
     def _nev_params(self, param_name):
         """
@@ -2613,6 +2594,6 @@ NSX_DATA_HEADER_TYPES = {
         ("reserved", "uint8"),
         ("timestamps", "uint64"),
         ("num_data_points", "uint32"),
-        ("samples", "int16", (channel_count,))
-    ]
+        ("samples", "int16", (channel_count,)),
+    ],
 }
