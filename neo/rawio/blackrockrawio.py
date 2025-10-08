@@ -8,6 +8,7 @@ This work is based on:
   * Lyuba Zehl, Michael Denker - fourth version
   * Samuel Garcia, Julia Srenger - fifth version
   * Chadwick Boulay - FileSpec 3.0 and 3.0-PTP
+  * Heberto Mayorquin - Time segmentation fixes, reporting and refactoring
 
 This IO supports reading only.
 This IO is able to read:
@@ -101,6 +102,27 @@ class BlackrockRawIO(BaseRawIO):
         must be set at the init before parse_header().
     load_nev: bool, default: True
         Load (or not) events/spikes by ignoring or not the nev file.
+    gap_tolerance_ms : float | None, default: None
+        Maximum acceptable gap size in milliseconds for automatic segmentation.
+
+        **Default behavior (None)**: If timestamp gaps are detected, an error is raised
+        with a detailed gap report. This ensures users are aware of data discontinuities.
+
+        **Opt-in segmentation**: Provide a value to automatically segment data at gaps
+        larger than this threshold. Gaps smaller than the threshold are ignored (data
+        treated as continuous).
+
+        Examples:
+
+        - None (default): Error on any detected gaps
+        - 1.0: Tolerate gaps up to 1 ms, segment on larger gaps
+        - 10.0: Tolerate gaps up to 10 ms (filters buffer artifacts)
+        - 100.0: Tolerate gaps up to 100 ms (only major pauses create segments)
+
+        Applies to:
+
+        - PTP format (v3.0-ptp): Gaps in per-sample timestamps
+        - Standard format (v2.2/2.3/3.0): Gaps between data blocks
 
     Notes
     -----
@@ -135,12 +157,12 @@ class BlackrockRawIO(BaseRawIO):
     main_sampling_rate = 30000.0
 
     def __init__(
-        self, filename=None, nsx_override=None, nev_override=None, nsx_to_load=None, load_nev=True, verbose=False
+        self, filename=None, nsx_override=None, nev_override=None, nsx_to_load=None, load_nev=True,
+        verbose=False, gap_tolerance_ms=None
     ):
-        """
-        Initialize the BlackrockIO class.
-        """
         BaseRawIO.__init__(self)
+
+        self.gap_tolerance_ms = gap_tolerance_ms
 
         self.filename = str(filename)
 
@@ -917,7 +939,7 @@ class BlackrockRawIO(BaseRawIO):
         │ - nb_data_points (e.g., 1000)               │
         ├─────────────────────────────────────────────┤
         │ DATA BLOCK 1 DATA                           │  ← Actual samples
-        │ - 1000 samples × N channels                 │
+        │ - 1000 samples x N channels                 │
         │ - int16 values                              │
         ├─────────────────────────────────────────────┤
         │ DATA BLOCK 2 HEADER                         │  ← Next block
@@ -926,15 +948,13 @@ class BlackrockRawIO(BaseRawIO):
         │ - nb_data_points (e.g., 1000)               │
         ├─────────────────────────────────────────────┤
         │ DATA BLOCK 2 DATA                           │
-        │ - 1000 samples × N channels                 │
+        │ - 1000 samples x N channels                 │
         └─────────────────────────────────────────────┘
 
         Key characteristics:
         - Headers are EXPLICIT and SPARSE (only at block boundaries)
         - Each block has ONE scalar timestamp for ALL samples in that block
         - Reader LOOPS through file, finding headers
-        - Multiple blocks exist when recording was paused/resumed
-        - Timestamp indicates when each block started recording
 
         PTP FORMAT (v3.0 with Precision Time Protocol)
         -----------------------------------------------
@@ -949,19 +969,19 @@ class BlackrockRawIO(BaseRawIO):
         │ - reserved (1 byte)                         │
         │ - timestamp (8 bytes, e.g., 1000)           │
         │ - num_data_points (always 1)                │
-        │ - samples (N channels × int16)              │
+        │ - samples (N channels x int16)              │
         ├─────────────────────────────────────────────┤
         │ PACKET 1:                                   │
         │ - reserved                                  │
         │ - timestamp (e.g., 1033)                    │
         │ - num_data_points (1)                       │
-        │ - samples (N channels × int16)              │
+        │ - samples (N channels x int16)              │
         ├─────────────────────────────────────────────┤
         │ PACKET 2:                                   │
         │ - reserved                                  │
         │ - timestamp (e.g., 1066)                    │
         │ - num_data_points (1)                       │
-        │ - samples (N channels × int16)              │
+        │ - samples (N channels x int16)              │
         ├─────────────────────────────────────────────┤
         │ ...thousands more packets...                │
         │ PACKET 500:                                 │
@@ -973,8 +993,6 @@ class BlackrockRawIO(BaseRawIO):
         - NO separate headers and data - they're INTERLEAVED
         - EVERY sample has its own timestamp (per-sample nanosecond precision)
         - File is ONE CONTINUOUS ARRAY of uniform packets
-        - Segments must be INFERRED by detecting timestamp gaps
-        - Timestamp gap > 2× sampling period indicates segment boundary
 
         V2.1 FORMAT
         -----------
@@ -1175,12 +1193,9 @@ class BlackrockRawIO(BaseRawIO):
             }
         }
 
-    def _report_nsx_timestamp_gaps(self, gap_indices, timestamps_in_seconds, time_differences, threshold, nsx_nb):
+    def _format_gap_report(self, gap_indices, timestamps_in_seconds, time_differences, nsx_nb):
         """
-        Report detected timestamp gaps with detailed table.
-
-        This function generates a warning message with a detailed table showing
-        where gaps were detected in the timestamp sequence.
+        Format a detailed gap report showing where timestamp discontinuities occur.
 
         Parameters
         ----------
@@ -1190,16 +1205,14 @@ class BlackrockRawIO(BaseRawIO):
             All timestamps converted to seconds
         time_differences : np.ndarray
             Time differences between consecutive timestamps
-        threshold : float
-            Gap threshold in seconds
         nsx_nb : int
             NSX file number for the report
+
+        Returns
+        -------
+        str
+            Formatted gap report with table
         """
-        import warnings
-
-        threshold_ms = threshold * 1000
-        num_segments = len(gap_indices) + 1
-
         # Calculate gap details
         gap_durations_seconds = time_differences[gap_indices]
         gap_durations_ms = gap_durations_seconds * 1000
@@ -1211,17 +1224,16 @@ class BlackrockRawIO(BaseRawIO):
             for index, pos, dur in zip(gap_indices, gap_positions_seconds, gap_durations_ms)
         ]
 
-        segmentation_report_message = (
-            f"\nFound {len(gap_indices)} gaps for nsx {nsx_nb} where samples are farther apart than {threshold_ms:.3f} ms.\n"
-            f"Data will be segmented at these locations to create {num_segments} segments.\n\n"
+        return (
+            f"Gap Report for ns{nsx_nb}:\n"
+            f"Found {len(gap_indices)} timestamp gaps (detection threshold: 2 x sampling period)\n\n"
             "Gap Details:\n"
             "+-----------------+-----------------------+-----------------------+\n"
-            "| Sample Index    | Sample at (Seconds)   | Gap Jump (ms)         |\n"
+            "| Sample Index    | Sample at (Seconds)   | Gap Size (ms)         |\n"
             "+-----------------+-----------------------+-----------------------+\n"
             + "".join(gap_detail_lines)
             + "+-----------------+-----------------------+-----------------------+\n"
         )
-        warnings.warn(segmentation_report_message)
 
     def _segment_nsx_data(self, data_blocks_dict, nsx_nb):
         """
@@ -1279,20 +1291,38 @@ class BlackrockRawIO(BaseRawIO):
             if isinstance(timestamps, np.ndarray):
                 # Analyze timestamp gaps
                 sampling_rate = self._nsx_sampling_frequency[nsx_nb]
-                segmentation_threshold = 2.0 / sampling_rate
+
+                # Detection threshold: use strict 2x sampling period to find ALL gaps
+                detection_threshold = 2.0 / sampling_rate
 
                 timestamps_sampling_rate = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
                 timestamps_in_seconds = timestamps / timestamps_sampling_rate
 
                 time_differences = np.diff(timestamps_in_seconds)
-                gap_indices = np.argwhere(time_differences > segmentation_threshold).flatten()
+                gap_indices = np.argwhere(time_differences > detection_threshold).flatten()
 
-                # Report gaps if found
+                # If gaps found, check user's tolerance
                 if len(gap_indices) > 0:
-                    self._report_nsx_timestamp_gaps(
-                        gap_indices, timestamps_in_seconds, time_differences,
-                        segmentation_threshold, nsx_nb
+                    gap_report = self._format_gap_report(
+                        gap_indices, timestamps_in_seconds, time_differences, nsx_nb
                     )
+
+                    # Error by default - user must opt-in to segmentation
+                    if self.gap_tolerance_ms is None:
+                        raise ValueError(
+                            f"Detected {len(gap_indices)} timestamp gaps in ns{nsx_nb} file.\n"
+                            f"{gap_report}\n"
+                            f"To load this data, provide gap_tolerance_ms parameter to automatically "
+                            f"segment at gaps larger than the specified tolerance."
+                        )
+
+                    # User provided tolerance - filter gaps and segment
+                    gap_tolerance_s = self.gap_tolerance_ms / 1000.0
+                    significant_gap_mask = time_differences[gap_indices] > gap_tolerance_s
+                    significant_gap_indices = gap_indices[significant_gap_mask]
+
+                    # Use significant gaps for segmentation (no warning - user opted in)
+                    gap_indices = significant_gap_indices
 
                 # Create segments based on gaps
                 segment_starts = np.hstack((0, gap_indices + 1))
