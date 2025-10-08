@@ -217,6 +217,8 @@ class TestBlackrockRawIO(
 
         Tests the error-by-default behavior where files with timestamp gaps raise ValueError
         unless the user explicitly opts in with gap_tolerance_ms parameter.
+        
+        See PR #1769 for the gap details on the example file used here.
         """
         # Use stubbed files with missing samples (timestamp gaps) from SimulatedSpikes data
         dirname = self.get_local_path("blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes")
@@ -228,7 +230,7 @@ class TestBlackrockRawIO(
             reader.parse_header()
 
         # Test 2: Explicit tolerance allows loading files with gaps
-        # User opts in by providing gap_tolerance_ms, so no warning is issued
+        # User opts in by providing gap_tolerance_ms
         reader_with_tolerance = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=10.0)
         reader_with_tolerance.parse_header()
         segments_with_tolerance = reader_with_tolerance.segment_count(0)
