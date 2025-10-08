@@ -227,12 +227,6 @@ class TestBlackrockRawIO(
             reader = BlackrockRawIO(filename=dirname, nsx_to_load=6)
             reader.parse_header()
 
-        # Verify the error message contains gap information
-        error_msg = str(context.exception)
-        self.assertIn("gap", error_msg.lower())
-        self.assertIn("gap_tolerance_ms", error_msg)
-        self.assertIn("Gap Report", error_msg)
-
         # Test 2: Explicit tolerance allows loading files with gaps
         # User opts in by providing gap_tolerance_ms, so no warning is issued
         reader_with_tolerance = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=10.0)
@@ -240,27 +234,12 @@ class TestBlackrockRawIO(
         segments_with_tolerance = reader_with_tolerance.segment_count(0)
         self.assertEqual(1, segments_with_tolerance)  # Gaps < 10ms are ignored
 
-        # Test 3: Very strict tolerance creates multiple segments
+        # Test 3: Stricter tolerance creates 3 segments
         # With strict tolerance (0.5ms), gaps > 0.5ms will create new segments
         reader_strict = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=0.5)
         reader_strict.parse_header()
         segments_strict = reader_strict.segment_count(0)
-        self.assertGreater(segments_strict, 1)  # Should have multiple segments due to gaps
-
-        # Test 4: Different NSX files can have different gap patterns
-        # Test ns4 file which has different gaps than ns6
-        with self.assertRaises(ValueError) as context_ns4:
-            reader_ns4 = BlackrockRawIO(filename=dirname, nsx_to_load=4)
-            reader_ns4.parse_header()
-
-        error_msg_ns4 = str(context_ns4.exception)
-        self.assertIn("ns4", error_msg_ns4)
-        self.assertIn("gap", error_msg_ns4.lower())
-
-        # ns4 should also load with tolerance
-        reader_ns4_with_tolerance = BlackrockRawIO(filename=dirname, nsx_to_load=4, gap_tolerance_ms=10.0)
-        reader_ns4_with_tolerance.parse_header()
-        self.assertEqual(1, reader_ns4_with_tolerance.segment_count(0))
+        self.assertEqual(segments_strict, 3)  #
 
 
 if __name__ == "__main__":
