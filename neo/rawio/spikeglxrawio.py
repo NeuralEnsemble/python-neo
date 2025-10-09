@@ -251,7 +251,13 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                     # For example: if there are 8 analog channels (indices 0-7), the digital word is at index 8
                     num_samples = info["sample_length"]
                     num_channels = info["num_chan"]
-                    data = np.memmap(info["bin_file"], dtype="int16", mode="r", shape=(num_samples, num_channels), order="C")
+                    data = np.memmap(
+                        info["bin_file"],
+                        dtype="int16",
+                        mode="r",
+                        shape=(num_samples, num_channels),
+                        order="C",
+                    )
                     digital_word_channel_index = len(info["analog_channels"])
                     self._events_memmap_digital_word = data[:, digital_word_channel_index]
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
