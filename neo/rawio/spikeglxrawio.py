@@ -246,12 +246,14 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         chan_name = local_chan
                         chan_id = f"{stream_name}#{chan_name}"
                         event_channels.append((chan_name, chan_id, "event"))
-                    # add events_memmap
-                    data = np.memmap(info["bin_file"], dtype="int16", mode="r", offset=0, order="C")
-                    data = data.reshape(-1, info["num_chan"])
-                    # The digital word is usually the last channel, after all the individual analog channels
-                    extracted_word = data[:, len(info["analog_channels"])]
-                    self._events_memmap = np.unpackbits(extracted_word.astype(np.uint8)[:, None], axis=1)
+                    # Create memmap for digital word but defer unpacking until needed
+                    # The digital word is stored as the last channel, after all the individual analog channels
+                    # For example: if there are 8 analog channels (indices 0-7), the digital word is at index 8
+                    num_samples = info["sample_length"]
+                    num_chan = info["num_chan"]
+                    data = np.memmap(info["bin_file"], dtype="int16", mode="r", shape=(num_samples, num_chan), order="C")
+                    digital_word_channel_index = len(info["analog_channels"])
+                    self._events_memmap_digital_word = data[:, digital_word_channel_index]
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         # No spikes
@@ -342,7 +344,9 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         info = self.signals_info_dict[0, "nidq"]  # There are no events that are not in the nidq stream
         dig_ch = info["digital_channels"]
         if len(dig_ch) > 0:
-            event_data = self._events_memmap
+            # Unpack bits on-demand - this is when memory allocation happens
+            event_data = np.unpackbits(self._events_memmap_digital_word.astype(np.uint8)[:, None], axis=1)
+
             channel = dig_ch[event_channel_index]
             ch_idx = 7 - int(channel[2:])  # They are in the reverse order
             this_stream = event_data[:, ch_idx]
