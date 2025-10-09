@@ -250,8 +250,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                     # The digital word is stored as the last channel, after all the individual analog channels
                     # For example: if there are 8 analog channels (indices 0-7), the digital word is at index 8
                     num_samples = info["sample_length"]
-                    num_chan = info["num_chan"]
-                    data = np.memmap(info["bin_file"], dtype="int16", mode="r", shape=(num_samples, num_chan), order="C")
+                    num_channels = info["num_chan"]
+                    data = np.memmap(info["bin_file"], dtype="int16", mode="r", shape=(num_samples, num_channels), order="C")
                     digital_word_channel_index = len(info["analog_channels"])
                     self._events_memmap_digital_word = data[:, digital_word_channel_index]
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
@@ -686,7 +686,12 @@ def extract_stream_info(meta_file, meta):
             info["sampling_rate"] = float(meta[k])
     info["num_chan"] = num_chan
 
-    info["sample_length"] = int(meta["fileSizeBytes"]) // 2 // num_chan
+    # Calculate sample_length from actual file size instead of metadata to handle stub/modified files
+    # The metadata fileSizeBytes may not match the actual .bin file (e.g., in test stub files)
+    # Original calculation (only correct for unmodified files):
+    # info["sample_length"] = int(meta["fileSizeBytes"]) // 2 // num_chan
+    actual_file_size = Path(meta_file).with_suffix(".bin").stat().st_size
+    info["sample_length"] = actual_file_size // 2 // num_chan  # 2 bytes per int16 sample
     info["gate_num"] = gate_num
     info["trigger_num"] = trigger_num
     info["device"] = device
