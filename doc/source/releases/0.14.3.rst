@@ -24,7 +24,7 @@ We updated the documentation to make use of the new eBRAINS URLs.
 Bug fixes and improvements in IO modules
 ----------------------------------------
 
-Bug fixes and/or improvements have been made to :code:`BlackRockIO`, :code:`NeuroNexusIO`, :code:`OpenEphysBinaryIO`, :code:`BiocamIO`, :code:`SpikegadgetsIO`,:code:`NeuralynxIO`, and :code:`BrainvisionIO`.
+Bug fixes and/or improvements have been made to :code:`BlackRockIO`, :code:`NeuroNexusIO`, :code:`OpenEphysBinaryIO`, :code:`BiocamIO`, :code:`SpikegadgetsIO`, :code:`NeuralynxIO`, and :code:`BrainvisionIO`.
 
 
 Acknowledgements
