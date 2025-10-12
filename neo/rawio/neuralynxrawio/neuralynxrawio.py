@@ -64,7 +64,7 @@ from neo.rawio.neuralynxrawio.ncssections import NcsSection, NcsSectionsFactory
 from neo.rawio.neuralynxrawio.nlxheader import NlxHeader
 
 # Named tuple for stream identification keys
-StreamKey = namedtuple('StreamKey', ['sampling_rate', 'input_range', 'filter_params'])
+StreamKey = namedtuple("StreamKey", ["sampling_rate", "input_range", "filter_params"])
 
 
 class NeuralynxRawIO(BaseRawIO):
@@ -456,7 +456,9 @@ class NeuralynxRawIO(BaseRawIO):
                 # Format stream name using namedtuple fields
                 dsp_filter_id = seen_filters[stream_key.filter_params]
                 voltage_mv = int(stream_key.input_range / 1000) if stream_key.input_range is not None else 0
-                stream_name = f"stream{stream_id}_{int(stream_key.sampling_rate)}Hz_{voltage_mv}mVRange_DSPFilter{dsp_filter_id}"
+                stream_name = (
+                    f"stream{stream_id}_{int(stream_key.sampling_rate)}Hz_{voltage_mv}mVRange_DSPFilter{dsp_filter_id}"
+                )
 
                 stream_names.append(stream_name)
                 stream_ids.append(str(stream_id))

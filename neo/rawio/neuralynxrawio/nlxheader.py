@@ -367,31 +367,31 @@ class NlxHeader(OrderedDict):
 
         # Convert boolean strings to actual booleans
         bool_keys = [
-            'DSPLowCutFilterEnabled',
-            'DSPHighCutFilterEnabled',
-            'DspDelayCompensation',
+            "DSPLowCutFilterEnabled",
+            "DSPHighCutFilterEnabled",
+            "DspDelayCompensation",
         ]
 
         for key in bool_keys:
             if key in self and isinstance(self[key], str):
-                if self[key] in ('True', 'Enabled'):
+                if self[key] in ("True", "Enabled"):
                     self[key] = True
-                elif self[key] in ('False', 'Disabled'):
+                elif self[key] in ("False", "Disabled"):
                     self[key] = False
 
         # Convert numeric strings to numbers
         numeric_keys = [
-            'DspLowCutFrequency',
-            'DspHighCutFrequency',
-            'DspLowCutNumTaps',
-            'DspHighCutNumTaps',
+            "DspLowCutFrequency",
+            "DspHighCutFrequency",
+            "DspLowCutNumTaps",
+            "DspHighCutNumTaps",
         ]
 
         for key in numeric_keys:
             if key in self and isinstance(self[key], str):
                 try:
                     # Try int first
-                    if '.' not in self[key]:
+                    if "." not in self[key]:
                         self[key] = int(self[key])
                     else:
                         self[key] = float(self[key])
@@ -400,7 +400,7 @@ class NlxHeader(OrderedDict):
                     pass
 
         # Handle DspFilterDelay_µs (could be string or already converted)
-        delay_key = 'DspFilterDelay_µs'
+        delay_key = "DspFilterDelay_µs"
         if delay_key in self and isinstance(self[delay_key], str):
             try:
                 self[delay_key] = int(self[delay_key])
@@ -410,10 +410,10 @@ class NlxHeader(OrderedDict):
         # Extract single-channel InputRange from list
         # For multi-channel files, keep as list
         # For single-channel files, extract the single value
-        if 'InputRange' in self and isinstance(self['InputRange'], list):
-            if len(self['InputRange']) == 1:
+        if "InputRange" in self and isinstance(self["InputRange"], list):
+            if len(self["InputRange"]) == 1:
                 # Single channel file: extract the value
-                self['InputRange'] = self['InputRange'][0]
+                self["InputRange"] = self["InputRange"][0]
             # else: multi-channel, keep as list
 
     def type_of_recording(self):
