@@ -2,7 +2,7 @@
 Neo 0.14.3 release notes
 ========================
 
-10 October 25
+13 October 25
 
 This release of Neo includes many bug fixes in various IOs with an eye to a 1.0 release.
 
@@ -24,7 +24,8 @@ We updated the documentation to make use of the new eBRAINS URLs.
 Bug fixes and improvements in IO modules
 ----------------------------------------
 
-Bug fixes and/or improvements have been made to :code:`BlackRockIO`, :code:`NeuroNexusIO`, :code:`OpenEphysBinaryIO`, :code:`BiocamIO`, :code:`SpikegadgetsIO`, :code:`NeuralynxIO`, and :code:`BrainvisionIO`.
+Bug fixes and/or improvements have been made to :code:`BlackRockIO`, :code:`NeuroNexusIO`, :code:`OpenEphysBinaryIO`, :code:`BiocamIO`, :code:`SpikeGadgetsIO`, :code:`NeuralynxIO`, 
+:code:`SpikeGLXIO`, and :code:`BrainvisionIO`.
 
 
 Acknowledgements
