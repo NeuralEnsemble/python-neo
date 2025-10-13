@@ -80,7 +80,6 @@ from .baserawio import (
 from neo.core import NeoReadWriteError
 
 
-
 class BlackrockRawIO(BaseRawIO):
     """
     Class for reading data in from a file set recorded by the Blackrock (Cerebus) recording system.
@@ -1205,14 +1204,14 @@ class BlackrockRawIO(BaseRawIO):
     def _read_nev_header(self, spec, filename):
         """
         Extract nev header information for any specification version.
-        
+
         Parameters
         ----------
         spec : str
             The specification version (e.g., "2.1", "2.2", "2.3", "3.0")
         filename : str
             The NEV filename to read from
-        
+
         Returns
         -------
         nev_basic_header : np.ndarray
@@ -1222,7 +1221,7 @@ class BlackrockRawIO(BaseRawIO):
         """
         # Note: This function only uses the passed parameters, not self attributes
         # This makes it easy to convert to @staticmethod later
-        
+
         # basic header (same for all versions)
         dt0 = [
             # Set to "NEURALEV"
@@ -1263,10 +1262,9 @@ class BlackrockRawIO(BaseRawIO):
 
         raw_ext_header = np.memmap(filename, offset=offset_dt0, dtype=dt1, shape=shape, mode="r")
 
-
         # Get extended header types for this spec
         header_types = NEV_EXT_HEADER_TYPES_BY_SPEC[spec]
-        
+
         # Parse extended headers by packet type
         # Strategy: view() entire array first, then mask for efficiency
         # Since all NEV extended header packets are fixed-width (32 bytes), temporarily
@@ -1283,7 +1281,7 @@ class BlackrockRawIO(BaseRawIO):
     def _read_nev_data(self, spec, filename):
         """
         Extract nev data for any specification version.
-        
+
         Parameters
         ----------
         spec : str
@@ -1333,8 +1331,8 @@ class BlackrockRawIO(BaseRawIO):
                 masks[data_type] = (min_val <= raw_data["packet_id"]) & (raw_data["packet_id"] <= max_val)
             else:
                 # Equality check
-                masks[data_type] = (raw_data["packet_id"] == packet_id_spec)
-            
+                masks[data_type] = raw_data["packet_id"] == packet_id_spec
+
             types[data_type] = data_types[data_type](packet_size_bytes)
 
         event_segment_ids = self._get_event_segment_ids(raw_data, masks, spec)
@@ -1351,14 +1349,13 @@ class BlackrockRawIO(BaseRawIO):
 
         return data
 
-
     def _get_reset_event_mask(self, raw_event_data, masks, spec):
         """
         Extract mask for reset comment events in 2.3 .nev file
         """
         if "Comments" not in masks:
             return np.zeros(len(raw_event_data), dtype=bool)
-            
+
         restart_mask = np.logical_and(
             masks["Comments"],
             raw_event_data["value"] == b"\x00\x00\x00\x00\x00\x00critical load restart",
@@ -1519,8 +1516,6 @@ class BlackrockRawIO(BaseRawIO):
             for k, (data, ev_ids) in self.nev_data.items():
                 if len(ev_ids):
                     ev_ids[:] = np.vectorize(new_nev_segment_id_mapping.__getitem__)(ev_ids)
-
-
 
     def _nev_params(self, param_name):
         """
