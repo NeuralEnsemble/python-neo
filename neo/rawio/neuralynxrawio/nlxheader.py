@@ -199,6 +199,9 @@ class NlxHeader(OrderedDict):
         if not props_only:
             self._setTimeDate(txt_header)
 
+        # Normalize all types to proper Python types
+        self._normalize_types()
+
     @staticmethod
     def get_text_header(filename):
         """
@@ -348,6 +351,70 @@ class NlxHeader(OrderedDict):
         if sr:
             dt2 = sr.groupdict()
             self["recording_closed"] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
+
+    def _normalize_types(self):
+        """
+        Convert all header values to proper Python types.
+
+        This ensures that:
+        - Boolean strings ('True', 'False', 'Enabled', 'Disabled') become Python bools
+        - Numeric strings ('0.1', '8000') become Python floats/ints
+        - Single-element lists are extracted to scalars (for single-channel files)
+
+        This normalization makes the header values directly usable for
+        stream identification without additional conversion in NeuralynxRawIO.
+        """
+
+        # Convert boolean strings to actual booleans
+        bool_keys = [
+            "DSPLowCutFilterEnabled",
+            "DSPHighCutFilterEnabled",
+            "DspDelayCompensation",
+        ]
+
+        for key in bool_keys:
+            if key in self and isinstance(self[key], str):
+                if self[key] in ("True", "Enabled"):
+                    self[key] = True
+                elif self[key] in ("False", "Disabled"):
+                    self[key] = False
+
+        # Convert numeric strings to numbers
+        numeric_keys = [
+            "DspLowCutFrequency",
+            "DspHighCutFrequency",
+            "DspLowCutNumTaps",
+            "DspHighCutNumTaps",
+        ]
+
+        for key in numeric_keys:
+            if key in self and isinstance(self[key], str):
+                try:
+                    # Try int first
+                    if "." not in self[key]:
+                        self[key] = int(self[key])
+                    else:
+                        self[key] = float(self[key])
+                except ValueError:
+                    # Keep as string if conversion fails
+                    pass
+
+        # Handle DspFilterDelay_µs (could be string or already converted)
+        delay_key = "DspFilterDelay_µs"
+        if delay_key in self and isinstance(self[delay_key], str):
+            try:
+                self[delay_key] = int(self[delay_key])
+            except ValueError:
+                pass
+
+        # Extract single-channel InputRange from list
+        # For multi-channel files, keep as list
+        # For single-channel files, extract the single value
+        if "InputRange" in self and isinstance(self["InputRange"], list):
+            if len(self["InputRange"]) == 1:
+                # Single channel file: extract the value
+                self["InputRange"] = self["InputRange"][0]
+            # else: multi-channel, keep as list
 
     def type_of_recording(self):
         """
