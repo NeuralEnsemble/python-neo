@@ -503,7 +503,6 @@ class NicoletRawIO(BaseRawIO):
             ts_packets_properties.append(ts_properties)
         self.ts_packets = ts_packets
         self.ts_packets_properties = ts_packets_properties
-        self.ts_properties = ts_packets_properties[ts_packet_index]
         pass
 
     def _get_segment_start_times(self):
@@ -515,17 +514,17 @@ class NicoletRawIO(BaseRawIO):
         n_segments = int(segment_instance["section_l"] / 152)
         with open(self.filename, "rb") as fid:
             fid.seek(segment_instance["offset"], 0)
-            for i in range(n_segments):
+            for seg_index in range(n_segments):
+                segment_signal_channels = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
                 segment_info = {}
                 segment_info["date_ole"] = self.read_as_list(fid, [("date", "float64")])
                 date_str = self._convert_ole_to_datetime(segment_info["date_ole"])
                 fid.seek(8, 1)
                 segment_info["duration"] = self.read_as_list(fid, [("duration", "float64")])
                 fid.seek(128, 1)
-                segment_info["ch_names"] = [channel[0] for channel in self.header["signal_channels"]]
-                # segment_info['ref_names'] = [info['ref_sensor'] for info in self.ts_properties]
-                segment_info["sampling_rates"] = [channel[2] for channel in self.header["signal_channels"]]
-                segment_info["scale"] = [channel[5] for channel in self.header["signal_channels"]]
+                segment_info["ch_names"] = [channel[0] for channel in segment_signal_channels]
+                segment_info["sampling_rates"] = [channel[2] for channel in segment_signal_channels]
+                segment_info["scale"] = [channel[5] for channel in segment_signal_channels]
                 segment_info["date"] = date_str
                 segment_info["start_date"] = date_str.date()
                 segment_info["start_time"] = date_str.time()
@@ -751,32 +750,47 @@ class NicoletRawIO(BaseRawIO):
         self._get_channel_info()
         self._get_ts_properties()
 
-    def _create_signal_channels(self, dtype):
+    def set_signal_channels(self, seg_index):
+        self.header["signal_channels"] = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
+
+    def _create_signal_channels(self, dtype, seg_index=0):
         """
         Create information for signal channels based on channel properties, timestream and signal_properties
         """
         signal_channels = []
         signal_streams = {}
         stream_id = 0
-        for i, channel in enumerate(self.channel_properties):
-            if not channel['on']:
+        channel_id = 0
+        for channel in self.channel_properties:
+            if not channel["on"]:
                 continue
             signal = next((item for item in self.signal_properties if item["name"] == channel["sensor"]), None)
-            timestream = next((item for item in self.ts_properties if item["active_sensor"] == channel["sensor"]), None)
+            timestream = next(
+                (item for item in self.ts_packets_properties[seg_index] if item["active_sensor"] == channel["sensor"]),
+                None,
+            )
             if signal is None:
-                warnings.warn(f'No signal found for channel {channel['sensor']}. Skipping channel.')
+                channel_id += 1
+                warnings.warn(
+                    f"No signal found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
+                )
                 continue
             if timestream is None:
-                warnings.warn(f'No Scaling and EEG-Offset found for channel {channel['sensor']}. Skipping channel.')
+                channel_id += 1
+                warnings.warn(
+                    f"No Scaling and EEG-Offset found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
+                )
                 continue
+
             if channel["sampling_rate"] not in signal_streams.keys():
                 signal_streams[channel["sampling_rate"]] = stream_id
                 stream_id += 1
                 channel["sampling_rate"]
+
             signal_channels.append(
                 (
                     channel["sensor"],
-                    i,
+                    channel_id,
                     int(channel["sampling_rate"]),
                     "int16",
                     signal["transducer"],
@@ -786,6 +800,7 @@ class NicoletRawIO(BaseRawIO):
                     "0",
                 )
             )
+            channel_id += 1
         self.signal_streams = signal_streams
         return np.array(signal_channels, dtype=dtype)
 
@@ -826,6 +841,8 @@ class NicoletRawIO(BaseRawIO):
         """
         Read a chunk of signal from the memmap
         """
+        segment_signal_channels = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
+
         if block_index >= self.header["nb_block"]:
             raise IndexError(f"Block Index out of range. There are {self.header['nb_block']} blocks in the file")
 
@@ -836,24 +853,24 @@ class NicoletRawIO(BaseRawIO):
 
         if channel_indexes is None:
             channel_indexes = [
-                i
-                for i, channel in enumerate(self.header["signal_channels"])
-                if channel["stream_id"] == str(stream_index)
+                i for i, channel in enumerate(segment_signal_channels) if channel["stream_id"] == str(stream_index)
             ]
         elif isinstance(channel_indexes, slice):
             if channel_indexes == slice(None):
                 channel_indexes = [
-                    i
-                    for i, channel in enumerate(self.header["signal_channels"])
-                    if channel["stream_id"] == str(stream_index)
+                    i for i, channel in enumerate(segment_signal_channels) if channel["stream_id"] == str(stream_index)
                 ]
             channel_indexes = np.arange(self.header["signal_channels"].shape[0], dtype="int")[channel_indexes]
         else:
             channel_indexes = np.asarray(channel_indexes)
             if any(channel_indexes < 0):
                 raise IndexError("Channel Indices cannot be negative")
-            if any(channel_indexes >= self.header["signal_channels"].shape[0]):
-                raise IndexError("Channel Indices out of range")
+            channels_exist = np.isin(channel_indexes, range(segment_signal_channels.shape[0]))
+            if not np.all(channels_exist):
+                raise IndexError(
+                    f"Channels {channel_indexes[~channels_exist]} from header do not exist in segment {seg_index}, stream {stream_index}. "
+                    "Use the set_signal_channels() method before calling read_segments() to update the header with the correct channels."
+                )
 
         if i_start is None:
             i_start = 0
@@ -889,7 +906,9 @@ class NicoletRawIO(BaseRawIO):
             section_slices[i] = self._get_section_slices(sections, sections_length, i_start, i_stop)
 
         full_data = np.empty([section_slices[i][-1].stop - section_slices[0][0].start])
-        full_data[0:(section_slices[i][-1].stop - section_slices[0][0].start)] = self.raw_signal[slice(section_slices[0][0].start, section_slices[i][-1].stop)]
+        full_data[0 : (section_slices[i][-1].stop - section_slices[0][0].start)] = self.raw_signal[
+            slice(section_slices[0][0].start, section_slices[i][-1].stop)
+        ]
         initial_offset = section_slices[0][0].start
 
         for column, slices in section_slices.items():
@@ -898,8 +917,8 @@ class NicoletRawIO(BaseRawIO):
                 full_data_start = single_slice.start - initial_offset
                 full_data_stop = single_slice.stop - initial_offset
                 slice_length = single_slice.stop - single_slice.start
-                data[np_idx:(np_idx+slice_length),column] = full_data[slice(full_data_start, full_data_stop)]
-                np_idx += slice_length 
+                data[np_idx : (np_idx + slice_length), column] = full_data[slice(full_data_start, full_data_stop)]
+                np_idx += slice_length
 
         return data
 
