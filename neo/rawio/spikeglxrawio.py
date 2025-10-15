@@ -695,9 +695,12 @@ def extract_stream_info(meta_file, meta):
     # Calculate sample_length from actual file size instead of metadata to handle stub/modified files
     # The metadata fileSizeBytes may not match the actual .bin file (e.g., in test stub files)
     # Original calculation (only correct for unmodified files):
-    # info["sample_length"] = int(meta["fileSizeBytes"]) // 2 // num_chan
-    actual_file_size = Path(meta_file).with_suffix(".bin").stat().st_size
-    info["sample_length"] = actual_file_size // 2 // num_chan  # 2 bytes per int16 sample
+    bin_file = Path(meta_file).with_suffix(".bin")
+    if bin_file.exists():
+        file_size = bin_file.stat().st_size
+    else:
+        file_size = int(meta["fileSizeBytes"])
+    info["sample_length"] = file_size // 2 // num_chan  # 2 bytes per int16 sample
     info["gate_num"] = gate_num
     info["trigger_num"] = trigger_num
     info["device"] = device
