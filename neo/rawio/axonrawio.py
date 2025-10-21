@@ -343,16 +343,73 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
     def read_raw_protocol(self):
         """
-        Read the protocol waveform of the file, if present;
-        function works with ABF2 only. Protocols can be reconstructed
-        from the ABF1 header.
+        Read stimulus waveforms (DAC output protocols) from ABF2 files.
+
+        Purpose
+        -------
+        In electrophysiology experiments, the DAC (Digital-to-Analog Converter)
+        outputs generate stimulus waveforms (voltage steps in voltage-clamp,
+        current injections in current-clamp). This function reconstructs these
+        commanded output waveforms from the protocol definition stored in the
+        file, NOT from recorded data.
+
+        Why This Matters
+        ----------------
+        - Recorded data shows what was MEASURED (ADC inputs: membrane voltage,
+          current, etc.)
+        - Protocol waveforms show what was COMMANDED (DAC outputs: stimulus
+          patterns)
+        - Having both allows you to analyze the relationship between stimulus
+          and response
+
+        Limitations
+        -----------
+        - ABF2 files only: ABF1 files don't store protocol sections, though
+          protocols can theoretically be reconstructed from ABF1 headers
+        - Waveforms are RECONSTRUCTED from epoch definitions, not recorded data
+        - Some complex protocols may not reconstruct perfectly (see TODO in code)
 
         Returns
         -------
-        segments : list of segments
-            Segments, one for every episode, with list of analog signls (one for every DAC).
+        sigs_by_segments : list of list of numpy.ndarray
+            Outer list: one entry per episode/sweep (length = nEpi)
+            Inner list: one entry per DAC channel (length = nDAC)
+            Arrays: stimulus waveform samples (length = nSam samples per episode)
 
-        Author:  JS Nowacki
+            Structure: sigs_by_segments[episode_idx][DAC_idx] = 1D array
+
+            Example for 3 episodes, 2 DAC channels:
+              sigs_by_segments[0][0] -> Episode 0, DAC 0 waveform (nSam samples)
+              sigs_by_segments[0][1] -> Episode 0, DAC 1 waveform (nSam samples)
+              sigs_by_segments[1][0] -> Episode 1, DAC 0 waveform (nSam samples)
+              ...
+
+        sig_names : list of str
+            DAC channel names (length = nDAC)
+            Example: ['Cmd 0', 'Cmd 1']
+
+        sig_units : list of str
+            DAC channel units (length = nDAC)
+            Example: ['mV', 'pA']
+
+        Example Usage
+        -------------
+        >>> reader = AxonRawIO(filename='mydata.abf')
+        >>> reader.parse_header()
+        >>> waveforms, names, units = reader.read_raw_protocol()
+        >>> # Get DAC 0 waveform for episode 2:
+        >>> dac0_ep2 = waveforms[2][0]
+        >>> print(f"{names[0]} waveform in {units[0]}: {dac0_ep2}")
+
+        Notes
+        -----
+        Waveforms are constructed from:
+        - Holding levels (fDACHoldingLevel)
+        - Epoch definitions (EpochPerDACSection) describing step changes
+        - Episode number (waveforms can change across episodes via increment
+          parameters)
+
+        Author: JS Nowacki
         """
         info = self._axon_info
 
@@ -404,224 +461,574 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
 def parse_axon_soup(filename):
     """
-    read the header of the file
+    Parse ABF file header and return metadata dict.
 
     The strategy here differs from the original script under Matlab.
     In the original script for ABF2, it completes the header with
     information that is located in other structures.
 
-    In ABF2 this function returns info with sub dict:
-        sections             (ABF2)
-        protocol             (ABF2)
-        listTags             (ABF1&2)
-        listADCInfo          (ABF2)
-        listDACInfo          (ABF2)
-        dictEpochInfoPerDAC  (ABF2)
-    that contains more information.
+    Returns info with sub dicts depending on version:
+        ABF1: listTag
+        ABF2: sections, protocol, listTags, listADCInfo, listDACInfo, dictEpochInfoPerDAC
+
+    Parameters
+    ----------
+    filename : str
+        Path to the ABF file
+
+    Returns
+    -------
+    dict or None
+        Header dictionary with file metadata, or None if file signature is invalid
     """
     with open(filename, "rb") as fid:
         f = StructFile(fid)
+        signature = f.read(4)
 
-        # version
-        f_file_signature = f.read(4)
-        if f_file_signature == b"ABF ":
-            header_description = headerDescriptionV1
-        elif f_file_signature == b"ABF2":
-            header_description = headerDescriptionV2
+        if signature == b"ABF ":
+            return _parse_abf_v1(f, headerDescriptionV1)
+        elif signature == b"ABF2":
+            return _parse_abf_v2(f, headerDescriptionV2)
         else:
             return None
 
-        # construct dict
-        header = {}
-        for key, offset, fmt in header_description:
-            val = f.read_f(fmt, offset=offset)
+
+def _parse_abf_v1(f, header_description):
+    """
+    Parse ABF 1.x files (pCLAMP 6-9).
+
+    Overview
+    --------
+    ABF 1.x uses a single, large, fixed-length header (~5KB) that contains
+    EVERYTHING you need to parse the file. Think of it as a "road map" where
+    every piece of metadata and every pointer is at a known, fixed location.
+
+    Key Design Principle: DIRECT ACCESS
+    ------------------------------------
+    Unlike ABF 2.x which uses indirection (Section Index -> Sections), ABF 1.x
+    puts all metadata directly in the header at fixed byte offsets.
+
+    Example: To get the number of channels:
+      Simply read 2 bytes at offset 120 -> nADCNumChannels
+
+    Example: To find the data section:
+      Read lDataSectionPtr at offset 40 -> multiply by 512 -> data location
+
+    Limitations:
+    - Maximum 16 ADC channels (arrays are fixed size in header)
+    - Strings are fixed-length (384 bytes for protocol path, 10 bytes per
+      channel name, etc.)
+    - Cannot add new features without breaking file format
+
+    Benefits:
+    - Simple to parse (read header, done!)
+    - Fast (direct memory mapping, no indirection)
+    - Everything in one place
+
+    Historical Context: ABF 1.x merged the older CLAMPEX and FETCHEX file
+    formats into a single, more versatile format for electrophysiology data.
+
+    Parsing Order (as implemented in this function):
+    ------------------------------------------------
+    1. Read entire fixed header (bytes 0-5119) -> all metadata available
+    2. Parse Tag section (using lTagSectionPtr from header)
+    3. Adjust protocol path formatting
+    4. Compute datetime from header fields
+
+    Format: Fixed header with static field offsets
+    Block Size: 512 bytes
+    Header Fields: See headerDescriptionV1 for complete field list
+
+    File Layout:
+    +----------------------------------------------------------------------+
+    | HEADER SECTION (Blocks 0-9, ~5KB)                                   |
+    +----------------------------------------------------------------------+
+    | Contains all metadata for the entire file, including acquisition    |
+    | parameters and pointers to all other data sections:                 |
+    |   - File signature, version, operation mode                         |
+    |   - Pointers to data/tag/synch sections (in block numbers)          |
+    |   - Channel configuration (up to 16 ADC channels)                   |
+    |   - Sampling parameters, gains, offsets                             |
+    |   - Protocol path and timing information                            |
+    | See headerDescriptionV1 for all fields (offset, format, name)       |
+    +----------------------------------------------------------------------+
+    | TAG SECTION (at lTagSectionPtr x 512)                                |
+    +----------------------------------------------------------------------+
+    | User-defined markers/comments during acquisition                    |
+    | Each tag: 64 bytes (time, comment, type, voice tag)                 |
+    | See TagInfoDescription for structure                                |
+    +----------------------------------------------------------------------+
+    | SYNCH ARRAY SECTION (Physical disk layout)                          |
+    +----------------------------------------------------------------------+
+    | Purpose: Index of episodes/sweeps within the continuous data stream |
+    | Critical for episodic acquisition modes (mode 2, 5)                 |
+    |                                                                       |
+    | Electrophysiology Context:                                           |
+    |   - Episode/Sweep = Single experimental trial or stimulation cycle  |
+    |   - In voltage-clamp: one voltage step protocol execution           |
+    |   - In current-clamp: one current injection sequence                |
+    |   - Data contains multiple episodes concatenated in data section    |
+    |                                                                       |
+    | Neo Mapping:                                                         |
+    |   - Each episode becomes one neo.Segment                             |
+    |   - offset = starting sample index in the continuous data array      |
+    |   - len = number of samples in this episode (all channels combined) |
+    |                                                                       |
+    | Start Position:                                                      |
+    |   Byte = lSynchArrayPtr x 512                                        |
+    |   Total entries = lSynchArraySize (number of episodes/segments)     |
+    |                                                                       |
+    | Each Entry Structure (8 bytes):                                      |
+    |   Offset  Size  Type   Field        Description                     |
+    |   0       4     int32  offset       Episode start position (samples)|
+    |   4       4     int32  len          Episode length (samples)        |
+    |                                                                       |
+    | Example: 3 episodes, 3 channels, 5000 samples per channel per ep:   |
+    |                                                                       |
+    |   Disk Offset  | Content                                             |
+    |   -------------|--------------------------------------------------   |
+    |   +0  bytes    | Episode 0 offset   (4 bytes, int32) = 0            |
+    |   +4  bytes    | Episode 0 length   (4 bytes, int32) = 15000        |
+    |   +8  bytes    | Episode 1 offset   (4 bytes, int32) = 15000        |
+    |   +12 bytes    | Episode 1 length   (4 bytes, int32) = 15000        |
+    |   +16 bytes    | Episode 2 offset   (4 bytes, int32) = 30000        |
+    |   +20 bytes    | Episode 2 length   (4 bytes, int32) = 15000        |
+    |                                                                       |
+    | Note: len = samples_per_channel x nADCNumChannels (interleaved)     |
+    +----------------------------------------------------------------------+
+    | DATA SECTION (Physical disk layout)                                 |
+    +----------------------------------------------------------------------+
+    | Start Position:                                                      |
+    |   Byte = (lDataSectionPtr x 512) + (nNumPointsIgnored x item_size)  |
+    |   item_size = 2 bytes if nDataFormat=0 (int16)                      |
+    |   item_size = 4 bytes if nDataFormat=1 (float32)                    |
+    |                                                                       |
+    | Example: 3 channels (Ch0, Ch1, Ch2), int16 format:                  |
+    |                                                                       |
+    |   Disk Offset  | Content                                             |
+    |   -------------|--------------------------------------------------   |
+    |   +0  bytes    | Sample 0, Channel 0  (2 bytes, int16)              |
+    |   +2  bytes    | Sample 0, Channel 1  (2 bytes, int16)              |
+    |   +4  bytes    | Sample 0, Channel 2  (2 bytes, int16)              |
+    |   +6  bytes    | Sample 1, Channel 0  (2 bytes, int16)              |
+    |   +8  bytes    | Sample 1, Channel 1  (2 bytes, int16)              |
+    |   +10 bytes    | Sample 1, Channel 2  (2 bytes, int16)              |
+    |   +12 bytes    | Sample 2, Channel 0  (2 bytes, int16)              |
+    |   +14 bytes    | Sample 2, Channel 1  (2 bytes, int16)              |
+    |   +16 bytes    | Sample 2, Channel 2  (2 bytes, int16)              |
+    |   ... continues for lActualAcqLength total samples                  |
+    |                                                                       |
+    | Pattern: Channels are interleaved within each time point            |
+    |   [Ch0,Ch1,Ch2] [Ch0,Ch1,Ch2] [Ch0,Ch1,Ch2] ...                     |
+    +----------------------------------------------------------------------+
+
+    Parameters
+    ----------
+    f : StructFile
+        File object positioned after reading the signature
+    header_description : list
+        List of (key, offset, fmt) tuples describing header structure
+
+    Returns
+    -------
+    dict
+        Header dictionary with file metadata
+    """
+    # construct dict
+    header = {}
+    for key, offset, fmt in header_description:
+        val = f.read_f(fmt, offset=offset)
+        if len(val) == 1:
+            header[key] = val[0]
+        else:
+            header[key] = np.array(val)
+
+    # correction of version number and starttime
+    header["lFileStartTime"] += header["nFileStartMillisecs"] * 0.001
+
+    # tags
+    listTag = []
+    for i in range(header["lNumTagEntries"]):
+        f.seek(header["lTagSectionPtr"] + i * 64)
+        tag = {}
+        for key, fmt in TagInfoDescription:
+            val = f.read_f(fmt)
             if len(val) == 1:
-                header[key] = val[0]
+                tag[key] = val[0]
             else:
-                header[key] = np.array(val)
+                tag[key] = np.array(val)
+        listTag.append(tag)
+    header["listTag"] = listTag
 
-        # correction of version number and starttime
-        if f_file_signature == b"ABF ":
-            header["lFileStartTime"] += header["nFileStartMillisecs"] * 0.001
-        elif f_file_signature == b"ABF2":
-            n = header["fFileVersionNumber"]
-            header["fFileVersionNumber"] = n[3] + 0.1 * n[2] + 0.01 * n[1] + 0.001 * n[0]
-            header["lFileStartTime"] = header["uFileStartTimeMS"] * 0.001
+    # protocol name formatting
+    header["sProtocolPath"] = clean_string(header["sProtocolPath"])
+    header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
 
-        if header["fFileVersionNumber"] < 2.0:
-            # tags
-            listTag = []
-            for i in range(header["lNumTagEntries"]):
-                f.seek(header["lTagSectionPtr"] + i * 64)
-                tag = {}
-                for key, fmt in TagInfoDescription:
-                    val = f.read_f(fmt)
-                    if len(val) == 1:
-                        tag[key] = val[0]
-                    else:
-                        tag[key] = np.array(val)
-                listTag.append(tag)
-            header["listTag"] = listTag
-            # protocol name formatting
-            header["sProtocolPath"] = clean_string(header["sProtocolPath"])
-            header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
+    # date and time
+    YY = 1900
+    MM = 1
+    DD = 1
+    hh = int(header["lFileStartTime"] / 3600.0)
+    mm = int((header["lFileStartTime"] - hh * 3600) / 60)
+    ss = header["lFileStartTime"] - hh * 3600 - mm * 60
+    ms = int(np.mod(ss, 1) * 1e6)
+    ss = int(ss)
+    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
-        elif header["fFileVersionNumber"] >= 2.0:
-            # in abf2 some info are in other place
+    return header
 
-            # sections
-            sections = {}
-            for s, sectionName in enumerate(sectionNames):
-                uBlockIndex, uBytes, llNumEntries = f.read_f("IIl", offset=76 + s * 16)
-                sections[sectionName] = {}
-                sections[sectionName]["uBlockIndex"] = uBlockIndex
-                sections[sectionName]["uBytes"] = uBytes
-                sections[sectionName]["llNumEntries"] = llNumEntries
-            header["sections"] = sections
 
-            # strings sections
-            # hack for reading channels names and units
-            # this section is not very detailed and so the code
-            # not very robust.
-            f.seek(sections["StringsSection"]["uBlockIndex"] * BLOCKSIZE)
-            big_string = f.read(sections["StringsSection"]["uBytes"])
-            # this idea comes from pyABF https://github.com/swharden/pyABF
-            # previously we searched for clampex, Clampex etc, but this was
-            # brittle. pyABF believes that looking for the \x00\x00 is more
-            # robust. We find these values, replace mu->u, then split into
-            # a set of strings
-            indexed_string = big_string[big_string.rfind(b"\x00\x00") :]
-            # replace mu -> u for easy display
-            indexed_string = indexed_string.replace(b"\xb5", b"\x75")
-            # we need to remove one of the \x00 to have the indices be
-            # the correct order
-            indexed_string = indexed_string.split(b"\x00")[1:]
-            strings = indexed_string
+def _parse_abf_v2(f, header_description):
+    """
+    Parse ABF 2.x files (pCLAMP 10+, 2006-present).
 
-            # ADC sections
-            header["listADCInfo"] = []
-            for i in range(sections["ADCSection"]["llNumEntries"]):
-                # read ADCInfo
-                f.seek(sections["ADCSection"]["uBlockIndex"] * BLOCKSIZE + sections["ADCSection"]["uBytes"] * i)
-                ADCInfo = {}
-                for key, fmt in ADCInfoDescription:
-                    val = f.read_f(fmt)
-                    if len(val) == 1:
-                        ADCInfo[key] = val[0]
-                    else:
-                        ADCInfo[key] = np.array(val)
-                ADCInfo["ADCChNames"] = strings[ADCInfo["lADCChannelNameIndex"]]
-                ADCInfo["ADCChUnits"] = strings[ADCInfo["lADCUnitsIndex"]]
-                header["listADCInfo"].append(ADCInfo)
+    Overview
+    --------
+    ABF 2.x uses a "table of contents" architecture, similar to a book or
+    database. Think of it as three layers:
 
-            # protocol sections
-            protocol = {}
-            f.seek(sections["ProtocolSection"]["uBlockIndex"] * BLOCKSIZE)
-            for key, fmt in protocolInfoDescription:
-                val = f.read_f(fmt)
-                if len(val) == 1:
-                    protocol[key] = val[0]
-                else:
-                    protocol[key] = np.array(val)
-            header["protocol"] = protocol
-            header["sProtocolPath"] = strings[header["uProtocolPathIndex"]]
+    1. MAIN HEADER (bytes 0-75): Cover page with basic file info
+    2. SECTION INDEX (bytes 76-827): Table of contents - WHERE everything is
+    3. SECTIONS (variable locations): The actual data chapters
 
-            # tags
-            listTag = []
-            for i in range(sections["TagSection"]["llNumEntries"]):
-                f.seek(sections["TagSection"]["uBlockIndex"] * BLOCKSIZE + sections["TagSection"]["uBytes"] * i)
-                tag = {}
-                for key, fmt in TagInfoDescription:
-                    val = f.read_f(fmt)
-                    if len(val) == 1:
-                        tag[key] = val[0]
-                    else:
-                        tag[key] = np.array(val)
-                listTag.append(tag)
+    Key Design Principle: INDIRECTION
+    ----------------------------------
+    Unlike ABF 1.x where everything is at fixed offsets, ABF 2.x uses a
+    two-step lookup process:
 
-            header["listTag"] = listTag
+    Step 1: Read Section Index to find WHERE a section lives
+    Step 2: Jump to that location and read the section data
 
-            # DAC sections
-            header["listDACInfo"] = []
-            for i in range(sections["DACSection"]["llNumEntries"]):
-                # read DACInfo
-                f.seek(sections["DACSection"]["uBlockIndex"] * BLOCKSIZE + sections["DACSection"]["uBytes"] * i)
-                DACInfo = {}
-                for key, fmt in DACInfoDescription:
-                    val = f.read_f(fmt)
-                    if len(val) == 1:
-                        DACInfo[key] = val[0]
-                    else:
-                        DACInfo[key] = np.array(val)
-                DACInfo["DACChNames"] = strings[DACInfo["lDACChannelNameIndex"]]
-                DACInfo["DACChUnits"] = strings[DACInfo["lDACChannelUnitsIndex"]]
+    Example: To read ADC channel info:
+      1. Read sections['ADCSection'] -> {uBlockIndex: 50, uBytes: 128, llNumEntries: 3}
+      2. Jump to byte (50 x 512) and read 3 entries of 128 bytes each
 
-                header["listDACInfo"].append(DACInfo)
+    Critical Feature: CENTRAL STRING POOL
+    --------------------------------------
+    All strings (channel names, units, paths) are stored ONCE in StringsSection.
+    Other sections store only INTEGER INDICES pointing to strings, not the
+    strings themselves. This is why StringsSection must be parsed before
+    ADC/DAC sections.
 
-            # EpochPerDAC  sections
-            # header['dictEpochInfoPerDAC'] is dict of dicts:
-            #  - the first index is the DAC number
-            #  - the second index is the epoch number
-            # It has to be done like that because data may not exist
-            # and may not be in sorted order
-            header["dictEpochInfoPerDAC"] = {}
-            for i in range(sections["EpochPerDACSection"]["llNumEntries"]):
-                #  read DACInfo
-                f.seek(
-                    sections["EpochPerDACSection"]["uBlockIndex"] * BLOCKSIZE
-                    + sections["EpochPerDACSection"]["uBytes"] * i
-                )
-                EpochInfoPerDAC = {}
-                for key, fmt in EpochInfoPerDACDescription:
-                    val = f.read_f(fmt)
-                    if len(val) == 1:
-                        EpochInfoPerDAC[key] = val[0]
-                    else:
-                        EpochInfoPerDAC[key] = np.array(val)
+    Example:
+      StringsSection contains: ['Clampex', 'IN 0', 'mV', 'IN 1', 'pA', ...]
+      ADCInfo[0] has lADCChannelNameIndex = 1  -> name is strings[1] = 'IN 0'
+      ADCInfo[0] has lADCUnitsIndex = 2        -> units is strings[2] = 'mV'
 
-                DACNum = EpochInfoPerDAC["nDACNum"]
-                EpochNum = EpochInfoPerDAC["nEpochNum"]
-                # Checking if the key exists, if not, the value is empty
-                # so we have to create empty dict to populate
-                if DACNum not in header["dictEpochInfoPerDAC"]:
-                    header["dictEpochInfoPerDAC"][DACNum] = {}
+    Benefits of This Architecture:
+    - Variable channel/epoch counts (no hard limits like ABF 1.x's 16 channels)
+    - Efficient storage (strings not duplicated)
+    - Extensible (new section types don't break old parsers)
 
-                header["dictEpochInfoPerDAC"][DACNum][EpochNum] = EpochInfoPerDAC
+    Parsing Order (as implemented in this function):
+    ------------------------------------------------
+    1. Read Main Header (bytes 0-75) -> basic file metadata
+    2. Read Section Index (bytes 76-827) -> build 'sections' dict
+    3. Parse StringsSection -> build 'strings' array (MUST be before step 4!)
+    4. Parse ADCSection -> use string indices to get channel names/units
+    5. Parse ProtocolSection -> acquisition parameters
+    6. Parse TagSection -> user markers
+    7. Parse DACSection -> use string indices to get output channel info
+    8. Parse EpochPerDACSection -> waveform definitions
+    9. Parse EpochSection -> epoch metadata
+    10. Compute datetime from header fields
 
-            # Epoch sections
-            header["EpochInfo"] = []
-            for i in range(sections["EpochSection"]["llNumEntries"]):
-                # read EpochInfo
-                f.seek(sections["EpochSection"]["uBlockIndex"] * BLOCKSIZE + sections["EpochSection"]["uBytes"] * i)
-                EpochInfo = {}
-                for key, fmt in EpochInfoDescription:
-                    val = f.read_f(fmt)
-                    if len(val) == 1:
-                        EpochInfo[key] = val[0]
-                    else:
-                        EpochInfo[key] = np.array(val)
-                header["EpochInfo"].append(EpochInfo)
+    Parsing Note: This is a reverse-engineering effort. Official method uses
+    Axon's ABFFIO.DLL. Some parts (e.g., Strings parsing) are brittle.
 
-        # date and time
-        if header["fFileVersionNumber"] < 2.0:
-            YY = 1900
-            MM = 1
-            DD = 1
-            hh = int(header["lFileStartTime"] / 3600.0)
-            mm = int((header["lFileStartTime"] - hh * 3600) / 60)
-            ss = header["lFileStartTime"] - hh * 3600 - mm * 60
-            ms = int(np.mod(ss, 1) * 1e6)
-            ss = int(ss)
-        elif header["fFileVersionNumber"] >= 2.0:
-            YY = int(header["uFileStartDate"] / 10000)
-            MM = int((header["uFileStartDate"] - YY * 10000) / 100)
-            DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
-            hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
-            mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
-            ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
-            ms = int(np.mod(ss, 1) * 1e6)
-            ss = int(ss)
-        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    Format: Section-based with table of contents
+    Block Size: 512 bytes
+    Header Fields: See headerDescriptionV2 for main header fields
+
+    File Layout:
+    +----------------------------------------------------------------------+
+    | MAIN HEADER (Bytes 0-75)                                             |
+    +----------------------------------------------------------------------+
+    | Minimal header with file metadata and version info                  |
+    | See headerDescriptionV2 for complete field list                     |
+    +----------------------------------------------------------------------+
+    | SECTION INDEX (Bytes 76-827) - THE KEY TO PARSING                    |
+    +----------------------------------------------------------------------+
+    | Table of contents: 18 sections x 16 bytes per entry                 |
+    | Each entry: uBlockIndex, uBytes, llNumEntries                        |
+    | Section names defined in sectionNames:                               |
+    |   ProtocolSection, ADCSection, DACSection, EpochSection,             |
+    |   StringsSection, DataSection, TagSection, SynchArraySection, etc.   |
+    +----------------------------------------------------------------------+
+    | PROTOCOL SECTION (at sections['ProtocolSection'] location)          |
+    +----------------------------------------------------------------------+
+    | Core acquisition settings (512 bytes): operation mode, sample rate, |
+    | resolution, etc. See protocolInfoDescription for fields              |
+    +----------------------------------------------------------------------+
+    | STRINGS SECTION (at sections['StringsSection'] location)            |
+    +----------------------------------------------------------------------+
+    | CENTRAL STRING REPOSITORY: All strings (channel names, units,       |
+    | protocol paths) stored here. Other sections store indices, not       |
+    | strings directly. This is fundamental to ABF 2.x design.             |
+    | Format: \x00\x00[str1]\x00[str2]\x00...                              |
+    | Accessed via indices like lADCChannelNameIndex                       |
+    +----------------------------------------------------------------------+
+    | ADC SECTION (at sections['ADCSection'] location)                    |
+    +----------------------------------------------------------------------+
+    | Per-channel input configs: 128 bytes per entry                       |
+    | Contains: gains, offsets, telegraph settings, string indices         |
+    | See ADCInfoDescription for fields                                    |
+    +----------------------------------------------------------------------+
+    | DAC SECTION (at sections['DACSection'] location)                    |
+    +----------------------------------------------------------------------+
+    | Per-channel output configs: 256 bytes per entry                      |
+    | Contains: holding levels, scale factors, waveform settings,          |
+    | string indices. See DACInfoDescription for fields                    |
+    +----------------------------------------------------------------------+
+    | EPOCH PER DAC SECTION (at sections['EpochPerDACSection'] location)  |
+    +----------------------------------------------------------------------+
+    | Waveform epoch definitions: 48 bytes per entry                       |
+    | Defines stimulus waveforms per DAC channel                           |
+    | See EpochPerDACDescription for fields                                |
+    +----------------------------------------------------------------------+
+    | TAG SECTION (at sections['TagSection'] location)                    |
+    +----------------------------------------------------------------------+
+    | User-defined markers/comments during acquisition                     |
+    | Each tag: 64 bytes. See TagInfoDescription for structure             |
+    +----------------------------------------------------------------------+
+    | SYNCH ARRAY SECTION (Physical disk layout)                          |
+    +----------------------------------------------------------------------+
+    | Purpose: Index of episodes/sweeps within the continuous data stream |
+    | Critical for episodic acquisition modes (mode 2, 5)                 |
+    |                                                                       |
+    | Electrophysiology Context:                                           |
+    |   - Episode/Sweep = Single experimental trial or stimulation cycle  |
+    |   - In voltage-clamp: one voltage step protocol execution           |
+    |   - In current-clamp: one current injection sequence                |
+    |   - Data contains multiple episodes concatenated in data section    |
+    |                                                                       |
+    | Neo Mapping:                                                         |
+    |   - Each episode becomes one neo.Segment                             |
+    |   - offset = starting sample index in the continuous data array      |
+    |   - len = number of samples in this episode (all channels combined) |
+    |                                                                       |
+    | Start Position:                                                      |
+    |   Byte = sections['SynchArraySection']['uBlockIndex'] x 512         |
+    |   Total entries = sections['SynchArraySection']['llNumEntries']     |
+    |                  (number of episodes/segments)                       |
+    |                                                                       |
+    | Each Entry Structure (8 bytes):                                      |
+    |   Offset  Size  Type   Field        Description                     |
+    |   0       4     int32  offset       Episode start position (samples)|
+    |   4       4     int32  len          Episode length (samples)        |
+    |                                                                       |
+    | Example: 3 episodes, 3 channels, 5000 samples per channel per ep:   |
+    |                                                                       |
+    |   Disk Offset  | Content                                             |
+    |   -------------|--------------------------------------------------   |
+    |   +0  bytes    | Episode 0 offset   (4 bytes, int32) = 0            |
+    |   +4  bytes    | Episode 0 length   (4 bytes, int32) = 15000        |
+    |   +8  bytes    | Episode 1 offset   (4 bytes, int32) = 15000        |
+    |   +12 bytes    | Episode 1 length   (4 bytes, int32) = 15000        |
+    |   +16 bytes    | Episode 2 offset   (4 bytes, int32) = 30000        |
+    |   +20 bytes    | Episode 2 length   (4 bytes, int32) = 15000        |
+    |                                                                       |
+    | Note: len = samples_per_channel x num_channels (interleaved)        |
+    |       num_channels from ADCSection llNumEntries                      |
+    +----------------------------------------------------------------------+
+    | DATA SECTION (Physical disk layout)                                 |
+    +----------------------------------------------------------------------+
+    | Start Position:                                                      |
+    |   Byte = sections['DataSection']['uBlockIndex'] x 512               |
+    |   Total samples = sections['DataSection']['llNumEntries']           |
+    |   item_size = 2 bytes if nDataFormat=0 (int16)                      |
+    |   item_size = 4 bytes if nDataFormat=1 (float32)                    |
+    |                                                                       |
+    | Example: 3 channels (Ch0, Ch1, Ch2), int16 format:                  |
+    |                                                                       |
+    |   Disk Offset  | Content                                             |
+    |   -------------|--------------------------------------------------   |
+    |   +0  bytes    | Sample 0, Channel 0  (2 bytes, int16)              |
+    |   +2  bytes    | Sample 0, Channel 1  (2 bytes, int16)              |
+    |   +4  bytes    | Sample 0, Channel 2  (2 bytes, int16)              |
+    |   +6  bytes    | Sample 1, Channel 0  (2 bytes, int16)              |
+    |   +8  bytes    | Sample 1, Channel 1  (2 bytes, int16)              |
+    |   +10 bytes    | Sample 1, Channel 2  (2 bytes, int16)              |
+    |   +12 bytes    | Sample 2, Channel 0  (2 bytes, int16)              |
+    |   +14 bytes    | Sample 2, Channel 1  (2 bytes, int16)              |
+    |   +16 bytes    | Sample 2, Channel 2  (2 bytes, int16)              |
+    |   ... continues for llNumEntries total samples                      |
+    |                                                                       |
+    | Pattern: Channels are interleaved within each time point            |
+    |   [Ch0,Ch1,Ch2] [Ch0,Ch1,Ch2] [Ch0,Ch1,Ch2] ...                     |
+    +----------------------------------------------------------------------+
+
+    Note: All section locations calculated as: uBlockIndex x 512
+
+    Parameters
+    ----------
+    f : StructFile
+        File object positioned after reading the signature
+    header_description : list
+        List of (key, offset, fmt) tuples describing header structure
+
+    Returns
+    -------
+    dict
+        Header dictionary with file metadata
+    """
+    # construct dict
+    header = {}
+    for key, offset, fmt in header_description:
+        val = f.read_f(fmt, offset=offset)
+        if len(val) == 1:
+            header[key] = val[0]
+        else:
+            header[key] = np.array(val)
+
+    # correction of version number and starttime
+    n = header["fFileVersionNumber"]
+    header["fFileVersionNumber"] = n[3] + 0.1 * n[2] + 0.01 * n[1] + 0.001 * n[0]
+    header["lFileStartTime"] = header["uFileStartTimeMS"] * 0.001
+
+    # sections
+    sections = {}
+    for s, sectionName in enumerate(sectionNames):
+        uBlockIndex, uBytes, llNumEntries = f.read_f("IIl", offset=76 + s * 16)
+        sections[sectionName] = {}
+        sections[sectionName]["uBlockIndex"] = uBlockIndex
+        sections[sectionName]["uBytes"] = uBytes
+        sections[sectionName]["llNumEntries"] = llNumEntries
+    header["sections"] = sections
+
+    # strings sections
+    # hack for reading channels names and units
+    # this section is not very detailed and so the code
+    # not very robust.
+    f.seek(sections["StringsSection"]["uBlockIndex"] * BLOCKSIZE)
+    big_string = f.read(sections["StringsSection"]["uBytes"])
+    # this idea comes from pyABF https://github.com/swharden/pyABF
+    # previously we searched for clampex, Clampex etc, but this was
+    # brittle. pyABF believes that looking for the \x00\x00 is more
+    # robust. We find these values, replace mu->u, then split into
+    # a set of strings
+    indexed_string = big_string[big_string.rfind(b"\x00\x00") :]
+    # replace mu -> u for easy display
+    indexed_string = indexed_string.replace(b"\xb5", b"\x75")
+    # we need to remove one of the \x00 to have the indices be
+    # the correct order
+    indexed_string = indexed_string.split(b"\x00")[1:]
+    strings = indexed_string
+
+    # ADC sections
+    header["listADCInfo"] = []
+    for i in range(sections["ADCSection"]["llNumEntries"]):
+        # read ADCInfo
+        f.seek(sections["ADCSection"]["uBlockIndex"] * BLOCKSIZE + sections["ADCSection"]["uBytes"] * i)
+        ADCInfo = {}
+        for key, fmt in ADCInfoDescription:
+            val = f.read_f(fmt)
+            if len(val) == 1:
+                ADCInfo[key] = val[0]
+            else:
+                ADCInfo[key] = np.array(val)
+        ADCInfo["ADCChNames"] = strings[ADCInfo["lADCChannelNameIndex"]]
+        ADCInfo["ADCChUnits"] = strings[ADCInfo["lADCUnitsIndex"]]
+        header["listADCInfo"].append(ADCInfo)
+
+    # protocol sections
+    protocol = {}
+    f.seek(sections["ProtocolSection"]["uBlockIndex"] * BLOCKSIZE)
+    for key, fmt in protocolInfoDescription:
+        val = f.read_f(fmt)
+        if len(val) == 1:
+            protocol[key] = val[0]
+        else:
+            protocol[key] = np.array(val)
+    header["protocol"] = protocol
+    header["sProtocolPath"] = strings[header["uProtocolPathIndex"]]
+
+    # tags
+    listTag = []
+    for i in range(sections["TagSection"]["llNumEntries"]):
+        f.seek(sections["TagSection"]["uBlockIndex"] * BLOCKSIZE + sections["TagSection"]["uBytes"] * i)
+        tag = {}
+        for key, fmt in TagInfoDescription:
+            val = f.read_f(fmt)
+            if len(val) == 1:
+                tag[key] = val[0]
+            else:
+                tag[key] = np.array(val)
+        listTag.append(tag)
+
+    header["listTag"] = listTag
+
+    # DAC sections
+    header["listDACInfo"] = []
+    for i in range(sections["DACSection"]["llNumEntries"]):
+        # read DACInfo
+        f.seek(sections["DACSection"]["uBlockIndex"] * BLOCKSIZE + sections["DACSection"]["uBytes"] * i)
+        DACInfo = {}
+        for key, fmt in DACInfoDescription:
+            val = f.read_f(fmt)
+            if len(val) == 1:
+                DACInfo[key] = val[0]
+            else:
+                DACInfo[key] = np.array(val)
+        DACInfo["DACChNames"] = strings[DACInfo["lDACChannelNameIndex"]]
+        DACInfo["DACChUnits"] = strings[DACInfo["lDACChannelUnitsIndex"]]
+
+        header["listDACInfo"].append(DACInfo)
+
+    # EpochPerDAC  sections
+    # header['dictEpochInfoPerDAC'] is dict of dicts:
+    #  - the first index is the DAC number
+    #  - the second index is the epoch number
+    # It has to be done like that because data may not exist
+    # and may not be in sorted order
+    header["dictEpochInfoPerDAC"] = {}
+    for i in range(sections["EpochPerDACSection"]["llNumEntries"]):
+        #  read DACInfo
+        f.seek(
+            sections["EpochPerDACSection"]["uBlockIndex"] * BLOCKSIZE
+            + sections["EpochPerDACSection"]["uBytes"] * i
+        )
+        EpochInfoPerDAC = {}
+        for key, fmt in EpochInfoPerDACDescription:
+            val = f.read_f(fmt)
+            if len(val) == 1:
+                EpochInfoPerDAC[key] = val[0]
+            else:
+                EpochInfoPerDAC[key] = np.array(val)
+
+        DACNum = EpochInfoPerDAC["nDACNum"]
+        EpochNum = EpochInfoPerDAC["nEpochNum"]
+        # Checking if the key exists, if not, the value is empty
+        # so we have to create empty dict to populate
+        if DACNum not in header["dictEpochInfoPerDAC"]:
+            header["dictEpochInfoPerDAC"][DACNum] = {}
+
+        header["dictEpochInfoPerDAC"][DACNum][EpochNum] = EpochInfoPerDAC
+
+    # Epoch sections
+    header["EpochInfo"] = []
+    for i in range(sections["EpochSection"]["llNumEntries"]):
+        # read EpochInfo
+        f.seek(sections["EpochSection"]["uBlockIndex"] * BLOCKSIZE + sections["EpochSection"]["uBytes"] * i)
+        EpochInfo = {}
+        for key, fmt in EpochInfoDescription:
+            val = f.read_f(fmt)
+            if len(val) == 1:
+                EpochInfo[key] = val[0]
+            else:
+                EpochInfo[key] = np.array(val)
+        header["EpochInfo"].append(EpochInfo)
+
+    # date and time
+    YY = int(header["uFileStartDate"] / 10000)
+    MM = int((header["uFileStartDate"] - YY * 10000) / 100)
+    DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
+    hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
+    mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
+    ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
+    ms = int(np.mod(ss, 1) * 1e6)
+    ss = int(ss)
+    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
     return header
 
