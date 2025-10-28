@@ -94,7 +94,7 @@ _signal_buffer_dtype = [
 ]
 # To be left an empty array if the concept of buffer is undefined for a reader.
 _signal_stream_dtype = [
-    ("name", "U64"),  # not necessarily unique
+    ("name", "U128"),  # not necessarily unique
     ("id", "U64"),  # must be unique
     (
         "buffer_id",
