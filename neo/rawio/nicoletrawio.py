@@ -540,8 +540,10 @@ class NicoletRawIO(BaseRawIO):
         epochs = []
         event_packet_guid = "{B799F680-72A4-11D3-93D3-00500400C148}"
         event_instances = self._ensure_list(self._get_index_instances(tag="Events"))
-        for instance in event_instances:
+        for i, instance in enumerate(event_instances):
             offset = instance["offset"]
+            if i == 1:
+                offset += 248
             with open(self.filename, "rb") as fid:
                 pkt_structure = [
                     ("guid", "uint8", 16),
@@ -566,45 +568,43 @@ class NicoletRawIO(BaseRawIO):
                         [("status", "S2", 32)],
                     ]
                     n_events += 1
-                    try:
-                        fid.seek(8, 1)
-                        event = self.read_as_dict(fid, event_structure[0])
-                        fid.seek(48, 1)
-                        event = event | self.read_as_dict(fid, event_structure[1])
-                        fid.seek(16, 1)
-                        event = event | self.read_as_dict(fid, event_structure[2])
-                        event["date"] = self._convert_ole_to_datetime(event["date_ole"], event["date_fraction"])
-                        event["timestamp"] = (event["date"] - self.segments_properties[0]["date"]).total_seconds()
-                        event["guid"] = self._convert_to_guid(event["guid"])
-                        try:
-                            event_str = self.HC_EVENT[event["guid"]]
-                        except:
-                            event_str = "UNKNOWN"
-                        if event_str == "Annotation" or event_str == "Event Comment":
-                            fid.seek(31, 1)
-                            annotation = self.read_as_list(fid, [("annotation", "S2", event["text_length"])])
-                            event["label"] = annotation
-                        else:
-                            event["label"] = event_str
+                    fid.seek(8, 1)
+                    event = self.read_as_dict(fid, event_structure[0])
+                    fid.seek(48, 1)
+                    event = event | self.read_as_dict(fid, event_structure[1])
+                    fid.seek(16, 1)
+                    event = event | self.read_as_dict(fid, event_structure[2])
+                    event["date"] = self._convert_ole_to_datetime(event["date_ole"], event["date_fraction"])
+                    event["timestamp"] = (event["date"] - self.segments_properties[0]["date"]).total_seconds()
+                    event["guid"] = self._convert_to_guid(event["guid"])
+                    event_str = self.HC_EVENT.get(event['guid'], 'UNKNOWN')
+                    if event_str == "Annotation" or event_str == "Event Comment":
+                        fid.seek(31, 1)
+                        annotation = self.read_as_list(fid, [("annotation", "S2", event["text_length"])])
+                        event["label"] = annotation
+                    else:
+                        event["label"] = event_str
 
-                        event["block_index"] = 0
-                        seg_index = 0
-                        segment_time_range = [segment["date"] for segment in self.segments_properties]
-                        for segment_time in segment_time_range[1:]:
-                            if segment_time <= event["date"]:
-                                seg_index += 1
-                        event["seg_index"] = seg_index
-                        event["block_index"] = 0
-                        event["type"] = "0" if event["duration"] == 0 else "1"
-                    except:
-                        warnings.warn(
-                            f"Not all events could not be read, only {n_events - 1} events were read", BytesWarning
-                        )
-                        break
+                    event["block_index"] = 0
+                    seg_index = 0
+                    segment_time_range = [segment["date"] for segment in self.segments_properties]
+                    for segment_time in segment_time_range[1:]:
+                        if segment_time <= event["date"]:
+                            seg_index += 1
+                    event["seg_index"] = seg_index
+                    event["block_index"] = 0
+                    event["type"] = "0" if event["duration"] == 0 else "1"
+
                     offset += int(pkt["len"])
                     fid.seek(offset)
                     pkt = self.read_as_dict(fid, pkt_structure)
                     pkt["guid"] = self._convert_to_guid(pkt["guid"])
+
+                    if event['timestamp'] < -1:
+                        warnings.warn(
+                            f"Not all events could not be read, only {n_events - 1} events were read", BytesWarning
+                        )
+                        continue
 
                     if event["duration"] == 0:
                         event["type"] = "0"
@@ -618,7 +618,11 @@ class NicoletRawIO(BaseRawIO):
 
     def _convert_ole_to_datetime(self, date_ole, date_fraction=0):
         """Date is saved as OLE with the timezone offset integrated in the file. Transform this to datetime object and add the date_fraction if provided"""
-        return datetime.fromtimestamp((date_ole - 25569) * 24 * 3600 + date_fraction, tz=timezone.utc)
+        if date_ole >= 25569:
+            date = datetime.fromtimestamp((date_ole - 25569) * 24 * 3600 + date_fraction, tz=timezone.utc)
+        else:
+            date = datetime.fromtimestamp(0, tz=timezone.utc)
+        return date
 
     def _get_montage(self):
         """
