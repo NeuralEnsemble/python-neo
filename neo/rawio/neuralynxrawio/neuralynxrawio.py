@@ -55,13 +55,16 @@ from ..baserawio import (
 )
 import numpy as np
 import os
-import pathlib
+from pathlib import Path
 import copy
 import warnings
 from collections import namedtuple, OrderedDict
 
 from neo.rawio.neuralynxrawio.ncssections import NcsSection, NcsSectionsFactory
 from neo.rawio.neuralynxrawio.nlxheader import NlxHeader
+
+# Named tuple for stream identification keys
+StreamKey = namedtuple("StreamKey", ["sampling_rate", "input_range", "filter_params"])
 
 
 class NeuralynxRawIO(BaseRawIO):
@@ -134,6 +137,20 @@ class NeuralynxRawIO(BaseRawIO):
         ("samples", "int16", NcsSection._RECORD_SIZE),
     ]
 
+    # Filter parameter keys used for stream differentiation
+    _filter_keys = [
+        "DSPLowCutFilterEnabled",
+        "DspLowCutFrequency",
+        "DspLowCutFilterType",
+        "DspLowCutNumTaps",
+        "DSPHighCutFilterEnabled",
+        "DspHighCutFrequency",
+        "DspHighCutFilterType",
+        "DspHighCutNumTaps",
+        "DspDelayCompensation",
+        "DspFilterDelay_µs",
+    ]
+
     def __init__(
         self,
         dirname="",
@@ -151,7 +168,9 @@ class NeuralynxRawIO(BaseRawIO):
 
         if filename is not None:
             include_filenames = [filename]
-            warnings.warn("`filename` is deprecated and will be removed. Please use `include_filenames` instead")
+            warnings.warn(
+                "`filename` is deprecated and will be removed in version 1.0. Please use `include_filenames` instead"
+            )
 
         if exclude_filename is not None:
             if isinstance(exclude_filename, str):
@@ -159,7 +178,7 @@ class NeuralynxRawIO(BaseRawIO):
             else:
                 exclude_filenames = exclude_filename
             warnings.warn(
-                "`exclude_filename` is deprecated and will be removed. Please use `exclude_filenames` instead"
+                "`exclude_filename` is deprecated and will be removed in version 1.0. Please use `exclude_filenames` instead"
             )
 
         if include_filenames is None:
@@ -214,30 +233,40 @@ class NeuralynxRawIO(BaseRawIO):
         unit_annotations = []
         event_annotations = []
 
-        if self.rawmode == "one-dir":
-            filenames = sorted(os.listdir(self.dirname))
-        else:
-            filenames = self.include_filenames
+        # 1) Get file paths based on mode and validate existence for multiple-files mode
+        if self.rawmode == "multiple-files":
+            # For multiple-files mode, validate that all explicitly provided files exist
+            file_paths = []
+            for filename in self.include_filenames:
+                full_path = Path(self.dirname) / filename
+                if not full_path.is_file():
+                    raise ValueError(
+                        f"Provided Filename is not a file: "
+                        f"{full_path}. If you want to provide a "
+                        f"directory use the `dirname` keyword"
+                    )
+                file_paths.append(full_path)
+        else:  # one-dir mode
+            # For one-dir mode, get all files from directory
+            dir_path = Path(self.dirname)
+            file_paths = [p for p in dir_path.iterdir() if p.is_file()]
+            file_paths = sorted(file_paths, key=lambda p: p.name)
 
-        filenames = [f for f in filenames if f not in self.exclude_filenames]
-        full_filenames = [os.path.join(self.dirname, f) for f in filenames]
+        # 2) Filter by exclude filenames
+        file_paths = [fp for fp in file_paths if fp.name not in self.exclude_filenames]
 
-        for filename in full_filenames:
-            if not os.path.isfile(filename):
-                raise ValueError(
-                    f"Provided Filename is not a file: "
-                    f"{filename}. If you want to provide a "
-                    f"directory use the `dirname` keyword"
-                )
+        # 3) Filter to keep only files with correct extensions
+        # Note: suffix[1:] removes the leading dot from file extension (e.g., ".ncs" -> "ncs")
+        valid_file_paths = [fp for fp in file_paths if fp.suffix[1:].lower() in self.extensions]
+
+        # Convert back to strings for backwards compatibility with existing code
+        full_filenames = [str(fp) for fp in valid_file_paths]
 
         stream_props = {}  # {(sampling_rate, n_samples, t_start): {stream_id: [filenames]}
 
         for filename in full_filenames:
             _, ext = os.path.splitext(filename)
-            ext = ext[1:]  # remove dot
-            ext = ext.lower()  # make lower case for comparisons
-            if ext not in self.extensions:
-                continue
+            ext = ext[1:].lower()  # remove dot and make lower case
 
             # Skip Ncs files with only header. Other empty file types
             # will have an empty dataset constructed later.
@@ -256,26 +285,49 @@ class NeuralynxRawIO(BaseRawIO):
 
                 chan_uid = (chan_name, str(chan_id))
                 if ext == "ncs":
-                    file_mmap = self._get_file_map(filename)
-                    n_packets = copy.copy(file_mmap.shape[0])
-                    if n_packets:
-                        t_start = copy.copy(file_mmap[0][0])
-                    else:  # empty file
-                        t_start = 0
-                    stream_prop = (float(info["sampling_rate"]), int(n_packets), float(t_start))
-                    if stream_prop not in stream_props:
-                        stream_props[stream_prop] = {"stream_id": len(stream_props), "filenames": [filename]}
+                    # Calculate gain for this channel
+                    gain = info["bit_to_microVolt"][idx]
+                    if info.get("input_inverted", False):
+                        gain *= -1
+
+                    # Build stream key from acquisition parameters
+                    sampling_rate = float(info["sampling_rate"])
+
+                    # Get InputRange for this specific channel
+                    # Normalized by NlxHeader to always be a list
+                    input_range = info.get("InputRange")
+                    if isinstance(input_range, list):
+                        input_range = input_range[idx] if idx < len(input_range) else input_range[0]
+
+                    # Build filter parameters tuple
+                    filter_params = []
+                    for key in self._filter_keys:
+                        if key in info:
+                            filter_params.append((key, info[key]))
+
+                    # Create stream key (channels with same key go in same stream)
+                    stream_key = StreamKey(
+                        sampling_rate=sampling_rate,
+                        input_range=input_range,
+                        filter_params=tuple(sorted(filter_params)),
+                    )
+
+                    if stream_key not in stream_props:
+                        stream_props[stream_key] = {
+                            "stream_id": len(stream_props),
+                            "filenames": [filename],
+                            "channels": set(),
+                        }
                     else:
-                        stream_props[stream_prop]["filenames"].append(filename)
-                    stream_id = stream_props[stream_prop]["stream_id"]
+                        stream_props[stream_key]["filenames"].append(filename)
+
+                    stream_id = stream_props[stream_key]["stream_id"]
+                    stream_props[stream_key]["channels"].add((chan_name, str(chan_id)))
                     # @zach @ramon : we need to discuss this split by channel buffer
                     buffer_id = ""
 
                     # a sampled signal channel
                     units = "uV"
-                    gain = info["bit_to_microVolt"][idx]
-                    if info.get("input_inverted", False):
-                        gain *= -1
                     offset = 0.0
                     signal_channels.append(
                         (
@@ -380,14 +432,42 @@ class NeuralynxRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         if signal_channels.size > 0:
-            # ordering streams according from high to low sampling rates
-            stream_props = {k: stream_props[k] for k in sorted(stream_props, reverse=True)}
-            stream_names = [f"Stream (rate,#packet,t0): {sp}" for sp in stream_props]
-            stream_ids = [stream_prop["stream_id"] for stream_prop in stream_props.values()]
-            buffer_ids = ["" for sp in stream_props]
+            # Build DSP filter configuration registry: filter_id -> filter parameters dict
+            # Extract unique filter configurations from stream keys
+            unique_filter_tuples = {stream_key.filter_params for stream_key in stream_props.keys()}
+            _dsp_filter_configurations = {i: dict(filt) for i, filt in enumerate(sorted(unique_filter_tuples))}
+
+            # Create reverse mapping for looking up filter IDs during stream name construction
+            seen_filters = {filt: i for i, filt in enumerate(sorted(unique_filter_tuples))}
+
+            # Store DSP filter configurations as private instance attribute
+            # Keeping private for now - may expose via annotations or public API in future
+            self._dsp_filter_configurations = _dsp_filter_configurations
+
+            # Order streams by sampling rate (high to low)
+            # This is to keep some semblance of stability
+            ordered_stream_keys = sorted(stream_props.keys(), reverse=True, key=lambda x: x.sampling_rate)
+
+            stream_names = []
+            stream_ids = []
+            buffer_ids = []
+
+            for stream_id, stream_key in enumerate(ordered_stream_keys):
+                # Format stream name using namedtuple fields
+                dsp_filter_id = seen_filters[stream_key.filter_params]
+                voltage_mv = int(stream_key.input_range / 1000) if stream_key.input_range is not None else 0
+                stream_name = (
+                    f"stream{stream_id}_{int(stream_key.sampling_rate)}Hz_{voltage_mv}mVRange_DSPFilter{dsp_filter_id}"
+                )
+
+                stream_names.append(stream_name)
+                stream_ids.append(str(stream_id))
+                buffer_ids.append("")
+
             signal_streams = list(zip(stream_names, stream_ids, buffer_ids))
         else:
             signal_streams = []
+            self._filter_configurations = {}
         signal_buffers = np.array([], dtype=_signal_buffer_dtype)
         signal_streams = np.array(signal_streams, dtype=_signal_stream_dtype)
 
@@ -574,7 +654,7 @@ class NeuralynxRawIO(BaseRawIO):
         Create memory maps when needed
         see also https://github.com/numpy/numpy/issues/19340
         """
-        filename = pathlib.Path(filename)
+        filename = Path(filename)
         suffix = filename.suffix.lower()[1:]
 
         if suffix == "ncs":

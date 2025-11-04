@@ -109,16 +109,13 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
     def _parse_header(self):
         # parse file until "</Configuration>"
-        header_size = None
         with open(self.filename, mode="rb") as f:
-            while True:
-                line = f.readline()
+            for line in f:
                 if b"</Configuration>" in line:
                     header_size = f.tell()
                     break
-
-            if header_size is None:
-                ValueError("SpikeGadgets: the xml header does not contain '</Configuration>'")
+            else:
+                raise ValueError("SpikeGadgets: the xml header does not contain '</Configuration>'")
 
             f.seek(0)
             header_txt = f.read(header_size).decode("utf8")
