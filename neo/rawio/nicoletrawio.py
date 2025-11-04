@@ -1016,8 +1016,8 @@ class NicoletRawIO(BaseRawIO):
             for event in self.events[event_channel_index]
             if (event["block_index"] == block_index and event["seg_index"] == seg_index)
         ]
-        timestamp = np.array([event["timestamp"] for event in events], dtype="float64")
-        durations = np.array([event["duration"] for event in events], dtype="float64")
+        timestamp = np.array([event["timestamp"]*self.segments_properties[seg_index]['sampling_rates'][0] for event in events], dtype="float64")
+        durations = np.array([event["duration"]*self.segments_properties[seg_index]['sampling_rates'][0] for event in events], dtype="float64")
         labels = np.array([event["label"] for event in events], dtype="U")
         if t_start is not None:
             keep = timestamp >= t_start
