@@ -577,7 +577,7 @@ class NicoletRawIO(BaseRawIO):
                     event["date"] = self._convert_ole_to_datetime(event["date_ole"], event["date_fraction"])
                     event["timestamp"] = (event["date"] - self.segments_properties[0]["date"]).total_seconds()
                     event["guid"] = self._convert_to_guid(event["guid"])
-                    event_str = self.HC_EVENT.get(event['guid'], 'UNKNOWN')
+                    event_str = self.HC_EVENT.get(event["guid"], "UNKNOWN")
                     if event_str == "Annotation" or event_str == "Event Comment":
                         fid.seek(31, 1)
                         annotation = self.read_as_list(fid, [("annotation", "S2", event["text_length"])])
@@ -600,7 +600,7 @@ class NicoletRawIO(BaseRawIO):
                     pkt = self.read_as_dict(fid, pkt_structure)
                     pkt["guid"] = self._convert_to_guid(pkt["guid"])
 
-                    if event['timestamp'] < -1:
+                    if event["timestamp"] < -1:
                         warnings.warn(
                             f"Not all events could not be read, only {n_events - 1} events were read", BytesWarning
                         )
@@ -763,8 +763,8 @@ class NicoletRawIO(BaseRawIO):
         """
         if seg_index >= len(self.ts_packets_properties):
             warnings.warn(
-                    f"No timestream found for segment {seg_index}. Using timestream of segment {len(self.ts_packets_properties) - 1}."
-                )
+                f"No timestream found for segment {seg_index}. Using timestream of segment {len(self.ts_packets_properties) - 1}."
+            )
             seg_index = len(self.ts_packets_properties) - 1
 
         signal_channels = []
@@ -1022,8 +1022,14 @@ class NicoletRawIO(BaseRawIO):
             for event in self.events[event_channel_index]
             if (event["block_index"] == block_index and event["seg_index"] == seg_index)
         ]
-        timestamp = np.array([event["timestamp"]*self.segments_properties[seg_index]['sampling_rates'][0] for event in events], dtype="float64")
-        durations = np.array([event["duration"]*self.segments_properties[seg_index]['sampling_rates'][0] for event in events], dtype="float64")
+        timestamp = np.array(
+            [event["timestamp"] * self.segments_properties[seg_index]["sampling_rates"][0] for event in events],
+            dtype="float64",
+        )
+        durations = np.array(
+            [event["duration"] * self.segments_properties[seg_index]["sampling_rates"][0] for event in events],
+            dtype="float64",
+        )
         labels = np.array([event["label"] for event in events], dtype="U")
         if t_start is not None:
             keep = timestamp >= t_start
