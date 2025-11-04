@@ -761,6 +761,12 @@ class NicoletRawIO(BaseRawIO):
         """
         Create information for signal channels based on channel properties, timestream and signal_properties
         """
+        if seg_index >= len(self.ts_packets_properties):
+            warnings.warn(
+                    f"No timestream found for segment {seg_index}. Using timestream of segment {len(self.ts_packets_properties) - 1}."
+                )
+            seg_index = len(self.ts_packets_properties) - 1
+
         signal_channels = []
         signal_streams = {}
         stream_id = 0
