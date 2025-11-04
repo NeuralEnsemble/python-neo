@@ -57,7 +57,7 @@ You can download them by hand, by selecting each file then selecting "Download f
 
     In [2]: from urllib.parse import quote
 
-    In [3]: dataset_url = "https://object.cscs.ch/v1/AUTH_63ea6845b1d34ad7a43c8158d9572867/hbp-d000017_PatchClamp-GranuleCells_pub"
+    In [3]: dataset_url = "https://data-proxy.ebrains.eu/api/v1/buckets/p63ea6-hbp-d000017_PatchClamp-GranuleCells_pub"
 
     In [4]: folder = "GrC_Subject15_180116"
 
