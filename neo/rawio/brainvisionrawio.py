@@ -257,60 +257,35 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes
     ):
         """
-        Override the base class method to handle VECTORIZED orientation.
-
-        For MULTIPLEXED data: ch1_s1, ch2_s1, ..., chN_s1, ch1_s2, ch2_s2, ...
-        For VECTORIZED data:  ch1_s1, ch1_s2, ..., ch1_sM, ch2_s1, ch2_s2, ..., ch2_sM, ...
+        Override to handle VECTORIZED orientation.
+        VECTORIZED: all samples for ch1, then all samples for ch2, etc.
         """
         if self._data_orientation == "MULTIPLEXED":
-            # Use the default implementation for MULTIPLEXED
             return super()._get_analogsignal_chunk(
                 block_index, seg_index, i_start, i_stop, stream_index, channel_indexes
             )
 
-        # VECTORIZED implementation
+        # VECTORIZED: use memmap to read each channel's data block
         buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
         buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
 
         i_start = i_start or 0
         i_stop = i_stop or buffer_desc["shape"][0]
 
-        # Open file on demand
-        if not hasattr(self, "_memmap_analogsignal_buffers"):
-            self._memmap_analogsignal_buffers = {}
-        if block_index not in self._memmap_analogsignal_buffers:
-            self._memmap_analogsignal_buffers[block_index] = {}
-        if seg_index not in self._memmap_analogsignal_buffers[block_index]:
-            self._memmap_analogsignal_buffers[block_index][seg_index] = {}
-        if buffer_id not in self._memmap_analogsignal_buffers[block_index][seg_index]:
-            fid = open(buffer_desc["file_path"], mode="rb")
-            self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id] = fid
-        else:
-            fid = self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id]
-
-        # Determine which channels to read
         if channel_indexes is None:
             channel_indexes = np.arange(self._nb_channel)
-        else:
-            channel_indexes = np.asarray(channel_indexes)
 
-        num_samples = i_stop - i_start
         dtype = np.dtype(buffer_desc["dtype"])
-
-        # For VECTORIZED, each channel's data is stored contiguously
-        # We need to read from different parts of the file for each channel
-        raw_sigs = np.empty((num_samples, len(channel_indexes)), dtype=dtype)
-
+        num_samples = i_stop - i_start
         total_samples_per_channel = buffer_desc["shape"][0]
 
-        for i, chan_idx in enumerate(channel_indexes):
-            # Calculate offset for this channel's data in the file
-            channel_offset = buffer_desc["file_offset"] + chan_idx * total_samples_per_channel * dtype.itemsize
-            sample_offset = channel_offset + i_start * dtype.itemsize
+        raw_sigs = np.empty((num_samples, len(channel_indexes)), dtype=dtype)
 
-            # Seek to the position and read the data
-            fid.seek(sample_offset)
-            raw_sigs[:, i] = np.fromfile(fid, dtype=dtype, count=num_samples)
+        for i, chan_idx in enumerate(channel_indexes):
+            offset = buffer_desc["file_offset"] + chan_idx * total_samples_per_channel * dtype.itemsize
+            channel_data = np.memmap(buffer_desc["file_path"], dtype=dtype, mode='r',
+                                    offset=offset, shape=(total_samples_per_channel,))
+            raw_sigs[:, i] = channel_data[i_start:i_stop]
 
         return raw_sigs
 
