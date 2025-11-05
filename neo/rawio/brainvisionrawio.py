@@ -91,13 +91,10 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         self._buffer_descriptions = {0: {0: {}}}
         self._stream_buffer_slice = {}
 
-        # Calculate the shape based on orientation
-        if self._data_orientation == "MULTIPLEXED":
-            shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
-        else:  # VECTORIZED
-            # For VECTORIZED, data is stored as [all_samples_ch1, all_samples_ch2, ...]
-            # We still report shape as (num_samples, num_channels) for compatibility
-            shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
+        shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
+
+        # time_axis indicates data layout: 0 for MULTIPLEXED (time, channels), 1 for VECTORIZED (channels, time)
+        time_axis = 0 if self._data_orientation == "MULTIPLEXED" else 1
 
         self._buffer_descriptions[0][0][buffer_id] = {
             "type": "raw",
@@ -106,11 +103,9 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
             "order": "C",
             "file_offset": 0,
             "shape": shape,
+            "time_axis": time_axis,
         }
         self._stream_buffer_slice[stream_id] = None
-
-        # Store number of channels for VECTORIZED reading
-        self._nb_channel = nb_channel
 
         signal_buffers = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
         signal_streams = np.array([("Signals", "0", "0")], dtype=_signal_stream_dtype)
@@ -252,42 +247,6 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
 
     def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
-
-    def _get_analogsignal_chunk(
-        self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes
-    ):
-        """
-        Override to handle VECTORIZED orientation.
-        VECTORIZED: all samples for ch1, then all samples for ch2, etc.
-        """
-        if self._data_orientation == "MULTIPLEXED":
-            return super()._get_analogsignal_chunk(
-                block_index, seg_index, i_start, i_stop, stream_index, channel_indexes
-            )
-
-        # VECTORIZED: use memmap to read each channel's data block
-        buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
-        buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
-
-        i_start = i_start or 0
-        i_stop = i_stop or buffer_desc["shape"][0]
-
-        if channel_indexes is None:
-            channel_indexes = np.arange(self._nb_channel)
-
-        dtype = np.dtype(buffer_desc["dtype"])
-        num_samples = i_stop - i_start
-        total_samples_per_channel = buffer_desc["shape"][0]
-
-        raw_sigs = np.empty((num_samples, len(channel_indexes)), dtype=dtype)
-
-        for i, chan_idx in enumerate(channel_indexes):
-            offset = buffer_desc["file_offset"] + chan_idx * total_samples_per_channel * dtype.itemsize
-            channel_data = np.memmap(buffer_desc["file_path"], dtype=dtype, mode='r',
-                                    offset=offset, shape=(total_samples_per_channel,))
-            raw_sigs[:, i] = channel_data[i_start:i_stop]
-
-        return raw_sigs
 
     def _ensure_filename(self, filename, kind, entry_name):
         if not os.path.exists(filename):
