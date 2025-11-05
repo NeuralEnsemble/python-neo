@@ -1577,14 +1577,11 @@ class BaseRawWithBufferApiIO(BaseRawIO):
     def _get_signal_size(self, block_index, seg_index, stream_index):
         buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
         buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
-        # For "raw" type, shape is always (time, channels) regardless of file layout
-        # For "hdf5" type, shape can be (time, channels) or (channels, time) based on time_axis
-        if buffer_desc["type"] == "raw":
-            return buffer_desc["shape"][0]
-        else:
-            # some hdf5 revert the buffer
-            time_axis = buffer_desc.get("time_axis", 0)
-            return buffer_desc["shape"][time_axis]
+        # time_axis indicates which dimension is time:
+        # time_axis=0: shape is (time, channels)
+        # time_axis=1: shape is (channels, time)
+        time_axis = buffer_desc.get("time_axis", 0)
+        return buffer_desc["shape"][time_axis]
 
     def _get_analogsignal_chunk(
         self,
@@ -1603,12 +1600,13 @@ class BaseRawWithBufferApiIO(BaseRawIO):
 
         buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
 
+        # Get time_axis to determine which dimension is time
+        time_axis = buffer_desc.get("time_axis", 0)
+
         i_start = i_start or 0
-        i_stop = i_stop or buffer_desc["shape"][0]
+        i_stop = i_stop or buffer_desc["shape"][time_axis]
 
         if buffer_desc["type"] == "raw":
-
-            time_axis = buffer_desc.get("time_axis", 0)
 
             if time_axis == 0:
                 # MULTIPLEXED: time_axis=0 means (time, channels) layout
@@ -1637,12 +1635,12 @@ class BaseRawWithBufferApiIO(BaseRawIO):
                 )
 
             elif time_axis == 1:
-                # VECTORIZED: time_axis=1 means (channels, time) layout
+                # VECTORIZED: time_axis=1 means shape is (channels, time)
                 # Data is stored as [all_samples_ch1, all_samples_ch2, ...]
                 dtype = np.dtype(buffer_desc["dtype"])
-                num_channels = buffer_desc["shape"][1]
+                num_channels = buffer_desc["shape"][0]  # shape is (channels, time)
                 num_samples = i_stop - i_start
-                total_samples_per_channel = buffer_desc["shape"][0]
+                total_samples_per_channel = buffer_desc["shape"][1]  # shape is (channels, time)
 
                 # Determine which channels to read
                 if channel_indexes is None:

@@ -91,10 +91,17 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         self._buffer_descriptions = {0: {0: {}}}
         self._stream_buffer_slice = {}
 
-        shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
-
         # time_axis indicates data layout: 0 for MULTIPLEXED (time, channels), 1 for VECTORIZED (channels, time)
         time_axis = 0 if self._data_orientation == "MULTIPLEXED" else 1
+
+        # Get shape - always returns (num_samples, num_channels)
+        temp_shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
+
+        # For consistency with HDF5 pattern: when time_axis=1, shape should be (channels, time)
+        if time_axis == 1:
+            shape = (temp_shape[1], temp_shape[0])  # (num_channels, num_samples)
+        else:
+            shape = temp_shape  # (num_samples, num_channels)
 
         self._buffer_descriptions[0][0][buffer_id] = {
             "type": "raw",
