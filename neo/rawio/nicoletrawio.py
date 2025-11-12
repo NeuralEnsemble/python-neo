@@ -567,7 +567,7 @@ class NicoletRawIO(BaseRawIO):
                         ],
                         [("status", "S2", 32)],
                     ]
-                    n_events += 1
+
                     fid.seek(8, 1)
                     event = self.read_as_dict(fid, event_structure[0])
                     fid.seek(48, 1)
@@ -578,9 +578,19 @@ class NicoletRawIO(BaseRawIO):
                     event["timestamp"] = (event["date"] - self.segments_properties[0]["date"]).total_seconds()
 
                     if event["timestamp"] < -1:
-                        warnings.warn(f"Corrupted events, only {n_events - 1} events were correctly read", BytesWarning)
-                        break
+                        offset += int(pkt["len"])
+                        fid.seek(offset)
+                        pkt = self.read_as_dict(fid, pkt_structure)
+                        pkt["guid"] = self._convert_to_guid(pkt["guid"])
+                        if pkt["guid"] == event_packet_guid:
+                            continue
+                        else:
+                            warnings.warn(
+                                f"Corrupted event, only {n_events - 1} events were correctly read", BytesWarning
+                            )
+                            break
 
+                    n_events += 1
                     event["guid"] = self._convert_to_guid(event["guid"])
                     event_str = self.HC_EVENT.get(event["guid"], "UNKNOWN")
                     if event_str == "Annotation" or event_str == "Event Comment":
