@@ -767,46 +767,91 @@ class NicoletRawIO(BaseRawIO):
         signal_streams = {}
         stream_id = 0
         channel_id = 0
-        for channel in self.channel_properties:
-            if not channel["on"]:
-                continue
-            signal = next((item for item in self.signal_properties if item["name"] == channel["sensor"]), None)
-            timestream = next(
-                (item for item in self.ts_packets_properties[seg_index] if item["active_sensor"] == channel["sensor"]),
-                None,
-            )
-            if signal is None:
-                channel_id += 1
-                warnings.warn(
-                    f"No signal found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
+        if (
+            self.channel_properties
+        ):  # Use channel_properties as ground truth, as they cannot be changed between segements
+            for channel in self.channel_properties:
+                if not channel["on"]:
+                    continue
+                signal = next((item for item in self.signal_properties if item["name"] == channel["sensor"]), None)
+                timestream = next(
+                    (
+                        item
+                        for item in self.ts_packets_properties[seg_index]
+                        if item["active_sensor"] == channel["sensor"]
+                    ),
+                    None,
                 )
-                continue
-            if timestream is None:
-                channel_id += 1
-                warnings.warn(
-                    f"No Scaling and EEG-Offset found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
-                )
-                continue
+                if signal is None:
+                    channel_id += 1
+                    warnings.warn(
+                        f"No signal found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
+                    )
+                    continue
+                if timestream is None:
+                    channel_id += 1
+                    warnings.warn(
+                        f"No Scaling and EEG-Offset found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
+                    )
+                    continue
 
-            if channel["sampling_rate"] not in signal_streams.keys():
-                signal_streams[channel["sampling_rate"]] = stream_id
-                stream_id += 1
-                channel["sampling_rate"]
+                if channel["sampling_rate"] not in signal_streams.keys():
+                    signal_streams[channel["sampling_rate"]] = stream_id
+                    stream_id += 1
+                    channel["sampling_rate"]
 
-            signal_channels.append(
-                (
-                    channel["sensor"],
-                    channel_id,
-                    int(channel["sampling_rate"]),
-                    "int16",
-                    signal["transducer"],
-                    timestream["resolution"],
-                    timestream["eeg_offset"],
-                    signal_streams[channel["sampling_rate"]],
-                    "0",
+                signal_channels.append(
+                    (
+                        channel["sensor"],
+                        channel_id,
+                        int(channel["sampling_rate"]),
+                        "int16",
+                        signal["transducer"],
+                        timestream["resolution"],
+                        timestream["eeg_offset"],
+                        signal_streams[channel["sampling_rate"]],
+                        "0",
+                    )
                 )
+                channel_id += 1
+        elif self.ts_packets_properties[
+            seg_index
+        ]:  # When channel properties are missing, use timestream of the current segment
+            warnings.warn(
+                f"Channel Properties not found. Extrapolating Signal Channels from Timestream of segment {seg_index}. Please check output to confirm correct channels."
             )
-            channel_id += 1
+            for channel in self.ts_packets_properties[seg_index]:
+                signal = next(
+                    (item for item in self.signal_properties if item["name"] == channel["active_sensor"]), None
+                )
+                if signal is None:
+                    channel_id += 1
+                    warnings.warn(
+                        f"No signal found for channel {channel['active_sensor']} in segment {seg_index}. Skipping channel."
+                    )
+                    continue
+                if channel["sampling_rate"] not in signal_streams.keys():
+                    signal_streams[channel["sampling_rate"]] = stream_id
+                    stream_id += 1
+                    channel["sampling_rate"]
+
+                signal_channels.append(
+                    (
+                        channel["active_sensor"],
+                        channel_id,
+                        int(channel["sampling_rate"]),
+                        "int16",
+                        signal["transducer"],
+                        channel["resolution"],
+                        channel["eeg_offset"],
+                        signal_streams[channel["sampling_rate"]],
+                        "0",
+                    )
+                )
+                channel_id += 1
+        else:
+            raise IOError("Signal channels could not be generated. File cannot be read by IO-Module.")
+
         self.signal_streams = signal_streams
         return np.array(signal_channels, dtype=dtype)
 
