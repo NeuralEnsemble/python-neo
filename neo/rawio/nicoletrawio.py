@@ -611,11 +611,11 @@ class NicoletRawIO(BaseRawIO):
     def _convert_ole_to_datetime(self, timestamp_ole, date_fraction=0):
         """
         Date is saved as OLE with the timezone offset integrated in the file. Transform this to datetime object and add the date_fraction if provided
-        If the timestamp is negative due to a corrupted event, return the datetime object for 1970-01-01 00:00:00
+        If the timestamp is negative or above the unix limit due to a corrupted event, return the datetime object for 1970-01-01 00:00:00
         """
         timestamp_epoch = timestamp_ole - 25569
 
-        if timestamp_epoch <= 0:
+        if timestamp_epoch <= 0 and timestamp_epoch > (2**31 -1)/(24 * 3600):
             timestamp_epoch = 0
             date_fraction = 0
 
