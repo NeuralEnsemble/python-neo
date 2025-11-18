@@ -608,18 +608,17 @@ class NicoletRawIO(BaseRawIO):
 
         return [events, epochs]
 
-    def _convert_ole_to_datetime(self, timestamp_ole, date_fraction=0):
+    def _convert_ole_to_datetime(self, timestamp_ole, date_fraction=0, ole_epoch = datetime(1899, 12, 30, 0, 0, 0, tzinfo=timezone.utc)):
         """
         Date is saved as OLE with the timezone offset integrated in the file. Transform this to datetime object and add the date_fraction if provided
-        If the timestamp is negative or above the unix limit due to a corrupted event, return the datetime object for 1970-01-01 00:00:00
+        If the timestamp is before the OLE Epoch plus 1 day (1899-12-31 00:00:00) or after 2100 due to a corrupted event, return the datetime object for 1899-12-30 00:00:00
         """
-        timestamp_epoch = timestamp_ole - 25569
 
-        if timestamp_epoch <= 0 and timestamp_epoch > (2**31 -1)/(24 * 3600):
-            timestamp_epoch = 0
+        if timestamp_ole <= 1 or timestamp_ole > 200*365.24:
+            timestamp_ole = 0
             date_fraction = 0
 
-        date = datetime.fromtimestamp(timestamp_epoch * 24 * 3600 + date_fraction, tz=timezone.utc)
+        date = ole_epoch + timedelta(seconds = timestamp_ole*24*3600, milliseconds= date_fraction)
 
         return date
 
