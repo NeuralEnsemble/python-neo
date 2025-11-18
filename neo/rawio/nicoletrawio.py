@@ -935,9 +935,9 @@ class NicoletRawIO(BaseRawIO):
         cum_segment_duration = [0] + list(
             np.cumsum([(segment["duration"].total_seconds()) for segment in self.segments_properties])
         )
-        data = np.empty([i_stop - i_start, len(channel_indexes)])
-        section_slices = {}
-        for i, channel_index in enumerate(channel_indexes):
+        data = np.empty([(i_stop - i_start) * len(channel_indexes)])
+        section_slices = []
+        for channel_index in channel_indexes:
             current_samplingrate = self.segments_properties[seg_index]["sampling_rates"][channel_index]
 
             [tag_idx] = [tag["index"] for tag in self.tags if tag["tag"] == str(channel_index)]
@@ -954,24 +954,15 @@ class NicoletRawIO(BaseRawIO):
             )
             sections = all_sections[first_section_for_seg:last_section_for_seg]
             sections_length = section_lengths[first_section_for_seg:last_section_for_seg]
-            section_slices[i] = self._get_section_slices(sections, sections_length, i_start, i_stop)
+            section_slices.append(self._get_section_slices(sections, sections_length, i_start, i_stop))
 
-        full_data = np.empty([section_slices[i][-1].stop - section_slices[0][0].start])
-        full_data[0 : (section_slices[i][-1].stop - section_slices[0][0].start)] = self.raw_signal[
-            slice(section_slices[0][0].start, section_slices[i][-1].stop)
-        ]
-        initial_offset = section_slices[0][0].start
-
-        for column, slices in section_slices.items():
-            np_idx = 0
+        np_idx = 0
+        for slices in section_slices:
             for single_slice in slices:
-                full_data_start = single_slice.start - initial_offset
-                full_data_stop = single_slice.stop - initial_offset
                 slice_length = single_slice.stop - single_slice.start
-                data[np_idx : (np_idx + slice_length), column] = full_data[slice(full_data_start, full_data_stop)]
-                np_idx += slice_length
-
-        return data
+                data[np_idx : (np_idx + slice_length)] = self.raw_signal[single_slice.start:single_slice.stop]
+                np_idx += slice_length 
+        return np.reshape(data, (len(section_slices), int(np_idx/len(section_slices)))).T
 
     def _get_section_slices(self, sections, sections_length, i_start, i_stop):
         section_slices = []
