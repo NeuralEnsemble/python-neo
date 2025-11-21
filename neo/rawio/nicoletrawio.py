@@ -191,13 +191,13 @@ class NicoletRawIO(BaseRawIO):
             [("Event", "0", "event"), ("Epoch", "1", "epoch")], dtype=_event_channel_dtype
         )
 
-        self._get_segment_start_times()
-        self._get_events()
-        self._get_montage()
-        self._get_raw_signal()
+        self.segments_properties = self._get_segment_properties()
+        self.events = self._get_events()
+        self.montages, self.display = self._get_montage()
+        self.raw_signal = self._get_raw_signal()
         self._generate_minimal_annotations()
         self._generate_additional_annotations()
-        self._get_buffer_descriptions()
+        self._buffer_descriptions = self._get_buffer_descriptions()
 
     def _get_tags(self):
         """
@@ -213,12 +213,8 @@ class NicoletRawIO(BaseRawIO):
             n_tags = self.read_as_list(fid, [("n_tags", "uint32")])
             tags = [self.read_as_dict(fid, tags_structure) for _ in range(n_tags)]
             for entry in tags:
-                try:
-                    entry["id_str"] = self.TAGS_DICT[entry["tag"]]
-                except KeyError:
-                    entry["id_str"] = "UNKNOWN"
-        self.n_tags = n_tags
-        self.tags = tags
+                entry["id_str"] = self.TAGS_DICT.get(entry["tag"], "UNKNOWN")
+        return tags, n_tags
 
     def _get_qi(self):
         """
@@ -235,7 +231,7 @@ class NicoletRawIO(BaseRawIO):
         with open(self.filename, "rb") as fid:
             fid.seek(172208)
             qi = self.read_as_dict(fid, qi_structure)
-        self.qi = qi
+        return qi
 
     def _get_main_index(self):
         """
@@ -260,12 +256,11 @@ class NicoletRawIO(BaseRawIO):
                     )
                 next_index_pointer = self.read_as_list(fid, [("next_index_pointer", "uint64")])
                 current_index = current_index + (i + 1)
-        self.main_index = main_index
-        self.all_section_ids = [entry["section_idx"] for entry in main_index]
+        return main_index
 
-    def _read_dynamic_packets(self):
+    def _get_dynamic_packets_data(self):
         """
-        Read the packets which specify where the data is located
+        Read the data within the dynamic packets
         """
         dynamic_packet_structure = [
             ("guid_list", "uint8", 16),
@@ -277,36 +272,28 @@ class NicoletRawIO(BaseRawIO):
         dynamic_packets = []
         [dynamic_packets_instace] = self._get_index_instances(id_str="InfoChangeStream")
         offset = dynamic_packets_instace["offset"]
-        self.n_dynamic_packets = int(dynamic_packets_instace["section_l"] / 48)
+        n_dynamic_packets = int(dynamic_packets_instace["section_l"] / 48)
         with open(self.filename, "rb") as fid:
             fid.seek(offset)
-            for i in range(self.n_dynamic_packets):
+            for i in range(n_dynamic_packets):
                 guid_offset = offset + (i + 1) * 48
                 dynamic_packet = self.read_as_dict(fid, dynamic_packet_structure)
-                dynamic_packet["date"] = self._convert_to_date(dynamic_packet["date"])
+                dynamic_packet["date"] = self._convert_ole_to_datetime(dynamic_packet["date"])
                 guid_as_str = self._convert_to_guid(dynamic_packet["guid_list"])
-                if guid_as_str in list(self.TAGS_DICT.keys()):
-                    id_str = self.TAGS_DICT[guid_as_str]
-                else:
-                    id_str = "UNKNOWN"
+                id_str = self.TAGS_DICT.get(guid_as_str, "UNKNOWN")
                 dynamic_packet["offset"] = int(guid_offset)
                 dynamic_packet["guid"] = guid_as_str.replace("-", "").replace("{", "").replace("}", "")
                 dynamic_packet["guid_as_str"] = guid_as_str
                 dynamic_packet["id_str"] = id_str
                 dynamic_packets.append(dynamic_packet)
-        self.dynamic_packets = dynamic_packets
 
-    def _get_dynamic_packets_data(self):
-        """
-        Read the data within the dynamic packets
-        """
         with open(self.filename, "rb") as fid:
-            for i in range(self.n_dynamic_packets):
+            for i in range(n_dynamic_packets):
                 data = []
-                dynamic_packet_instances = self._get_index_instances(tag=self.dynamic_packets[i]["guid_as_str"])
+                dynamic_packet_instances = self._get_index_instances(tag=dynamic_packets[i]["guid_as_str"])
                 internal_offset = 0
-                remaining_data_to_read = int(self.dynamic_packets[i]["packet_size"])
-                current_target_start = int(self.dynamic_packets[i]["internal_offset_start"])
+                remaining_data_to_read = int(dynamic_packets[i]["packet_size"])
+                current_target_start = int(dynamic_packets[i]["internal_offset_start"])
                 for j in range(len(dynamic_packet_instances)):
                     current_instance = dynamic_packet_instances[j]
                     if (internal_offset <= (current_target_start)) & (
@@ -324,9 +311,10 @@ class NicoletRawIO(BaseRawIO):
                         remaining_data_to_read = remaining_data_to_read - read_length
                         current_target_start = current_target_start + read_length
                     internal_offset = internal_offset + current_instance["section_l"]
-                self.dynamic_packets[i]["data"] = np.array(data)
+                dynamic_packets[i]["data"] = np.array(data)
+        return dynamic_packets
 
-    def _get_patient_guid(self):
+    def _get_patient_info(self):
         """
         Read patient metadata
         """
@@ -344,7 +332,7 @@ class NicoletRawIO(BaseRawIO):
                 id_temp = self.read_as_list(fid, [("value", "uint64")])
                 if id_temp in [7, 8]:
                     value = self.read_as_list(fid, [("value", "float64")])
-                    value = self._convert_to_date(value)
+                    value = self._convert_ole_to_datetime(value)
                 elif id_temp in [23, 24]:
                     value = self.read_as_list(fid, [("value", "float64")])
                 else:
@@ -362,7 +350,7 @@ class NicoletRawIO(BaseRawIO):
         for prop in self.INFO_PROPS:
             if prop not in patient_info.keys():
                 patient_info[prop] = None
-        self.patient_info = patient_info
+        return patient_info
 
     def _get_signal_properties(self):
         """
@@ -389,13 +377,11 @@ class NicoletRawIO(BaseRawIO):
                 signal_structure = self.read_as_dict(fid, signal_structure_segment)
                 fid.seek(664, 1)
                 n_idx = self.read_as_dict(fid, [("n_idx", "uint16"), ("misc1", "uint16", 3)])
-                for i in range(n_idx["n_idx"]):
+                for _ in range(n_idx["n_idx"]):
                     properties = self.read_as_dict(fid, signal_properties_segment)
                     signal_properties.append(properties)
                     fid.seek(256, 1)
-        self.signal_structure = signal_structure
-        self.signal_properties = signal_properties
-        pass
+        return signal_structure, signal_properties
 
     def _get_channel_info(self):
         """
@@ -421,7 +407,7 @@ class NicoletRawIO(BaseRawIO):
             fid.seek(488, 1)
             n_index = self.read_as_list(fid, [("n_index", "int32", 2)])
             current_index = 0
-            for i in range(n_index[1]):
+            for _ in range(n_index[1]):
                 channel_properties_structure = [
                     ("sensor", "S2", self.LABELSIZE),
                     ("sampling_rate", "float64"),
@@ -438,14 +424,13 @@ class NicoletRawIO(BaseRawIO):
                     index_id = -1
                 info["index_id"] = index_id
                 channel_properties.append(info)
-                reserved = self.read_as_list(fid, [("reserved", "S1", 4)])
-        self.channel_structure = channel_structure
-        self.channel_properties = channel_properties
+                fid.seek(4, 1)
 
-    def _get_ts_properties(self, ts_packet_index=0):
+        return channel_structure, channel_properties
+
+    def _get_ts_properties(self):
         """
-        Read properties of every timestream.
-        Currently, only the first instance of the timestream is used for every segment
+        Get the properties of every timestream.
         """
         ts_packets_properties = []
         ts_packets = [packet for packet in self.dynamic_packets if packet["id_str"] == "TSGUID"]
@@ -501,13 +486,11 @@ class NicoletRawIO(BaseRawIO):
                     }
                 )
             ts_packets_properties.append(ts_properties)
-        self.ts_packets = ts_packets
-        self.ts_packets_properties = ts_packets_properties
-        pass
+        return ts_packets, ts_packets_properties
 
-    def _get_segment_start_times(self):
+    def _get_segment_properties(self):
         """
-        Get the start and stop times and the duration of each segment
+        Get the properties of each segment
         """
         segments_properties = []
         [segment_instance] = self._get_index_instances("SegmentStream")
@@ -530,11 +513,12 @@ class NicoletRawIO(BaseRawIO):
                 segment_info["start_time"] = date_str.time()
                 segment_info["duration"] = timedelta(seconds=segment_info["duration"])
                 segments_properties.append(segment_info)
-        self.segments_properties = segments_properties
+
+        return segments_properties
 
     def _get_events(self):
         """
-        Read all events
+        Get all events
         """
         events = []
         epochs = []
@@ -567,7 +551,7 @@ class NicoletRawIO(BaseRawIO):
                         ],
                         [("status", "S2", 32)],
                     ]
-                    n_events += 1
+
                     fid.seek(8, 1)
                     event = self.read_as_dict(fid, event_structure[0])
                     fid.seek(48, 1)
@@ -576,8 +560,29 @@ class NicoletRawIO(BaseRawIO):
                     event = event | self.read_as_dict(fid, event_structure[2])
                     event["date"] = self._convert_ole_to_datetime(event["date_ole"], event["date_fraction"])
                     event["timestamp"] = (event["date"] - self.segments_properties[0]["date"]).total_seconds()
+
                     event["guid"] = self._convert_to_guid(event["guid"])
                     event_str = self.HC_EVENT.get(event["guid"], "UNKNOWN")
+
+                    if event["timestamp"] < -1 and event_str == "UNKNOWN":
+                        if pkt["len"] > 1e6:  # Packet Length of more than 1e6 indicates a corrupted event
+                            warnings.warn(
+                                f"Corrupted event, only {n_events - 1} events were correctly read", BytesWarning
+                            )
+                            break
+                        offset += int(pkt["len"])
+                        fid.seek(offset)
+                        pkt = self.read_as_dict(fid, pkt_structure)
+                        pkt["guid"] = self._convert_to_guid(pkt["guid"])
+                        if pkt["guid"] == event_packet_guid:
+                            continue
+                        else:
+                            warnings.warn(
+                                f"Corrupted event, only {n_events - 1} events were correctly read", BytesWarning
+                            )
+                            break
+
+                    n_events += 1
                     if event_str == "Annotation" or event_str == "Event Comment":
                         fid.seek(31, 1)
                         annotation = self.read_as_list(fid, [("annotation", "S2", event["text_length"])])
@@ -600,12 +605,6 @@ class NicoletRawIO(BaseRawIO):
                     pkt = self.read_as_dict(fid, pkt_structure)
                     pkt["guid"] = self._convert_to_guid(pkt["guid"])
 
-                    if event["timestamp"] < -1:
-                        warnings.warn(
-                            f"Not all events could not be read, only {n_events - 1} events were read", BytesWarning
-                        )
-                        continue
-
                     if event["duration"] == 0:
                         event["type"] = "0"
                         events.append(event)
@@ -613,15 +612,22 @@ class NicoletRawIO(BaseRawIO):
                         event["type"] = "1"
                         epochs.append(event)
 
-        self.events = [events, epochs]
-        pass
+        return [events, epochs]
 
-    def _convert_ole_to_datetime(self, date_ole, date_fraction=0):
-        """Date is saved as OLE with the timezone offset integrated in the file. Transform this to datetime object and add the date_fraction if provided"""
-        if date_ole >= 25569:
-            date = datetime.fromtimestamp((date_ole - 25569) * 24 * 3600 + date_fraction, tz=timezone.utc)
-        else:
-            date = datetime.fromtimestamp(0, tz=timezone.utc)
+    def _convert_ole_to_datetime(
+        self, timestamp_ole, date_fraction=0, ole_epoch=datetime(1899, 12, 30, 0, 0, 0, tzinfo=timezone.utc)
+    ):
+        """
+        Date is saved as OLE with the timezone offset integrated in the file. Transform this to datetime object and add the date_fraction if provided
+        If the timestamp is before the OLE Epoch plus 1 day (1899-12-31 00:00:00) or after 2100 due to a corrupted event, return the datetime object for 1899-12-30 00:00:00
+        """
+
+        if timestamp_ole <= 1 or timestamp_ole > 200 * 365.24:
+            timestamp_ole = 0
+            date_fraction = 0
+
+        date = ole_epoch + timedelta(seconds=timestamp_ole * 24 * 3600, milliseconds=date_fraction)
+
         return date
 
     def _get_montage(self):
@@ -673,27 +679,19 @@ class NicoletRawIO(BaseRawIO):
                     montages[i]["disp_name"] = display["name"]
                     montages[i]["color"] = self.read_as_list(fid, display_structure[2])
             else:
-                print("Could not match montage derivations with display color table")
-        self.montages = montages
-        self.display = display
+                warnings.warn("Could not match montage derivations with display color table")
+        return montages, display
 
     def get_nr_samples(self, block_index=0, seg_index=0, stream_index=0):
         """
         Get the number of samples for a given signal stream in a given segment
         """
-        try:
-            duration = self.segments_properties[seg_index]["duration"].total_seconds()
-            return [
-                int(sampling_rate * duration)
-                for sampling_rate in self.segments_properties[seg_index]["sampling_rates"]
-                if self.signal_streams[sampling_rate] == stream_index
-            ]
-        except IndexError as error:
-            print(
-                str(error)
-                + ": Incorrect segment argument; seg_index must be an integer representing segment index, starting from 0."
-            )
-        pass
+        duration = self.segments_properties[seg_index]["duration"].total_seconds()
+        return [
+            int(sampling_rate * duration)
+            for sampling_rate in self.segments_properties[seg_index]["sampling_rates"]
+            if self.signal_streams[sampling_rate] == stream_index
+        ]
 
     def _get_raw_signal(self):
         """
@@ -704,14 +702,14 @@ class NicoletRawIO(BaseRawIO):
 
         raw_signal = np.memmap(self.filename, dtype="i2", offset=offset, mode="r")
         self.signal_data_offset = offset
-        self.raw_signal = raw_signal
+        return raw_signal
 
     def _get_buffer_descriptions(self):
         """
         Get the descriptions of raw signal buffers
         """
         buffer_id = 0
-        self._buffer_descriptions = {0: {}}
+        buffer_descriptions = {0: {}}
         for seg_index, segment in enumerate(self.segments_properties):
             current_samplingrate = segment["sampling_rates"][
                 0
@@ -730,8 +728,8 @@ class NicoletRawIO(BaseRawIO):
                 max(self.get_nr_samples(seg_index=seg_index)),
                 segment["sampling_rates"].count(segment["sampling_rates"][0]),
             )
-            self._buffer_descriptions[0][seg_index] = {}
-            self._buffer_descriptions[0][seg_index][buffer_id] = {
+            buffer_descriptions[0][seg_index] = {}
+            buffer_descriptions[0][seg_index][buffer_id] = {
                 "type": "raw",
                 "file_path": str(self.filename),
                 "dtype": "i2",
@@ -739,22 +737,27 @@ class NicoletRawIO(BaseRawIO):
                 "file_offset": offset,
                 "shape": shape,
             }
+        return buffer_descriptions
 
     def _extract_header_information(self):
         """
         Create header information by reading file metadata
         """
-        self._get_tags()
-        self._get_qi()
-        self._get_main_index()
-        self._read_dynamic_packets()
-        self._get_dynamic_packets_data()
-        self._get_patient_guid()
-        self._get_signal_properties()
-        self._get_channel_info()
-        self._get_ts_properties()
+        self.tags, self.n_tags = self._get_tags()
+        self.qi = self._get_qi()
+        self.main_index = self._get_main_index()
+        self.all_section_ids = [entry["section_idx"] for entry in self.main_index]
+        self.dynamic_packets = self._get_dynamic_packets_data()
+        self.patient_info = self._get_patient_info()
+        self.signal_structure, self.signal_properties = self._get_signal_properties()
+        self.channel_structure, self.channel_properties = self._get_channel_info()
+        self.ts_packets, self.ts_packets_properties = self._get_ts_properties()
 
     def set_signal_channels(self, seg_index):
+        """
+        Helper function to set the header of the reader to the number of channels in the desired segment
+        Use this when the number of channels differs between segments.
+        """
         self.header["signal_channels"] = self._create_signal_channels(dtype=_signal_channel_dtype, seg_index=seg_index)
 
     def _create_signal_channels(self, dtype, seg_index=0):
@@ -771,46 +774,91 @@ class NicoletRawIO(BaseRawIO):
         signal_streams = {}
         stream_id = 0
         channel_id = 0
-        for channel in self.channel_properties:
-            if not channel["on"]:
-                continue
-            signal = next((item for item in self.signal_properties if item["name"] == channel["sensor"]), None)
-            timestream = next(
-                (item for item in self.ts_packets_properties[seg_index] if item["active_sensor"] == channel["sensor"]),
-                None,
-            )
-            if signal is None:
-                channel_id += 1
-                warnings.warn(
-                    f"No signal found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
+        if (
+            self.channel_properties
+        ):  # Use channel_properties as ground truth, as they cannot be changed between segements
+            for channel in self.channel_properties:
+                if not channel["on"]:
+                    continue
+                signal = next((item for item in self.signal_properties if item["name"] == channel["sensor"]), None)
+                timestream = next(
+                    (
+                        item
+                        for item in self.ts_packets_properties[seg_index]
+                        if item["active_sensor"] == channel["sensor"]
+                    ),
+                    None,
                 )
-                continue
-            if timestream is None:
-                channel_id += 1
-                warnings.warn(
-                    f"No Scaling and EEG-Offset found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
-                )
-                continue
+                if signal is None:
+                    channel_id += 1
+                    warnings.warn(
+                        f"No signal found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
+                    )
+                    continue
+                if timestream is None:
+                    channel_id += 1
+                    warnings.warn(
+                        f"No Scaling and EEG-Offset found for channel {channel['sensor']} in segment {seg_index}. Skipping channel."
+                    )
+                    continue
 
-            if channel["sampling_rate"] not in signal_streams.keys():
-                signal_streams[channel["sampling_rate"]] = stream_id
-                stream_id += 1
-                channel["sampling_rate"]
+                if channel["sampling_rate"] not in signal_streams.keys():
+                    signal_streams[channel["sampling_rate"]] = stream_id
+                    stream_id += 1
+                    channel["sampling_rate"]
 
-            signal_channels.append(
-                (
-                    channel["sensor"],
-                    channel_id,
-                    int(channel["sampling_rate"]),
-                    "int16",
-                    signal["transducer"],
-                    timestream["resolution"],
-                    timestream["eeg_offset"],
-                    signal_streams[channel["sampling_rate"]],
-                    "0",
+                signal_channels.append(
+                    (
+                        channel["sensor"],
+                        channel_id,
+                        int(channel["sampling_rate"]),
+                        "int16",
+                        signal["transducer"],
+                        timestream["resolution"],
+                        timestream["eeg_offset"],
+                        signal_streams[channel["sampling_rate"]],
+                        "0",
+                    )
                 )
+                channel_id += 1
+        elif self.ts_packets_properties[
+            seg_index
+        ]:  # When channel properties are missing, use timestream of the current segment
+            warnings.warn(
+                f"Channel Properties not found. Extrapolating Signal Channels from Timestream of segment {seg_index}. Please check output to confirm correct channels."
             )
-            channel_id += 1
+            for channel in self.ts_packets_properties[seg_index]:
+                signal = next(
+                    (item for item in self.signal_properties if item["name"] == channel["active_sensor"]), None
+                )
+                if signal is None:
+                    channel_id += 1
+                    warnings.warn(
+                        f"No signal found for channel {channel['active_sensor']} in segment {seg_index}. Skipping channel."
+                    )
+                    continue
+                if channel["sampling_rate"] not in signal_streams.keys():
+                    signal_streams[channel["sampling_rate"]] = stream_id
+                    stream_id += 1
+                    channel["sampling_rate"]
+
+                signal_channels.append(
+                    (
+                        channel["active_sensor"],
+                        channel_id,
+                        int(channel["sampling_rate"]),
+                        "int16",
+                        signal["transducer"],
+                        channel["resolution"],
+                        channel["eeg_offset"],
+                        signal_streams[channel["sampling_rate"]],
+                        "0",
+                    )
+                )
+                channel_id += 1
+        else:
+            raise IOError("Signal channels could not be generated. File cannot be read by IO-Module.")
+
         self.signal_streams = signal_streams
         return np.array(signal_channels, dtype=dtype)
 
@@ -879,7 +927,7 @@ class NicoletRawIO(BaseRawIO):
             if not np.all(channels_exist):
                 raise IndexError(
                     f"Channels {channel_indexes[~channels_exist]} from header do not exist in segment {seg_index}, stream {stream_index}. "
-                    "Use the set_signal_channels() method before calling read_segments() to update the header with the correct channels."
+                    "Use the set_signal_channels method before calling read_segments to update the header with the correct channels."
                 )
 
         if i_start is None:
@@ -894,9 +942,9 @@ class NicoletRawIO(BaseRawIO):
         cum_segment_duration = [0] + list(
             np.cumsum([(segment["duration"].total_seconds()) for segment in self.segments_properties])
         )
-        data = np.empty([i_stop - i_start, len(channel_indexes)])
-        section_slices = {}
-        for i, channel_index in enumerate(channel_indexes):
+        data = np.empty([(i_stop - i_start) * len(channel_indexes)])
+        section_slices = []
+        for channel_index in channel_indexes:
             current_samplingrate = self.segments_properties[seg_index]["sampling_rates"][channel_index]
 
             [tag_idx] = [tag["index"] for tag in self.tags if tag["tag"] == str(channel_index)]
@@ -913,24 +961,15 @@ class NicoletRawIO(BaseRawIO):
             )
             sections = all_sections[first_section_for_seg:last_section_for_seg]
             sections_length = section_lengths[first_section_for_seg:last_section_for_seg]
-            section_slices[i] = self._get_section_slices(sections, sections_length, i_start, i_stop)
+            section_slices.append(self._get_section_slices(sections, sections_length, i_start, i_stop))
 
-        full_data = np.empty([section_slices[i][-1].stop - section_slices[0][0].start])
-        full_data[0 : (section_slices[i][-1].stop - section_slices[0][0].start)] = self.raw_signal[
-            slice(section_slices[0][0].start, section_slices[i][-1].stop)
-        ]
-        initial_offset = section_slices[0][0].start
-
-        for column, slices in section_slices.items():
-            np_idx = 0
+        np_idx = 0
+        for slices in section_slices:
             for single_slice in slices:
-                full_data_start = single_slice.start - initial_offset
-                full_data_stop = single_slice.stop - initial_offset
                 slice_length = single_slice.stop - single_slice.start
-                data[np_idx : (np_idx + slice_length), column] = full_data[slice(full_data_start, full_data_stop)]
+                data[np_idx : (np_idx + slice_length)] = self.raw_signal[single_slice.start : single_slice.stop]
                 np_idx += slice_length
-
-        return data
+        return np.reshape(data, (len(section_slices), int(np_idx / len(section_slices)))).T
 
     def _get_section_slices(self, sections, sections_length, i_start, i_stop):
         section_slices = []
@@ -1074,7 +1113,7 @@ class NicoletRawIO(BaseRawIO):
 
     def read_as_dict(self, fid, dtype):
         """
-        Read bytes from the given binary file and return the results as a dictinary
+        Read bytes from the given binary file and return the results as a dictionary
         """
         info = dict()
         dt = np.dtype(dtype)
@@ -1119,17 +1158,10 @@ class NicoletRawIO(BaseRawIO):
 
     def _convert_to_guid(self, hex_list, guid_format="{3}{2}{1}{0}-{5}{4}-{7}{6}-{8}{9}-{10}{11}{12}{13}{14}{15}"):
         """
-        Shuffel around a list of hexadecimal numbers into the given guid_format
+        Shuffle around a list of hexadecimal numbers into the given guid_format
         """
         dec_list = [f"{nr:x}".upper().rjust(2, "0") for nr in hex_list]
         return "{" + guid_format.format(*dec_list) + "}"
-
-    def _convert_to_date(self, data_float, origin="30-12-1899"):
-        """
-        Convert a OLE float to datetime.
-        Set Origin to 1 day back to account for OLE considering 1900 as a leap year
-        """
-        return datetime.strptime(origin, "%d-%m-%Y") + timedelta(seconds=int(data_float * 24 * 60 * 60))
 
     def _typecast(self, data, dtype_in=np.uint8, dtype_out=np.uint32):
         """
@@ -1140,7 +1172,7 @@ class NicoletRawIO(BaseRawIO):
 
     def _transform_ts_properties(self, data, dtype):
         """
-        For some timestream properties, if the list contains 1 floating-point number return it as a value.
+        For some timestream properties, if the list contains 1 floating-point number, return it as a value.
         Else, paste all entries it into a single string
         """
         cast_list = list(self._typecast(data, dtype_out=dtype))
@@ -1173,11 +1205,11 @@ class NicoletRawIO(BaseRawIO):
         """
         Get the section that contains the given sampling point
         """
-        try:
-            segment = min([j for j, length in enumerate(lengths_list) if length > to_compare])
-        except ValueError:
-            segment = len(lengths_list)
-        return segment - 1
+        datapoint_section_index = [j for j, length in enumerate(lengths_list) if length > to_compare]
+        if not datapoint_section_index:
+            datapoint_section_index = [len(lengths_list)]
+        section_index = min(datapoint_section_index) - 1
+        return section_index
 
     def _ensure_list(self, output):
         """
