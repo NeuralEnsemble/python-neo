@@ -564,8 +564,8 @@ class NicoletRawIO(BaseRawIO):
                     event["guid"] = self._convert_to_guid(event["guid"])
                     event_str = self.HC_EVENT.get(event["guid"], "UNKNOWN")
 
-                    if event["timestamp"] < -1 and event_str == 'UNKNOWN':
-                        if pkt["len"] > 1e6: #Packet Length of more than 1e6 indicates a corrupted event
+                    if event["timestamp"] < -1 and event_str == "UNKNOWN":
+                        if pkt["len"] > 1e6:  # Packet Length of more than 1e6 indicates a corrupted event
                             warnings.warn(
                                 f"Corrupted event, only {n_events - 1} events were correctly read", BytesWarning
                             )
@@ -614,17 +614,19 @@ class NicoletRawIO(BaseRawIO):
 
         return [events, epochs]
 
-    def _convert_ole_to_datetime(self, timestamp_ole, date_fraction=0, ole_epoch = datetime(1899, 12, 30, 0, 0, 0, tzinfo=timezone.utc)):
+    def _convert_ole_to_datetime(
+        self, timestamp_ole, date_fraction=0, ole_epoch=datetime(1899, 12, 30, 0, 0, 0, tzinfo=timezone.utc)
+    ):
         """
         Date is saved as OLE with the timezone offset integrated in the file. Transform this to datetime object and add the date_fraction if provided
         If the timestamp is before the OLE Epoch plus 1 day (1899-12-31 00:00:00) or after 2100 due to a corrupted event, return the datetime object for 1899-12-30 00:00:00
         """
 
-        if timestamp_ole <= 1 or timestamp_ole > 200*365.24:
+        if timestamp_ole <= 1 or timestamp_ole > 200 * 365.24:
             timestamp_ole = 0
             date_fraction = 0
 
-        date = ole_epoch + timedelta(seconds = timestamp_ole*24*3600, milliseconds= date_fraction)
+        date = ole_epoch + timedelta(seconds=timestamp_ole * 24 * 3600, milliseconds=date_fraction)
 
         return date
 
@@ -965,9 +967,9 @@ class NicoletRawIO(BaseRawIO):
         for slices in section_slices:
             for single_slice in slices:
                 slice_length = single_slice.stop - single_slice.start
-                data[np_idx : (np_idx + slice_length)] = self.raw_signal[single_slice.start:single_slice.stop]
-                np_idx += slice_length 
-        return np.reshape(data, (len(section_slices), int(np_idx/len(section_slices)))).T
+                data[np_idx : (np_idx + slice_length)] = self.raw_signal[single_slice.start : single_slice.stop]
+                np_idx += slice_length
+        return np.reshape(data, (len(section_slices), int(np_idx / len(section_slices)))).T
 
     def _get_section_slices(self, sections, sections_length, i_start, i_stop):
         section_slices = []
