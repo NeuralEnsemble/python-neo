@@ -984,10 +984,7 @@ def _parse_abf_v2(f, header_description):
     header["dictEpochInfoPerDAC"] = {}
     for i in range(sections["EpochPerDACSection"]["llNumEntries"]):
         #  read DACInfo
-        f.seek(
-            sections["EpochPerDACSection"]["uBlockIndex"] * BLOCKSIZE
-            + sections["EpochPerDACSection"]["uBytes"] * i
-        )
+        f.seek(sections["EpochPerDACSection"]["uBlockIndex"] * BLOCKSIZE + sections["EpochPerDACSection"]["uBytes"] * i)
         EpochInfoPerDAC = {}
         for key, fmt in EpochInfoPerDACDescription:
             val = f.read_f(fmt)
