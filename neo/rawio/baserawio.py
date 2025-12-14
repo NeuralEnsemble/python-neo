@@ -1652,8 +1652,13 @@ class BaseRawWithBufferApiIO(BaseRawIO):
 
                 for i, chan_idx in enumerate(chan_indices):
                     offset = buffer_desc["file_offset"] + chan_idx * total_samples_per_channel * dtype.itemsize
-                    channel_data = np.memmap(buffer_desc["file_path"], dtype=dtype, mode='r',
-                                            offset=offset, shape=(total_samples_per_channel,))
+                    channel_data = np.memmap(
+                        buffer_desc["file_path"],
+                        dtype=dtype,
+                        mode="r",
+                        offset=offset,
+                        shape=(total_samples_per_channel,),
+                    )
                     raw_sigs[:, i] = channel_data[i_start:i_stop]
 
                 # Channel slicing already done above, so skip later channel_indexes slicing
