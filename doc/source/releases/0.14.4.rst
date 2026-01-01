@@ -1,0 +1,43 @@
+========================
+Neo 0.14.4 release notes
+========================
+
+xx January 25
+
+This release of Neo includes many bug fixes in various IOs with an eye to a 1.0 release.
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+
+Dependency Changes
+------------------
+Per our policy of NEP29 + 1 year, we have dropped support for NumPy < 1.25.
+
+
+Testing
+-------
+We are now testing against Python 3.14 for core tests with all possible combinations of NumPy and Python that we support. IO tests were updated to test against Python 3.9 (oldest supported) and Python 3.14 (newest supported) Python versions.
+
+
+:code:`BaseRawIO` Change
+------------------------
+The signal stream dtype name was lengthened from :code:`U64` to a :code:`U128` to deal with long file paths being incorporated into
+file names. See `file name issue`_ on SpikeInterface repo for an example of the truncation which required this fix.
+
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+Bug fixes and/or improvements have been made to :code:`AxonIO`, :code:`BrainVisionIO`, :code:`SpikeGLXIO`.
+
+
+Acknowledgements
+----------------
+
+Thanks to Andrew Davison, Zach McKenzie, @Kkuntal990, Heberto Mayorquin, Samuel Garcia, Alessio Buccino, and Chris Halcrow
+
+.. _`pull requests` : https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+milestone%3A0.14.4
+
+.. _`list of closed issues` : https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue%20state%3Aclosed%20milestone%3A0.14.4
+
+.. _`file name issue` : https://github.com/SpikeInterface/spikeinterface/issues/4185
