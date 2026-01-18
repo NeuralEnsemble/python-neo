@@ -523,10 +523,8 @@ class AnalogSignal(BaseSignal):
             j = i + int(np.rint(delta.simplified.magnitude))
 
         if (i < 0) or (j > len(self)):
-            raise ValueError(
-                "t_start, t_stop have to be within the analog \
-                              signal duration"
-            )
+            raise ValueError("t_start, t_stop have to be within the analog \
+                              signal duration")
 
         # Time slicing should create a deep copy of the object
         obj = deepcopy(self[i:j])
