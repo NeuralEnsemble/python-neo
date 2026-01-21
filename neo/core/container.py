@@ -549,7 +549,8 @@ class Container(BaseNeo):
                     lookup[obj.name] = obj
                     ids.append(id(obj))
                     getattr(self, container).append(obj)
-                obj.set_parent(self)
+                if self.__class__.__name__ in obj._parent_objects:
+                    obj.set_parent(self)
 
         # use the BaseNeo merge as well
         super().merge(other)
