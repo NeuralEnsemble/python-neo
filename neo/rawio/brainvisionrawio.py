@@ -62,9 +62,12 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
             raise NeoReadWriteError(
                 f"Only `BINARY` format has been implemented. Current Data Format is {vhdr_header['Common Infos']['DataFormat']}"
             )
-        if vhdr_header["Common Infos"]["DataOrientation"] != "MULTIPLEXED":
+
+        # Store the data orientation for later use in reading
+        self._data_orientation = vhdr_header["Common Infos"]["DataOrientation"]
+        if self._data_orientation not in ("MULTIPLEXED", "VECTORIZED"):
             raise NeoReadWriteError(
-                f"Only `MULTIPLEXED` is implemented. Current Orientation is {vhdr_header['Common Infos']['DataOrientation']}"
+                f"Data orientation must be either `MULTIPLEXED` or `VECTORIZED`. Current Orientation is {self._data_orientation}"
             )
 
         nb_channel = int(vhdr_header["Common Infos"]["NumberOfChannels"])
@@ -87,7 +90,19 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         buffer_id = "0"
         self._buffer_descriptions = {0: {0: {}}}
         self._stream_buffer_slice = {}
-        shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
+
+        # time_axis indicates data layout: 0 for MULTIPLEXED (time, channels), 1 for VECTORIZED (channels, time)
+        time_axis = 0 if self._data_orientation == "MULTIPLEXED" else 1
+
+        # Get shape - always returns (num_samples, num_channels)
+        temp_shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
+
+        # For consistency with HDF5 pattern: when time_axis=1, shape should be (channels, time)
+        if time_axis == 1:
+            shape = (temp_shape[1], temp_shape[0])  # (num_channels, num_samples)
+        else:
+            shape = temp_shape  # (num_samples, num_channels)
+
         self._buffer_descriptions[0][0][buffer_id] = {
             "type": "raw",
             "file_path": binary_filename,
@@ -95,6 +110,7 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
             "order": "C",
             "file_offset": 0,
             "shape": shape,
+            "time_axis": time_axis,
         }
         self._stream_buffer_slice[stream_id] = None
 

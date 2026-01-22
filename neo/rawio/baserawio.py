@@ -94,7 +94,7 @@ _signal_buffer_dtype = [
 ]
 # To be left an empty array if the concept of buffer is undefined for a reader.
 _signal_stream_dtype = [
-    ("name", "U64"),  # not necessarily unique
+    ("name", "U128"),  # not necessarily unique
     ("id", "U64"),  # must be unique
     (
         "buffer_id",
@@ -1577,7 +1577,9 @@ class BaseRawWithBufferApiIO(BaseRawIO):
     def _get_signal_size(self, block_index, seg_index, stream_index):
         buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
         buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
-        # some hdf5 revert teh buffer
+        # time_axis indicates which dimension is time:
+        # time_axis=0: shape is (time, channels)
+        # time_axis=1: shape is (channels, time)
         time_axis = buffer_desc.get("time_axis", 0)
         return buffer_desc["shape"][time_axis]
 
@@ -1598,34 +1600,72 @@ class BaseRawWithBufferApiIO(BaseRawIO):
 
         buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
 
+        # Get time_axis to determine which dimension is time
+        time_axis = buffer_desc.get("time_axis", 0)
+
         i_start = i_start or 0
-        i_stop = i_stop or buffer_desc["shape"][0]
+        i_stop = i_stop or buffer_desc["shape"][time_axis]
 
         if buffer_desc["type"] == "raw":
 
-            # open files on demand and keep reference to opened file
-            if not hasattr(self, "_memmap_analogsignal_buffers"):
-                self._memmap_analogsignal_buffers = {}
-            if block_index not in self._memmap_analogsignal_buffers:
-                self._memmap_analogsignal_buffers[block_index] = {}
-            if seg_index not in self._memmap_analogsignal_buffers[block_index]:
-                self._memmap_analogsignal_buffers[block_index][seg_index] = {}
-            if buffer_id not in self._memmap_analogsignal_buffers[block_index][seg_index]:
-                fid = open(buffer_desc["file_path"], mode="rb")
-                self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id] = fid
+            if time_axis == 0:
+                # MULTIPLEXED: time_axis=0 means (time, channels) layout
+                # open files on demand and keep reference to opened file
+                if not hasattr(self, "_memmap_analogsignal_buffers"):
+                    self._memmap_analogsignal_buffers = {}
+                if block_index not in self._memmap_analogsignal_buffers:
+                    self._memmap_analogsignal_buffers[block_index] = {}
+                if seg_index not in self._memmap_analogsignal_buffers[block_index]:
+                    self._memmap_analogsignal_buffers[block_index][seg_index] = {}
+                if buffer_id not in self._memmap_analogsignal_buffers[block_index][seg_index]:
+                    fid = open(buffer_desc["file_path"], mode="rb")
+                    self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id] = fid
+                else:
+                    fid = self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id]
+
+                num_channels = buffer_desc["shape"][1]
+
+                raw_sigs = get_memmap_chunk_from_opened_file(
+                    fid,
+                    num_channels,
+                    i_start,
+                    i_stop,
+                    np.dtype(buffer_desc["dtype"]),
+                    file_offset=buffer_desc["file_offset"],
+                )
+
+            elif time_axis == 1:
+                # VECTORIZED: time_axis=1 means shape is (channels, time)
+                # Data is stored as [all_samples_ch1, all_samples_ch2, ...]
+                dtype = np.dtype(buffer_desc["dtype"])
+                num_channels = buffer_desc["shape"][0]  # shape is (channels, time)
+                num_samples = i_stop - i_start
+                total_samples_per_channel = buffer_desc["shape"][1]  # shape is (channels, time)
+
+                # Determine which channels to read
+                if channel_indexes is None:
+                    chan_indices = np.arange(num_channels)
+                else:
+                    chan_indices = np.asarray(channel_indexes)
+
+                raw_sigs = np.empty((num_samples, len(chan_indices)), dtype=dtype)
+
+                for i, chan_idx in enumerate(chan_indices):
+                    offset = buffer_desc["file_offset"] + chan_idx * total_samples_per_channel * dtype.itemsize
+                    channel_data = np.memmap(
+                        buffer_desc["file_path"],
+                        dtype=dtype,
+                        mode="r",
+                        offset=offset,
+                        shape=(total_samples_per_channel,),
+                    )
+                    raw_sigs[:, i] = channel_data[i_start:i_stop]
+
+                # Channel slicing already done above, so skip later channel_indexes slicing
+                channel_indexes = None
+
             else:
-                fid = self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id]
-
-            num_channels = buffer_desc["shape"][1]
-
-            raw_sigs = get_memmap_chunk_from_opened_file(
-                fid,
-                num_channels,
-                i_start,
-                i_stop,
-                np.dtype(buffer_desc["dtype"]),
-                file_offset=buffer_desc["file_offset"],
-            )
+                raise ValueError(f"time_axis must be 0 or 1, got {time_axis}")
 
         elif buffer_desc["type"] == "hdf5":
 
