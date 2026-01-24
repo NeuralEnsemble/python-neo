@@ -471,9 +471,7 @@ class BaseTestIO:
         Test read_block method of BaseFromRaw with different test cases
         for create_group_across_segment.
 
-        """.format(
-            io_name=self.ioclass.__name__
-        )
+        """.format(io_name=self.ioclass.__name__)
 
         test_cases = [
             {"SpikeTrain": True},
