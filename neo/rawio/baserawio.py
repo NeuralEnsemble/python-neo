@@ -79,7 +79,6 @@ from neo import logging_handler
 
 from .utils import get_memmap_chunk_from_opened_file
 
-
 possible_raw_modes = [
     "one-file",
     "multi-file",
@@ -262,8 +261,7 @@ class BaseRawIO:
             html.append(f"<p><strong>nb_segment:</strong> {nb_seg}</p>")
 
             # CSS for tables - using only black, white, and gray colors
-            html.append(
-                """
+            html.append("""
             <style>
                 #{unique_id} table.neo-table {{
                     border-collapse: collapse;
@@ -308,8 +306,7 @@ class BaseRawIO:
                     background-color: transparent;
                 }}
             </style>
-            """
-            )
+            """)
 
             # Signal Streams
             signal_streams = self.header["signal_streams"]
