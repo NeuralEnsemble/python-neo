@@ -15,6 +15,7 @@ This is where user-specified attributes are set.
 * :meth:`__array_finalize__` is called for all new objects, including those
 created by slicing. This is where attributes are copied over from
 the old object.
+
 """
 
 import logging
