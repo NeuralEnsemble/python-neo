@@ -217,7 +217,7 @@ class TestBlackrockRawIO(
 
         Tests the error-by-default behavior where files with timestamp gaps raise ValueError
         unless the user explicitly opts in with gap_tolerance_ms parameter.
-        
+
         See PR #1769 for the gap details on the example file used here.
         """
         # Use stubbed files with missing samples (timestamp gaps) from SimulatedSpikes data
