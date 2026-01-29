@@ -211,6 +211,38 @@ class TestBlackrockRawIO(
         # Spikes enabled on channels 1-129 but channel 129 had 0 events.
         self.assertEqual(128, reader.spike_channels_count())
 
+    def test_gap_tolerance_ms_parameter(self):
+        """
+        Test gap_tolerance_ms parameter for gap handling with files that have actual gaps.
+
+        Tests the error-by-default behavior where files with timestamp gaps raise ValueError
+        unless the user explicitly opts in with gap_tolerance_ms parameter.
+
+        See PR #1769 for the gap details on the example file used here.
+        """
+        # Use stubbed files with missing samples (timestamp gaps) from SimulatedSpikes data
+        dirname = self.get_local_path("blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes")
+
+        # Test 1: Default behavior (None) raises ValueError for files with gaps
+        # This is the error-by-default behavior to ensure users are aware of data issues
+        with self.assertRaises(ValueError) as context:
+            reader = BlackrockRawIO(filename=dirname, nsx_to_load=6)
+            reader.parse_header()
+
+        # Test 2: Explicit tolerance allows loading files with gaps
+        # User opts in by providing gap_tolerance_ms
+        reader_with_tolerance = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=10.0)
+        reader_with_tolerance.parse_header()
+        segments_with_tolerance = reader_with_tolerance.segment_count(0)
+        self.assertEqual(1, segments_with_tolerance)  # Gaps < 10ms are ignored
+
+        # Test 3: Stricter tolerance creates 3 segments
+        # With strict tolerance (0.5ms), gaps > 0.5ms will create new segments
+        reader_strict = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=0.5)
+        reader_strict.parse_header()
+        segments_strict = reader_strict.segment_count(0)
+        self.assertEqual(segments_strict, 3)  #
+
 
 if __name__ == "__main__":
     unittest.main()
