@@ -24,8 +24,8 @@ classifiers = [
 
 dependencies = [
     "packaging",
-    "numpy>=1.24.4",
-    "quantities>=0.16.1"
+    "numpy>=1.25.2",
+    "quantities>=0.16.4"
 ]
 
 [project.urls]
