@@ -23,7 +23,7 @@
   "programmingLanguage": ["Python"],
   "operatingSystem": ["Linux", "Windows", "macOS"],
   "softwareRequirements": [
-    "Python (version 3.9+)",
+    "Python (version 3.10+)",
     "see https://github.com/NeuralEnsemble/python-neo/blob/master/pyproject.toml"
   ],
   "relatedLink": ["https://neo.readthedocs.io", "https://neuralensemble.org/community"],

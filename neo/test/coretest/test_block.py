@@ -24,7 +24,6 @@ from neo.core import SpikeTrain, AnalogSignal, Event
 from neo.test.tools import assert_neo_object_is_compliant, assert_same_sub_schema
 from neo.test.generate_datasets import random_block, simple_block, random_signal
 
-
 N_EXAMPLES = 5
 
 

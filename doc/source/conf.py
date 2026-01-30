@@ -247,9 +247,7 @@ todo_include_todos = True  # set to False before releasing documentation
 
 rst_epilog = """
 .. |neo_github_url| replace:: https://github.com/NeuralEnsemble/python-neo/archive/neo-{}.zip
-""".format(
-    neo_release
-)
+""".format(neo_release)
 
 sphinx_gallery_conf = {
     # 'only_warn_on_example_error': True, # helps with debugging broken examples

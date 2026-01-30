@@ -111,7 +111,7 @@ class NestIO(BaseIO):
         t_start, t_stop = self._check_input_times(t_start, t_stop, mandatory=False)
 
         # checking value input parameters
-        (value_columns, value_types, value_units) = self._check_input_values_parameters(
+        value_columns, value_types, value_units = self._check_input_values_parameters(
             value_columns, value_types, value_units
         )
 
@@ -133,7 +133,7 @@ class NestIO(BaseIO):
             )
 
         # extracting condition and sorting parameters for raw data loading
-        (condition, condition_column, sorting_column) = self._get_conditions_and_sorting(
+        condition, condition_column, sorting_column = self._get_conditions_and_sorting(
             id_column, time_column, gid_list, t_start, t_stop
         )
         # loading raw data columns
@@ -210,7 +210,7 @@ class NestIO(BaseIO):
             if cid is None:
                 column_ids[i] = -1
 
-        (condition, condition_column, sorting_column) = self._get_conditions_and_sorting(
+        condition, condition_column, sorting_column = self._get_conditions_and_sorting(
             id_column, time_column, gdf_id_list, t_start, t_stop
         )
 
