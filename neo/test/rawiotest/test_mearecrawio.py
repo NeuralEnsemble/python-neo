@@ -9,7 +9,6 @@ from neo.rawio.mearecrawio import MEArecRawIO
 
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
-
 try:
     import MEArec as mr
 

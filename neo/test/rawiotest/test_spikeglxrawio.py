@@ -41,6 +41,8 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-D",
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-E",
         "spikeglx/multi_trigger_multi_gate/CatGT/Supercat-A",
+        # One Box"
+        "spikeglx/onebox/run_with_only_adc",
     ]
 
     def test_loading_only_one_probe_in_multi_probe_scenario(self):
@@ -55,7 +57,7 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         rawio = SpikeGLXRawIO(probe_folder_path)
         rawio.parse_header()
 
-        expected_stream_names = ["imec1.ap", "imec1.lf"]
+        expected_stream_names = ["imec1.ap", "imec1.lf", "imec1.ap-SYNC", "imec1.lf-SYNC"]
         actual_stream_names = rawio.header["signal_streams"]["name"].tolist()
         assert (
             actual_stream_names == expected_stream_names
@@ -129,6 +131,34 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         on_diff = np.diff(on_ts_scaled)
         atol = 0.001
         assert np.allclose(on_diff, 1, atol=atol)
+
+    def test_sync_channel_as_separate_stream(self):
+        """Test that sync channel is added as its own stream when load_sync_channel=False."""
+        import warnings
+
+        # Test with load_sync_channel=False (default)
+        rawio_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=False)
+        rawio_no_sync.parse_header()
+
+        # Get stream names
+        stream_names = rawio_no_sync.header["signal_streams"]["name"].tolist()
+
+        # Check if there's a sync channel stream (should contain "SY0" or "SYNC" in the name)
+        sync_streams = [name for name in stream_names if "SY0" in name or "SYNC" in name]
+        assert len(sync_streams) > 0, "No sync channel stream found when load_sync_channel=False"
+
+        # Test deprecation warning when load_sync_channel=True
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            rawio_with_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=True)
+
+            # Check if deprecation warning was raised
+            assert any(
+                issubclass(warning.category, DeprecationWarning) for warning in w
+            ), "No deprecation warning raised"
+            assert any(
+                "will be removed in version 0.15" in str(warning.message) for warning in w
+            ), "Deprecation warning message is incorrect"
 
     def test_t_start_reading(self):
         """Test that t_start values are correctly read for all streams and segments."""

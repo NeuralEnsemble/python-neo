@@ -24,10 +24,7 @@ like channel_names, channel_ids, channel_types.
 
 An additional note on channels. It appears that analog channels are called `pri` or
 `ai0` within the metadata whereas digital channels are called `din0` or `dout0`.
-In this first implementation it is up to the user to do the appropriate channel slice
-to only get the data they want. This is a buffer-based approach that Sam likes.
-Eventually we will try to divide these channels into streams (analog vs digital) or
-we can come up with a work around if users open an issue requesting this.
+
 
 Zach McKenzie
 
@@ -132,10 +129,11 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         self._n_samples, self._n_channels = self.metadata["status"]["shape"]
         # Stored as a simple float32 binary file
         BINARY_DTYPE = "float32"
+        TIMESTAMP_DTYPE = "int64"  # this is from the allego sample reader timestamps are np.int64
         binary_file = self.binary_file
         timestamp_file = self.timestamp_file
 
-        # the will cretae a memory map with teh generic mechanism
+        # the will cretae a memory map with the generic mechanism
         buffer_id = "0"
         self._buffer_descriptions = {0: {0: {}}}
         self._buffer_descriptions[0][0][buffer_id] = {
@@ -149,7 +147,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         # Make the memory map for timestamp
         self._timestamps = np.memmap(
             timestamp_file,
-            dtype=np.int64,  # this is from the allego sample reader timestamps are np.int64
+            dtype=TIMESTAMP_DTYPE,
             mode="r",
             offset=0,  # headerless binary file
         )
@@ -158,7 +156,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         # given metadata
         if self._timestamps[0] != self.metadata["status"]["timestamp_range"][0]:
             metadata_start = self.metadata["status"]["timestamp_range"][0]
-            data_start = self._teimstamps[0]
+            data_start = self._timestamps[0]
             raise NeoReadWriteError(
                 f"The metadata indicates a different starting timestamp {metadata_start} than the data starting timestamp {data_start}"
             )
@@ -167,24 +165,28 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         signal_channels = []
         channel_info = self.metadata["sapiens_base"]["biointerface_map"]
 
-        # as per dicussion with the Neo/SpikeInterface teams stream_id will become buffer_id
-        # and because all data is stored in the same buffer stream for the moment all channels
-        # will be in stream_id = 0. In the future this will be split into sub_streams based on
-        # type but for now it will be the end-users responsability for this.
-        stream_id = "0"  # hard-coded see note above
+        # NeuroNexus uses a single buffer for all file types. Now that we buffer API
+        # we divide each Allego signal into it's appropriate stream for the end-user
         buffer_id = "0"
         for channel_index, channel_name in enumerate(channel_info["chan_name"]):
             channel_id = channel_info["ntv_chan_name"][channel_index]
             # 'ai0' indicates analog data which is stored as microvolts
+            # sometimes also called the pri data for NeuroNexus terminology
             if channel_info["chan_type"][channel_index] == "ai0":
                 units = "uV"
+                stream_id = "ai-pri"
             # 'd' means digital. Per discussion with neuroconv users the use of
             # 'a.u.' makes the units clearer
-            elif channel_info["chan_type"][channel_index][0] == "d":
+            elif channel_info["chan_type"][channel_index][:2] == "di":
                 units = "a.u."
-            # aux channel
+                stream_id = "din"
+            elif channel_info["chan_type"][channel_index][:2] == "do":
+                # aux channel
+                units = "a.u."
+                stream_id = "dout"
             else:
                 units = "V"
+                stream_id = "aux"
 
             signal_channels.append(
                 (
@@ -212,7 +214,7 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         signal_streams["buffer_id"] = buffer_id
         self._stream_buffer_slice = {}
         for stream_index, stream_id in enumerate(stream_ids):
-            name = stream_id_to_stream_name.get(int(stream_id), "")
+            name = stream_id_to_stream_name.get(stream_id, "")
             signal_streams["name"][stream_index] = name
             chan_inds = np.flatnonzero(signal_channels["stream_id"] == stream_id)
             self._stream_buffer_slice[stream_id] = chan_inds
@@ -294,7 +296,10 @@ class NeuroNexusRawIO(BaseRawWithBufferApiIO):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
 
-# this is pretty useless right now, but I think after a
-# refactor with sub streams we could adapt this for the sub-streams
-# so let's leave this here for now :)
-stream_id_to_stream_name = {"0": "Neuronexus Allego Data"}
+# here we map the stream_id to the more descriptive stream_name
+stream_id_to_stream_name = {
+    "ai-pri": "NeuroNexus Allego Analog (pri) Data",
+    "din": "NeuroNexus Allego Digital-in (din) Data",
+    "dout": "NeuroNexus Allego Digital-out (dout) Data",
+    "aux": "NeuroNexus Allego Auxiliary (aux) Data",
+}
