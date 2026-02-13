@@ -667,6 +667,68 @@ class BlackrockRawIO(BaseRawIO):
         sig_chunk = memmap_data[i_start:i_stop, channel_indexes]
         return sig_chunk
 
+    def _get_blackrock_timestamps(self, block_index, seg_index, i_start, i_stop, stream_index):
+        """
+        Return timestamps in seconds for analog signal samples in the given range.
+
+        The behavior depends on the file format:
+
+        - **PTP format (FileSpec 3.0-ptp):** Each packet in the file contains
+          exactly one sample with its own PTP hardware timestamp at nanosecond
+          resolution. This method returns those actual timestamps converted to
+          seconds. Because each NSx file (e.g. ns2 at 1kHz, ns6 at 30kHz) stores
+          its own independent PTP packets, every sample has a real timestamp.
+          Note that PTP timestamps exhibit natural clock jitter at the
+          nanosecond scale, so consecutive sample intervals are not perfectly
+          uniform.
+
+        - **Standard formats (FileSpec 2.2, 2.3, 3.0 non-PTP):** Each data
+          block has a single scalar timestamp for its first sample. All
+          subsequent samples within the block are interpolated as
+          ``t_start + sample_index / sampling_rate``, assuming uniform spacing.
+
+        - **FileSpec 2.1:** No timestamps are stored in the file. All samples
+          are interpolated from ``t_start=0`` using the sampling rate.
+
+        Parameters
+        ----------
+        block_index : int
+            Block index.
+        seg_index : int
+            Segment index.
+        i_start : int | None
+            First sample index. None means 0.
+        i_stop : int | None
+            Stop sample index (exclusive). None means end of segment.
+        stream_index : int
+            Stream index.
+
+        Returns
+        -------
+        timestamps : np.ndarray (float64)
+            Timestamps in seconds for each sample in [i_start, i_stop).
+        """
+        stream_id = self.header["signal_streams"][stream_index]["id"]
+        nsx_nb = int(stream_id)
+
+        # Resolve None to concrete indices
+        size = self.nsx_datas[nsx_nb][seg_index].shape[0]
+        i_start = i_start if i_start is not None else 0
+        i_stop = i_stop if i_stop is not None else size
+
+        # Check if this segment has per-sample timestamps (PTP format)
+        raw_timestamps = self._nsx_data_header[nsx_nb][seg_index]["timestamp"]
+
+        if isinstance(raw_timestamps, np.ndarray) and raw_timestamps.size == size:
+            # PTP: real hardware timestamps
+            ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
+            return raw_timestamps[i_start:i_stop].astype("float64") / ts_res
+        else:
+            # Non-PTP: reconstruct from t_start + index / sampling_rate
+            t_start = self._sigs_t_starts[nsx_nb][seg_index]
+            sr = self._nsx_sampling_frequency[nsx_nb]
+            return t_start + np.arange(i_start, i_stop, dtype="float64") / sr
+
     def _spike_count(self, block_index, seg_index, unit_index):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
 

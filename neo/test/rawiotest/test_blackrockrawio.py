@@ -211,6 +211,110 @@ class TestBlackrockRawIO(
         # Spikes enabled on channels 1-129 but channel 129 had 0 events.
         self.assertEqual(128, reader.spike_channels_count())
 
+    def test_get_blackrock_timestamps_reconstruction(self):
+        """Test _get_blackrock_timestamps for non-PTP formats (reconstructed from t_start + rate)."""
+        reader = BlackrockRawIO(filename=self.get_local_path("blackrock/FileSpec2.3001"))
+        reader.parse_header()
+
+        stream_index = 0
+        size = reader.get_signal_size(0, 0, stream_index)
+        sr = reader.get_signal_sampling_rate(stream_index)
+        t_start = reader.get_signal_t_start(0, 0, stream_index)
+
+        # Full segment timestamps
+        timestamps = reader._get_blackrock_timestamps(0, 0, None, None, stream_index)
+        self.assertEqual(timestamps.shape[0], size)
+        self.assertEqual(timestamps.dtype, np.float64)
+
+        # Verify reconstruction: t_start + index / sr
+        expected = t_start + np.arange(size, dtype="float64") / sr
+        np.testing.assert_allclose(timestamps, expected)
+
+    def test_get_blackrock_timestamps_ptp(self):
+        """Test _get_blackrock_timestamps for PTP format (real hardware timestamps)."""
+        dirname = self.get_local_path("blackrock/blackrock_3_0_ptp/20231027-125608-001")
+        reader = BlackrockRawIO(filename=dirname)
+        reader.parse_header()
+
+        nanoseconds_per_second = 1_000_000_000.0
+
+        # ns2 stream (stream_index=0, 1 kHz)
+        stream_index = 0
+        timestamps = reader._get_blackrock_timestamps(0, 0, None, None, stream_index)
+        self.assertEqual(timestamps.shape[0], reader.get_signal_size(0, 0, stream_index))
+        self.assertEqual(timestamps.dtype, np.float64)
+
+        # First 5 PTP clock values (nanoseconds since Unix epoch) read directly from the ns2 file and hardcoded here for testing
+        ptp_clock_ns_ns2 = np.array(
+            [1688252801327128558, 1688252801328128518, 1688252801329128718,
+             1688252801330128558, 1688252801331128518], dtype="uint64",
+        )
+        expected_ns2 = ptp_clock_ns_ns2.astype("float64") / nanoseconds_per_second
+        np.testing.assert_array_equal(timestamps[:5], expected_ns2)
+
+        # ns6 stream (stream_index=1, 30 kHz) — different sampling rate, different timestamps
+        stream_index = 1
+        timestamps_ns6 = reader._get_blackrock_timestamps(0, 0, None, None, stream_index)
+        self.assertEqual(timestamps_ns6.shape[0], reader.get_signal_size(0, 0, stream_index))
+        self.assertEqual(timestamps_ns6.dtype, np.float64)
+
+        # First 5 PTP clock values (nanoseconds since Unix epoch) read directly from the ns6 file and hardcoded here for testing
+        ptp_clock_ns_ns6 = np.array(
+            [1688252801327328740, 1688252801327361940, 1688252801327395260,
+             1688252801327428620, 1688252801327461940], dtype="uint64",
+        )
+        expected_ns6 = ptp_clock_ns_ns6.astype("float64") / nanoseconds_per_second
+        np.testing.assert_array_equal(timestamps_ns6[:5], expected_ns6)
+
+    def test_get_blackrock_timestamps_ptp_with_gaps(self):
+        """Test _get_blackrock_timestamps for PTP format with gaps and multiple segments."""
+        dirname = self.get_local_path("blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes")
+        gap_tolerance_ms = 0.5
+        reader = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=gap_tolerance_ms)
+        reader.parse_header()
+
+        n_segments = reader.segment_count(0)
+        self.assertEqual(n_segments, 3)
+
+        nanoseconds_per_second = 1_000_000_000.0
+
+        # This file has a single stream: ns6 (30 kHz, 1 channel)
+        stream_index = 0
+        expected_sizes = [632, 58, 310]
+
+        # First 5 PTP clock values (nanoseconds since Unix epoch) per segment, read directly from file and hardcoded here for testing
+        first_5_ptp_clock_ns_per_segment = [
+            np.array([1752531864717743037, 1752531864717776237, 1752531864717809677,
+                       1752531864717843077, 1752531864717876277], dtype="uint64"),
+            np.array([1752531864739742985, 1752531864739776305, 1752531864739809665,
+                       1752531864739842945, 1752531864739876385], dtype="uint64"),
+            np.array([1752531864740742986, 1752531864740776306, 1752531864740809626,
+                       1752531864740842946, 1752531864740876346], dtype="uint64"),
+        ]
+        # Last PTP clock value (nanoseconds since Unix epoch) of each segment, hardcoded here for testing
+        last_ptp_clock_ns_per_segment = np.array(
+            [1752531864738776304, 1752531864739709625, 1752531864751042999], dtype="uint64",
+        )
+
+        for seg_index in range(n_segments):
+            timestamps = reader._get_blackrock_timestamps(0, seg_index, None, None, stream_index)
+            self.assertEqual(timestamps.shape[0], expected_sizes[seg_index])
+
+            # Verify first 5 timestamps match the clock values from the file
+            expected_first_5 = first_5_ptp_clock_ns_per_segment[seg_index].astype("float64") / nanoseconds_per_second
+            np.testing.assert_array_equal(timestamps[:5], expected_first_5)
+
+            # Verify last timestamp
+            expected_last = last_ptp_clock_ns_per_segment[seg_index].astype("float64") / nanoseconds_per_second
+            np.testing.assert_array_equal(timestamps[-1], expected_last)
+
+        # Verify the gaps between segments exceed the tolerance
+        for seg_index in range(n_segments - 1):
+            last_ts = last_ptp_clock_ns_per_segment[seg_index].astype("float64") / nanoseconds_per_second
+            first_ts_next = first_5_ptp_clock_ns_per_segment[seg_index + 1][0].astype("float64") / nanoseconds_per_second
+            gap_ms = (first_ts_next - last_ts) * 1000
+            self.assertGreater(gap_ms, gap_tolerance_ms)
+
     def test_gap_tolerance_ms_parameter(self):
         """
         Test gap_tolerance_ms parameter for gap handling with files that have actual gaps.
