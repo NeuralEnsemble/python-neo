@@ -399,7 +399,7 @@ class NeuralynxRawIO(BaseRawIO):
                         else:
                             t_start = 0
 
-                        stream_prop = (info["sampling_rate"], n_frames, t_start)
+                        stream_prop = (info["sampling_rate"], n_frames, t_start, stream_kind)
 
                         if stream_prop not in stream_props:
                             stream_props[stream_prop] = {"stream_id": len(stream_props), "filenames": [filename]}
