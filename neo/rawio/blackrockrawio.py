@@ -440,27 +440,25 @@ class BlackrockRawIO(BaseRawIO):
                 t_start = float("inf")
                 t_stop = 0.0
                 for nsx_nb in self.nsx_to_load:
-                    seg = self._segmented_data_headers[nsx_nb][data_bl]
-                    t_start = min(t_start, seg["t_start"])
-                    nb_pts = seg["nb_data_points"]
+                    segment_header = self._segmented_data_headers[nsx_nb][data_bl]
+                    t_start = min(t_start, segment_header["t_start"])
+                    nb_pts = segment_header["nb_data_points"]
                     sr = self._nsx_sampling_frequency[nsx_nb]
-                    if self._nsx_data_spec == "3.0-ptp":
+                    if "timestamps_memmap_kwargs" in segment_header:
                         # PTP: read actual last timestamp (jitter makes t_start + n/sr imprecise)
-                        channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-                        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-                        ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channels)
+                        ts_kw = segment_header["timestamps_memmap_kwargs"]
                         memmap = np.memmap(
-                            filename, dtype=ptp_dt, mode="r",
-                            offset=seg["ptp_data_offset"],
-                            shape=(seg["nb_data_points"],),
+                            ts_kw["filename"], dtype=ts_kw["dtype"], mode="r",
+                            offset=ts_kw["offset"],
+                            shape=(ts_kw["num_samples"],),
                         )
                         ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
-                        last_ts = float(memmap["timestamps"][-1]) / ts_res
+                        last_ts = float(memmap[ts_kw["field"]][-1]) / ts_res
                         del memmap
                         seg_t_stop = last_ts + 1.0 / sr
                     else:
                         # Standard/v2.1: exact from t_start + nb_pts / sr
-                        seg_t_stop = seg["t_start"] + nb_pts / sr
+                        seg_t_stop = segment_header["t_start"] + nb_pts / sr
                     t_stop = max(t_stop, seg_t_stop)
 
                 if self._avail_files["nev"]:
@@ -635,35 +633,37 @@ class BlackrockRawIO(BaseRawIO):
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
-        seg = self._segmented_data_headers[nsx_nb][seg_index]
+        segment_header = self._segmented_data_headers[nsx_nb][seg_index]
         channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
         if channel_indexes is None:
             channel_indexes = slice(None)
 
-        if self._nsx_data_spec == "3.0-ptp":
-            ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channels)
-            memmap = np.memmap(
-                filename, dtype=ptp_dt, mode="r",
-                offset=seg["ptp_data_offset"],
-                shape=(seg["nb_data_points"],),
-            )
-            return memmap["samples"][i_start:i_stop, channel_indexes]
-        else:
-            specs = seg["memmap_specs"]
-            if len(specs) == 1:
+        specs = segment_header["memmap_specs"]
+        if len(specs) == 1:
+            spec = specs[0]
+            field = spec.get("field")
+            if field is not None:
+                # PTP: structured dtype, extract named field (e.g. "samples")
+                memmap = np.memmap(
+                    spec["filename"], dtype=spec["dtype"], mode="r",
+                    offset=spec["offset"],
+                    shape=(spec["num_samples"],),
+                )
+                return memmap[field][i_start:i_stop, channel_indexes]
+            else:
+                # Standard/v2.1: flat dtype (e.g. int16)
                 data = np.memmap(
-                    filename, dtype="int16", mode="r",
-                    offset=specs[0]["offset"],
-                    shape=(specs[0]["num_samples"], channels),
+                    spec["filename"], dtype=spec["dtype"], mode="r",
+                    offset=spec["offset"],
+                    shape=(spec["num_samples"], channels),
                 )
                 return data[i_start:i_stop, channel_indexes]
-            else:
-                return self._read_multi_block_chunk(
-                    filename, specs, channels, i_start, i_stop, channel_indexes,
-                )
+        else:
+            return self._read_multi_block_chunk(
+                specs, channels, i_start, i_stop, channel_indexes,
+            )
 
-    def _read_multi_block_chunk(self, filename, memmap_specs, channels,
+    def _read_multi_block_chunk(self, memmap_specs, channels,
                                 i_start, i_stop, channel_indexes):
         """
         Read a chunk of analog signal data that spans multiple data blocks
@@ -679,12 +679,10 @@ class BlackrockRawIO(BaseRawIO):
 
         Parameters
         ----------
-        filename : str
-            Path to the NSx file.
         memmap_specs : list[dict]
-            Each dict has "offset" (byte offset in file) and "num_samples"
-            (number of samples in that block). Ordered sequentially within
-            the segment.
+            Each dict has "filename" (path to file), "offset" (byte offset in
+            file) and "num_samples" (number of samples in that block). Ordered
+            sequentially within the segment.
         channels : int
             Number of channels (columns in the int16 data matrix).
         i_start : int or None
@@ -715,7 +713,7 @@ class BlackrockRawIO(BaseRawIO):
                 local_start = max(0, i_start - block_start)
                 local_stop = min(spec["num_samples"], i_stop - block_start)
                 data = np.memmap(
-                    filename, dtype="int16", mode="r",
+                    spec["filename"], dtype=spec["dtype"], mode="r",
                     offset=spec["offset"],
                     shape=(spec["num_samples"], channels),
                 )
@@ -768,26 +766,24 @@ class BlackrockRawIO(BaseRawIO):
         """
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
-        seg = self._segmented_data_headers[nsx_nb][seg_index]
+        segment_header = self._segmented_data_headers[nsx_nb][seg_index]
 
-        size = seg["nb_data_points"]
+        size = segment_header["nb_data_points"]
         i_start = i_start if i_start is not None else 0
         i_stop = i_stop if i_stop is not None else size
 
-        if self._nsx_data_spec == "3.0-ptp":
-            channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-            filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-            ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channels)
+        if "timestamps_memmap_kwargs" in segment_header:
+            ts_kw = segment_header["timestamps_memmap_kwargs"]
             memmap = np.memmap(
-                filename, dtype=ptp_dt, mode="r",
-                offset=seg["ptp_data_offset"],
-                shape=(seg["nb_data_points"],),
+                ts_kw["filename"], dtype=ts_kw["dtype"], mode="r",
+                offset=ts_kw["offset"],
+                shape=(ts_kw["num_samples"],),
             )
             ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
-            return memmap["timestamps"][i_start:i_stop].astype("float64") / ts_res
+            return memmap[ts_kw["field"]][i_start:i_stop].astype("float64") / ts_res
         else:
             sr = self._nsx_sampling_frequency[nsx_nb]
-            return seg["t_start"] + np.arange(i_start, i_stop, dtype="float64") / sr
+            return segment_header["t_start"] + np.arange(i_start, i_stop, dtype="float64") / sr
 
     def _spike_count(self, block_index, seg_index, unit_index):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
@@ -1135,12 +1131,15 @@ class BlackrockRawIO(BaseRawIO):
         -------
         list[dict]
             Each dict contains:
-            - "memmap_kwargs": {"offset": int, "num_samples": int}
-                Byte offset and sample count for creating memmaps at read time.
-            - "nsx_block_timestamp": scalar (standard only)
+            - "memmap_kwargs": {"filename": str, "dtype": str or np.dtype,
+              "offset": int, "num_samples": int}
+                Recipe for creating memmaps at read time.
+            - "nsx_block_timestamp": scalar (v2.2, v2.3, v3.0 only)
                 Raw timestamp tick from the block header.
-            - "ptp_timestamps": np.ndarray of uint64 (PTP only)
-                Per-sample timestamps, temporary (used for gap detection then discarded).
+            - "ptp_timestamps_memmap_kwargs": {"filename": str, "dtype": np.dtype,
+              "offset": int, "num_samples": int} (v3.0-ptp only)
+                Recipe for creating a temporary memmap to read per-sample timestamps
+                during segmentation.
 
         Notes
         -----
@@ -1176,7 +1175,7 @@ class BlackrockRawIO(BaseRawIO):
         )
         filesize = self._get_file_size(filename)
         num_samples = int((filesize - bytes_in_headers) / (2 * channels) - 1)
-        return [{"memmap_kwargs": {"offset": bytes_in_headers, "num_samples": num_samples}}]
+        return [{"memmap_kwargs": {"filename": filename, "dtype": "int16", "offset": bytes_in_headers, "num_samples": num_samples}}]
 
     def _parse_nsx_data_v22_v30(self, spec, nsx_nb):
         """
@@ -1213,7 +1212,7 @@ class BlackrockRawIO(BaseRawIO):
             data_offset = current_offset + header.dtype.itemsize
 
             parsed_data_headers.append({
-                "memmap_kwargs": {"offset": data_offset, "num_samples": num_samples},
+                "memmap_kwargs": {"filename": filename, "dtype": "int16", "offset": data_offset, "num_samples": num_samples},
                 "nsx_block_timestamp": header["timestamp"],
             })
 
@@ -1235,7 +1234,8 @@ class BlackrockRawIO(BaseRawIO):
         -------
         list[dict]
             [{"memmap_kwargs": {"offset": int, "num_samples": int},
-              "ptp_timestamps": np.ndarray (uint64)}]
+              "ptp_timestamps_memmap_kwargs": {"offset": int, "dtype": np.dtype,
+                                               "num_samples": int}}]
         """
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
@@ -1246,7 +1246,7 @@ class BlackrockRawIO(BaseRawIO):
         ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
         npackets = int((filesize - header_size) / np.dtype(ptp_dt).itemsize)
 
-        # Temporary memmap for verification only
+        # Temporary memmap to verify this is truly PTP (every packet has exactly 1 sample)
         temp_memmap = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=header_size, mode="r")
 
         if not np.all(temp_memmap["num_data_points"] == 1):
@@ -1254,13 +1254,16 @@ class BlackrockRawIO(BaseRawIO):
             del temp_memmap
             return self._parse_nsx_data_v22_v30("3.0", nsx_nb)
 
-        # Copy timestamps for gap detection (released after segmentation)
-        ptp_timestamps = np.array(temp_memmap["timestamps"])
         del temp_memmap
 
         return [{
-            "memmap_kwargs": {"offset": header_size, "num_samples": npackets},
-            "ptp_timestamps": ptp_timestamps,
+            "memmap_kwargs": {"filename": filename, "offset": header_size, "num_samples": npackets},
+            "ptp_timestamps_memmap_kwargs": {
+                "filename": filename,
+                "offset": header_size,
+                "dtype": ptp_dt,
+                "num_samples": npackets,
+            },
         }]
 
     def _format_gap_report(self, gap_indices, timestamps_in_seconds, time_differences, nsx_nb):
@@ -1380,12 +1383,14 @@ class BlackrockRawIO(BaseRawIO):
         -------
         list[dict]
             Each dict contains:
+            - "memmap_specs": list of {"filename": str, "dtype": str or np.dtype,
+              "offset": int, "num_samples": int}, with optional "field": str
+              for structured dtypes (all formats)
             - "nb_data_points": int
             - "t_start": float (seconds)
-            - "memmap_specs": list of {"offset": int, "num_samples": int}
-              (standard/v2.1 only)
-            - "ptp_data_offset": int (PTP only)
-            - "nsx_block_timestamp": scalar raw ticks (standard only)
+            - "timestamps_memmap_kwargs": {"filename": str, "dtype": np.dtype,
+              "offset": int, "num_samples": int, "field": str} (v3.0-ptp only)
+            - "nsx_block_timestamp": scalar raw ticks (v2.2, v2.3, v3.0 only)
         """
         data_spec = self._nsx_data_spec
         if data_spec == "2.1":
@@ -1472,21 +1477,30 @@ class BlackrockRawIO(BaseRawIO):
         """
         Segment PTP format data (v3.0-ptp) using sample-level gap detection.
 
-        Operates on per-sample uint64 timestamps. The ptp_timestamps array from
-        the parser is consumed here and not stored on segments.
+        Creates a temporary memmap from ptp_timestamps_memmap_kwargs to read
+        per-sample uint64 timestamps for gap detection. The memmap is released
+        after segmentation; only byte offsets are stored on segments.
         """
         ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
         sr = self._nsx_sampling_frequency[nsx_nb]
-        channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
-        ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
-        packet_size = np.dtype(ptp_dt).itemsize
 
         header = parsed_data_headers[0]
         base_offset = header["memmap_kwargs"]["offset"]
         num_samples = header["memmap_kwargs"]["num_samples"]
-        ptp_timestamps = header["ptp_timestamps"]  # temporary, consumed here
+        filename = header["memmap_kwargs"]["filename"]
+
+        # Create temporary memmap to read timestamps for gap detection
+        ts_kwargs = header["ptp_timestamps_memmap_kwargs"]
+        temp_memmap = np.memmap(
+            ts_kwargs["filename"], dtype=ts_kwargs["dtype"], mode="r",
+            offset=ts_kwargs["offset"], shape=(ts_kwargs["num_samples"],),
+        )
+        ptp_timestamps = temp_memmap["timestamps"]
+        ptp_dt = ts_kwargs["dtype"]
+        packet_size = np.dtype(ptp_dt).itemsize
 
         all_timestamps = ptp_timestamps.astype("float64") / ts_res
+        del temp_memmap  # release file handle; all_timestamps is an independent copy
         time_diffs = np.diff(all_timestamps)
         deviations = time_diffs - 1.0 / sr
 
@@ -1502,9 +1516,24 @@ class BlackrockRawIO(BaseRawIO):
         for seg_index in range(len(segment_starts)):
             start = int(segment_starts[seg_index])
             end = int(segment_ends[seg_index])
+            seg_num_samples = end - start
+            seg_offset = base_offset + start * packet_size
             segments.append({
-                "ptp_data_offset": base_offset + start * packet_size,
-                "nb_data_points": end - start,
+                "memmap_specs": [{
+                    "filename": filename,
+                    "offset": seg_offset,
+                    "num_samples": seg_num_samples,
+                    "dtype": ptp_dt,
+                    "field": "samples",
+                }],
+                "timestamps_memmap_kwargs": {
+                    "filename": filename,
+                    "offset": seg_offset,
+                    "num_samples": seg_num_samples,
+                    "dtype": ptp_dt,
+                    "field": "timestamps",
+                },
+                "nb_data_points": seg_num_samples,
                 "t_start": float(all_timestamps[start]),
             })
 
