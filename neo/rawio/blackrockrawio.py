@@ -326,20 +326,6 @@ class BlackrockRawIO(BaseRawIO):
             sampling_rate = 30_000.0 / nsx_period
             self._nsx_sampling_frequency[nsx_nb] = float(sampling_rate)
 
-        # Parase data packages
-        for nsx_nb in self._avail_nsx:
-
-            # The only way to know if it is the Precision Time Protocol of file spec 3.0
-            # is to check for nanosecond timestamp resolution.
-            is_ptp_variant = (
-                "timestamp_resolution" in self._nsx_basic_header[nsx_nb].dtype.names
-                and self._nsx_basic_header[nsx_nb]["timestamp_resolution"] == 1_000_000_000
-            )
-            if is_ptp_variant:
-                data_header_spec = "3.0-ptp"
-            else:
-                data_header_spec = spec_version
-
         # nsx_to_load can be either int, list, 'max', 'all' (aka None)
         # here make a list only
         if self.nsx_to_load is None or self.nsx_to_load == "all":
