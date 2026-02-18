@@ -91,12 +91,19 @@ class NeuralynxRawIO(BaseRawIO):
     keep_original_times: bool, default: False
         If True, keep original start time as in files,
         Otherwise set 0 of time to first time in dataset
-    strict_gap_mode: bool, default: True
-        Detect gaps using strict mode or not.
-          * strict_gap_mode = True then a gap is consider when timstamp difference between two
-            consequtive data packet is more than one sample interval.
-          * strict_gap_mode = False then a gap has an increased tolerance. Some new system with different clock need this option
-            otherwise, too many gaps are detected
+    gap_tolerance_ms : float | None, default: None
+        Controls how timestamp gaps in NCS files are handled.
+        If None (default), a ValueError is raised when gaps are detected, with a
+        detailed gap report showing the number, size, and location of each gap.
+        If a float value is provided, gaps smaller than this threshold (in milliseconds)
+        are ignored, and gaps larger than this threshold create new segments.
+        Use gap_tolerance_ms=0.0 to segment on all detected gaps.
+    strict_gap_mode : bool | None, default: None
+        .. deprecated::
+            Use ``gap_tolerance_ms`` instead. Will be removed in version 0.16.
+        If explicitly set, uses legacy gap detection behavior:
+        strict_gap_mode=True uses tight tolerance (0.2 sample intervals),
+        strict_gap_mode=False uses loose tolerance (quarter of 512-sample packet).
 
     Notes
     -----
@@ -157,7 +164,8 @@ class NeuralynxRawIO(BaseRawIO):
         include_filenames=None,
         exclude_filenames=None,
         keep_original_times=False,
-        strict_gap_mode=True,
+        gap_tolerance_ms=None,
+        strict_gap_mode=None,
         filename=None,
         exclude_filename=None,
         **kargs,
@@ -196,11 +204,32 @@ class NeuralynxRawIO(BaseRawIO):
         else:
             self.rawmode = "one-dir"
 
+        # Handle gap_tolerance_ms and deprecated strict_gap_mode
+        if strict_gap_mode is not None:
+            warnings.warn(
+                "`strict_gap_mode` is deprecated and will be removed in version 0.16. "
+                "Use `gap_tolerance_ms` instead to control gap handling. "
+                "See issue #1773 for details.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if gap_tolerance_ms is not None:
+                warnings.warn(
+                    "Both `gap_tolerance_ms` and `strict_gap_mode` were provided. "
+                    "`gap_tolerance_ms` takes precedence.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            self._use_legacy_gap_mode = gap_tolerance_ms is None
+        else:
+            self._use_legacy_gap_mode = False
+
         self.dirname = dirname
         self.include_filenames = include_filenames
         self.exclude_filenames = exclude_filenames
         self.keep_original_times = keep_original_times
-        self.strict_gap_mode = strict_gap_mode
+        self.gap_tolerance_ms = gap_tolerance_ms
+        self.strict_gap_mode = strict_gap_mode if strict_gap_mode is not None else True
         BaseRawIO.__init__(self, **kargs)
 
     def _source_name(self):
@@ -878,6 +907,76 @@ class NeuralynxRawIO(BaseRawIO):
         event_times -= self.global_t_start
         return event_times
 
+    def _format_gap_report(self, detected_gaps, sampling_frequency, filename):
+        """
+        Format a detailed gap report showing where timestamp discontinuities occur.
+
+        Parameters
+        ----------
+        detected_gaps : list of (int, int)
+            List of (record_index, gap_size_us) tuples from NcsSections.detected_gaps.
+        sampling_frequency : float
+            Sampling frequency in Hz used for the file.
+        filename : str
+            Path to the NCS file for the report header.
+
+        Returns
+        -------
+        str
+            Formatted gap report with table.
+        """
+        gap_durations_ms = [abs(gap_size) / 1000.0 for _, gap_size in detected_gaps]
+        gap_positions_seconds = [
+            record_index * NcsSection._RECORD_SIZE / sampling_frequency
+            for record_index, _ in detected_gaps
+        ]
+
+        gap_detail_lines = [
+            f"| {record_index:>15,} | {pos:>21.6f} | {dur:>21.3f} |\n"
+            for (record_index, _), pos, dur in zip(detected_gaps, gap_positions_seconds, gap_durations_ms)
+        ]
+
+        return (
+            f"Gap Report for {os.path.basename(filename)}:\n"
+            f"Found {len(detected_gaps)} timestamp gaps "
+            f"(detection threshold: {NcsSectionsFactory._maxGapSampFrac} sample intervals)\n\n"
+            "Gap Details:\n"
+            "+-----------------+-----------------------+-----------------------+\n"
+            "| Record Index    | Record at (Seconds)   | Gap Size (ms)         |\n"
+            "+-----------------+-----------------------+-----------------------+\n"
+            + "".join(gap_detail_lines)
+            + "+-----------------+-----------------------+-----------------------+\n"
+        )
+
+    def _get_neuralynx_timestamps(self, block_index, seg_index, stream_index):
+        """
+        Return original NCS record timestamps for the first channel in a stream/segment.
+
+        These are the raw hardware timestamps from the NCS file records, one timestamp
+        per 512-sample record, in microseconds.
+
+        Parameters
+        ----------
+        block_index : int
+            Block index (always 0 for Neuralynx).
+        seg_index : int
+            Segment index.
+        stream_index : int
+            Stream index.
+
+        Returns
+        -------
+        np.ndarray
+            Timestamps in microseconds from the NCS records, one per 512-sample record.
+        """
+        stream_id = self.header["signal_streams"][stream_index]["id"]
+        stream_mask = self.header["signal_channels"]["stream_id"] == stream_id
+        channel = self.header["signal_channels"][stream_mask][0]
+        chan_uid = (channel["name"], channel["id"])
+
+        data = self._sigs_memmaps[seg_index][chan_uid]
+        return data["timestamp"].copy()
+
     def scan_stream_ncs_files(self, ncs_filenames):
         """
         Given a list of ncs files, read their basic structure.
@@ -906,6 +1005,17 @@ class NeuralynxRawIO(BaseRawIO):
         if len(ncs_filenames) == 0:
             return None, None, None
 
+        # Determine gap tolerance in microseconds for NcsSectionsFactory
+        if self._use_legacy_gap_mode:
+            # Legacy mode: let NcsSectionsFactory use strict_gap_mode defaults
+            factory_kwargs = {"strict_gap_mode": self.strict_gap_mode}
+        elif self.gap_tolerance_ms is not None:
+            # New API: convert ms to us
+            factory_kwargs = {"gap_tolerance_us": self.gap_tolerance_ms * 1000.0}
+        else:
+            # New default: detect all gaps strictly, we'll error later if gaps found
+            factory_kwargs = {}
+
         # Build dictionary of chan_uid to associated NcsSections, memmap and NlxHeaders. Only
         # construct new NcsSections when it is different from that for the preceding file.
         chanSectMap = dict()
@@ -918,8 +1028,35 @@ class NeuralynxRawIO(BaseRawIO):
             verify_sec_struct = NcsSectionsFactory._verifySectionsStructure
             if not chanSectMap or (not verify_sec_struct(data, chan_ncs_sections)):
                 chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(
-                    data, nlxHeader, strict_gap_mode=self.strict_gap_mode
+                    data, nlxHeader, **factory_kwargs
                 )
+
+                # Check for gaps and handle according to gap_tolerance_ms
+                if not self._use_legacy_gap_mode and chan_ncs_sections.detected_gaps:
+                    if self.gap_tolerance_ms is None:
+                        # Default mode: only error on gaps >= 1 sample period.
+                        # Sub-sample deviations (from timestamp rounding, clock jitter, etc.)
+                        # are not real gaps and should not produce false positives.
+                        one_sample_us = 1e6 / chan_ncs_sections.sampFreqUsed
+                        significant_gaps = [
+                            (record_index, gap_us)
+                            for record_index, gap_us in chan_ncs_sections.detected_gaps
+                            if abs(gap_us) >= one_sample_us
+                        ]
+                        if significant_gaps:
+                            gap_report = self._format_gap_report(
+                                significant_gaps,
+                                chan_ncs_sections.sampFreqUsed,
+                                ncs_filename,
+                            )
+                            raise ValueError(
+                                f"Detected {len(significant_gaps)} timestamp gaps "
+                                f"in {os.path.basename(ncs_filename)}.\n"
+                                f"{gap_report}\n"
+                                f"To load this data, provide the gap_tolerance_ms parameter to "
+                                f"automatically segment at gaps larger than the specified tolerance.\n"
+                                f"Example: NeuralynxRawIO(dirname=..., gap_tolerance_ms=1.0)"
+                            )
 
             # register file section structure for all contained channels
             for chan_uid in zip(nlxHeader["channel_names"], np.asarray(nlxHeader["channel_ids"], dtype=str)):
