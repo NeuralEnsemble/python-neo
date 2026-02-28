@@ -283,11 +283,17 @@ class TdtRawIO(BaseRawIO):
                             raise ValueError("Dtype is changing!!")
 
                     # data buffer test if SEV file exists otherwise TEV
-                    # path = self.dirname / segment_name
                     if self.tdt_block_mode == "multi":
                         # for multi block datasets the names of sev files are fixed
-                        sev_stem = f"{tankname}_{segment_name}_{stream_name}_ch{chan_id}"
-                        sev_filename = (path / sev_stem).with_suffix(".sev")
+                        block_path = self.dirname / segment_name
+                        sev_regex = f"{tankname}_{segment_name}_{stream_name}_[cC]h{chan_id}.sev"
+                        sev_filename = list(block_path.glob(sev_regex))
+                        if len(sev_filename) == 1:
+                            sev_filename = sev_filename[0]
+                        elif len(sev_filename) == 0:
+                            sev_filename = None  # Indirect flag for TEV Format, see issue 1087
+                        else:
+                            raise ValueError(f"Multiple SEV files matched for channel {chan_id}: {sev_filename}")
                     else:
                         # for single block datasets the exact name of sev files is not known
                         sev_regex = f"*_[cC]h{chan_id}.sev"
