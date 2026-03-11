@@ -122,6 +122,6 @@
     {"@type": "Person", "givenName": "Akshaj", "familyName": "Verma"},
     {"@type": "Person", "givenName": "Letizia", "familyName": "Signorelli"},
     {"@type": "Person", "givenName": "Daniel", "familyName": "Parthier"},
-    {@ADDkkuntal}
+    {"@type": "Person", "givenName": "Kuntal", "familyName": "Kokate"},
   ]
 }

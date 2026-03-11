@@ -2,7 +2,7 @@
 Neo 0.14.4 release notes
 ========================
 
-xx January 25
+12 March 2026
 
 This release of Neo includes many bug fixes in various IOs with an eye to a 1.0 release.
 
@@ -34,7 +34,7 @@ Bug fixes and/or improvements have been made to :code:`AxonIO`, :code:`BrainVisi
 Acknowledgements
 ----------------
 
-Thanks to Andrew Davison, Zach McKenzie, @Kkuntal990, Heberto Mayorquin, Samuel Garcia, Alessio Buccino, and Chris Halcrow
+Thanks to Andrew Davison, Zach McKenzie, Kuntal Kokate, Heberto Mayorquin, Samuel Garcia, Alessio Buccino, and Chris Halcrow
 
 .. _`pull requests` : https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+milestone%3A0.14.4
 
