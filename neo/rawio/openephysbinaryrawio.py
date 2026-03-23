@@ -405,16 +405,31 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     # all theses data are put in event array annotations
                     if "text" in info:
                         # text case
-                        info["labels"] = info["text"].astype("U")
+                        try:
+                            info["labels"] = info["text"].astype("U")
+                        except UnicodeDecodeError:
+                            info["labels"] = np.array([e.decode('utf-8') for e in info['text']], dtype='U')
                     elif "metadata" in info:
                         # binary case
-                        info["labels"] = info["channels"].astype("U")
+                        try:
+                            info["labels"] = info["channels"].astype("U")
+                        except UnicodeDecodeError:
+                            # non-ascii character, fallback on UTF-8 decoding byte by byte
+                            info["labels"] = np.array([e.decode('utf-8') for e in info['channels']], dtype='U')
                     elif "channels" in info:
                         # ttl case use channels
-                        info["labels"] = info["channels"].astype("U")
+                        try:
+                            info["labels"] = info["channels"].astype("U")
+                        except UnicodeDecodeError:
+                            # non-ascii character, fallback on UTF-8 decoding byte by byte
+                            info["labels"] = np.array([e.decode('utf-8') for e in info['channels']], dtype='U')
                     elif "states" in info:
                         # ttl case use states
-                        info["labels"] = info["states"].astype("U")
+                        try:
+                            info["labels"] = info["states"].astype("U")
+                        except UnicodeDecodeError:
+                            # non-ascii character, fallback on UTF-8 decoding byte by byte
+                            info["labels"] = np.array([e.decode('utf-8') for e in info['states']], dtype='U')
                     else:
                         raise ValueError(f"There is no possible labels for this event!")
 
