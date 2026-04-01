@@ -391,7 +391,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     # check that events have timestamps
                     assert "timestamps" in info, "Event stream does not have timestamps!"
                     # Updates for OpenEphys v0.6:
-                    # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
+                    # In new version (>=0.6) timestamps.npy is now called sample_numbers.npy
                     # The timestamps are already in seconds, so that event times don't require scaling
                     # see https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#events
                     if "sample_numbers" in info:
@@ -399,37 +399,34 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     else:
                         self._use_direct_evt_timestamps = False
 
-                    # for event the neo "label" will change depending the nature
+                    # for event the neo "label" will change depending on the nature
                     #  of event (ttl, text, binary)
-                    # and this is transform into unicode
-                    # all theses data are put in event array annotations
+                    # and this is transform into Unicode
+                    # all these data are put in event array annotations
                     if "text" in info:
                         # text case
-                        try:
-                            info["labels"] = info["text"].astype("U")
-                        except UnicodeDecodeError:
+                        if info["text"].dtype.kind in ["U", "S"]:
                             info["labels"] = np.array([e.decode('utf-8') for e in info['text']], dtype='U')
+                        else:
+                            info["labels"] = info["text"].astype("U")
                     elif "metadata" in info:
                         # binary case
-                        try:
-                            info["labels"] = info["channels"].astype("U")
-                        except UnicodeDecodeError:
-                            # non-ascii character, fallback on UTF-8 decoding byte by byte
+                        if info["metadata"].dtype.kind in ["U", "S"]:
                             info["labels"] = np.array([e.decode('utf-8') for e in info['channels']], dtype='U')
+                        else:
+                            info["labels"] = info["channels"].astype("U")
                     elif "channels" in info:
                         # ttl case use channels
-                        try:
-                            info["labels"] = info["channels"].astype("U")
-                        except UnicodeDecodeError:
-                            # non-ascii character, fallback on UTF-8 decoding byte by byte
+                        if info["channels"].dtype.kind in ["U", "S"]:
                             info["labels"] = np.array([e.decode('utf-8') for e in info['channels']], dtype='U')
+                        else:
+                            info["labels"] = info["channels"].astype("U")
                     elif "states" in info:
                         # ttl case use states
-                        try:
-                            info["labels"] = info["states"].astype("U")
-                        except UnicodeDecodeError:
-                            # non-ascii character, fallback on UTF-8 decoding byte by byte
+                        if info["states"].dtype.kind in ["U", "S"]:
                             info["labels"] = np.array([e.decode('utf-8') for e in info['states']], dtype='U')
+                        else:
+                            info["labels"] = info["states"].astype("U")
                     else:
                         raise ValueError(f"There is no possible labels for this event!")
 
