@@ -143,7 +143,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
         # as spikegadgets change we should follow this
         try:
             num_chan_per_chip = int(sconf.attrib["chanPerChip"])
-            if num_chan_per_chip <= 0:
+            if num_chan_per_chip <= 0:  # invalid value
+                raise KeyError
+            if num_chan_per_chip > 100000:  # abnormal large value
                 raise KeyError
         except KeyError:
             num_chan_per_chip = 32  # default value for Intan chips
