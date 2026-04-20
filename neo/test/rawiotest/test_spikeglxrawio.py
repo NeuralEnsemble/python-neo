@@ -4,7 +4,9 @@ Tests of neo.rawio.spikeglxrawio
 
 import unittest
 
-from neo.rawio.spikeglxrawio import SpikeGLXRawIO
+import pytest
+
+from neo.rawio.spikeglxrawio import SpikeGLXRawIO, _build_signals_info_dict
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 import numpy as np
 
@@ -195,6 +197,30 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
                     atol=1e-9,
                     err_msg=f"Mismatch in t_start for stream '{stream_name}', segment {seg_index}",
                 )
+
+
+def test_build_signals_info_dict_collision_raises_value_error():
+    info_a = {"seg_index": 0, "stream_name": "imec0.ap", "meta_file": "/x/first.meta"}
+    info_b = {"seg_index": 0, "stream_name": "imec0.ap", "meta_file": "/x/second.meta"}
+
+    expected_message = (
+        "Two SpikeGLX file pairs resolve to the same stream 'imec0.ap' in segment 0:\n"
+        "  1) /x/first.meta\n"
+        "  2) /x/second.meta\n"
+        "This can happen if:\n"
+        "  - Files were renamed on disk. Stream names come from the 'fileName' field "
+        "inside the .meta, not the filename on disk.\n"
+        "  - Recordings from different sessions are in the same folder with the same "
+        "gate/trigger numbers.\n"
+        "  - Duplicate copies exist in subfolders (the reader scans recursively).\n"
+        "  - A third-party tool rewrote the .meta file with an incorrect 'fileName' "
+        "(for example, LF meta pointing to the AP binary)."
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        _build_signals_info_dict([info_a, info_b])
+
+    assert str(exc_info.value) == expected_message
 
 
 if __name__ == "__main__":
