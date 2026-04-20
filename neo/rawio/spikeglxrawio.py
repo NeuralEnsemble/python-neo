@@ -126,6 +126,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
     def _parse_header(self):
         self.signals_info_list = scan_files(self.dirname)
+        _add_first_sample(self.signals_info_list)
         _add_segment_order(self.signals_info_list)
 
         # sort stream_name by higher sampling rate first
@@ -274,7 +275,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             for seg_index in range(nb_segment):
                 info = self.signals_info_dict[seg_index, stream_name]
 
-                frame_start = float(info["meta"]["firstSample"])
+                frame_start = info["first_sample"]
                 sampling_frequency = info["sampling_rate"]
                 t_start = frame_start / sampling_frequency
 
@@ -410,6 +411,30 @@ def scan_files(dirname):
         raise FileNotFoundError(f"No appropriate combination of .meta and .bin files were detected in {dirname}")
 
     return info_list
+
+
+def _add_first_sample(info_list):
+    """
+    Add ``info["first_sample"]`` for each signal in ``info_list``.
+
+    Reads ``meta["firstSample"]`` (documented in every SpikeGLX phase) and converts
+    to float. When absent, defaults to 0 with a UserWarning naming the file:
+    older Phase 3A builds and some third-party rewritten .meta files omit this
+    field, and 0 is the correct fallback for a binary that starts at the
+    beginning of its run.
+    """
+    for info in info_list:
+        meta = info["meta"]
+        if "firstSample" in meta:
+            info["first_sample"] = float(meta["firstSample"])
+        else:
+            warn(
+                f"'firstSample' missing from {info['meta_file']}; "
+                f"defaulting to 0. t_start for this stream/segment will be 0 s.",
+                UserWarning,
+                stacklevel=2,
+            )
+            info["first_sample"] = 0.0
 
 
 def _add_segment_order(info_list):
