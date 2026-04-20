@@ -130,5 +130,8 @@ all = [
 # we do not include 'stfio' in 'all' as it is not pip installable
 
 
+[tool.setuptools.packages.find]
+include = ["neo*"]
+
 [tool.black]
 line-length = 120
