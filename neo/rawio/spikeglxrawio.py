@@ -127,6 +127,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     def _parse_header(self):
         self.signals_info_list = scan_files(self.dirname)
         _add_segment_order(self.signals_info_list)
+        _add_segment_timing(self.signals_info_list)
 
         # sort stream_name by higher sampling rate first
         srates = {info["stream_name"]: info["sampling_rate"] for info in self.signals_info_list}
@@ -269,9 +270,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             for seg_index in range(nb_segment):
                 info = self.signals_info_dict[seg_index, stream_name]
 
-                frame_start = float(info["meta"]["firstSample"])
-                sampling_frequency = info["sampling_rate"]
-                t_start = frame_start / sampling_frequency
+                t_start = info["t_start"]
 
                 self._t_starts[stream_name][seg_index] = t_start
 
@@ -282,8 +281,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         self._t_starts[sync_stream_name] = {}
                     self._t_starts[sync_stream_name][seg_index] = t_start
 
-                t_stop = info["sample_length"] / info["sampling_rate"]
-                self._t_stops[seg_index] = max(self._t_stops[seg_index], t_stop)
+                self._t_stops[seg_index] = max(self._t_stops[seg_index], info["t_stop"])
 
         # fille into header dict
         self.header = {}
@@ -405,6 +403,40 @@ def scan_files(dirname):
         raise FileNotFoundError(f"No appropriate combination of .meta and .bin files were detected in {dirname}")
 
     return info_list
+
+
+def _add_segment_timing(info_list):
+    """
+    Add ``info["first_sample"]``, ``info["t_start"]``, and ``info["t_stop"]`` per signal.
+
+    Reads ``meta["firstSample"]`` (documented in every SpikeGLX phase) and converts
+    to float. When absent, defaults to 0 with a UserWarning naming the file. Zero
+    is the correct fallback for a file that starts at the beginning of its SpikeGLX
+    run, which covers the expected causes of a missing tag: pre-2016 builds (the
+    tag was introduced in 2016), recordings where the end-of-run write was
+    interrupted, and ``.meta`` files modified after acquisition.
+
+    Then stores ``info["t_start"] = info["first_sample"] / info["sampling_rate"]``
+    and ``info["t_stop"] = info["sample_length"] / info["sampling_rate"]`` in
+    seconds, so downstream code can read both directly without recomputation.
+    """
+    for info in info_list:
+        meta = info["meta"]
+        if "firstSample" in meta:
+            info["first_sample"] = float(meta["firstSample"])
+        else:
+            warn(
+                f"'firstSample' missing from {info['meta_file']}; defaulting to 0. "
+                f"Zero is correct for files that start at the beginning of their SpikeGLX run, "
+                f"but wrong for any file that represents a non-initial trigger or that was "
+                f"derived from a longer recording. Typical causes: pre-2016 SpikeGLX build, "
+                f"interrupted end-of-run write, or post-acquisition modification of the .meta file.",
+                UserWarning,
+                stacklevel=2,
+            )
+            info["first_sample"] = 0.0
+        info["t_start"] = info["first_sample"] / info["sampling_rate"]
+        info["t_stop"] = info["sample_length"] / info["sampling_rate"]
 
 
 def _build_signals_info_dict(info_list):
