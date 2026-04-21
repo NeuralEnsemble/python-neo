@@ -281,8 +281,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         self._t_starts[sync_stream_name] = {}
                     self._t_starts[sync_stream_name][seg_index] = t_start
 
-                t_stop = info["sample_length"] / info["sampling_rate"]
-                self._t_stops[seg_index] = max(self._t_stops[seg_index], t_stop)
+                self._t_stops[seg_index] = max(self._t_stops[seg_index], info["t_stop"])
 
         # fille into header dict
         self.header = {}
