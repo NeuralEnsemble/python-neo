@@ -418,10 +418,11 @@ def _add_first_sample(info_list):
     Add ``info["first_sample"]`` for each signal in ``info_list``.
 
     Reads ``meta["firstSample"]`` (documented in every SpikeGLX phase) and converts
-    to float. When absent, defaults to 0 with a UserWarning naming the file:
-    older Phase 3A builds and some third-party rewritten .meta files omit this
-    field, and 0 is the correct fallback for a binary that starts at the
-    beginning of its run.
+    to float. When absent, defaults to 0 with a UserWarning naming the file. Zero
+    is the correct fallback for a binary that starts at the beginning of its run,
+    which covers the expected causes of a missing tag: pre-2016 SpikeGLX builds
+    (the tag was introduced in 2016), recordings where the end-of-run write was
+    interrupted, and `.meta` files modified after acquisition.
     """
     for info in info_list:
         meta = info["meta"]
@@ -429,8 +430,11 @@ def _add_first_sample(info_list):
             info["first_sample"] = float(meta["firstSample"])
         else:
             warn(
-                f"'firstSample' missing from {info['meta_file']}; "
-                f"defaulting to 0. t_start for this stream/segment will be 0 s.",
+                f"'firstSample' missing from {info['meta_file']}; defaulting to 0. "
+                f"Zero is correct for files that start at the beginning of their SpikeGLX run, "
+                f"but wrong for any file that represents a non-initial trigger or that was "
+                f"derived from a longer recording. Typical causes: pre-2016 SpikeGLX build, "
+                f"interrupted end-of-run write, or post-acquisition modification of the .meta file.",
                 UserWarning,
                 stacklevel=2,
             )
