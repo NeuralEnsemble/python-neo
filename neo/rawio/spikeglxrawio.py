@@ -408,7 +408,7 @@ def scan_files(dirname):
 
 def _add_segment_timing(info_list):
     """
-    Add ``info["first_sample"]`` and ``info["t_start"]`` per signal.
+    Add ``info["first_sample"]``, ``info["t_start"]``, and ``info["t_stop"]`` per signal.
 
     Reads ``meta["firstSample"]`` (documented in every SpikeGLX phase) and converts
     to float. When absent, defaults to 0 with a UserWarning naming the file. Zero
@@ -418,7 +418,8 @@ def _add_segment_timing(info_list):
     interrupted, and ``.meta`` files modified after acquisition.
 
     Then stores ``info["t_start"] = info["first_sample"] / info["sampling_rate"]``
-    in seconds, so downstream code can read it directly without recomputation.
+    and ``info["t_stop"] = info["sample_length"] / info["sampling_rate"]`` in
+    seconds, so downstream code can read both directly without recomputation.
     """
     for info in info_list:
         meta = info["meta"]
@@ -436,6 +437,7 @@ def _add_segment_timing(info_list):
             )
             info["first_sample"] = 0.0
         info["t_start"] = info["first_sample"] / info["sampling_rate"]
+        info["t_stop"] = info["sample_length"] / info["sampling_rate"]
 
 
 def _build_signals_info_dict(info_list):
