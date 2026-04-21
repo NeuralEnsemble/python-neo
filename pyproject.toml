@@ -53,6 +53,9 @@ test = [
     "h5py",
     "igor2",
     "klusta",
+    # klusta imports pkg_resources at module load; pkg_resources was moved
+    # out of setuptools>=81. Pin until klusta is removed or vendored.
+    "setuptools<81",
     "tqdm",
     "nixio",
     "matplotlib",
