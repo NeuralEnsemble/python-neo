@@ -126,8 +126,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
     def _parse_header(self):
         self.signals_info_list = scan_files(self.dirname)
-        _add_first_sample(self.signals_info_list)
         _add_segment_order(self.signals_info_list)
+        _add_segment_timing(self.signals_info_list)
 
         # sort stream_name by higher sampling rate first
         srates = {info["stream_name"]: info["sampling_rate"] for info in self.signals_info_list}
@@ -270,9 +270,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             for seg_index in range(nb_segment):
                 info = self.signals_info_dict[seg_index, stream_name]
 
-                frame_start = info["first_sample"]
-                sampling_frequency = info["sampling_rate"]
-                t_start = frame_start / sampling_frequency
+                t_start = info["t_start"]
 
                 self._t_starts[stream_name][seg_index] = t_start
 
@@ -408,16 +406,19 @@ def scan_files(dirname):
     return info_list
 
 
-def _add_first_sample(info_list):
+def _add_segment_timing(info_list):
     """
-    Add ``info["first_sample"]`` for each signal in ``info_list``.
+    Add ``info["first_sample"]`` and ``info["t_start"]`` per signal.
 
     Reads ``meta["firstSample"]`` (documented in every SpikeGLX phase) and converts
     to float. When absent, defaults to 0 with a UserWarning naming the file. Zero
-    is the correct fallback for a binary that starts at the beginning of its run,
-    which covers the expected causes of a missing tag: pre-2016 SpikeGLX builds
-    (the tag was introduced in 2016), recordings where the end-of-run write was
-    interrupted, and `.meta` files modified after acquisition.
+    is the correct fallback for a file that starts at the beginning of its SpikeGLX
+    run, which covers the expected causes of a missing tag: pre-2016 builds (the
+    tag was introduced in 2016), recordings where the end-of-run write was
+    interrupted, and ``.meta`` files modified after acquisition.
+
+    Then stores ``info["t_start"] = info["first_sample"] / info["sampling_rate"]``
+    in seconds, so downstream code can read it directly without recomputation.
     """
     for info in info_list:
         meta = info["meta"]
@@ -434,6 +435,7 @@ def _add_first_sample(info_list):
                 stacklevel=2,
             )
             info["first_sample"] = 0.0
+        info["t_start"] = info["first_sample"] / info["sampling_rate"]
 
 
 def _build_signals_info_dict(info_list):
