@@ -134,17 +134,12 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         stream_names = sorted(list(srates.keys()), key=lambda e: srates[e])[::-1]
         nb_segment = np.unique([info["seg_index"] for info in self.signals_info_list]).size
 
-        self.signals_info_dict = {}
+        self.signals_info_dict = _build_signals_info_dict(self.signals_info_list)
+
         # one unique block
         self._buffer_descriptions = {0: {}}
         self._stream_buffer_slice = {}
-        for info in self.signals_info_list:
-            seg_index, stream_name = info["seg_index"], info["stream_name"]
-            key = (seg_index, stream_name)
-            if key in self.signals_info_dict:
-                raise KeyError(f"key {key} is already in the signals_info_dict")
-            self.signals_info_dict[key] = info
-
+        for (seg_index, stream_name), info in self.signals_info_dict.items():
             buffer_id = stream_name
             block_index = 0
 
@@ -439,6 +434,41 @@ def _add_first_sample(info_list):
                 stacklevel=2,
             )
             info["first_sample"] = 0.0
+
+
+def _build_signals_info_dict(info_list):
+    """
+    Re-index a flat list of info dicts into a dict keyed by (seg_index, stream_name).
+
+    Requires each info dict to already have "seg_index", "stream_name", and "meta_file",
+    populated by scan_files + _add_segment_order.
+
+    Raises ValueError on duplicate keys, naming both colliding .meta paths and
+    listing common causes so users can self-diagnose.
+    """
+    signals_info_dict = {}
+    for info in info_list:
+        key = (info["seg_index"], info["stream_name"])
+        if key in signals_info_dict:
+            existing = signals_info_dict[key]
+            seg_index, stream_name = key
+            raise ValueError(
+                f"Two SpikeGLX file pairs resolve to the same stream "
+                f"'{stream_name}' in segment {seg_index}:\n"
+                f"  1) {existing['meta_file']}\n"
+                f"  2) {info['meta_file']}\n"
+                f"This can happen if:\n"
+                f"  - Files were renamed on disk. Stream names come from the "
+                f"'fileName' field inside the .meta, not the filename on disk.\n"
+                f"  - Recordings from different sessions are in the same folder "
+                f"with the same gate/trigger numbers.\n"
+                f"  - Duplicate copies exist in subfolders (the reader scans "
+                f"recursively).\n"
+                f"  - A third-party tool rewrote the .meta file with an incorrect "
+                f"'fileName' (for example, LF meta pointing to the AP binary)."
+            )
+        signals_info_dict[key] = info
+    return signals_info_dict
 
 
 def _add_segment_order(info_list):
