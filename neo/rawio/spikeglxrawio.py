@@ -46,10 +46,11 @@ Author : Samuel Garcia, Alessio Buccino, Heberto Mayorquin
 Some functions are copied from Graham Findlay
 """
 
-from pathlib import Path
 import os
 import re
+from pathlib import Path
 from warnings import warn
+import json
 
 import numpy as np
 
