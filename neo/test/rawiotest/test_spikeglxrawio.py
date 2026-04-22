@@ -75,46 +75,25 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         assert any(have_location)
 
     def test_sync(self):
-        rawio_with_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=True)
-        rawio_with_sync.parse_header()
-        stream_index = list(rawio_with_sync.header["signal_streams"]["name"]).index("imec0.ap")
+        # The sync trace is always split off into its own -SYNC stream; the parent
+        # AP stream has 384 channels (384 neural channels, SY0 excluded).
+        rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"))
+        rawio.parse_header()
+        stream_index = list(rawio.header["signal_streams"]["name"]).index("imec0.ap")
 
-        # AP stream has 385 channels
-        chunk = rawio_with_sync.get_analogsignal_chunk(
-            block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
-        )
-        assert chunk.shape[1] == 385
-
-        rawio_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=False)
-        rawio_no_sync.parse_header()
-
-        # AP stream has 384 channels
-        chunk = rawio_no_sync.get_analogsignal_chunk(
+        chunk = rawio.get_analogsignal_chunk(
             block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
         )
         assert chunk.shape[1] == 384
 
-    def test_no_sync(self):
-        # requesting sync channel when there is none raises an error
-        with self.assertRaises(ValueError):
-            rawio_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_no_sync"), load_sync_channel=True)
-            rawio_no_sync.parse_header()
-
     def test_subset_with_sync(self):
-        rawio_sub = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_subset_with_sync"), load_sync_channel=True)
-        rawio_sub.parse_header()
-        stream_index = list(rawio_sub.header["signal_streams"]["name"]).index("imec0.ap")
+        # Channel-subset recording with SY: 121 saved channels total, 120 neural plus
+        # one SY that is split into the -SYNC stream, leaving 120 in the parent.
+        rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_subset_with_sync"))
+        rawio.parse_header()
+        stream_index = list(rawio.header["signal_streams"]["name"]).index("imec0.ap")
 
-        # AP stream has 121 channels
-        chunk = rawio_sub.get_analogsignal_chunk(
-            block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
-        )
-        assert chunk.shape[1] == 121
-
-        rawio_sub_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_subset_with_sync"), load_sync_channel=False)
-        rawio_sub_no_sync.parse_header()
-        # AP stream has 120 channels
-        chunk = rawio_sub_no_sync.get_analogsignal_chunk(
+        chunk = rawio.get_analogsignal_chunk(
             block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
         )
         assert chunk.shape[1] == 120
@@ -135,32 +114,13 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         assert np.allclose(on_diff, 1, atol=atol)
 
     def test_sync_channel_as_separate_stream(self):
-        """Test that sync channel is added as its own stream when load_sync_channel=False."""
-        import warnings
+        """Sync trace is always exposed as its own -SYNC stream."""
+        rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"))
+        rawio.parse_header()
 
-        # Test with load_sync_channel=False (default)
-        rawio_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=False)
-        rawio_no_sync.parse_header()
-
-        # Get stream names
-        stream_names = rawio_no_sync.header["signal_streams"]["name"].tolist()
-
-        # Check if there's a sync channel stream (should contain "SY0" or "SYNC" in the name)
-        sync_streams = [name for name in stream_names if "SY0" in name or "SYNC" in name]
-        assert len(sync_streams) > 0, "No sync channel stream found when load_sync_channel=False"
-
-        # Test deprecation warning when load_sync_channel=True
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            rawio_with_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=True)
-
-            # Check if deprecation warning was raised
-            assert any(
-                issubclass(warning.category, DeprecationWarning) for warning in w
-            ), "No deprecation warning raised"
-            assert any(
-                "will be removed in version 0.15" in str(warning.message) for warning in w
-            ), "Deprecation warning message is incorrect"
+        stream_names = rawio.header["signal_streams"]["name"].tolist()
+        sync_streams = [name for name in stream_names if "SYNC" in name]
+        assert len(sync_streams) > 0, "No -SYNC stream found"
 
     def test_t_start_reading(self):
         """Test that t_start values are correctly read for all streams and segments."""

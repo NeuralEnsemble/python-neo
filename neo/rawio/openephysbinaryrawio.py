@@ -36,9 +36,6 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     ----------
     dirname : str
         Path to Open Ephys directory
-    load_sync_channel : bool
-        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
-        If True, the SYNC channel is loaded and can be accessed in the analog signals.
     experiment_names : str or list or None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
@@ -109,21 +106,13 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     extensions = ["xml", "oebin", "txt", "dat", "npy"]
     rawmode = "one-dir"
 
-    def __init__(self, dirname="", load_sync_channel=False, experiment_names=None):
+    def __init__(self, dirname="", experiment_names=None):
         BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
         if experiment_names is not None:
             if isinstance(experiment_names, str):
                 experiment_names = [experiment_names]
         self.experiment_names = experiment_names
-        self.load_sync_channel = load_sync_channel
-        if load_sync_channel:
-            warn(
-                "The load_sync_channel=True option is deprecated and will be removed in version 0.15. "
-                "Use load_sync_channel=False instead, which will add sync channels as separate streams.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
         self.folder_structure = None
         self._use_direct_evt_timestamps = None
 
@@ -200,7 +189,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     units = "uV" if "ADC" not in chan_id else "V"
 
                 # Special cases for stream
-                if "SYNC" in chan_id and not self.load_sync_channel:
+                if "SYNC" in chan_id:
                     # Every stream sync channel is added as its own stream
                     sync_stream_id = f"{stream_name}SYNC"
                     sync_stream_id_to_buffer_id[sync_stream_id] = buffer_id
@@ -296,12 +285,6 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
                     has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
 
-                    # check sync channel validity (only for AP and LF)
-                    if not has_sync_trace and self.load_sync_channel and "NI-DAQ" not in info["stream_name"]:
-                        raise ValueError(
-                            "SYNC channel is not present in the recording. " "Set load_sync_channel to False"
-                        )
-
                     # Check if ADC and non-ADC channels are contiguous
                     is_channel_adc = ["ADC" in ch["channel_name"] for ch in info["channels"]]
                     if any(is_channel_adc):
@@ -343,7 +326,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         num_adc_channels = 0
 
                     if num_adc_channels == 0:
-                        if has_sync_trace and not self.load_sync_channel:
+                        if has_sync_trace:
                             # Exclude the sync channel from the main stream
                             self._stream_buffer_slice[stream_id] = slice(None, -1)
 
@@ -358,7 +341,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
                         self._stream_buffer_slice[stream_id_neural] = slice(0, num_neural_channels)
 
-                        if has_sync_trace and not self.load_sync_channel:
+                        if has_sync_trace:
                             # Exclude the sync channel from the non-neural stream
                             self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, -1)
 
@@ -564,7 +547,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             if has_sync_trace:
                                 values = values[:-1]
 
-                            if "SYNC" in stream_name and not self.load_sync_channel:
+                            if "SYNC" in stream_name:
                                 # This is the sync stream, we only keep the last value
                                 values = values[-1:]
 
