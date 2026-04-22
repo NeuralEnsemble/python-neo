@@ -35,18 +35,14 @@ https://billkarsh.github.io/SpikeGLX/#offline-analysis-tools
 https://billkarsh.github.io/SpikeGLX/#metadata-guides
 https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/spikeglxrecordingextractor/spikeglxrecordingextractor.py
 
-This reader handle:
+For the "imec" device, this reader handles 1.0 and 2.0 Neuropixels probes.
+The probe-type is identified by the `imDatPrb_pn` field in the meta file
+and checked agains the ProbeTable info (https://raw.githubusercontent.com/billkarsh/ProbeTable/refs/heads/main/Tables/probe_features.json).
+It uses the "datasheet" field in the meta file to identify the whether the probe is 1.0 or 2.0.
+Neuropixels NXT/3.0 will return unscaled int16 data, since the gain for NP3.0 is not
+yet implemented as it is not yet clear how to get it from the meta file.
 
-imDatPrb_type=1 (NP 1.0)
-imDatPrb_type=21 (NP 2.0, single multiplexed shank)
-imDatPrb_type=24 (NP 2.0, 4-shank)
-imDatPrb_type=1030 (NP 1.0-NHP 45mm SOI90 - NHP long 90um wide, staggered contacts)
-imDatPrb_type=1031 (NP 1.0-NHP 45mm SOI125 - NHP long 125um wide, staggered contacts)
-imDatPrb_type=1032 (NP 1.0-NHP 45mm SOI115 / 125 linear - NHP long 125um wide, linear contacts)
-imDatPrb_type=1022 (NP 1.0-NHP 25mm - NHP medium)
-imDatPrb_type=1015 (NP 1.0-NHP 10mm - NHP short)
-
-Author : Samuel Garcia
+Author : Samuel Garcia, Alessio Buccino, Heberto Mayorquin
 Some functions are copied from Graham Findlay
 """
 
@@ -66,6 +62,9 @@ from .baserawio import (
     _event_channel_dtype,
 )
 from .utils import get_memmap_shape
+
+
+neuropixels_probe_features_file = Path(__file__).parents[1] / "resources" / "neuropixels_probe_features.json"
 
 
 class SpikeGLXRawIO(BaseRawWithBufferApiIO):
@@ -679,36 +678,45 @@ def extract_stream_info(meta_file, meta):
         # metad['imroTbl'] contain two gain per channel  AP and LF
         # except for the last fake channel
         per_channel_gain = np.ones(num_chan, dtype="float64")
-        if (
-            "imDatPrb_type" not in meta
-            or meta["imDatPrb_type"] == "0"
-            or meta["imDatPrb_type"] in ("1015", "1016", "1022", "1030", "1031", "1032", "1100", "1121", "1123", "1300")
-        ):
-            # This work with NP 1.0 case with different metadata versions
-            # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
-            if stream_kind == "ap":
-                index_imroTbl = 3
-            elif stream_kind == "lf":
-                index_imroTbl = 4
-            for c in range(num_chan - 1):
-                v = meta["imroTbl"][c].split(" ")[index_imroTbl]
-                per_channel_gain[c] = 1.0 / float(v)
-            gain_factor = float(meta["imAiRangeMax"]) / 512
-            channel_gains = gain_factor * per_channel_gain * 1e6
-        elif meta["imDatPrb_type"] in ("21", "24", "2003", "2004", "2013", "2014"):
-            # This work with NP 2.0 case with different metadata versions
-            # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md#imec
-            # We allow also LF streams for NP2.0 because CatGT can produce them
-            # See: https://github.com/SpikeInterface/spikeinterface/issues/1949
-            if "imChan0apGain" in meta:
-                per_channel_gain[:-1] = 1 / float(meta["imChan0apGain"])
+        probe_part_number = meta.get("imDatPrb_pn", None)
+
+        if neuropixels_probe_features_file.exists() and probe_part_number is not None:
+            with open(neuropixels_probe_features_file, "r") as f:
+                probe_features = json.load(f)
+            features = probe_features[probe_part_number]
+            datasheet = features.get("datasheet", "unknown")
+            if "1.0" in datasheet:
+                # This work with NP 1.0 case with different metadata versions
+                # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
+                if stream_kind == "ap":
+                    index_imroTbl = 3
+                elif stream_kind == "lf":
+                    index_imroTbl = 4
+                for c in range(num_chan - 1):
+                    v = meta["imroTbl"][c].split(" ")[index_imroTbl]
+                    per_channel_gain[c] = 1.0 / float(v)
+                gain_factor = float(meta["imAiRangeMax"]) / 512
+                channel_gains = gain_factor * per_channel_gain * 1e6
+            elif "2.0" in datasheet:
+                # This work with NP 2.0 case with different metadata versions
+                # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md#imec
+                # We allow also LF streams for NP2.0 because CatGT can produce them
+                # See: https://github.com/SpikeInterface/spikeinterface/issues/1949
+                if "imChan0apGain" in meta:
+                    per_channel_gain[:-1] = 1 / float(meta["imChan0apGain"])
+                else:
+                    per_channel_gain[:-1] = 1 / 80.0
+                max_int = int(meta["imMaxInt"]) if "imMaxInt" in meta else 8192
+                gain_factor = float(meta["imAiRangeMax"]) / max_int
+                channel_gains = gain_factor * per_channel_gain * 1e6
             else:
-                per_channel_gain[:-1] = 1 / 80.0
-            max_int = int(meta["imMaxInt"]) if "imMaxInt" in meta else 8192
-            gain_factor = float(meta["imAiRangeMax"]) / max_int
-            channel_gains = gain_factor * per_channel_gain * 1e6
-        else:
-            raise NotImplementedError("This meta file version of spikeglx" " is not implemented")
+                warn(
+                    f"Unknown probe datasheet version for probe part number {probe_part_number}. "
+                    f"Unitary gains will be used.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                channel_gains = np.ones(num_chan, dtype="float64")
     elif meta.get("typeThis") == "obx":
         # OneBox case
         device = fname.split(".")[-2] if "." in fname else device
