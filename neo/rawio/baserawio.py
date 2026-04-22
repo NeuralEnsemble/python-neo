@@ -1698,7 +1698,7 @@ class BaseRawWithBufferApiIO(BaseRawIO):
         else:
             raise NotImplementedError()
 
-        # this is a pre slicing when the stream do not contain all channels (for instance spikeglx when load_sync_channel=False)
+        # this is a pre slicing when the stream does not contain all channels in the buffer (for instance spikeglx -SYNC streams)
         if buffer_slice is not None:
             raw_sigs = raw_sigs[:, buffer_slice]
 

@@ -76,10 +76,6 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     ----------
     dirname: str, default: ''
         The spikeglx folder containing meta/bin files
-    load_sync_channel: bool, default: False
-        Can be used to load the synch stream as the last channel of the neural data.
-        This option is deprecated and will be removed in version 0.15.
-        From versions higher than 0.14.1 the sync channel is always loaded as a separate stream.
     load_channel_location: bool, default: False
         If True probeinterface is used to load the channel locations from the directory
 
@@ -108,17 +104,9 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     extensions = ["meta", "bin"]
     rawmode = "one-dir"
 
-    def __init__(self, dirname="", load_sync_channel=False, load_channel_location=False):
+    def __init__(self, dirname="", load_channel_location=False):
         BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
-        self.load_sync_channel = load_sync_channel
-        if load_sync_channel:
-            warn(
-                "The load_sync_channel=True option is deprecated and will be removed in version 0.15 \n"
-                "The sync channel is now loaded as a separate stream by default and should be accessed as such. ",
-                DeprecationWarning,
-                stacklevel=2,
-            )
         self.load_channel_location = load_channel_location
 
     def _source_name(self):
@@ -179,10 +167,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                 chan_name = info["channel_names"][local_channel_index]
                 chan_id = f"{stream_name}#{chan_name}"
 
-                # Separate sync channel in its own stream
-                is_sync_channel = "SY" in chan_name and not self.load_sync_channel
-                if is_sync_channel:
-                    # This is a sync channel and should be added as its own stream
+                # Separate sync channel in its own stream.
+                if "SY" in chan_name:
                     sync_stream_id = f"{stream_name}-SYNC"
                     sync_stream_id_to_buffer_id[sync_stream_id] = buffer_id
                     stream_id_for_chan = sync_stream_id
@@ -207,19 +193,12 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             # None here means that the all the channels in the buffer will be included
             self._stream_buffer_slice[stream_id] = None
 
-            # Then we modify this if sync channel is present to slice the last channel
-            # out of the stream buffer
-            if "nidq" not in stream_name:
-                if not self.load_sync_channel and info["has_sync_trace"]:
-                    # the last channel is removed from the stream but not from the buffer
-                    self._stream_buffer_slice[stream_id] = slice(0, -1)
-
-                    # Add a buffer slice for the sync channel
-                    sync_stream_id = f"{stream_name}-SYNC"
-                    self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
-
-                if self.load_sync_channel and not info["has_sync_trace"]:
-                    raise ValueError("SYNC channel is not present in the recording. " "Set load_sync_channel to False")
+            # If a sync trace is present, slice the last channel out of the parent
+            # stream and expose it as the companion -SYNC stream sharing the same buffer.
+            if "nidq" not in stream_name and info["has_sync_trace"]:
+                self._stream_buffer_slice[stream_id] = slice(0, -1)
+                sync_stream_id = f"{stream_name}-SYNC"
+                self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
 
         signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
@@ -318,9 +297,6 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         # only for ap channel
                         probe = probeinterface.read_spikeglx(info["meta_file"])
                         loc = probe.contact_positions
-                        if self.load_sync_channel:
-                            # one fake channel  for "sys0"
-                            loc = np.concatenate((loc, [[0.0, 0.0]]), axis=0)
                         for ndim in range(loc.shape[1]):
                             sig_ann["__array_annotations__"][f"channel_location_{ndim}"] = loc[:, ndim]
 
