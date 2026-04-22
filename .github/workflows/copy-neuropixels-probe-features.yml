@@ -44,4 +44,4 @@ jobs:
         title: "Update Neuropixels probe features"
         body: "This PR updates the probe features JSON file from the ProbeTable repository."
         branch-suffix: short-commit-hash
-        base: "main"
+        base: "master"
