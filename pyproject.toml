@@ -136,5 +136,8 @@ all = [
 [tool.setuptools.packages.find]
 include = ["neo*"]
 
+[tool.setuptools.package-data]
+neo = ["resources/*.json"]
+
 [tool.black]
 line-length = 120
