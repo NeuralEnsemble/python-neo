@@ -127,23 +127,19 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     def _parse_header(self):
         self.signals_info_list = scan_files(self.dirname)
         _add_segment_order(self.signals_info_list)
+        _add_segment_timing(self.signals_info_list)
 
         # sort stream_name by higher sampling rate first
         srates = {info["stream_name"]: info["sampling_rate"] for info in self.signals_info_list}
         stream_names = sorted(list(srates.keys()), key=lambda e: srates[e])[::-1]
         nb_segment = np.unique([info["seg_index"] for info in self.signals_info_list]).size
 
-        self.signals_info_dict = {}
+        self.signals_info_dict = _build_signals_info_dict(self.signals_info_list)
+
         # one unique block
         self._buffer_descriptions = {0: {}}
         self._stream_buffer_slice = {}
-        for info in self.signals_info_list:
-            seg_index, stream_name = info["seg_index"], info["stream_name"]
-            key = (seg_index, stream_name)
-            if key in self.signals_info_dict:
-                raise KeyError(f"key {key} is already in the signals_info_dict")
-            self.signals_info_dict[key] = info
-
+        for (seg_index, stream_name), info in self.signals_info_dict.items():
             buffer_id = stream_name
             block_index = 0
 
@@ -274,9 +270,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             for seg_index in range(nb_segment):
                 info = self.signals_info_dict[seg_index, stream_name]
 
-                frame_start = float(info["meta"]["firstSample"])
-                sampling_frequency = info["sampling_rate"]
-                t_start = frame_start / sampling_frequency
+                t_start = info["t_start"]
 
                 self._t_starts[stream_name][seg_index] = t_start
 
@@ -287,8 +281,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         self._t_starts[sync_stream_name] = {}
                     self._t_starts[sync_stream_name][seg_index] = t_start
 
-                t_stop = info["sample_length"] / info["sampling_rate"]
-                self._t_stops[seg_index] = max(self._t_stops[seg_index], t_stop)
+                self._t_stops[seg_index] = max(self._t_stops[seg_index], info["t_stop"])
 
         # fille into header dict
         self.header = {}
@@ -410,6 +403,75 @@ def scan_files(dirname):
         raise FileNotFoundError(f"No appropriate combination of .meta and .bin files were detected in {dirname}")
 
     return info_list
+
+
+def _add_segment_timing(info_list):
+    """
+    Add ``info["first_sample"]``, ``info["t_start"]``, and ``info["t_stop"]`` per signal.
+
+    Reads ``meta["firstSample"]`` (documented in every SpikeGLX phase) and converts
+    to float. When absent, defaults to 0 with a UserWarning naming the file. Zero
+    is the correct fallback for a file that starts at the beginning of its SpikeGLX
+    run, which covers the expected causes of a missing tag: pre-2016 builds (the
+    tag was introduced in 2016), recordings where the end-of-run write was
+    interrupted, and ``.meta`` files modified after acquisition.
+
+    Then stores ``info["t_start"] = info["first_sample"] / info["sampling_rate"]``
+    and ``info["t_stop"] = info["sample_length"] / info["sampling_rate"]`` in
+    seconds, so downstream code can read both directly without recomputation.
+    """
+    for info in info_list:
+        meta = info["meta"]
+        if "firstSample" in meta:
+            info["first_sample"] = float(meta["firstSample"])
+        else:
+            warn(
+                f"'firstSample' missing from {info['meta_file']}; defaulting to 0. "
+                f"Zero is correct for files that start at the beginning of their SpikeGLX run, "
+                f"but wrong for any file that represents a non-initial trigger or that was "
+                f"derived from a longer recording. Typical causes: pre-2016 SpikeGLX build, "
+                f"interrupted end-of-run write, or post-acquisition modification of the .meta file.",
+                UserWarning,
+                stacklevel=2,
+            )
+            info["first_sample"] = 0.0
+        info["t_start"] = info["first_sample"] / info["sampling_rate"]
+        info["t_stop"] = info["sample_length"] / info["sampling_rate"]
+
+
+def _build_signals_info_dict(info_list):
+    """
+    Re-index a flat list of info dicts into a dict keyed by (seg_index, stream_name).
+
+    Requires each info dict to already have "seg_index", "stream_name", and "meta_file",
+    populated by scan_files + _add_segment_order.
+
+    Raises ValueError on duplicate keys, naming both colliding .meta paths and
+    listing common causes so users can self-diagnose.
+    """
+    signals_info_dict = {}
+    for info in info_list:
+        key = (info["seg_index"], info["stream_name"])
+        if key in signals_info_dict:
+            existing = signals_info_dict[key]
+            seg_index, stream_name = key
+            raise ValueError(
+                f"Two SpikeGLX file pairs resolve to the same stream "
+                f"'{stream_name}' in segment {seg_index}:\n"
+                f"  1) {existing['meta_file']}\n"
+                f"  2) {info['meta_file']}\n"
+                f"This can happen if:\n"
+                f"  - Files were renamed on disk. Stream names come from the "
+                f"'fileName' field inside the .meta, not the filename on disk.\n"
+                f"  - Recordings from different sessions are in the same folder "
+                f"with the same gate/trigger numbers.\n"
+                f"  - Duplicate copies exist in subfolders (the reader scans "
+                f"recursively).\n"
+                f"  - A third-party tool rewrote the .meta file with an incorrect "
+                f"'fileName' (for example, LF meta pointing to the AP binary)."
+            )
+        signals_info_dict[key] = info
+    return signals_info_dict
 
 
 def _add_segment_order(info_list):
