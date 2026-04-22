@@ -680,7 +680,7 @@ def extract_stream_info(meta_file, meta):
         per_channel_gain = np.ones(num_chan, dtype="float64")
         probe_part_number = meta.get("imDatPrb_pn", None)
 
-        if neuropixels_probe_features_file.exists() and probe_part_number is not None:
+        if probe_part_number is not None:
             with open(neuropixels_probe_features_file, "r") as f:
                 probe_features = json.load(f)
             features = probe_features[probe_part_number]
@@ -717,6 +717,13 @@ def extract_stream_info(meta_file, meta):
                     stacklevel=2,
                 )
                 channel_gains = np.ones(num_chan, dtype="float64")
+        else:
+            warn(
+                "Could not find probe part number in metadata. Unitary gains will be used.",
+                UserWarning,
+                stacklevel=2,
+            )
+            channel_gains = np.ones(num_chan, dtype="float64")
     elif meta.get("typeThis") == "obx":
         # OneBox case
         device = fname.split(".")[-2] if "." in fname else device
