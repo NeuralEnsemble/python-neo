@@ -35,6 +35,7 @@ gaps from those introduced by a quirk of the hardware, recording software, or fi
 """
 
 import math
+import warnings
 import numpy as np
 
 from enum import IntEnum, auto
@@ -67,6 +68,7 @@ class NcsSections:
         self.sects = []
         self.sampFreqUsed = 0  # actual sampling frequency of samples
         self.microsPerSampUsed = 0  # microseconds per sample
+        self.detected_gaps = []  # list of (record_index, gap_size_us) for all detected gaps
 
     def __eq__(self, other):
         samp_eq = self.sampFreqUsed == other.sampFreqUsed
@@ -216,6 +218,8 @@ class NcsSectionsFactory:
                 n_samples=n_samples,
             )
             ncsSects.sects.append(section0)
+            # No gaps detected in fast path
+            ncsSects.detected_gaps = []
 
         else:
             # need to parse all data block to detect gaps
@@ -223,6 +227,16 @@ class NcsSectionsFactory:
             delta = (ncsMemMap["timestamp"][1:] - ncsMemMap["timestamp"][:-1]).astype(np.int64)
             delta_prediction = ((ncsMemMap["nb_valid"][:-1] / sampFreq) * 1e6).astype(np.int64)
 
+            # Always detect all gaps using the strict threshold for reporting
+            strict_tolerance = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / sampFreq)
+            all_gap_inds = np.flatnonzero(np.abs(delta - delta_prediction) > strict_tolerance)
+            gap_sizes_us = (delta - delta_prediction)[all_gap_inds]
+            ncsSects.detected_gaps = [
+                (int(record_index + 1), int(gap_size))
+                for record_index, gap_size in zip(all_gap_inds, gap_sizes_us)
+            ]
+
+            # Use user-provided tolerance for actual segmentation
             gap_inds = np.flatnonzero(np.abs(delta - delta_prediction) > gapTolerance)
             gap_inds += 1
 
@@ -245,7 +259,7 @@ class NcsSectionsFactory:
         return ncsSects
 
     @staticmethod
-    def build_for_ncs_file(ncsMemMap, nlxHdr, gapTolerance=None, strict_gap_mode=True):
+    def build_for_ncs_file(ncsMemMap, nlxHdr, gap_tolerance_us=None, **kwargs):
         """
         Build an NcsSections object for an NcsFile, given as a memmap and NlxHeader,
         handling gap detection appropriately given the file type as specified by the header.
@@ -256,11 +270,37 @@ class NcsSectionsFactory:
             memory map of file
         nlxHdr:
             NlxHeader from corresponding file.
+        gap_tolerance_us : float | None, default: None
+            Gap tolerance in microseconds for segmentation.
 
         Returns
         -------
         An NcsSections corresponding to the provided ncsMemMap and nlxHdr
         """
+        # Handle deprecated parameters
+        gapTolerance = kwargs.pop("gapTolerance", None)
+        strict_gap_mode = kwargs.pop("strict_gap_mode", None)
+        if kwargs:
+            raise TypeError(f"Unexpected keyword arguments: {list(kwargs.keys())}")
+
+        if gapTolerance is not None:
+            warnings.warn(
+                "The `gapTolerance` parameter is deprecated and will be removed in version 0.16. "
+                "Use `gap_tolerance_us` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if gap_tolerance_us is None:
+                gap_tolerance_us = gapTolerance
+
+        if strict_gap_mode is not None:
+            warnings.warn(
+                "The `strict_gap_mode` parameter is deprecated and will be removed in version 0.16. "
+                "Use `gap_tolerance_us` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         acqType = nlxHdr.type_of_recording()
         freq = nlxHdr["sampling_rate"]
 
@@ -269,14 +309,13 @@ class NcsSectionsFactory:
             # restriction arose from the sampling being based on a master 1 MHz clock.
             microsPerSampUsed = math.floor(NcsSectionsFactory.get_micros_per_samp_for_freq(freq))
             sampFreqUsed = NcsSectionsFactory.get_freq_for_micros_per_samp(microsPerSampUsed)
-            if gapTolerance is None:
-                if strict_gap_mode:
-                    # this is the old behavior, maybe we could put 0.9 sample interval no ?
-                    gapTolerance = 0
+            if gap_tolerance_us is None:
+                if strict_gap_mode is not None and not strict_gap_mode:
+                    gap_tolerance_us = 0
                 else:
-                    gapTolerance = 0
+                    gap_tolerance_us = 0
 
-            ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, sampFreqUsed, gapTolerance=gapTolerance)
+            ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, sampFreqUsed, gapTolerance=gap_tolerance_us)
             ncsSects.sampFreqUsed = sampFreqUsed
             ncsSects.microsPerSampUsed = microsPerSampUsed
 
@@ -288,17 +327,16 @@ class NcsSectionsFactory:
             AcqType.RAWDATAFILE,
         ]:
             # digital lynx style with fractional frequency and micros per samp determined from block times
-            if gapTolerance is None:
-                if strict_gap_mode:
-                    # this is the old behavior
-                    gapTolerance = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / freq)
+            if gap_tolerance_us is None:
+                if strict_gap_mode is not None and not strict_gap_mode:
+                    # quarter of packet size is tolerated
+                    gap_tolerance_us = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
                 else:
-                    # quarter of paquet size is tolerate
-                    gapTolerance = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
-            ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gapTolerance)
+                    # default: strict detection (0.2 of a sample interval)
+                    gap_tolerance_us = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / freq)
+            ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gap_tolerance_us)
 
-            # take longer data block to compute reaal sampling rate
-            # ind_max = np.argmax([section.n_samples for section in ncsSects.sects])
+            # take longer data block to compute real sampling rate
             ind_max = np.argmax([section.endRec - section.startRec for section in ncsSects.sects])
             section = ncsSects.sects[ind_max]
             if section.endRec != section.startRec:
@@ -315,13 +353,13 @@ class NcsSectionsFactory:
 
         elif acqType == AcqType.BML or acqType == AcqType.ATLAS:
             # BML & ATLAS style with fractional frequency and micros per samp
-            if strict_gap_mode:
-                # this is the old behavior, maybe we could put 0.9 sample interval no ?
-                gapTolerance = 0
-            else:
-                # quarter of paquet size is tolerate
-                gapTolerance = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
-            ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gapTolerance)
+            if gap_tolerance_us is None:
+                if strict_gap_mode is not None and not strict_gap_mode:
+                    # quarter of packet size is tolerated
+                    gap_tolerance_us = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
+                else:
+                    gap_tolerance_us = 0
+            ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gap_tolerance_us)
             ncsSects.sampFreqUsed = freq
             ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(freq)
 
