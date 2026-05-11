@@ -17,6 +17,7 @@ class TestSpikeGadgetsRawIO(
         "spikegadgets/20210225_em8_minirec2_ac.rec",
         "spikegadgets/W122_06_09_2019_1_fromSD.rec",
         "spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec",
+        "spikegadgets/neuropixels2_4shank/20260122_134412_merged_cropped_1min_NP2.rec",
     ]
 
     def test_parse_header_missing_channels(self):
@@ -52,6 +53,31 @@ class TestSpikeGadgetsRawIO(
             ]
             # fmt: on
         )
+
+    def test_neuropixels_uses_hwchan_ids(self):
+        # Regression test: Neuropixels recordings must expose hwChan ids, not synthesised
+        # Intan chip ids. The original reports of the related ZeroDivisionError on NP2
+        # (chanPerChip="0") are in issues #1844 and #1810 and are exercised through the
+        # NP2 fixture in `entities_to_test`. This test guards against the separate NP1
+        # silent-misrouting case that surfaced while investigating those issues: NP1
+        # files like this one have chanPerChip="32" despite the probe not using Intan
+        # chips, which made the old divisibility check pass and silently produced
+        # synthesised ids. The fix relies on SpikeConfiguration.device to detect
+        # non-Intan setups regardless of chanPerChip.
+        file_path = Path(
+            self.get_local_path("spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec")
+        )
+        reader = SpikeGadgetsRawIO(filename=file_path)
+        reader.parse_header()
+
+        trodes_mask = reader.header["signal_channels"]["stream_id"] == "trodes"
+        trodes_ids = list(reader.header["signal_channels"]["id"][trodes_mask])
+
+        # Real hwChan values from the XML, in document order. The synthesised path with
+        # chanPerChip=32 would produce ['0', '32', '64', '96'] instead.
+        self.assertEqual(trodes_ids[:4], ["735", "734", "671", "670"])
+        self.assertEqual(trodes_ids[-4:], ["97", "96", "33", "32"])
+        self.assertEqual(len(trodes_ids), 768)
 
     def test_opening_gibberish_file(self):
         """Test that parsing a file without </Configuration> raises ValueError instead of infinite loop."""

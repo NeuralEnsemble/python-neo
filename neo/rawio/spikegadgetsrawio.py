@@ -140,12 +140,6 @@ class SpikeGadgetsRawIO(BaseRawIO):
                 "than the number of channels in the hardware configuration"
             )
 
-        # as spikegadgets change we should follow this
-        try:
-            num_chan_per_chip = int(sconf.attrib["chanPerChip"])
-        except KeyError:
-            num_chan_per_chip = 32  # default value for Intan chips
-
         # explore sub stream and count packet size
         # first bytes is 0x55
         packet_size = 1
@@ -219,26 +213,42 @@ class SpikeGadgetsRawIO(BaseRawIO):
             signal_streams.append((stream_name, stream_id, buffer_id))
             self._mask_channels_bytes[stream_id] = []
 
-            # we can only produce these channels for a subset of spikegadgets setup. If this criteria isn't
-            # true then we should just use the raw_channel_ids and let the end user sort everything out
-            if num_ephy_channels % num_chan_per_chip == 0:
-                all_hw_chans = [int(schan.attrib["hwChan"]) for trode in sconf for schan in trode]
-                missing_hw_chans = set(range(num_ephy_channels)) - set(all_hw_chans)
-                channel_ids = self._produce_ephys_channel_ids(
-                    num_ephy_channels_xml, num_chan_per_chip, missing_hw_chans
-                )
-                raw_channel_ids = False
-            else:
-                raw_channel_ids = True
+            # Channel id resolution.
+            # - Default: take each spike channel's id from its hwChan attribute in the XML.
+            #   That's the identifier produced by the acquisition hardware, and it's the right
+            #   thing for Neuropixels and most modern setups.
+            # - Intan special case (`device` is "intan" or absent for legacy files): recompute
+            #   the ids from the chip layout instead. Intan recordings lay out the binary
+            #   stream in a chip-interleaved order (all chips' channel 0, then all chips'
+            #   channel 1, ...), and the synthesised labels reflect that ordering. See
+            #   `_produce_ephys_channel_ids` and issue #1215 for the rationale. Only valid
+            #   when chanPerChip divides evenly into the total channel count.
+            # Default: use hwChan directly from the XML.
+            channel_id_and_name = [
+                (schan.attrib["hwChan"], f"trode{trode.attrib['id']}chan{schan.attrib['hwChan']}")
+                for trode in sconf
+                for schan in trode
+            ]
+            # Intan special case: replace with synthesised chip-interleaved ids when applicable.
+            spike_device = sconf.attrib.get("device")
+            if spike_device in (None, "intan"):
+                intan_chans_per_chip = int(sconf.attrib.get("chanPerChip", 32))  # RHD2132 default for legacy
+                if intan_chans_per_chip > 0 and num_ephy_channels % intan_chans_per_chip == 0:
+                    hw_chans_in_xml = {int(schan.attrib["hwChan"]) for trode in sconf for schan in trode}
+                    missing_hw_chans = set(range(num_ephy_channels)) - hw_chans_in_xml
+                    synthesised_ids = self._produce_ephys_channel_ids(
+                        num_ephy_channels_xml, intan_chans_per_chip, missing_hw_chans
+                    )
+                    channel_id_and_name = [(str(cid), f"hwChan{cid}") for cid in synthesised_ids]
 
-            chan_ind = 0
             self.is_scaleable = all("spikeScalingToUv" in trode.attrib for trode in sconf)
             if not self.is_scaleable:
                 self.logger.warning(
                     "Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!"
                 )
 
-            for trode in sconf:
+            trode_per_channel = [trode for trode in sconf for _ in trode]
+            for chan_ind, trode in enumerate(trode_per_channel):
                 if "spikeScalingToUv" in trode.attrib:
                     gain = float(trode.attrib["spikeScalingToUv"])
                     units = "uV"
@@ -246,29 +256,18 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     gain = 1  # revert to hardcoded gain
                     units = ""
 
-                for schan in trode:
-                    # Here we use raw ids if necessary for parsing (for some neuropixel recordings)
-                    # otherwise we default back to the raw hwChan IDs
-                    if raw_channel_ids:
-                        name = "trode" + trode.attrib["id"] + "chan" + schan.attrib["hwChan"]
-                        chan_id = schan.attrib["hwChan"]
-                    else:
-                        chan_id = str(channel_ids[chan_ind])
-                        name = "hwChan" + chan_id
+                chan_id, name = channel_id_and_name[chan_ind]
+                offset = 0.0
+                buffer_id = ""
+                signal_channels.append(
+                    (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id)
+                )
 
-                    offset = 0.0
-                    buffer_id = ""
-                    signal_channels.append(
-                        (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id)
-                    )
-
-                    chan_mask = np.zeros(packet_size, dtype="bool")
-                    num_bytes = packet_size - 2 * num_ephy_channels + 2 * chan_ind
-                    chan_mask[num_bytes] = True
-                    chan_mask[num_bytes + 1] = True
-                    self._mask_channels_bytes[stream_id].append(chan_mask)
-
-                    chan_ind += 1
+                chan_mask = np.zeros(packet_size, dtype="bool")
+                num_bytes = packet_size - 2 * num_ephy_channels + 2 * chan_ind
+                chan_mask[num_bytes] = True
+                chan_mask[num_bytes + 1] = True
+                self._mask_channels_bytes[stream_id].append(chan_mask)
 
         # make mask as array (used in _get_analogsignal_chunk(...))
         self._mask_streams = {}
