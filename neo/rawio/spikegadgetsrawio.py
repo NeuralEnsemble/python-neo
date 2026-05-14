@@ -8,14 +8,86 @@ Documentation of the format:
 https://bitbucket.org/mkarlsso/trodes/wiki/Configuration
 
 Note :
-  * this file format have multiple version. news version include the gain for scaling.
-     The actual implementation does not contain this feature because we don't have
-     files to test this. So now the gain is "hardcoded" to 1. and so units are
-      not handled correctly.
+  * this file format has multiple versions. When the SpikeConfiguration entries in the
+    XML header carry a `spikeScalingToUv` attribute (newer versions), the reader uses
+    it to populate per-channel `gain` and sets `units="uV"`. When the attribute is
+    absent (older files), the reader falls back to `gain=1` with empty `units` and
+    emits a warning that the data has no physical units.
 
-The ".rec" file format contains:
-  * a first text part with information in an XML structure
-  * a second part for the binary buffer
+The ".rec" file format contains two parts:
+
+    +--------------------------------------------+
+    |  XML configuration                         |
+    |    GlobalConfiguration                     |
+    |    HardwareConfiguration                   |
+    |    SpikeConfiguration                      |
+    |    ...                                     |
+    |  terminated by "</Configuration>"          |
+    +--------------------------------------------+
+    |                                            |
+    |  Binary section                            |
+    |    A stream of fixed-size packets, one     |
+    |    per sample tick. packet_size is         |
+    |    constant for a given file, computed     |
+    |    at parse time from the XML.             |
+    |                                            |
+    |    packet 0                                |
+    |    packet 1                                |
+    |    packet 2                                |
+    |    ...                                     |
+    +--------------------------------------------+
+
+Each packet has the following structure (packet_size bytes total):
+
+    +------+-----------+-----------+ ... +-----------+--------+----- ... -----+
+    | 0x55 | device A  | device B  |     | device K  | tstamp | ephys region  |
+    | 1 B  | numBytes  | numBytes  |     | numBytes  |  4 B   | 2*N_ephy B    |
+    +------+-----------+-----------+ ... +-----------+--------+----- ... -----+
+       ^         ^                                       ^           ^
+       |         |                                       |           |
+       packet    one block per hardware device           uint32      one int16 per
+       marker    with a numBytes attribute in            sample      ephys channel;
+                 HardwareConfiguration (e.g.             tick        layout of this
+                 Controller_DIO, Multiplexed,                        region depends
+                 SysClock, ECU)                                      on the device,
+                                                                     see below.
+
+The ephys region is laid out differently depending on the acquisition hardware,
+which is declared by SpikeConfiguration.device:
+
+  * Intan recordings (`device="intan"` or absent on legacy files):
+    chip-interleaved order. The SpikeGadgets MCU (main control unit) clocks all
+    attached Intan chips in parallel over SPI (serial peripheral interface), so
+    samples are written in the sequence
+    [chip 0 ch 0, chip 1 ch 0, ..., chip N-1 ch 0,
+     chip 0 ch 1, chip 1 ch 1, ..., chip N-1 ch 1, ...].
+
+    Example with chanPerChip=32 and 4 chips, every packet's ephys region:
+
+        slot     0    1    2    3  |  4    5    6    7  | ... | 124  125  126  127
+        hwChan   0   32   64   96  |  1   33   65   97  | ... |  31   63   95  127
+
+    Formula: hwChan at slot i = (i % n_chips) * chanPerChip + (i // n_chips).
+    The XML's <SpikeChannel> hwChan attributes are *not* in slot order; they are
+    listed in user-defined SpikeNTrode (tetrode) groupings, so the reader cannot
+    use XML document position as a proxy and must reproduce the chip-interleaved
+    sequence directly (see `_intan_hwchans_in_binary_order`).
+
+  * Neuropixels recordings (`device="neuropixels1"` or `"neuropixels2"`):
+    probe-native order. The Neuropixels probe digitises on-shank and emits its
+    channels in its own internal sequence; the MCU passes them through without
+    any multiplexing reordering. Trodes writes the XML's <SpikeChannel> elements
+    in that same sequence, so packet slot order matches XML document order
+    one-to-one.
+
+    Example (NP2 4-shank fixture), every packet's ephys region:
+
+        slot     0    1    2    3    4    5    6    7   ...
+        hwChan   2    3  196  197   14   15  208  209   ...
+
+    The hwChan at slot i is `int(SpikeConfiguration[i].hwChan)` (the i-th
+    <SpikeChannel> in XML document order). No synthesis is needed; the reader
+    reads hwChan straight from each <SpikeChannel> attribute.
 
 Author: Samuel Garcia
 """
@@ -81,31 +153,49 @@ class SpikeGadgetsRawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
 
-    def _produce_ephys_channel_ids(self, n_total_channels, n_channels_per_chip, missing_hw_chans):
-        """Compute the channel ID labels for subset of spikegadgets recordings
-        The ephys channels in the .rec file are stored in the following order:
-        hwChan ID of channel 0 of first chip, hwChan ID of channel 0 of second chip, ..., hwChan ID of channel 0 of Nth chip,
-        hwChan ID of channel 1 of first chip, hwChan ID of channel 1 of second chip, ..., hwChan ID of channel 1 of Nth chip,
-        ...
-        So if there are 32 channels per chip and 128 channels (4 chips), then the channel IDs are:
-        0, 32, 64, 96, 1, 33, 65, 97, ..., 128
-        See also: https://github.com/NeuralEnsemble/python-neo/issues/1215
+    def _intan_hwchans_in_binary_order(self, sconf, num_ephy_channels, num_ephy_channels_xml):
+        """Return the hwChan-at-each-byte-position sequence for an Intan recording.
 
-        This doesn't work for all types of spikegadgets
-        see: https://github.com/NeuralEnsemble/python-neo/issues/1517
+        The SpikeGadgets MCU (main control unit) multiplexes Intan chips in chip-interleaved
+        order: local-channel outer, chip inner. Every chip contributes its local channel 0
+        first, then every chip contributes its local channel 1, and so on. So byte pair i of
+        each packet holds the sample for the hwChan returned at index i.
 
-        If there are any missing hardware channels, they must be specified in missing_hw_chans.
-        See: https://github.com/NeuralEnsemble/python-neo/issues/1592
+        Example: chanPerChip=32 and 4 chips (128 channels total). Returns
+        [0, 32, 64, 96, 1, 33, 65, 97, ..., 31, 63, 95, 127].
+
+        If the channel count does not divide evenly into chanPerChip we fall back to XML
+        document order; in that case the chip-interleaved bridging assumption does not
+        apply and labels reflect the XML's hwChan attributes directly.
+
+        See also:
+            - https://github.com/NeuralEnsemble/python-neo/issues/1215 (origin of this logic)
+            - https://github.com/NeuralEnsemble/python-neo/issues/1517 (doesn't fit all setups)
+            - https://github.com/NeuralEnsemble/python-neo/issues/1592 (missing channels)
         """
-        ephys_channel_ids_list = []
-        for local_hw_channel in range(n_channels_per_chip):
-            n_chips = int(n_total_channels / n_channels_per_chip)
+        intan_chans_per_chip = int(sconf.attrib.get("chanPerChip", 32))  # RHD2132 default for legacy files
+        hw_chans_in_xml = [int(schan.attrib["hwChan"]) for trode in sconf for schan in trode]
+
+        channels_fit_chip_layout = (
+            intan_chans_per_chip > 0
+            and num_ephy_channels % intan_chans_per_chip == 0
+        )
+        if not channels_fit_chip_layout:
+            return hw_chans_in_xml
+
+        # Reproduce the chip-interleaved hwChan sequence (local-channel outer, chip inner)
+        # so that hwchans_in_binary_order[i] is the hwChan whose data lives at byte pair i.
+        # Any hwChans absent from the SpikeConfiguration are skipped.
+        missing_hw_chans = set(range(num_ephy_channels)) - set(hw_chans_in_xml)
+        n_chips = num_ephy_channels_xml // intan_chans_per_chip
+        hwchans_in_binary_order = []
+        for local_hw_channel in range(intan_chans_per_chip):
             for chip in range(n_chips):
-                global_hw_chan = local_hw_channel + chip * n_channels_per_chip
-                if global_hw_chan in missing_hw_chans:
+                hw_chan = local_hw_channel + chip * intan_chans_per_chip
+                if hw_chan in missing_hw_chans:
                     continue
-                ephys_channel_ids_list.append(local_hw_channel + chip * n_channels_per_chip)
-        return ephys_channel_ids_list
+                hwchans_in_binary_order.append(hw_chan)
+        return hwchans_in_binary_order
 
     def _parse_header(self):
         # parse file until "</Configuration>"
@@ -122,7 +212,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
         # explore xml header
         root = ElementTree.fromstring(header_txt)
-        gconf = sr = root.find("GlobalConfiguration")
+        gconf = root.find("GlobalConfiguration")
         hconf = root.find("HardwareConfiguration")
         sconf = root.find("SpikeConfiguration")
 
@@ -208,38 +298,8 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
         if num_ephy_channels > 0:
             stream_id = "trodes"
-            stream_name = stream_id
-            buffer_id = ""
-            signal_streams.append((stream_name, stream_id, buffer_id))
+            signal_streams.append((stream_id, stream_id, ""))
             self._mask_channels_bytes[stream_id] = []
-
-            # Channel id resolution.
-            # - Default: take each spike channel's id from its hwChan attribute in the XML.
-            #   That's the identifier produced by the acquisition hardware, and it's the right
-            #   thing for Neuropixels and most modern setups.
-            # - Intan special case (`device` is "intan" or absent for legacy files): recompute
-            #   the ids from the chip layout instead. Intan recordings lay out the binary
-            #   stream in a chip-interleaved order (all chips' channel 0, then all chips'
-            #   channel 1, ...), and the synthesised labels reflect that ordering. See
-            #   `_produce_ephys_channel_ids` and issue #1215 for the rationale. Only valid
-            #   when chanPerChip divides evenly into the total channel count.
-            # Default: use hwChan directly from the XML.
-            channel_id_and_name = [
-                (schan.attrib["hwChan"], f"trode{trode.attrib['id']}chan{schan.attrib['hwChan']}")
-                for trode in sconf
-                for schan in trode
-            ]
-            # Intan special case: replace with synthesised chip-interleaved ids when applicable.
-            spike_device = sconf.attrib.get("device")
-            if spike_device in (None, "intan"):
-                intan_chans_per_chip = int(sconf.attrib.get("chanPerChip", 32))  # RHD2132 default for legacy
-                if intan_chans_per_chip > 0 and num_ephy_channels % intan_chans_per_chip == 0:
-                    hw_chans_in_xml = {int(schan.attrib["hwChan"]) for trode in sconf for schan in trode}
-                    missing_hw_chans = set(range(num_ephy_channels)) - hw_chans_in_xml
-                    synthesised_ids = self._produce_ephys_channel_ids(
-                        num_ephy_channels_xml, intan_chans_per_chip, missing_hw_chans
-                    )
-                    channel_id_and_name = [(str(cid), f"hwChan{cid}") for cid in synthesised_ids]
 
             self.is_scaleable = all("spikeScalingToUv" in trode.attrib for trode in sconf)
             if not self.is_scaleable:
@@ -247,24 +307,46 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     "Unable to read channel gain scaling (to uV) from .rec header. Data has no physical units!"
                 )
 
-            trode_per_channel = [trode for trode in sconf for _ in trode]
-            for chan_ind, trode in enumerate(trode_per_channel):
-                if "spikeScalingToUv" in trode.attrib:
-                    gain = float(trode.attrib["spikeScalingToUv"])
-                    units = "uV"
-                else:
-                    gain = 1  # revert to hardcoded gain
-                    units = ""
-
-                chan_id, name = channel_id_and_name[chan_ind]
-                offset = 0.0
-                buffer_id = ""
-                signal_channels.append(
-                    (name, chan_id, self._sampling_rate, "int16", units, gain, offset, stream_id, buffer_id)
+            # Compute the hwChan-at-each-byte-position sequence based on the hardware kind
+            # declared in SpikeConfiguration.device. Intan recordings are chip-interleaved by
+            # the MCU (main control unit); Neuropixels recordings pass through in XML order.
+            spike_device = sconf.attrib.get("device")
+            if spike_device in (None, "intan"):
+                hwchans_in_binary_order = self._intan_hwchans_in_binary_order(
+                    sconf, num_ephy_channels, num_ephy_channels_xml
+                )
+            elif spike_device in ("neuropixels1", "neuropixels2"):
+                # Neuropixels: binary stream matches XML document order one-to-one (the MCU
+                # does not chip-multiplex the probe), so hwChan comes straight from each
+                # SpikeChannel in document order.
+                hwchans_in_binary_order = [
+                    int(schan.attrib["hwChan"]) for trode in sconf for schan in trode
+                ]
+            else:
+                raise NeoReadWriteError(
+                    f"SpikeGadgets: unsupported SpikeConfiguration.device {spike_device!r}. "
+                    "Add a dedicated branch for this hardware in SpikeGadgetsRawIO._parse_header."
                 )
 
+            # Walk binary order, using hwChan as the explicit bridge to per-trode metadata.
+            trode_by_hwchan = {int(schan.attrib["hwChan"]): trode for trode in sconf for schan in trode}
+            for binary_index, hw_chan in enumerate(hwchans_in_binary_order):
+                parent_trode = trode_by_hwchan[hw_chan]
+                if "spikeScalingToUv" in parent_trode.attrib:
+                    gain = float(parent_trode.attrib["spikeScalingToUv"])
+                    units = "uV"
+                else:
+                    gain = 1.0
+                    units = ""
+
+                chan_id = str(hw_chan)
+                name = f"trode{parent_trode.attrib['id']}chan{hw_chan}"
+                signal_channels.append(
+                    (name, chan_id, self._sampling_rate, "int16", units, gain, 0.0, stream_id, "")
+                )
+
+                num_bytes = packet_size - 2 * num_ephy_channels + 2 * binary_index
                 chan_mask = np.zeros(packet_size, dtype="bool")
-                num_bytes = packet_size - 2 * num_ephy_channels + 2 * chan_ind
                 chan_mask[num_bytes] = True
                 chan_mask[num_bytes + 1] = True
                 self._mask_channels_bytes[stream_id].append(chan_mask)
