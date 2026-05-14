@@ -74,20 +74,21 @@ which is declared by SpikeConfiguration.device:
     sequence directly (see `_intan_hwchans_in_binary_order`).
 
   * Neuropixels recordings (`device="neuropixels1"` or `"neuropixels2"`):
-    probe-native order. The Neuropixels probe digitises on-shank and emits its
-    channels in its own internal sequence; the MCU passes them through without
-    any multiplexing reordering. Trodes writes the XML's <SpikeChannel> elements
-    in that same sequence, so packet slot order matches XML document order
-    one-to-one.
+    hwChan ascending order. The SpikeGadgets MCU (main control unit) firmware
+    emits Neuropixels samples in hwChan ascending order: byte pair i of each
+    packet holds the sample from the electrode whose hwChan = i. The XML's
+    <SpikeChannel> elements may be listed in any order Trodes wrote them
+    (typically not hwChan-ascending), but that order does not constrain the
+    binary; the binary always follows hwChan ordering.
 
-    Example (NP2 4-shank fixture), every packet's ephys region:
+    Example, every packet's ephys region:
 
-        slot     0    1    2    3    4    5    6    7   ...
-        hwChan   2    3  196  197   14   15  208  209   ...
+        slot     0    1    2    3    4    5  ... 380  381  382  383
+        hwChan   0    1    2    3    4    5  ... 380  381  382  383
 
-    The hwChan at slot i is `int(SpikeConfiguration[i].hwChan)` (the i-th
-    <SpikeChannel> in XML document order). No synthesis is needed; the reader
-    reads hwChan straight from each <SpikeChannel> attribute.
+    The reader walks the XML to recover per-trode metadata (gain, anatomical
+    coordinates) for each hwChan, but the column-to-byte-position mapping is
+    the identity: column i reads byte pair i, with hwChan i's data.
 
 Author: Samuel Garcia
 """
@@ -308,20 +309,28 @@ class SpikeGadgetsRawIO(BaseRawIO):
                 )
 
             # Compute the hwChan-at-each-byte-position sequence based on the hardware kind
-            # declared in SpikeConfiguration.device. Intan recordings are chip-interleaved by
-            # the MCU (main control unit); Neuropixels recordings pass through in XML order.
+            # declared in SpikeConfiguration.device.
+            # - Intan recordings are chip-interleaved by the MCU (main control unit), so we
+            #   reproduce that ordering from the chip layout.
+            # - Neuropixels recordings are emitted in hwChan ascending order: byte pair i
+            #   holds the sample from the electrode whose hwChan = i.
             spike_device = sconf.attrib.get("device")
             if spike_device in (None, "intan"):
                 hwchans_in_binary_order = self._intan_hwchans_in_binary_order(
                     sconf, num_ephy_channels, num_ephy_channels_xml
                 )
             elif spike_device in ("neuropixels1", "neuropixels2"):
-                # Neuropixels: binary stream matches XML document order one-to-one (the MCU
-                # does not chip-multiplex the probe), so hwChan comes straight from each
-                # SpikeChannel in document order.
-                hwchans_in_binary_order = [
-                    int(schan.attrib["hwChan"]) for trode in sconf for schan in trode
-                ]
+                xml_hwchans = {int(schan.attrib["hwChan"]) for trode in sconf for schan in trode}
+                expected = set(range(num_ephy_channels))
+                if xml_hwchans != expected:
+                    raise NeoReadWriteError(
+                        "SpikeGadgets Neuropixels: hwChan values in SpikeConfiguration do not "
+                        f"cover [0, {num_ephy_channels}). The reader assumes the firmware emits "
+                        "samples in hwChan ascending order over a contiguous range; this file "
+                        f"has missing or out-of-range hwChans (missing: {sorted(expected - xml_hwchans)[:5]}..., "
+                        f"extra: {sorted(xml_hwchans - expected)[:5]}...)."
+                    )
+                hwchans_in_binary_order = list(range(num_ephy_channels))
             else:
                 raise NeoReadWriteError(
                     f"SpikeGadgets: unsupported SpikeConfiguration.device {spike_device!r}. "

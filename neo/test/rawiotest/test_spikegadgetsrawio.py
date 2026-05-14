@@ -55,15 +55,14 @@ class TestSpikeGadgetsRawIO(
         )
 
     def test_neuropixels_uses_hwchan_ids(self):
-        # Regression test: Neuropixels recordings must expose hwChan ids, not synthesised
-        # Intan chip ids. The original reports of the related ZeroDivisionError on NP2
-        # (chanPerChip="0") are in issues #1844 and #1810 and are exercised through the
-        # NP2 fixture in `entities_to_test`. This test guards against the separate NP1
-        # silent-misrouting case that surfaced while investigating those issues: NP1
-        # files like this one have chanPerChip="32" despite the probe not using Intan
-        # chips, which made the old divisibility check pass and silently produced
-        # synthesised ids. The fix relies on SpikeConfiguration.device to detect
-        # non-Intan setups regardless of chanPerChip.
+        # Regression test for Neuropixels channel id semantics.
+        # SpikeGadgets's Neuropixels firmware emits samples in hwChan ascending order: byte
+        # pair i of each packet holds the sample from the electrode whose hwChan = i.
+        # The reader therefore assigns column i the id str(i), so a user asking for the
+        # channel labelled '735' gets the data from the electrode whose hwChan is 735.
+        # Empirically verified against the NP2 4-shank recording; see issues #1844 and
+        # #1810 for the original ZeroDivisionError, exercised via the NP2 fixture in
+        # entities_to_test.
         file_path = Path(
             self.get_local_path("spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec")
         )
@@ -73,10 +72,11 @@ class TestSpikeGadgetsRawIO(
         trodes_mask = reader.header["signal_channels"]["stream_id"] == "trodes"
         trodes_ids = list(reader.header["signal_channels"]["id"][trodes_mask])
 
-        # Real hwChan values from the XML, in document order. The synthesised path with
-        # chanPerChip=32 would produce ['0', '32', '64', '96'] instead.
-        self.assertEqual(trodes_ids[:4], ["735", "734", "671", "670"])
-        self.assertEqual(trodes_ids[-4:], ["97", "96", "33", "32"])
+        # Channel ids equal the column index, which equals hwChan because the firmware
+        # emits in hwChan ascending order. For the 2-probe NP1 fixture the union of both
+        # probes' hwChans covers [0, 768).
+        self.assertEqual(trodes_ids[:4], ["0", "1", "2", "3"])
+        self.assertEqual(trodes_ids[-4:], ["764", "765", "766", "767"])
         self.assertEqual(len(trodes_ids), 768)
 
     def test_opening_gibberish_file(self):
