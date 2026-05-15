@@ -325,9 +325,9 @@ class SpikeGadgetsRawIO(BaseRawIO):
                 if xml_hwchans != expected:
                     raise NeoReadWriteError(
                         "SpikeGadgets Neuropixels: hwChan values in SpikeConfiguration do not "
-                        f"cover [0, {num_ephy_channels}). The reader assumes the firmware emits "
-                        "samples in hwChan ascending order over a contiguous range; this file "
-                        f"has missing or out-of-range hwChans (missing: {sorted(expected - xml_hwchans)[:5]}..., "
+                        f"cover [0, {num_ephy_channels}). The firmware emits Neuropixels samples "
+                        "in hwChan ascending order over a contiguous range; this file has "
+                        f"missing or out-of-range hwChans (missing: {sorted(expected - xml_hwchans)[:5]}..., "
                         f"extra: {sorted(xml_hwchans - expected)[:5]}...)."
                     )
                 hwchans_in_binary_order = list(range(num_ephy_channels))
