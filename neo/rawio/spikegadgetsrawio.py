@@ -339,8 +339,10 @@ class SpikeGadgetsRawIO(BaseRawIO):
 
             # Walk binary order, using hwChan as the explicit bridge to per-trode metadata.
             trode_by_hwchan = {int(schan.attrib["hwChan"]): trode for trode in sconf for schan in trode}
+            schan_by_hwchan = {int(schan.attrib["hwChan"]): schan for trode in sconf for schan in trode}
             for binary_index, hw_chan in enumerate(hwchans_in_binary_order):
                 parent_trode = trode_by_hwchan[hw_chan]
+                schan = schan_by_hwchan[hw_chan]
                 if "spikeScalingToUv" in parent_trode.attrib:
                     gain = float(parent_trode.attrib["spikeScalingToUv"])
                     units = "uV"
@@ -348,8 +350,13 @@ class SpikeGadgetsRawIO(BaseRawIO):
                     gain = 1.0
                     units = ""
 
-                chan_id = str(hw_chan)
-                name = f"trode{parent_trode.attrib['id']}chan{hw_chan}"
+                if spike_device in ("neuropixels1", "neuropixels2"):
+                    chan_id = f"hwChan{hw_chan}"
+                    sorting_group = schan.attrib.get("spikeSortingGroup", "0")
+                    name = f"probe{sorting_group}_chan{hw_chan}"
+                else:
+                    chan_id = str(hw_chan)
+                    name = f"trode{parent_trode.attrib['id']}chan{hw_chan}"
                 signal_channels.append(
                     (name, chan_id, self._sampling_rate, "int16", units, gain, 0.0, stream_id, "")
                 )

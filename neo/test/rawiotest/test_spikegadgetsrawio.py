@@ -55,14 +55,11 @@ class TestSpikeGadgetsRawIO(
         )
 
     def test_neuropixels_uses_hwchan_ids(self):
-        # Regression test for Neuropixels channel id semantics.
-        # SpikeGadgets's Neuropixels firmware emits samples in hwChan ascending order: byte
-        # pair i of each packet holds the sample from the electrode whose hwChan = i.
-        # The reader therefore assigns column i the id str(i), so a user asking for the
-        # channel labelled '735' gets the data from the electrode whose hwChan is 735.
-        # Empirically verified against the NP2 4-shank recording; see issues #1844 and
-        # #1810 for the original ZeroDivisionError, exercised via the NP2 fixture in
-        # entities_to_test.
+        # Regression test for Neuropixels channel id and name semantics.
+        # ids are f"hwChan{i}" and names are f"probe{spikeSortingGroup}_chan{i}",
+        # where i is the channel index in the trodes stream (which equals the hwChan
+        # the firmware writes at that byte position, since the SpikeGadgets MCU emits
+        # Neuropixels samples in hwChan ascending order).
         file_path = Path(
             self.get_local_path("spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec")
         )
@@ -71,13 +68,20 @@ class TestSpikeGadgetsRawIO(
 
         trodes_mask = reader.header["signal_channels"]["stream_id"] == "trodes"
         trodes_ids = list(reader.header["signal_channels"]["id"][trodes_mask])
+        trodes_names = list(reader.header["signal_channels"]["name"][trodes_mask])
 
-        # Channel ids equal the column index, which equals hwChan because the firmware
-        # emits in hwChan ascending order. For the 2-probe NP1 fixture the union of both
-        # probes' hwChans covers [0, 768).
-        self.assertEqual(trodes_ids[:4], ["0", "1", "2", "3"])
-        self.assertEqual(trodes_ids[-4:], ["764", "765", "766", "767"])
+        self.assertEqual(trodes_ids[:4], ["hwChan0", "hwChan1", "hwChan2", "hwChan3"])
+        self.assertEqual(trodes_ids[-4:], ["hwChan764", "hwChan765", "hwChan766", "hwChan767"])
         self.assertEqual(len(trodes_ids), 768)
+
+        # Names embed the SpikeChannel spikeSortingGroup attribute. The two-probe NP1
+        # workspace sets spikeSortingGroup=0 for one probe and =1 for the other; the
+        # boundary is interleaved across channel indices (not at i=384) because the
+        # two probes' hwChans interleave in chip blocks.
+        self.assertEqual(trodes_names[0], "probe0_chan0")
+        self.assertEqual(trodes_names[767], "probe1_chan767")
+        groups = {n.split("_")[0] for n in trodes_names}
+        self.assertEqual(groups, {"probe0", "probe1"})
 
     def test_opening_gibberish_file(self):
         """Test that parsing a file without </Configuration> raises ValueError instead of infinite loop."""
