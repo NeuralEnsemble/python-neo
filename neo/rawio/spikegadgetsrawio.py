@@ -177,10 +177,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
         intan_chans_per_chip = int(sconf.attrib.get("chanPerChip", 32))  # RHD2132 default for legacy files
         hw_chans_in_xml = [int(schan.attrib["hwChan"]) for trode in sconf for schan in trode]
 
-        channels_fit_chip_layout = (
-            intan_chans_per_chip > 0
-            and num_ephy_channels % intan_chans_per_chip == 0
-        )
+        channels_fit_chip_layout = intan_chans_per_chip > 0 and num_ephy_channels % intan_chans_per_chip == 0
         if not channels_fit_chip_layout:
             return hw_chans_in_xml
 
@@ -357,9 +354,7 @@ class SpikeGadgetsRawIO(BaseRawIO):
                 else:
                     chan_id = str(hw_chan)
                     name = f"trode{parent_trode.attrib['id']}chan{hw_chan}"
-                signal_channels.append(
-                    (name, chan_id, self._sampling_rate, "int16", units, gain, 0.0, stream_id, "")
-                )
+                signal_channels.append((name, chan_id, self._sampling_rate, "int16", units, gain, 0.0, stream_id, ""))
 
                 num_bytes = packet_size - 2 * num_ephy_channels + 2 * binary_index
                 chan_mask = np.zeros(packet_size, dtype="bool")
