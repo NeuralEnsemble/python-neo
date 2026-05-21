@@ -74,6 +74,7 @@ import logging
 import numpy as np
 import os
 import sys
+from typing import Literal
 
 from neo import logging_handler
 
@@ -1387,7 +1388,7 @@ class BaseRawIO:
         """
         return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
-    def setup_cache(self, cache_path: "home" | "same_as_resource", **init_kargs):
+    def setup_cache(self, cache_path: Literal["home", "same_as_resource"], **init_kargs):
         try:
             import joblib
         except ImportError:
@@ -1444,6 +1445,8 @@ class BaseRawIO:
     def dump_cache(self):
         if not self.use_cache:
             raise ValueError("Can not use dump_cache if not using cache")
+        import joblib
+
         joblib.dump(self._cache, self.cache_filename)
 
     ##################
