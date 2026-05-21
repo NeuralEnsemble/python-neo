@@ -177,9 +177,29 @@ class SpikeGadgetsRawIO(BaseRawIO):
         intan_chans_per_chip = int(sconf.attrib.get("chanPerChip", 32))  # RHD2132 default for legacy files
         hw_chans_in_xml = [int(schan.attrib["hwChan"]) for trode in sconf for schan in trode]
 
+        if intan_chans_per_chip > num_ephy_channels:
+            # chanPerChip larger than the total channel count is structurally impossible
+            # for any real Intan chip layout. Reported in #1830 with the example value
+            # 1645402192, suspected to come from a Trodes header-write bug.
+            self.logger.warning(
+                "SpikeGadgets chanPerChip=%d exceeds num_ephy_channels=%d; "
+                "treating as invalid and falling back to XML document order. "
+                "This usually indicates a header-write bug in Trodes "
+                "(originally reported in python-neo PR #1830). The reader's "
+                "channel ids and sample data are unaffected, but downstream "
+                "code should not trust chanPerChip on this recording.",
+                intan_chans_per_chip,
+                num_ephy_channels,
+            )
+
         channels_fit_chip_layout = intan_chans_per_chip > 0 and num_ephy_channels % intan_chans_per_chip == 0
         if not channels_fit_chip_layout:
-            return hw_chans_in_xml
+            # The Trodes writer (recordThread.cpp) writes the raw acquisition
+            # buffer in hwChan-indexed order regardless of deviceType, so the
+            # correct ordering for the fallback path is hwChan ascending. Sort
+            # rather than trust XML document order in case the workspace
+            # reordered SpikeNTrodes.
+            return sorted(hw_chans_in_xml)
 
         # Reproduce the chip-interleaved hwChan sequence (local-channel outer, chip inner)
         # so that hwchans_in_binary_order[i] is the hwChan whose data lives at byte pair i.
