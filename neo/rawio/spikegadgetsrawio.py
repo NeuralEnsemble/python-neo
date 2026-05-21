@@ -182,23 +182,24 @@ class SpikeGadgetsRawIO(BaseRawIO):
             # for any real Intan chip layout. Reported in #1830 with the example value
             # 1645402192, suspected to come from a Trodes header-write bug.
             self.logger.warning(
-                "SpikeGadgets chanPerChip=%d exceeds num_ephy_channels=%d; "
-                "treating as invalid and falling back to XML document order. "
-                "This usually indicates a header-write bug in Trodes "
-                "(originally reported in python-neo PR #1830). The reader's "
-                "channel ids and sample data are unaffected, but downstream "
-                "code should not trust chanPerChip on this recording.",
-                intan_chans_per_chip,
-                num_ephy_channels,
+                f"SpikeGadgets chanPerChip={intan_chans_per_chip} exceeds "
+                f"num_ephy_channels={num_ephy_channels}; treating as invalid "
+                f"and falling back to XML document order. This could indicate "
+                f"a bug; verify that channel order matches your expectation, "
+                f"and please open an issue at "
+                f"https://github.com/NeuralEnsemble/python-neo/issues if you "
+                f"encounter this. See PR #1830 for an earlier report."
             )
 
         channels_fit_chip_layout = intan_chans_per_chip > 0 and num_ephy_channels % intan_chans_per_chip == 0
         if not channels_fit_chip_layout:
-            # The Trodes writer (recordThread.cpp) writes the raw acquisition
-            # buffer in hwChan-indexed order regardless of deviceType, so the
-            # correct ordering for the fallback path is hwChan ascending. Sort
-            # rather than trust XML document order in case the workspace
-            # reordered SpikeNTrodes.
+            # The Trodes always write the data so the binary
+            # stream is hwChan-ascending for every SpikeGadgets device. Source:
+            # `Trodes/src-threads/recordThread.cpp` lines ~281-298 in the
+            # canonical Trodes repo at https://bitbucket.org/mkarlsso/trodes
+            # (checked May 2026). The correct ordering for the fallback path
+            # is therefore hwChan ascending; sort rather than trust XML
+            # document order in case the user reordered the xml
             return sorted(hw_chans_in_xml)
 
         # Reproduce the chip-interleaved hwChan sequence (local-channel outer, chip inner)
