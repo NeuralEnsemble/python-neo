@@ -18,6 +18,7 @@ class TestSpikeGadgetsRawIO(
         "spikegadgets/W122_06_09_2019_1_fromSD.rec",
         "spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec",
         "spikegadgets/neuropixels2_4shank/20260122_134412_merged_cropped_1min_NP2.rec",
+        "spikegadgets/msh_1024ch/msh_1024ch.rec",
     ]
 
     def test_parse_header_missing_channels(self):
@@ -60,9 +61,7 @@ class TestSpikeGadgetsRawIO(
         # where i is the channel index in the trodes stream (which equals the hwChan
         # the firmware writes at that byte position, since the SpikeGadgets MCU emits
         # Neuropixels samples in hwChan ascending order).
-        file_path = Path(
-            self.get_local_path("spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec")
-        )
+        file_path = Path(self.get_local_path("spikegadgets/SpikeGadgets_test_data_2xNpix1.0_20240318_173658.rec"))
         reader = SpikeGadgetsRawIO(filename=file_path)
         reader.parse_header()
 
