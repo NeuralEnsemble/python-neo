@@ -177,9 +177,30 @@ class SpikeGadgetsRawIO(BaseRawIO):
         intan_chans_per_chip = int(sconf.attrib.get("chanPerChip", 32))  # RHD2132 default for legacy files
         hw_chans_in_xml = [int(schan.attrib["hwChan"]) for trode in sconf for schan in trode]
 
+        if intan_chans_per_chip > num_ephy_channels:
+            # chanPerChip larger than the total channel count is structurally impossible
+            # for any real Intan chip layout. Reported in #1830 with the example value
+            # 1645402192, suspected to come from a Trodes header-write bug.
+            self.logger.warning(
+                f"SpikeGadgets chanPerChip={intan_chans_per_chip} exceeds "
+                f"num_ephy_channels={num_ephy_channels}; treating as invalid "
+                f"and falling back to XML document order. This could indicate "
+                f"a bug; verify that channel order matches your expectation, "
+                f"and please open an issue at "
+                f"https://github.com/NeuralEnsemble/python-neo/issues if you "
+                f"encounter this. See PR #1830 for an earlier report."
+            )
+
         channels_fit_chip_layout = intan_chans_per_chip > 0 and num_ephy_channels % intan_chans_per_chip == 0
         if not channels_fit_chip_layout:
-            return hw_chans_in_xml
+            # The Trodes always write the data so the binary
+            # stream is hwChan-ascending for every SpikeGadgets device. Source:
+            # `Trodes/src-threads/recordThread.cpp` lines ~281-298 in the
+            # canonical Trodes repo at https://bitbucket.org/mkarlsso/trodes
+            # (checked May 2026). The correct ordering for the fallback path
+            # is therefore hwChan ascending; sort rather than trust XML
+            # document order in case the user reordered the xml
+            return sorted(hw_chans_in_xml)
 
         # Reproduce the chip-interleaved hwChan sequence (local-channel outer, chip inner)
         # so that hwchans_in_binary_order[i] is the hwChan whose data lives at byte pair i.
