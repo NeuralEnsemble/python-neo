@@ -412,9 +412,9 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     elif "metadata" in info:
                         # binary case
                         if info["metadata"].dtype.kind in ["U", "S"]:
-                            info["labels"] = np.array([e.decode('utf-8') for e in info['channels']], dtype='U')
+                            info["labels"] = np.array([e.decode('utf-8') for e in info['metadata']], dtype='U')
                         else:
-                            info["labels"] = info["channels"].astype("U")
+                            info["labels"] = info["metadata"].astype("U")
                     elif "channels" in info:
                         # ttl case use channels
                         if info["channels"].dtype.kind in ["U", "S"]:
