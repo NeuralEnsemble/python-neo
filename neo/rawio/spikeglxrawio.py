@@ -683,56 +683,47 @@ def extract_stream_info(meta_file, meta):
         with open(neuropixels_probe_features_file, "r") as f:
             probe_features = json.load(f)
 
-        if probe_part_number is not None:
-            features = probe_features["neuropixels_probes"].get(probe_part_number)
-            if features is not None:
-                datasheet = features.get("datasheet", "unknown")
-                if "1.0" in datasheet:
-                    # This work with NP 1.0 case with different metadata versions
-                    # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
-                    if stream_kind == "ap":
-                        index_imroTbl = 3
-                    elif stream_kind == "lf":
-                        index_imroTbl = 4
-                    for c in range(num_chan - 1):
-                        v = meta["imroTbl"][c].split(" ")[index_imroTbl]
-                        per_channel_gain[c] = 1.0 / float(v)
-                    gain_factor = float(meta["imAiRangeMax"]) / 512
-                    channel_gains = gain_factor * per_channel_gain * 1e6
-                elif "2.0" in datasheet:
-                    # This work with NP 2.0 case with different metadata versions
-                    # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md#imec
-                    # We allow also LF streams for NP2.0 because CatGT can produce them
-                    # See: https://github.com/SpikeInterface/spikeinterface/issues/1949
-                    if "imChan0apGain" in meta:
-                        per_channel_gain[:-1] = 1 / float(meta["imChan0apGain"])
-                    else:
-                        per_channel_gain[:-1] = 1 / 80.0
-                    max_int = int(meta["imMaxInt"]) if "imMaxInt" in meta else 8192
-                    gain_factor = float(meta["imAiRangeMax"]) / max_int
-                    channel_gains = gain_factor * per_channel_gain * 1e6
-                else:
-                    warn(
-                        f"Unknown probe datasheet version for probe part number {probe_part_number}. "
-                        f"Unitary gains will be used.",
-                        UserWarning,
-                        stacklevel=2,
-                    )
-                    channel_gains = np.ones(num_chan, dtype="float64")
+        probe_part_number = meta.get("imDatPrb_pn", None)
+        if probe_part_number is None and meta.get("imProbeOpt") is not None:
+            probe_part_number = "NP1010"  # Phase3A remap, matches probeinterface
+        if probe_part_number is None:
+            raise ValueError("Could not determine probe part number from metadata.")
+
+        features = probe_features["neuropixels_probes"].get(probe_part_number)
+        if features is None:
+            raise ValueError(f"Probe part number {probe_part_number} not found in ProbeTable.")
+
+        datasheet = features.get("datasheet", "unknown")
+        if "1.0" in datasheet:
+            # This work with NP 1.0 case with different metadata versions
+            # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
+            if stream_kind == "ap":
+                index_imroTbl = 3
+            elif stream_kind == "lf":
+                index_imroTbl = 4
+            for c in range(num_chan - 1):
+                v = meta["imroTbl"][c].split(" ")[index_imroTbl]
+                per_channel_gain[c] = 1.0 / float(v)
+            gain_factor = float(meta["imAiRangeMax"]) / 512
+            channel_gains = gain_factor * per_channel_gain * 1e6
+        elif "2.0" in datasheet:
+            # This work with NP 2.0 case with different metadata versions
+            # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md#imec
+            # We allow also LF streams for NP2.0 because CatGT can produce them
+            # See: https://github.com/SpikeInterface/spikeinterface/issues/1949
+            if "imChan0apGain" in meta:
+                per_channel_gain[:-1] = 1 / float(meta["imChan0apGain"])
             else:
-                warn(
-                    f"Unknown probe part number {probe_part_number}. Unitary gains will be used.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-                channel_gains = np.ones(num_chan, dtype="float64")
+                per_channel_gain[:-1] = 1 / 80.0
+            max_int = int(meta["imMaxInt"]) if "imMaxInt" in meta else 8192
+            gain_factor = float(meta["imAiRangeMax"]) / max_int
+            channel_gains = gain_factor * per_channel_gain * 1e6
         else:
-            warn(
-                "Could not find probe part number in metadata. Unitary gains will be used.",
-                UserWarning,
-                stacklevel=2,
+            raise NotImplementedError(
+                f"Probe {probe_part_number} has datasheet {datasheet!r}, "
+                f"which is not currently supported by the SpikeGLX gain calculation. \n"
+                "Please open an issue at python-neo repo"
             )
-            channel_gains = np.ones(num_chan, dtype="float64")
     elif meta.get("typeThis") == "obx":
         # OneBox case
         device = fname.split(".")[-2] if "." in fname else device
