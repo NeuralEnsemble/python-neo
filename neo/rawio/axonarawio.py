@@ -386,7 +386,7 @@ class AxonaRawIO(BaseRawIO):
         offset = i_start // 3 * (bin_dict["bytes_packet"] // 2)
         rem = i_start % 3
 
-        raw_samples = np.arange(num_packets_oi + 1, dtype=np.uint32)
+        raw_samples = np.arange(num_packets_oi + 1, dtype=np.uint64)
         sample1 = raw_samples * (bin_dict["bytes_packet"] // 2) + bin_dict["bytes_head"] // 2 + offset
         sample2 = sample1 + 64
         sample3 = sample2 + 64
@@ -402,7 +402,7 @@ class AxonaRawIO(BaseRawIO):
 
         for i, ch_idx in enumerate(channel_indexes):
             chan_offset = self.channel_memory_offset[ch_idx]
-            raw_signals[:, i] = self._raw_signals[sig_ids + chan_offset]
+            raw_signals[:, i] = self._raw_signals[np.uint64(sig_ids) + chan_offset]
 
         return raw_signals
 
