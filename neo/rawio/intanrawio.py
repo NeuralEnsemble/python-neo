@@ -192,16 +192,16 @@ class IntanRawIO(BaseRawIO):
             for stream_name, stream_dtype in memmap_data_dtype.items():
                 # Digital streams pack all channels into one 16-bit word per sample (see #1853).
                 stream_is_digital = stream_name in digital_stream_names
-                file_channels = 1 if stream_is_digital else channel_number_dict[stream_name]
+                num_channels = 1 if stream_is_digital else channel_number_dict[stream_name]
                 file_path = raw_file_paths_dict[stream_name]
                 size_in_bytes = file_path.stat().st_size
                 dtype_size = np.dtype(stream_dtype).itemsize
-                n_samples = size_in_bytes // (dtype_size * file_channels)
+                n_samples = size_in_bytes // (dtype_size * num_channels)
                 signal_stream_memmap = np.memmap(
                     file_path,
                     dtype=stream_dtype,
                     mode="r",
-                    shape=(n_samples, file_channels),
+                    shape=(n_samples, num_channels),
                     order="C",
                 )
                 self._raw_data[stream_name] = signal_stream_memmap
