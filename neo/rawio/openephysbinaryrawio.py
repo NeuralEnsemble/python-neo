@@ -403,32 +403,26 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     #  of event (ttl, text, binary)
                     # and this is transform into Unicode
                     # all these data are put in event array annotations
+                    labels_text = None
                     if "text" in info:
-                        # text case
-                        if info["text"].dtype.kind in ["U", "S"]:
-                            info["labels"] = np.array([e.decode('utf-8') for e in info['text']], dtype='U')
-                        else:
-                            info["labels"] = info["text"].astype("U")
+                        labels_text = info["text"]
                     elif "metadata" in info:
                         # binary case
-                        if info["metadata"].dtype.kind in ["U", "S"]:
-                            info["labels"] = np.array([e.decode('utf-8') for e in info['metadata']], dtype='U')
-                        else:
-                            info["labels"] = info["metadata"].astype("U")
+                        labels_text = info["metadata"]
                     elif "channels" in info:
                         # ttl case use channels
-                        if info["channels"].dtype.kind in ["U", "S"]:
-                            info["labels"] = np.array([e.decode('utf-8') for e in info['channels']], dtype='U')
-                        else:
-                            info["labels"] = info["channels"].astype("U")
+                        labels_text = info["channels"]
                     elif "states" in info:
                         # ttl case use states
-                        if info["states"].dtype.kind in ["U", "S"]:
-                            info["labels"] = np.array([e.decode('utf-8') for e in info['states']], dtype='U')
-                        else:
-                            info["labels"] = info["states"].astype("U")
+                        labels_text = info["states"]
                     else:
                         raise ValueError(f"There is no possible labels for this event!")
+
+                    # decode if unicode or string case
+                    if labels_text.dtype.kind in ["U", "S"]:
+                        info["labels"] = np.array([e.decode('utf-8') for e in labels_text], dtype='U')
+                    else:
+                        info["labels"] = labels_text.astype("U")
 
                     # # If available, use 'states' to compute event duration
                     info["durations"] = None
