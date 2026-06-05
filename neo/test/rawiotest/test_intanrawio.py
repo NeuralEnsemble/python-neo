@@ -219,5 +219,25 @@ class TestIntanRawIO(
         assert np.isclose(duration_of_positive_pulse, expected_duration)
 
 
+class TestIntanDigitalDemultiplexShape(unittest.TestCase):
+    """Regression coverage for https://github.com/NeuralEnsemble/python-neo/issues/1853."""
+
+    def test_demultiplex_handles_packed_digital_buffer(self):
+        # Digital streams pack all channels into one uint16 word per timestamp.
+        n_samples = 8
+        packed = np.array([0, 1, 16, 17, 0, 16, 1, 17], dtype=np.uint16).reshape(n_samples, 1)
+        expected_bit0 = np.array([0, 1, 0, 1, 0, 0, 1, 1], dtype=np.uint16)
+        expected_bit4 = np.array([0, 0, 1, 1, 0, 1, 0, 1], dtype=np.uint16)
+
+        reader = IntanRawIO.__new__(IntanRawIO)
+        reader.native_channel_order = {"DIN-00": 0, "DIN-04": 4}
+
+        chunk = reader._demultiplex_digital_data(packed, ["DIN-00", "DIN-04"], 0, n_samples)
+
+        self.assertEqual(chunk.shape, (n_samples, 2))
+        np.testing.assert_array_equal(chunk[:, 0], expected_bit0)
+        np.testing.assert_array_equal(chunk[:, 1], expected_bit4)
+
+
 if __name__ == "__main__":
     unittest.main()
