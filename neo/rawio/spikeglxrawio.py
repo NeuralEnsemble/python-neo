@@ -68,6 +68,15 @@ from .utils import get_memmap_shape
 neuropixels_probe_features_file = Path(__file__).parents[1] / "resources" / "neuropixels_probe_features.json"
 
 
+def is_1_0_probe(features):
+    """
+    Check if the probe is a Neuropixels 1.0 based on the datasheet / 
+    description / databus_decoder field in the features dict.
+    """
+    search_string = features.get("datasheet", features.get("description", features.get("databus_decoder", "")))
+    return "1.0" in search_string
+
+
 class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     """
     Class for reading data from a SpikeGLX system
@@ -693,8 +702,8 @@ def extract_stream_info(meta_file, meta):
         if features is None:
             raise ValueError(f"Probe part number {probe_part_number} not found in ProbeTable.")
 
-        datasheet = features.get("datasheet", "unknown")
-        if "1.0" in datasheet:
+        # For NP 1.0 probes, the gain is stored in the imroTbl field of the metadata, and the scaling factor is imAiRangeMax / 512
+        if is_1_0_probe(features):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
             if stream_kind == "ap":
@@ -706,7 +715,7 @@ def extract_stream_info(meta_file, meta):
                 per_channel_gain[c] = 1.0 / float(v)
             gain_factor = float(meta["imAiRangeMax"]) / 512
             channel_gains = gain_factor * per_channel_gain * 1e6
-        elif "2.0" in datasheet:
+        else:
             # This work with NP 2.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md#imec
             # We allow also LF streams for NP2.0 because CatGT can produce them
@@ -714,16 +723,18 @@ def extract_stream_info(meta_file, meta):
             if "imChan0apGain" in meta:
                 per_channel_gain[:-1] = 1 / float(meta["imChan0apGain"])
             else:
-                per_channel_gain[:-1] = 1 / 80.0
+                # For 2.0+ probes, the gain is not configurable, so we can take it directly from the probe features.
+                gain_list = features["ap_gain_list"].split(",")
+                if len(gain_list) > 1:
+                    raise ValueError(
+                        f"Found multiple gains in probe features for stream kind {stream_kind}, but expected only one "
+                        f"since gain is not configurable for NP 2.0 probes. Gain list: {gain_list}"
+                    )
+                default_gain = float(gain_list[0])
+                per_channel_gain[:-1] = 1 / default_gain
             max_int = int(meta["imMaxInt"]) if "imMaxInt" in meta else 8192
             gain_factor = float(meta["imAiRangeMax"]) / max_int
             channel_gains = gain_factor * per_channel_gain * 1e6
-        else:
-            raise NotImplementedError(
-                f"Probe {probe_part_number} has datasheet {datasheet!r}, "
-                f"which is not currently supported by the SpikeGLX gain calculation. \n"
-                "Please open an issue at python-neo repo"
-            )
     elif meta.get("typeThis") == "obx":
         # OneBox case
         device = fname.split(".")[-2] if "." in fname else device
