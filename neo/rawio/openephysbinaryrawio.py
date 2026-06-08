@@ -403,7 +403,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
                     # decode if unicode or string case
                     if labels_text.dtype.kind in ["U", "S"]:
-                        info["labels"] = np.array([e.decode('utf-8') for e in labels_text], dtype='U')
+                        info["labels"] = np.array([e.decode("utf-8") for e in labels_text], dtype="U")
                     elif labels_text.dtype.names is not None:
                         # structured dtype: unfold the named fields into a str per element
                         labels = []
