@@ -73,7 +73,10 @@ def is_1_0_probe(features):
     Check if the probe is a Neuropixels 1.0 based on the datasheet / 
     description / databus_decoder field in the features dict.
     """
-    search_string = features.get("datasheet", features.get("description", features.get("databus_decoder", "")))
+    datasheet_string = features.get("datasheet", "")
+    description_string = features.get("description", "")
+    databus_decoder_string = features.get("databus_decoder", "")
+    search_string = datasheet_string + description_string + databus_decoder_string
     return "1.0" in search_string
 
 
