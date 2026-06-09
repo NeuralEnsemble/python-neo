@@ -860,8 +860,12 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         else:
                             timestamp_file = recording_folder / "continuous" / info["folder_name"] / "timestamps.npy"
                         timestamps = np.load(str(timestamp_file), mmap_mode="r")
-                        timestamp0 = timestamps[0]
-                        t_start = timestamp0 / info["sample_rate"]
+                        if len(timestamps) == 0:
+                            timestamp0 = 0
+                            t_start = 0.0
+                        else:
+                            timestamp0 = timestamps[0]
+                            t_start = timestamp0 / info["sample_rate"]
 
                         # TODO for later : gap checking
                         signal_stream = info.copy()
