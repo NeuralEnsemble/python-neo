@@ -68,7 +68,7 @@ from .utils import get_memmap_shape
 neuropixels_probe_features_file = Path(__file__).parents[1] / "resources" / "neuropixels_probe_features.json"
 
 
-def is_1_0_probe(features):
+def _is_1_0_probe(features):
     """
     Check if the probe is a Neuropixels 1.0 based on the datasheet / 
     description / databus_decoder field in the features dict.
@@ -706,7 +706,7 @@ def extract_stream_info(meta_file, meta):
             raise ValueError(f"Probe part number {probe_part_number} not found in ProbeTable.")
 
         # For NP 1.0 probes, the gain is stored in the imroTbl field of the metadata, and the scaling factor is imAiRangeMax / 512
-        if is_1_0_probe(features):
+        if _is_1_0_probe(features):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
             if stream_kind == "ap":
