@@ -64,13 +64,12 @@ from .baserawio import (
 )
 from .utils import get_memmap_shape
 
-
 neuropixels_probe_features_file = Path(__file__).parents[1] / "resources" / "neuropixels_probe_features.json"
 
 
 def _is_1_0_probe(features):
     """
-    Check if the probe is a Neuropixels 1.0 based on the datasheet / 
+    Check if the probe is a Neuropixels 1.0 based on the datasheet /
     description / databus_decoder field in the features dict.
     """
     datasheet_string = features.get("datasheet", "")
