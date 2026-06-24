@@ -33,13 +33,16 @@ class TestNeuralynxRawIO(
         "neuralynx/Cheetah_v6.3.2/incomplete_blocks",
         "neuralynx/two_streams_different_header_encoding",
     ]
+    # Some test datasets have real gaps (pause/resume). Pass gap_tolerance_ms
+    # so the base test_read_all can load them without erroring.
+    rawio_kwargs = {"gap_tolerance_ms": 0.01}
 
     def test_scan_ncs_files(self):
 
         # Test BML style of Ncs files, similar to PRE4 but with fractional frequency
         # in the header and fractional microsPerSamp, which is then rounded as appropriate
         # in each record.
-        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/BML/original_data"))
+        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/BML/original_data"), gap_tolerance_ms=0.0)
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 1)
@@ -51,7 +54,7 @@ class TestNeuralynxRawIO(
         # Test Cheetah 4.0.2, which is PRE4 type with frequency in header and
         # no microsPerSamp. Number of microseconds per sample in file is inverse of
         # sampling frequency in header trucated to microseconds.
-        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v4.0.2/original_data"))
+        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v4.0.2/original_data"), gap_tolerance_ms=0.0)
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 1)
@@ -63,7 +66,7 @@ class TestNeuralynxRawIO(
 
         # Test Cheetah 5.5.1, which is DigitalLynxSX and has two blocks of records
         # with a fairly large gap.
-        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"))
+        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"), gap_tolerance_ms=0.0)
         rawio.parse_header()
         # test values here from direct inspection of .ncs files
         self.assertEqual(rawio._nb_segment, 2)
@@ -76,7 +79,9 @@ class TestNeuralynxRawIO(
 
         # Test Cheetah 6.3.2, the incomplete_blocks test. This is a DigitalLynxSX with
         # three blocks of records. Gaps are on the order of 60 microseconds or so.
-        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v6.3.2/incomplete_blocks"))
+        # Use tolerance of 0.01 ms (10 us) to match old strict_gap_mode=True behavior
+        # which used 0.2 * sample_interval (~6.25 us at 32kHz)
+        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v6.3.2/incomplete_blocks"), gap_tolerance_ms=0.01)
         rawio.parse_header()
         # test values here from direct inspection of .ncs file, except for 3rd block
         # t_stop, which is extended due to events past the last block of ncs records.
@@ -94,7 +99,7 @@ class TestNeuralynxRawIO(
         self.assertEqual(len(rawio._sigs_memmaps), 3)  # check that there are only 3 memmaps
 
         # Test Cheetah 6.4.1, with different sampling rates across ncs files.
-        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v6.4.1dev/original_data"))
+        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v6.4.1dev/original_data"), gap_tolerance_ms=0.0)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 1)
@@ -117,7 +122,7 @@ class TestNeuralynxRawIO(
         # test single analog signal channel
         fname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data/CSC1.ncs")
         dirname, filename = os.path.split(fname)
-        rawio = NeuralynxRawIO(dirname=dirname, include_filenames=filename)
+        rawio = NeuralynxRawIO(dirname=dirname, include_filenames=filename, gap_tolerance_ms=0.0)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
@@ -133,7 +138,7 @@ class TestNeuralynxRawIO(
         # test one single electrode channel
         fname = self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data/STet3a.nse")
         dirname, filename = os.path.split(fname)
-        rawio = NeuralynxRawIO(dirname=dirname, include_filenames=filename)
+        rawio = NeuralynxRawIO(dirname=dirname, include_filenames=filename, gap_tolerance_ms=0.0)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 1)
@@ -149,7 +154,7 @@ class TestNeuralynxRawIO(
     def test_exclude_filenames(self):
         # exclude single ncs file from session
         dname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data/")
-        rawio = NeuralynxRawIO(dirname=dname, exclude_filenames="CSC2.ncs")
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filenames="CSC2.ncs", gap_tolerance_ms=0.0)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
@@ -163,7 +168,7 @@ class TestNeuralynxRawIO(
         self.assertEqual(len(rawio.header["event_channels"]), 2)
 
         # exclude multiple files from session
-        rawio = NeuralynxRawIO(dirname=dname, exclude_filenames=["Events.nev", "CSC2.ncs"])
+        rawio = NeuralynxRawIO(dirname=dname, exclude_filenames=["Events.nev", "CSC2.ncs"], gap_tolerance_ms=0.0)
         rawio.parse_header()
 
         self.assertEqual(rawio._nb_segment, 2)
@@ -201,7 +206,7 @@ class TestNeuralynxRawIO(
                 f.write("test file content")
 
             # This should not raise an error despite the directory presence
-            rawio = NeuralynxRawIO(dirname=temp_data_dir)
+            rawio = NeuralynxRawIO(dirname=temp_data_dir, gap_tolerance_ms=0.0)
             rawio.parse_header()
 
             # Verify that the reader still works correctly
@@ -224,7 +229,7 @@ class TestNeuralynxRawIO(
         dname = self.get_local_path("neuralynx/two_streams_different_header_encoding")
 
         # Test with Path object (as shown in user's notebook)
-        rawio = NeuralynxRawIO(dirname=Path(dname))
+        rawio = NeuralynxRawIO(dirname=Path(dname), gap_tolerance_ms=0.0)
         rawio.parse_header()
 
         # Should have 2 streams due to different filter configurations
@@ -254,6 +259,77 @@ class TestNeuralynxRawIO(
         # Verify filter 1 (ephys): low-cut enabled
         filter_1 = rawio._dsp_filter_configurations[1]
         self.assertTrue(filter_1.get("DSPLowCutFilterEnabled", False))
+
+    def test_gap_tolerance_ms_error_by_default(self):
+        """Test that gaps raise ValueError by default (no gap_tolerance_ms)."""
+        # Cheetah_v5.5.1 has 2 segments (a large gap between them)
+        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"))
+        with self.assertRaises(ValueError) as cm:
+            rawio.parse_header()
+        self.assertIn("timestamp gaps", str(cm.exception))
+        self.assertIn("gap_tolerance_ms", str(cm.exception))
+
+    def test_gap_tolerance_ms_segmentation(self):
+        """Test that gap_tolerance_ms=0.0 segments on all gaps."""
+        rawio = NeuralynxRawIO(
+            self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"),
+            gap_tolerance_ms=0.0,
+        )
+        rawio.parse_header()
+        self.assertEqual(rawio._nb_segment, 2)
+
+    def test_gap_tolerance_ms_large_tolerance(self):
+        """Test that a very large tolerance collapses everything to 1 segment."""
+        rawio = NeuralynxRawIO(
+            self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"),
+            gap_tolerance_ms=1e9,
+        )
+        rawio.parse_header()
+        self.assertEqual(rawio._nb_segment, 1)
+
+    def test_no_gaps_no_error(self):
+        """Test that datasets without gaps load fine without gap_tolerance_ms."""
+        rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v4.0.2/original_data"))
+        rawio.parse_header()
+        self.assertEqual(rawio._nb_segment, 1)
+
+    def test_strict_gap_mode_deprecation(self):
+        """Test that strict_gap_mode emits DeprecationWarning."""
+        with self.assertWarns(DeprecationWarning):
+            rawio = NeuralynxRawIO(
+                self.get_local_path("neuralynx/BML/original_data"),
+                strict_gap_mode=True,
+            )
+
+        with self.assertWarns(DeprecationWarning):
+            rawio = NeuralynxRawIO(
+                self.get_local_path("neuralynx/BML/original_data"),
+                strict_gap_mode=False,
+            )
+
+    def test_strict_gap_mode_legacy_behavior(self):
+        """Test that strict_gap_mode still works for backward compatibility."""
+        # strict_gap_mode=True should segment like gap_tolerance_ms=0.0
+        with self.assertWarns(DeprecationWarning):
+            rawio = NeuralynxRawIO(
+                self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"),
+                strict_gap_mode=True,
+            )
+        rawio.parse_header()
+        self.assertEqual(rawio._nb_segment, 2)
+
+    def test_get_neuralynx_timestamps(self):
+        """Test that _get_neuralynx_timestamps returns record timestamps."""
+        rawio = NeuralynxRawIO(
+            self.get_local_path("neuralynx/Cheetah_v4.0.2/original_data"),
+            gap_tolerance_ms=0.0,
+        )
+        rawio.parse_header()
+        timestamps = rawio._get_neuralynx_timestamps(block_index=0, seg_index=0, stream_index=0)
+        self.assertIsInstance(timestamps, np.ndarray)
+        self.assertTrue(len(timestamps) > 0)
+        # Timestamps should be monotonically increasing
+        self.assertTrue(np.all(np.diff(timestamps) > 0))
 
 
 class TestNcsRecordingType(BaseTestRawIO, unittest.TestCase):
