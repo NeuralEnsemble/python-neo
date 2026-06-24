@@ -4,8 +4,8 @@
   "license": "https://spdx.org/licenses/BSD-3-Clause",
   "codeRepository": "https://github.com/NeuralEnsemble/python-neo",
   "contIntegration": "https://github.com/NeuralEnsemble/python-neo/actions",
-  "dateModified": "2026-06-23",
-  "downloadUrl": "https://files.pythonhosted.org/packages/neo-0.14.5.tar.gz",
+  "dateModified": "2026-06-24",
+  "downloadUrl": "",
   "issueTracker": "https://github.com/NeuralEnsemble/python-neo/issues",
   "name": "Neo",
   "version": "0.14.5",
@@ -123,8 +123,8 @@
     {"@type": "Person", "givenName": "Letizia", "familyName": "Signorelli"},
     {"@type": "Person", "givenName": "Daniel", "familyName": "Parthier"},
     {"@type": "Person", "givenName": "Kuntal", "familyName": "Kokate"},
-    { "@type": "Person", "alternateName": "LizzyMcKay@github" },
     { "@type": "Person", "givenName": "Reema", "familyName": "Gupta" },
-    { "@type": "Person", "givenName": "Sai Asish", "familyName": "Y" }
+    { "@type": "Person", "givenName": "Sai Asish", "familyName": "Yamani" },
+    { "@type": "Person", "alternateName": "LizzyMcKay@github" }
   ]
 }
