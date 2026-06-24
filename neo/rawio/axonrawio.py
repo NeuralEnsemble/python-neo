@@ -673,7 +673,13 @@ def _parse_abf_v1(f, header_description):
     ss = header["lFileStartTime"] - hh * 3600 - mm * 60
     ms = int(np.mod(ss, 1) * 1e6)
     ss = int(ss)
-    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    try:
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    except (ValueError, OverflowError):
+        # Date/time header fields hold an out-of-range or "no date" sentinel
+        # (e.g. 0xFFFFFFFF). The acquisition date is non-essential annotation,
+        # so fall back to None rather than blocking the read of the signal.
+        header["rec_datetime"] = None
 
     return header
 
@@ -1025,7 +1031,13 @@ def _parse_abf_v2(f, header_description):
     ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
     ms = int(np.mod(ss, 1) * 1e6)
     ss = int(ss)
-    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    try:
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    except (ValueError, OverflowError):
+        # Date/time header fields hold an out-of-range or "no date" sentinel
+        # (e.g. 0xFFFFFFFF). The acquisition date is non-essential annotation,
+        # so fall back to None rather than blocking the read of the signal.
+        header["rec_datetime"] = None
 
     return header
 
