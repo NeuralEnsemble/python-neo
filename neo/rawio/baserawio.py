@@ -709,10 +709,28 @@ class BaseRawIO:
                     f"do not have the same {_common_sig_characteristics} {unique_characteristics}"
                 )
 
-            # also check that channel_id is unique inside a stream
-            channel_ids = signal_channels[mask]["id"]
-            if np.unique(channel_ids).size != channel_ids.size:
-                raise ValueError(f"signal_channels do not have unique ids for stream {stream_index}")
+            # Channel ids must be unique inside a stream so a channel can be addressed by id
+            # (see channel_id_to_index). Some files, e.g. re-saved exports, store duplicate ids.
+            # Rather than refuse an otherwise-readable file, make the duplicates unique by
+            # suffixing them and warn, so the data stays readable and id-based selection works.
+            channel_indexes = np.flatnonzero(mask)
+            channel_ids = list(signal_channels["id"][channel_indexes])
+            if len(set(channel_ids)) != len(channel_ids):
+                used_ids = set()
+                deduplicated_ids = []
+                for channel_id in channel_ids:
+                    new_id = channel_id
+                    suffix = 0
+                    while new_id in used_ids:
+                        suffix += 1
+                        new_id = f"{channel_id}-{suffix}"
+                    used_ids.add(new_id)
+                    deduplicated_ids.append(new_id)
+                signal_channels["id"][channel_indexes] = deduplicated_ids
+                self.logger.warning(
+                    f"signal_channels in stream {stream_index} have non-unique ids; duplicates were "
+                    "made unique by suffixing so channels remain addressable by id."
+                )
 
         self._several_channel_groups = signal_streams.size > 1
 
