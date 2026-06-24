@@ -28,6 +28,17 @@ class TestAxonRawIO(
 
         reader.read_raw_protocol()
 
+    def test_non_unique_channel_ids_are_deduplicated(self):
+        # Some ABF files (e.g. re-saved exports) store duplicate signal_channel ids. Rather than
+        # refuse an otherwise-readable file, neo makes the ids unique and warns, so the data stays
+        # readable and channels remain addressable by id.
+        path = self.get_local_path("axon/intracellular_data/files_with_errors/non_unique_channel_ids.abf")
+        reader = AxonRawIO(filename=path)
+        with self.assertLogs(reader.logger, level="WARNING"):
+            reader.parse_header()
+        channel_ids = list(reader.header["signal_channels"]["id"])
+        self.assertEqual(len(channel_ids), len(set(channel_ids)))
+
 
 if __name__ == "__main__":
     unittest.main()
