@@ -46,6 +46,7 @@ reads abf files - would be good to cross-check
 
 """
 
+import os
 import struct
 import datetime
 from io import open, BufferedReader
@@ -160,9 +161,17 @@ class AxonRawIO(BaseRawWithBufferApiIO):
         self._t_starts = {}
         self._buffer_descriptions = {0: {}}
         self._stream_buffer_slice = {stream_id: None}
+        # Offsets and segment sizes come from header fields that can be corrupt
+        # (truncated file, header surgery). Do the arithmetic in Python ints so it
+        # cannot silently overflow as numpy int32 would, and validate the implied
+        # data extent against the file on disk so a bad header raises a clear error
+        # rather than returning garbage or negative signal sizes.
+        head_offset = int(head_offset)
+        file_size = os.path.getsize(self.filename)
+
         pos = 0
         for seg_index in range(nb_segment):
-            length = episode_array[seg_index]["len"]
+            length = int(episode_array[seg_index]["len"])
 
             if version < 2.0:
                 fSynchTimeUnit = info["fSynchTimeUnit"]
@@ -171,6 +180,11 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
             if (fSynchTimeUnit != 0) and (mode == 1):
                 length /= fSynchTimeUnit
+
+            if length < 0:
+                raise NeoReadWriteError(
+                    f"Negative segment size ({length}) parsed from {self.filename}; the file header is corrupt."
+                )
 
             self._buffer_descriptions[0][seg_index] = {}
             self._buffer_descriptions[0][seg_index][buffer_id] = {
@@ -189,6 +203,13 @@ class AxonRawIO(BaseRawWithBufferApiIO):
             else:
                 t_start = t_start * fSynchTimeUnit * 1e-6
             self._t_starts[seg_index] = t_start
+
+        implied_data_end = head_offset + pos * sig_dtype.itemsize
+        if implied_data_end > file_size:
+            raise NeoReadWriteError(
+                f"ABF header implies {pos} samples ending at byte {implied_data_end}, which exceeds the "
+                f"file size of {file_size} bytes for {self.filename}; the file header is corrupt or the file is truncated."
+            )
 
         # Create channel header
         if version < 2.0:
