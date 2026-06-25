@@ -665,15 +665,24 @@ def _parse_abf_v1(f, header_description):
     header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
 
     # date and time
-    YY = 1900
-    MM = 1
-    DD = 1
+    # lFileStartDate is a YYYYMMDD-packed integer, parsed the same way as uFileStartDate in ABF2.
+    # An unset/sentinel value (0 or 0xFFFFFFFF) yields an out-of-range date that the try/except
+    # below turns into rec_datetime=None.
+    YY = int(header["lFileStartDate"] / 10000)
+    MM = int((header["lFileStartDate"] - YY * 10000) / 100)
+    DD = int(header["lFileStartDate"] - YY * 10000 - MM * 100)
     hh = int(header["lFileStartTime"] / 3600.0)
     mm = int((header["lFileStartTime"] - hh * 3600) / 60)
     ss = header["lFileStartTime"] - hh * 3600 - mm * 60
     ms = int(np.mod(ss, 1) * 1e6)
     ss = int(ss)
-    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    try:
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    except (ValueError, OverflowError):
+        # Date/time header fields hold an out-of-range or "no date" sentinel
+        # (e.g. 0xFFFFFFFF). The acquisition date is non-essential annotation,
+        # so fall back to None rather than blocking the read of the signal.
+        header["rec_datetime"] = None
 
     return header
 
@@ -1060,6 +1069,7 @@ headerDescriptionV1 = [
     ("lActualAcqLength", 10, "i"),
     ("nNumPointsIgnored", 14, "h"),
     ("lActualEpisodes", 16, "i"),
+    ("lFileStartDate", 20, "i"),
     ("lFileStartTime", 24, "i"),
     ("lDataSectionPtr", 40, "i"),
     ("lTagSectionPtr", 44, "i"),
