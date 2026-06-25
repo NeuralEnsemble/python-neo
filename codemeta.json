@@ -4,7 +4,7 @@
   "license": "https://spdx.org/licenses/BSD-3-Clause",
   "codeRepository": "https://github.com/NeuralEnsemble/python-neo",
   "contIntegration": "https://github.com/NeuralEnsemble/python-neo/actions",
-  "dateModified": "2026-06-24",
+  "dateModified": "2026-06-25",
   "downloadUrl": "",
   "issueTracker": "https://github.com/NeuralEnsemble/python-neo/issues",
   "name": "Neo",
