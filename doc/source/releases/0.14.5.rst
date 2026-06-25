@@ -2,7 +2,7 @@
 Neo 0.14.5 release notes
 ========================
 
-23 June 2026
+25 June 2026
 
 This release of Neo includes many bug fixes across various IOs, removal of previously deprecated features, and improvements to the SpikeGLX Neuropixels probe detection infrastructure.
 
@@ -18,7 +18,7 @@ The ``load_sync_channel`` parameter has been removed from :code:`SpikeGLXRawIO` 
 Bug fixes and improvements in IO modules
 -----------------------------------------
 
-Bug fixes and/or improvements have been made to :code:`AxonaIO`, :code:`BlackrockIO`, :code:`IntanRawIO`, :code:`OpenEphysBinaryIO`, :code:`SpikeGadgetsRawIO`, :code:`SpikeGLXIO`, and :code:`TdtIO`.
+Bug fixes and/or improvements have been made to :code:`AxonaIO`, :code:`IntanRawIO`, :code:`OpenEphysBinaryIO`, :code:`SpikeGadgetsRawIO`, and :code:`SpikeGLXIO`.
 
 
 SpikeGLX improvements
