@@ -5,7 +5,7 @@
   "codeRepository": "https://github.com/NeuralEnsemble/python-neo",
   "contIntegration": "https://github.com/NeuralEnsemble/python-neo/actions",
   "dateModified": "2026-06-25",
-  "downloadUrl": "",
+  "downloadUrl": "https://files.pythonhosted.org/packages/f0/ee/168b94170399e21d68cba4efb79f532e81b2cb3ce747d642d95370da8882/neo-0.14.5.tar.gz",
   "issueTracker": "https://github.com/NeuralEnsemble/python-neo/issues",
   "name": "Neo",
   "version": "0.14.5",
