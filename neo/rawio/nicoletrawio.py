@@ -180,7 +180,7 @@ class NicoletRawIO(BaseRawIO):
         self.header = {}
         self.header["nb_block"] = 1
         self.header["nb_segment"] = [int(self._get_index_instances("SegmentStream")[0]["section_l"] / 152)]
-        self.header["signal_buffers"] = np.array(["Signals", "0"], dtype=_signal_buffer_dtype)
+        self.header["signal_buffers"] = np.array([("Signals", "0")], dtype=_signal_buffer_dtype)
         self.header["signal_channels"] = self._create_signal_channels(_signal_channel_dtype)
         self.header["signal_streams"] = np.array(
             [(f"Signals {signal_id}", signal_id, "0") for signal_id in self.signal_streams.values()],
