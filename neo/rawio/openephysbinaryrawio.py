@@ -374,7 +374,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     # check that events have timestamps
                     assert "timestamps" in info, "Event stream does not have timestamps!"
                     # Updates for OpenEphys v0.6:
-                    # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
+                    # In new version (>=0.6) timestamps.npy is now called sample_numbers.npy
                     # The timestamps are already in seconds, so that event times don't require scaling
                     # see https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/Binary-format.html#events
                     if "sample_numbers" in info:
@@ -382,24 +382,42 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     else:
                         self._use_direct_evt_timestamps = False
 
-                    # for event the neo "label" will change depending the nature
+                    # for event the neo "label" will change depending on the nature
                     #  of event (ttl, text, binary)
-                    # and this is transform into unicode
-                    # all theses data are put in event array annotations
+                    # and this is transform into Unicode
+                    # all these data are put in event array annotations
+                    labels_text = None
                     if "text" in info:
-                        # text case
-                        info["labels"] = info["text"].astype("U")
+                        labels_text = info["text"]
                     elif "metadata" in info:
                         # binary case
-                        info["labels"] = info["channels"].astype("U")
+                        labels_text = info["metadata"]
                     elif "channels" in info:
                         # ttl case use channels
-                        info["labels"] = info["channels"].astype("U")
+                        labels_text = info["channels"]
                     elif "states" in info:
                         # ttl case use states
-                        info["labels"] = info["states"].astype("U")
+                        labels_text = info["states"]
                     else:
                         raise ValueError(f"There is no possible labels for this event!")
+
+                    # decode if unicode or string case
+                    if labels_text.dtype.kind in ["U", "S"]:
+                        info["labels"] = np.array([e.decode("utf-8") for e in labels_text], dtype="U")
+                    elif labels_text.dtype.names is not None:
+                        # structured dtype: unfold the named fields into a str per element
+                        labels = []
+                        for row in labels_text:
+                            parts = []
+                            for field_name in labels_text.dtype.names:
+                                value = row[field_name]
+                                if isinstance(value, bytes):
+                                    value = value.decode("utf-8")
+                                parts.append(f"{field_name}={value}")
+                            labels.append(";".join(parts))
+                        info["labels"] = np.array(labels, dtype="U")
+                    else:
+                        info["labels"] = labels_text.astype("U")
 
                     # # If available, use 'states' to compute event duration
                     info["durations"] = None
@@ -842,8 +860,12 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         else:
                             timestamp_file = recording_folder / "continuous" / info["folder_name"] / "timestamps.npy"
                         timestamps = np.load(str(timestamp_file), mmap_mode="r")
-                        timestamp0 = timestamps[0]
-                        t_start = timestamp0 / info["sample_rate"]
+                        if len(timestamps) == 0:
+                            timestamp0 = 0
+                            t_start = 0.0
+                        else:
+                            timestamp0 = timestamps[0]
+                            t_start = timestamp0 / info["sample_rate"]
 
                         # TODO for later : gap checking
                         signal_stream = info.copy()
