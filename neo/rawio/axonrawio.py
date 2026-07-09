@@ -665,14 +665,12 @@ def _parse_abf_v1(f, header_description):
     header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
 
     # date and time
-    # ABF1 does not reliably store the calendar date here, so it is left at 1900-01-01 and only the
-    # time-of-day is read. A "no date" file writes the 0xFFFFFFFF sentinel, which reads as a
-    # negative time; a valid time-of-day is always in [0, 86400) seconds. Guard that range and fall
-    # back to rec_datetime=None, leaving any other value to build normally so real errors surface.
     YY = 1900
     MM = 1
     DD = 1
     seconds_per_day = 24 * 3600
+    # A "no date" file writes the 0xFFFFFFFF sentinel, which reads as a negative time; fall back to
+    # rec_datetime=None instead of crashing on the resulting out-of-range time-of-day.
     if not (0 <= header["lFileStartTime"] < seconds_per_day):
         header["rec_datetime"] = None
     else:
