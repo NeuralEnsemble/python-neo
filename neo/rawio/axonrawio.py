@@ -680,12 +680,18 @@ def _parse_abf_v1(f, header_description):
     YY = 1900
     MM = 1
     DD = 1
-    hh = int(header["lFileStartTime"] / 3600.0)
-    mm = int((header["lFileStartTime"] - hh * 3600) / 60)
-    ss = header["lFileStartTime"] - hh * 3600 - mm * 60
-    ms = int(np.mod(ss, 1) * 1e6)
-    ss = int(ss)
-    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    seconds_per_day = 24 * 3600
+    # A "no date" file writes the 0xFFFFFFFF sentinel, which reads as a negative time; fall back to
+    # rec_datetime=None instead of crashing on the resulting out-of-range time-of-day.
+    if not (0 <= header["lFileStartTime"] < seconds_per_day):
+        header["rec_datetime"] = None
+    else:
+        hh = int(header["lFileStartTime"] / 3600.0)
+        mm = int((header["lFileStartTime"] - hh * 3600) / 60)
+        ss = header["lFileStartTime"] - hh * 3600 - mm * 60
+        ms = int(np.mod(ss, 1) * 1e6)
+        ss = int(ss)
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
     return header
 
@@ -1029,15 +1035,22 @@ def _parse_abf_v2(f, header_description):
         header["EpochInfo"].append(EpochInfo)
 
     # date and time
-    YY = int(header["uFileStartDate"] / 10000)
-    MM = int((header["uFileStartDate"] - YY * 10000) / 100)
-    DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
-    hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
-    mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
-    ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
-    ms = int(np.mod(ss, 1) * 1e6)
-    ss = int(ss)
-    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    # A "no date" sentinel (0 = unset, 0xFFFFFFFF = all bits set) has no valid date to build, so
+    # fall back to rec_datetime=None. Any other value is trusted and left to raise if genuinely out
+    # of range, so a real parsing error surfaces rather than being masked.
+    no_date_sentinels = (0, 0xFFFFFFFF)
+    if header["uFileStartDate"] in no_date_sentinels:
+        header["rec_datetime"] = None
+    else:
+        YY = int(header["uFileStartDate"] / 10000)
+        MM = int((header["uFileStartDate"] - YY * 10000) / 100)
+        DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
+        hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
+        mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
+        ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
+        ms = int(np.mod(ss, 1) * 1e6)
+        ss = int(ss)
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
     return header
 
