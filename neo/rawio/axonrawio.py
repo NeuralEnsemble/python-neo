@@ -665,21 +665,23 @@ def _parse_abf_v1(f, header_description):
     header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
 
     # date and time
+    # ABF1 does not reliably store the calendar date here, so it is left at 1900-01-01 and only the
+    # time-of-day is read. A "no date" file writes the 0xFFFFFFFF sentinel, which reads as a
+    # negative time; a valid time-of-day is always in [0, 86400) seconds. Guard that range and fall
+    # back to rec_datetime=None, leaving any other value to build normally so real errors surface.
     YY = 1900
     MM = 1
     DD = 1
-    hh = int(header["lFileStartTime"] / 3600.0)
-    mm = int((header["lFileStartTime"] - hh * 3600) / 60)
-    ss = header["lFileStartTime"] - hh * 3600 - mm * 60
-    ms = int(np.mod(ss, 1) * 1e6)
-    ss = int(ss)
-    try:
-        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
-    except (ValueError, OverflowError):
-        # Date/time header fields hold an out-of-range or "no date" sentinel
-        # (e.g. 0xFFFFFFFF). The acquisition date is non-essential annotation,
-        # so fall back to None rather than blocking the read of the signal.
+    seconds_per_day = 24 * 3600
+    if not (0 <= header["lFileStartTime"] < seconds_per_day):
         header["rec_datetime"] = None
+    else:
+        hh = int(header["lFileStartTime"] / 3600.0)
+        mm = int((header["lFileStartTime"] - hh * 3600) / 60)
+        ss = header["lFileStartTime"] - hh * 3600 - mm * 60
+        ms = int(np.mod(ss, 1) * 1e6)
+        ss = int(ss)
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
     return header
 
@@ -1023,21 +1025,22 @@ def _parse_abf_v2(f, header_description):
         header["EpochInfo"].append(EpochInfo)
 
     # date and time
-    YY = int(header["uFileStartDate"] / 10000)
-    MM = int((header["uFileStartDate"] - YY * 10000) / 100)
-    DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
-    hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
-    mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
-    ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
-    ms = int(np.mod(ss, 1) * 1e6)
-    ss = int(ss)
-    try:
-        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
-    except (ValueError, OverflowError):
-        # Date/time header fields hold an out-of-range or "no date" sentinel
-        # (e.g. 0xFFFFFFFF). The acquisition date is non-essential annotation,
-        # so fall back to None rather than blocking the read of the signal.
+    # A "no date" sentinel (0 = unset, 0xFFFFFFFF = all bits set) has no valid date to build, so
+    # fall back to rec_datetime=None. Any other value is trusted and left to raise if genuinely out
+    # of range, so a real parsing error surfaces rather than being masked.
+    no_date_sentinels = (0, 0xFFFFFFFF)
+    if header["uFileStartDate"] in no_date_sentinels:
         header["rec_datetime"] = None
+    else:
+        YY = int(header["uFileStartDate"] / 10000)
+        MM = int((header["uFileStartDate"] - YY * 10000) / 100)
+        DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
+        hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
+        mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
+        ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
+        ms = int(np.mod(ss, 1) * 1e6)
+        ss = int(ss)
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
     return header
 
