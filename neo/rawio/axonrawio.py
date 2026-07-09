@@ -190,11 +190,23 @@ class AxonRawIO(BaseRawWithBufferApiIO):
                 t_start = t_start * fSynchTimeUnit * 1e-6
             self._t_starts[seg_index] = t_start
 
-        # Create channel header
+        # Create channel header. By default assume channels 0..nbchannel-1 were sampled in order,
+        # which is always the case for version >= 2.0. For version < 2.0 the channel ids come from
+        # nADCSamplingSeq (the ADC sampling sequence) and are also used to index the per-channel
+        # metadata (name, units, gain). Some re-saved exports corrupt this sequence so every entry
+        # is the same value, which produces non-unique ids and makes every channel read channel 0's
+        # metadata; in that case we keep the sequential default instead.
+        channel_ids = list(range(nbchannel))
         if version < 2.0:
-            channel_ids = [chan_num for chan_num in info["nADCSamplingSeq"] if chan_num >= 0]
-        else:
-            channel_ids = list(range(nbchannel))
+            sampling_sequence_ids = [chan_num for chan_num in info["nADCSamplingSeq"] if chan_num >= 0]
+            non_unique_ids = len(set(sampling_sequence_ids)) != len(sampling_sequence_ids)
+            if non_unique_ids:
+                self.logger.warning(
+                    "nADCSamplingSeq has non-unique channel ids; assuming channels were sampled "
+                    "in order and using sequential ids instead."
+                )
+            else:
+                channel_ids = sampling_sequence_ids
 
         signal_channels = []
         adc_nums = []
