@@ -28,6 +28,18 @@ class TestAxonRawIO(
 
         reader.read_raw_protocol()
 
+    def test_non_unique_channel_ids_fall_back_to_sequential_ids(self):
+        # Some version < 2.0 ABF files (e.g. re-saved exports) corrupt nADCSamplingSeq so every
+        # entry is identical, which yields non-unique channel ids. AxonRawIO detects this, warns,
+        # and falls back to sequential ids (the same default used for version >= 2.0) so the file
+        # stays readable and channels remain addressable by id.
+        path = self.get_local_path("axon/intracellular_data/files_with_errors/non_unique_channel_ids.abf")
+        reader = AxonRawIO(filename=path)
+        with self.assertLogs(reader.logger, level="WARNING"):
+            reader.parse_header()
+        channel_ids = list(reader.header["signal_channels"]["id"])
+        self.assertEqual(len(channel_ids), len(set(channel_ids)))
+
 
 if __name__ == "__main__":
     unittest.main()
