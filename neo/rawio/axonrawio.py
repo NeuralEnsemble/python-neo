@@ -666,23 +666,23 @@ def _parse_abf_v1(f, header_description):
 
     # date and time
     # lFileStartDate is a YYYYMMDD-packed integer, parsed the same way as uFileStartDate in ABF2.
-    # An unset/sentinel value (0 or 0xFFFFFFFF) yields an out-of-range date that the try/except
-    # below turns into rec_datetime=None.
-    YY = int(header["lFileStartDate"] / 10000)
-    MM = int((header["lFileStartDate"] - YY * 10000) / 100)
-    DD = int(header["lFileStartDate"] - YY * 10000 - MM * 100)
-    hh = int(header["lFileStartTime"] / 3600.0)
-    mm = int((header["lFileStartTime"] - hh * 3600) / 60)
-    ss = header["lFileStartTime"] - hh * 3600 - mm * 60
-    ms = int(np.mod(ss, 1) * 1e6)
-    ss = int(ss)
-    try:
-        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
-    except (ValueError, OverflowError):
-        # Date/time header fields hold an out-of-range or "no date" sentinel
-        # (e.g. 0xFFFFFFFF). The acquisition date is non-essential annotation,
-        # so fall back to None rather than blocking the read of the signal.
+    # A "no date" sentinel means there is no date to build, so fall back to rec_datetime=None. The
+    # field is signed, so the all-bits-set 0xFFFFFFFF sentinel is read as -1, and 0 is the unset
+    # value. Any other value is trusted and left to raise if genuinely out of range, so a real
+    # parsing error surfaces rather than being masked.
+    no_date_sentinels = (0, -1)
+    if header["lFileStartDate"] in no_date_sentinels:
         header["rec_datetime"] = None
+    else:
+        YY = int(header["lFileStartDate"] / 10000)
+        MM = int((header["lFileStartDate"] - YY * 10000) / 100)
+        DD = int(header["lFileStartDate"] - YY * 10000 - MM * 100)
+        hh = int(header["lFileStartTime"] / 3600.0)
+        mm = int((header["lFileStartTime"] - hh * 3600) / 60)
+        ss = header["lFileStartTime"] - hh * 3600 - mm * 60
+        ms = int(np.mod(ss, 1) * 1e6)
+        ss = int(ss)
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
     return header
 
