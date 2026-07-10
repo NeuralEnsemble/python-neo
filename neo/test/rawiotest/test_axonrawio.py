@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 from neo.rawio.axonrawio import AxonRawIO, parse_axon_soup
@@ -28,6 +29,17 @@ class TestAxonRawIO(
 
         reader.read_raw_protocol()
 
+    def test_v1_reads_real_acquisition_date(self):
+        # ABF1 stores the calendar date in lFileStartDate (a YYYYMMDD-packed integer). Older neo
+        # ignored that field and hardcoded 1900-01-01, so the recording date was always wrong for
+        # ABF1 files. It must now be read from the header.
+        expected_datetime = datetime.datetime(2005, 6, 11, 14, 15, 0)
+        header = parse_axon_soup(self.get_local_path("axon/File_axon_2.abf"))
+        rec_datetime = header["rec_datetime"]
+        # Drop sub-second precision: the millisecond field round-trips through a float, so the
+        # microsecond is a rounding artifact, not a meaningful value to assert.
+        self.assertEqual(rec_datetime.replace(microsecond=0), expected_datetime)
+
     def test_invalid_date_falls_back_to_none(self):
         # Some ABF files store an out-of-range / "no date" sentinel (e.g. 0xFFFFFFFF)
         # in the acquisition date header fields. The date is non-essential annotation,
@@ -55,3 +67,4 @@ class TestAxonRawIO(
 
 if __name__ == "__main__":
     unittest.main()
+    
