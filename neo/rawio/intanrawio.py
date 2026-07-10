@@ -190,7 +190,9 @@ class IntanRawIO(BaseRawIO):
         elif self.file_format == "one-file-per-signal":
             self._raw_data = {}
             for stream_name, stream_dtype in memmap_data_dtype.items():
-                num_channels = channel_number_dict[stream_name]
+                # Digital streams pack all channels into one 16-bit word per sample (see #1853).
+                stream_is_digital = stream_name in digital_stream_names
+                num_channels = 1 if stream_is_digital else channel_number_dict[stream_name]
                 file_path = raw_file_paths_dict[stream_name]
                 size_in_bytes = file_path.stat().st_size
                 dtype_size = np.dtype(stream_dtype).itemsize
@@ -569,13 +571,15 @@ class IntanRawIO(BaseRawIO):
 
         """
         dtype = np.uint16  # We fix this to match the memmap dtype
+        # Slice to the requested window once up front so the bitwise unpacking below only runs over
+        # the requested samples rather than the whole recording for every channel.
+        raw_digital_data = raw_digital_data[i_start:i_stop]
         output = np.zeros((i_stop - i_start, len(channel_ids)), dtype=dtype)
 
         for channel_index, channel_id in enumerate(channel_ids):
             native_order = self.native_channel_order[channel_id]
             mask = 1 << native_order
-            demultiplex_data = np.bitwise_and(raw_digital_data, mask) > 0
-            output[:, channel_index] = demultiplex_data[i_start:i_stop].flatten()
+            output[:, channel_index] = (np.bitwise_and(raw_digital_data, mask) > 0).flatten()
 
         return output
 

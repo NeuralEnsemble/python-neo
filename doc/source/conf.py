@@ -11,16 +11,11 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import os
-import sys
-import re
-
+import datetime
+import importlib.metadata
 from packaging.version import Version
 
-with open("../../pyproject.toml", mode="r") as f:
-    txt = f.read()
-    neo_release = re.findall('version = "(\S+)"', txt)[0]
-
+neo_release = importlib.metadata.version('neo')
 neo_version = ".".join((str(e) for e in Version(neo_release).release[:2]))
 
 AUTHORS = "Neo authors and contributors <neuralensemble@googlegroups.com>"
@@ -60,7 +55,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Neo"
-copyright = "2010-2025, " + AUTHORS
+copyright = f"2010-{datetime.date.today().year}, " + AUTHORS
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

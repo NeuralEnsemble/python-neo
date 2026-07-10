@@ -246,8 +246,8 @@ class TestBlackrockRawIO(
 
         # First 5 PTP clock values (nanoseconds since Unix epoch) read directly from the ns2 file and hardcoded here for testing
         ptp_clock_ns_ns2 = np.array(
-            [1688252801327128558, 1688252801328128518, 1688252801329128718,
-             1688252801330128558, 1688252801331128518], dtype="uint64",
+            [1688252801327128558, 1688252801328128518, 1688252801329128718, 1688252801330128558, 1688252801331128518],
+            dtype="uint64",
         )
         expected_ns2 = ptp_clock_ns_ns2.astype("float64") / nanoseconds_per_second
         np.testing.assert_array_equal(timestamps[:5], expected_ns2)
@@ -260,8 +260,8 @@ class TestBlackrockRawIO(
 
         # First 5 PTP clock values (nanoseconds since Unix epoch) read directly from the ns6 file and hardcoded here for testing
         ptp_clock_ns_ns6 = np.array(
-            [1688252801327328740, 1688252801327361940, 1688252801327395260,
-             1688252801327428620, 1688252801327461940], dtype="uint64",
+            [1688252801327328740, 1688252801327361940, 1688252801327395260, 1688252801327428620, 1688252801327461940],
+            dtype="uint64",
         )
         expected_ns6 = ptp_clock_ns_ns6.astype("float64") / nanoseconds_per_second
         np.testing.assert_array_equal(timestamps_ns6[:5], expected_ns6)
@@ -284,16 +284,41 @@ class TestBlackrockRawIO(
 
         # First 5 PTP clock values (nanoseconds since Unix epoch) per segment, read directly from file and hardcoded here for testing
         first_5_ptp_clock_ns_per_segment = [
-            np.array([1752531864717743037, 1752531864717776237, 1752531864717809677,
-                       1752531864717843077, 1752531864717876277], dtype="uint64"),
-            np.array([1752531864739742985, 1752531864739776305, 1752531864739809665,
-                       1752531864739842945, 1752531864739876385], dtype="uint64"),
-            np.array([1752531864740742986, 1752531864740776306, 1752531864740809626,
-                       1752531864740842946, 1752531864740876346], dtype="uint64"),
+            np.array(
+                [
+                    1752531864717743037,
+                    1752531864717776237,
+                    1752531864717809677,
+                    1752531864717843077,
+                    1752531864717876277,
+                ],
+                dtype="uint64",
+            ),
+            np.array(
+                [
+                    1752531864739742985,
+                    1752531864739776305,
+                    1752531864739809665,
+                    1752531864739842945,
+                    1752531864739876385,
+                ],
+                dtype="uint64",
+            ),
+            np.array(
+                [
+                    1752531864740742986,
+                    1752531864740776306,
+                    1752531864740809626,
+                    1752531864740842946,
+                    1752531864740876346,
+                ],
+                dtype="uint64",
+            ),
         ]
         # Last PTP clock value (nanoseconds since Unix epoch) of each segment, hardcoded here for testing
         last_ptp_clock_ns_per_segment = np.array(
-            [1752531864738776304, 1752531864739709625, 1752531864751042999], dtype="uint64",
+            [1752531864738776304, 1752531864739709625, 1752531864751042999],
+            dtype="uint64",
         )
 
         for seg_index in range(n_segments):
@@ -311,7 +336,9 @@ class TestBlackrockRawIO(
         # Verify the gaps between segments exceed the tolerance
         for seg_index in range(n_segments - 1):
             last_ts = last_ptp_clock_ns_per_segment[seg_index].astype("float64") / nanoseconds_per_second
-            first_ts_next = first_5_ptp_clock_ns_per_segment[seg_index + 1][0].astype("float64") / nanoseconds_per_second
+            first_ts_next = (
+                first_5_ptp_clock_ns_per_segment[seg_index + 1][0].astype("float64") / nanoseconds_per_second
+            )
             gap_ms = (first_ts_next - last_ts) * 1000
             self.assertGreater(gap_ms, gap_tolerance_ms)
 
