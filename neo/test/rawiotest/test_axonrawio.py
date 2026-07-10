@@ -2,6 +2,7 @@ import datetime
 import unittest
 
 from neo.rawio.axonrawio import AxonRawIO, parse_axon_soup
+from neo.core import NeoReadWriteError
 
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
@@ -28,6 +29,20 @@ class TestAxonRawIO(
         reader.parse_header()
 
         reader.read_raw_protocol()
+
+    def test_unparseable_file_raises(self):
+        # A file whose header does not start with a valid ABF signature must raise a clear error
+        # rather than a cryptic NoneType error deep in parsing. The fixture has a zeroed signature.
+        path = self.get_local_path("axon/intracellular_data/files_with_errors/unparseable_header.abf")
+        expected_msg = (
+            f"Could not parse {path} as an ABF file: expected the header to start with signature "
+            f"b'ABF ' or b'ABF2', but found b'\\x00\\x00\\x00\\x00'. The file is not an ABF file, "
+            f"is corrupt, or is an unsupported variant."
+        )
+        reader = AxonRawIO(filename=path)
+        with self.assertRaises(NeoReadWriteError) as cm:
+            reader.parse_header()
+        self.assertEqual(str(cm.exception), expected_msg)
 
     def test_v1_reads_real_acquisition_date(self):
         # ABF1 stores the calendar date in lFileStartDate (a YYYYMMDD-packed integer). Older neo

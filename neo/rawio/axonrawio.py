@@ -490,8 +490,13 @@ def parse_axon_soup(filename):
 
     Returns
     -------
-    dict or None
-        Header dictionary with file metadata, or None if file signature is invalid
+    dict
+        Header dictionary with file metadata.
+
+    Raises
+    ------
+    NeoReadWriteError
+        If the file does not start with a valid ABF signature (b"ABF " or b"ABF2").
     """
     with open(filename, "rb") as fid:
         f = StructFile(fid)
@@ -502,7 +507,14 @@ def parse_axon_soup(filename):
         elif signature == b"ABF2":
             return _parse_abf_v2(f, headerDescriptionV2)
         else:
-            return None
+            # The first 4 bytes are the ABF magic; anything else means the file is not an ABF
+            # file, is corrupt, or is an unsupported variant. Raise here rather than returning
+            # None so the caller gets a clear error instead of a downstream NoneType access.
+            raise NeoReadWriteError(
+                f"Could not parse {filename} as an ABF file: expected the header to start with "
+                f"signature b'ABF ' or b'ABF2', but found {signature}. The file is not an ABF "
+                f"file, is corrupt, or is an unsupported variant."
+            )
 
 
 def _parse_abf_v1(f, header_description):
