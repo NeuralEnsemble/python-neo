@@ -677,24 +677,37 @@ def _parse_abf_v1(f, header_description):
     header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
 
     # date and time
-    # lFileStartDate is a YYYYMMDD-packed integer, parsed the same way as uFileStartDate in ABF2.
     # A "no date" sentinel means there is no date to build, so fall back to rec_datetime=None. The
-    # field is signed, so the all-bits-set 0xFFFFFFFF sentinel is read as -1, and 0 is the unset
-    # value. Any other value is trusted and left to raise if genuinely out of range, so a real
-    # parsing error surfaces rather than being masked.
+    # lFileStartDate field is signed, so the all-bits-set 0xFFFFFFFF sentinel is read as -1, and 0
+    # is the unset value. Any other value is trusted; a genuinely out-of-range date is left to
+    # raise rather than being masked.
     no_date_sentinels = (0, -1)
     if header["lFileStartDate"] in no_date_sentinels:
         header["rec_datetime"] = None
     else:
-        YY = int(header["lFileStartDate"] / 10000)
-        MM = int((header["lFileStartDate"] - YY * 10000) / 100)
-        DD = int(header["lFileStartDate"] - YY * 10000 - MM * 100)
+        # lFileStartDate packs the calendar date as decimal digits, but the packing changed across
+        # ABF1 versions:
+        #   - newer files use YYYYMMDD (4-digit year), e.g. 20050611 -> 2005-06-11
+        #   - older files use YYMMDD   (2-digit year), e.g.   180618 -> 2018-06-18
+        # Detect the old form from the value rather than the version number (whose exact cutoff we
+        # cannot pin down): a real 4-digit year is >= 1000, so a year field below 100 is a 2-digit
+        # year. We assume such years are in the 2000s, as no ABF recording predates 2000.
+        date_as_integer = header["lFileStartDate"]
+        # The digits are laid out as [year][MM][DD], so month and day occupy the low four decimal
+        # places: dividing by 10_000 discards MMDD and leaves the year.
+        year = date_as_integer // 10_000
+        year_is_two_digit = year < 100
+        if year_is_two_digit:
+            date_as_integer += 2000 * 10_000  # shift a 2-digit year into the 2000s: 180618 -> 20180618
+            year = date_as_integer // 10_000
+        month = (date_as_integer // 100) % 100  # drop the two DD digits, keep the two MM digits
+        day = date_as_integer % 100  # the last two digits
         hh = int(header["lFileStartTime"] / 3600.0)
         mm = int((header["lFileStartTime"] - hh * 3600) / 60)
         ss = header["lFileStartTime"] - hh * 3600 - mm * 60
         ms = int(np.mod(ss, 1) * 1e6)
         ss = int(ss)
-        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+        header["rec_datetime"] = datetime.datetime(year, month, day, hh, mm, ss, ms)
 
     return header
 
