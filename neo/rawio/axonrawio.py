@@ -679,9 +679,10 @@ def _parse_abf_v1(f, header_description):
         listTag.append(tag)
     header["listTag"] = listTag
 
-    # protocol name formatting
-    header["sProtocolPath"] = clean_string(header["sProtocolPath"])
-    header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
+    # protocol name formatting. Decode to str (like the channel names) so consumers get a plain
+    # string rather than a bytes value, whose str() would bake the "b'...'" repr into the path.
+    header["sProtocolPath"] = clean_string(header["sProtocolPath"]).decode("utf-8", errors="replace")
+    header["sProtocolPath"] = header["sProtocolPath"].replace("\\", "/")
 
     # date and time
     # lFileStartDate is a YYYYMMDD-packed integer, parsed the same way as uFileStartDate in ABF2.
@@ -969,7 +970,8 @@ def _parse_abf_v2(f, header_description):
         else:
             protocol[key] = np.array(val)
     header["protocol"] = protocol
-    header["sProtocolPath"] = strings[header["uProtocolPathIndex"]]
+    # Decode to str (like the channel names) so consumers get a plain string, not raw bytes.
+    header["sProtocolPath"] = strings[header["uProtocolPathIndex"]].decode("utf-8", errors="replace")
 
     # tags
     listTag = []

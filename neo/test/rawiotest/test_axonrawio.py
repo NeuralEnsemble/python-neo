@@ -48,6 +48,14 @@ class TestAxonRawIO(
         names = list(reader.header["signal_channels"]["name"])
         self.assertEqual(names, ["IN 1"])
 
+    def test_protocol_path_decoded_to_str(self):
+        # String header fields should be decoded to str, not left as raw bytes; otherwise a caller
+        # doing str(value) gets the "b'...'" byte-literal repr baked into the path.
+        for fixture in ["axon/File_axon_1.abf", "axon/File_axon_2.abf"]:  # v2 and v1
+            reader = AxonRawIO(filename=self.get_local_path(fixture))
+            reader.parse_header()
+            self.assertIsInstance(reader._axon_info["sProtocolPath"], str)
+
     def test_v1_reads_real_acquisition_date(self):
         # ABF1 stores the calendar date in lFileStartDate (a YYYYMMDD-packed integer). Older neo
         # ignored that field and hardcoded 1900-01-01, so the recording date was always wrong for
