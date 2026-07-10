@@ -190,11 +190,23 @@ class AxonRawIO(BaseRawWithBufferApiIO):
                 t_start = t_start * fSynchTimeUnit * 1e-6
             self._t_starts[seg_index] = t_start
 
-        # Create channel header
+        # Create channel header. By default assume channels 0..nbchannel-1 were sampled in order,
+        # which is always the case for version >= 2.0. For version < 2.0 the channel ids come from
+        # nADCSamplingSeq (the ADC sampling sequence) and are also used to index the per-channel
+        # metadata (name, units, gain). Some re-saved exports corrupt this sequence so every entry
+        # is the same value, which produces non-unique ids and makes every channel read channel 0's
+        # metadata; in that case we keep the sequential default instead.
+        channel_ids = list(range(nbchannel))
         if version < 2.0:
-            channel_ids = [chan_num for chan_num in info["nADCSamplingSeq"] if chan_num >= 0]
-        else:
-            channel_ids = list(range(nbchannel))
+            sampling_sequence_ids = [chan_num for chan_num in info["nADCSamplingSeq"] if chan_num >= 0]
+            non_unique_ids = len(set(sampling_sequence_ids)) != len(sampling_sequence_ids)
+            if non_unique_ids:
+                self.logger.warning(
+                    "nADCSamplingSeq has non-unique channel ids; assuming channels were sampled "
+                    "in order and using sequential ids instead."
+                )
+            else:
+                channel_ids = sampling_sequence_ids
 
         signal_channels = []
         adc_nums = []
@@ -1026,15 +1038,22 @@ def _parse_abf_v2(f, header_description):
         header["EpochInfo"].append(EpochInfo)
 
     # date and time
-    YY = int(header["uFileStartDate"] / 10000)
-    MM = int((header["uFileStartDate"] - YY * 10000) / 100)
-    DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
-    hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
-    mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
-    ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
-    ms = int(np.mod(ss, 1) * 1e6)
-    ss = int(ss)
-    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    # A "no date" sentinel (0 = unset, 0xFFFFFFFF = all bits set) has no valid date to build, so
+    # fall back to rec_datetime=None. Any other value is trusted and left to raise if genuinely out
+    # of range, so a real parsing error surfaces rather than being masked.
+    no_date_sentinels = (0, 0xFFFFFFFF)
+    if header["uFileStartDate"] in no_date_sentinels:
+        header["rec_datetime"] = None
+    else:
+        YY = int(header["uFileStartDate"] / 10000)
+        MM = int((header["uFileStartDate"] - YY * 10000) / 100)
+        DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
+        hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
+        mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
+        ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
+        ms = int(np.mod(ss, 1) * 1e6)
+        ss = int(ss)
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
     return header
 
