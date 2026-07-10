@@ -35,25 +35,22 @@ https://billkarsh.github.io/SpikeGLX/#offline-analysis-tools
 https://billkarsh.github.io/SpikeGLX/#metadata-guides
 https://github.com/SpikeInterface/spikeextractors/blob/master/spikeextractors/extractors/spikeglxrecordingextractor/spikeglxrecordingextractor.py
 
-This reader handle:
+For the "imec" device, this reader handles 1.0 and 2.0 Neuropixels probes.
+The probe-type is identified by the `imDatPrb_pn` field in the meta file
+and checked agains the ProbeTable info (https://raw.githubusercontent.com/billkarsh/ProbeTable/refs/heads/main/Tables/probe_features.json).
+It uses the "datasheet" field in the meta file to identify the whether the probe is 1.0 or 2.0.
+Neuropixels NXT/3.0 will return unscaled int16 data, since the gain for NP3.0 is not
+yet implemented as it is not yet clear how to get it from the meta file.
 
-imDatPrb_type=1 (NP 1.0)
-imDatPrb_type=21 (NP 2.0, single multiplexed shank)
-imDatPrb_type=24 (NP 2.0, 4-shank)
-imDatPrb_type=1030 (NP 1.0-NHP 45mm SOI90 - NHP long 90um wide, staggered contacts)
-imDatPrb_type=1031 (NP 1.0-NHP 45mm SOI125 - NHP long 125um wide, staggered contacts)
-imDatPrb_type=1032 (NP 1.0-NHP 45mm SOI115 / 125 linear - NHP long 125um wide, linear contacts)
-imDatPrb_type=1022 (NP 1.0-NHP 25mm - NHP medium)
-imDatPrb_type=1015 (NP 1.0-NHP 10mm - NHP short)
-
-Author : Samuel Garcia
+Author : Samuel Garcia, Alessio Buccino, Heberto Mayorquin
 Some functions are copied from Graham Findlay
 """
 
-from pathlib import Path
 import os
 import re
+from pathlib import Path
 from warnings import warn
+import json
 
 import numpy as np
 
@@ -67,6 +64,20 @@ from .baserawio import (
 )
 from .utils import get_memmap_shape
 
+neuropixels_probe_features_file = Path(__file__).parents[1] / "resources" / "neuropixels_probe_features.json"
+
+
+def _is_1_0_probe(features):
+    """
+    Check if the probe is a Neuropixels 1.0 based on the datasheet /
+    description / databus_decoder field in the features dict.
+    """
+    datasheet_string = features.get("datasheet", "")
+    description_string = features.get("description", "")
+    databus_decoder_string = features.get("databus_decoder", "")
+    search_string = datasheet_string + description_string + databus_decoder_string
+    return "1.0" in search_string
+
 
 class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     """
@@ -76,10 +87,6 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     ----------
     dirname: str, default: ''
         The spikeglx folder containing meta/bin files
-    load_sync_channel: bool, default: False
-        Can be used to load the synch stream as the last channel of the neural data.
-        This option is deprecated and will be removed in version 0.15.
-        From versions higher than 0.14.1 the sync channel is always loaded as a separate stream.
     load_channel_location: bool, default: False
         If True probeinterface is used to load the channel locations from the directory
 
@@ -108,17 +115,9 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     extensions = ["meta", "bin"]
     rawmode = "one-dir"
 
-    def __init__(self, dirname="", load_sync_channel=False, load_channel_location=False):
+    def __init__(self, dirname="", load_channel_location=False):
         BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
-        self.load_sync_channel = load_sync_channel
-        if load_sync_channel:
-            warn(
-                "The load_sync_channel=True option is deprecated and will be removed in version 0.15 \n"
-                "The sync channel is now loaded as a separate stream by default and should be accessed as such. ",
-                DeprecationWarning,
-                stacklevel=2,
-            )
         self.load_channel_location = load_channel_location
 
     def _source_name(self):
@@ -127,6 +126,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
     def _parse_header(self):
         self.signals_info_list = scan_files(self.dirname)
         _add_segment_order(self.signals_info_list)
+        _add_segment_timing(self.signals_info_list)
 
         # sort stream_name by higher sampling rate first
         srates = {info["stream_name"]: info["sampling_rate"] for info in self.signals_info_list}
@@ -178,10 +178,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                 chan_name = info["channel_names"][local_channel_index]
                 chan_id = f"{stream_name}#{chan_name}"
 
-                # Separate sync channel in its own stream
-                is_sync_channel = "SY" in chan_name and not self.load_sync_channel
-                if is_sync_channel:
-                    # This is a sync channel and should be added as its own stream
+                # Separate sync channel in its own stream.
+                if "SY" in chan_name:
                     sync_stream_id = f"{stream_name}-SYNC"
                     sync_stream_id_to_buffer_id[sync_stream_id] = buffer_id
                     stream_id_for_chan = sync_stream_id
@@ -206,19 +204,12 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             # None here means that the all the channels in the buffer will be included
             self._stream_buffer_slice[stream_id] = None
 
-            # Then we modify this if sync channel is present to slice the last channel
-            # out of the stream buffer
-            if "nidq" not in stream_name:
-                if not self.load_sync_channel and info["has_sync_trace"]:
-                    # the last channel is removed from the stream but not from the buffer
-                    self._stream_buffer_slice[stream_id] = slice(0, -1)
-
-                    # Add a buffer slice for the sync channel
-                    sync_stream_id = f"{stream_name}-SYNC"
-                    self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
-
-                if self.load_sync_channel and not info["has_sync_trace"]:
-                    raise ValueError("SYNC channel is not present in the recording. " "Set load_sync_channel to False")
+            # If a sync trace is present, slice the last channel out of the parent
+            # stream and expose it as the companion -SYNC stream sharing the same buffer.
+            if "nidq" not in stream_name and info["has_sync_trace"]:
+                self._stream_buffer_slice[stream_id] = slice(0, -1)
+                sync_stream_id = f"{stream_name}-SYNC"
+                self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
 
         signal_buffers = np.array(signal_buffers, dtype=_signal_buffer_dtype)
 
@@ -269,9 +260,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
             for seg_index in range(nb_segment):
                 info = self.signals_info_dict[seg_index, stream_name]
 
-                frame_start = float(info["meta"]["firstSample"])
-                sampling_frequency = info["sampling_rate"]
-                t_start = frame_start / sampling_frequency
+                t_start = info["t_start"]
 
                 self._t_starts[stream_name][seg_index] = t_start
 
@@ -282,8 +271,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         self._t_starts[sync_stream_name] = {}
                     self._t_starts[sync_stream_name][seg_index] = t_start
 
-                t_stop = info["sample_length"] / info["sampling_rate"]
-                self._t_stops[seg_index] = max(self._t_stops[seg_index], t_stop)
+                self._t_stops[seg_index] = max(self._t_stops[seg_index], info["t_stop"])
 
         # fille into header dict
         self.header = {}
@@ -320,9 +308,6 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         # only for ap channel
                         probe = probeinterface.read_spikeglx(info["meta_file"])
                         loc = probe.contact_positions
-                        if self.load_sync_channel:
-                            # one fake channel  for "sys0"
-                            loc = np.concatenate((loc, [[0.0, 0.0]]), axis=0)
                         for ndim in range(loc.shape[1]):
                             sig_ann["__array_annotations__"][f"channel_location_{ndim}"] = loc[:, ndim]
 
@@ -405,6 +390,40 @@ def scan_files(dirname):
         raise FileNotFoundError(f"No appropriate combination of .meta and .bin files were detected in {dirname}")
 
     return info_list
+
+
+def _add_segment_timing(info_list):
+    """
+    Add ``info["first_sample"]``, ``info["t_start"]``, and ``info["t_stop"]`` per signal.
+
+    Reads ``meta["firstSample"]`` (documented in every SpikeGLX phase) and converts
+    to float. When absent, defaults to 0 with a UserWarning naming the file. Zero
+    is the correct fallback for a file that starts at the beginning of its SpikeGLX
+    run, which covers the expected causes of a missing tag: pre-2016 builds (the
+    tag was introduced in 2016), recordings where the end-of-run write was
+    interrupted, and ``.meta`` files modified after acquisition.
+
+    Then stores ``info["t_start"] = info["first_sample"] / info["sampling_rate"]``
+    and ``info["t_stop"] = info["sample_length"] / info["sampling_rate"]`` in
+    seconds, so downstream code can read both directly without recomputation.
+    """
+    for info in info_list:
+        meta = info["meta"]
+        if "firstSample" in meta:
+            info["first_sample"] = float(meta["firstSample"])
+        else:
+            warn(
+                f"'firstSample' missing from {info['meta_file']}; defaulting to 0. "
+                f"Zero is correct for files that start at the beginning of their SpikeGLX run, "
+                f"but wrong for any file that represents a non-initial trigger or that was "
+                f"derived from a longer recording. Typical causes: pre-2016 SpikeGLX build, "
+                f"interrupted end-of-run write, or post-acquisition modification of the .meta file.",
+                UserWarning,
+                stacklevel=2,
+            )
+            info["first_sample"] = 0.0
+        info["t_start"] = info["first_sample"] / info["sampling_rate"]
+        info["t_stop"] = info["sample_length"] / info["sampling_rate"]
 
 
 def _build_signals_info_dict(info_list):
@@ -647,11 +666,22 @@ def extract_stream_info(meta_file, meta):
         # metad['imroTbl'] contain two gain per channel  AP and LF
         # except for the last fake channel
         per_channel_gain = np.ones(num_chan, dtype="float64")
-        if (
-            "imDatPrb_type" not in meta
-            or meta["imDatPrb_type"] == "0"
-            or meta["imDatPrb_type"] in ("1015", "1016", "1022", "1030", "1031", "1032", "1100", "1121", "1123", "1300")
-        ):
+        probe_part_number = meta.get("imDatPrb_pn", None)
+        with open(neuropixels_probe_features_file, "r") as f:
+            probe_features = json.load(f)
+
+        probe_part_number = meta.get("imDatPrb_pn", None)
+        if probe_part_number is None and meta.get("imProbeOpt") is not None:
+            probe_part_number = "NP1010"  # Phase3A remap, matches probeinterface
+        if probe_part_number is None:
+            raise ValueError("Could not determine probe part number from metadata.")
+
+        features = probe_features["neuropixels_probes"].get(probe_part_number)
+        if features is None:
+            raise ValueError(f"Probe part number {probe_part_number} not found in ProbeTable.")
+
+        # For NP 1.0 probes, the gain is stored in the imroTbl field of the metadata, and the scaling factor is imAiRangeMax / 512
+        if _is_1_0_probe(features):
             # This work with NP 1.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md
             if stream_kind == "ap":
@@ -663,7 +693,7 @@ def extract_stream_info(meta_file, meta):
                 per_channel_gain[c] = 1.0 / float(v)
             gain_factor = float(meta["imAiRangeMax"]) / 512
             channel_gains = gain_factor * per_channel_gain * 1e6
-        elif meta["imDatPrb_type"] in ("21", "24", "2003", "2004", "2013", "2014"):
+        else:
             # This work with NP 2.0 case with different metadata versions
             # https://github.com/billkarsh/SpikeGLX/blob/15ec8898e17829f9f08c226bf04f46281f106e5f/Markdown/Metadata_30.md#imec
             # We allow also LF streams for NP2.0 because CatGT can produce them
@@ -671,12 +701,18 @@ def extract_stream_info(meta_file, meta):
             if "imChan0apGain" in meta:
                 per_channel_gain[:-1] = 1 / float(meta["imChan0apGain"])
             else:
-                per_channel_gain[:-1] = 1 / 80.0
+                # For 2.0+ probes, the gain is not configurable, so we can take it directly from the probe features.
+                gain_list = features["ap_gain_list"].split(",")
+                if len(gain_list) > 1:
+                    raise ValueError(
+                        f"Found multiple gains in probe features for stream kind {stream_kind}, but expected only one "
+                        f"since gain is not configurable for NP 2.0 probes. Gain list: {gain_list}"
+                    )
+                default_gain = float(gain_list[0])
+                per_channel_gain[:-1] = 1 / default_gain
             max_int = int(meta["imMaxInt"]) if "imMaxInt" in meta else 8192
             gain_factor = float(meta["imAiRangeMax"]) / max_int
             channel_gains = gain_factor * per_channel_gain * 1e6
-        else:
-            raise NotImplementedError("This meta file version of spikeglx" " is not implemented")
     elif meta.get("typeThis") == "obx":
         # OneBox case
         device = fname.split(".")[-2] if "." in fname else device

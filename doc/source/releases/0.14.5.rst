@@ -1,0 +1,37 @@
+========================
+Neo 0.14.5 release notes
+========================
+
+25 June 2026
+
+This release of Neo includes many bug fixes across various IOs, removal of previously deprecated features, and improvements to the SpikeGLX Neuropixels probe detection infrastructure.
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+
+Removed deprecated features
+----------------------------
+
+The ``load_sync_channel`` parameter has been removed from :code:`SpikeGLXRawIO` and :code:`OpenEphysBinaryRawIO`, as it was deprecated in a prior release.
+
+
+Bug fixes and improvements in IO modules
+-----------------------------------------
+
+Bug fixes and/or improvements have been made to :code:`AxonaIO`, :code:`IntanRawIO`, :code:`OpenEphysBinaryIO`, :code:`SpikeGadgetsRawIO`, and :code:`SpikeGLXIO`.
+
+
+SpikeGLX improvements
+~~~~~~~~~~~~~~~~~~~~~~
+
+:code:`SpikeGLXIO` now uses a ProbeTable to infer the Neuropixels probe type, replacing hardcoded probe type detection. A GitHub Action was added to automatically keep the probe features table up-to-date from the upstream ProbeTable. Additionally, a missing ``firstSample`` field in SpikeGLX meta files now defaults to 0, and the stream-collision error message has been improved.
+
+
+Acknowledgements
+----------------
+
+Thanks to Alessio Buccino, Andrew Davison, Heberto Mayorquin, LizzyMcKay, Michael Denker, Reema Gupta, Sai Asish Yamani, and Zach McKenzie.
+
+.. _`pull requests` : https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+milestone%3A0.14.5
+
+.. _`list of closed issues` : https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue%20state%3Aclosed%20milestone%3A0.14.5
