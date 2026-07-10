@@ -211,15 +211,22 @@ class AxonRawIO(BaseRawWithBufferApiIO):
         signal_channels = []
         adc_nums = []
         for chan_index, chan_id in enumerate(channel_ids):
+            # Name fields are fixed-width and right-padded with spaces (v1) or already trimmed (v2).
+            # Strip the padding but keep interior spaces (e.g. "IN 1"); errors="replace" so an odd
+            # byte can never crash the read.
             if version < 2.0:
-                name = info["sADCChannelName"][chan_id].replace(b" ", b"")
+                name = info["sADCChannelName"][chan_id].decode("utf-8", errors="replace").strip()
                 units = safe_decode_units(info["sADCUnits"][chan_id])
                 adc_num = info["nADCPtoLChannelMap"][chan_id]
             elif version >= 2.0:
                 ADCInfo = info["listADCInfo"][chan_id]
-                name = ADCInfo["ADCChNames"].replace(b" ", b"")
+                name = ADCInfo["ADCChNames"].decode("utf-8", errors="replace").strip()
                 units = safe_decode_units(ADCInfo["ADCChUnits"])
                 adc_num = ADCInfo["nADCNum"]
+            if not name:
+                # A blank name leaves the channel unaddressable; fall back to a positional name so
+                # every channel keeps a usable id.
+                name = f"ch{chan_id}"
             adc_nums.append(adc_num)
 
             if info["nDataFormat"] == 0:

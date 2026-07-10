@@ -29,6 +29,25 @@ class TestAxonRawIO(
 
         reader.read_raw_protocol()
 
+    def test_empty_channel_name_gets_fallback(self):
+        # Some ABF files store a blank ADC channel name, which collapses to "" after space
+        # stripping and leaves the channel unaddressable by name. A positional fallback (ch{id})
+        # must be used instead so every channel keeps a usable name.
+        path = self.get_local_path("axon/intracellular_data/abf1_episodic_empty_channel_name.abf")
+        reader = AxonRawIO(filename=path)
+        reader.parse_header()
+        names = list(reader.header["signal_channels"]["name"])
+        self.assertNotIn("", names)
+        self.assertEqual(names, ["ch0"])
+
+    def test_channel_name_keeps_interior_space(self):
+        # Channel names are stripped of padding but keep interior spaces (e.g. "IN 1", not "IN1")
+        # and are returned as str.
+        reader = AxonRawIO(filename=self.get_local_path("axon/File_axon_7.abf"))
+        reader.parse_header()
+        names = list(reader.header["signal_channels"]["name"])
+        self.assertEqual(names, ["IN 1"])
+
     def test_v1_reads_real_acquisition_date(self):
         # ABF1 stores the calendar date in lFileStartDate (a YYYYMMDD-packed integer). Older neo
         # ignored that field and hardcoded 1900-01-01, so the recording date was always wrong for
