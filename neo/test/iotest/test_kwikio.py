@@ -3,12 +3,17 @@ Tests of neo.io.kwikio
 """
 
 import unittest
+import importlib.util
+import importlib.metadata
+from packaging.version import Version, parse
 
-try:
-    from klusta import kwik
-
+kwik_spec = importlib.util.find_spec("klusta")
+# kwik no longer works with recent versions of numpy
+numpy_version = parse(importlib.metadata.version("numpy"))
+numpy_okay = numpy_version < Version("2.3.0")
+if kwik_spec is not None and numpy_okay:
     HAVE_KWIK = True
-except ImportError:
+else:
     HAVE_KWIK = False
 
 from neo.io import kwikio

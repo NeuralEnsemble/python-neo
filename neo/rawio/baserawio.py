@@ -74,11 +74,11 @@ import logging
 import numpy as np
 import os
 import sys
+from typing import Literal
 
 from neo import logging_handler
 
 from .utils import get_memmap_chunk_from_opened_file
-
 
 possible_raw_modes = [
     "one-file",
@@ -94,7 +94,7 @@ _signal_buffer_dtype = [
 ]
 # To be left an empty array if the concept of buffer is undefined for a reader.
 _signal_stream_dtype = [
-    ("name", "U64"),  # not necessarily unique
+    ("name", "U128"),  # not necessarily unique
     ("id", "U64"),  # must be unique
     (
         "buffer_id",
@@ -238,6 +238,182 @@ class BaseRawIO:
                 txt += f"{k}: {v}\n"
 
         return txt
+
+    def _repr_html_(self):
+        """
+        HTML representation for the raw recording base.
+
+        Returns
+        -------
+        html : str
+            The HTML representation as a string.
+        """
+        html = []
+        html.append('<div style="font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto;">')
+
+        # Header
+        html.append(f'<h3 style="color: #2c3e50;">{self.__class__.__name__}: {self.source_name()}</h3>')
+
+        if self.is_header_parsed:
+            # Basic info
+            nb_block = self.block_count()
+            html.append(f"<p><strong>nb_block:</strong> {nb_block}</p>")
+            nb_seg = [self.segment_count(i) for i in range(nb_block)]
+            html.append(f"<p><strong>nb_segment:</strong> {nb_seg}</p>")
+
+            # CSS for tables - using only black, white, and gray colors
+            html.append("""
+            <style>
+                #{unique_id} table.neo-table {{
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin-bottom: 20px;
+                    font-size: 14px;
+                    color: inherit;
+                    background-color: transparent;
+                }}
+                #{unique_id} table.neo-table th,
+                #{unique_id} table.neo-table td {{
+                    border: 1px solid #888;
+                    padding: 8px;
+                    text-align: left;
+                }}
+                #{unique_id} table.neo-table th {{
+                    background-color: rgba(128,128,128,0.2);
+                }}
+                #{unique_id} table.neo-table tr:nth-child(even) {{
+                    background-color: rgba(128,128,128,0.1);
+                }}
+                #{unique_id} details {{
+                    margin-bottom: 15px;
+                    border: 1px solid rgba(128,128,128,0.3);
+                    border-radius: 4px;
+                    overflow: hidden;
+                    background-color: transparent;
+                }}
+                #{unique_id} summary {{
+                    padding: 10px;
+                    background-color: rgba(128,128,128,0.2);
+                    cursor: pointer;
+                    font-weight: bold;
+                    color: inherit;
+                }}
+                #{unique_id} details[open] summary {{
+                    border-bottom: 1px solid rgba(128,128,128,0.3);
+                }}
+                #{unique_id} .table-container {{
+                    padding: 10px;
+                    overflow-x: auto;
+                    background-color: transparent;
+                }}
+            </style>
+            """)
+
+            # Signal Streams
+            signal_streams = self.header["signal_streams"]
+            if signal_streams.size > 0:
+                html.append("<details>")
+                html.append("<summary>Signal Streams</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append("<thead><tr><th>Name</th><th>ID</th><th>Buffer ID</th><th>Channel Count</th></tr></thead>")
+                html.append("<tbody>")
+
+                for i, stream in enumerate(signal_streams):
+                    html.append("<tr>")
+                    html.append(f'<td>{stream["name"]}</td>')
+                    html.append(f'<td>{stream["id"]}</td>')
+                    html.append(f'<td>{stream["buffer_id"]}</td>')
+                    html.append(f"<td>{self.signal_channels_count(i)}</td>")
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+
+            # Signal Channels
+            signal_channels = self.header["signal_channels"]
+            if signal_channels.size > 0:
+                html.append("<details>")
+                html.append("<summary>Signal Channels</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append(
+                    "<thead><tr><th>Name</th><th>ID</th><th>Sampling Rate</th><th>Data Type</th><th>Units</th><th>Gain</th><th>Offset</th><th>Stream ID</th><th>Buffer ID</th></tr></thead>"
+                )
+                html.append("<tbody>")
+
+                for channel in signal_channels:
+                    html.append("<tr>")
+                    html.append(f'<td>{channel["name"]}</td>')
+                    html.append(f'<td>{channel["id"]}</td>')
+                    html.append(f'<td>{channel["sampling_rate"]}</td>')
+                    html.append(f'<td>{channel["dtype"]}</td>')
+                    html.append(f'<td>{channel["units"]}</td>')
+                    html.append(f'<td>{channel["gain"]}</td>')
+                    html.append(f'<td>{channel["offset"]}</td>')
+                    html.append(f'<td>{channel["stream_id"]}</td>')
+                    html.append(f'<td>{channel["buffer_id"]}</td>')
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+
+            # Spike Channels
+            spike_channels = self.header["spike_channels"]
+            if spike_channels.size > 0:
+                html.append("<details>")
+                html.append("<summary>Spike Channels</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append(
+                    "<thead><tr><th>Name</th><th>ID</th><th>WF Units</th><th>WF Gain</th><th>WF Offset</th><th>WF Left Sweep</th><th>WF Sampling Rate</th></tr></thead>"
+                )
+                html.append("<tbody>")
+
+                for channel in spike_channels:
+                    html.append("<tr>")
+                    html.append(f'<td>{channel["name"]}</td>')
+                    html.append(f'<td>{channel["id"]}</td>')
+                    html.append(f'<td>{channel["wf_units"]}</td>')
+                    html.append(f'<td>{channel["wf_gain"]}</td>')
+                    html.append(f'<td>{channel["wf_offset"]}</td>')
+                    html.append(f'<td>{channel["wf_left_sweep"]}</td>')
+                    html.append(f'<td>{channel["wf_sampling_rate"]}</td>')
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+
+            # Event Channels
+            event_channels = self.header["event_channels"]
+            if event_channels.size > 0:
+                html.append("<details>")
+                html.append("<summary>Event Channels</summary>")
+                html.append('<div class="table-container">')
+                html.append('<table class="neo-table">')
+                html.append("<thead><tr><th>Name</th><th>ID</th><th>Type</th></tr></thead>")
+                html.append("<tbody>")
+
+                for channel in event_channels:
+                    html.append("<tr>")
+                    html.append(f'<td>{channel["name"]}</td>')
+                    html.append(f'<td>{channel["id"]}</td>')
+                    html.append(
+                        f'<td>{channel["type"].decode("utf-8") if isinstance(channel["type"], bytes) else channel["type"]}</td>'
+                    )
+                    html.append("</tr>")
+
+                html.append("</tbody></table>")
+                html.append("</div>")
+                html.append("</details>")
+        else:
+            html.append("<p><em>Call <code>parse_header()</code> to load the reader data.</p>")
+
+        html.append("</div>")
+        return "\n".join(html)
 
     def _generate_minimal_annotations(self):
         """
@@ -1212,7 +1388,7 @@ class BaseRawIO:
         """
         return self._rescale_epoch_duration(raw_duration, dtype, event_channel_index)
 
-    def setup_cache(self, cache_path: "home" | "same_as_resource", **init_kargs):
+    def setup_cache(self, cache_path: Literal["home", "same_as_resource"], **init_kargs):
         try:
             import joblib
         except ImportError:
@@ -1269,6 +1445,8 @@ class BaseRawIO:
     def dump_cache(self):
         if not self.use_cache:
             raise ValueError("Can not use dump_cache if not using cache")
+        import joblib
+
         joblib.dump(self._cache, self.cache_filename)
 
     ##################
@@ -1399,7 +1577,9 @@ class BaseRawWithBufferApiIO(BaseRawIO):
     def _get_signal_size(self, block_index, seg_index, stream_index):
         buffer_id = self.header["signal_streams"][stream_index]["buffer_id"]
         buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
-        # some hdf5 revert teh buffer
+        # time_axis indicates which dimension is time:
+        # time_axis=0: shape is (time, channels)
+        # time_axis=1: shape is (channels, time)
         time_axis = buffer_desc.get("time_axis", 0)
         return buffer_desc["shape"][time_axis]
 
@@ -1420,34 +1600,72 @@ class BaseRawWithBufferApiIO(BaseRawIO):
 
         buffer_desc = self.get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
 
+        # Get time_axis to determine which dimension is time
+        time_axis = buffer_desc.get("time_axis", 0)
+
         i_start = i_start or 0
-        i_stop = i_stop or buffer_desc["shape"][0]
+        i_stop = i_stop or buffer_desc["shape"][time_axis]
 
         if buffer_desc["type"] == "raw":
 
-            # open files on demand and keep reference to opened file
-            if not hasattr(self, "_memmap_analogsignal_buffers"):
-                self._memmap_analogsignal_buffers = {}
-            if block_index not in self._memmap_analogsignal_buffers:
-                self._memmap_analogsignal_buffers[block_index] = {}
-            if seg_index not in self._memmap_analogsignal_buffers[block_index]:
-                self._memmap_analogsignal_buffers[block_index][seg_index] = {}
-            if buffer_id not in self._memmap_analogsignal_buffers[block_index][seg_index]:
-                fid = open(buffer_desc["file_path"], mode="rb")
-                self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id] = fid
+            if time_axis == 0:
+                # MULTIPLEXED: time_axis=0 means (time, channels) layout
+                # open files on demand and keep reference to opened file
+                if not hasattr(self, "_memmap_analogsignal_buffers"):
+                    self._memmap_analogsignal_buffers = {}
+                if block_index not in self._memmap_analogsignal_buffers:
+                    self._memmap_analogsignal_buffers[block_index] = {}
+                if seg_index not in self._memmap_analogsignal_buffers[block_index]:
+                    self._memmap_analogsignal_buffers[block_index][seg_index] = {}
+                if buffer_id not in self._memmap_analogsignal_buffers[block_index][seg_index]:
+                    fid = open(buffer_desc["file_path"], mode="rb")
+                    self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id] = fid
+                else:
+                    fid = self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id]
+
+                num_channels = buffer_desc["shape"][1]
+
+                raw_sigs = get_memmap_chunk_from_opened_file(
+                    fid,
+                    num_channels,
+                    i_start,
+                    i_stop,
+                    np.dtype(buffer_desc["dtype"]),
+                    file_offset=buffer_desc["file_offset"],
+                )
+
+            elif time_axis == 1:
+                # VECTORIZED: time_axis=1 means shape is (channels, time)
+                # Data is stored as [all_samples_ch1, all_samples_ch2, ...]
+                dtype = np.dtype(buffer_desc["dtype"])
+                num_channels = buffer_desc["shape"][0]  # shape is (channels, time)
+                num_samples = i_stop - i_start
+                total_samples_per_channel = buffer_desc["shape"][1]  # shape is (channels, time)
+
+                # Determine which channels to read
+                if channel_indexes is None:
+                    chan_indices = np.arange(num_channels)
+                else:
+                    chan_indices = np.asarray(channel_indexes)
+
+                raw_sigs = np.empty((num_samples, len(chan_indices)), dtype=dtype)
+
+                for i, chan_idx in enumerate(chan_indices):
+                    offset = buffer_desc["file_offset"] + chan_idx * total_samples_per_channel * dtype.itemsize
+                    channel_data = np.memmap(
+                        buffer_desc["file_path"],
+                        dtype=dtype,
+                        mode="r",
+                        offset=offset,
+                        shape=(total_samples_per_channel,),
+                    )
+                    raw_sigs[:, i] = channel_data[i_start:i_stop]
+
+                # Channel slicing already done above, so skip later channel_indexes slicing
+                channel_indexes = None
+
             else:
-                fid = self._memmap_analogsignal_buffers[block_index][seg_index][buffer_id]
-
-            num_channels = buffer_desc["shape"][1]
-
-            raw_sigs = get_memmap_chunk_from_opened_file(
-                fid,
-                num_channels,
-                i_start,
-                i_stop,
-                np.dtype(buffer_desc["dtype"]),
-                file_offset=buffer_desc["file_offset"],
-            )
+                raise ValueError(f"time_axis must be 0 or 1, got {time_axis}")
 
         elif buffer_desc["type"] == "hdf5":
 
@@ -1483,7 +1701,7 @@ class BaseRawWithBufferApiIO(BaseRawIO):
         else:
             raise NotImplementedError()
 
-        # this is a pre slicing when the stream do not contain all channels (for instance spikeglx when load_sync_channel=False)
+        # this is a pre slicing when the stream does not contain all channels in the buffer (for instance spikeglx -SYNC streams)
         if buffer_slice is not None:
             raw_sigs = raw_sigs[:, buffer_slice]
 

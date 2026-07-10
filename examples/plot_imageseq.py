@@ -14,7 +14,6 @@ import quantities as pq
 
 import random
 
-
 ############################################################
 # Now we need to generate some data
 # We will just make a nice box and then we can attach this

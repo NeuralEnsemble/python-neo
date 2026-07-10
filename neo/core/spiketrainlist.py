@@ -113,8 +113,11 @@ class SpikeTrainList(ObjectList):
         self._channel_id_array = None
         self._all_channel_ids = None
         self._spiketrain_metadata = {}
-        if parent is not None and parent.__class__.__name__ != "Segment":
-            raise AttributeError("The parent class must be a Segment")
+
+        from .segment import Segment  # import here rather than at the top to avoid circular import
+
+        if parent is not None and not isinstance(parent, Segment):
+            raise AttributeError("If provided, the parent class must be a Segment")
         self.segment = parent
 
     @property

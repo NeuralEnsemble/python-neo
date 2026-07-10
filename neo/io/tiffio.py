@@ -15,35 +15,53 @@ class TiffIO(BaseIO):
     """
     Neo IO module for optical imaging data stored as a folder of TIFF images.
 
-    *Usage*:
-        >>> from neo import io
-        >>> import quantities as pq
-        >>> r = io.TiffIO("dir_tiff",spatial_scale=1.0*pq.mm, units='V',
-        ...               sampling_rate=1.0*pq.Hz)
-        >>> block = r.read_block()
-        read block
-        creating segment
-        returning block
-        >>> block
-        Block with 1 segments
-        file_origin: 'test'
-        # segments (N=1)
-        0: Segment with 1 imagesequences
-            annotations: {'tiff_file_names': ['file_tif_1_.tiff',
-                'file_tif_2.tiff',
-                'file_tif_3.tiff',
-                'file_tif_4.tiff',
-                'file_tif_5.tiff',
-                'file_tif_6.tiff',
-                'file_tif_7.tiff',
-                'file_tif_8.tiff',
-                'file_tif_9.tiff',
-                'file_tif_10.tiff',
-                'file_tif_11.tiff',
-                'file_tif_12.tiff',
-                'file_tif_13.tiff',
-                'file_tif_14.tiff']}
-            # analogsignals (N=0)
+    Parameters
+    ----------
+    directory_path: Path | str | None, default: None
+        The path to the folder containing tiff images
+    units: Quantity units | None, default: None
+        the units for creating the ImageSequence
+    sampling_rate: Quantity Units | None, default: None
+        The sampling rate
+    spatial_scale: Quantity unit | None, default: None
+        The scale of the images
+    origin: Literal['top-left'| 'bottom-left'], default: 'top-left'
+        Whether to use the python default origin for images which is upper left corner ('top-left')
+        as orgin or to use a bottom left corner as orgin ('bottom-left')
+        Note that plotting functions like matplotlib.pyplot.imshow expect upper left corner.
+    **kwargs: dict
+        The standard neo annotation kwargs
+
+    Examples
+    --------
+    >>> from neo import io
+    >>> import quantities as pq
+    >>> r = io.TiffIO("dir_tiff",spatial_scale=1.0*pq.mm, units='V',
+    ...               sampling_rate=1.0*pq.Hz)
+    >>> block = r.read_block()
+    read block
+    creating segment
+    returning block
+    >>> block
+    Block with 1 segments
+    file_origin: 'test'
+    # segments (N=1)
+    0: Segment with 1 imagesequences
+        annotations: {'tiff_file_names': ['file_tif_1_.tiff',
+            'file_tif_2.tiff',
+            'file_tif_3.tiff',
+            'file_tif_4.tiff',
+            'file_tif_5.tiff',
+            'file_tif_6.tiff',
+            'file_tif_7.tiff',
+            'file_tif_8.tiff',
+            'file_tif_9.tiff',
+            'file_tif_10.tiff',
+            'file_tif_11.tiff',
+            'file_tif_12.tiff',
+            'file_tif_13.tiff',
+            'file_tif_14.tiff']}
+        # analogsignals (N=0)
     """
 
     name = "TIFF IO"
@@ -66,13 +84,30 @@ class TiffIO(BaseIO):
 
     mode = "dir"
 
-    def __init__(self, directory_path=None, units=None, sampling_rate=None, spatial_scale=None, **kwargs):
-        import PIL
+    def __init__(
+        self,
+        directory_path=None,
+        units=None,
+        sampling_rate=None,
+        spatial_scale=None,
+        origin="top-left",
+        **kwargs,
+    ):
+        # this block is because people might be confused about the PIL -> pillow change
+        # between python2 -> python3 (both with namespace PIL)
+        try:
+            import PIL
+        except ImportError:
+            raise ImportError("To use TiffIO you must first `pip install pillow`")
+
+        if origin != "top-left" and origin != "bottom-left":
+            raise ValueError("`origin` must be either `top-left` or `bottom-left`")
 
         BaseIO.__init__(self, directory_path, **kwargs)
         self.units = units
         self.sampling_rate = sampling_rate
         self.spatial_scale = spatial_scale
+        self.origin = origin
 
     def read_block(self, lazy=False, **kwargs):
         import PIL
@@ -98,6 +133,8 @@ class TiffIO(BaseIO):
         list_data_image = []
         for file_name in file_name_list:
             data = np.array(PIL.Image.open(self.filename + "/" + file_name)).astype(np.float32)
+            if self.origin == "bottom-left":
+                data = np.flip(data, axis=-2)
             list_data_image.append(data)
         list_data_image = np.array(list_data_image)
         if len(list_data_image.shape) == 4:
@@ -105,6 +142,8 @@ class TiffIO(BaseIO):
             for file_name in file_name_list:
                 image = PIL.Image.open(self.filename + "/" + file_name).convert("L")
                 data = np.array(image).astype(np.float32)
+                if self.origin == "bottom-left":
+                    data = np.flip(data, axis=-2)
                 list_data_image.append(data)
 
         print("read block")

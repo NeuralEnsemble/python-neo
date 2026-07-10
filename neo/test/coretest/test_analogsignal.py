@@ -545,15 +545,17 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
     def test__time_slice_deepcopy_data(self):
         result = self.signal1.time_slice(None, None)
 
-        # Change values of original array
+        # Take a copy of sliced array before any modifications
+        result_data = result.magnitude.copy()
+
+        # Change values of original array, sliced array should be unaffected (proves deep copy)
         self.signal1[2] = 7.3 * self.signal1.units
+        np.testing.assert_array_equal(result.magnitude, result_data)
 
-        np.testing.assert_raises(AssertionError, assert_array_equal, self.signal1, result)
-
-        # Change values of sliced array
+        # Take a copy of original array, then change values of sliced array, original array should be unaffected
+        signal1_data = self.signal1.magnitude.copy()
         result[3] = 9.5 * result.units
-
-        np.testing.assert_raises(AssertionError, assert_array_equal, self.signal1, result)
+        np.testing.assert_array_equal(self.signal1.magnitude, signal1_data)
 
     def test__slice_should_change_sampling_period(self):
         result1 = self.signal1[:2, 0]

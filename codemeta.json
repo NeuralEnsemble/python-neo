@@ -4,15 +4,15 @@
   "license": "https://spdx.org/licenses/BSD-3-Clause",
   "codeRepository": "https://github.com/NeuralEnsemble/python-neo",
   "contIntegration": "https://github.com/NeuralEnsemble/python-neo/actions",
-  "dateModified": "2025-01-20",
-  "downloadUrl": "https://files.pythonhosted.org/packages/3b/91/c3630d766b3b959f8e604d8d41580c78973ece5f1e070b13bd9755dba60b/neo-0.14.0.tar.gz",
+  "dateModified": "2026-06-25",
+  "downloadUrl": "https://files.pythonhosted.org/packages/f0/ee/168b94170399e21d68cba4efb79f532e81b2cb3ce747d642d95370da8882/neo-0.14.5.tar.gz",
   "issueTracker": "https://github.com/NeuralEnsemble/python-neo/issues",
   "name": "Neo",
-  "version": "0.14.0",
+  "version": "0.14.5",
   "identifier": "RRID:SCR_000634",
   "description": "Neo is a Python package for working with electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats, including Spike2, NeuroExplorer, AlphaOmega, Axon, Blackrock, Plexon, Tdt, and support for writing to a subset of these formats plus non-proprietary formats including HDF5.\n\nThe goal of Neo is to improve interoperability between Python tools for analyzing, visualizing and generating electrophysiology data by providing a common, shared object model. In order to be as lightweight a dependency as possible, Neo is deliberately limited to represention of data, with no functions for data analysis or visualization.\n\nNeo is used by a number of other software tools, including SpykeViewer (data analysis and visualization), Elephant (data analysis), the G-node suite (databasing), PyNN (simulations), tridesclous_ (spike sorting) and ephyviewer (data visualization).\n\nNeo implements a hierarchical data model well adapted to intracellular and extracellular electrophysiology and EEG data with support for multi-electrodes (for example tetrodes). Neo's data objects build on the quantities package, which in turn builds on NumPy by adding support for physical dimensions. Thus Neo objects behave just like normal NumPy arrays, but with additional metadata, checks for dimensional consistency and automatic unit conversion.",
   "applicationCategory": "neuroscience",
-  "releaseNotes": "https://neo.readthedocs.io/en/latest/releases/0.14.0.html",
+  "releaseNotes": "https://neo.readthedocs.io/en/latest/releases/0.14.5.html",
   "funding": "https://cordis.europa.eu/project/id/945539",
   "developmentStatus": "active",
   "referencePublication": "https://doi.org/10.3389/fninf.2014.00010",
@@ -23,7 +23,7 @@
   "programmingLanguage": ["Python"],
   "operatingSystem": ["Linux", "Windows", "macOS"],
   "softwareRequirements": [
-    "Python (version 3.9+)",
+    "Python (version 3.10+)",
     "see https://github.com/NeuralEnsemble/python-neo/blob/master/pyproject.toml"
   ],
   "relatedLink": ["https://neo.readthedocs.io", "https://neuralensemble.org/community"],
@@ -114,6 +114,17 @@
     { "@type": "Person", "givenName": "Anthony", "familyName": "Pinto"},
     { "@type": "Person", "givenName": "Chris", "familyName": "Heydrick"},
     {"@type": "Person", "givenName": "Nikhil", "familyName": "Chandra"},
-    {"@type": "Person", "givenName": "Luigi", "familyName": "Petrucco"}
+    {"@type": "Person", "givenName": "Luigi", "familyName": "Petrucco"},
+    {"@type": "Person", "givenName": "Tommaso", "familyName": "Lambresa"},
+    {"@type": "Person", "givenName": "Rémi", "familyName": "Proville"},
+    {"@type": "Person", "givenName": "Nina", "familyName": "Kudryashova"},
+    {"@type": "Person", "givenName": "Paul", "familyName": "Adkisson"},
+    {"@type": "Person", "givenName": "Akshaj", "familyName": "Verma"},
+    {"@type": "Person", "givenName": "Letizia", "familyName": "Signorelli"},
+    {"@type": "Person", "givenName": "Daniel", "familyName": "Parthier"},
+    {"@type": "Person", "givenName": "Kuntal", "familyName": "Kokate"},
+    { "@type": "Person", "givenName": "Reema", "familyName": "Gupta" },
+    { "@type": "Person", "givenName": "Sai Asish", "familyName": "Yamani" },
+    { "@type": "Person", "alternateName": "LizzyMcKay@github" }
   ]
 }

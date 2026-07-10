@@ -1,30 +1,21 @@
-name: NeoIoTest
+name: NeoPlexon2Test
 
 on:
-  workflow_call:
-    inputs:
-      os:
-        required: true
-        type: string
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 0" # weekly at noon UTC on Sundays
 
-concurrency:  # Cancel previous workflows on the same pull request
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   build-and-test:
-    name: Test on (${{ inputs.os }}) (${{ matrix.python-version}}) (${{ matrix.numpy-version }})
-    runs-on: ${{ inputs.os }}
+    name: Test on (${{ matrix.os }}) (${{ matrix.python-version}}) (${{ matrix.numpy-version }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
-        python-version: ['3.10', '3.14']
-        numpy-version: ['1.26', '2.3.3']
-        exclude:
-           - python-version: '3.10'
-             numpy-version: '2.3.3'
-           - python-version: '3.14'
-             numpy-version: '1.26'
+        os:  [ubuntu-latest]
+        python-version: ['3.9', '3.12']
+        numpy-version: ['1.26', '2.0']
     defaults:
       # by default run in bash mode (required for conda usage)
       run:
@@ -56,25 +47,6 @@ jobs:
         with:
           activate-environment: neo-test-env-${{ matrix.python-version }}
           python-version: "${{ matrix.python-version }}"
-      
-      # TEST NOT USING CACHE
-      #- name: Get current dependencies hash
-      #  id: dependencies
-      #  run: |
-      #    echo "hash=${{hashFiles('**/pyproject.toml', '**/environment_testing.yml')}}" >> $GITHUB_OUTPUT
-
-      #- uses: actions/cache/restore@v3
-        # the cache for python package is reset:
-        #   * every month
-        #   * when package dependencies change
-      #  id: cache-conda-env
-      #  with:
-      #    path: /usr/share/miniconda/envs/neo-test-env-${{ matrix.python-version }}
-      #    key: ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
-          # restore-keys match any key that starts with the restore-key
-       #   restore-keys: |
-       #     ${{ runner.os }}-conda-env-${{ steps.dependencies.outputs.hash }}-
-       #     ${{ runner.os }}-conda-env-
 
       - name: Install testing dependencies
         # testing environment is only created from yml if no cache was found
@@ -112,12 +84,13 @@ jobs:
           pip install --upgrade -e .
           pip install .[test]
 
-      # TEST NOT USING CACHE
-      #- name: Install neo without dependencies
-        # only installing neo version to test as dependencies should be in cached conda env already
-      #  if: steps.cache-conda-env.outputs.cache-hit == 'true'
-      #  run: |
-      #    pip install --no-dependencies -e .
+
+      - name: Install wine
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -qq
+          sudo apt-get install -yqq --allow-downgrades libc6:i386 libgcc-s1:i386 libstdc++6:i386 wine
 
       - name: Pip list
         run: |
@@ -130,6 +103,7 @@ jobs:
       - name: Test with pytest
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_local_plugin_path
+          PLEXON2_TEST: true
         run: |
           # only neo.rawio and neo.io
           pytest --cov=neo neo/test/rawiotest

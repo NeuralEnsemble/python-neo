@@ -7,7 +7,6 @@ import unittest
 from neo.io import MEArecIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
-
 try:
     import MEArec as mr
 

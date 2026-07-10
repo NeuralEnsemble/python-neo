@@ -27,6 +27,7 @@ Neo objects behave just like normal NumPy arrays, but with additional metadata,
 checks for dimensional consistency and automatic unit conversion.
 
 A project with similar aims but for neuroimaging file formats is `NiBabel`_.
+Neo is a `NumFocus Affiliated Project`_.
 
 Code status
 -----------
@@ -56,7 +57,7 @@ For installation instructions, see doc/source/install.rst
 
 To cite Neo in publications, see CITATION.txt
 
-:copyright: Copyright 2010-2025 by the Neo team, see doc/source/authors.rst.
+:copyright: Copyright 2010-2026 by the Neo team, see doc/source/authors.rst.
 :license: 3-Clause Revised BSD License, see LICENSE.txt for details.
 
 Funding
@@ -82,3 +83,4 @@ and by the European Union's Research and Innovation Program Horizon Europe Grant
 .. _`issue tracker`: https://github.c
 .. _tridesclous: https://github.com/tridesclous/tridesclous
 .. _ephyviewer: https://github.com/NeuralEnsemble/ephyviewer
+.. _`NumFocus Affiliated Project`: https://numfocus.org/sponsored-projects/affiliated-projects

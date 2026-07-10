@@ -13,11 +13,7 @@ If you want a model for developing a new IO start from exampleIO.
 
 from __future__ import annotations
 from pathlib import Path
-
-try:
-    from collections.abc import Sequence
-except ImportError:
-    from collections import Sequence
+from collections.abc import Sequence
 import logging
 
 from neo import logging_handler

@@ -5,7 +5,8 @@ Governance
 Neo is a community-developed project,
 we welcome contributions from anyone who is interested in the project.
 The project maintainers are the members of the `Neo maintainers team`_.
-All contributors agree to abide by the Code of Conduct, see the file `CODE_OF_CONDUCT.md`_.
+All contributors agree to abide by the `NumFocus Code of Conduct`_,
+see the file `CODE_OF_CONDUCT.md`_.
 
 Contributions
 =============
@@ -38,6 +39,7 @@ The current maintainers are:
 - Julia Sprenger (`@JuliaSprenger`_)
 - Michael Denker (`@mdenker`_)
 - Alessio Buccino (`@alejoe91`_)
+- Zach McKenzie (`@zm711`_)
 
 
 .. _`Neo maintainers team`: https://github.com/orgs/NeuralEnsemble/teams/neo-maintainers
@@ -47,3 +49,5 @@ The current maintainers are:
 .. _`@JuliaSprenger`: https://github.com/JuliaSprenger
 .. _`@mdenker`: https://github.com/mdenker
 .. _`@alejoe91`: https://github.com/alejoe91
+.. _`@zm711`: https://github.com/zm711
+.. _`NumFocus Code of Conduct`: https://numfocus.org/code-of-conduct

@@ -27,7 +27,6 @@ from neo.test.generate_datasets import random_segment, simple_block
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
 
-
 N_EXAMPLES = 5
 
 

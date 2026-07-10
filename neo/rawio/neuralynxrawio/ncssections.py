@@ -37,6 +37,20 @@ gaps from those introduced by a quirk of the hardware, recording software, or fi
 import math
 import numpy as np
 
+from enum import IntEnum, auto
+
+
+class AcqType(IntEnum):
+    PRE4 = auto()
+    BML = auto()
+    DIGITALLYNX = auto()
+    DIGITALLYNXSX = auto()
+    CHEETAH64 = auto()
+    RAWDATAFILE = auto()
+    CHEETAH560 = auto()
+    ATLAS = auto()
+    UNKNOWN = auto()
+
 
 class NcsSections:
     """
@@ -250,7 +264,7 @@ class NcsSectionsFactory:
         acqType = nlxHdr.type_of_recording()
         freq = nlxHdr["sampling_rate"]
 
-        if acqType == "PRE4":
+        if acqType == AcqType.PRE4:
             # Old Neuralynx style with truncated whole microseconds for actual sampling. This
             # restriction arose from the sampling being based on a master 1 MHz clock.
             microsPerSampUsed = math.floor(NcsSectionsFactory.get_micros_per_samp_for_freq(freq))
@@ -266,7 +280,13 @@ class NcsSectionsFactory:
             ncsSects.sampFreqUsed = sampFreqUsed
             ncsSects.microsPerSampUsed = microsPerSampUsed
 
-        elif acqType in ["DIGITALLYNX", "DIGITALLYNXSX", "CHEETAH64", "CHEETAH560", "RAWDATAFILE"]:
+        elif acqType in [
+            AcqType.DIGITALLYNX,
+            AcqType.DIGITALLYNXSX,
+            AcqType.CHEETAH64,
+            AcqType.CHEETAH560,
+            AcqType.RAWDATAFILE,
+        ]:
             # digital lynx style with fractional frequency and micros per samp determined from block times
             if gapTolerance is None:
                 if strict_gap_mode:
@@ -293,7 +313,7 @@ class NcsSectionsFactory:
             ncsSects.sampFreqUsed = sampFreqUsed
             ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(sampFreqUsed)
 
-        elif acqType == "BML" or acqType == "ATLAS":
+        elif acqType == AcqType.BML or acqType == AcqType.ATLAS:
             # BML & ATLAS style with fractional frequency and micros per samp
             if strict_gap_mode:
                 # this is the old behavior, maybe we could put 0.9 sample interval no ?

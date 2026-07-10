@@ -15,6 +15,7 @@ This is where user-specified attributes are set.
 * :meth:`__array_finalize__` is called for all new objects, including those
 created by slicing. This is where attributes are copied over from
 the old object.
+
 """
 
 import logging
@@ -523,10 +524,8 @@ class AnalogSignal(BaseSignal):
             j = i + int(np.rint(delta.simplified.magnitude))
 
         if (i < 0) or (j > len(self)):
-            raise ValueError(
-                "t_start, t_stop have to be within the analog \
-                              signal duration"
-            )
+            raise ValueError("t_start, t_stop have to be within the analog \
+                              signal duration")
 
         # Time slicing should create a deep copy of the object
         obj = deepcopy(self[i:j])

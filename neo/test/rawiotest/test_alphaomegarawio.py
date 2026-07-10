@@ -32,7 +32,6 @@ from neo.rawio.alphaomegarawio import AlphaOmegaRawIO
 
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
-
 logging.getLogger().setLevel(logging.INFO)
 
 

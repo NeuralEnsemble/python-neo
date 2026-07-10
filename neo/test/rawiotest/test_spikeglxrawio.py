@@ -4,7 +4,9 @@ Tests of neo.rawio.spikeglxrawio
 
 import unittest
 
-from neo.rawio.spikeglxrawio import SpikeGLXRawIO
+import pytest
+
+from neo.rawio.spikeglxrawio import SpikeGLXRawIO, _build_signals_info_dict
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 import numpy as np
 
@@ -41,7 +43,27 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-D",
         "spikeglx/multi_trigger_multi_gate/CatGT/CatGT-E",
         "spikeglx/multi_trigger_multi_gate/CatGT/Supercat-A",
+        # One Box"
+        "spikeglx/onebox/run_with_only_adc",
     ]
+
+    def test_loading_only_one_probe_in_multi_probe_scenario(self):
+        from pathlib import Path
+
+        local_path_multi_probe_path = Path(
+            self.get_local_path("spikeglx/multi_trigger_multi_gate/SpikeGLX/5-19-2022-CI0")
+        )
+        gate_folder_path = local_path_multi_probe_path / "5-19-2022-CI0_g0"
+        probe_folder_path = gate_folder_path / "5-19-2022-CI0_g0_imec1"
+
+        rawio = SpikeGLXRawIO(probe_folder_path)
+        rawio.parse_header()
+
+        expected_stream_names = ["imec1.ap", "imec1.lf", "imec1.ap-SYNC", "imec1.lf-SYNC"]
+        actual_stream_names = rawio.header["signal_streams"]["name"].tolist()
+        assert (
+            actual_stream_names == expected_stream_names
+        ), f"Expected {expected_stream_names}, but got {actual_stream_names}"
 
     def test_with_location(self):
         rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/Noise4Sam_g0"), load_channel_location=True)
@@ -53,46 +75,25 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         assert any(have_location)
 
     def test_sync(self):
-        rawio_with_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=True)
-        rawio_with_sync.parse_header()
-        stream_index = list(rawio_with_sync.header["signal_streams"]["name"]).index("imec0.ap")
+        # The sync trace is always split off into its own -SYNC stream; the parent
+        # AP stream has 384 channels (384 neural channels, SY0 excluded).
+        rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"))
+        rawio.parse_header()
+        stream_index = list(rawio.header["signal_streams"]["name"]).index("imec0.ap")
 
-        # AP stream has 385 channels
-        chunk = rawio_with_sync.get_analogsignal_chunk(
-            block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
-        )
-        assert chunk.shape[1] == 385
-
-        rawio_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"), load_sync_channel=False)
-        rawio_no_sync.parse_header()
-
-        # AP stream has 384 channels
-        chunk = rawio_no_sync.get_analogsignal_chunk(
+        chunk = rawio.get_analogsignal_chunk(
             block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
         )
         assert chunk.shape[1] == 384
 
-    def test_no_sync(self):
-        # requesting sync channel when there is none raises an error
-        with self.assertRaises(ValueError):
-            rawio_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_no_sync"), load_sync_channel=True)
-            rawio_no_sync.parse_header()
-
     def test_subset_with_sync(self):
-        rawio_sub = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_subset_with_sync"), load_sync_channel=True)
-        rawio_sub.parse_header()
-        stream_index = list(rawio_sub.header["signal_streams"]["name"]).index("imec0.ap")
+        # Channel-subset recording with SY: 121 saved channels total, 120 neural plus
+        # one SY that is split into the -SYNC stream, leaving 120 in the parent.
+        rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_subset_with_sync"))
+        rawio.parse_header()
+        stream_index = list(rawio.header["signal_streams"]["name"]).index("imec0.ap")
 
-        # AP stream has 121 channels
-        chunk = rawio_sub.get_analogsignal_chunk(
-            block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
-        )
-        assert chunk.shape[1] == 121
-
-        rawio_sub_no_sync = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_subset_with_sync"), load_sync_channel=False)
-        rawio_sub_no_sync.parse_header()
-        # AP stream has 120 channels
-        chunk = rawio_sub_no_sync.get_analogsignal_chunk(
+        chunk = rawio.get_analogsignal_chunk(
             block_index=0, seg_index=0, i_start=0, i_stop=100, stream_index=stream_index
         )
         assert chunk.shape[1] == 120
@@ -111,6 +112,15 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         on_diff = np.diff(on_ts_scaled)
         atol = 0.001
         assert np.allclose(on_diff, 1, atol=atol)
+
+    def test_sync_channel_as_separate_stream(self):
+        """Sync trace is always exposed as its own -SYNC stream."""
+        rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"))
+        rawio.parse_header()
+
+        stream_names = rawio.header["signal_streams"]["name"].tolist()
+        sync_streams = [name for name in stream_names if "SYNC" in name]
+        assert len(sync_streams) > 0, "No -SYNC stream found"
 
     def test_t_start_reading(self):
         """Test that t_start values are correctly read for all streams and segments."""
@@ -147,6 +157,30 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
                     atol=1e-9,
                     err_msg=f"Mismatch in t_start for stream '{stream_name}', segment {seg_index}",
                 )
+
+
+def test_build_signals_info_dict_collision_raises_value_error():
+    info_a = {"seg_index": 0, "stream_name": "imec0.ap", "meta_file": "/x/first.meta"}
+    info_b = {"seg_index": 0, "stream_name": "imec0.ap", "meta_file": "/x/second.meta"}
+
+    expected_message = (
+        "Two SpikeGLX file pairs resolve to the same stream 'imec0.ap' in segment 0:\n"
+        "  1) /x/first.meta\n"
+        "  2) /x/second.meta\n"
+        "This can happen if:\n"
+        "  - Files were renamed on disk. Stream names come from the 'fileName' field "
+        "inside the .meta, not the filename on disk.\n"
+        "  - Recordings from different sessions are in the same folder with the same "
+        "gate/trigger numbers.\n"
+        "  - Duplicate copies exist in subfolders (the reader scans recursively).\n"
+        "  - A third-party tool rewrote the .meta file with an incorrect 'fileName' "
+        "(for example, LF meta pointing to the AP binary)."
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        _build_signals_info_dict([info_a, info_b])
+
+    assert str(exc_info.value) == expected_message
 
 
 if __name__ == "__main__":

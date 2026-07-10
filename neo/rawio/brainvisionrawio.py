@@ -55,13 +55,19 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         marker_filename = self.filename.replace(bname, vhdr_header["Common Infos"]["MarkerFile"])
         binary_filename = self.filename.replace(bname, vhdr_header["Common Infos"]["DataFile"])
 
+        marker_filename = self._ensure_filename(marker_filename, "marker", "MarkerFile")
+        binary_filename = self._ensure_filename(binary_filename, "data", "DataFile")
+
         if vhdr_header["Common Infos"]["DataFormat"] != "BINARY":
             raise NeoReadWriteError(
                 f"Only `BINARY` format has been implemented. Current Data Format is {vhdr_header['Common Infos']['DataFormat']}"
             )
-        if vhdr_header["Common Infos"]["DataOrientation"] != "MULTIPLEXED":
+
+        # Store the data orientation for later use in reading
+        self._data_orientation = vhdr_header["Common Infos"]["DataOrientation"]
+        if self._data_orientation not in ("MULTIPLEXED", "VECTORIZED"):
             raise NeoReadWriteError(
-                f"Only `MULTIPLEXED` is implemented. Current Orientation is {vhdr_header['Common Infos']['DataOrientation']}"
+                f"Data orientation must be either `MULTIPLEXED` or `VECTORIZED`. Current Orientation is {self._data_orientation}"
             )
 
         nb_channel = int(vhdr_header["Common Infos"]["NumberOfChannels"])
@@ -84,7 +90,19 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         buffer_id = "0"
         self._buffer_descriptions = {0: {0: {}}}
         self._stream_buffer_slice = {}
-        shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
+
+        # time_axis indicates data layout: 0 for MULTIPLEXED (time, channels), 1 for VECTORIZED (channels, time)
+        time_axis = 0 if self._data_orientation == "MULTIPLEXED" else 1
+
+        # Get shape - always returns (num_samples, num_channels)
+        temp_shape = get_memmap_shape(binary_filename, sig_dtype, num_channels=nb_channel, offset=0)
+
+        # For consistency with HDF5 pattern: when time_axis=1, shape should be (channels, time)
+        if time_axis == 1:
+            shape = (temp_shape[1], temp_shape[0])  # (num_channels, num_samples)
+        else:
+            shape = temp_shape  # (num_samples, num_channels)
+
         self._buffer_descriptions[0][0][buffer_id] = {
             "type": "raw",
             "file_path": binary_filename,
@@ -92,6 +110,7 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
             "order": "C",
             "file_offset": 0,
             "shape": shape,
+            "time_axis": time_axis,
         }
         self._stream_buffer_slice[stream_id] = None
 
@@ -235,6 +254,51 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
 
     def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
+
+    def _ensure_filename(self, filename, kind, entry_name):
+        if not os.path.exists(filename):
+            # file not found, subsequent import stage would fail
+            ext = os.path.splitext(filename)[1]
+            # Check if we can fall back to a file with the same prefix as the .vhdr.
+            # This can happen when users rename their files but forget to edit the
+            # .vhdr file to fix the path reference to the binary and marker files,
+            # in which case import will fail. These files come in triples, like:
+            # myfile.vhdr, myfile.eeg and myfile.vmrk; this code will thus pick
+            # the next best alternative.
+            alt_name = self.filename.replace(".vhdr", ext)
+            if os.path.exists(alt_name):
+                self.logger.warning(
+                    f"The {kind} file {filename} was not found, but found a file whose "
+                    f"prefix matched the .vhdr ({os.path.basename(alt_name)}). Using "
+                    f"this file instead."
+                )
+                filename = alt_name
+            else:
+                # we neither found the file referenced in the .vhdr file nor a file of
+                # same name as header with the desired extension; most likely a file went
+                # missing or was renamed in an inconsistent fashion; generate a useful
+                # error message
+                header_dname = os.path.dirname(self.filename)
+                header_bname = os.path.basename(self.filename)
+                referenced_bname = os.path.basename(filename)
+                alt_bname = os.path.basename(alt_name)
+                if alt_bname != referenced_bname:
+                    # this is only needed when the two candidate file names differ
+                    detail = (
+                        f" is named either as per the {entry_name}={referenced_bname} " f"line in the .vhdr file, or"
+                    )
+                else:
+                    # we omit it if we can to make it less confusing
+                    detail = ""
+                self.logger.error(
+                    f"Did not find the {kind} file associated with .vhdr (header) "
+                    f"file {header_bname!r} in folder {header_dname!r}.\n  Please make "
+                    f"sure the file{detail} is named the same way as the .vhdr file, but "
+                    f"ending in {ext} (i.e. {alt_bname}).\n  The import will likely fail, "
+                    f"but if it goes through, you can ignore this message (the check "
+                    f"can misfire on networked file systems)."
+                )
+        return filename
 
 
 def read_brainvsion_soup(filename):
