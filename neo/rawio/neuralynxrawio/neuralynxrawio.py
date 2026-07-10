@@ -1019,6 +1019,7 @@ class NeuralynxRawIO(BaseRawIO):
         # Build dictionary of chan_uid to associated NcsSections, memmap and NlxHeaders. Only
         # construct new NcsSections when it is different from that for the preceding file.
         chanSectMap = dict()
+        chan_ncs_sections = None
         sig_length = []
         for ncs_filename in ncs_filenames:
 
