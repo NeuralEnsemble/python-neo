@@ -1834,7 +1834,7 @@ class BlackrockRawIO(BaseRawIO):
             for k, (data, ev_ids) in self.nev_data.items():
 
                 # Check all nonempty nsX segments
-                for i, seg in enumerate(nonempty_nsx_segments[:]):
+                for nonempty_segment_index, seg in enumerate(nonempty_nsx_segments[:]):
 
                     # Last timestamp in this nsX segment
                     # Not subtracting nsX offset from end because spike extraction might continue
@@ -1842,16 +1842,18 @@ class BlackrockRawIO(BaseRawIO):
                         seg["timestamp"] + seg["nb_data_points"] * self._nsx_basic_header[nsx_nb]["period"]
                     )
 
-                    mask_after_seg = (ev_ids == i) & (data["timestamp"] > end_of_current_nsx_seg + nsx_period)
+                    mask_after_seg = (ev_ids == nonempty_segment_index) & (
+                        data["timestamp"] > end_of_current_nsx_seg + nsx_period
+                    )
 
                     # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
                     # Spike should belong to segment before
-                    mask_outside = (ev_ids == i) & (
+                    mask_outside = (ev_ids == nonempty_segment_index) & (
                         data["timestamp"] < int(seg["timestamp"]) - int(nsx_offset) - int(nsx_period)
                     )
 
                     if len(data[mask_outside]) > 0:
-                        warnings.warn(f"Spikes outside any segment. Detected on segment #{i}")
+                        warnings.warn(f"Spikes outside any segment. Detected on segment #{nonempty_segment_index}")
                         ev_ids[mask_outside] -= 1
 
                     # If some nev data are outside of this nsX segment, increase their segment ids
@@ -1862,7 +1864,7 @@ class BlackrockRawIO(BaseRawIO):
                     # because a new one has been discovered
                     if len(data[mask_after_seg]) > 0:
                         # Warning if spikes are after last segment
-                        if i == len(nonempty_nsx_segments) - 1:
+                        if nonempty_segment_index == len(nonempty_nsx_segments) - 1:
                             # Get timestamp resolution from header (available for v2.2+)
                             timestamp_resolution = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
                             time_after_seg = (
@@ -1876,15 +1878,15 @@ class BlackrockRawIO(BaseRawIO):
                         # If reset and no segment detected in nev, then these segments cannot be
                         # distinguished in nev, which is a big problem
                         # XXX 96 is an arbitrary number based on observations in available files
-                        elif nonempty_nsx_segments[i + 1]["timestamp"] - nsx_offset <= 96:
+                        elif nonempty_nsx_segments[nonempty_segment_index + 1]["timestamp"] - nsx_offset <= 96:
                             # If not all definitely belong to the next segment,
                             # then it cannot be distinguished where some belong
-                            if len(data[ev_ids == i]) != len(data[mask_after_seg]):
+                            if len(data[ev_ids == nonempty_segment_index]) != len(data[mask_after_seg]):
                                 raise ValueError("Some segments in nsX cannot be detected in nev")
 
                         # Actual processing if no problem has occurred
                         nb_possible_nev_segments += 1
-                        ev_ids[ev_ids > i] += 1
+                        ev_ids[ev_ids > nonempty_segment_index] += 1
                         ev_ids[mask_after_seg] += 1
 
             # consistency check: same number of segments for nsx and nev data
