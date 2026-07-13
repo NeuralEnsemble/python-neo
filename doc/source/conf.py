@@ -15,7 +15,7 @@ import datetime
 import importlib.metadata
 from packaging.version import Version
 
-neo_release = importlib.metadata.version('neo')
+neo_release = importlib.metadata.version("neo")
 neo_version = ".".join((str(e) for e in Version(neo_release).release[:2]))
 
 AUTHORS = "Neo authors and contributors <neuralensemble@googlegroups.com>"
