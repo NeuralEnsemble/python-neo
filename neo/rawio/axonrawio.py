@@ -677,15 +677,18 @@ def _parse_abf_v1(f, header_description):
     header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
 
     # date and time
-    YY = 1900
-    MM = 1
-    DD = 1
-    seconds_per_day = 24 * 3600
-    # A "no date" file writes the 0xFFFFFFFF sentinel, which reads as a negative time; fall back to
-    # rec_datetime=None instead of crashing on the resulting out-of-range time-of-day.
-    if not (0 <= header["lFileStartTime"] < seconds_per_day):
+    # lFileStartDate is a YYYYMMDD-packed integer, parsed the same way as uFileStartDate in ABF2.
+    # A "no date" sentinel means there is no date to build, so fall back to rec_datetime=None. The
+    # field is signed, so the all-bits-set 0xFFFFFFFF sentinel is read as -1, and 0 is the unset
+    # value. Any other value is trusted and left to raise if genuinely out of range, so a real
+    # parsing error surfaces rather than being masked.
+    no_date_sentinels = (0, -1)
+    if header["lFileStartDate"] in no_date_sentinels:
         header["rec_datetime"] = None
     else:
+        YY = int(header["lFileStartDate"] / 10000)
+        MM = int((header["lFileStartDate"] - YY * 10000) / 100)
+        DD = int(header["lFileStartDate"] - YY * 10000 - MM * 100)
         hh = int(header["lFileStartTime"] / 3600.0)
         mm = int((header["lFileStartTime"] - hh * 3600) / 60)
         ss = header["lFileStartTime"] - hh * 3600 - mm * 60
@@ -1085,6 +1088,7 @@ headerDescriptionV1 = [
     ("lActualAcqLength", 10, "i"),
     ("nNumPointsIgnored", 14, "h"),
     ("lActualEpisodes", 16, "i"),
+    ("lFileStartDate", 20, "i"),
     ("lFileStartTime", 24, "i"),
     ("lDataSectionPtr", 40, "i"),
     ("lTagSectionPtr", 44, "i"),
