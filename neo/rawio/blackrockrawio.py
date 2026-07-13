@@ -1309,19 +1309,19 @@ class BlackrockRawIO(BaseRawIO):
         header_size = int(self._nsx_basic_header[nsx_nb]["bytes_in_headers"])
         channel_count = int(self._nsx_basic_header[nsx_nb]["channel_count"])
 
-        # Create structured memmap for verification only
         ptp_dt = NSX_DATA_HEADER_TYPES["3.0-ptp"](channel_count)
         ptp_dtype = np.dtype(ptp_dt)
         npackets = int((filesize - header_size) / ptp_dtype.itemsize)
-        temp_memmap = np.memmap(filename, dtype=ptp_dt, shape=npackets, offset=header_size, mode="r")
 
-        # Verify this is truly PTP (all packets should have 1 sample)
-        if not np.all(temp_memmap["num_data_points"] == 1):
+        # Verify this is truly PTP: the first packet should carry exactly one sample.
+        # PTP files are homogeneous (every packet holds a single sample), so the first
+        # packet is diagnostic for the whole file and we avoid mapping all of it.
+        fid = self._get_nsx_fid(nsx_nb)
+        fid.seek(header_size)
+        first_packet = np.frombuffer(fid.read(ptp_dtype.itemsize), dtype=ptp_dtype, count=1)[0]
+        if first_packet["num_data_points"] != 1:
             # Not actually PTP! Fall back to standard format
-            del temp_memmap
             return self._parse_nsx_data_v22_v30("3.0", nsx_nb)
-
-        del temp_memmap
 
         # Compute strided access parameters from the structured dtype
         packet_size = ptp_dtype.itemsize
