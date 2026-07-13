@@ -739,16 +739,16 @@ class BlackrockRawIO(BaseRawIO):
         nsx_nb = int(stream_id)
         seg = self._nsx_data_header[nsx_nb][seg_index]
         fid = self._get_nsx_fid(nsx_nb)
-        kw = seg["memmap_kwargs"]
+        memmap_kwargs = seg["memmap_kwargs"]
         channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
         data = self._create_mmap_view(
             fid=fid,
-            dtype=kw["dtype"],
-            offset=kw["offset"],
-            num_samples=kw["num_samples"],
-            num_channels=kw.get("num_channels", channels),
-            packet_size=kw.get("packet_size"),
-            item_offset=kw.get("item_offset", 0),
+            dtype=memmap_kwargs["dtype"],
+            offset=memmap_kwargs["offset"],
+            num_samples=memmap_kwargs["num_samples"],
+            num_channels=memmap_kwargs.get("num_channels", channels),
+            packet_size=memmap_kwargs.get("packet_size"),
+            item_offset=memmap_kwargs.get("item_offset", 0),
         )
         if channel_indexes is None:
             channel_indexes = slice(None)
