@@ -1172,7 +1172,7 @@ class BlackrockRawIO(BaseRawIO):
             List of parsed data block headers, one per block in the file:
             [
                 {
-                    "timestamps": scalar or None,
+                    "timestamp": scalar or None,
                         - Standard format: scalar (one timestamp per block)
                         - v2.1 format: None (no timestamps)
                     "memmap_kwargs": dict,
@@ -1209,7 +1209,7 @@ class BlackrockRawIO(BaseRawIO):
         Returns
         -------
         list[dict]
-            Single-element list: [{"timestamps": None, "memmap_kwargs": dict}]
+            Single-element list: [{"timestamp": None, "memmap_kwargs": dict}]
         """
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
@@ -1223,7 +1223,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return [
             {
-                "timestamps": None,
+                "timestamp": None,
                 "memmap_kwargs": {
                     "filename": filename,
                     "dtype": "int16",
@@ -1245,7 +1245,7 @@ class BlackrockRawIO(BaseRawIO):
         Returns
         -------
         list[dict]
-            [{"timestamps": scalar, "memmap_kwargs": dict}, ...]
+            [{"timestamp": scalar, "memmap_kwargs": dict}, ...]
         """
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
 
@@ -1272,7 +1272,7 @@ class BlackrockRawIO(BaseRawIO):
             timestamp = header["timestamp"]
 
             parsed_data_headers.append({
-                "timestamps": timestamp,
+                "timestamp": timestamp,
                 "memmap_kwargs": {
                     "filename": filename,
                     "dtype": "int16",
@@ -1299,7 +1299,7 @@ class BlackrockRawIO(BaseRawIO):
         Returns
         -------
         list[dict]
-            Single-element list: [{"timestamps": None, "memmap_kwargs": dict,
+            Single-element list: [{"timestamp": None, "memmap_kwargs": dict,
                                     "ptp_timestamps_memmap_kwargs": dict}]
         """
         filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
@@ -1330,7 +1330,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return [
             {
-                "timestamps": None,
+                "timestamp": None,
                 "memmap_kwargs": {
                     "filename": filename,
                     "dtype": "int16",
@@ -1408,7 +1408,7 @@ class BlackrockRawIO(BaseRawIO):
         ----------
         parsed_data_headers : list[dict]
             List from _parse_nsx_data():
-            [{"timestamps": scalar/None, "memmap_kwargs": dict, ...}, ...]
+            [{"timestamp": scalar/None, "memmap_kwargs": dict, ...}, ...]
         nsx_nb : int
             NSX file number
 
@@ -1433,7 +1433,7 @@ class BlackrockRawIO(BaseRawIO):
         if len(parsed_data_headers) > 1:
             for block_info in parsed_data_headers:
                 segments.append({
-                    "timestamp": block_info["timestamps"],  # Use singular for backward compatibility
+                    "timestamp": block_info["timestamp"],
                     "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
                     "header": 1,  # Standard format has headers
                     "offset_to_data_block": None,  # Not needed
@@ -1530,7 +1530,7 @@ class BlackrockRawIO(BaseRawIO):
             # V2.1 or single block standard format: no segmentation needed
             else:
                 segments.append({
-                    "timestamp": block_info["timestamps"],  # Use singular for backward compatibility
+                    "timestamp": block_info["timestamp"],
                     "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
                     "header": None,
                     "offset_to_data_block": None,
