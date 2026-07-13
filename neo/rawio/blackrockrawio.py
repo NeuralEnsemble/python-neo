@@ -2159,7 +2159,7 @@ class BlackrockRawIO(BaseRawIO):
 
             # Remap nev segment ids: shift down all ids above the removed segment
             if self._avail_files["nev"]:
-                for _key, (data, ev_ids) in self.nev_data.items():
+                for _data, ev_ids in self.nev_data.values():
                     ev_ids[ev_ids > seg_index] -= 1
 
             self._nb_segment -= 1
