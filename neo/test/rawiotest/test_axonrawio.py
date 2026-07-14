@@ -30,6 +30,29 @@ class TestAxonRawIO(
 
         reader.read_raw_protocol()
 
+    def test_integer_overflow_size_raises(self):
+        # An ABF header that claims more samples than the file can hold must raise a
+        # clear error instead of silently returning an overflowed signal size.
+        path = self.get_local_path("axon/intracellular_data/files_with_errors/integer_overflow_size.abf")
+        expected_error = (
+            "ABF header implies 3221225472 samples ending at byte 6442457600, which exceeds the "
+            f"file size of 8704 bytes for {path}; the file header is corrupt or the file is truncated."
+        )
+        reader = AxonRawIO(filename=path)
+        with self.assertRaises(NeoReadWriteError) as cm:
+            reader.parse_header()
+        self.assertEqual(str(cm.exception), expected_error)
+
+    def test_negative_segment_size_raises(self):
+        # An ABF header with a negative segment size must raise a clear error
+        # instead of silently returning a negative signal size.
+        path = self.get_local_path("axon/intracellular_data/files_with_errors/negative_synch_length.abf")
+        expected_error = f"Negative segment size (-1041598657) parsed from {path}; the file header is corrupt."
+        reader = AxonRawIO(filename=path)
+        with self.assertRaises(NeoReadWriteError) as cm:
+            reader.parse_header()
+        self.assertEqual(str(cm.exception), expected_error)
+
     def test_unparseable_file_raises(self):
         # A file whose header does not start with a valid ABF signature must raise a clear error
         # rather than a cryptic NoneType error deep in parsing. The fixture has a zeroed signature.
