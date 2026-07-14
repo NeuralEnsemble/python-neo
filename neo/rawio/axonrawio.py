@@ -724,15 +724,19 @@ def _parse_abf_v1(f, header_description):
         #   - older files use YYMMDD   (2-digit year), e.g.   180618 -> 2018-06-18
         # Detect the old form from the value rather than the version number (whose exact cutoff we
         # cannot pin down): a real 4-digit year is >= 1000, so a year field below 100 is a 2-digit
-        # year. We assume such years are in the 2000s, as no ABF recording predates 2000.
+        # year. The century is then ambiguous, so we disambiguate with the one hard invariant we
+        # have: a recording cannot be in the future. Map the 2-digit year to the 2000s, and fall
+        # back to the 1900s only if that lands past the current year.
         date_as_integer = header["lFileStartDate"]
         # The digits are laid out as [year][MM][DD], so month and day occupy the low four decimal
         # places: dividing by 10_000 discards MMDD and leaves the year.
         year = date_as_integer // 10_000
         year_is_two_digit = year < 100
         if year_is_two_digit:
-            date_as_integer += 2000 * 10_000  # shift a 2-digit year into the 2000s: 180618 -> 20180618
-            year = date_as_integer // 10_000
+            year += 2000
+            if year > datetime.datetime.now().year:
+                year -= 100  # e.g. 98 -> 1998 rather than a not-yet-happened 2098
+            date_as_integer = year * 10_000 + date_as_integer % 10_000
         month = (date_as_integer // 100) % 100  # drop the two DD digits, keep the two MM digits
         day = date_as_integer % 100  # the last two digits
         hh = int(header["lFileStartTime"] / 3600.0)
