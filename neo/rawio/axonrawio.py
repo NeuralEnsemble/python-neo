@@ -46,6 +46,7 @@ reads abf files - would be good to cross-check
 
 """
 
+import os
 import struct
 import datetime
 from io import open, BufferedReader
@@ -160,9 +161,17 @@ class AxonRawIO(BaseRawWithBufferApiIO):
         self._t_starts = {}
         self._buffer_descriptions = {0: {}}
         self._stream_buffer_slice = {stream_id: None}
+        # Offsets and segment sizes come from header fields that can be corrupt
+        # (truncated file, header surgery). Do the arithmetic in Python ints so it
+        # cannot silently overflow as numpy int32 would, and validate the implied
+        # data extent against the file on disk so a bad header raises a clear error
+        # rather than returning garbage or negative signal sizes.
+        head_offset = int(head_offset)
+        file_size = os.path.getsize(self.filename)
+
         pos = 0
         for seg_index in range(nb_segment):
-            length = episode_array[seg_index]["len"]
+            length = int(episode_array[seg_index]["len"])
 
             if version < 2.0:
                 fSynchTimeUnit = info["fSynchTimeUnit"]
@@ -171,6 +180,11 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
             if (fSynchTimeUnit != 0) and (mode == 1):
                 length /= fSynchTimeUnit
+
+            if length < 0:
+                raise NeoReadWriteError(
+                    f"Negative segment size ({length}) parsed from {self.filename}; the file header is corrupt."
+                )
 
             self._buffer_descriptions[0][seg_index] = {}
             self._buffer_descriptions[0][seg_index][buffer_id] = {
@@ -190,11 +204,30 @@ class AxonRawIO(BaseRawWithBufferApiIO):
                 t_start = t_start * fSynchTimeUnit * 1e-6
             self._t_starts[seg_index] = t_start
 
-        # Create channel header
+        implied_data_end = head_offset + pos * sig_dtype.itemsize
+        if implied_data_end > file_size:
+            raise NeoReadWriteError(
+                f"ABF header implies {pos} samples ending at byte {implied_data_end}, which exceeds the "
+                f"file size of {file_size} bytes for {self.filename}; the file header is corrupt or the file is truncated."
+            )
+
+        # Create channel header. By default assume channels 0..nbchannel-1 were sampled in order,
+        # which is always the case for version >= 2.0. For version < 2.0 the channel ids come from
+        # nADCSamplingSeq (the ADC sampling sequence) and are also used to index the per-channel
+        # metadata (name, units, gain). Some re-saved exports corrupt this sequence so every entry
+        # is the same value, which produces non-unique ids and makes every channel read channel 0's
+        # metadata; in that case we keep the sequential default instead.
+        channel_ids = list(range(nbchannel))
         if version < 2.0:
-            channel_ids = [chan_num for chan_num in info["nADCSamplingSeq"] if chan_num >= 0]
-        else:
-            channel_ids = list(range(nbchannel))
+            sampling_sequence_ids = [chan_num for chan_num in info["nADCSamplingSeq"] if chan_num >= 0]
+            non_unique_ids = len(set(sampling_sequence_ids)) != len(sampling_sequence_ids)
+            if non_unique_ids:
+                self.logger.warning(
+                    "nADCSamplingSeq has non-unique channel ids; assuming channels were sampled "
+                    "in order and using sequential ids instead."
+                )
+            else:
+                channel_ids = sampling_sequence_ids
 
         signal_channels = []
         adc_nums = []
@@ -478,8 +511,13 @@ def parse_axon_soup(filename):
 
     Returns
     -------
-    dict or None
-        Header dictionary with file metadata, or None if file signature is invalid
+    dict
+        Header dictionary with file metadata.
+
+    Raises
+    ------
+    NeoReadWriteError
+        If the file does not start with a valid ABF signature (b"ABF " or b"ABF2").
     """
     with open(filename, "rb") as fid:
         f = StructFile(fid)
@@ -490,7 +528,14 @@ def parse_axon_soup(filename):
         elif signature == b"ABF2":
             return _parse_abf_v2(f, headerDescriptionV2)
         else:
-            return None
+            # The first 4 bytes are the ABF magic; anything else means the file is not an ABF
+            # file, is corrupt, or is an unsupported variant. Raise here rather than returning
+            # None so the caller gets a clear error instead of a downstream NoneType access.
+            raise NeoReadWriteError(
+                f"Could not parse {filename} as an ABF file: expected the header to start with "
+                f"signature b'ABF ' or b'ABF2', but found {signature}. The file is not an ABF "
+                f"file, is corrupt, or is an unsupported variant."
+            )
 
 
 def _parse_abf_v1(f, header_description):
@@ -665,15 +710,24 @@ def _parse_abf_v1(f, header_description):
     header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
 
     # date and time
-    YY = 1900
-    MM = 1
-    DD = 1
-    hh = int(header["lFileStartTime"] / 3600.0)
-    mm = int((header["lFileStartTime"] - hh * 3600) / 60)
-    ss = header["lFileStartTime"] - hh * 3600 - mm * 60
-    ms = int(np.mod(ss, 1) * 1e6)
-    ss = int(ss)
-    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    # lFileStartDate is a YYYYMMDD-packed integer, parsed the same way as uFileStartDate in ABF2.
+    # A "no date" sentinel means there is no date to build, so fall back to rec_datetime=None. The
+    # field is signed, so the all-bits-set 0xFFFFFFFF sentinel is read as -1, and 0 is the unset
+    # value. Any other value is trusted and left to raise if genuinely out of range, so a real
+    # parsing error surfaces rather than being masked.
+    no_date_sentinels = (0, -1)
+    if header["lFileStartDate"] in no_date_sentinels:
+        header["rec_datetime"] = None
+    else:
+        YY = int(header["lFileStartDate"] / 10000)
+        MM = int((header["lFileStartDate"] - YY * 10000) / 100)
+        DD = int(header["lFileStartDate"] - YY * 10000 - MM * 100)
+        hh = int(header["lFileStartTime"] / 3600.0)
+        mm = int((header["lFileStartTime"] - hh * 3600) / 60)
+        ss = header["lFileStartTime"] - hh * 3600 - mm * 60
+        ms = int(np.mod(ss, 1) * 1e6)
+        ss = int(ss)
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
     return header
 
@@ -1017,15 +1071,22 @@ def _parse_abf_v2(f, header_description):
         header["EpochInfo"].append(EpochInfo)
 
     # date and time
-    YY = int(header["uFileStartDate"] / 10000)
-    MM = int((header["uFileStartDate"] - YY * 10000) / 100)
-    DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
-    hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
-    mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
-    ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
-    ms = int(np.mod(ss, 1) * 1e6)
-    ss = int(ss)
-    header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+    # A "no date" sentinel (0 = unset, 0xFFFFFFFF = all bits set) has no valid date to build, so
+    # fall back to rec_datetime=None. Any other value is trusted and left to raise if genuinely out
+    # of range, so a real parsing error surfaces rather than being masked.
+    no_date_sentinels = (0, 0xFFFFFFFF)
+    if header["uFileStartDate"] in no_date_sentinels:
+        header["rec_datetime"] = None
+    else:
+        YY = int(header["uFileStartDate"] / 10000)
+        MM = int((header["uFileStartDate"] - YY * 10000) / 100)
+        DD = int(header["uFileStartDate"] - YY * 10000 - MM * 100)
+        hh = int(header["uFileStartTimeMS"] / 1000.0 / 3600.0)
+        mm = int((header["uFileStartTimeMS"] / 1000.0 - hh * 3600) / 60)
+        ss = header["uFileStartTimeMS"] / 1000.0 - hh * 3600 - mm * 60
+        ms = int(np.mod(ss, 1) * 1e6)
+        ss = int(ss)
+        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
 
     return header
 
@@ -1060,6 +1121,7 @@ headerDescriptionV1 = [
     ("lActualAcqLength", 10, "i"),
     ("nNumPointsIgnored", 14, "h"),
     ("lActualEpisodes", 16, "i"),
+    ("lFileStartDate", 20, "i"),
     ("lFileStartTime", 24, "i"),
     ("lDataSectionPtr", 40, "i"),
     ("lTagSectionPtr", 44, "i"),
