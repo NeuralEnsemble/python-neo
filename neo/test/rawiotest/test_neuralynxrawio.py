@@ -318,6 +318,16 @@ class TestNeuralynxRawIO(
         rawio.parse_header()
         self.assertEqual(rawio._nb_segment, 2)
 
+    def test_strict_gap_mode_false_legacy_behavior(self):
+        """The deprecated strict_gap_mode=False (lenient) path still loads, warns, and segments."""
+        with self.assertWarns(DeprecationWarning):
+            rawio = NeuralynxRawIO(
+                self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"),
+                strict_gap_mode=False,
+            )
+        rawio.parse_header()
+        self.assertEqual(rawio._nb_segment, 2)
+
     def test_get_neuralynx_timestamps(self):
         """Test that _get_neuralynx_timestamps returns record timestamps."""
         rawio = NeuralynxRawIO(

@@ -304,16 +304,21 @@ class NcsSectionsFactory:
         acqType = nlxHdr.type_of_recording()
         freq = nlxHdr["sampling_rate"]
 
+        # Deprecation shim for strict_gap_mode (the boolean predecessor of gap_tolerance_us).
+        # strict_gap_mode True/None already match the modern per-type defaults below; only
+        # strict_gap_mode=False differed, tolerating a quarter-packet gap (PRE4 was 0 either way).
+        # Translating that single case here keeps the per-type branches on gap_tolerance_us only.
+        # Remove this block when strict_gap_mode is dropped in v0.16.
+        if gap_tolerance_us is None and strict_gap_mode is not None and not strict_gap_mode and acqType != AcqType.PRE4:
+            gap_tolerance_us = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
+
         if acqType == AcqType.PRE4:
             # Old Neuralynx style with truncated whole microseconds for actual sampling. This
             # restriction arose from the sampling being based on a master 1 MHz clock.
             microsPerSampUsed = math.floor(NcsSectionsFactory.get_micros_per_samp_for_freq(freq))
             sampFreqUsed = NcsSectionsFactory.get_freq_for_micros_per_samp(microsPerSampUsed)
             if gap_tolerance_us is None:
-                if strict_gap_mode is not None and not strict_gap_mode:
-                    gap_tolerance_us = 0
-                else:
-                    gap_tolerance_us = 0
+                gap_tolerance_us = 0
 
             ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, sampFreqUsed, gapTolerance=gap_tolerance_us)
             ncsSects.sampFreqUsed = sampFreqUsed
@@ -328,12 +333,8 @@ class NcsSectionsFactory:
         ]:
             # digital lynx style with fractional frequency and micros per samp determined from block times
             if gap_tolerance_us is None:
-                if strict_gap_mode is not None and not strict_gap_mode:
-                    # quarter of packet size is tolerated
-                    gap_tolerance_us = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
-                else:
-                    # default: strict detection (0.2 of a sample interval)
-                    gap_tolerance_us = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / freq)
+                # default: strict detection (0.2 of a sample interval)
+                gap_tolerance_us = round(NcsSectionsFactory._maxGapSampFrac * 1e6 / freq)
             ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gap_tolerance_us)
 
             # take longer data block to compute real sampling rate
@@ -354,11 +355,7 @@ class NcsSectionsFactory:
         elif acqType == AcqType.BML or acqType == AcqType.ATLAS:
             # BML & ATLAS style with fractional frequency and micros per samp
             if gap_tolerance_us is None:
-                if strict_gap_mode is not None and not strict_gap_mode:
-                    # quarter of packet size is tolerated
-                    gap_tolerance_us = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
-                else:
-                    gap_tolerance_us = 0
+                gap_tolerance_us = 0
             ncsSects = NcsSectionsFactory._buildNcsSections(ncsMemMap, freq, gapTolerance=gap_tolerance_us)
             ncsSects.sampFreqUsed = freq
             ncsSects.microsPerSampUsed = NcsSectionsFactory.get_micros_per_samp_for_freq(freq)
