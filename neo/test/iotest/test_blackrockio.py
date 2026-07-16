@@ -343,7 +343,9 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # And another one because there are spikes between segments
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            reader = BlackrockIO(filename=filename, nsx_to_load=2, nev_override=filename_nev_outside_seg, gap_tolerance_ms=0)
+            reader = BlackrockIO(
+                filename=filename, nsx_to_load=2, nev_override=filename_nev_outside_seg, gap_tolerance_ms=0
+            )
             self.assertGreaterEqual(len(w), 2)
 
             # Check that warnings are correct
