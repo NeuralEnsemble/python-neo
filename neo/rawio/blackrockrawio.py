@@ -1418,40 +1418,48 @@ class BlackrockRawIO(BaseRawIO):
             }
         ]
 
-    def _format_gap_report(self, gap_indices, timestamps_in_seconds, time_differences, nsx_nb):
+    def _format_gap_report(
+        self, gap_sample_indices, gap_positions_seconds, gap_durations_ms, stream_label, detection_threshold_ms
+    ):
         """
         Format a detailed gap report showing where timestamp discontinuities occur.
 
+        This renders a report and nothing else: every quantity is passed in already
+        resolved, so it makes no assumption about how a format stores its timing. A
+        reader whose file carries one timestamp per sample and a reader whose file
+        carries one per block describe their gaps in the same sample-level terms, and
+        each works out those terms whichever way suits its own storage. That keeps the
+        report usable across readers as the gap API spreads to other formats (see
+        python-neo issue #1773).
+
         Parameters
         ----------
-        gap_indices : np.ndarray
-            Indices where gaps were detected
-        timestamps_in_seconds : np.ndarray
-            All timestamps converted to seconds
-        time_differences : np.ndarray
-            Time differences between consecutive timestamps
-        nsx_nb : int
-            NSX file number for the report
+        gap_sample_indices : np.ndarray
+            Index of the last sample before each gap.
+        gap_positions_seconds : np.ndarray
+            Time of that sample, in seconds since the start of the recording.
+        gap_durations_ms : np.ndarray
+            Length of each gap in milliseconds. Negative when the clock jumped backwards.
+        stream_label : str
+            Name of the stream the gaps were found in, e.g. "ns2".
+        detection_threshold_ms : float
+            Threshold that was used to detect the gaps, in milliseconds.
 
         Returns
         -------
         str
             Formatted gap report with table
         """
-        # Calculate gap details
-        gap_durations_seconds = time_differences[gap_indices]
-        gap_durations_ms = gap_durations_seconds * 1000
-        gap_positions_seconds = timestamps_in_seconds[gap_indices] - timestamps_in_seconds[0]
-
         # Build gap detail table
         gap_detail_lines = [
             f"| {index:>15,} | {pos:>21.6f} | {dur:>21.3f} |\n"
-            for index, pos, dur in zip(gap_indices, gap_positions_seconds, gap_durations_ms)
+            for index, pos, dur in zip(gap_sample_indices, gap_positions_seconds, gap_durations_ms)
         ]
 
         return (
-            f"Gap Report for ns{nsx_nb}:\n"
-            f"Found {len(gap_indices)} timestamp gaps (detection threshold: 2 x sampling period)\n\n"
+            f"Gap Report for {stream_label}:\n"
+            f"Found {len(gap_sample_indices)} timestamp gaps "
+            f"(detection threshold: {detection_threshold_ms:.6g} ms)\n\n"
             "Gap Details:\n"
             "+-----------------+-----------------------+-----------------------+\n"
             "| Sample Index    | Sample at (Seconds)   | Gap Size (ms)         |\n"
@@ -1506,13 +1514,17 @@ class BlackrockRawIO(BaseRawIO):
         else:
             return self._segment_nsx_v22_v30(parsed_data_headers, nsx_nb)
 
-    def _classify_gaps(self, time_differences, sampling_rate, nsx_nb, timestamps_in_seconds):
+    def _classify_gaps(self, time_differences, sampling_rate, nsx_nb, sample_indices, sample_positions_seconds):
         """
         Classify timestamp discontinuities into segment boundaries.
 
-        Shared by the standard and PTP segmenters. Both hand over the same quantity:
-        the interval between the timestamps of two consecutive samples, which is one
-        sampling period when the data is contiguous.
+        Shared by the standard and PTP segmenters. Both hand over the interval between
+        the timestamps of two consecutive samples, which is one sampling period when the
+        data is contiguous, along with a sample-level description of where each interval
+        sits. The PTP path reads those descriptions from the per-sample timestamps in the
+        file; the standard path works them out from its block timestamps, since within a
+        block the timing is uniform by definition. Either way the gaps are detected, and
+        reported, in the same terms.
 
         Two kinds of discontinuity are treated differently:
 
@@ -1532,14 +1544,17 @@ class BlackrockRawIO(BaseRawIO):
             Sampling rate in Hz.
         nsx_nb : int
             NSX file number (for error reporting).
-        timestamps_in_seconds : np.ndarray
-            Timestamps in seconds, used to report where each gap falls.
+        sample_indices : np.ndarray
+            For each interval, the index of the sample that precedes it.
+        sample_positions_seconds : np.ndarray
+            For each interval, the time of that sample in seconds since the start of the
+            recording.
 
         Returns
         -------
         np.ndarray
             Indices into time_differences at which a segment boundary falls; a boundary
-            at index i means a new segment starts at sample i + 1.
+            at index i means a new segment starts at i + 1.
         """
         # Detection threshold: use strict 2x sampling period to find ALL gaps
         detection_threshold = 2.0 / sampling_rate
@@ -1551,10 +1566,15 @@ class BlackrockRawIO(BaseRawIO):
         if len(gap_indices) == 0:
             return gap_indices
 
-        gap_report = self._format_gap_report(gap_indices, timestamps_in_seconds, time_differences, nsx_nb)
-
         # Error by default - user must opt-in to segmentation
         if self.gap_tolerance_ms is None:
+            gap_report = self._format_gap_report(
+                gap_sample_indices=sample_indices[gap_indices],
+                gap_positions_seconds=sample_positions_seconds[gap_indices],
+                gap_durations_ms=time_differences[gap_indices] * 1000,
+                stream_label=f"ns{nsx_nb}",
+                detection_threshold_ms=detection_threshold * 1000,
+            )
             raise ValueError(
                 f"Detected {len(gap_indices)} timestamp gaps in ns{nsx_nb} file.\n"
                 f"{gap_report}\n"
@@ -1608,7 +1628,18 @@ class BlackrockRawIO(BaseRawIO):
             # the per-block equivalent of np.diff() over the PTP per-sample timestamps.
             block_last_sample_times = block_t_starts + (block_sizes - 1) / sampling_rate
             inter_block_intervals = block_t_starts[1:] - block_last_sample_times[:-1]
-            boundary_indices = self._classify_gaps(inter_block_intervals, sampling_rate, nsx_nb, block_t_starts)
+
+            # Describe each candidate boundary by the sample before it, the same way the
+            # PTP path does. Within a block the timing is uniform by definition, so the
+            # last sample of block i is sample cumsum(sizes)[i] - 1 and its time follows
+            # from the block's own timestamp. Working these out from the block scalars
+            # gives exactly what per-sample timestamps would say, without building them.
+            last_sample_indices = np.cumsum(block_sizes)[:-1] - 1
+            last_sample_positions = block_last_sample_times[:-1] - block_t_starts[0]
+
+            boundary_indices = self._classify_gaps(
+                inter_block_intervals, sampling_rate, nsx_nb, last_sample_indices, last_sample_positions
+            )
         else:
             boundary_indices = np.array([], dtype=np.intp)
 
@@ -1657,7 +1688,15 @@ class BlackrockRawIO(BaseRawIO):
         del timestamps  # release the mmap buffer; timestamps_in_seconds is an independent copy
 
         time_differences = np.diff(timestamps_in_seconds)
-        boundary_indices = self._classify_gaps(time_differences, sampling_rate, nsx_nb, timestamps_in_seconds)
+
+        # Every sample carries its own timestamp, so the sample before each interval and
+        # its time are read straight off the array
+        last_sample_indices = np.arange(len(time_differences))
+        last_sample_positions = timestamps_in_seconds[:-1] - timestamps_in_seconds[0]
+
+        boundary_indices = self._classify_gaps(
+            time_differences, sampling_rate, nsx_nb, last_sample_indices, last_sample_positions
+        )
 
         num_total_samples = ts_kw["num_samples"]
         segment_starts = np.hstack((0, boundary_indices + 1)).astype(np.intp)

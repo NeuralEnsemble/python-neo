@@ -415,6 +415,25 @@ class TestBlackrockRawIO(
         stream_index = 0
         self.assertEqual(reader_merged.get_signal_size(0, 0, stream_index), 8000)  # 4000 + 4000
 
+    def test_gap_report_locates_gap_in_sample_terms(self):
+        """
+        The gap report must locate gaps by sample, whatever the file stores.
+
+        A standard-format file has one timestamp per block rather than one per sample, but
+        the report describes gaps the same way the PTP report does. In pause_correct the
+        first block holds 4000 samples at 1 kHz, so the gap follows sample 3999 at 3.999 s
+        rather than sitting at the start of the recording.
+        """
+        dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
+        with self.assertRaises(ValueError) as context:
+            reader = BlackrockRawIO(filename=dirname, nsx_to_load=2)
+            reader.parse_header()
+
+        report = str(context.exception)
+        self.assertIn("3,999", report)  # last sample before the gap, not block index 0
+        self.assertIn("3.999000", report)  # when that sample was taken, not 0.000000
+        self.assertIn("27009.700", report)  # gap duration in ms
+
     def test_gap_tolerance_ms_standard_format_merged_chunk(self):
         """
         Reading across blocks merged into one segment must stitch them together.
