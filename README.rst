@@ -57,7 +57,7 @@ For installation instructions, see doc/source/install.rst
 
 To cite Neo in publications, see CITATION.txt
 
-:copyright: Copyright 2010-2025 by the Neo team, see doc/source/authors.rst.
+:copyright: Copyright 2010-2026 by the Neo team, see doc/source/authors.rst.
 :license: 3-Clause Revised BSD License, see LICENSE.txt for details.
 
 Funding
