@@ -854,10 +854,23 @@ class BlackrockRawIO(BaseRawIO):
         - **Standard formats (FileSpec 2.2, 2.3, 3.0 non-PTP):** Each data
           block has a single scalar timestamp for its first sample. All
           subsequent samples within the block are interpolated as
-          ``t_start + sample_index / sampling_rate``, assuming uniform spacing.
+          ``block_timestamp + sample_index_within_block / sampling_rate``,
+          assuming uniform spacing. Uniform spacing holds within a block
+          because that is what the format means by a block; it does not hold
+          across blocks, which are separated by a pause of recorded length.
+          A segment built with ``gap_tolerance_ms`` may merge several blocks,
+          so the interpolation is done per block and steps across each pause.
 
         - **FileSpec 2.1:** No timestamps are stored in the file. All samples
           are interpolated from ``t_start=0`` using the sampling rate.
+
+        The times returned here do not depend on ``gap_tolerance_ms``. That
+        parameter decides how samples are grouped into segments, not what time
+        a sample was recorded at. When a segment merges blocks across a pause,
+        its single ``t_start`` cannot express that pause, so the segment's own
+        ``t_start + sample_index / sampling_rate`` is wrong for every sample
+        after it while the times returned here stay correct. That gap is the
+        reason this method exists.
 
         Parameters
         ----------
@@ -901,10 +914,31 @@ class BlackrockRawIO(BaseRawIO):
             ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
             return timestamps[i_start:i_stop].astype("float64") / ts_res
         else:
-            # Non-PTP: reconstruct from t_start + index / sampling_rate
-            t_start = self._sigs_t_starts[nsx_nb][seg_index]
             sr = self._nsx_sampling_frequency[nsx_nb]
-            return t_start + np.arange(i_start, i_stop, dtype="float64") / sr
+            block_timestamps = seg.get("block_timestamps")
+
+            if block_timestamps is None or len(block_timestamps) == 1:
+                # One block, so the segment's own t_start is the block's recorded start
+                # and the whole stretch is uniform from it
+                t_start = self._sigs_t_starts[nsx_nb][seg_index]
+                return t_start + np.arange(i_start, i_stop, dtype="float64") / sr
+
+            # Several blocks merged into this segment. The segment has a single t_start
+            # and cannot express the pauses between them, but each block recorded its own
+            # start, so use those: the times returned here step across each pause even
+            # though the signal's uniform time base does not.
+            ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
+            timestamps = np.empty(i_stop - i_start, dtype="float64")
+            block_start = 0
+            for block_timestamp, spec in zip(block_timestamps, seg["memmap_specs"]):
+                block_stop = block_start + spec["num_samples"]
+                first = max(i_start, block_start)
+                last = min(i_stop, block_stop)
+                if last > first:
+                    within_block = np.arange(first - block_start, last - block_start, dtype="float64")
+                    timestamps[first - i_start : last - i_start] = float(block_timestamp) / ts_res + within_block / sr
+                block_start = block_stop
+            return timestamps
 
     def _spike_count(self, block_index, seg_index, unit_index):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
@@ -1667,6 +1701,7 @@ class BlackrockRawIO(BaseRawIO):
             block_infos = parsed_data_headers[start:stop]
             segments.append({
                 "timestamp": block_infos[0]["timestamp"],
+                "block_timestamps": [block["timestamp"] for block in block_infos],
                 "nb_data_points": int(sum(block["memmap_kwargs"]["num_samples"] for block in block_infos)),
                 "header": 1,  # Standard format has headers
                 "offset_to_data_block": None,  # Not needed

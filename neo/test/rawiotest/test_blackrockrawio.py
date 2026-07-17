@@ -415,6 +415,43 @@ class TestBlackrockRawIO(
         stream_index = 0
         self.assertEqual(reader_merged.get_signal_size(0, 0, stream_index), 8000)  # 4000 + 4000
 
+    def test_blackrock_timestamps_do_not_depend_on_gap_tolerance(self):
+        """
+        The timestamps accessor reports what the file recorded, whatever gap_tolerance_ms says.
+
+        gap_tolerance_ms decides how samples are grouped into segments. It must not decide what
+        time a sample is reported at. Merging blocks into one segment gives that segment a single
+        t_start, which cannot express the pause between them, but every block recorded its own
+        start and the accessor still reports from those.
+        """
+        dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
+        stream_index = 0
+
+        reader_split = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=0)
+        reader_split.parse_header()
+        expected = np.concatenate(
+            [
+                reader_split._get_blackrock_timestamps(0, 0, None, None, stream_index),
+                reader_split._get_blackrock_timestamps(0, 1, None, None, stream_index),
+            ]
+        )
+
+        reader_merged = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=100_000)
+        reader_merged.parse_header()
+        merged = reader_merged._get_blackrock_timestamps(0, 0, None, None, stream_index)
+
+        # Same samples, same recorded times, whether or not the blocks were merged
+        np.testing.assert_array_equal(merged, expected)
+
+        # The pause is still visible in the timestamps even though the segment's uniform
+        # time base has no way to show it
+        self.assertAlmostEqual(merged[4000] - merged[3999], 27.0097, places=3)
+
+        # Ranges straddling the block boundary agree with the full read
+        for i_start, i_stop in [(3990, 4010), (4000, 4001), (5000, 5100)]:
+            chunk = reader_merged._get_blackrock_timestamps(0, 0, i_start, i_stop, stream_index)
+            np.testing.assert_array_equal(chunk, expected[i_start:i_stop])
+
     def test_gap_report_locates_gap_in_sample_terms(self):
         """
         The gap report must locate gaps by sample, whatever the file stores.
