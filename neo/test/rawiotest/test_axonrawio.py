@@ -2,6 +2,7 @@ import datetime
 import unittest
 
 from neo.rawio.axonrawio import AxonRawIO, parse_axon_soup
+from neo.core import NeoReadWriteError
 
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
@@ -29,6 +30,43 @@ class TestAxonRawIO(
 
         reader.read_raw_protocol()
 
+    def test_integer_overflow_size_raises(self):
+        # An ABF header that claims more samples than the file can hold must raise a
+        # clear error instead of silently returning an overflowed signal size.
+        path = self.get_local_path("axon/intracellular_data/files_with_errors/integer_overflow_size.abf")
+        expected_error = (
+            "ABF header implies 3221225472 samples ending at byte 6442457600, which exceeds the "
+            f"file size of 8704 bytes for {path}; the file header is corrupt or the file is truncated."
+        )
+        reader = AxonRawIO(filename=path)
+        with self.assertRaises(NeoReadWriteError) as cm:
+            reader.parse_header()
+        self.assertEqual(str(cm.exception), expected_error)
+
+    def test_negative_segment_size_raises(self):
+        # An ABF header with a negative segment size must raise a clear error
+        # instead of silently returning a negative signal size.
+        path = self.get_local_path("axon/intracellular_data/files_with_errors/negative_synch_length.abf")
+        expected_error = f"Negative segment size (-1041598657) parsed from {path}; the file header is corrupt."
+        reader = AxonRawIO(filename=path)
+        with self.assertRaises(NeoReadWriteError) as cm:
+            reader.parse_header()
+        self.assertEqual(str(cm.exception), expected_error)
+
+    def test_unparseable_file_raises(self):
+        # A file whose header does not start with a valid ABF signature must raise a clear error
+        # rather than a cryptic NoneType error deep in parsing. The fixture has a zeroed signature.
+        path = self.get_local_path("axon/intracellular_data/files_with_errors/unparseable_header.abf")
+        expected_msg = (
+            f"Could not parse {path} as an ABF file: expected the header to start with signature "
+            f"b'ABF ' or b'ABF2', but found b'\\x00\\x00\\x00\\x00'. The file is not an ABF file, "
+            f"is corrupt, or is an unsupported variant."
+        )
+        reader = AxonRawIO(filename=path)
+        with self.assertRaises(NeoReadWriteError) as cm:
+            reader.parse_header()
+        self.assertEqual(str(cm.exception), expected_msg)
+
     def test_v1_reads_real_acquisition_date(self):
         # ABF1 stores the calendar date in lFileStartDate (a YYYYMMDD-packed integer). Older neo
         # ignored that field and hardcoded 1900-01-01, so the recording date was always wrong for
@@ -38,6 +76,15 @@ class TestAxonRawIO(
         rec_datetime = header["rec_datetime"]
         # Drop sub-second precision: the millisecond field round-trips through a float, so the
         # microsecond is a rounding artifact, not a meaningful value to assert.
+        self.assertEqual(rec_datetime.replace(microsecond=0), expected_datetime)
+
+    def test_v1_reads_two_digit_year_date(self):
+        # Old ABF1 files (before ~v1.65) pack the date as YYMMDD (2-digit year) rather than
+        # YYYYMMDD. lFileStartDate = 180618 is 2018-06-18, not year 18, so the 2-digit year must be
+        # expanded to the 2000s.
+        expected_datetime = datetime.datetime(2018, 6, 18, 17, 34, 27)
+        header = parse_axon_soup(self.get_local_path("axon/intracellular_data/abf1_episodic_empty_channel_name.abf"))
+        rec_datetime = header["rec_datetime"]
         self.assertEqual(rec_datetime.replace(microsecond=0), expected_datetime)
 
     def test_invalid_date_falls_back_to_none(self):
@@ -67,4 +114,3 @@ class TestAxonRawIO(
 
 if __name__ == "__main__":
     unittest.main()
-    

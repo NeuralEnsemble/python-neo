@@ -46,6 +46,7 @@ reads abf files - would be good to cross-check
 
 """
 
+import os
 import struct
 import datetime
 from io import open, BufferedReader
@@ -160,9 +161,17 @@ class AxonRawIO(BaseRawWithBufferApiIO):
         self._t_starts = {}
         self._buffer_descriptions = {0: {}}
         self._stream_buffer_slice = {stream_id: None}
+        # Offsets and segment sizes come from header fields that can be corrupt
+        # (truncated file, header surgery). Do the arithmetic in Python ints so it
+        # cannot silently overflow as numpy int32 would, and validate the implied
+        # data extent against the file on disk so a bad header raises a clear error
+        # rather than returning garbage or negative signal sizes.
+        head_offset = int(head_offset)
+        file_size = os.path.getsize(self.filename)
+
         pos = 0
         for seg_index in range(nb_segment):
-            length = episode_array[seg_index]["len"]
+            length = int(episode_array[seg_index]["len"])
 
             if version < 2.0:
                 fSynchTimeUnit = info["fSynchTimeUnit"]
@@ -171,6 +180,11 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
             if (fSynchTimeUnit != 0) and (mode == 1):
                 length /= fSynchTimeUnit
+
+            if length < 0:
+                raise NeoReadWriteError(
+                    f"Negative segment size ({length}) parsed from {self.filename}; the file header is corrupt."
+                )
 
             self._buffer_descriptions[0][seg_index] = {}
             self._buffer_descriptions[0][seg_index][buffer_id] = {
@@ -189,6 +203,13 @@ class AxonRawIO(BaseRawWithBufferApiIO):
             else:
                 t_start = t_start * fSynchTimeUnit * 1e-6
             self._t_starts[seg_index] = t_start
+
+        implied_data_end = head_offset + pos * sig_dtype.itemsize
+        if implied_data_end > file_size:
+            raise NeoReadWriteError(
+                f"ABF header implies {pos} samples ending at byte {implied_data_end}, which exceeds the "
+                f"file size of {file_size} bytes for {self.filename}; the file header is corrupt or the file is truncated."
+            )
 
         # Create channel header. By default assume channels 0..nbchannel-1 were sampled in order,
         # which is always the case for version >= 2.0. For version < 2.0 the channel ids come from
@@ -490,8 +511,13 @@ def parse_axon_soup(filename):
 
     Returns
     -------
-    dict or None
-        Header dictionary with file metadata, or None if file signature is invalid
+    dict
+        Header dictionary with file metadata.
+
+    Raises
+    ------
+    NeoReadWriteError
+        If the file does not start with a valid ABF signature (b"ABF " or b"ABF2").
     """
     with open(filename, "rb") as fid:
         f = StructFile(fid)
@@ -502,7 +528,14 @@ def parse_axon_soup(filename):
         elif signature == b"ABF2":
             return _parse_abf_v2(f, headerDescriptionV2)
         else:
-            return None
+            # The first 4 bytes are the ABF magic; anything else means the file is not an ABF
+            # file, is corrupt, or is an unsupported variant. Raise here rather than returning
+            # None so the caller gets a clear error instead of a downstream NoneType access.
+            raise NeoReadWriteError(
+                f"Could not parse {filename} as an ABF file: expected the header to start with "
+                f"signature b'ABF ' or b'ABF2', but found {signature}. The file is not an ABF "
+                f"file, is corrupt, or is an unsupported variant."
+            )
 
 
 def _parse_abf_v1(f, header_description):
@@ -677,24 +710,41 @@ def _parse_abf_v1(f, header_description):
     header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
 
     # date and time
-    # lFileStartDate is a YYYYMMDD-packed integer, parsed the same way as uFileStartDate in ABF2.
     # A "no date" sentinel means there is no date to build, so fall back to rec_datetime=None. The
-    # field is signed, so the all-bits-set 0xFFFFFFFF sentinel is read as -1, and 0 is the unset
-    # value. Any other value is trusted and left to raise if genuinely out of range, so a real
-    # parsing error surfaces rather than being masked.
+    # lFileStartDate field is signed, so the all-bits-set 0xFFFFFFFF sentinel is read as -1, and 0
+    # is the unset value. Any other value is trusted; a genuinely out-of-range date is left to
+    # raise rather than being masked.
     no_date_sentinels = (0, -1)
     if header["lFileStartDate"] in no_date_sentinels:
         header["rec_datetime"] = None
     else:
-        YY = int(header["lFileStartDate"] / 10000)
-        MM = int((header["lFileStartDate"] - YY * 10000) / 100)
-        DD = int(header["lFileStartDate"] - YY * 10000 - MM * 100)
+        # lFileStartDate packs the calendar date as decimal digits, but the packing changed across
+        # ABF1 versions:
+        #   - newer files use YYYYMMDD (4-digit year), e.g. 20050611 -> 2005-06-11
+        #   - older files use YYMMDD   (2-digit year), e.g.   180618 -> 2018-06-18
+        # Detect the old form from the value rather than the version number (whose exact cutoff we
+        # cannot pin down): a real 4-digit year is >= 1000, so a year field below 100 is a 2-digit
+        # year. The century is then ambiguous, so we disambiguate with the one hard invariant we
+        # have: a recording cannot be in the future. Map the 2-digit year to the 2000s, and fall
+        # back to the 1900s only if that lands past the current year.
+        date_as_integer = header["lFileStartDate"]
+        # The digits are laid out as [year][MM][DD], so month and day occupy the low four decimal
+        # places: dividing by 10_000 discards MMDD and leaves the year.
+        year = date_as_integer // 10_000
+        year_is_two_digit = year < 100
+        if year_is_two_digit:
+            year += 2000
+            if year > datetime.datetime.now().year:
+                year -= 100  # e.g. 98 -> 1998 rather than a not-yet-happened 2098
+            date_as_integer = year * 10_000 + date_as_integer % 10_000
+        month = (date_as_integer // 100) % 100  # drop the two DD digits, keep the two MM digits
+        day = date_as_integer % 100  # the last two digits
         hh = int(header["lFileStartTime"] / 3600.0)
         mm = int((header["lFileStartTime"] - hh * 3600) / 60)
         ss = header["lFileStartTime"] - hh * 3600 - mm * 60
         ms = int(np.mod(ss, 1) * 1e6)
         ss = int(ss)
-        header["rec_datetime"] = datetime.datetime(YY, MM, DD, hh, mm, ss, ms)
+        header["rec_datetime"] = datetime.datetime(year, month, day, hh, mm, ss, ms)
 
     return header
 
