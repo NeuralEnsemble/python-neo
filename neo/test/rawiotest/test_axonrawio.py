@@ -105,6 +105,15 @@ class TestAxonRawIO(
         # microsecond is a rounding artifact, not a meaningful value to assert.
         self.assertEqual(rec_datetime.replace(microsecond=0), expected_datetime)
 
+    def test_v1_reads_two_digit_year_date(self):
+        # Old ABF1 files (before ~v1.65) pack the date as YYMMDD (2-digit year) rather than
+        # YYYYMMDD. lFileStartDate = 180618 is 2018-06-18, not year 18, so the 2-digit year must be
+        # expanded to the 2000s.
+        expected_datetime = datetime.datetime(2018, 6, 18, 17, 34, 27)
+        header = parse_axon_soup(self.get_local_path("axon/intracellular_data/abf1_episodic_empty_channel_name.abf"))
+        rec_datetime = header["rec_datetime"]
+        self.assertEqual(rec_datetime.replace(microsecond=0), expected_datetime)
+
     def test_invalid_date_falls_back_to_none(self):
         # Some ABF files store an out-of-range / "no date" sentinel (e.g. 0xFFFFFFFF)
         # in the acquisition date header fields. The date is non-essential annotation,
