@@ -36,6 +36,8 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
         include_filenames=None,
         exclude_filenames=None,
         keep_original_times=False,
+        gap_tolerance_ms=None,
+        strict_gap_mode=None,
         filename=None,
         exclude_filename=None,
     ):
@@ -67,6 +69,13 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             Preserve original time stamps as in data files. By default datasets are
             shifted to begin at t_start = 0*pq.second.
             Default: False
+        gap_tolerance_ms : float | None, default: None
+            Controls how timestamp gaps in NCS files are handled.
+            If None (default), a ValueError is raised when gaps are detected, with a
+            detailed gap report. If a float value is provided, gaps smaller than this
+            threshold (in milliseconds) are ignored, and gaps larger create new segments.
+        strict_gap_mode : bool | None, default: None
+            Deprecated. Use gap_tolerance_ms instead.
         """
 
         if filename is not None:
@@ -83,6 +92,8 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             include_filenames=include_filenames,
             exclude_filenames=exclude_filenames,
             keep_original_times=keep_original_times,
+            gap_tolerance_ms=gap_tolerance_ms,
+            strict_gap_mode=strict_gap_mode,
             use_cache=use_cache,
             cache_path=cache_path,
         )
