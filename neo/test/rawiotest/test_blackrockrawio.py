@@ -477,6 +477,16 @@ class TestBlackrockRawIO(
         )
         np.testing.assert_array_equal(one_channel, expected[3990:4010, [0]])
 
+        # An empty range must behave the same as it does on an unmerged segment, which
+        # returns an empty array rather than failing
+        empty_merged = reader_merged.get_analogsignal_chunk(
+            seg_index=0, stream_index=stream_index, i_start=4000, i_stop=4000
+        )
+        empty_split = reader_split.get_analogsignal_chunk(
+            seg_index=0, stream_index=stream_index, i_start=4000, i_stop=4000
+        )
+        self.assertEqual(empty_merged.shape, empty_split.shape)
+
 
 if __name__ == "__main__":
     unittest.main()

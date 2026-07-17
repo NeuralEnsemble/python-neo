@@ -791,6 +791,9 @@ class BlackrockRawIO(BaseRawIO):
         -------
         np.ndarray
             Signal data of shape (i_stop - i_start, len(channel_indexes)), dtype int16.
+            A range falling inside a single block is returned as a view, as it would be
+            from a segment that was never merged; otherwise the blocks are copied into
+            one array.
         """
         total_samples = sum(spec["num_samples"] for spec in memmap_specs)
         if i_start is None:
@@ -798,7 +801,9 @@ class BlackrockRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = total_samples
 
-        pieces = []
+        # Map only the blocks the range touches. Slicing the rows keeps these as views,
+        # so nothing is read from disk until the data is actually used below.
+        block_views = []
         block_start = 0
         for spec in memmap_specs:
             block_stop = block_start + spec["num_samples"]
@@ -814,12 +819,22 @@ class BlackrockRawIO(BaseRawIO):
                 )
                 local_start = max(0, i_start - block_start)
                 local_stop = min(spec["num_samples"], i_stop - block_start)
-                pieces.append(data[local_start:local_stop, channel_indexes])
+                block_views.append(data[local_start:local_stop])
             block_start = block_stop
 
-        if len(pieces) == 1:
-            return pieces[0]
-        return np.concatenate(pieces, axis=0)
+        if len(block_views) == 1:
+            return block_views[0][:, channel_indexes]
+
+        # Fill one output array rather than concatenating, so the blocks are never all
+        # held at once, and a range touching no block still gives a correctly shaped
+        # empty result rather than failing
+        selected_channel_count = np.arange(channels)[channel_indexes].size
+        out = np.empty((i_stop - i_start, selected_channel_count), dtype=memmap_specs[0]["dtype"])
+        position = 0
+        for block_view in block_views:
+            out[position : position + len(block_view)] = block_view[:, channel_indexes]
+            position += len(block_view)
+        return out
 
     def _get_blackrock_timestamps(self, block_index, seg_index, i_start, i_stop, stream_index):
         """
