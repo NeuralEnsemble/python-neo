@@ -124,10 +124,6 @@ class BlackrockRawIO(BaseRawIO):
         - PTP format (v3.0-ptp): Gaps in per-sample timestamps
         - Standard format (v2.2/2.3/3.0): Gaps between data blocks
 
-        Backward jumps, where the clock runs backwards from one sample to the next,
-        are not gaps and have no duration to compare against this tolerance. They
-        always create a segment boundary, whatever the value given here.
-
     Notes
     -----
     * Note: This routine will handle files according to specification 2.1, 2.2,
@@ -767,10 +763,8 @@ class BlackrockRawIO(BaseRawIO):
         """
         Read a chunk from a segment that merges several data blocks.
 
-        In the standard format, consecutive blocks that are not separated by a
-        significant gap are merged into one segment. Each block lives at its own file
-        offset, so a contiguous sample range can straddle several of them. Only the
-        blocks overlapping the requested range are mapped, sliced, and concatenated.
+        Each block lives at its own file offset, so a contiguous sample range can
+        straddle several of them.
 
         Parameters
         ----------
@@ -791,9 +785,8 @@ class BlackrockRawIO(BaseRawIO):
         -------
         np.ndarray
             Signal data of shape (i_stop - i_start, len(channel_indexes)), dtype int16.
-            A range falling inside a single block is returned as a view, as it would be
-            from a segment that was never merged; otherwise the blocks are copied into
-            one array.
+            A range inside a single block is a view; otherwise the blocks are copied
+            into one array.
         """
         total_samples = sum(spec["num_samples"] for spec in memmap_specs)
         if i_start is None:
@@ -801,8 +794,7 @@ class BlackrockRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = total_samples
 
-        # Map only the blocks the range touches. Slicing the rows keeps these as views,
-        # so nothing is read from disk until the data is actually used below.
+        # Row slicing keeps these as views, so nothing is read until used below
         block_views = []
         block_start = 0
         for spec in memmap_specs:
@@ -825,9 +817,8 @@ class BlackrockRawIO(BaseRawIO):
         if len(block_views) == 1:
             return block_views[0][:, channel_indexes]
 
-        # Fill one output array rather than concatenating, so the blocks are never all
-        # held at once, and a range touching no block still gives a correctly shaped
-        # empty result rather than failing
+        # Fill one array rather than concatenating: the blocks are never all held at
+        # once, and a range touching no block still gives a correctly shaped result
         selected_channel_count = np.arange(channels)[channel_indexes].size
         out = np.empty((i_stop - i_start, selected_channel_count), dtype=memmap_specs[0]["dtype"])
         position = 0
@@ -855,22 +846,15 @@ class BlackrockRawIO(BaseRawIO):
           block has a single scalar timestamp for its first sample. All
           subsequent samples within the block are interpolated as
           ``block_timestamp + sample_index_within_block / sampling_rate``,
-          assuming uniform spacing. Uniform spacing holds within a block
-          because that is what the format means by a block; it does not hold
-          across blocks, which are separated by a pause of recorded length.
-          A segment built with ``gap_tolerance_ms`` may merge several blocks,
-          so the interpolation is done per block and steps across each pause.
+          assuming uniform spacing. A segment may merge several blocks, so the
+          interpolation is per block and steps across the pause between them.
 
         - **FileSpec 2.1:** No timestamps are stored in the file. All samples
           are interpolated from ``t_start=0`` using the sampling rate.
 
-        The times returned here do not depend on ``gap_tolerance_ms``. That
-        parameter decides how samples are grouped into segments, not what time
-        a sample was recorded at. When a segment merges blocks across a pause,
-        its single ``t_start`` cannot express that pause, so the segment's own
-        ``t_start + sample_index / sampling_rate`` is wrong for every sample
-        after it while the times returned here stay correct. That gap is the
-        reason this method exists.
+        The times returned do not depend on ``gap_tolerance_ms``, which decides
+        how samples are grouped into segments rather than when they were
+        recorded.
 
         Parameters
         ----------
@@ -918,15 +902,12 @@ class BlackrockRawIO(BaseRawIO):
             block_timestamps = seg.get("block_timestamps")
 
             if block_timestamps is None or len(block_timestamps) == 1:
-                # One block, so the segment's own t_start is the block's recorded start
-                # and the whole stretch is uniform from it
+                # One block, so the segment's t_start is that block's recorded start
                 t_start = self._sigs_t_starts[nsx_nb][seg_index]
                 return t_start + np.arange(i_start, i_stop, dtype="float64") / sr
 
-            # Several blocks merged into this segment. The segment has a single t_start
-            # and cannot express the pauses between them, but each block recorded its own
-            # start, so use those: the times returned here step across each pause even
-            # though the signal's uniform time base does not.
+            # Several blocks merged: the segment's single t_start cannot express the
+            # pauses between them, but each block recorded its own start
             ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
             timestamps = np.empty(i_stop - i_start, dtype="float64")
             block_start = 0
@@ -1473,13 +1454,8 @@ class BlackrockRawIO(BaseRawIO):
         """
         Format a detailed gap report showing where timestamp discontinuities occur.
 
-        This renders a report and nothing else: every quantity is passed in already
-        resolved, so it makes no assumption about how a format stores its timing. A
-        reader whose file carries one timestamp per sample and a reader whose file
-        carries one per block describe their gaps in the same sample-level terms, and
-        each works out those terms whichever way suits its own storage. That keeps the
-        report usable across readers as the gap API spreads to other formats (see
-        python-neo issue #1773).
+        Every quantity is passed in already resolved, so this makes no assumption about
+        how a format stores its timing and stays usable across readers (see #1773).
 
         Parameters
         ----------
@@ -1488,11 +1464,11 @@ class BlackrockRawIO(BaseRawIO):
         gap_positions_seconds : np.ndarray
             Time of that sample, in seconds since the start of the recording.
         gap_durations_ms : np.ndarray
-            Length of each gap in milliseconds. Negative when the clock jumped backwards.
+            Length of each gap in milliseconds.
         stream_label : str
             Name of the stream the gaps were found in, e.g. "ns2".
         detection_threshold_ms : float
-            Threshold that was used to detect the gaps, in milliseconds.
+            Threshold used to detect the gaps, in milliseconds.
 
         Returns
         -------
@@ -1522,10 +1498,9 @@ class BlackrockRawIO(BaseRawIO):
         Segment NSX data based on timestamp gaps.
 
         Takes the parsed data headers returned by _parse_nsx_data() and dispatches to
-        the segmenter for the file's format. The dispatch keys off the structure of the
-        parsed headers rather than the declared spec version, because
-        _parse_nsx_data_v30_ptp() falls back to standard parsing for files that declare
-        PTP but do not use it.
+        the segmenter for the file's format. Dispatch keys off the structure of the
+        headers rather than the declared spec, because _parse_nsx_data_v30_ptp() falls
+        back to standard parsing for files that declare PTP but do not use it.
 
         Parameters
         ----------
@@ -1541,14 +1516,11 @@ class BlackrockRawIO(BaseRawIO):
             [
                 {
                     "timestamp": scalar or None,
-                        Raw timestamp ticks at the start of the segment.
+                    "block_timestamps": list (standard format only),
                     "nb_data_points": int,
                     "header": int or None,
                     "offset_to_data_block": None (deprecated but kept for compatibility),
-                    "memmap_specs": list[dict],
-                        One entry per data block making up the segment. Standard-format
-                        segments hold several when consecutive blocks were merged; PTP
-                        and v2.1 segments always hold exactly one.
+                    "memmap_specs": list[dict], one per data block in the segment,
                     "timestamps_memmap_kwargs": dict (PTP only),
                 },
                 ...
@@ -1567,27 +1539,14 @@ class BlackrockRawIO(BaseRawIO):
         """
         Classify timestamp discontinuities into segment boundaries.
 
-        Shared by the standard and PTP segmenters. Both hand over the interval between
-        the timestamps of two consecutive samples, which is one sampling period when the
-        data is contiguous, along with a sample-level description of where each interval
-        sits. The PTP path reads those descriptions from the per-sample timestamps in the
-        file; the standard path works them out from its block timestamps, since within a
-        block the timing is uniform by definition. Either way the gaps are detected, and
-        reported, in the same terms.
+        Shared by the standard and PTP segmenters, which both pass the interval between
+        consecutive samples, one sampling period when the data is contiguous.
 
-        Two kinds of discontinuity are treated differently, because only one of them
-        leaves the caller anything to decide:
-
-        - Forward gaps (a pause, or dropped samples) are detected with a fixed
-          threshold of 2 sampling periods, which sits above the jitter and rounding
-          noise floor of these files. Merging across one distorts the segment's uniform
-          time base while splitting gives more segments, and only the caller knows which
-          is acceptable, so with gap_tolerance_ms unset this raises and reports them.
-        - Backward jumps (the clock runs backwards between consecutive samples, which a
-          recording reset causes) have no duration to compare against a tolerance, so
-          there is no choice to offer: they always become segment boundaries. Raising
-          would pose a question with one possible answer, so they are warned about
-          instead, and left out of the gap report, which is about gaps.
+        Forward gaps are detected at 2 sampling periods, above the jitter and rounding
+        noise floor of these files, and raise when gap_tolerance_ms is unset because
+        merging across one or splitting at it is a choice only the caller can make.
+        Backward jumps have no duration to compare against a tolerance, so they always
+        become boundaries and are warned about rather than raised on.
 
         Parameters
         ----------
@@ -1615,8 +1574,7 @@ class BlackrockRawIO(BaseRawIO):
         forward_mask = time_differences > detection_threshold
         backward_mask = time_differences < 0
 
-        # Backward jumps always split, so there is nothing to ask about. Say what was
-        # found and what was done about it, and carry on.
+        # Backward jumps always split, so there is nothing to ask about
         backward_indices = np.flatnonzero(backward_mask)
         if len(backward_indices) > 0:
             locations = ", ".join(
@@ -1634,8 +1592,7 @@ class BlackrockRawIO(BaseRawIO):
         if len(forward_indices) == 0:
             return backward_indices
 
-        # Error by default on forward gaps - merging across one or splitting at it is a
-        # choice only the caller can make
+        # Error by default on forward gaps - the caller must choose
         if self.gap_tolerance_ms is None:
             gap_report = self._format_gap_report(
                 gap_sample_indices=sample_indices[forward_indices],
@@ -1679,11 +1636,10 @@ class BlackrockRawIO(BaseRawIO):
         """
         Segment standard format data (v2.2, v2.3, v3.0) using block-level gap detection.
 
-        The file already breaks data into a new block at every pause, so block
-        boundaries are the candidate segment boundaries and gap detection decides which
-        of them are real. Blocks separated by less than gap_tolerance_ms are merged into
-        one segment, which then keeps one memmap spec per contributing block because
-        those blocks sit at different offsets in the file.
+        The file starts a new block at every pause, so block boundaries are the
+        candidate segment boundaries. Blocks separated by less than gap_tolerance_ms
+        merge into one segment, which keeps one memmap spec per block because they sit
+        at different offsets in the file.
         """
         ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
         sampling_rate = self._nsx_sampling_frequency[nsx_nb]
@@ -1692,17 +1648,13 @@ class BlackrockRawIO(BaseRawIO):
         block_sizes = np.array([header["memmap_kwargs"]["num_samples"] for header in parsed_data_headers])
 
         if len(parsed_data_headers) > 1:
-            # Interval between the last sample of a block and the first sample of the
-            # next one, so contiguous blocks give exactly one sampling period. This is
-            # the per-block equivalent of np.diff() over the PTP per-sample timestamps.
+            # Interval between a block's last sample and the next block's first, so
+            # contiguous blocks give exactly one sampling period
             block_last_sample_times = block_t_starts + (block_sizes - 1) / sampling_rate
             inter_block_intervals = block_t_starts[1:] - block_last_sample_times[:-1]
 
-            # Describe each candidate boundary by the sample before it, the same way the
-            # PTP path does. Within a block the timing is uniform by definition, so the
-            # last sample of block i is sample cumsum(sizes)[i] - 1 and its time follows
-            # from the block's own timestamp. Working these out from the block scalars
-            # gives exactly what per-sample timestamps would say, without building them.
+            # Describe each boundary by the sample before it, as the PTP path does.
+            # Derived from the block scalars rather than built per sample.
             last_sample_indices = np.cumsum(block_sizes)[:-1] - 1
             last_sample_positions = block_last_sample_times[:-1] - block_t_starts[0]
 
@@ -1759,8 +1711,7 @@ class BlackrockRawIO(BaseRawIO):
 
         time_differences = np.diff(timestamps_in_seconds)
 
-        # Every sample carries its own timestamp, so the sample before each interval and
-        # its time are read straight off the array
+        # Every sample carries its own timestamp, so read these off the array
         last_sample_indices = np.arange(len(time_differences))
         last_sample_positions = timestamps_in_seconds[:-1] - timestamps_in_seconds[0]
 

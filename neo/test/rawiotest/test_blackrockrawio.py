@@ -372,6 +372,8 @@ class TestBlackrockRawIO(
         with self.assertRaises(ValueError) as context:
             reader = BlackrockRawIO(filename=dirname, nsx_to_load=6)
             reader.parse_header()
+        # The backward jump is not a gap, so it is not among them
+        self.assertIn("Detected 2 timestamp gaps", str(context.exception))
 
         # Test 2: A tolerance above every forward gap keeps the data either side of them
         # together, but the backward jump splits regardless of the tolerance
@@ -391,13 +393,9 @@ class TestBlackrockRawIO(
         """
         A backward jump warns rather than raising, and splits whatever the tolerance says.
 
-        Raising exists so the caller can choose between merging across a gap and splitting
-        at it. A backward jump offers no such choice: it has no duration to compare against
-        gap_tolerance_ms, so it always becomes a segment boundary. Raising would pose a
-        question with one possible answer, so the reader reports it and carries on.
-
-        The reset file's clock restarts, so its two blocks are separated by a backward jump
-        rather than a gap.
+        It has no duration to compare against gap_tolerance_ms, so there is no choice to
+        offer the caller. The reset file's clock restarts, so its two blocks are separated
+        by a backward jump rather than a gap.
         """
         dirname = self.get_local_path("blackrock/segment/ResetCorrect/reset")
 
@@ -416,37 +414,23 @@ class TestBlackrockRawIO(
             reader.parse_header()
             self.assertEqual(reader.segment_count(0), 2)
 
-    def test_gap_report_covers_gaps_only(self):
-        """
-        The gap report is about gaps, so a backward jump is not counted among them.
-
-        The PTP file holds two forward gaps and one backward jump. Only the gaps are
-        something gap_tolerance_ms can act on, so only they are reported and counted.
-        """
-        dirname = self.get_local_path("blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes")
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            with self.assertRaises(ValueError) as context:
-                reader = BlackrockRawIO(filename=dirname, nsx_to_load=6)
-                reader.parse_header()
-
-        # Two forward gaps, not three discontinuities
-        self.assertIn("Detected 2 timestamp gaps", str(context.exception))
-
     def test_gap_tolerance_ms_standard_format(self):
         """
         Test gap_tolerance_ms on a standard-format (v2.2/2.3/3.0) file.
 
-        The pause_correct file has two data blocks separated by a ~27 s recording pause.
-        Unlike the PTP path, gaps here are detected between block timestamps rather than
-        between per-sample timestamps.
+        The pause_correct file has two data blocks separated by a ~27 s recording pause,
+        detected between block timestamps rather than per-sample ones.
         """
         dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
 
-        # Default behavior (None) raises, same as for PTP files
-        with self.assertRaises(ValueError):
+        # Default behavior (None) raises, same as for PTP files. The gap follows sample
+        # 3999 at 3.999 s, rather than sitting at the start of the recording
+        with self.assertRaises(ValueError) as context:
             reader = BlackrockRawIO(filename=dirname, nsx_to_load=2)
             reader.parse_header()
+        self.assertIn("3,999", str(context.exception))
+        self.assertIn("3.999000", str(context.exception))
+        self.assertIn("27009.700", str(context.exception))
 
         # A tolerance below the pause keeps one segment per block
         reader_strict = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=0)
@@ -499,32 +483,12 @@ class TestBlackrockRawIO(
             chunk = reader_merged._get_blackrock_timestamps(0, 0, i_start, i_stop, stream_index)
             np.testing.assert_array_equal(chunk, expected[i_start:i_stop])
 
-    def test_gap_report_locates_gap_in_sample_terms(self):
-        """
-        The gap report must locate gaps by sample, whatever the file stores.
-
-        A standard-format file has one timestamp per block rather than one per sample, but
-        the report describes gaps the same way the PTP report does. In pause_correct the
-        first block holds 4000 samples at 1 kHz, so the gap follows sample 3999 at 3.999 s
-        rather than sitting at the start of the recording.
-        """
-        dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
-        with self.assertRaises(ValueError) as context:
-            reader = BlackrockRawIO(filename=dirname, nsx_to_load=2)
-            reader.parse_header()
-
-        report = str(context.exception)
-        self.assertIn("3,999", report)  # last sample before the gap, not block index 0
-        self.assertIn("3.999000", report)  # when that sample was taken, not 0.000000
-        self.assertIn("27009.700", report)  # gap duration in ms
-
     def test_gap_tolerance_ms_standard_format_merged_chunk(self):
         """
         Reading across blocks merged into one segment must stitch them together.
 
-        A merged segment holds one memmap spec per block, so a requested sample range can
-        straddle several of them. Compare reads from the merged segment against the same
-        data read as two separate segments, which needs no stitching.
+        Compared against the same data read as two separate segments, which needs no
+        stitching.
         """
         dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
         stream_index = 0
