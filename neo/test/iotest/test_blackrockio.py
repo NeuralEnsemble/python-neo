@@ -289,12 +289,12 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         # This fails, because in the nev there is no way to separate two segments
         with self.assertRaises(NeoReadWriteError):
-            reader = BlackrockIO(filename=filename, nsx_to_load=2, nev_override=filename_nev_fail, gap_tolerance_ms=0)
+            reader = BlackrockIO(filename=filename, nsx_to_load=2, nev_override=filename_nev_fail)
 
         # The correct file will issue a warning because a reset has occurred
         # and could be detected, but was not explicitly documented in the file
         with warnings.catch_warnings(record=True) as w:
-            reader = BlackrockIO(filename=filename, nsx_to_load=2, gap_tolerance_ms=0)
+            reader = BlackrockIO(filename=filename, nsx_to_load=2)
             self.assertGreaterEqual(len(w), 1)
             messages = [str(warning.message) for warning in w if warning.category == UserWarning]
             self.assertIn("Detected 1 undocumented segments within nev data after " "timestamps [5451].", messages)

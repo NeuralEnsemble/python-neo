@@ -1575,15 +1575,19 @@ class BlackrockRawIO(BaseRawIO):
         block the timing is uniform by definition. Either way the gaps are detected, and
         reported, in the same terms.
 
-        Two kinds of discontinuity are treated differently:
+        Two kinds of discontinuity are treated differently, because only one of them
+        leaves the caller anything to decide:
 
         - Forward gaps (a pause, or dropped samples) are detected with a fixed
           threshold of 2 sampling periods, which sits above the jitter and rounding
-          noise floor of these files. Whether a detected forward gap actually becomes
-          a segment boundary is then up to gap_tolerance_ms.
-        - Backward jumps (the clock runs backwards between consecutive samples) are an
-          abnormal condition rather than missing data. They have no gap duration to
-          compare against a tolerance, so they always become segment boundaries.
+          noise floor of these files. Merging across one distorts the segment's uniform
+          time base while splitting gives more segments, and only the caller knows which
+          is acceptable, so with gap_tolerance_ms unset this raises and reports them.
+        - Backward jumps (the clock runs backwards between consecutive samples, which a
+          recording reset causes) have no duration to compare against a tolerance, so
+          there is no choice to offer: they always become segment boundaries. Raising
+          would pose a question with one possible answer, so they are warned about
+          instead, and left out of the gap report, which is about gaps.
 
         Parameters
         ----------
@@ -1610,22 +1614,38 @@ class BlackrockRawIO(BaseRawIO):
 
         forward_mask = time_differences > detection_threshold
         backward_mask = time_differences < 0
-        gap_indices = np.flatnonzero(forward_mask | backward_mask)
 
-        if len(gap_indices) == 0:
-            return gap_indices
+        # Backward jumps always split, so there is nothing to ask about. Say what was
+        # found and what was done about it, and carry on.
+        backward_indices = np.flatnonzero(backward_mask)
+        if len(backward_indices) > 0:
+            locations = ", ".join(
+                f"sample {sample_indices[index]:,} at {sample_positions_seconds[index]:.6f} s "
+                f"(back {-time_differences[index] * 1000:.3f} ms)"
+                for index in backward_indices
+            )
+            warnings.warn(
+                f"Detected {len(backward_indices)} backward timestamp jump(s) in ns{nsx_nb}: {locations}. "
+                f"The clock ran backwards, which a recording reset causes. Each one starts a new segment; "
+                f"gap_tolerance_ms does not apply to them because a backward jump has no gap duration."
+            )
 
-        # Error by default - user must opt-in to segmentation
+        forward_indices = np.flatnonzero(forward_mask)
+        if len(forward_indices) == 0:
+            return backward_indices
+
+        # Error by default on forward gaps - merging across one or splitting at it is a
+        # choice only the caller can make
         if self.gap_tolerance_ms is None:
             gap_report = self._format_gap_report(
-                gap_sample_indices=sample_indices[gap_indices],
-                gap_positions_seconds=sample_positions_seconds[gap_indices],
-                gap_durations_ms=time_differences[gap_indices] * 1000,
+                gap_sample_indices=sample_indices[forward_indices],
+                gap_positions_seconds=sample_positions_seconds[forward_indices],
+                gap_durations_ms=time_differences[forward_indices] * 1000,
                 stream_label=f"ns{nsx_nb}",
                 detection_threshold_ms=detection_threshold * 1000,
             )
             raise ValueError(
-                f"Detected {len(gap_indices)} timestamp gaps in ns{nsx_nb} file.\n"
+                f"Detected {len(forward_indices)} timestamp gaps in ns{nsx_nb} file.\n"
                 f"{gap_report}\n"
                 f"To load this data, provide gap_tolerance_ms parameter to automatically "
                 f"segment at gaps larger than the specified tolerance."

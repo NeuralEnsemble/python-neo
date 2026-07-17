@@ -3,6 +3,7 @@ Tests of neo.rawio.examplerawio
 """
 
 import unittest
+import warnings
 
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -385,6 +386,52 @@ class TestBlackrockRawIO(
         reader_strict.parse_header()
         segments_strict = reader_strict.segment_count(0)
         self.assertEqual(segments_strict, 4)
+
+    def test_backward_jump_warns_and_splits_without_gap_tolerance_ms(self):
+        """
+        A backward jump warns rather than raising, and splits whatever the tolerance says.
+
+        Raising exists so the caller can choose between merging across a gap and splitting
+        at it. A backward jump offers no such choice: it has no duration to compare against
+        gap_tolerance_ms, so it always becomes a segment boundary. Raising would pose a
+        question with one possible answer, so the reader reports it and carries on.
+
+        The reset file's clock restarts, so its two blocks are separated by a backward jump
+        rather than a gap.
+        """
+        dirname = self.get_local_path("blackrock/segment/ResetCorrect/reset")
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            reader = BlackrockRawIO(filename=dirname, nsx_to_load=2)
+            reader.parse_header()
+
+        self.assertEqual(reader.segment_count(0), 2)
+        messages = [str(warning.message) for warning in caught]
+        self.assertTrue(any("backward timestamp jump" in message for message in messages))
+
+        # No tolerance merges the blocks either side of a reset
+        for gap_tolerance_ms in [0, 100.0, 10_000_000]:
+            reader = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=gap_tolerance_ms)
+            reader.parse_header()
+            self.assertEqual(reader.segment_count(0), 2)
+
+    def test_gap_report_covers_gaps_only(self):
+        """
+        The gap report is about gaps, so a backward jump is not counted among them.
+
+        The PTP file holds two forward gaps and one backward jump. Only the gaps are
+        something gap_tolerance_ms can act on, so only they are reported and counted.
+        """
+        dirname = self.get_local_path("blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with self.assertRaises(ValueError) as context:
+                reader = BlackrockRawIO(filename=dirname, nsx_to_load=6)
+                reader.parse_header()
+
+        # Two forward gaps, not three discontinuities
+        self.assertIn("Detected 2 timestamp gaps", str(context.exception))
 
     def test_gap_tolerance_ms_standard_format(self):
         """
