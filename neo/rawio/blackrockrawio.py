@@ -650,8 +650,7 @@ class BlackrockRawIO(BaseRawIO):
         return self._sigs_t_starts[nsx_nb][seg_index]
 
     @staticmethod
-    def _create_mmap_view(fid, dtype, offset, num_samples, num_channels=None,
-                          packet_size=None, item_offset=0):
+    def _create_mmap_view(fid, dtype, offset, num_samples, num_channels=None, packet_size=None, item_offset=0):
         """
         Create an np.ndarray view over a raw mmap buffer from an open file.
 
@@ -1271,15 +1270,17 @@ class BlackrockRawIO(BaseRawIO):
             data_offset = current_offset + header.dtype.itemsize
             timestamp = header["timestamp"]
 
-            parsed_data_headers.append({
-                "timestamp": timestamp,
-                "memmap_kwargs": {
-                    "filename": filename,
-                    "dtype": "int16",
-                    "offset": data_offset,
-                    "num_samples": num_samples,
-                },
-            })
+            parsed_data_headers.append(
+                {
+                    "timestamp": timestamp,
+                    "memmap_kwargs": {
+                        "filename": filename,
+                        "dtype": "int16",
+                        "offset": data_offset,
+                        "num_samples": num_samples,
+                    },
+                }
+            )
 
             # Jump to next block
             data_size_bytes = num_samples * channels * 2  # int16 = 2 bytes
@@ -1432,13 +1433,15 @@ class BlackrockRawIO(BaseRawIO):
         # Case 1: Multiple blocks (Standard format) - each block is a segment
         if len(parsed_data_headers) > 1:
             for block_info in parsed_data_headers:
-                segments.append({
-                    "timestamp": block_info["timestamp"],
-                    "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
-                    "header": 1,  # Standard format has headers
-                    "offset_to_data_block": None,  # Not needed
-                    "memmap_kwargs": block_info["memmap_kwargs"],
-                })
+                segments.append(
+                    {
+                        "timestamp": block_info["timestamp"],
+                        "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
+                        "header": 1,  # Standard format has headers
+                        "offset_to_data_block": None,  # Not needed
+                        "memmap_kwargs": block_info["memmap_kwargs"],
+                    }
+                )
 
         # Case 2: Single block - check if PTP (has ptp_timestamps_memmap_kwargs) or simple
         elif len(parsed_data_headers) == 1:
@@ -1510,32 +1513,36 @@ class BlackrockRawIO(BaseRawIO):
                     seg_samples_offset = base_samples_offset + int(start) * packet_size
                     seg_ts_offset = base_ts_offset + int(start) * packet_size
 
-                    segments.append({
-                        "timestamp": None,  # PTP timestamps read on demand
-                        "nb_data_points": seg_num_samples,
-                        "header": None,  # PTP has no headers
-                        "offset_to_data_block": None,
-                        "memmap_kwargs": {
-                            **samples_kw,
-                            "offset": seg_samples_offset,
-                            "num_samples": seg_num_samples,
-                        },
-                        "timestamps_memmap_kwargs": {
-                            **ts_kw,
-                            "offset": seg_ts_offset,
-                            "num_samples": seg_num_samples,
-                        },
-                    })
+                    segments.append(
+                        {
+                            "timestamp": None,  # PTP timestamps read on demand
+                            "nb_data_points": seg_num_samples,
+                            "header": None,  # PTP has no headers
+                            "offset_to_data_block": None,
+                            "memmap_kwargs": {
+                                **samples_kw,
+                                "offset": seg_samples_offset,
+                                "num_samples": seg_num_samples,
+                            },
+                            "timestamps_memmap_kwargs": {
+                                **ts_kw,
+                                "offset": seg_ts_offset,
+                                "num_samples": seg_num_samples,
+                            },
+                        }
+                    )
 
             # V2.1 or single block standard format: no segmentation needed
             else:
-                segments.append({
-                    "timestamp": block_info["timestamp"],
-                    "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
-                    "header": None,
-                    "offset_to_data_block": None,
-                    "memmap_kwargs": block_info["memmap_kwargs"],
-                })
+                segments.append(
+                    {
+                        "timestamp": block_info["timestamp"],
+                        "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
+                        "header": None,
+                        "offset_to_data_block": None,
+                        "memmap_kwargs": block_info["memmap_kwargs"],
+                    }
+                )
 
         return segments
 
@@ -1820,8 +1827,7 @@ class BlackrockRawIO(BaseRawIO):
             # Nonempty segments are those containing at least 2 samples
             # These have to be able to be mapped to nev
             nonempty_nsx_segment_indices = [
-                seg_index for seg_index, seg in enumerate(self._nsx_data_header[nsx_nb])
-                if seg["nb_data_points"] > 1
+                seg_index for seg_index, seg in enumerate(self._nsx_data_header[nsx_nb]) if seg["nb_data_points"] > 1
             ]
             nonempty_nsx_segments = [
                 self._nsx_data_header[nsx_nb][seg_index] for seg_index in nonempty_nsx_segment_indices
