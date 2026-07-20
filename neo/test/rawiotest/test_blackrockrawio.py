@@ -3,6 +3,7 @@ Tests of neo.rawio.examplerawio
 """
 
 import unittest
+import warnings
 
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -267,20 +268,30 @@ class TestBlackrockRawIO(
         np.testing.assert_array_equal(timestamps_ns6[:5], expected_ns6)
 
     def test_get_blackrock_timestamps_ptp_with_gaps(self):
-        """Test _get_blackrock_timestamps for PTP format with gaps and multiple segments."""
+        """Test _get_blackrock_timestamps for PTP format with gaps and multiple segments.
+
+        This file has three timestamp discontinuities, so it splits into four segments:
+
+        - after sample 631: forward gap of ~0.97 ms (dropped samples)
+        - after sample 661: backward jump of ~1.9 ms (the clock runs backwards)
+        - after sample 689: forward gap of ~1.03 ms (dropped samples)
+
+        Because of the backward jump, segment 2 starts earlier in time than segment 1
+        ends, so the segments are not in ascending time order.
+        """
         dirname = self.get_local_path("blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes")
         gap_tolerance_ms = 0.5
         reader = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=gap_tolerance_ms)
         reader.parse_header()
 
         n_segments = reader.segment_count(0)
-        self.assertEqual(n_segments, 3)
+        self.assertEqual(n_segments, 4)
 
         nanoseconds_per_second = 1_000_000_000.0
 
         # This file has a single stream: ns6 (30 kHz, 1 channel)
         stream_index = 0
-        expected_sizes = [632, 58, 310]
+        expected_sizes = [632, 30, 28, 310]
 
         # First 5 PTP clock values (nanoseconds since Unix epoch) per segment, read directly from file and hardcoded here for testing
         first_5_ptp_clock_ns_per_segment = [
@@ -306,6 +317,16 @@ class TestBlackrockRawIO(
             ),
             np.array(
                 [
+                    1752531864738809624,
+                    1752531864738842984,
+                    1752531864738876304,
+                    1752531864738909664,
+                    1752531864738942984,
+                ],
+                dtype="uint64",
+            ),
+            np.array(
+                [
                     1752531864740742986,
                     1752531864740776306,
                     1752531864740809626,
@@ -317,7 +338,7 @@ class TestBlackrockRawIO(
         ]
         # Last PTP clock value (nanoseconds since Unix epoch) of each segment, hardcoded here for testing
         last_ptp_clock_ns_per_segment = np.array(
-            [1752531864738776304, 1752531864739709625, 1752531864751042999],
+            [1752531864738776304, 1752531864740709666, 1752531864739709625, 1752531864751042999],
             dtype="uint64",
         )
 
@@ -333,15 +354,6 @@ class TestBlackrockRawIO(
             expected_last = last_ptp_clock_ns_per_segment[seg_index].astype("float64") / nanoseconds_per_second
             np.testing.assert_array_equal(timestamps[-1], expected_last)
 
-        # Verify the gaps between segments exceed the tolerance
-        for seg_index in range(n_segments - 1):
-            last_ts = last_ptp_clock_ns_per_segment[seg_index].astype("float64") / nanoseconds_per_second
-            first_ts_next = (
-                first_5_ptp_clock_ns_per_segment[seg_index + 1][0].astype("float64") / nanoseconds_per_second
-            )
-            gap_ms = (first_ts_next - last_ts) * 1000
-            self.assertGreater(gap_ms, gap_tolerance_ms)
-
     def test_gap_tolerance_ms_parameter(self):
         """
         Test gap_tolerance_ms parameter for gap handling with files that have actual gaps.
@@ -349,7 +361,8 @@ class TestBlackrockRawIO(
         Tests the error-by-default behavior where files with timestamp gaps raise ValueError
         unless the user explicitly opts in with gap_tolerance_ms parameter.
 
-        See PR #1769 for the gap details on the example file used here.
+        See PR #1769 for the gap details on the example file used here. This file has two
+        forward gaps (~0.97 ms and ~1.03 ms) and one backward jump (~1.9 ms).
         """
         # Use stubbed files with missing samples (timestamp gaps) from SimulatedSpikes data
         dirname = self.get_local_path("blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes")
@@ -359,20 +372,168 @@ class TestBlackrockRawIO(
         with self.assertRaises(ValueError) as context:
             reader = BlackrockRawIO(filename=dirname, nsx_to_load=6)
             reader.parse_header()
+        # The backward jump is not a gap, so it is not among them
+        self.assertIn("Detected 2 timestamp gaps", str(context.exception))
 
-        # Test 2: Explicit tolerance allows loading files with gaps
-        # User opts in by providing gap_tolerance_ms
+        # Test 2: A tolerance above every forward gap keeps the data either side of them
+        # together, but the backward jump splits regardless of the tolerance
         reader_with_tolerance = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=10.0)
         reader_with_tolerance.parse_header()
         segments_with_tolerance = reader_with_tolerance.segment_count(0)
-        self.assertEqual(1, segments_with_tolerance)  # Gaps < 10ms are ignored
+        self.assertEqual(2, segments_with_tolerance)
 
-        # Test 3: Stricter tolerance creates 3 segments
-        # With strict tolerance (0.5ms), gaps > 0.5ms will create new segments
+        # Test 3: Stricter tolerance creates 4 segments
+        # With strict tolerance (0.5ms), both forward gaps split as well as the backward jump
         reader_strict = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=0.5)
         reader_strict.parse_header()
         segments_strict = reader_strict.segment_count(0)
-        self.assertEqual(segments_strict, 3)  #
+        self.assertEqual(segments_strict, 4)
+
+    def test_backward_jump_warns_and_splits_without_gap_tolerance_ms(self):
+        """
+        A backward jump warns rather than raising, and splits whatever the tolerance says.
+
+        It has no duration to compare against gap_tolerance_ms, so there is no choice to
+        offer the caller. The reset file's clock restarts, so its two blocks are separated
+        by a backward jump rather than a gap.
+        """
+        dirname = self.get_local_path("blackrock/segment/ResetCorrect/reset")
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            reader = BlackrockRawIO(filename=dirname, nsx_to_load=2)
+            reader.parse_header()
+
+        self.assertEqual(reader.segment_count(0), 2)
+        messages = [str(warning.message) for warning in caught]
+        self.assertTrue(any("backward timestamp jump" in message for message in messages))
+
+        # No tolerance merges the blocks either side of a reset
+        for gap_tolerance_ms in [0, 100.0, 10_000_000]:
+            reader = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=gap_tolerance_ms)
+            reader.parse_header()
+            self.assertEqual(reader.segment_count(0), 2)
+
+    def test_gap_tolerance_ms_standard_format(self):
+        """
+        Test gap_tolerance_ms on a standard-format (v2.2/2.3/3.0) file.
+
+        The pause_correct file has two data blocks separated by a ~27 s recording pause,
+        detected between block timestamps rather than per-sample ones.
+        """
+        dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
+
+        # Default behavior (None) raises, same as for PTP files. The gap follows sample
+        # 3999 at 3.999 s, rather than sitting at the start of the recording
+        with self.assertRaises(ValueError) as context:
+            reader = BlackrockRawIO(filename=dirname, nsx_to_load=2)
+            reader.parse_header()
+        self.assertIn("3,999", str(context.exception))
+        self.assertIn("3.999000", str(context.exception))
+        self.assertIn("27009.700", str(context.exception))
+
+        # A tolerance below the pause keeps one segment per block
+        reader_strict = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=0)
+        reader_strict.parse_header()
+        self.assertEqual(reader_strict.segment_count(0), 2)
+
+        # A tolerance above the pause merges both blocks into a single segment
+        reader_merged = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=100_000)
+        reader_merged.parse_header()
+        self.assertEqual(reader_merged.segment_count(0), 1)
+
+        # The merged segment spans both blocks, which sit at different file offsets
+        stream_index = 0
+        self.assertEqual(reader_merged.get_signal_size(0, 0, stream_index), 8000)  # 4000 + 4000
+
+    def test_blackrock_timestamps_do_not_depend_on_gap_tolerance(self):
+        """
+        The timestamps accessor reports what the file recorded, whatever gap_tolerance_ms says.
+
+        gap_tolerance_ms decides how samples are grouped into segments. It must not decide what
+        time a sample is reported at. Merging blocks into one segment gives that segment a single
+        t_start, which cannot express the pause between them, but every block recorded its own
+        start and the accessor still reports from those.
+        """
+        dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
+        stream_index = 0
+
+        reader_split = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=0)
+        reader_split.parse_header()
+        expected = np.concatenate(
+            [
+                reader_split._get_blackrock_timestamps(0, 0, None, None, stream_index),
+                reader_split._get_blackrock_timestamps(0, 1, None, None, stream_index),
+            ]
+        )
+
+        reader_merged = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=100_000)
+        reader_merged.parse_header()
+        merged = reader_merged._get_blackrock_timestamps(0, 0, None, None, stream_index)
+
+        # Same samples, same recorded times, whether or not the blocks were merged
+        np.testing.assert_array_equal(merged, expected)
+
+        # The pause is still visible in the timestamps even though the segment's uniform
+        # time base has no way to show it
+        self.assertAlmostEqual(merged[4000] - merged[3999], 27.0097, places=3)
+
+        # Ranges straddling the block boundary agree with the full read
+        for i_start, i_stop in [(3990, 4010), (4000, 4001), (5000, 5100)]:
+            chunk = reader_merged._get_blackrock_timestamps(0, 0, i_start, i_stop, stream_index)
+            np.testing.assert_array_equal(chunk, expected[i_start:i_stop])
+
+    def test_gap_tolerance_ms_standard_format_merged_chunk(self):
+        """
+        Reading across blocks merged into one segment must stitch them together.
+
+        Compared against the same data read as two separate segments, which needs no
+        stitching.
+        """
+        dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
+        stream_index = 0
+
+        reader_split = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=0)
+        reader_split.parse_header()
+        block_0 = reader_split.get_analogsignal_chunk(seg_index=0, stream_index=stream_index)
+        block_1 = reader_split.get_analogsignal_chunk(seg_index=1, stream_index=stream_index)
+        expected = np.concatenate([block_0, block_1], axis=0)
+
+        reader_merged = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=100_000)
+        reader_merged.parse_header()
+
+        # Full read
+        full = reader_merged.get_analogsignal_chunk(seg_index=0, stream_index=stream_index)
+        self.assertEqual(full.shape[0], 8000)
+        np.testing.assert_array_equal(full, expected)
+
+        # A range straddling the boundary between the two blocks
+        straddling = reader_merged.get_analogsignal_chunk(
+            seg_index=0, stream_index=stream_index, i_start=3990, i_stop=4010
+        )
+        np.testing.assert_array_equal(straddling, expected[3990:4010])
+
+        # A range wholly inside the second block
+        second_block_only = reader_merged.get_analogsignal_chunk(
+            seg_index=0, stream_index=stream_index, i_start=5000, i_stop=5100
+        )
+        np.testing.assert_array_equal(second_block_only, expected[5000:5100])
+
+        # A single channel selection across the boundary
+        one_channel = reader_merged.get_analogsignal_chunk(
+            seg_index=0, stream_index=stream_index, i_start=3990, i_stop=4010, channel_indexes=[0]
+        )
+        np.testing.assert_array_equal(one_channel, expected[3990:4010, [0]])
+
+        # An empty range must behave the same as it does on an unmerged segment, which
+        # returns an empty array rather than failing
+        empty_merged = reader_merged.get_analogsignal_chunk(
+            seg_index=0, stream_index=stream_index, i_start=4000, i_stop=4000
+        )
+        empty_split = reader_split.get_analogsignal_chunk(
+            seg_index=0, stream_index=stream_index, i_start=4000, i_stop=4000
+        )
+        self.assertEqual(empty_merged.shape, empty_split.shape)
 
 
 if __name__ == "__main__":

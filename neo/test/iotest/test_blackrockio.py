@@ -343,7 +343,9 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # And another one because there are spikes between segments
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            reader = BlackrockIO(filename=filename, nsx_to_load=2, nev_override=filename_nev_outside_seg)
+            reader = BlackrockIO(
+                filename=filename, nsx_to_load=2, nev_override=filename_nev_outside_seg, gap_tolerance_ms=0
+            )
             self.assertGreaterEqual(len(w), 2)
 
             # Check that warnings are correct
@@ -387,7 +389,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         self.assertEqual(len(block.segments[1].analogsignals[0][:]), 4000)
 
         # This case is correct, no spikes outside segment or anything
-        reader = BlackrockIO(filename=filename, nsx_to_load=2)
+        reader = BlackrockIO(filename=filename, nsx_to_load=2, gap_tolerance_ms=0)
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
         # 2 segments

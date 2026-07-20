@@ -739,8 +739,15 @@ class BlackrockRawIO(BaseRawIO):
         nsx_nb = int(stream_id)
         seg = self._nsx_data_header[nsx_nb][seg_index]
         fid = self._get_nsx_fid(nsx_nb)
-        memmap_kwargs = seg["memmap_kwargs"]
+        memmap_specs = seg["memmap_specs"]
         channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
+        if channel_indexes is None:
+            channel_indexes = slice(None)
+
+        if len(memmap_specs) > 1:
+            return self._read_multi_block_chunk(fid, memmap_specs, channels, i_start, i_stop, channel_indexes)
+
+        memmap_kwargs = memmap_specs[0]
         data = self._create_mmap_view(
             fid=fid,
             dtype=memmap_kwargs["dtype"],
@@ -750,9 +757,75 @@ class BlackrockRawIO(BaseRawIO):
             packet_size=memmap_kwargs.get("packet_size"),
             item_offset=memmap_kwargs.get("item_offset", 0),
         )
-        if channel_indexes is None:
-            channel_indexes = slice(None)
         return data[i_start:i_stop, channel_indexes]
+
+    def _read_multi_block_chunk(self, fid, memmap_specs, channels, i_start, i_stop, channel_indexes):
+        """
+        Read a chunk from a segment that merges several data blocks.
+
+        Each block lives at its own file offset, so a contiguous sample range can
+        straddle several of them.
+
+        Parameters
+        ----------
+        fid : file-like
+            Open file object (must support .fileno()).
+        memmap_specs : list[dict]
+            One spec per block in the segment, in acquisition order.
+        channels : int
+            Number of channels (columns) in the int16 data matrix.
+        i_start : int or None
+            First sample index, relative to the segment. None means 0.
+        i_stop : int or None
+            Stop sample index (exclusive), relative to the segment. None means the end.
+        channel_indexes : slice or array-like
+            Which channels to return.
+
+        Returns
+        -------
+        np.ndarray
+            Signal data of shape (i_stop - i_start, len(channel_indexes)), dtype int16.
+            A range inside a single block is a view; otherwise the blocks are copied
+            into one array.
+        """
+        total_samples = sum(spec["num_samples"] for spec in memmap_specs)
+        if i_start is None:
+            i_start = 0
+        if i_stop is None:
+            i_stop = total_samples
+
+        # Row slicing keeps these as views, so nothing is read until used below
+        block_views = []
+        block_start = 0
+        for spec in memmap_specs:
+            block_stop = block_start + spec["num_samples"]
+            if block_stop > i_start and block_start < i_stop:
+                data = self._create_mmap_view(
+                    fid=fid,
+                    dtype=spec["dtype"],
+                    offset=spec["offset"],
+                    num_samples=spec["num_samples"],
+                    num_channels=spec.get("num_channels", channels),
+                    packet_size=spec.get("packet_size"),
+                    item_offset=spec.get("item_offset", 0),
+                )
+                local_start = max(0, i_start - block_start)
+                local_stop = min(spec["num_samples"], i_stop - block_start)
+                block_views.append(data[local_start:local_stop])
+            block_start = block_stop
+
+        if len(block_views) == 1:
+            return block_views[0][:, channel_indexes]
+
+        # Fill one array rather than concatenating: the blocks are never all held at
+        # once, and a range touching no block still gives a correctly shaped result
+        selected_channel_count = np.arange(channels)[channel_indexes].size
+        out = np.empty((i_stop - i_start, selected_channel_count), dtype=memmap_specs[0]["dtype"])
+        position = 0
+        for block_view in block_views:
+            out[position : position + len(block_view)] = block_view[:, channel_indexes]
+            position += len(block_view)
+        return out
 
     def _get_blackrock_timestamps(self, block_index, seg_index, i_start, i_stop, stream_index):
         """
@@ -772,10 +845,16 @@ class BlackrockRawIO(BaseRawIO):
         - **Standard formats (FileSpec 2.2, 2.3, 3.0 non-PTP):** Each data
           block has a single scalar timestamp for its first sample. All
           subsequent samples within the block are interpolated as
-          ``t_start + sample_index / sampling_rate``, assuming uniform spacing.
+          ``block_timestamp + sample_index_within_block / sampling_rate``,
+          assuming uniform spacing. A segment may merge several blocks, so the
+          interpolation is per block and steps across the pause between them.
 
         - **FileSpec 2.1:** No timestamps are stored in the file. All samples
           are interpolated from ``t_start=0`` using the sampling rate.
+
+        The times returned do not depend on ``gap_tolerance_ms``, which decides
+        how samples are grouped into segments rather than when they were
+        recorded.
 
         Parameters
         ----------
@@ -819,10 +898,28 @@ class BlackrockRawIO(BaseRawIO):
             ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
             return timestamps[i_start:i_stop].astype("float64") / ts_res
         else:
-            # Non-PTP: reconstruct from t_start + index / sampling_rate
-            t_start = self._sigs_t_starts[nsx_nb][seg_index]
             sr = self._nsx_sampling_frequency[nsx_nb]
-            return t_start + np.arange(i_start, i_stop, dtype="float64") / sr
+            block_timestamps = seg.get("block_timestamps")
+
+            if block_timestamps is None or len(block_timestamps) == 1:
+                # One block, so the segment's t_start is that block's recorded start
+                t_start = self._sigs_t_starts[nsx_nb][seg_index]
+                return t_start + np.arange(i_start, i_stop, dtype="float64") / sr
+
+            # Several blocks merged: the segment's single t_start cannot express the
+            # pauses between them, but each block recorded its own start
+            ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
+            timestamps = np.empty(i_stop - i_start, dtype="float64")
+            block_start = 0
+            for block_timestamp, spec in zip(block_timestamps, seg["memmap_specs"]):
+                block_stop = block_start + spec["num_samples"]
+                first = max(i_start, block_start)
+                last = min(i_stop, block_stop)
+                if last > first:
+                    within_block = np.arange(first - block_start, last - block_start, dtype="float64")
+                    timestamps[first - i_start : last - i_start] = float(block_timestamp) / ts_res + within_block / sr
+                block_start = block_stop
+            return timestamps
 
     def _spike_count(self, block_index, seg_index, unit_index):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
@@ -1351,40 +1448,43 @@ class BlackrockRawIO(BaseRawIO):
             }
         ]
 
-    def _format_gap_report(self, gap_indices, timestamps_in_seconds, time_differences, nsx_nb):
+    def _format_gap_report(
+        self, gap_sample_indices, gap_positions_seconds, gap_durations_ms, stream_label, detection_threshold_ms
+    ):
         """
         Format a detailed gap report showing where timestamp discontinuities occur.
 
+        Every quantity is passed in already resolved, so this makes no assumption about
+        how a format stores its timing and stays usable across readers (see #1773).
+
         Parameters
         ----------
-        gap_indices : np.ndarray
-            Indices where gaps were detected
-        timestamps_in_seconds : np.ndarray
-            All timestamps converted to seconds
-        time_differences : np.ndarray
-            Time differences between consecutive timestamps
-        nsx_nb : int
-            NSX file number for the report
+        gap_sample_indices : np.ndarray
+            Index of the last sample before each gap.
+        gap_positions_seconds : np.ndarray
+            Time of that sample, in seconds since the start of the recording.
+        gap_durations_ms : np.ndarray
+            Length of each gap in milliseconds.
+        stream_label : str
+            Name of the stream the gaps were found in, e.g. "ns2".
+        detection_threshold_ms : float
+            Threshold used to detect the gaps, in milliseconds.
 
         Returns
         -------
         str
             Formatted gap report with table
         """
-        # Calculate gap details
-        gap_durations_seconds = time_differences[gap_indices]
-        gap_durations_ms = gap_durations_seconds * 1000
-        gap_positions_seconds = timestamps_in_seconds[gap_indices] - timestamps_in_seconds[0]
-
         # Build gap detail table
         gap_detail_lines = [
             f"| {index:>15,} | {pos:>21.6f} | {dur:>21.3f} |\n"
-            for index, pos, dur in zip(gap_indices, gap_positions_seconds, gap_durations_ms)
+            for index, pos, dur in zip(gap_sample_indices, gap_positions_seconds, gap_durations_ms)
         ]
 
         return (
-            f"Gap Report for ns{nsx_nb}:\n"
-            f"Found {len(gap_indices)} timestamp gaps (detection threshold: 2 x sampling period)\n\n"
+            f"Gap Report for {stream_label}:\n"
+            f"Found {len(gap_sample_indices)} timestamp gaps "
+            f"(detection threshold: {detection_threshold_ms:.6g} ms)\n\n"
             "Gap Details:\n"
             "+-----------------+-----------------------+-----------------------+\n"
             "| Sample Index    | Sample at (Seconds)   | Gap Size (ms)         |\n"
@@ -1397,12 +1497,10 @@ class BlackrockRawIO(BaseRawIO):
         """
         Segment NSX data based on timestamp gaps.
 
-        Takes the parsed data headers returned by _parse_nsx_data() and creates segments.
-        Segmentation logic depends on the file format:
-
-        - Standard format (multiple blocks): Each block IS a segment
-        - PTP format (single block with timestamp array): Detect gaps in timestamps
-        - V2.1 format (no timestamps): Single segment
+        Takes the parsed data headers returned by _parse_nsx_data() and dispatches to
+        the segmenter for the file's format. Dispatch keys off the structure of the
+        headers rather than the declared spec, because _parse_nsx_data_v30_ptp() falls
+        back to standard parsing for files that declare PTP but do not use it.
 
         Parameters
         ----------
@@ -1418,124 +1516,241 @@ class BlackrockRawIO(BaseRawIO):
             [
                 {
                     "timestamp": scalar or None,
+                    "block_timestamps": list (standard format only),
                     "nb_data_points": int,
                     "header": int or None,
                     "offset_to_data_block": None (deprecated but kept for compatibility),
-                    "memmap_kwargs": dict,
+                    "memmap_specs": list[dict], one per data block in the segment,
                     "timestamps_memmap_kwargs": dict (PTP only),
                 },
                 ...
             ]
         """
-        segments = []
+        first_header = parsed_data_headers[0]
 
-        # Case 1: Multiple blocks (Standard format) - each block is a segment
+        if "ptp_timestamps_memmap_kwargs" in first_header:
+            return self._segment_nsx_ptp(parsed_data_headers, nsx_nb)
+        elif first_header["timestamp"] is None:
+            return self._segment_nsx_v21(parsed_data_headers)
+        else:
+            return self._segment_nsx_v22_v30(parsed_data_headers, nsx_nb)
+
+    def _classify_gaps(self, time_differences, sampling_rate, nsx_nb, sample_indices, sample_positions_seconds):
+        """
+        Classify timestamp discontinuities into segment boundaries.
+
+        Shared by the standard and PTP segmenters, which both pass the interval between
+        consecutive samples, one sampling period when the data is contiguous.
+
+        Forward gaps are detected at 2 sampling periods, above the jitter and rounding
+        noise floor of these files, and raise when gap_tolerance_ms is unset because
+        merging across one or splitting at it is a choice only the caller can make.
+        Backward jumps have no duration to compare against a tolerance, so they always
+        become boundaries and are warned about rather than raised on.
+
+        Parameters
+        ----------
+        time_differences : np.ndarray
+            Intervals in seconds between the timestamps of consecutive samples.
+        sampling_rate : float
+            Sampling rate in Hz.
+        nsx_nb : int
+            NSX file number (for error reporting).
+        sample_indices : np.ndarray
+            For each interval, the index of the sample that precedes it.
+        sample_positions_seconds : np.ndarray
+            For each interval, the time of that sample in seconds since the start of the
+            recording.
+
+        Returns
+        -------
+        np.ndarray
+            Indices into time_differences at which a segment boundary falls; a boundary
+            at index i means a new segment starts at i + 1.
+        """
+        # Detection threshold: use strict 2x sampling period to find ALL gaps
+        detection_threshold = 2.0 / sampling_rate
+
+        forward_mask = time_differences > detection_threshold
+        backward_mask = time_differences < 0
+
+        # Backward jumps always split, so there is nothing to ask about
+        backward_indices = np.flatnonzero(backward_mask)
+        if len(backward_indices) > 0:
+            locations = ", ".join(
+                f"sample {sample_indices[index]:,} at {sample_positions_seconds[index]:.6f} s "
+                f"(back {-time_differences[index] * 1000:.3f} ms)"
+                for index in backward_indices
+            )
+            warnings.warn(
+                f"Detected {len(backward_indices)} backward timestamp jump(s) in ns{nsx_nb}: {locations}. "
+                f"The clock ran backwards, which a recording reset causes. Each one starts a new segment; "
+                f"gap_tolerance_ms does not apply to them because a backward jump has no gap duration."
+            )
+
+        forward_indices = np.flatnonzero(forward_mask)
+        if len(forward_indices) == 0:
+            return backward_indices
+
+        # Error by default on forward gaps - the caller must choose
+        if self.gap_tolerance_ms is None:
+            gap_report = self._format_gap_report(
+                gap_sample_indices=sample_indices[forward_indices],
+                gap_positions_seconds=sample_positions_seconds[forward_indices],
+                gap_durations_ms=time_differences[forward_indices] * 1000,
+                stream_label=f"ns{nsx_nb}",
+                detection_threshold_ms=detection_threshold * 1000,
+            )
+            raise ValueError(
+                f"Detected {len(forward_indices)} timestamp gaps in ns{nsx_nb} file.\n"
+                f"{gap_report}\n"
+                f"To load this data, provide gap_tolerance_ms parameter to automatically "
+                f"segment at gaps larger than the specified tolerance."
+            )
+
+        # User provided tolerance - keep forward gaps above it, and every backward jump
+        # (no warning - user opted in)
+        gap_tolerance_s = self.gap_tolerance_ms / 1000.0
+        significant_forward_mask = forward_mask & (time_differences > gap_tolerance_s)
+        return np.flatnonzero(significant_forward_mask | backward_mask)
+
+    def _segment_nsx_v21(self, parsed_data_headers):
+        """
+        Segment v2.1 data.
+
+        The format has a single continuous block and no timestamps, so there is nothing
+        to detect gaps in and the result is always one segment.
+        """
+        block_info = parsed_data_headers[0]
+        return [
+            {
+                "timestamp": block_info["timestamp"],
+                "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
+                "header": None,
+                "offset_to_data_block": None,
+                "memmap_specs": [block_info["memmap_kwargs"]],
+            }
+        ]
+
+    def _segment_nsx_v22_v30(self, parsed_data_headers, nsx_nb):
+        """
+        Segment standard format data (v2.2, v2.3, v3.0) using block-level gap detection.
+
+        The file starts a new block at every pause, so block boundaries are the
+        candidate segment boundaries. Blocks separated by less than gap_tolerance_ms
+        merge into one segment, which keeps one memmap spec per block because they sit
+        at different offsets in the file.
+        """
+        ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
+        sampling_rate = self._nsx_sampling_frequency[nsx_nb]
+
+        block_t_starts = np.array([float(header["timestamp"]) / ts_res for header in parsed_data_headers])
+        block_sizes = np.array([header["memmap_kwargs"]["num_samples"] for header in parsed_data_headers])
+
         if len(parsed_data_headers) > 1:
-            for block_info in parsed_data_headers:
-                segments.append({
-                    "timestamp": block_info["timestamp"],
-                    "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
-                    "header": 1,  # Standard format has headers
-                    "offset_to_data_block": None,  # Not needed
-                    "memmap_kwargs": block_info["memmap_kwargs"],
-                })
+            # Interval between a block's last sample and the next block's first, so
+            # contiguous blocks give exactly one sampling period
+            block_last_sample_times = block_t_starts + (block_sizes - 1) / sampling_rate
+            inter_block_intervals = block_t_starts[1:] - block_last_sample_times[:-1]
 
-        # Case 2: Single block - check if PTP (has ptp_timestamps_memmap_kwargs) or simple
-        elif len(parsed_data_headers) == 1:
-            block_info = parsed_data_headers[0]
+            # Describe each boundary by the sample before it, as the PTP path does.
+            # Derived from the block scalars rather than built per sample.
+            last_sample_indices = np.cumsum(block_sizes)[:-1] - 1
+            last_sample_positions = block_last_sample_times[:-1] - block_t_starts[0]
 
-            # PTP format: read timestamps on demand and detect gaps
-            if "ptp_timestamps_memmap_kwargs" in block_info:
-                ts_kw = block_info["ptp_timestamps_memmap_kwargs"]
-                samples_kw = block_info["memmap_kwargs"]
+            boundary_indices = self._classify_gaps(
+                inter_block_intervals, sampling_rate, nsx_nb, last_sample_indices, last_sample_positions
+            )
+        else:
+            boundary_indices = np.array([], dtype=np.intp)
 
-                # Read timestamps via strided mmap view for gap detection
-                fid = self._get_nsx_fid(nsx_nb)
-                timestamps = self._create_mmap_view(
-                    fid=fid,
-                    dtype=ts_kw["dtype"],
-                    offset=ts_kw["offset"],
-                    num_samples=ts_kw["num_samples"],
-                    packet_size=ts_kw.get("packet_size"),
-                    item_offset=ts_kw.get("item_offset", 0),
-                )
+        # Runs of blocks between boundaries become one segment each
+        segment_starts = np.hstack((0, boundary_indices + 1)).astype(np.intp)
+        segment_stops = np.hstack((boundary_indices + 1, len(parsed_data_headers))).astype(np.intp)
 
-                # Analyze timestamp gaps
-                sampling_rate = self._nsx_sampling_frequency[nsx_nb]
+        segments = []
+        for start, stop in zip(segment_starts, segment_stops):
+            block_infos = parsed_data_headers[start:stop]
+            segments.append({
+                "timestamp": block_infos[0]["timestamp"],
+                "block_timestamps": [block["timestamp"] for block in block_infos],
+                "nb_data_points": int(sum(block["memmap_kwargs"]["num_samples"] for block in block_infos)),
+                "header": 1,  # Standard format has headers
+                "offset_to_data_block": None,  # Not needed
+                "memmap_specs": [block["memmap_kwargs"] for block in block_infos],
+            })
 
-                # Detection threshold: use strict 2x sampling period to find ALL gaps
-                detection_threshold = 2.0 / sampling_rate
+        return segments
 
-                timestamps_sampling_rate = self._nsx_basic_header[nsx_nb]["timestamp_resolution"]
-                timestamps_in_seconds = timestamps / timestamps_sampling_rate
+    def _segment_nsx_ptp(self, parsed_data_headers, nsx_nb):
+        """
+        Segment PTP format data (v3.0) using sample-level gap detection.
 
-                time_differences = np.diff(timestamps_in_seconds)
-                gap_indices = np.argwhere(time_differences > detection_threshold).flatten()
+        Every sample carries its own timestamp, so gaps are detected between samples and
+        each resulting segment is a slice of the single block the file stores.
+        """
+        block_info = parsed_data_headers[0]
+        ts_kw = block_info["ptp_timestamps_memmap_kwargs"]
+        samples_kw = block_info["memmap_kwargs"]
 
-                # If gaps found, check user's tolerance
-                if len(gap_indices) > 0:
-                    gap_report = self._format_gap_report(gap_indices, timestamps_in_seconds, time_differences, nsx_nb)
+        sampling_rate = self._nsx_sampling_frequency[nsx_nb]
+        ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
 
-                    # Error by default - user must opt-in to segmentation
-                    if self.gap_tolerance_ms is None:
-                        raise ValueError(
-                            f"Detected {len(gap_indices)} timestamp gaps in ns{nsx_nb} file.\n"
-                            f"{gap_report}\n"
-                            f"To load this data, provide gap_tolerance_ms parameter to automatically "
-                            f"segment at gaps larger than the specified tolerance."
-                        )
+        # Read timestamps via strided mmap view for gap detection
+        fid = self._get_nsx_fid(nsx_nb)
+        timestamps = self._create_mmap_view(
+            fid=fid,
+            dtype=ts_kw["dtype"],
+            offset=ts_kw["offset"],
+            num_samples=ts_kw["num_samples"],
+            packet_size=ts_kw.get("packet_size"),
+            item_offset=ts_kw.get("item_offset", 0),
+        )
+        timestamps_in_seconds = timestamps.astype("float64") / ts_res
+        del timestamps  # release the mmap buffer; timestamps_in_seconds is an independent copy
 
-                    # User provided tolerance - filter gaps and segment
-                    gap_tolerance_s = self.gap_tolerance_ms / 1000.0
-                    significant_gap_mask = time_differences[gap_indices] > gap_tolerance_s
-                    significant_gap_indices = gap_indices[significant_gap_mask]
+        time_differences = np.diff(timestamps_in_seconds)
 
-                    # Use significant gaps for segmentation (no warning - user opted in)
-                    gap_indices = significant_gap_indices
+        # Every sample carries its own timestamp, so read these off the array
+        last_sample_indices = np.arange(len(time_differences))
+        last_sample_positions = timestamps_in_seconds[:-1] - timestamps_in_seconds[0]
 
-                # Create segments based on gaps
-                num_total_samples = ts_kw["num_samples"]
-                segment_starts = np.hstack((0, gap_indices + 1))
-                segment_boundaries = list(segment_starts) + [num_total_samples]
+        boundary_indices = self._classify_gaps(
+            time_differences, sampling_rate, nsx_nb, last_sample_indices, last_sample_positions
+        )
 
-                packet_size = samples_kw["packet_size"]
-                base_samples_offset = samples_kw["offset"]
-                base_ts_offset = ts_kw["offset"]
+        num_total_samples = ts_kw["num_samples"]
+        segment_starts = np.hstack((0, boundary_indices + 1)).astype(np.intp)
+        segment_stops = np.hstack((boundary_indices + 1, num_total_samples)).astype(np.intp)
 
-                for seg_index, start in enumerate(segment_starts):
-                    end = segment_boundaries[seg_index + 1]
-                    seg_num_samples = end - start
+        packet_size = samples_kw["packet_size"]
+        base_samples_offset = samples_kw["offset"]
+        base_ts_offset = ts_kw["offset"]
 
-                    # Compute new file offset for this segment slice
-                    seg_samples_offset = base_samples_offset + int(start) * packet_size
-                    seg_ts_offset = base_ts_offset + int(start) * packet_size
+        segments = []
+        for start, stop in zip(segment_starts, segment_stops):
+            seg_num_samples = int(stop - start)
 
-                    segments.append({
-                        "timestamp": None,  # PTP timestamps read on demand
-                        "nb_data_points": seg_num_samples,
-                        "header": None,  # PTP has no headers
-                        "offset_to_data_block": None,
-                        "memmap_kwargs": {
-                            **samples_kw,
-                            "offset": seg_samples_offset,
-                            "num_samples": seg_num_samples,
-                        },
-                        "timestamps_memmap_kwargs": {
-                            **ts_kw,
-                            "offset": seg_ts_offset,
-                            "num_samples": seg_num_samples,
-                        },
-                    })
+            # Compute new file offset for this segment slice
+            seg_samples_offset = base_samples_offset + int(start) * packet_size
+            seg_ts_offset = base_ts_offset + int(start) * packet_size
 
-            # V2.1 or single block standard format: no segmentation needed
-            else:
-                segments.append({
-                    "timestamp": block_info["timestamp"],
-                    "nb_data_points": block_info["memmap_kwargs"]["num_samples"],
-                    "header": None,
-                    "offset_to_data_block": None,
-                    "memmap_kwargs": block_info["memmap_kwargs"],
-                })
+            segments.append({
+                "timestamp": None,  # PTP timestamps read on demand
+                "nb_data_points": seg_num_samples,
+                "header": None,  # PTP has no headers
+                "offset_to_data_block": None,
+                "memmap_specs": [{
+                    **samples_kw,
+                    "offset": seg_samples_offset,
+                    "num_samples": seg_num_samples,
+                }],
+                "timestamps_memmap_kwargs": {
+                    **ts_kw,
+                    "offset": seg_ts_offset,
+                    "num_samples": seg_num_samples,
+                },
+            })
 
         return segments
 
