@@ -40,6 +40,21 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
         E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
+    gap_tolerance_ms : float or None, default: None
+        Controls how within-recording timestamp gaps are handled. OpenEphys Binary stores
+        per-sample sample indices in `sample_numbers.npy` (v0.6+) or `timestamps.npy`
+        (pre-v0.6); any deviation from unit increments indicates a gap (e.g. from a
+        dropped USB packet). If ``None`` (the default), a ``ValueError`` is raised when
+        gaps are detected, with a report showing where each gap occurs. If a float is
+        provided, gaps larger than this threshold (in milliseconds) split the recording
+        into multiple Neo segments; smaller gaps are absorbed into the surrounding
+        segment. Use ``gap_tolerance_ms=0.0`` to segment on every detected gap. See
+        python-neo issue #1773 for the cross-reader API this matches.
+    ignore_integrity_checks : bool, default: False
+        If True, bypass gap detection entirely and load the file as if it were
+        contiguous, even when ``sample_numbers.npy`` reveals discontinuities. Intended
+        for users who know their data is fine and want faster loads, or who need to
+        recover data from a corrupt file.
 
     Note
     ----
@@ -106,13 +121,22 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     extensions = ["xml", "oebin", "txt", "dat", "npy"]
     rawmode = "one-dir"
 
-    def __init__(self, dirname="", experiment_names=None):
+    def __init__(
+        self,
+        dirname="",
+        experiment_names=None,
+        *,
+        gap_tolerance_ms=None,
+        ignore_integrity_checks=False,
+    ):
         BaseRawWithBufferApiIO.__init__(self)
         self.dirname = dirname
         if experiment_names is not None:
             if isinstance(experiment_names, str):
                 experiment_names = [experiment_names]
         self.experiment_names = experiment_names
+        self.gap_tolerance_ms = gap_tolerance_ms
+        self.ignore_integrity_checks = bool(ignore_integrity_checks)
         self.folder_structure = None
         self._use_direct_evt_timestamps = None
 
@@ -130,6 +154,13 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         # Map folder structure to Neo indexing
         all_streams, nb_block, nb_segment_per_block = OpenEphysBinaryRawIO._map_folder_structure_to_neo(
             open_ephys_folder_structure_dict=folder_structure_dict
+        )
+
+        # Apply gap handling: either raise on detected gaps, absorb them, or split the
+        # affected recordings into multiple Neo segments. A no-op when
+        # ignore_integrity_checks is True or when no gaps are detected in any stream.
+        all_streams, nb_segment_per_block = self._apply_gap_handling(
+            all_streams, nb_block, nb_segment_per_block
         )
 
         # all streams are consistent across blocks and segments.
@@ -273,13 +304,24 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     num_channels = len(info["channels"])
                     stream_id = str(stream_index)
                     buffer_id = str(stream_index)
-                    shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels, offset=0)
+                    dtype_itemsize = np.dtype(info["dtype"]).itemsize
+                    if info.get("_is_sub_segment"):
+                        # Sub-segment from a gap split: offset and length are known
+                        # explicitly; no filesystem probe needed.
+                        start_rec = int(info["_sub_segment_start_rec"])
+                        file_offset = start_rec * num_channels * dtype_itemsize
+                        shape = (int(info["n_samples_total"]), num_channels)
+                    else:
+                        file_offset = 0
+                        shape = get_memmap_shape(
+                            info["raw_filename"], info["dtype"], num_channels=num_channels, offset=0
+                        )
                     self._buffer_descriptions[block_index][seg_index][buffer_id] = {
                         "type": "raw",
                         "file_path": str(info["raw_filename"]),
                         "dtype": info["dtype"],
                         "order": "C",
-                        "file_offset": 0,
+                        "file_offset": file_offset,
                         "shape": shape,
                     }
 
@@ -496,6 +538,14 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 global_t_start = None
                 global_t_stop = None
 
+                # A sub-segment from a gap split carries explicit bounds derived from the
+                # continuous streams. Use those as authoritative: events that land
+                # outside the continuous window should not extend the segment range.
+                is_sub_segment = any(
+                    info.get("_is_sub_segment")
+                    for info in self._sig_streams[block_index][seg_index].values()
+                )
+
                 # loop over signals
                 for stream_index, info in self._sig_streams[block_index][seg_index].items():
                     t_start = info["t_start"]
@@ -512,6 +562,11 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 # loop over events
                 for stream_index, stream_name in enumerate(event_stream_names):
                     info = self._evt_streams[block_index][seg_index][stream_index]
+                    if is_sub_segment:
+                        # Events in sub-segments are filtered at query time; their
+                        # underlying arrays still span the whole recording, so we do not
+                        # let them widen the sub-segment's bounds.
+                        continue
                     if info["timestamps"].size == 0:
                         continue
                     t_start = info["timestamps"][0]
@@ -651,6 +706,26 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
         durations = info["durations"]
         labels = info["labels"]
 
+        # If this segment comes from a gap-split recording, restrict to its absolute
+        # time bounds. Events share the underlying arrays across sub-segments, so each
+        # sub-segment filters its view here at query time.
+        sub_t_start = info.get("_sub_segment_t_start_abs")
+        sub_t_stop = info.get("_sub_segment_t_stop_abs")
+        if sub_t_start is not None or sub_t_stop is not None:
+            if not self._use_direct_evt_timestamps:
+                ts_seconds = timestamps / info["sample_rate"]
+            else:
+                ts_seconds = timestamps
+            sub_mask = np.ones(timestamps.shape, dtype=bool)
+            if sub_t_start is not None:
+                sub_mask &= ts_seconds >= sub_t_start
+            if sub_t_stop is not None:
+                sub_mask &= ts_seconds < sub_t_stop
+            timestamps = timestamps[sub_mask]
+            labels = labels[sub_mask]
+            if durations is not None:
+                durations = durations[sub_mask]
+
         # slice it if needed
         if t_start is not None:
             if not self._use_direct_evt_timestamps:
@@ -688,6 +763,291 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
     def _get_analogsignal_buffer_description(self, block_index, seg_index, buffer_id):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
+
+    def _get_openephysbinary_timestamps(self, block_index, seg_index, stream_index):
+        """
+        Return the raw per-sample sample indices for a continuous stream segment.
+
+        These are the values from ``sample_numbers.npy`` (v0.6+) or ``timestamps.npy``
+        (pre-v0.6) for the requested segment, expressed as integer sample indices from
+        the acquisition system. Gaps show up as jumps in the returned array. The array
+        is memory-mapped, so opening large files is cheap.
+
+        Parameters
+        ----------
+        block_index : int
+            Block (experiment) index.
+        seg_index : int
+            Segment (recording or sub-segment) index.
+        stream_index : int
+            Signal stream index. ADC sub-streams share timestamps with their neural
+            parent stream; either stream_index selects the same underlying timestamps.
+
+        Returns
+        -------
+        numpy.ndarray
+            1-D integer array of sample indices aligned to the stream's recorded
+            samples for this segment.
+        """
+        if stream_index < self._num_of_signal_streams:
+            base_index = stream_index
+        else:
+            base_index = stream_index - self._num_of_signal_streams
+
+        info = self._sig_streams[block_index][seg_index][base_index]
+        timestamps_file = info.get("timestamps_file")
+        if timestamps_file is None:
+            raise RuntimeError(
+                f"No timestamps file recorded for stream {stream_index} in block "
+                f"{block_index}, segment {seg_index}."
+            )
+        full = np.load(timestamps_file, mmap_mode="r")
+        if info.get("_is_sub_segment"):
+            start = int(info["_sub_segment_start_rec"])
+            stop = start + int(info["n_samples_total"])
+            return full[start:stop]
+        return full
+
+    def _apply_gap_handling(self, all_streams, nb_block, nb_segment_per_block):
+        """
+        Apply the gap-handling policy to the per-recording stream structure.
+
+        Walks every continuous stream, reads its ``detected_gaps`` attached during
+        folder parsing, and either raises (default, ``gap_tolerance_ms=None``), absorbs
+        (``ignore_integrity_checks=True`` or no gaps above tolerance), or splits each
+        affected recording into multiple Neo sub-segments.
+
+        When ``ignore_integrity_checks`` is True the detected gaps are cleared and the
+        original segment structure is returned unchanged.
+
+        Parameters
+        ----------
+        all_streams : dict
+            Nested mapping ``[block_index][seg_index][stream_type][stream_name] -> info``.
+        nb_block : int
+        nb_segment_per_block : dict
+
+        Returns
+        -------
+        all_streams : dict
+            Possibly expanded to include sub-segments from gap-based splits.
+        nb_segment_per_block : dict
+            Updated segment counts reflecting any splits.
+        """
+        if self.ignore_integrity_checks:
+            # Clear detected_gaps so downstream code treats the recording as contiguous.
+            for block_index in range(nb_block):
+                for seg_index in range(nb_segment_per_block[block_index]):
+                    streams = all_streams[block_index][seg_index].get("continuous", {})
+                    for stream_info in streams.values():
+                        stream_info["detected_gaps"] = []
+            return all_streams, nb_segment_per_block
+
+        tolerance_ms = self.gap_tolerance_ms
+
+        any_gaps_reported = []  # list of (block, seg, stream_name, info) with gaps above threshold
+        # (block_index, seg_index, stream_name) -> list of (pos, gap_size) above tolerance.
+        # Kept local to this call so the per-stream info dicts stay free of transient state.
+        significant_by_stream = {}
+
+        for block_index in range(nb_block):
+            for seg_index in range(nb_segment_per_block[block_index]):
+                streams = all_streams[block_index][seg_index].get("continuous", {})
+                for stream_name, stream_info in streams.items():
+                    detected = stream_info.get("detected_gaps", [])
+                    if not detected:
+                        continue
+                    sample_rate = float(stream_info["sample_rate"])
+                    if tolerance_ms is None:
+                        any_gaps_reported.append((block_index, seg_index, stream_name, stream_info))
+                    else:
+                        significant_by_stream[(block_index, seg_index, stream_name)] = [
+                            (pos, gap_size)
+                            for pos, gap_size in detected
+                            if (gap_size - 1) * 1000.0 / sample_rate > tolerance_ms
+                        ]
+
+        if tolerance_ms is None and any_gaps_reported:
+            # Build a combined gap report across the first offending streams.
+            block_index, seg_index, stream_name, stream_info = any_gaps_reported[0]
+            detected = stream_info["detected_gaps"]
+            sample_rate = float(stream_info["sample_rate"])
+            report = self._format_gap_report(
+                detected,
+                sample_rate,
+                stream_name,
+                stream_info.get("timestamps_file", ""),
+            )
+            n_offenders = len(any_gaps_reported)
+            header = (
+                f"Detected timestamp gaps in {n_offenders} continuous stream(s). "
+                "The first stream's report is shown below.\n"
+                "Pass gap_tolerance_ms to segment at gaps larger than this threshold, "
+                "or ignore_integrity_checks=True to skip the check entirely.\n\n"
+            )
+            raise ValueError(header + report)
+
+        if tolerance_ms is None:
+            # No gaps anywhere. Return unchanged.
+            return all_streams, nb_segment_per_block
+
+        if not any(significant_by_stream.values()):
+            return all_streams, nb_segment_per_block
+
+        # Rebuild all_streams with sub-segments. Cross-stream alignment: all continuous
+        # streams within a recording must have the same number of significant gaps.
+        new_all_streams = {}
+        new_nb_segment_per_block = {}
+        for block_index in range(nb_block):
+            new_all_streams[block_index] = {}
+            new_seg_cursor = 0
+            for seg_index in range(nb_segment_per_block[block_index]):
+                rec = all_streams[block_index][seg_index]
+                cont_streams = rec.get("continuous", {})
+                evt_streams = rec.get("events", {})
+
+                gap_counts = {
+                    name: len(significant_by_stream.get((block_index, seg_index, name), []))
+                    for name in cont_streams
+                }
+                if gap_counts and len(set(gap_counts.values())) > 1:
+                    raise ValueError(
+                        "Incompatible section structures across continuous streams in "
+                        f"block {block_index}, recording {seg_index}: "
+                        f"different streams detected different numbers of significant gaps "
+                        f"({gap_counts}). All streams within a recording must have the same "
+                        "gap structure for segmentation to be well-defined."
+                    )
+
+                n_sub = 1 + (next(iter(gap_counts.values())) if gap_counts else 0)
+
+                for sub_index in range(n_sub):
+                    new_rec = {"continuous": {}, "events": {}}
+                    for stream_name, stream_info in cont_streams.items():
+                        significant = significant_by_stream.get(
+                            (block_index, seg_index, stream_name), []
+                        )
+                        new_rec["continuous"][stream_name] = self._slice_continuous_stream(
+                            stream_info, sub_index, significant
+                        )
+                    # Events: attach full info to every sub-segment with absolute time
+                    # bounds so _get_event_timestamps can filter at query time.
+                    sub_t_start = None
+                    sub_t_stop = None
+                    if cont_streams:
+                        any_new = next(iter(new_rec["continuous"].values()))
+                        sub_t_start = any_new["t_start"]
+                        sub_t_stop = sub_t_start + any_new["n_samples_total"] / float(
+                            any_new["sample_rate"]
+                        )
+                    for evt_name, evt_info in evt_streams.items():
+                        # Shallow-copy so each sub-segment gets its own bounds while
+                        # sharing the underlying (large) event arrays. Filtering
+                        # happens at query time in _get_event_timestamps.
+                        new_evt_info = evt_info.copy()
+                        new_evt_info["_sub_segment_t_start_abs"] = sub_t_start
+                        new_evt_info["_sub_segment_t_stop_abs"] = sub_t_stop
+                        new_rec["events"][evt_name] = new_evt_info
+                    new_all_streams[block_index][new_seg_cursor] = new_rec
+                    new_seg_cursor += 1
+            new_nb_segment_per_block[block_index] = new_seg_cursor
+
+        return new_all_streams, new_nb_segment_per_block
+
+    @staticmethod
+    def _slice_continuous_stream(stream_info, sub_index, significant):
+        """
+        Build the stream info dict for a sub-segment of a gap-split recording.
+
+        ``sub_index=0`` covers from recorded sample 0 up to the first significant gap
+        (or the end if there are none). Subsequent indices cover inter-gap regions.
+        """
+        n_samples_total_rec = int(stream_info["n_samples_total"])
+        sample_rate = float(stream_info["sample_rate"])
+        timestamp0 = int(stream_info["timestamp0"])
+
+        # Boundary positions in recorded-sample space (inclusive start, exclusive stop).
+        # `pos` in detected_gaps is the index of the sample BEFORE the gap in
+        # recorded-sample space, so sub-segment `i` runs from boundaries[i] to
+        # boundaries[i+1].
+        boundaries = [0]
+        for pos, _gap_size in significant:
+            boundaries.append(pos + 1)
+        boundaries.append(n_samples_total_rec)
+
+        start_rec = boundaries[sub_index]
+        stop_rec = boundaries[sub_index + 1]
+        n_sub_samples = stop_rec - start_rec
+
+        # Compute the absolute sample index at the start of this sub-segment.
+        # Every gap before this sub-segment has advanced the absolute timestamp by
+        # `gap_size - 1` samples beyond what recorded-sample space accounts for.
+        extra_samples = 0
+        for pos, gap_size in significant[:sub_index]:
+            extra_samples += gap_size - 1
+        sub_timestamp0 = timestamp0 + start_rec + extra_samples
+        sub_t_start = sub_timestamp0 / sample_rate
+
+        new_info = stream_info.copy()
+        new_info["timestamp0"] = int(sub_timestamp0)
+        new_info["t_start"] = sub_t_start
+        new_info["n_samples_total"] = int(n_sub_samples)
+        new_info["_sub_segment_start_rec"] = int(start_rec)
+        new_info["detected_gaps"] = []
+        new_info["_is_sub_segment"] = True
+        return new_info
+
+    @staticmethod
+    def _format_gap_report(detected_gaps, sampling_frequency, stream_name, filename):
+        """
+        Format a detailed gap report showing where timestamp discontinuities occur
+        in a continuous stream.
+
+        Parameters
+        ----------
+        detected_gaps : list of (int, int)
+            List of ``(position_in_recorded_samples, gap_size_samples)`` tuples.
+        sampling_frequency : float
+            Stream sampling rate in Hz, used to convert positions and durations to time.
+        stream_name : str
+            Stream name shown in the report header.
+        filename : str
+            Path to the timestamps file, shown in the report header.
+
+        Returns
+        -------
+        str
+            Multi-line table suitable for inclusion in a ``ValueError`` message.
+        """
+        # Only show up to the first 20 gaps to keep the report readable.
+        max_rows = 20
+        shown = detected_gaps[:max_rows]
+        positions_s = [pos / sampling_frequency for pos, _ in shown]
+        # gap_size here is the stored diff between consecutive timestamps; the "gap"
+        # duration is (gap_size - 1) sample periods.
+        durations_ms = [(gap_size - 1) * 1000.0 / sampling_frequency for _, gap_size in shown]
+
+        detail_rows = "".join(
+            f"| {pos:>15,} | {pos_s:>21.6f} | {dur_ms:>21.3f} |\n"
+            for (pos, _), pos_s, dur_ms in zip(shown, positions_s, durations_ms)
+        )
+        truncated_note = (
+            f"\n... {len(detected_gaps) - max_rows} additional gaps not shown.\n"
+            if len(detected_gaps) > max_rows
+            else ""
+        )
+
+        return (
+            f"Gap Report for stream {stream_name!r} ({filename}):\n"
+            f"Found {len(detected_gaps)} timestamp gap(s) in the sample-index sequence.\n\n"
+            "Gap Details:\n"
+            "+-----------------+-----------------------+-----------------------+\n"
+            "| Sample Index    | Time at Gap (s)       | Gap Size (ms)         |\n"
+            "+-----------------+-----------------------+-----------------------+\n"
+            f"{detail_rows}"
+            "+-----------------+-----------------------+-----------------------+"
+            f"{truncated_note}"
+        )
 
     @staticmethod
     def _parse_folder_structure(dirname, experiment_names=None):
@@ -862,17 +1222,37 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         timestamps = np.load(str(timestamp_file), mmap_mode="r")
                         if len(timestamps) == 0:
                             timestamp0 = 0
+                            n_samples_total = 0
                             t_start = 0.0
                         else:
-                            timestamp0 = timestamps[0]
+                            timestamp0 = int(timestamps[0])
+                            n_samples_total = int(timestamps.shape[0])
                             t_start = timestamp0 / info["sample_rate"]
 
-                        # TODO for later : gap checking
+                        # Gap detection. Timestamps in OpenEphys Binary are integer
+                        # sample indices stored in sample_numbers.npy (v0.6+) or
+                        # timestamps.npy (pre-v0.6). For contiguous recordings the
+                        # last value equals timestamp0 + n_samples_total - 1 exactly;
+                        # any deviation indicates a gap in the recording.
+                        expected_last = timestamp0 + n_samples_total - 1
+                        if int(timestamps[-1]) == expected_last:
+                            detected_gaps = []
+                        else:
+                            ts = timestamps if timestamps.dtype == np.int64 else timestamps.astype(np.int64)
+                            diffs = np.diff(ts)
+                            gap_positions = np.flatnonzero(diffs != 1)
+                            detected_gaps = [
+                                (int(pos), int(diffs[pos])) for pos in gap_positions
+                            ]
+
                         signal_stream = info.copy()
                         signal_stream["raw_filename"] = str(raw_filename)
                         signal_stream["dtype"] = "int16"
                         signal_stream["timestamp0"] = timestamp0
                         signal_stream["t_start"] = t_start
+                        signal_stream["timestamps_file"] = str(timestamp_file)
+                        signal_stream["n_samples_total"] = n_samples_total
+                        signal_stream["detected_gaps"] = detected_gaps
 
                         recording["streams"]["continuous"][stream_name] = signal_stream
 
