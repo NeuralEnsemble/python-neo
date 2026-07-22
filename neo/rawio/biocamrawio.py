@@ -267,22 +267,39 @@ def open_biocam_file_header(filename) -> dict:
         )
     else:  # brw v4.x
         # Read recording variables
-        experiment_settings = json.JSONDecoder().decode(rf["ExperimentSettings"][0].decode())
-        max_uv = experiment_settings["ValueConverter"]["MaxAnalogValue"]
-        min_uv = experiment_settings["ValueConverter"]["MinAnalogValue"]
-        max_digital = experiment_settings["ValueConverter"]["MaxDigitalValue"]
-        min_digital = experiment_settings["ValueConverter"]["MinDigitalValue"]
-        scale_factor = experiment_settings["ValueConverter"]["ScaleFactor"]
-        sampling_rate = experiment_settings["TimeConverter"]["FrameRate"]
-        num_frames = rf["TOC"][-1, -1]
 
+        if "ExperimentSettings" in rf:
+            experiment_settings = json.JSONDecoder().decode(rf["ExperimentSettings"][0].decode())
+            max_uv = experiment_settings["ValueConverter"]["MaxAnalogValue"]
+            min_uv = experiment_settings["ValueConverter"]["MinAnalogValue"]
+            max_digital = experiment_settings["ValueConverter"]["MaxDigitalValue"]
+            min_digital = experiment_settings["ValueConverter"]["MinDigitalValue"]
+            scale_factor = experiment_settings["ValueConverter"]["ScaleFactor"]
+            sampling_rate = experiment_settings["TimeConverter"]["FrameRate"]
+        elif "ExperimentInfo" in rf:
+            experiment_info = json.JSONDecoder().decode(rf["ExperimentInfo"][0].decode())
+            signal_converter = experiment_info["SignalConverter"]["DigitalToAnalogConverter"]
+            max_uv = signal_converter["MaxAnalogValueMicroVolt"]
+            min_uv = signal_converter["MinAnalogValueMicroVolt"]
+            max_digital = signal_converter["MaxDigitalValue"]
+            min_digital = signal_converter["MinDigitalValue"]
+            scale_factor = 1.0 
+            sampling_rate = experiment_info["SignalConverter"]["SampleToTimeConverter"]["FrameRateHertz"]
+
+        num_frames = rf["TOC"][-1, -1]
         num_channels = None
         well_ID = None
         for well_ID in rf:
             if well_ID.startswith("Well_"):
-                num_channels = len(rf[well_ID]["StoredChIdxs"])
+                if "StoredChIdxs" in rf[well_ID]:
+                    num_channels = len(rf[well_ID]["StoredChIdxs"])
+                elif "NoisePlateElIdxs" in rf[well_ID]:
+                    num_channels = max(rf[well_ID]["NoisePlateElIdxs"]) + 1
+                else:
+                    # Fallback: assume num_channels from TOC and Raw
+                    num_channels = len(rf[well_ID]["Raw"]) // num_frames
                 if "Raw" in rf[well_ID]:
-                    if len(rf[well_ID]["Raw"]) % num_channels:
+                    if len(rf[well_ID]["Raw"]) // num_channels * num_channels != len(rf[well_ID]["Raw"]):
                         raise NeoReadWriteError(
                             f"Length of raw data array is not multiple of channel number in {well_ID}"
                         )
