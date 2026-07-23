@@ -25,6 +25,10 @@ import warnings
 from neo.core import NeoReadWriteError
 
 
+# Maximum bytes to read at once.
+_MAX_READ_BYTES = 64 * 1024 * 1024  # 64 MB
+
+
 class BiocamRawIO(BaseRawIO):
     """
     Class for reading data from a Biocam h5 file.
@@ -136,12 +140,8 @@ class BiocamRawIO(BaseRawIO):
             raise ValueError("`stream_index must be 0")
         return self._segment_t_start(block_index, seg_index)
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
-        if i_start is None:
-            i_start = 0
-        if i_stop is None:
-            i_stop = self._num_frames
-
+    def _read_block(self, i_start, i_stop):
+        """Read frames [i_start, i_stop) for all channels, as (n_frames, n_channels)."""
         # read functions are different based on the version of biocam
         if self._read_function is readHDF5t_brw4_sparse:
             if self._fill_gaps_strategy is None:
@@ -163,34 +163,45 @@ class BiocamRawIO(BaseRawIO):
         else:
             data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
 
-        # older style data returns array of (n_samples, n_channels), should be a view
-        # but if memory issues come up we should doublecheck out how the file is being stored
-        if data.ndim > 1:
-            if channel_indexes is None:
-                channel_indexes = slice(None)
-            sig_chunk = data[:, channel_indexes]
+        # Newer style data is read as a flat (n_samples * n_channels) array. The h5py read is
+        # C-contiguous, so this reshape is a free view: it copies nothing and allocates nothing.
+        # Older style data is already (n_samples, n_channels).
+        if data.ndim == 1:
+            data = data.reshape(i_stop - i_start, self._num_channels)
+        return data
 
-        # newer style data returns an initial flat array (n_samples * n_channels)
-        # we iterate through channels rather than slicing
-        # Due to the fact that Neo and SpikeInterface tend to prefer slices we need to add
-        # some careful checks around slicing of None in the case we need to iterate through
-        # channels. First check if None. Then check if slice and only if slice check that it is slice(None)
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
+        if i_start is None:
+            i_start = 0
+        if i_stop is None:
+            i_stop = self._num_frames
+        n_frames = i_stop - i_start
+        # Read a single sample to determine the number of selected channels.
+        if channel_indexes is None:
+            channel_indexes = slice(None)
+        n_ch = self._read_block(i_start, i_start + 1)[:, channel_indexes].shape[1]
+        dtype = self.header["signal_channels"]["dtype"][0]
+        itemsize = np.dtype(dtype).itemsize
+        read_bytes = n_frames * self._num_channels * itemsize
+        out_bytes = n_frames * n_ch * itemsize
+
+        # Reading a subset of channels from a very large recording.
+        # The BioCam hdf5 layout is such that all channels are chunked together, so they cannot be
+        # read independently. In the event that only a subset of channels of a very large recording
+        # is needed, we cannot slice a single channel. Instead, we must loop and read all channels,
+        # slicing as we go. We will do this chunking if the read is large and the output to be
+        # returned is smaller.
+        read_by_chunks = read_bytes > _MAX_READ_BYTES and out_bytes < read_bytes // 2
+        if read_by_chunks:
+            # Read in chunks, copying desired channels into a preallocated array.
+            out = np.empty((n_frames, n_ch), dtype=dtype)
+            max_frames = max(1, _MAX_READ_BYTES // (itemsize * self._num_channels))
+            for start in range(i_start, i_stop, max_frames):
+                stop = min(start + max_frames, i_stop)
+                out[start - i_start : stop - i_start] = self._read_block(start, stop)[:, channel_indexes]
         else:
-            if channel_indexes is None:
-                channel_indexes = [ch for ch in range(self._num_channels)]
-            elif isinstance(channel_indexes, slice):
-                start = channel_indexes.start or 0
-                stop = channel_indexes.stop or self._num_channels
-                step = channel_indexes.step or 1
-                channel_indexes = [ch for ch in range(start, stop, step)]
-
-            sig_chunk = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=data.dtype)
-            # iterate through channels to prevent loading all channels into memory which can cause
-            # memory exhaustion. See https://github.com/SpikeInterface/spikeinterface/issues/3303
-            for index, channel_index in enumerate(channel_indexes):
-                sig_chunk[:, index] = data[channel_index :: self._num_channels]
-
-        return sig_chunk
+            out = self._read_block(i_start, i_stop)[:, channel_indexes]
+        return out
 
 
 def open_biocam_file_header(filename) -> dict:
