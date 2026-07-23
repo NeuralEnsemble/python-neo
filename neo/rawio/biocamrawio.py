@@ -213,7 +213,9 @@ def open_biocam_file_header(filename) -> dict:
     if "3BRecInfo" in rf.keys():  # brw v3.x
         # Read recording variables
         rec_vars = rf.require_group("3BRecInfo/3BRecVars/")
-        bit_depth = rec_vars["BitDepth"][0]
+        # Biocam v3.x stores BitDepth as a np.uint8.
+        # Convert to int to avoid overflow when calculating gain.
+        bit_depth = int(rec_vars["BitDepth"][0])
         max_uv = rec_vars["MaxVolt"][0]
         min_uv = rec_vars["MinVolt"][0]
         num_frames = rec_vars["NRecFrames"][0]
