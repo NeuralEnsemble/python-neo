@@ -199,7 +199,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     on demand without creating a temporary ``.dat`` file. Parsing metadata, events,
     and timestamps does not require mtscomp; accessing compressed traces requires the
     optional ``mtscomp`` package, available through ``pip install "neo[mtscomp]"``
-    or ``pip install mtscomp``.
+    or ``pip install mtscomp tqdm``.
 
     # Correspondencies
     Neo          OpenEphys
@@ -389,11 +389,11 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     buffer_id = str(stream_index)
                     if info["data_format"] == "raw":
                         shape = get_memmap_shape(
-                            info["data_filename"], info["dtype"], num_channels=num_channels, offset=0
+                            info["raw_filename"], info["dtype"], num_channels=num_channels, offset=0
                         )
                         buffer_description = {
                             "type": "raw",
-                            "file_path": info["data_filename"],
+                            "file_path": str(info["raw_filename"]),
                             "dtype": info["dtype"],
                             "order": "C",
                             "file_offset": 0,

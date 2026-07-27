@@ -218,6 +218,11 @@ def test_raw_and_mtscomp_open_ephys_signals_are_equal(tmp_path):
     )
     compressed_folder = _compress_open_ephys_recording(raw_folder, tmp_path / "compressed")
 
+    # Even invalid compressed artifacts must not affect a valid raw recording.
+    for dat_path in raw_folder.rglob("continuous.dat"):
+        (dat_path.parent / "continuous.cbin").write_bytes(b"not mtscomp data")
+        (dat_path.parent / "continuous.ch").write_text("not JSON", encoding="utf8")
+
     _, raw_streams, _, _, _ = explore_folder(raw_folder)
     raw_stream_info = raw_streams[0][0]["continuous"]["ProbeA-AP"]
     assert raw_stream_info["raw_filename"] == raw_stream_info["data_filename"]
@@ -241,6 +246,17 @@ def test_raw_and_mtscomp_open_ephys_signals_are_equal(tmp_path):
     np.testing.assert_array_equal(raw_reader.header["signal_buffers"], compressed_reader.header["signal_buffers"])
     np.testing.assert_array_equal(raw_reader.header["signal_streams"], compressed_reader.header["signal_streams"])
     np.testing.assert_array_equal(raw_reader.header["signal_channels"], compressed_reader.header["signal_channels"])
+    raw_buffer_description = raw_reader.get_analogsignal_buffer_description(0, 0, "0")
+    assert set(raw_buffer_description) == {
+        "type",
+        "file_path",
+        "dtype",
+        "order",
+        "file_offset",
+        "shape",
+    }
+    assert raw_buffer_description["type"] == "raw"
+    assert raw_buffer_description["file_path"].endswith("continuous.dat")
     assert raw_reader.segment_t_start(0, 0) == compressed_reader.segment_t_start(0, 0)
     assert raw_reader.segment_t_stop(0, 0) == compressed_reader.segment_t_stop(0, 0)
 
@@ -378,6 +394,7 @@ def test_mtscomp_is_only_required_for_trace_access_and_reader_closes(tmp_path):
         json.dump(structure, file)
 
     compressed_folder = _compress_open_ephys_recording(raw_folder, tmp_path / "compressed")
+    raw_reader = OpenEphysBinaryRawIO(raw_folder)
     reader = OpenEphysBinaryRawIO(compressed_folder)
 
     original_import = builtins.__import__
@@ -388,9 +405,17 @@ def test_mtscomp_is_only_required_for_trace_access_and_reader_closes(tmp_path):
         return original_import(name, *args, **kwargs)
 
     with patch("builtins.__import__", side_effect=import_without_mtscomp):
+        raw_reader.parse_header()
         reader.parse_header()
-        assert reader.event_count(0, 0, 0) == 2
+        raw_chunk = raw_reader.get_analogsignal_chunk(0, 0, 0, 10, 0)
+        np.testing.assert_array_equal(raw_chunk, data[:10])
+
+        assert raw_reader.event_count(0, 0, 0) == reader.event_count(0, 0, 0) == 2
+        raw_events = raw_reader.get_event_timestamps(0, 0, 0)
         event_timestamps, event_durations, event_labels = reader.get_event_timestamps(0, 0, 0)
+        np.testing.assert_array_equal(raw_events[0], event_timestamps)
+        assert raw_events[1] is event_durations is None
+        np.testing.assert_array_equal(raw_events[2], event_labels)
         np.testing.assert_array_equal(event_timestamps, [10, 20])
         assert event_durations is None
         np.testing.assert_array_equal(event_labels, ["start", "stop"])
