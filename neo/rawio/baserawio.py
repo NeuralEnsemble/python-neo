@@ -1681,7 +1681,7 @@ class BaseRawWithBufferApiIO(BaseRawIO):
             except ImportError as exc:
                 raise ImportError(
                     "Reading mtscomp-compressed signals requires mtscomp. "
-                    'Install it with `pip install mtscomp` or `pip install "neo[openephys]"`.'
+                    'Install it with `pip install mtscomp` or `pip install "neo[mtscomp]"`.'
                 ) from exc
 
             if not hasattr(self, "_mtscomp_analogsignal_buffers"):

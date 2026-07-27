@@ -198,7 +198,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     ``continuous.dat`` takes precedence. Compressed data are decompressed losslessly
     on demand without creating a temporary ``.dat`` file. Parsing metadata, events,
     and timestamps does not require mtscomp; accessing compressed traces requires the
-    optional ``mtscomp`` package, available through ``pip install "neo[openephys]"``
+    optional ``mtscomp`` package, available through ``pip install "neo[mtscomp]"``
     or ``pip install mtscomp``.
 
     # Correspondencies
