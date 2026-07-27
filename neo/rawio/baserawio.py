@@ -1561,6 +1561,11 @@ class BaseRawWithBufferApiIO(BaseRawIO):
 
       * np.memmap
       * hdf5
+      * mtscomp
+
+    An mtscomp buffer description contains ``type="mtscomp"``, the compressed
+    ``file_path`` and JSON ``metadata_path``, plus ``dtype``, ``shape``, and
+    ``time_axis=0``.
 
     In theses cases _get_signal_size and _get_analogsignal_chunk are totaly generic and do not need to be implemented in the class.
 
@@ -1667,6 +1672,30 @@ class BaseRawWithBufferApiIO(BaseRawIO):
             else:
                 raise ValueError(f"time_axis must be 0 or 1, got {time_axis}")
 
+        elif buffer_desc["type"] == "mtscomp":
+            if time_axis != 0:
+                raise ValueError(f"mtscomp buffers require time_axis=0, got {time_axis}")
+
+            try:
+                import mtscomp
+            except ImportError as exc:
+                raise ImportError(
+                    "Reading mtscomp-compressed signals requires mtscomp. "
+                    'Install it with `pip install mtscomp` or `pip install "neo[openephys]"`.'
+                ) from exc
+
+            if not hasattr(self, "_mtscomp_analogsignal_buffers"):
+                self._mtscomp_analogsignal_buffers = {}
+            block_readers = self._mtscomp_analogsignal_buffers.setdefault(block_index, {})
+            segment_readers = block_readers.setdefault(seg_index, {})
+
+            if buffer_id not in segment_readers:
+                reader = mtscomp.Reader()
+                reader.open(buffer_desc["file_path"], buffer_desc["metadata_path"])
+                segment_readers[buffer_id] = reader
+
+            raw_sigs = segment_readers[buffer_id][i_start:i_stop]
+
         elif buffer_desc["type"] == "hdf5":
 
             # open files on demand and keep reference to opened file
@@ -1725,6 +1754,25 @@ class BaseRawWithBufferApiIO(BaseRawIO):
                     for buffer_id, h5_file in self._hdf5_analogsignal_buffers[block_index][seg_index].items():
                         h5_file.close()
             del self._hdf5_analogsignal_buffers
+
+        self._close_mtscomp_analogsignal_buffers()
+
+    def _close_mtscomp_analogsignal_buffers(self):
+        """Close cached mtscomp readers, tolerating partially constructed instances."""
+        readers_by_block = getattr(self, "_mtscomp_analogsignal_buffers", None)
+        if readers_by_block is None:
+            return
+
+        for readers_by_segment in readers_by_block.values():
+            for readers_by_buffer in readers_by_segment.values():
+                for reader in readers_by_buffer.values():
+                    try:
+                        reader.close()
+                    except Exception:
+                        # Destructors must remain safe during interpreter shutdown or
+                        # after a Reader failed part-way through opening its files.
+                        pass
+        del self._mtscomp_analogsignal_buffers
 
 
 def pprint_vector(vector, lim: int = 8):

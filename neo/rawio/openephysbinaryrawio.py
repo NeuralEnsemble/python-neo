@@ -28,6 +28,105 @@ from .baserawio import (
 from .utils import get_memmap_shape
 
 
+def _resolve_continuous_storage(stream_folder):
+    """Resolve the signal data backend for one Open Ephys continuous stream."""
+    stream_folder = Path(stream_folder)
+    dat_file = stream_folder / "continuous.dat"
+    cbin_file = stream_folder / "continuous.cbin"
+    ch_file = stream_folder / "continuous.ch"
+
+    # Preserve the historical raw-file behavior when both representations exist.
+    if dat_file.is_file():
+        return {"type": "raw", "file_path": dat_file}
+
+    if cbin_file.is_file():
+        if not ch_file.is_file():
+            raise FileNotFoundError(
+                f"Found mtscomp-compressed signal data at {cbin_file}, but its required "
+                f"metadata file {ch_file} is missing."
+            )
+        return {"type": "mtscomp", "file_path": cbin_file, "metadata_path": ch_file}
+
+    if ch_file.is_file():
+        raise FileNotFoundError(
+            f"Found mtscomp metadata at {ch_file}, but no signal data file was found. "
+            f"Expected {dat_file} or {cbin_file}."
+        )
+
+    raise FileNotFoundError(f"No signal data file was found in {stream_folder}. Expected {dat_file} or {cbin_file}.")
+
+
+def _read_mtscomp_metadata(metadata_path):
+    """Read and validate the metadata needed to describe an mtscomp buffer."""
+    metadata_path = Path(metadata_path)
+    with open(metadata_path, encoding="utf8") as file:
+        metadata = json.load(file)
+
+    if not isinstance(metadata, dict):
+        raise ValueError(f"Invalid mtscomp metadata in {metadata_path}: expected a JSON object.")
+
+    required_keys = ("n_channels", "sample_rate", "dtype", "chunk_bounds")
+    missing_keys = [key for key in required_keys if key not in metadata]
+    if missing_keys:
+        raise ValueError(
+            f"Invalid mtscomp metadata in {metadata_path}: missing required "
+            f"{'key' if len(missing_keys) == 1 else 'keys'} {', '.join(missing_keys)}."
+        )
+
+    n_channels = metadata["n_channels"]
+    if isinstance(n_channels, bool) or not isinstance(n_channels, int) or n_channels <= 0:
+        raise ValueError(
+            f"Invalid mtscomp metadata in {metadata_path}: n_channels must be a positive integer, "
+            f"observed {n_channels!r}."
+        )
+
+    sample_rate = metadata["sample_rate"]
+    if isinstance(sample_rate, bool):
+        valid_sample_rate = False
+    else:
+        try:
+            sample_rate = float(sample_rate)
+        except (TypeError, ValueError):
+            valid_sample_rate = False
+        else:
+            valid_sample_rate = np.isfinite(sample_rate) and sample_rate > 0
+    if not valid_sample_rate:
+        raise ValueError(
+            f"Invalid mtscomp metadata in {metadata_path}: sample_rate must be finite and positive, "
+            f"observed {metadata['sample_rate']!r}."
+        )
+
+    try:
+        np.dtype(metadata["dtype"])
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"Invalid mtscomp metadata in {metadata_path}: dtype {metadata['dtype']!r} "
+            f"cannot be interpreted as a NumPy dtype."
+        ) from exc
+
+    chunk_bounds = metadata["chunk_bounds"]
+    if not isinstance(chunk_bounds, list) or len(chunk_bounds) == 0:
+        raise ValueError(f"Invalid mtscomp metadata in {metadata_path}: chunk_bounds must be a non-empty list.")
+    if any(isinstance(bound, bool) or not isinstance(bound, int) for bound in chunk_bounds):
+        raise ValueError(
+            f"Invalid mtscomp metadata in {metadata_path}: chunk_bounds must contain integer sample indices."
+        )
+    if chunk_bounds[0] != 0:
+        raise ValueError(
+            f"Invalid mtscomp metadata in {metadata_path}: chunk_bounds must start at 0, "
+            f"observed {chunk_bounds[0]}."
+        )
+    if chunk_bounds[-1] < 0:
+        raise ValueError(
+            f"Invalid mtscomp metadata in {metadata_path}: the final chunk bound must be non-negative, "
+            f"observed {chunk_bounds[-1]}."
+        )
+    if any(next_bound <= bound for bound, next_bound in zip(chunk_bounds, chunk_bounds[1:])):
+        raise ValueError(f"Invalid mtscomp metadata in {metadata_path}: chunk_bounds must be monotonically increasing.")
+
+    return metadata
+
+
 class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     """
     Handle several Blocks and several Segments.
@@ -57,7 +156,9 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     │   │   │   ├── structure.oebin       # Required: JSON metadata file
     │   │   │   ├── continuous/           # Signal data streams
     │   │   │   │   └── AP_band/          # Stream folder (becomes "Record Node 102#AP_band")
-    │   │   │   │       ├── continuous.dat      # Raw binary signal data
+    │   │   │   │       ├── continuous.dat      # Raw binary signal data, or:
+    │   │   │   │       ├── continuous.cbin     # Lossless mtscomp signal data
+    │   │   │   │       ├── continuous.ch       # mtscomp metadata
     │   │   │   │       ├── timestamps.npy      # Sample timestamps (pre-v0.6)
     │   │   │   │       └── sample_numbers.npy  # Sample numbers (v0.6+)
     │   │   │   └── events/               # Event data streams (optional)
@@ -92,6 +193,14 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
     - Point to specific recording folder: Single recording session only
     The reader will automatically detect the level and parse accordingly.
 
+    Signal data may be stored as ``continuous.dat`` or as an mtscomp
+    ``continuous.cbin``/``continuous.ch`` pair. If both representations exist,
+    ``continuous.dat`` takes precedence. Compressed data are decompressed losslessly
+    on demand without creating a temporary ``.dat`` file. Parsing metadata, events,
+    and timestamps does not require mtscomp; accessing compressed traces requires the
+    optional ``mtscomp`` package, available through ``pip install "neo[openephys]"``
+    or ``pip install mtscomp``.
+
     # Correspondencies
     Neo          OpenEphys
     block[n-1]   experiment[n]    New device start/stop
@@ -103,7 +212,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
     """
 
-    extensions = ["xml", "oebin", "txt", "dat", "npy"]
+    extensions = ["xml", "oebin", "txt", "dat", "cbin", "ch", "npy"]
     rawmode = "one-dir"
 
     def __init__(self, dirname="", experiment_names=None):
@@ -118,6 +227,11 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
     def _source_name(self):
         return self.dirname
+
+    @property
+    def uses_mtscomp(self):
+        """Whether any parsed continuous stream uses mtscomp compression."""
+        return getattr(self, "_uses_mtscomp", False)
 
     def _parse_header(self):
         # Use the static private methods directly
@@ -273,15 +387,66 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                     num_channels = len(info["channels"])
                     stream_id = str(stream_index)
                     buffer_id = str(stream_index)
-                    shape = get_memmap_shape(info["raw_filename"], info["dtype"], num_channels=num_channels, offset=0)
-                    self._buffer_descriptions[block_index][seg_index][buffer_id] = {
-                        "type": "raw",
-                        "file_path": str(info["raw_filename"]),
-                        "dtype": info["dtype"],
-                        "order": "C",
-                        "file_offset": 0,
-                        "shape": shape,
-                    }
+                    if info["data_format"] == "raw":
+                        shape = get_memmap_shape(
+                            info["data_filename"], info["dtype"], num_channels=num_channels, offset=0
+                        )
+                        buffer_description = {
+                            "type": "raw",
+                            "file_path": info["data_filename"],
+                            "dtype": info["dtype"],
+                            "order": "C",
+                            "file_offset": 0,
+                            "shape": shape,
+                        }
+                    elif info["data_format"] == "mtscomp":
+                        metadata = _read_mtscomp_metadata(info["compression_metadata_filename"])
+                        cbin_path = info["data_filename"]
+                        stream_name = info["stream_name"]
+
+                        expected_n_channels = len(info["channels"])
+                        observed_n_channels = metadata["n_channels"]
+                        if observed_n_channels != expected_n_channels:
+                            raise ValueError(
+                                f"Open Ephys stream {stream_name!r} at {cbin_path} declares "
+                                f"{expected_n_channels} channels in structure.oebin, but "
+                                f"continuous.ch declares {observed_n_channels}."
+                            )
+
+                        expected_dtype = np.dtype(info["dtype"])
+                        observed_dtype = np.dtype(metadata["dtype"])
+                        if observed_dtype != expected_dtype:
+                            raise ValueError(
+                                f"Open Ephys stream {stream_name!r} at {cbin_path} declares dtype "
+                                f"{expected_dtype} in structure.oebin, but continuous.ch declares "
+                                f"{observed_dtype}."
+                            )
+
+                        expected_sample_rate = float(info["sample_rate"])
+                        observed_sample_rate = float(metadata["sample_rate"])
+                        if not np.isclose(observed_sample_rate, expected_sample_rate):
+                            raise ValueError(
+                                f"Open Ephys stream {stream_name!r} at {cbin_path} declares sample rate "
+                                f"{expected_sample_rate} Hz in structure.oebin, but continuous.ch declares "
+                                f"{observed_sample_rate} Hz."
+                            )
+
+                        shape = (metadata["chunk_bounds"][-1], metadata["n_channels"])
+                        buffer_description = {
+                            "type": "mtscomp",
+                            "file_path": cbin_path,
+                            "metadata_path": info["compression_metadata_filename"],
+                            "dtype": str(observed_dtype),
+                            "shape": shape,
+                            "time_axis": 0,
+                        }
+                    else:
+                        raise ValueError(
+                            f"Unsupported continuous data format {info['data_format']!r} "
+                            f"for Open Ephys stream {info['stream_name']!r}."
+                        )
+
+                    self._buffer_descriptions[block_index][seg_index][buffer_id] = buffer_description
 
                     has_sync_trace = self._sig_streams[block_index][seg_index][stream_index]["has_sync_trace"]
 
@@ -350,6 +515,13 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             self._stream_buffer_slice[sync_stream_id] = slice(-1, None)
                         else:
                             self._stream_buffer_slice[stream_id_non_neural] = slice(num_neural_channels, None)
+
+        self._uses_mtscomp = any(
+            description["type"] == "mtscomp"
+            for descriptions_by_segment in self._buffer_descriptions.values()
+            for descriptions in descriptions_by_segment.values()
+            for description in descriptions.values()
+        )
 
         # events zone
         # channel map: one channel one stream
@@ -725,7 +897,9 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
             {
                 "channels": [{"channel_name": "CH1", "bit_volts": 0.195, ...}, ...],
                 "sample_rate": 30000.0,
-                "raw_filename": "/path/to/continuous.dat",
+                "data_format": "raw" or "mtscomp",
+                "data_filename": "/path/to/continuous.dat" or "/path/to/continuous.cbin",
+                "compression_metadata_filename": "/path/to/continuous.ch",  # mtscomp only
                 "dtype": "int16",
                 "timestamp0": 123456,
                 "t_start": 0.0
@@ -849,7 +1023,8 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                             )
                             continue
 
-                        raw_filename = recording_folder / "continuous" / info["folder_name"] / "continuous.dat"
+                        stream_folder = recording_folder / "continuous" / info["folder_name"]
+                        storage = _resolve_continuous_storage(stream_folder)
 
                         # Updates for OpenEphys v0.6:
                         # In new vesion (>=0.6) timestamps.npy is now called sample_numbers.npy
@@ -869,7 +1044,10 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
 
                         # TODO for later : gap checking
                         signal_stream = info.copy()
-                        signal_stream["raw_filename"] = str(raw_filename)
+                        signal_stream["data_format"] = storage["type"]
+                        signal_stream["data_filename"] = str(storage["file_path"])
+                        if storage["type"] == "mtscomp":
+                            signal_stream["compression_metadata_filename"] = str(storage["metadata_path"])
                         signal_stream["dtype"] = "int16"
                         signal_stream["timestamp0"] = timestamp0
                         signal_stream["t_start"] = t_start

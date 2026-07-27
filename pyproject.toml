@@ -67,6 +67,7 @@ test = [
     "sonpy;python_version<'3.10'",
     "pynwb",
     "probeinterface",
+    "mtscomp>=1.0.2",
     "zugbruecke>=0.2",
     "wenv"
 ]
@@ -105,6 +106,7 @@ biocam = ["h5py"]
 med = ["dhn_med_py<2.0"] # ci failing with 2.0 test future version when stable
 plexon2 = ["zugbruecke>=0.2; sys_platform!='win32'", "wenv; sys_platform!='win32'"]
 neuralynx = ["python-dateutil"] 
+openephys = ["mtscomp>=1.0.2"]
 
 all = [
     "coverage",
@@ -116,6 +118,7 @@ all = [
     "joblib>=1.0.0",
     "klusta",
     "matplotlib",
+    "mtscomp>=1.0.2",
     "nixio>=1.5.0",
     "pillow",
     "probeinterface",
