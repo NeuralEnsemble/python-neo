@@ -899,6 +899,7 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                 "sample_rate": 30000.0,
                 "data_format": "raw" or "mtscomp",
                 "data_filename": "/path/to/continuous.dat" or "/path/to/continuous.cbin",
+                "raw_filename": "/path/to/continuous.dat",  # raw streams only; compatibility alias
                 "compression_metadata_filename": "/path/to/continuous.ch",  # mtscomp only
                 "dtype": "int16",
                 "timestamp0": 123456,
@@ -1046,7 +1047,12 @@ class OpenEphysBinaryRawIO(BaseRawWithBufferApiIO):
                         signal_stream = info.copy()
                         signal_stream["data_format"] = storage["type"]
                         signal_stream["data_filename"] = str(storage["file_path"])
-                        if storage["type"] == "mtscomp":
+                        if storage["type"] == "raw":
+                            # Keep the field historically returned by explore_folder().
+                            # Compressed streams deliberately omit this alias because a
+                            # .cbin file cannot be treated as raw binary data.
+                            signal_stream["raw_filename"] = signal_stream["data_filename"]
+                        else:
                             signal_stream["compression_metadata_filename"] = str(storage["metadata_path"])
                         signal_stream["dtype"] = "int16"
                         signal_stream["timestamp0"] = timestamp0

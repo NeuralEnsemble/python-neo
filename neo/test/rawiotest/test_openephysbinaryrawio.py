@@ -9,6 +9,7 @@ from neo.rawio.openephysbinaryrawio import (
     OpenEphysBinaryRawIO,
     _read_mtscomp_metadata,
     _resolve_continuous_storage,
+    explore_folder,
 )
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
@@ -216,6 +217,16 @@ def test_raw_and_mtscomp_open_ephys_signals_are_equal(tmp_path):
         },
     )
     compressed_folder = _compress_open_ephys_recording(raw_folder, tmp_path / "compressed")
+
+    _, raw_streams, _, _, _ = explore_folder(raw_folder)
+    raw_stream_info = raw_streams[0][0]["continuous"]["ProbeA-AP"]
+    assert raw_stream_info["raw_filename"] == raw_stream_info["data_filename"]
+    assert raw_stream_info["raw_filename"].endswith("continuous.dat")
+
+    _, compressed_streams, _, _, _ = explore_folder(compressed_folder)
+    compressed_stream_info = compressed_streams[0][0]["continuous"]["ProbeA-AP"]
+    assert "raw_filename" not in compressed_stream_info
+    assert compressed_stream_info["data_filename"].endswith("continuous.cbin")
 
     raw_reader = OpenEphysBinaryRawIO(raw_folder)
     compressed_reader = OpenEphysBinaryRawIO(compressed_folder)
