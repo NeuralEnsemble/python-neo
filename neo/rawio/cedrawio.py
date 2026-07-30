@@ -19,6 +19,9 @@ Please note that the SONPY package:
 Author : Samuel Garcia
 """
 
+import functools
+import importlib
+
 import numpy as np
 
 from .baserawio import (
@@ -29,6 +32,41 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+
+
+@functools.cache
+def _get_sonpy_namespace():
+    """Return the sonpy module namespace that exposes ``SonFile``.
+
+    The layout of the sonpy package changed in 1.9.12:
+
+    * ``<= 1.9.5`` shipped a single pure-Python wheel whose ``__init__.py``
+      dispatched on the platform and bound the binary to ``lib``.
+    * ``>= 1.9.12`` ships one binary wheel per interpreter. The top level does
+      ``from .sonpy import *`` on Windows and macOS, but the Linux wheel ships
+      an empty ``__init__.py``, so only the ``sonpy.sonpy`` extension module is
+      populated there.
+
+    Probing all three keeps old and new installations working.
+    """
+    import sonpy
+
+    candidates = [getattr(sonpy, "lib", None), sonpy]
+    try:
+        candidates.append(importlib.import_module("sonpy.sonpy"))
+    except ImportError:
+        pass
+
+    for namespace in candidates:
+        if namespace is not None and hasattr(namespace, "SonFile"):
+            return namespace
+
+    raise ImportError(
+        "The installed sonpy package exposes no 'SonFile' symbol "
+        "(tried sonpy.lib, sonpy and sonpy.sonpy). "
+        "Note that sonpy only publishes wheels for Windows, and for Linux and macOS "
+        "on Python 3.14 and above; the source distribution is not usable."
+    )
 
 
 class CedRawIO(BaseRawIO):
@@ -67,9 +105,9 @@ class CedRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-        import sonpy
+        sonpy_ns = _get_sonpy_namespace()
 
-        self.smrx_file = sonpy.lib.SonFile(sName=str(self.filename), bReadOnly=True)
+        self.smrx_file = sonpy_ns.SonFile(sName=str(self.filename), bReadOnly=True)
         smrx = self.smrx_file
 
         self._time_base = smrx.GetTimeBase()
@@ -82,7 +120,7 @@ class CedRawIO(BaseRawIO):
         for chan_ind in range(smrx.MaxChannels()):
             chan_type = smrx.ChannelType(chan_ind)
             chan_id = str(chan_ind)
-            if chan_type == sonpy.lib.DataType.Adc:
+            if chan_type == sonpy_ns.DataType.Adc:
                 physical_chan = smrx.PhysicalChannel(chan_ind)
                 divide = smrx.ChannelDivide(chan_ind)
                 if self.take_ideal_sampling_rate:
@@ -105,13 +143,13 @@ class CedRawIO(BaseRawIO):
                 buffer_id = ""
                 signal_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
 
-            elif chan_type == sonpy.lib.DataType.AdcMark:
+            elif chan_type == sonpy_ns.DataType.AdcMark:
                 # spike and waveforms : only spike times is used here
                 ch_name = smrx.GetChannelTitle(chan_ind)
                 first_time = smrx.FirstTime(chan_ind, 0, max_time)
                 max_time = smrx.ChannelMaxTime(chan_ind)
                 divide = smrx.ChannelDivide(chan_ind)
-                # here we don't use filter (sonpy.lib.MarkerFilter()) so we get all marker
+                # here we don't use filter (sonpy_ns.MarkerFilter()) so we get all marker
                 wave_marks = smrx.ReadWaveMarks(chan_ind, int(max_time / divide), 0, max_time)
 
                 # here we load in memory all spike once because the access is really slow
