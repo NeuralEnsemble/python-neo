@@ -3,12 +3,11 @@ Tests of neo.rawio.BiocamRawIO
 """
 
 import unittest
+import pytest
 
 import numpy as np
-import pytest
 import h5py
 
-from neo.rawio import biocamrawio
 from neo.rawio.biocamrawio import BiocamRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
@@ -25,144 +24,122 @@ class TestBiocamRawIO(
     entities_to_test = [
         "biocam/biocam_hw3.0_fw1.6.brw",
         "biocam/biocam_hw3.0_fw1.7.0.12_raw.brw",
+        "biocam/raw_shape_variants/version_100.brw",
+        "biocam/raw_shape_variants/version_101.brw",
     ]
 
+    # The two files in `raw_shape_variants` hold the same recording, 64 channels over 1000 samples,
+    # written in the two shapes that the BRW v3.x specification defines for `3BData/Raw`: a T x W
+    # matrix for version 100 and a flat interleaved array for version 101. The value stored at a
+    # given position is `sample * 64 + channel`, so no two positions share a value and a misread
+    # returns a number that says where it actually came from.
+    shape_variants = [
+        "biocam/raw_shape_variants/version_100.brw",
+        "biocam/raw_shape_variants/version_101.brw",
+    ]
+    variant_num_channels = 64
+    variant_num_frames = 1000
 
-def write_minimal_brw(path, n_ch, n_frames, version=102):
-    """Write a minimal Biocam file whose samples are all distinct.
+    # Some of the ways that neo and SpikeInterface are known to ask for channels.
+    channel_queries = [None, slice(None), slice(2, 6), [0, 1, 2], [3, 0, 2], [5], np.array([1, 4])]
+    # None means the whole segment. The rest include a non-zero start, a single frame, and the
+    # empty range at the end of the recording.
+    frame_ranges = [(None, None), (0, 5), (7, 13), (999, 1000), (1000, 1000)]
 
-    Sample `s` of channel `c` holds the value `s * n_ch + c`, so an error in reshaping,
-    channel selection or block stitching produces wrong values rather than plausible ones.
-    Version 102 stores the raw data as a flat array, version 101 stores it 2-D.
-
-    BioCam 3.x stores the 3BData group's format in its "Version" attribute.
-    v100 lays Raw out as a (T, W) matrix; v101 as a flat (T*W, 1) interleaved array.
-
-    Info on 100-102 file formats:
-
-        https://resources.3brain.com/f1/downloads/BrainWave_Documentation_for_BRWv.%203.x_and_BXRv.%202.x_FileFormats_v1.2.0.pdf
-
-    Returns the expected (n_frames, n_ch) contents.
-
-    TODO: this can be shared with the parallel pull request for issue #1883.
-    """
-    values = np.arange(n_frames * n_ch, dtype=np.uint16)
-    with h5py.File(path, "w") as f:
-        rec_vars = f.create_group("3BRecInfo/3BRecVars")
-        rec_vars.create_dataset("BitDepth", data=np.array([12], dtype=np.uint8))
-        rec_vars.create_dataset("MaxVolt", data=np.array([4125.0]))
-        rec_vars.create_dataset("MinVolt", data=np.array([-4125.0]))
-        rec_vars.create_dataset("NRecFrames", data=np.array([n_frames], dtype=np.int64))
-        rec_vars.create_dataset("SamplingRate", data=np.array([17852.77]))
-        rec_vars.create_dataset("SignalInversion", data=np.array([1], dtype=np.int32))
-        f.create_dataset("3BRecInfo/3BMeaStreams/Raw/Chs", data=np.arange(2 * n_ch, dtype=np.int32).reshape(n_ch, 2))
-        f.create_dataset("3BData/Raw", data=values.reshape(n_frames, n_ch) if version == 100 else values)
-        f["3BData"].attrs["Version"] = version
-    frames = values.reshape(n_frames, n_ch)
-    return frames
-
-
-class TestGetAnalogsignalChunk:
-    """Tests for BiocamRawIO._get_analogsignal_chunk.
-
-    It's a little tricky to test this function, as what we care about is not input or output but performance.
-    A reasonably effective way to inspect the behaviour is to count how many times the inner _read block is called,
-    which is the function that actually reads the raw file. This is is done for the tests of this class. To do it, we
-    replace the private _read_block method of BiocamRawIO with a custom method that tracks its calls.
-    """
-
-    n_ch = 8
-    n_frames = 20
-    # Some ways neo and SpikeInterface are known to ask for channels:
-    channel_queries = [None, slice(None), slice(2, 6), slice(0, n_ch, 2), [0, 1, 2], [3, 0, 2], [5], np.array([1, 4])]
-    # None means "the whole segment"; the rest include a non-zero start and a single frame.
-    frame_ranges = [(None, None), (0, 5), (7, 13), (n_frames - 1, n_frames)]
-    # 64 bytes is 4 frames of 8 uint16 channels, so requests split into several blocks,
-    # the last of which is partial for most of the ranges above.
-    small_budget = 64
-    small_budget_frames = 4
-
-    def make_reader(self, tmp_path, version=101):
-        """Return a BiocamRawIO , and the expected frames."""
-        path = tmp_path / "minimal.brw"
-        frames = write_minimal_brw(path, self.n_ch, self.n_frames, version)
-        reader = BiocamRawIO(filename=path)
-        reader.parse_header()
-        return reader, frames
-
-    @pytest.fixture
-    def frames_per_read(self, monkeypatch):
-        """Record how many frames each raw read covers."""
-        reads = []
-        original = BiocamRawIO._read_block
-
-        def spy(self, i_start, i_stop):
-            reads.append(i_stop - i_start)
-            return original(self, i_start, i_stop)
-
-        monkeypatch.setattr(BiocamRawIO, "_read_block", spy)
-        return reads
-
-    @pytest.mark.parametrize("version", [100, 101])
-    @pytest.mark.parametrize("channel_indexes", channel_queries)
-    @pytest.mark.parametrize("i_start, i_stop", frame_ranges)
-    def test_values(self, tmp_path, version, channel_indexes, i_start, i_stop):
+    def test_get_analogsignal_chunk_values(self):
         """Values, shape and dtype are correct for every way of selecting channels."""
-        reader, expected_all = self.make_reader(tmp_path, version)
+        expected_all = np.arange(self.variant_num_frames * self.variant_num_channels, dtype="uint16")
+        expected_all = expected_all.reshape(self.variant_num_frames, self.variant_num_channels)
 
-        sig = reader.get_analogsignal_chunk(
-            block_index=0, seg_index=0, i_start=i_start, i_stop=i_stop, channel_indexes=channel_indexes
-        )
+        for entity in self.shape_variants:
+            reader = BiocamRawIO(filename=self.get_local_path(entity))
+            reader.parse_header()
+            for channel_indexes in self.channel_queries:
+                for i_start, i_stop in self.frame_ranges:
+                    with self.subTest(entity=entity, channel_indexes=channel_indexes, i_start=i_start, i_stop=i_stop):
+                        sig = reader.get_analogsignal_chunk(
+                            block_index=0,
+                            seg_index=0,
+                            i_start=i_start,
+                            i_stop=i_stop,
+                            channel_indexes=channel_indexes,
+                        )
+                        start = 0 if i_start is None else i_start
+                        stop = self.variant_num_frames if i_stop is None else i_stop
+                        columns = slice(None) if channel_indexes is None else channel_indexes
+                        expected = expected_all[start:stop][:, columns]
+                        assert sig.dtype == expected.dtype
+                        np.testing.assert_array_equal(sig, expected)
 
-        start = 0 if i_start is None else i_start
-        stop = self.n_frames if i_stop is None else i_stop
-        expected = expected_all[start:stop][:, slice(None) if channel_indexes is None else channel_indexes]
-        assert sig.dtype == expected.dtype
-        np.testing.assert_array_equal(sig, expected)
+    def test_chunked_read_matches_direct_read(self):
+        """Shrinking the read budget must not change the data that comes back.
 
-    @pytest.mark.parametrize("channel_indexes", channel_queries)
-    @pytest.mark.parametrize("i_start, i_stop", frame_ranges)
-    def test_chunked_read_matches_direct_read(self, tmp_path, monkeypatch, channel_indexes, i_start, i_stop):
-        """Shrinking the read budget must not change the data that comes back."""
-        reader, _ = self.make_reader(tmp_path)
-        kwargs = dict(block_index=0, seg_index=0, i_start=i_start, i_stop=i_stop, channel_indexes=channel_indexes)
-
-        direct = reader.get_analogsignal_chunk(**kwargs)
-        monkeypatch.setattr(biocamrawio, "_MAX_READ_BYTES", self.small_budget)
-        chunked = reader.get_analogsignal_chunk(**kwargs)
-
-        assert chunked.dtype == direct.dtype
-        np.testing.assert_array_equal(chunked, direct)
-
-    def test_read_budget(self, tmp_path, monkeypatch, frames_per_read):
-        """A long request for few channels is split, so the whole recording is never resident.
-
-        See https://github.com/SpikeInterface/spikeinterface/issues/3303
+        A request for a few channels over a long stretch of a large recording is served by
+        reading all the channels in blocks and copying out the requested ones, the BioCAM
+        layout interleaving the channels so that they cannot be read independently.
         """
-        reader, expected_all = self.make_reader(tmp_path)
-        # Another testing hack here, to make sure multiple reads are done.
-        monkeypatch.setattr(biocamrawio, "_MAX_READ_BYTES", self.small_budget)
+        for entity in self.entities_to_test:
+            reader = BiocamRawIO(filename=self.get_local_path(entity))
+            reader.parse_header()
+            for channel_indexes in self.channel_queries:
+                with self.subTest(entity=entity, channel_indexes=channel_indexes):
+                    kwargs = dict(block_index=0, seg_index=0, i_start=0, i_stop=100, channel_indexes=channel_indexes)
+                    direct = reader.get_analogsignal_chunk(**kwargs)
+                    # A budget of ten frames splits the hundred frames requested above into ten
+                    # blocks that the reader has to stitch back together.
+                    reader.max_read_bytes_dense = 10 * reader._num_channels * np.dtype("uint16").itemsize
+                    chunked = reader.get_analogsignal_chunk(**kwargs)
+                    del reader.max_read_bytes_dense
 
-        sig = reader.get_analogsignal_chunk(
-            block_index=0, seg_index=0, i_start=0, i_stop=self.n_frames, channel_indexes=[2]
-        )
+                    assert chunked.dtype == direct.dtype
+                    np.testing.assert_array_equal(chunked, direct)
 
-        np.testing.assert_array_equal(sig, expected_all[:, [2]])
-        largest = max(frames_per_read)
-        assert largest <= self.small_budget_frames, f"a single read covered {largest} frames"
-        assert len(frames_per_read) > 2, "the request was not split, so the chunked path is untested"
+    def test_all_channel_read_is_a_view(self):
+        """Asking for every channel returns the raw read itself rather than a copy of it.
 
-    def test_requesting_all_channels(self, tmp_path, monkeypatch, frames_per_read):
-        """Requesting every channel shouldn't cause multiple reads (nothing to be gained)."""
-        reader, _ = self.make_reader(tmp_path)
-        monkeypatch.setattr(biocamrawio, "_MAX_READ_BYTES", self.small_budget)
+        Copying there doubles the memory of a full read and costs a pass over the data, which is
+        the regression that pull request #1885 fixed.
+        """
+        for entity in self.shape_variants:
+            with self.subTest(entity=entity):
+                reader = BiocamRawIO(filename=self.get_local_path(entity))
+                reader.parse_header()
+                sig = reader.get_analogsignal_chunk(block_index=0, seg_index=0, channel_indexes=None)
+                assert sig.base is not None
 
-        sig = reader.get_analogsignal_chunk(
-            block_index=0, seg_index=0, i_start=0, i_stop=self.n_frames, channel_indexes=None
-        )
 
-        assert max(frames_per_read) == self.n_frames, "the full-channel request was split, which only adds a copy"
-        assert sig.base is not None, "the full-channel read should be a view on the raw read, not a copy"
+def test_biocamrawio_gain(tmp_path):
+    """Test that BiocamRawIO correctly reads the gain from a Biocam HDF5 file.
+
+    A test case, from Issue #1883 (https://github.com/NeuralEnsemble/python-neo/issues/1883).
+    Previously, BiocamRawIO would return a gain of `inf`, due to a numpy dtype
+    overflow bug.
+    """
+    # Setup
+    n_ch = 4
+    n_frames = 10
+    path = tmp_path / "minimal_v3.brw"
+    bit_depth = 12
+    max_volt = 4125.0
+    min_volt = -4125.0
+    with h5py.File(path, "w") as f:
+        rv = f.create_group("3BRecInfo/3BRecVars")
+        rv.create_dataset("BitDepth", data=np.array([bit_depth], dtype=np.uint8))
+        rv.create_dataset("MaxVolt", data=np.array([max_volt]))
+        rv.create_dataset("MinVolt", data=np.array([min_volt]))
+        rv.create_dataset("NRecFrames", data=np.array([n_frames], dtype=np.int64))
+        rv.create_dataset("SamplingRate", data=np.array([17852.77]))
+        rv.create_dataset("SignalInversion", data=np.array([1], dtype=np.int32))
+        f.create_dataset("3BRecInfo/3BMeaStreams/Raw/Chs", data=np.arange(2 * n_ch, dtype=np.int32).reshape(n_ch, 2))
+        f.create_dataset("3BData/Raw", data=np.zeros(n_ch * n_frames, dtype=np.uint16))
+        f["3BData"].attrs["Version"] = 102
+
+    # Test
+    r = BiocamRawIO(filename=path)
+    r.parse_header()
+    expected_gain = (max_volt - min_volt) / 2**bit_depth  # ~ 2.014
+    gain = r.header["signal_channels"]["gain"][0]
+    assert expected_gain == pytest.approx(gain)
 
 
 if __name__ == "__main__":

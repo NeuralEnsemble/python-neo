@@ -25,10 +25,6 @@ import warnings
 from neo.core import NeoReadWriteError
 
 
-# Maximum bytes to read at once.
-_MAX_READ_BYTES = 64 * 1024 * 1024  # 64 MB
-
-
 class BiocamRawIO(BaseRawIO):
     """
     Class for reading data from a Biocam h5 file.
@@ -64,6 +60,14 @@ class BiocamRawIO(BaseRawIO):
 
     extensions = ["h5", "brw"]
     rawmode = "one-file"
+
+    # Ceiling on the temporary all-channel buffer used when only a subset of channels is requested.
+    # The dense layouts read a contiguous slice, so their cost scales with bytes and a small buffer
+    # stays in cache. The event-based sparse decoder re-reads both tables of contents and re-walks
+    # the event blob on every call, so its cost is per call rather than per byte and it wants a
+    # buffer large enough that it almost never splits.
+    max_read_bytes_dense = 4 * 1024 * 1024
+    max_read_bytes_sparse = 512 * 1024 * 1024
 
     def __init__(self, filename="", fill_gaps_strategy="zeros"):
         BaseRawIO.__init__(self)
@@ -176,14 +180,18 @@ class BiocamRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self._num_frames
         n_frames = i_stop - i_start
-        # Read a single sample to determine the number of selected channels.
         if channel_indexes is None:
             channel_indexes = slice(None)
-        n_ch = self._read_block(i_start, i_start + 1)[:, channel_indexes].shape[1]
+        # Number of selected channels, for every form `channel_indexes` can take: a slice, an
+        # integer array or a boolean mask.
+        n_ch = np.arange(self._num_channels)[channel_indexes].size
         dtype = self.header["signal_channels"]["dtype"][0]
         itemsize = np.dtype(dtype).itemsize
         read_bytes = n_frames * self._num_channels * itemsize
         out_bytes = n_frames * n_ch * itemsize
+        max_read_bytes = (
+            self.max_read_bytes_sparse if self._read_function is readHDF5t_brw4_sparse else self.max_read_bytes_dense
+        )
 
         # Reading a subset of channels from a very large recording.
         # The BioCam hdf5 layout is such that all channels are chunked together, so they cannot be
@@ -191,11 +199,11 @@ class BiocamRawIO(BaseRawIO):
         # is needed, we cannot slice a single channel. Instead, we must loop and read all channels,
         # slicing as we go. We will do this chunking if the read is large and the output to be
         # returned is smaller.
-        read_by_chunks = read_bytes > _MAX_READ_BYTES and out_bytes < read_bytes // 2
+        read_by_chunks = read_bytes > max_read_bytes and out_bytes < read_bytes // 2
         if read_by_chunks:
             # Read in chunks, copying desired channels into a preallocated array.
             out = np.empty((n_frames, n_ch), dtype=dtype)
-            max_frames = max(1, _MAX_READ_BYTES // (itemsize * self._num_channels))
+            max_frames = max(1, max_read_bytes // (itemsize * self._num_channels))
             for start in range(i_start, i_stop, max_frames):
                 stop = min(start + max_frames, i_stop)
                 out[start - i_start : stop - i_start] = self._read_block(start, stop)[:, channel_indexes]
@@ -224,7 +232,9 @@ def open_biocam_file_header(filename) -> dict:
     if "3BRecInfo" in rf.keys():  # brw v3.x
         # Read recording variables
         rec_vars = rf.require_group("3BRecInfo/3BRecVars/")
-        bit_depth = rec_vars["BitDepth"][0]
+        # Biocam v3.x stores BitDepth as a np.uint8.
+        # Convert to int to avoid overflow when calculating gain.
+        bit_depth = int(rec_vars["BitDepth"][0])
         max_uv = rec_vars["MaxVolt"][0]
         min_uv = rec_vars["MinVolt"][0]
         num_frames = rec_vars["NRecFrames"][0]
