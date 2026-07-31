@@ -285,7 +285,7 @@ class NcsSectionsFactory:
 
         if gapTolerance is not None:
             warnings.warn(
-                "The `gapTolerance` parameter is deprecated and will be removed in version 0.16. "
+                "The `gapTolerance` parameter is deprecated and will be removed in version 0.16.0. "
                 "Use `gap_tolerance_us` instead.",
                 DeprecationWarning,
                 stacklevel=2,
@@ -295,11 +295,14 @@ class NcsSectionsFactory:
 
         if strict_gap_mode is not None:
             warnings.warn(
-                "The `strict_gap_mode` parameter is deprecated and will be removed in version 0.16. "
+                "The `strict_gap_mode` parameter is deprecated and will be removed in version 0.16.0. "
                 "Use `gap_tolerance_us` instead.",
                 DeprecationWarning,
                 stacklevel=2,
             )
+
+        if gap_tolerance_us is not None and gap_tolerance_us < 0:
+            raise ValueError(f"`gap_tolerance_us` must be non-negative, got {gap_tolerance_us}")
 
         acqType = nlxHdr.type_of_recording()
         freq = nlxHdr["sampling_rate"]
@@ -308,7 +311,7 @@ class NcsSectionsFactory:
         # strict_gap_mode True/None already match the modern per-type defaults below; only
         # strict_gap_mode=False differed, tolerating a quarter-packet gap (PRE4 was 0 either way).
         # Translating that single case here keeps the per-type branches on gap_tolerance_us only.
-        # Remove this block when strict_gap_mode is dropped in v0.16.
+        # Remove this block when strict_gap_mode is dropped in v0.16.0.
         if gap_tolerance_us is None and strict_gap_mode is not None and not strict_gap_mode and acqType != AcqType.PRE4:
             gap_tolerance_us = round(0.25 * NcsSection._RECORD_SIZE * 1e6 / freq)
 

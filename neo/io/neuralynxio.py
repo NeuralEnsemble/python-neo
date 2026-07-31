@@ -75,7 +75,7 @@ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
             detailed gap report. If a float value is provided, gaps smaller than this
             threshold (in milliseconds) are ignored, and gaps larger create new segments.
         strict_gap_mode : bool | None, default: None
-            Deprecated. Use gap_tolerance_ms instead.
+            Deprecated and will be removed in version 0.16.0. Use gap_tolerance_ms instead.
         """
 
         if filename is not None:

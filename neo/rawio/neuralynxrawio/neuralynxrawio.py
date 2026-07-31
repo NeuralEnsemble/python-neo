@@ -100,7 +100,7 @@ class NeuralynxRawIO(BaseRawIO):
         Use gap_tolerance_ms=0.0 to segment on all detected gaps.
     strict_gap_mode : bool | None, default: None
         .. deprecated::
-            Use ``gap_tolerance_ms`` instead. Will be removed in version 0.16.
+            Use ``gap_tolerance_ms`` instead. Will be removed in version 0.16.0.
         If explicitly set, uses legacy gap detection behavior:
         strict_gap_mode=True uses tight tolerance (0.2 sample intervals),
         strict_gap_mode=False uses loose tolerance (quarter of 512-sample packet).
@@ -204,13 +204,18 @@ class NeuralynxRawIO(BaseRawIO):
         else:
             self.rawmode = "one-dir"
 
+        if gap_tolerance_ms is not None and gap_tolerance_ms < 0:
+            raise ValueError(f"`gap_tolerance_ms` must be non-negative, got {gap_tolerance_ms}")
+
         # Handle gap_tolerance_ms and deprecated strict_gap_mode
         if strict_gap_mode is not None:
             warnings.warn(
-                "`strict_gap_mode` is deprecated and will be removed in version 0.16. "
-                "Use `gap_tolerance_ms` instead to control gap handling. "
+                "`strict_gap_mode` is deprecated and will be removed in version 0.16.0. "
+                "Use `gap_tolerance_ms` instead to control gap handling. The equivalent value "
+                "depends on the sampling rate: 0.2 / rate * 1000 ms reproduces strict_gap_mode=True "
+                "and 128 / rate * 1000 ms reproduces strict_gap_mode=False (at 32 kHz, 0.00625 and 4.0). "
                 "See issue #1773 for details.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
             if gap_tolerance_ms is not None:

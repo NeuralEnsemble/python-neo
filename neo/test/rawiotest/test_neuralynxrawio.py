@@ -287,6 +287,14 @@ class TestNeuralynxRawIO(
         rawio.parse_header()
         self.assertEqual(rawio._nb_segment, 1)
 
+    def test_negative_gap_tolerance_ms_raises(self):
+        """A negative tolerance would treat every record as a gap, so it is rejected up front."""
+        with self.assertRaises(ValueError):
+            NeuralynxRawIO(
+                self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"),
+                gap_tolerance_ms=-10.0,
+            )
+
     def test_no_gaps_no_error(self):
         """Test that datasets without gaps load fine without gap_tolerance_ms."""
         rawio = NeuralynxRawIO(self.get_local_path("neuralynx/Cheetah_v4.0.2/original_data"))
@@ -294,14 +302,14 @@ class TestNeuralynxRawIO(
         self.assertEqual(rawio._nb_segment, 1)
 
     def test_strict_gap_mode_deprecation(self):
-        """Test that strict_gap_mode emits DeprecationWarning."""
-        with self.assertWarns(DeprecationWarning):
+        """Test that strict_gap_mode emits FutureWarning."""
+        with self.assertWarns(FutureWarning):
             rawio = NeuralynxRawIO(
                 self.get_local_path("neuralynx/BML/original_data"),
                 strict_gap_mode=True,
             )
 
-        with self.assertWarns(DeprecationWarning):
+        with self.assertWarns(FutureWarning):
             rawio = NeuralynxRawIO(
                 self.get_local_path("neuralynx/BML/original_data"),
                 strict_gap_mode=False,
@@ -310,7 +318,7 @@ class TestNeuralynxRawIO(
     def test_strict_gap_mode_legacy_behavior(self):
         """Test that strict_gap_mode still works for backward compatibility."""
         # strict_gap_mode=True should segment like gap_tolerance_ms=0.0
-        with self.assertWarns(DeprecationWarning):
+        with self.assertWarns(FutureWarning):
             rawio = NeuralynxRawIO(
                 self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"),
                 strict_gap_mode=True,
@@ -320,7 +328,7 @@ class TestNeuralynxRawIO(
 
     def test_strict_gap_mode_false_legacy_behavior(self):
         """The deprecated strict_gap_mode=False (lenient) path still loads, warns, and segments."""
-        with self.assertWarns(DeprecationWarning):
+        with self.assertWarns(FutureWarning):
             rawio = NeuralynxRawIO(
                 self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data"),
                 strict_gap_mode=False,
