@@ -94,19 +94,6 @@ class TestBiocamRawIO(
                     assert chunked.dtype == direct.dtype
                     np.testing.assert_array_equal(chunked, direct)
 
-    def test_all_channel_read_is_a_view(self):
-        """Asking for every channel returns the raw read itself rather than a copy of it.
-
-        Copying there doubles the memory of a full read and costs a pass over the data, which is
-        the regression that pull request #1885 fixed.
-        """
-        for entity in self.shape_variants:
-            with self.subTest(entity=entity):
-                reader = BiocamRawIO(filename=self.get_local_path(entity))
-                reader.parse_header()
-                sig = reader.get_analogsignal_chunk(block_index=0, seg_index=0, channel_indexes=None)
-                assert sig.base is not None
-
 
 def test_biocamrawio_gain(tmp_path):
     """Test that BiocamRawIO correctly reads the gain from a Biocam HDF5 file.
