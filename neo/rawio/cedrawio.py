@@ -21,6 +21,7 @@ Author : Samuel Garcia
 
 import functools
 import importlib
+import importlib.util
 
 import numpy as np
 
@@ -51,14 +52,16 @@ def _get_sonpy_namespace():
     """
     import sonpy
 
-    candidates = [getattr(sonpy, "lib", None), sonpy]
-    try:
-        candidates.append(importlib.import_module("sonpy.sonpy"))
-    except ImportError:
-        pass
-
-    for namespace in candidates:
+    for namespace in (getattr(sonpy, "lib", None), sonpy):
         if namespace is not None and hasattr(namespace, "SonFile"):
+            return namespace
+
+    # Only reached with the >= 1.9.12 Linux wheels, whose __init__.py is empty.
+    # find_spec imports the parent package, and raises if it is not a package,
+    # so guard on __path__ before probing the submodule.
+    if hasattr(sonpy, "__path__") and importlib.util.find_spec("sonpy.sonpy") is not None:
+        namespace = importlib.import_module("sonpy.sonpy")
+        if hasattr(namespace, "SonFile"):
             return namespace
 
     raise ImportError(
