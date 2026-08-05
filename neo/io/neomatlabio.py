@@ -334,11 +334,13 @@ class NeoMatlabIO(BaseIO):
                         new_value[key] = subvalue
                         if subunits:
                             new_value[f"{key}_units"] = subunits
-                    elif attrname == "annotations":
+                    else:
                         # In general we don't send None to MATLAB
                         # but we make an exception for annotations.
                         # However, we have to save then retrieve some
                         # special value as actual `None` is ignored by default.
+                        # Annotations are the only mapping-valued attribute Neo has,
+                        # so this holds at every level of a nested annotation too.
                         new_value[key] = PY_NONE
                 value = new_value
         return value, units
@@ -376,6 +378,37 @@ class NeoMatlabIO(BaseIO):
         struct[obj_name] = id(viewed_obj)
         struct["viewed_classname"] = viewed_obj.__class__.__name__
         return struct
+
+    def create_dict_from_struct(self, struct):
+        """
+        Rebuild a Python dict, typically the annotations, from the MATLAB struct that
+        :meth:`_get_matlab_value` wrote it to.
+
+        That method flattens a quantity into a plain magnitude plus a companion
+        ``<key>_units`` field, mirrors nested mappings as nested structs, and stores
+        `None` as a sentinel string because MATLAB has no equivalent. This undoes all
+        three so that a value survives a write/read round trip unchanged.
+        """
+        new_dict = {}
+        for field_name in struct._fieldnames:
+            if field_name.endswith("_units") and field_name[: -len("_units")] in struct._fieldnames:
+                # this field carries the units of another one and is consumed along with it
+                continue
+
+            value = getattr(struct, field_name)
+            if hasattr(value, "_fieldnames"):
+                # a nested mapping, which scipy returns as a struct of its own
+                value = self.create_dict_from_struct(value)
+            elif isinstance(value, str) and value == PY_NONE:
+                # `isinstance` first: an array compared to the sentinel gives an array,
+                # which is not usable as a condition
+                value = None
+            else:
+                units = getattr(struct, f"{field_name}_units", None)
+                if units is not None:
+                    value = pq.Quantity(value, str(units))
+            new_dict[field_name] = value
+        return new_dict
 
     def create_ob_from_struct(self, struct, classname):
         cl = class_by_name[classname]
@@ -508,13 +541,7 @@ class NeoMatlabIO(BaseIO):
                     else:
                         item = pq.Quantity(item, units)
                 elif attrtype == dict:
-                    new_item = {}
-                    for fn in item._fieldnames:
-                        value = getattr(item, fn)
-                        if value == PY_NONE:
-                            value = None
-                        new_item[fn] = value
-                    item = new_item
+                    item = self.create_dict_from_struct(item)
                 else:
                     item = attrtype(item)
 
