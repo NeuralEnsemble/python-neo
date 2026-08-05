@@ -163,34 +163,27 @@ class BiocamRawIO(BaseRawIO):
         else:
             data = self._read_function(self._filehandle, i_start, i_stop, self._num_channels)
 
-        # older style data returns array of (n_samples, n_channels), should be a view
+        # Newer style data comes back as a flat array of length (n_samples * n_channels)
+        # laid out frame-major, i.e. every channel of frame 0, then every channel of
+        # frame 1, and so on. The read functions materialize it in memory already, so
+        # reshaping is a free view onto the same buffer and puts both file layouts on the
+        # same (n_samples, n_channels) footing.
+        if data.ndim == 1:
+            expected_size = (i_stop - i_start) * self._num_channels
+            if data.size != expected_size:
+                raise NeoReadWriteError(
+                    f"Read {data.size} values for frames {i_start}:{i_stop} of {self._num_channels} "
+                    f"channels but expected {expected_size}. The requested frame range is most likely "
+                    "out of bounds."
+                )
+            data = data.reshape(i_stop - i_start, self._num_channels)
+
+        # older style data is already (n_samples, n_channels), should be a view
         # but if memory issues come up we should doublecheck out how the file is being stored
-        if data.ndim > 1:
-            if channel_indexes is None:
-                channel_indexes = slice(None)
-            sig_chunk = data[:, channel_indexes]
+        if channel_indexes is None:
+            channel_indexes = slice(None)
 
-        # newer style data returns an initial flat array (n_samples * n_channels)
-        # we iterate through channels rather than slicing
-        # Due to the fact that Neo and SpikeInterface tend to prefer slices we need to add
-        # some careful checks around slicing of None in the case we need to iterate through
-        # channels. First check if None. Then check if slice and only if slice check that it is slice(None)
-        else:
-            if channel_indexes is None:
-                channel_indexes = [ch for ch in range(self._num_channels)]
-            elif isinstance(channel_indexes, slice):
-                start = channel_indexes.start or 0
-                stop = channel_indexes.stop or self._num_channels
-                step = channel_indexes.step or 1
-                channel_indexes = [ch for ch in range(start, stop, step)]
-
-            sig_chunk = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=data.dtype)
-            # iterate through channels to prevent loading all channels into memory which can cause
-            # memory exhaustion. See https://github.com/SpikeInterface/spikeinterface/issues/3303
-            for index, channel_index in enumerate(channel_indexes):
-                sig_chunk[:, index] = data[channel_index :: self._num_channels]
-
-        return sig_chunk
+        return data[:, channel_indexes]
 
 
 def open_biocam_file_header(filename) -> dict:
