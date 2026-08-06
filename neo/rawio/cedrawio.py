@@ -19,9 +19,9 @@ Please note that the SONPY package:
 Author : Samuel Garcia
 """
 
-import functools
 import importlib
 import importlib.util
+from functools import cache
 
 import numpy as np
 
@@ -35,41 +35,31 @@ from .baserawio import (
 )
 
 
-@functools.cache
+@cache
 def _get_sonpy_namespace():
-    """Return the sonpy module namespace that exposes ``SonFile``.
+    """Return the sonpy namespace exposing SonFile, whatever the installed layout."""
+    if importlib.util.find_spec("sonpy") is None:
+        raise ImportError("sonpy is not installed. Install it with `pip install sonpy`.")
 
-    The layout of the sonpy package changed in 1.9.12:
+    sonpy = importlib.import_module("sonpy")
 
-    * ``<= 1.9.5`` shipped a single pure-Python wheel whose ``__init__.py``
-      dispatched on the platform and bound the binary to ``lib``.
-    * ``>= 1.9.12`` ships one binary wheel per interpreter. The top level does
-      ``from .sonpy import *`` on Windows and macOS, but the Linux wheel ships
-      an empty ``__init__.py``, so only the ``sonpy.sonpy`` extension module is
-      populated there.
+    # <= 1.9.5 binds the extension module as an attribute, not a submodule,
+    # so find_spec("sonpy.lib") cannot see it.
+    lib = getattr(sonpy, "lib", None)
+    if lib is not None and hasattr(lib, "SonFile"):
+        return lib
 
-    Probing all three keeps old and new installations working.
-    """
-    import sonpy
+    # >= 1.9.12 on Windows/macOS re-exports into the package namespace.
+    if hasattr(sonpy, "SonFile"):
+        return sonpy
 
-    for namespace in (getattr(sonpy, "lib", None), sonpy):
-        if namespace is not None and hasattr(namespace, "SonFile"):
-            return namespace
+    # >= 1.9.12 on Linux ships an empty __init__.py.
+    if importlib.util.find_spec("sonpy.sonpy") is not None:
+        nested = importlib.import_module("sonpy.sonpy")
+        if hasattr(nested, "SonFile"):
+            return nested
 
-    # Only reached with the >= 1.9.12 Linux wheels, whose __init__.py is empty.
-    # find_spec imports the parent package, and raises if it is not a package,
-    # so guard on __path__ before probing the submodule.
-    if hasattr(sonpy, "__path__") and importlib.util.find_spec("sonpy.sonpy") is not None:
-        namespace = importlib.import_module("sonpy.sonpy")
-        if hasattr(namespace, "SonFile"):
-            return namespace
-
-    raise ImportError(
-        "The installed sonpy package exposes no 'SonFile' symbol "
-        "(tried sonpy.lib, sonpy and sonpy.sonpy). "
-        "Note that sonpy only publishes wheels for Windows, and for Linux and macOS "
-        "on Python 3.14 and above; the source distribution is not usable."
-    )
+    raise ImportError("sonpy is installed but exposes no SonFile.")
 
 
 class CedRawIO(BaseRawIO):
