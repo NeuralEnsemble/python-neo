@@ -21,7 +21,6 @@ Author : Samuel Garcia
 
 import importlib
 import importlib.util
-from functools import cache
 
 import numpy as np
 
@@ -35,7 +34,6 @@ from .baserawio import (
 )
 
 
-@cache
 def _get_sonpy_namespace():
     """Return the sonpy namespace exposing SonFile, whatever the installed layout."""
     if importlib.util.find_spec("sonpy") is None:
