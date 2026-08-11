@@ -1362,6 +1362,29 @@ class NixIOWriteTest(NixIOTest):
             else:
                 self.assertFalse(hasattr(rst.array_annotations[k], "units"))
 
+    def test_datetime_array_annotations(self):
+        # Regression test for GH Issue #1198: array_annotations holding
+        # datetime/date/time objects must survive a NixIO write/read roundtrip
+        wblock = Block("block with datetime array annotations")
+        wseg = Segment()
+        times = np.array([1.0, 2.0, 3.0]) * pq.s
+        datetime_array_annotations = {
+            "acq_datetime": np.array(
+                [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 0), datetime(2022, 3, 3, 8, 15, 30)],
+                dtype=object,
+            ),
+            "acq_date": np.array([date(2021, 1, 1), date(2021, 6, 15), date(2022, 3, 3)], dtype=object),
+            "acq_time": np.array([time(0, 0, 0), time(12, 30, 0), time(8, 15, 30)], dtype=object),
+        }
+        wseg.events = [Event(times=times, array_annotations=datetime_array_annotations)]
+        wblock.segments = [wseg]
+        self.writer.write_block(wblock)
+        rblock = self.writer.read_block(neoname="block with datetime array annotations")
+        revent = rblock.segments[0].events[0]
+        for k, v in datetime_array_annotations.items():
+            self.assertIn(k, revent.array_annotations)
+            np.testing.assert_array_equal(revent.array_annotations[k], v)
+
     def test_write_proxyobjects(self):
 
         def generate_complete_block():

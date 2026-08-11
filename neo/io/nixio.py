@@ -1261,6 +1261,8 @@ class NixIO(BaseIO):
                 for item in v:
                     if isinstance(item, str):
                         item = item
+                    elif isinstance(item, datetime_types):
+                        item, definition = dt_to_nix(item)
                     elif isinstance(item, pq.Quantity):
                         current_unit = str(item.dimensionality)
                         if unit is None:
@@ -1320,7 +1322,10 @@ class NixIO(BaseIO):
                     units = prop.unit
                     values = create_quantity(values, units)
                 if prop.definition in (DATEANNOTATION, TIMEANNOTATION, DATETIMEANNOTATION):
-                    values = dt_from_nix(values, prop.definition)
+                    if isinstance(values, list):
+                        values = np.array([dt_from_nix(v, prop.definition) for v in values], dtype=object)
+                    else:
+                        values = dt_from_nix(values, prop.definition)
                 if prop.type == ARRAYANNOTATION:
                     if "array_annotations" in neo_attrs:
                         neo_attrs["array_annotations"][prop.name] = values
