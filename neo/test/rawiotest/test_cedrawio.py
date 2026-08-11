@@ -5,7 +5,10 @@ from neo.rawio.cedrawio import CedRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 try:
-    import sonpy
+    from neo.rawio.cedrawio import _get_sonpy_namespace
+
+    # Raises ImportError if sonpy is missing or exposes no usable namespace.
+    _get_sonpy_namespace()
 
     HAVE_SONPY = True
 except ImportError:
