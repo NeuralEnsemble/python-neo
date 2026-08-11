@@ -386,8 +386,12 @@ class NeoMatlabIO(BaseIO):
 
         That method flattens a quantity into a plain magnitude plus a companion
         ``<key>_units`` field, mirrors nested mappings as nested structs, and stores
-        `None` as a sentinel string because MATLAB has no equivalent. This undoes all
-        three so that a value survives a write/read round trip unchanged.
+        `None` as the sentinel string ``"Py_None"`` because MATLAB has no equivalent.
+
+        This reverses that flattening, transforming the string ``"Py_None"`` into
+        Python `None`, the magnitude/units pair into a Quantity scalar or array, and
+        the nested struct back into a dict, so that a value survives a write/read
+        round trip unchanged.
         """
         new_dict = {}
         for field_name in struct._fieldnames:
