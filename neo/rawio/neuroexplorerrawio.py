@@ -160,12 +160,16 @@ class NeuroExplorerRawIO(BaseRawIO):
         entity_header = self._entity_headers[entity_index]
         n = int(entity_header["n"])
         nb_sample = int(entity_header["NPointsWave"])
-        # offset = entity_header['offset']
-        # timestamps = self._memmap[offset:offset+n*4].view('int32')
-        # offset2 = entity_header['offset'] + n*4
-        # fragment_starts = self._memmap[offset2:offset2+n*4].view('int32')
-        offset3 = int(entity_header["offset"]) + n * 4 + n * 4
-        raw_signal = self._memmap[offset3 : offset3 + nb_sample * 2].view("int16")
+        # A continuous variable stores three blocks back to back from the entity offset:
+        # n fragment timestamps (int32), then n fragment start indices (int32), then the
+        # NPointsWave samples (int16). Only the samples are read here because neo exposes
+        # the variable as one continuous signal and ignores the fragmentation.
+        timestamp_size = np.dtype("int32").itemsize
+        sample_size = np.dtype("int16").itemsize
+        timestamps_offset = int(entity_header["offset"])
+        fragment_starts_offset = timestamps_offset + n * timestamp_size
+        samples_offset = fragment_starts_offset + n * timestamp_size
+        raw_signal = self._memmap[samples_offset : samples_offset + nb_sample * sample_size].view("int16")
         raw_signal = raw_signal[slice(i_start, i_stop), None]  # 2D for compliance
         return raw_signal
 
