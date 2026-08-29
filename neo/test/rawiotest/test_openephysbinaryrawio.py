@@ -1,9 +1,45 @@
+import os
+import shutil
+import tempfile
 import unittest
+from pathlib import Path
 
 from neo.rawio.openephysbinaryrawio import OpenEphysBinaryRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 import numpy as np
+
+
+def _synthesize_gap_fixture(src_dir, dst_dir, gap_start=450, gap_size=50):
+    """
+    Copy a clean OpenEphys Binary recording and introduce an aligned gap of
+    ``gap_size`` samples starting at position ``gap_start`` in every continuous
+    stream's ``sample_numbers.npy``. Returns the destination path.
+
+    Fixture source files often come from datalad with read-only permissions, so
+    the copy is chmodded to allow mutation.
+    """
+    dst_dir = Path(dst_dir)
+    shutil.copytree(src_dir, dst_dir)
+    for root, _dirs, files in os.walk(dst_dir):
+        os.chmod(root, 0o755)
+        for f in files:
+            os.chmod(os.path.join(root, f), 0o644)
+
+    continuous_root = next(dst_dir.rglob("continuous"))
+    for stream_dir in continuous_root.iterdir():
+        if not stream_dir.is_dir():
+            continue
+        sn_path = stream_dir / "sample_numbers.npy"
+        if not sn_path.is_file():
+            continue
+        sn = np.load(sn_path)
+        if sn.shape[0] <= gap_start:
+            continue
+        tail = sn[gap_start] + gap_size + np.arange(sn.shape[0] - gap_start, dtype=sn.dtype)
+        new_sn = np.concatenate([sn[:gap_start], tail])
+        np.save(sn_path, new_sn)
+    return dst_dir
 
 
 class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
@@ -82,6 +118,82 @@ class TestOpenEphysBinaryRawIO(BaseTestRawIO, unittest.TestCase):
         # Check that the non-neural data stream is correctly separated
         assert len(rawio.header["signal_streams"]["name"]) == 2
         assert rawio.header["signal_streams"]["name"].tolist() == ["Rhythm_FPGA-100.0", "Rhythm_FPGA-100.0_ADC"]
+
+    def test_gap_default_raises(self):
+        """Default behavior (gap_tolerance_ms=None) raises ValueError when gaps exist."""
+        src = self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync")
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = _synthesize_gap_fixture(src, Path(tmp) / "synth")
+            rawio = OpenEphysBinaryRawIO(dirname=str(dst))
+            with self.assertRaises(ValueError) as ctx:
+                rawio.parse_header()
+            msg = str(ctx.exception)
+            self.assertIn("gap", msg.lower())
+            self.assertIn("gap_tolerance_ms", msg)
+            self.assertIn("ignore_integrity_checks", msg)
+
+    def test_gap_tolerance_ms_segments(self):
+        """A small tolerance that does not absorb the gap splits the recording in two."""
+        src = self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync")
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = _synthesize_gap_fixture(src, Path(tmp) / "synth")
+            rawio = OpenEphysBinaryRawIO(
+                dirname=str(dst), gap_tolerance_ms=0.1
+            )
+            rawio.parse_header()
+            self.assertEqual(rawio.segment_count(0), 2)
+
+    def test_gap_tolerance_ms_absorbs(self):
+        """A large tolerance absorbs the gap back into a single segment."""
+        src = self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync")
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = _synthesize_gap_fixture(src, Path(tmp) / "synth")
+            rawio = OpenEphysBinaryRawIO(
+                dirname=str(dst), gap_tolerance_ms=10_000.0
+            )
+            rawio.parse_header()
+            self.assertEqual(rawio.segment_count(0), 1)
+
+    def test_ignore_integrity_checks_bypasses(self):
+        """``ignore_integrity_checks=True`` loads the file with a single segment."""
+        src = self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync")
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = _synthesize_gap_fixture(src, Path(tmp) / "synth")
+            rawio = OpenEphysBinaryRawIO(
+                dirname=str(dst), ignore_integrity_checks=True
+            )
+            rawio.parse_header()
+            self.assertEqual(rawio.segment_count(0), 1)
+
+    def test_get_openephysbinary_timestamps(self):
+        """The raw-timestamps accessor returns sliced arrays that reflect each sub-segment."""
+        src = self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync")
+        gap_start = 450
+        gap_size = 50
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = _synthesize_gap_fixture(
+                src, Path(tmp) / "synth", gap_start=gap_start, gap_size=gap_size
+            )
+            rawio = OpenEphysBinaryRawIO(
+                dirname=str(dst), gap_tolerance_ms=0.1
+            )
+            rawio.parse_header()
+            ts_seg0 = rawio._get_openephysbinary_timestamps(0, 0, 0)
+            ts_seg1 = rawio._get_openephysbinary_timestamps(0, 1, 0)
+            self.assertEqual(ts_seg0.shape[0], gap_start)
+            self.assertGreater(ts_seg1.shape[0], 0)
+            # At the boundary, the absolute index jumps by ``gap_size + 1``: the
+            # normal +1 increment plus the ``gap_size`` missing samples.
+            self.assertEqual(int(ts_seg1[0]) - int(ts_seg0[-1]), gap_size + 1)
+
+    def test_fast_path_clean_file(self):
+        """A clean (gap-free) fixture takes the fast path: no detected gaps, one segment."""
+        src = self.get_local_path("openephysbinary/v0.6.x_neuropixels_with_sync")
+        rawio = OpenEphysBinaryRawIO(dirname=src)
+        rawio.parse_header()
+        self.assertEqual(rawio.segment_count(0), 1)
+        for stream_info in rawio._sig_streams[0][0].values():
+            self.assertEqual(stream_info.get("detected_gaps"), [])
 
 
 if __name__ == "__main__":
