@@ -530,6 +530,48 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.array_annotations, {})
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
+    def test_time_slice_window_without_samples(self):
+        # A window that contains no sample used to hand back the whole signal:
+        # `id_start` and `id_stop` were both left at `None`, and `self[None:None]`
+        # is `self[:]`.  It should return an empty signal instead, as
+        # `Event.time_slice` and `Epoch.time_slice` do, and as this class already
+        # does when the signal it is called on is itself empty.
+        gap_signal = IrregularlySampledSignal(
+            np.array([1.0, 2.0, 30.0, 40.0]) * pq.s,
+            signal=np.arange(4.0).reshape(-1, 1) * pq.mV,
+            name="spam",
+            description="eggs",
+            file_origin="testfile.txt",
+            arg1="test",
+        )
+
+        windows = (
+            (5 * pq.s, 20 * pq.s),  # inside a gap between two samples
+            (50 * pq.s, 60 * pq.s),  # entirely after the last sample
+            (-20 * pq.s, -10 * pq.s),  # entirely before the first sample
+        )
+        for t_start, t_stop in windows:
+            with self.subTest(t_start=t_start, t_stop=t_stop):
+                result = gap_signal.time_slice(t_start, t_stop)
+
+                self.assertIsInstance(result, IrregularlySampledSignal)
+                self.assertIsNot(result, gap_signal)
+                assert_arrays_equal(result.times, [] * pq.s)
+                self.assertEqual(result.shape, (0, 1))
+                self.assertEqual(result.units, 1 * pq.mV)
+
+                # metadata survives the slice, as it does for a non-empty window
+                assert_neo_object_is_compliant(result)
+                self.assertEqual(result.name, "spam")
+                self.assertEqual(result.description, "eggs")
+                self.assertEqual(result.file_origin, "testfile.txt")
+                self.assertEqual(result.annotations, {"arg1": "test"})
+
+        # a window that does contain samples is unaffected by the fix
+        result = gap_signal.time_slice(30 * pq.s, 40 * pq.s)
+        assert_arrays_equal(result.times, np.array([30.0, 40.0]) * pq.s)
+        assert_arrays_equal(result, np.array([[2.0], [3.0]]) * pq.mV)
+
     def test_time_slice_none_stop(self):
         targdataquant = [[1.0], [2.0], [3.0], [4.0], [5.0], [6.0], [7.0], [8.0], [9.0]] * pq.mV
         targtime = np.logspace(1, 5, 10)
