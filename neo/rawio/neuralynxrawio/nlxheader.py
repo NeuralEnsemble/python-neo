@@ -350,7 +350,8 @@ class NlxHeader(OrderedDict):
             sr = NlxHeader._closeDatetime2_pat.search(txt_header)
         if sr:
             dt2 = sr.groupdict()
-            self["recording_closed"] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
+            if (dt2["date"], dt2["time"]) != ("File", "was"):
+                self["recording_closed"] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
 
     def _normalize_types(self):
         """
