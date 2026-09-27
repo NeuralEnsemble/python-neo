@@ -2,6 +2,7 @@ import datetime
 import unittest
 
 import os
+import tempfile
 import numpy as np
 import re
 
@@ -561,6 +562,40 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
         filename = self.get_local_path("neuralynx/Cheetah_v5.4.0/original_data/CSC5_trunc.Ncs")
         hdr = NlxHeader(filename)
         self.assertEqual(r"C:\CheetahData\2000-01-01_00-00-00\CSC5.ncs", hdr["OriginalFileName"])
+
+class TestNlxHeaderUnclosedFile(unittest.TestCase):
+    def test_unclosed_file_datetime(self):
+        # Neuralynx files where recording was not properly closed (#1901)
+        header_txt = (
+            "######## Neuralynx Data File Header\r\n"
+            "-FileType NCS\r\n"
+            "-FileVersion 3.4\r\n"
+            "-RecordSize 1044\r\n"
+            "-AcqEntName CSC1\r\n"
+            "-HardwareSubSystemName AcqSystem1\r\n"
+            "-HardwareSubSystemType AcqSys\r\n"
+            "-SamplingFrequency 32000\r\n"
+            "-ADMaxValue 32767\r\n"
+            "-ADBitVolts 0.000000030517578125\r\n"
+            "-NumADChannels 1\r\n"
+            "-ADChannel 0\r\n"
+            "-InputRange 1000\r\n"
+            "-InputInverted False\r\n"
+            "-ApplicationName Cheetah \"5.7.4\"\r\n"
+            "-TimeCreated 2017/02/16 17:56:04\r\n"
+            "-TimeClosed File was not properly closed\r\n"
+        )
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".ncs") as f:
+            f.write(header_txt.ljust(NlxHeader.HEADER_SIZE, " "))
+            temp_file = f.name
+        try:
+            hdr = NlxHeader(temp_file)
+            self.assertEqual(datetime.datetime(2017, 2, 16, 17, 56, 4), hdr["recording_opened"])
+            self.assertIsNone(hdr.get("recording_closed"))
+            self.assertEqual("File was not properly closed", hdr["TimeClosed"])
+        finally:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
 
 
 if __name__ == "__main__":
