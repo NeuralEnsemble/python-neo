@@ -14,9 +14,11 @@ class TestNeuroExplorerRawIO(
 ):
     rawioclass = NeuroExplorerRawIO
     entities_to_download = ["neuroexplorer"]
-    files_to_download = [
+    entities_to_test = [
         "neuroexplorer/File_neuroexplorer_1.nex",
         "neuroexplorer/File_neuroexplorer_2.nex",
+        "neuroexplorer/nex_version_106/nonzero_prethreshold.nex",
+        "neuroexplorer/nex_version_106/nonzero_mv_offset.nex",
     ]
 
     def test_spike_waveforms(self):
@@ -56,6 +58,64 @@ class TestNeuroExplorerRawIO(
 
         parsed = np.frombuffer(bytes(buffer), dtype=entity_dtype)[0]
         assert parsed["offset"] == true_offset
+
+    def test_version_106_prethreshold(self):
+        """A nonzero PrethresholdTimeInSeconds used to make the file unopenable.
+
+        The variable header ends with that double followed by 52 bytes of padding, but the
+        reader declared the last 60 bytes as a single string field and decodes string fields
+        as UTF-8, so a nonzero double raised UnicodeDecodeError before any data was read.
+        The value is the left sweep, which neo counts in samples.
+        """
+        assert np.dtype(EntityHeader).itemsize == 208
+
+        filename = self.get_local_path("neuroexplorer/nex_version_106/nonzero_prethreshold.nex")
+        reader = NeuroExplorerRawIO(filename=filename)
+        reader.parse_header()
+
+        waveform_channels = [channel for channel in reader.header["spike_channels"] if channel["wf_sampling_rate"] > 0]
+        assert len(waveform_channels) == 6
+        for channel in waveform_channels:
+            # 0.0002 s of prethreshold time at 40 kHz, so 8 of the 32 points precede the crossing
+            assert channel["wf_left_sweep"] == 8
+
+    def test_field_validity_follows_the_file_version(self):
+        """The file version declares which fixed header fields carry a meaningful value.
+
+        PrethresholdTimeInSeconds is only meaningful from version 106 and MVOffset from 105,
+        so a version 104 file must report a left sweep of zero whatever its bytes hold.
+        """
+        filename = self.get_local_path("neuroexplorer/File_neuroexplorer_2.nex")
+        reader = NeuroExplorerRawIO(filename=filename)
+        reader.parse_header()
+        assert reader.global_header["version"] == 104
+
+        names = [channel["name"] for channel in reader.header["spike_channels"]]
+        assert reader.header["spike_channels"][names.index("sig01i_wf")]["wf_left_sweep"] == 0
+
+        filename = self.get_local_path("neuroexplorer/nex_version_106/nonzero_mv_offset.nex")
+        reader = NeuroExplorerRawIO(filename=filename)
+        reader.parse_header()
+        assert reader.global_header["version"] == 106
+        assert reader.header["signal_channels"][0]["offset"] == 0.125
+
+    def test_variable_metadata_annotations(self):
+        """WireNumber, UnitNumber and the electrode positions were parsed and never surfaced."""
+        filename = self.get_local_path("neuroexplorer/nex_version_106/nonzero_prethreshold.nex")
+        reader = NeuroExplorerRawIO(filename=filename)
+        reader.parse_header()
+
+        annotations = reader.raw_annotations["blocks"][0]["segments"][0]["spikes"]
+        neuron = annotations[0]
+        assert neuron["name"] == "Neuron04a"
+        assert neuron["wire_number"] == 0
+        assert neuron["unit_number"] == 0
+        assert (neuron["x_pos"], neuron["y_pos"]) == (16.67, 25.0)
+
+        # Positions are documented for neurons only, so a waveform variable reports none
+        waveform = annotations[6]
+        assert waveform["name"] == "sig001a_wf"
+        assert "x_pos" not in waveform
 
 
 if __name__ == "__main__":
