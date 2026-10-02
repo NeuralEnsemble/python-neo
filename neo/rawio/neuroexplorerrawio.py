@@ -60,12 +60,8 @@ class NeuroExplorerRawIO(BaseRawIO):
 
         self._memmap = np.memmap(self.filename, dtype="u1", mode="r")
 
-        # The file version does not change the header layout, it declares which of the fixed
-        # fields carry a meaningful value. NexFile.h: versions 100, 101 and 104 leave both
-        # MVOffset and PrethresholdTimeInSeconds at zero, 105 is where MVOffset can be non-zero
-        # and 106 where PrethresholdTimeInSeconds can be.
+        # NexFile.h: PrethresholdTimeInSeconds can only be non-zero from file version 106 on
         file_version = self.global_header["version"]
-        mv_offset_is_valid = file_version >= 105
 
         self._sig_lengths = []
         self._sig_t_starts = []
@@ -88,7 +84,7 @@ class NeuroExplorerRawIO(BaseRawIO):
             elif entity_header["type"] == 3:  # spiketrain and waveforms
                 wf_units = "mV"
                 wf_gain = entity_header["ADtoMV"]
-                wf_offset = entity_header["MVOffset"] if mv_offset_is_valid else 0.0
+                wf_offset = entity_header["MVOffset"]
                 wf_sampling_rate = entity_header["WFrequency"]
                 # PrethresholdTimeInSeconds is the specification's own definition of neo's left
                 # sweep: if a waveform timestamp is t, its first point is at t - Prethreshold.
@@ -109,7 +105,7 @@ class NeuroExplorerRawIO(BaseRawIO):
                 sampling_rate = entity_header["WFrequency"]
                 dtype = "int16"
                 gain = entity_header["ADtoMV"]
-                offset = entity_header["MVOffset"] if mv_offset_is_valid else 0.0
+                offset = entity_header["MVOffset"]
                 stream_id = str(_id)
                 buffer_id = ""
                 sig_channels.append((name, _id, sampling_rate, dtype, units, gain, offset, stream_id, buffer_id))
@@ -153,24 +149,6 @@ class NeuroExplorerRawIO(BaseRawIO):
         for d in (bl_annotations, seg_annotations):
             d["neuroexplorer_version"] = self.global_header["version"]
             d["comment"] = self.global_header["comment"]
-
-        # Per-variable metadata, surfaced only where the specification says it is meaningful.
-        # WireNumber and UnitNumber are the channel and unit of the source record, so they are
-        # the electrode and unit identity a conversion needs; they apply to neurons and
-        # waveforms and the variable's own version gates them at 101. Gain, Filter, XPos and
-        # YPos apply to neurons alone, XPos and YPos being electrode positions in a (0, 100)
-        # range, so a waveform variable would report a position of (0, 0) that is not its own.
-        for spike_channel_index, spike_channel in enumerate(spike_channels):
-            entity_header = self._entity_headers[int(spike_channel["id"])]
-            spike_annotations = seg_annotations["spikes"][spike_channel_index]
-            if entity_header["varVersion"] >= 101:
-                spike_annotations["wire_number"] = int(entity_header["WireNumber"])
-                spike_annotations["unit_number"] = int(entity_header["UnitNumber"])
-            if entity_header["type"] == 0:  # Unit
-                spike_annotations["gain"] = int(entity_header["Gain"])
-                spike_annotations["filter"] = int(entity_header["Filter"])
-                spike_annotations["x_pos"] = float(entity_header["XPos"])
-                spike_annotations["y_pos"] = float(entity_header["YPos"])
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = self.global_header["tbeg"] / self.global_header["freq"]

@@ -79,11 +79,11 @@ class TestNeuroExplorerRawIO(
             # 0.0002 s of prethreshold time at 40 kHz, so 8 of the 32 points precede the crossing
             assert channel["wf_left_sweep"] == 8
 
-    def test_field_validity_follows_the_file_version(self):
-        """The file version declares which fixed header fields carry a meaningful value.
+    def test_prethreshold_ignored_before_version_106(self):
+        """PrethresholdTimeInSeconds is only meaningful from file version 106.
 
-        PrethresholdTimeInSeconds is only meaningful from version 106 and MVOffset from 105,
-        so a version 104 file must report a left sweep of zero whatever its bytes hold.
+        Before that the bytes are padding, so a version 104 file must report a left sweep of
+        zero whatever they hold.
         """
         filename = self.get_local_path("neuroexplorer/File_neuroexplorer_2.nex")
         reader = NeuroExplorerRawIO(filename=filename)
@@ -92,30 +92,6 @@ class TestNeuroExplorerRawIO(
 
         names = [channel["name"] for channel in reader.header["spike_channels"]]
         assert reader.header["spike_channels"][names.index("sig01i_wf")]["wf_left_sweep"] == 0
-
-        filename = self.get_local_path("neuroexplorer/nex_version_106/nonzero_mv_offset.nex")
-        reader = NeuroExplorerRawIO(filename=filename)
-        reader.parse_header()
-        assert reader.global_header["version"] == 106
-        assert reader.header["signal_channels"][0]["offset"] == 0.125
-
-    def test_variable_metadata_annotations(self):
-        """WireNumber, UnitNumber and the electrode positions were parsed and never surfaced."""
-        filename = self.get_local_path("neuroexplorer/nex_version_106/nonzero_prethreshold.nex")
-        reader = NeuroExplorerRawIO(filename=filename)
-        reader.parse_header()
-
-        annotations = reader.raw_annotations["blocks"][0]["segments"][0]["spikes"]
-        neuron = annotations[0]
-        assert neuron["name"] == "Neuron04a"
-        assert neuron["wire_number"] == 0
-        assert neuron["unit_number"] == 0
-        assert (neuron["x_pos"], neuron["y_pos"]) == (16.67, 25.0)
-
-        # Positions are documented for neurons only, so a waveform variable reports none
-        waveform = annotations[6]
-        assert waveform["name"] == "sig001a_wf"
-        assert "x_pos" not in waveform
 
 
 if __name__ == "__main__":
