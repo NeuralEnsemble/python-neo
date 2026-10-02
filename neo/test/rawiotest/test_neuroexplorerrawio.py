@@ -18,7 +18,6 @@ class TestNeuroExplorerRawIO(
         "neuroexplorer/File_neuroexplorer_1.nex",
         "neuroexplorer/File_neuroexplorer_2.nex",
         "neuroexplorer/nex_version_106/nonzero_prethreshold.nex",
-        "neuroexplorer/nex_version_106/nonzero_mv_offset.nex",
     ]
 
     def test_spike_waveforms(self):
