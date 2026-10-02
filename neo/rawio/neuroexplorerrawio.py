@@ -335,6 +335,7 @@ EntityHeader = [
     ("MarkerLength", "int32"),
     ("MVOffset", "float64"),
     ("PrethresholdTimeInSeconds", "float64"),
+    # Unused padding that fills the variable header to its fixed 208 bytes
     ("dummy", "S52"),
 ]
 
