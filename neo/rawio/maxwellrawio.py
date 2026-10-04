@@ -67,22 +67,31 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
         return self.filename
 
     def _get_ids_and_electrodes(self, version, stream_id, h5file, mapping):
-        """Return channel and electrode IDs in signal-buffer order."""
+        """Return channel IDs, electrode IDs and their signal-buffer indices."""
         mapped_channel_ids = np.array(mapping["channel"])
         electrode_ids = np.array(mapping["electrode"])
         # Use the legacy format version already handled by _parse_header.
         if int(version) == 20160704:
             mask = mapped_channel_ids >= 0
-            return mapped_channel_ids[mask], electrode_ids[mask]
+            return mapped_channel_ids[mask], electrode_ids[mask], slice(None)
 
         routed = h5file["wells"][stream_id][self.rec_name]["groups"]["routed"]
         channel_ids = np.array(routed["channels"])
-        channel_ids = channel_ids[channel_ids >= 0]
-        routed_channel_ids_mask = np.isin(mapped_channel_ids, channel_ids)
-        unique_channel_ids, first_indices = np.unique(mapped_channel_ids[routed_channel_ids_mask], return_index=True)
+        routed_channel_ids_mask = np.isin(mapped_channel_ids, channel_ids[channel_ids >= 0])
+        unique_channel_ids, first_indices, counts = np.unique(
+            mapped_channel_ids[routed_channel_ids_mask], return_index=True, return_counts=True
+        )
+        duplicate_channel_ids = unique_channel_ids[counts > 1]
+        if duplicate_channel_ids.size:
+            warnings.warn(
+                f"Ignoring routed channels with multiple electrode mappings: {duplicate_channel_ids.tolist()}"
+            )
+        valid_channels = (channel_ids >= 0) & np.isin(channel_ids, unique_channel_ids[counts == 1])
+        buffer_indices = np.flatnonzero(valid_channels)
+        channel_ids = channel_ids[valid_channels]
         channel_electrodes = dict(zip(unique_channel_ids, electrode_ids[routed_channel_ids_mask][first_indices]))
         electrode_ids = np.array([channel_electrodes[channel_id] for channel_id in channel_ids])
-        return channel_ids, electrode_ids
+        return channel_ids, electrode_ids, buffer_indices
 
     def _parse_header(self):
         import h5py
@@ -157,9 +166,6 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
                     gain_uV = 3.3 / (1024 * gain) * 1e6
                 hdf5_path = "sig"
                 mapping = h5file["mapping"]
-                ids = np.array(mapping["channel"])
-                ids = ids[ids >= 0]
-                self._stream_buffer_slice[stream_id] = ids
             elif int(version) > 20160704:
                 settings = h5file["wells"][stream_id][self.rec_name]["settings"]
                 sr = settings["sampling"][0]
@@ -180,10 +186,15 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
                     well_indices_to_remove.append(stream_index)
                     continue
 
-                self._stream_buffer_slice[stream_id] = None
-
             buffer_id = stream_id
             shape = h5file[hdf5_path].shape
+            max_sig_length = max(max_sig_length, shape[1])
+            channel_ids, electrode_ids, buffer_indices = self._get_ids_and_electrodes(
+                version, stream_id, h5file, mapping
+            )
+            if channel_ids.size == 0:
+                well_indices_to_remove.append(stream_index)
+                continue
             self._buffer_descriptions[0][0][buffer_id] = {
                 "type": "hdf5",
                 "file_path": str(self.filename),
@@ -191,9 +202,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
                 "shape": shape,
                 "time_axis": 1,
             }
-            self._stream_buffer_slice[stream_id] = slice(None)
-
-            channel_ids, electrode_ids = self._get_ids_and_electrodes(version, stream_id, h5file, mapping)
+            self._stream_buffer_slice[stream_id] = buffer_indices
 
             for i, chan_id in enumerate(channel_ids):
                 elec_id = electrode_ids[i]
@@ -201,15 +210,24 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
                 offset_uV = 0
                 buffer_id = stream_id
                 sig_channels.append(
-                    (ch_name, str(chan_id), sr, "uint16", "uV", gain_uV, offset_uV, stream_id, buffer_id)
+                    (
+                        ch_name,
+                        str(chan_id),
+                        sr,
+                        "uint16",
+                        "uV",
+                        gain_uV,
+                        offset_uV,
+                        stream_id,
+                        buffer_id,
+                    )
                 )
-
-            max_sig_length = max(max_sig_length, shape[1])
 
         self._t_stop = max_sig_length / sr
 
         if len(well_indices_to_remove) > 0:
             signal_streams = np.delete(signal_streams, np.array(well_indices_to_remove))
+            signal_buffers = np.delete(signal_buffers, np.array(well_indices_to_remove))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
