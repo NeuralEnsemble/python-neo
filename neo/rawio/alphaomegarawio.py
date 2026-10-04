@@ -911,8 +911,7 @@ class AlphaOmegaRawIO(BaseRawIO):
                         offset=file_position,
                     )
                     i += 1
-        waveforms.shape = nb_spikes, 1, spike_length
-        return waveforms
+        return waveforms.reshape(nb_spikes, 1, spike_length)
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         event_id = int(self.header["event_channels"]["id"][event_channel_index])

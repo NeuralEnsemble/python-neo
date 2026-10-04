@@ -101,7 +101,7 @@ class NeuroExplorerRawIO(BaseRawIO):
                 sig_channels.append((name, _id, sampling_rate, dtype, units, gain, offset, stream_id, buffer_id))
                 self._sig_lengths.append(entity_header["NPointsWave"])
                 # sig t_start is the first timestamp if datablock
-                offset = entity_header["offset"]
+                offset = int(entity_header["offset"])
                 timestamps0 = self._memmap[offset : offset + 4].view("int32")
                 t_start = timestamps0[0] / self.global_header["freq"]
                 self._sig_t_starts.append(t_start)
@@ -158,14 +158,18 @@ class NeuroExplorerRawIO(BaseRawIO):
         channel_index = stream_index
         entity_index = int(self.header["signal_channels"][channel_index]["id"])
         entity_header = self._entity_headers[entity_index]
-        n = entity_header["n"]
-        nb_sample = entity_header["NPointsWave"]
-        # offset = entity_header['offset']
-        # timestamps = self._memmap[offset:offset+n*4].view('int32')
-        # offset2 = entity_header['offset'] + n*4
-        # fragment_starts = self._memmap[offset2:offset2+n*4].view('int32')
-        offset3 = entity_header["offset"] + n * 4 + n * 4
-        raw_signal = self._memmap[offset3 : offset3 + nb_sample * 2].view("int16")
+        n = int(entity_header["n"])
+        nb_sample = int(entity_header["NPointsWave"])
+        # A continuous variable stores three blocks back to back from the entity offset:
+        # n fragment timestamps (int32), then n fragment start indices (int32), then the
+        # NPointsWave samples (int16). Only the samples are read here because neo exposes
+        # the variable as one continuous signal and ignores the fragmentation.
+        timestamp_size = np.dtype("int32").itemsize
+        sample_size = np.dtype("int16").itemsize
+        timestamps_offset = int(entity_header["offset"])
+        fragment_starts_offset = timestamps_offset + n * timestamp_size
+        samples_offset = fragment_starts_offset + n * timestamp_size
+        raw_signal = self._memmap[samples_offset : samples_offset + nb_sample * sample_size].view("int16")
         raw_signal = raw_signal[slice(i_start, i_stop), None]  # 2D for compliance
         return raw_signal
 
@@ -178,8 +182,8 @@ class NeuroExplorerRawIO(BaseRawIO):
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         entity_index = int(self.header["spike_channels"][unit_index]["id"])
         entity_header = self._entity_headers[entity_index]
-        n = entity_header["n"]
-        offset = entity_header["offset"]
+        n = int(entity_header["n"])
+        offset = int(entity_header["offset"])
         timestamps = self._memmap[offset : offset + n * 4].view("int32")
 
         if t_start is not None:
@@ -204,9 +208,9 @@ class NeuroExplorerRawIO(BaseRawIO):
         if entity_header["type"] != 3:
             raise NeoReadWriteError(f"Neo requires the entity_header['type'] to be 3 not {entity_header['type']}")
 
-        n = entity_header["n"]
-        width = entity_header["NPointsWave"]
-        offset = entity_header["offset"] + n * 2
+        n = int(entity_header["n"])
+        width = int(entity_header["NPointsWave"])
+        offset = int(entity_header["offset"]) + n * 4
         waveforms = self._memmap[offset : offset + n * 2 * width].view("int16")
         waveforms = waveforms.reshape(n, 1, width)
 
@@ -222,8 +226,8 @@ class NeuroExplorerRawIO(BaseRawIO):
         entity_index = int(self.header["event_channels"][event_channel_index]["id"])
         entity_header = self._entity_headers[entity_index]
 
-        n = entity_header["n"]
-        offset = entity_header["offset"]
+        n = int(entity_header["n"])
+        offset = int(entity_header["offset"])
         timestamps = self._memmap[offset : offset + n * 4].view("int32")
 
         if t_start is None:
@@ -302,7 +306,11 @@ EntityHeader = [
     ("type", "int32"),
     ("varVersion", "int32"),
     ("name", "S64"),
-    ("offset", "int32"),
+    # The specification declares DataOffset as a signed int, but NeuroExplorer writes the low
+    # 32 bits of the true offset, so every variable past 2 GB reads back negative. Parsing it
+    # unsigned recovers the true position for any file below 4 GB. Above 4 GB the information
+    # is genuinely lost and the file has to be re-exported as .nex5, which uses 64-bit offsets.
+    ("offset", "uint32"),
     ("n", "int32"),
     ("WireNumber", "int32"),
     ("UnitNumber", "int32"),
