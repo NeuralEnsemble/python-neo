@@ -162,6 +162,7 @@ from .baserawio import (
     _spike_channel_dtype,
     _event_channel_dtype,
 )
+from neo.core import NeoReadWriteError
 
 import os
 from datetime import datetime

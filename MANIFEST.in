@@ -1,5 +1,6 @@
 include README.rst
 include LICENSE.txt
+recursive-include neo/resources *.json
 include CITATION.rst
 prune drafts
 include examples/*.py

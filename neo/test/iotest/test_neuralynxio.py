@@ -11,10 +11,9 @@ import numpy as np
 import quantities as pq
 
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.core import *
+from neo.core import AnalogSignal, Epoch, Event, Segment, SpikeTrain
 
 from neo.io.neuralynxio import NeuralynxIO
-from neo import AnalogSignal
 
 from neo.test.rawiotest.test_neuralynxrawio import TestNeuralynxRawIO
 

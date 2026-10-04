@@ -18,6 +18,7 @@ class TestIntanRawIO(
         "intan/rhs_fpc_multistim_240514_082243/rhs_fpc_multistim_240514_082243.rhs",  # Format header-attached newer version
         "intan/intan_fpc_test_231117_052630/info.rhd",  # Format one-file-per-channel
         "intan/intan_fps_test_231117_052500/info.rhd",  # Format one file per signal
+        "intan/intan_fps_multiple_digital_channels/info.rhd",  # one-file-per-signal with multiple packed digital channels (issue #1853)
         "intan/intan_fpc_rhs_test_240329_091637/info.rhs",  # Format one-file-per-channel
         "intan/intan_fps_rhs_test_240329_091536/info.rhs",  # Format one-file-per-signal
         "intan/rhd_fpc_multistim_240514_082044/info.rhd",  # Multiple digital channels one-file-per-channel rhd
@@ -217,6 +218,59 @@ class TestIntanRawIO(
         expected_duration = 200 * 1e-6  # 400 microseconds / 2
 
         assert np.isclose(duration_of_positive_pulse, expected_duration)
+
+    def test_reading_one_file_per_signal_multiple_digital_channels(self):
+        "Regression test for https://github.com/NeuralEnsemble/python-neo/issues/1853"
+        # One-file-per-signal recording with 16 digital-input and 16 digital-output channels.
+        # All channels of a digital stream are packed as bit positions of a single 16-bit word
+        # per sample, so the per-file sample count must divide by one word, not by the channel
+        # count. Earlier fixtures had a single digital channel per stream, so the division by one
+        # happened to be correct and never exercised this path.
+        file_path = Path(self.get_local_path("intan/intan_fps_multiple_digital_channels/info.rhd"))
+        intan_reader = IntanRawIO(filename=file_path)
+        intan_reader.parse_header()
+
+        signal_streams = intan_reader.header["signal_streams"]
+        signal_channels = intan_reader.header["signal_channels"]
+        stream_names = signal_streams["name"].tolist()
+        stream_ids = signal_streams["id"].tolist()
+
+        amplifier_stream_index = stream_names.index("RHD2000 amplifier channel")
+        expected_num_samples = intan_reader.get_signal_size(
+            block_index=0, seg_index=0, stream_index=amplifier_stream_index
+        )
+
+        folder_path = file_path.parent
+        digital_stream_to_raw_file = {
+            "USB board digital input channel": folder_path / "digitalin.dat",
+            "USB board digital output channel": folder_path / "digitalout.dat",
+        }
+        for stream_name, raw_file_path in digital_stream_to_raw_file.items():
+            stream_index = stream_names.index(stream_name)
+            stream_id = stream_ids[stream_index]
+            channel_ids = [channel["name"] for channel in signal_channels if channel["stream_id"] == stream_id]
+            assert len(channel_ids) == 16
+
+            # The packed word holds all channels, so the stream reports the full sample count.
+            # Before the fix it was divided by the channel count and get_analogsignal_chunk crashed.
+            num_samples = intan_reader.get_signal_size(block_index=0, seg_index=0, stream_index=stream_index)
+            assert num_samples == expected_num_samples
+
+            chunk = intan_reader.get_analogsignal_chunk(stream_index=stream_index, channel_ids=channel_ids)
+            assert chunk.shape == (expected_num_samples, len(channel_ids))
+
+            # Each channel is one bit of the packed word; demultiplex the raw file and compare.
+            # Intan RHD Application Note: Data File Formats (digitalin.dat / digitalout.dat):
+            # "All 16 digital inputs are encoded bit-by-bit in each 16-bit word. For example, if
+            # digital inputs 0, 4, and 5 are high and the rest low, the uint16 value for this sample
+            # time will be 2^0 + 2^4 + 2^5 = 1 + 16 + 32 = 49." The note isolates a channel with the
+            # MATLAB recipe "digital_input_ch = (bitand(digital_word, 2^ch) > 0)", which is what the
+            # bitwise_and below reproduces (2^ch -> 1 << bit_position).
+            packed_words = np.fromfile(raw_file_path, dtype=np.uint16)
+            for channel_index, channel_id in enumerate(channel_ids):
+                bit_position = int(channel_id.split("-")[-1])
+                expected = (np.bitwise_and(packed_words, np.uint16(1 << bit_position)) > 0).astype(np.uint16)
+                np.testing.assert_array_equal(chunk[:, channel_index], expected)
 
 
 if __name__ == "__main__":

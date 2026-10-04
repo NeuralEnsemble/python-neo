@@ -1,0 +1,47 @@
+name: Sync neuropixels_probe_features from ProbeTable
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Every Monday at 00:00 UTC
+  workflow_dispatch:
+
+jobs:
+  copy-file:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout current repository
+      uses: actions/checkout@v4
+
+    - name: Copy file from external repo
+      run: |
+        # Download the file directly
+        mkdir -p neo/resources
+        curl -o neo/resources/neuropixels_probe_features.json \
+          https://raw.githubusercontent.com/billkarsh/ProbeTable/refs/heads/main/Tables/probe_features.json
+
+    - name: Commit changes if any
+      id: commit
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+        git add neo/resources/neuropixels_probe_features.json
+
+        # Only commit if there are changes
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          echo "changes=false" >> $GITHUB_OUTPUT
+        else
+          git commit -m "Update neuropixels_probe_features from ProbeTable"
+          echo "changes=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Make PR with updated probe features
+      if: steps.commit.outputs.changes == 'true'
+      uses: peter-evans/create-pull-request@v7
+      with:
+        title: "Update Neuropixels probe features"
+        body: "This PR updates the probe features JSON file from the ProbeTable repository."
+        branch-suffix: short-commit-hash
+        base: "master"

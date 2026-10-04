@@ -54,6 +54,9 @@ test = [
     "h5py",
     "igor2",
     "klusta",
+    # klusta imports pkg_resources at module load; pkg_resources was moved
+    # out of setuptools>=81. Pin until klusta is removed or vendored.
+    "setuptools<81",
     "tqdm",
     "nixio",
     "matplotlib",
@@ -62,7 +65,7 @@ test = [
     "coverage",
     "coveralls",
     "pillow",
-    "sonpy;python_version<'3.10'",
+    "sonpy; platform_system=='Windows' or python_version>='3.14'",
     "pynwb",
     "probeinterface",
     "zugbruecke>=0.2",
@@ -130,6 +133,12 @@ all = [
 ]
 # we do not include 'stfio' in 'all' as it is not pip installable
 
+
+[tool.setuptools.packages.find]
+include = ["neo*"]
+
+[tool.setuptools.package-data]
+neo = ["resources/*.json"]
 
 [tool.black]
 line-length = 120
