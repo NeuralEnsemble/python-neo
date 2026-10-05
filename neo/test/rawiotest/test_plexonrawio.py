@@ -24,12 +24,22 @@ class TestPlexonRawIO(
     def test_timestamps_with_lower_word_above_two_to_the_31(self):
         """The lower 32 bits of the 40-bit block timestamp must be read unsigned.
 
-        A PLX block stores its timestamp as an upper byte and a lower 32-bit word, and the timestamp is
-        upper * 2 ** 32 + lower. The reader used to read the lower word as a signed int32, so a lower word at
-        or above 2 ** 31 came out negative and the timestamp landed 2 ** 32 ticks early. At the usual 40 kHz
-        clock that only happens after about 15 hours, but this file has a 1 MHz clock (an Offline Sorter
-        import of a Neuralynx recording), where it starts after 36 minutes and each affected timestamp comes
-        out about 72 minutes early.
+        A PLX block stores its 40-bit timestamp in two fields of its header:
+
+            +-------------+------------------------------------+
+            | upper byte  |             lower word             |
+            |  (8 bits)   |             (32 bits)              |
+            +-------------+------------------------------------+
+              how many      ticks since the last wrap
+              wraps         (0 to 2 ** 32 - 1, then back to 0)
+
+            timestamp = upper * 2 ** 32 + lower
+            e.g. upper = 1, lower = 4_294_797_782  ->  8_589_765_078 ticks (8589.77 s at 1 MHz)
+
+        The reader used to read the lower word as a signed int32, so a lower word at or above 2 ** 31 came out
+        negative and the timestamp landed 2 ** 32 ticks early. At the usual 40 kHz clock that only happens after
+        about 15 hours, but this file has a 1 MHz clock (an Offline Sorter import of a Neuralynx recording),
+        where it starts after 36 minutes and each affected timestamp comes out about 72 minutes early.
 
         The expected values are the spikes of one unit on both sides of the second wrap, at 2 * 2 ** 32 ticks,
         decoded from the block headers. The two before the wrap have lower words above 2 ** 31 and are the
