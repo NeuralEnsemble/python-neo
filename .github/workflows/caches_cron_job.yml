@@ -70,7 +70,12 @@ jobs:
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: ephy_testing_data
         run: |
-          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+          set -o pipefail
+          if ! hash="$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" || [ -z "$hash" ]; then
+            echo "::error::could not resolve ephy_testing_data HEAD on gin; refusing to build a degenerate cache key"
+            exit 1
+          fi
+          echo "dataset_hash=$hash" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v3
         # Loading cache of ephys_testing_dataset
