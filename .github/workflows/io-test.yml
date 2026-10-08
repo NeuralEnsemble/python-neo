@@ -96,7 +96,8 @@ jobs:
         shell: bash
         run: |
           pip install datalad-installer
-          datalad-installer --sudo ok git-annex --method datalad/packages
+          # TODO: remove the pin once datalad uploads the git-annex 10.20261006 package (its latest-version points to a missing file)
+          datalad-installer --sudo ok git-annex=10.20260901 --method datalad/packages
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
 
       - name: Configure git
