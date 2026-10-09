@@ -60,6 +60,9 @@ class NeuroExplorerRawIO(BaseRawIO):
 
         self._memmap = np.memmap(self.filename, dtype="u1", mode="r")
 
+        # NexFile.h: PrethresholdTimeInSeconds can only be non-zero from file version 106 on
+        file_version = self.global_header["version"]
+
         self._sig_lengths = []
         self._sig_t_starts = []
         sig_channels = []
@@ -82,8 +85,15 @@ class NeuroExplorerRawIO(BaseRawIO):
                 wf_units = "mV"
                 wf_gain = entity_header["ADtoMV"]
                 wf_offset = entity_header["MVOffset"]
-                wf_left_sweep = 0
                 wf_sampling_rate = entity_header["WFrequency"]
+                # PrethresholdTimeInSeconds is the specification's own definition of neo's left
+                # sweep: if a waveform timestamp is t, its first point is at t - Prethreshold.
+                # neo counts the left sweep in samples. The variable's own version gates the
+                # field independently of the file version, 102 being where it is valid.
+                if file_version >= 106 and entity_header["varVersion"] >= 102:
+                    wf_left_sweep = int(round(entity_header["PrethresholdTimeInSeconds"] * wf_sampling_rate))
+                else:
+                    wf_left_sweep = 0
                 spike_channels.append((name, _id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
 
             elif entity_header["type"] == 4:
@@ -324,7 +334,9 @@ EntityHeader = [
     ("NMarkers", "int32"),
     ("MarkerLength", "int32"),
     ("MVOffset", "float64"),
-    ("dummy", "S60"),
+    ("PrethresholdTimeInSeconds", "float64"),
+    # Unused padding that fills the variable header to its fixed 208 bytes
+    ("dummy", "S52"),
 ]
 
 MarkerHeader = [
