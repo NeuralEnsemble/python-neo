@@ -566,10 +566,11 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
 class TestNlxHeaderParsing(unittest.TestCase):
     def test_unclosed_recording(self):
         header = NlxHeader.__new__(NlxHeader)
-        header._setTimeDate(
-            "## Time Opened: (m/d/y): 1/1/2000 (h:m:s.ms) 18:28:39.821\n"
-            "## Date Closed: (m/d/y): File At Time: was not properly closed"
-        )
+        with self.assertWarnsRegex(UserWarning, "File was not closed properly"):
+            header._setTimeDate(
+                "## Time Opened: (m/d/y): 1/1/2000 (h:m:s.ms) 18:28:39.821\n"
+                "## Date Closed: (m/d/y): File At Time: was not properly closed"
+            )
 
         self.assertIsNone(header.get("recording_closed"))
 
