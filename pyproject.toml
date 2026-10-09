@@ -98,7 +98,8 @@ neomatlabio = ["scipy>=1.0.0"]
 nixio = ["nixio>=1.5.0"]
 tiffio = ["pillow"]
 edf = ["pyedflib"]
-ced = ["sonpy"]
+# sonpy wheels exist only for Windows, and for Linux/macOS from Python 3.14 (same marker as in `test`)
+ced = ["sonpy; platform_system=='Windows' or python_version>='3.14'"]
 nwb = ["pynwb"]
 maxwell = ["h5py"]
 biocam = ["h5py"]
@@ -124,7 +125,7 @@ all = [
     "pytest",
     "pytest-cov",
     "scipy>=1.0.0",
-    "sonpy",
+    "sonpy; platform_system=='Windows' or python_version>='3.14'",
     "tqdm",
     "wenv; sys_platform!='win32'",
     "zugbruecke>=0.2; sys_platform!='win32'",
