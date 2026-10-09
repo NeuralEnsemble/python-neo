@@ -82,7 +82,7 @@ def get_test_file_full_path(ioclass, filename=None, directory=None, clean=False)
 get_test_file_full_path.__test__ = False
 
 
-def create_generic_io_object(ioclass, filename=None, directory=None, return_path=False, clean=False):
+def create_generic_io_object(ioclass, filename=None, directory=None, return_path=False, clean=False, io_kwargs=None):
     """
     Create an io object in a generic way that can work with both
     file-based and directory-based io objects
@@ -99,14 +99,19 @@ def create_generic_io_object(ioclass, filename=None, directory=None, return_path
 
     If clean is True, try to delete existing versions of the file
     before creating the io object.  Default is False.
+
+    If io_kwargs is not None, pass them as extra keyword arguments to
+    the io class constructor.
     """
+    if io_kwargs is None:
+        io_kwargs = {}
     filename = get_test_file_full_path(ioclass, filename=filename, directory=directory, clean=clean)
     try:
         # actually create the object
         if ioclass.mode == "file":
-            ioobj = ioclass(filename=filename)
+            ioobj = ioclass(filename=filename, **io_kwargs)
         elif ioclass.mode == "dir":
-            ioobj = ioclass(dirname=filename)
+            ioobj = ioclass(dirname=filename, **io_kwargs)
         else:
             ioobj = None
     except:
@@ -119,7 +124,7 @@ def create_generic_io_object(ioclass, filename=None, directory=None, return_path
     return ioobj
 
 
-def iter_generic_io_objects(ioclass, filenames, directory=None, return_path=False, clean=False):
+def iter_generic_io_objects(ioclass, filenames, directory=None, return_path=False, clean=False, io_kwargs=None):
     """
     Return an iterable over the io objects created from a list of filenames.
 
@@ -136,7 +141,7 @@ def iter_generic_io_objects(ioclass, filenames, directory=None, return_path=Fals
     """
     for filename in filenames:
         ioobj, path = create_generic_io_object(
-            ioclass, filename=filename, directory=directory, return_path=True, clean=clean
+            ioclass, filename=filename, directory=directory, return_path=True, clean=clean, io_kwargs=io_kwargs
         )
 
         if ioobj is None:
@@ -183,7 +188,15 @@ def create_generic_reader(ioobj, target=None, readall=False):
 
 
 def iter_generic_readers(
-    ioclass, filenames, directory=None, target=None, return_path=False, return_ioobj=False, clean=False, readall=False
+    ioclass,
+    filenames,
+    directory=None,
+    target=None,
+    return_path=False,
+    return_ioobj=False,
+    clean=False,
+    readall=False,
+    io_kwargs=None,
 ):
     """
     Iterate over functions that can read the target object from a list of
@@ -214,7 +227,7 @@ def iter_generic_readers(
     Default is False.
     """
     for ioobj, path in iter_generic_io_objects(
-        ioclass=ioclass, filenames=filenames, directory=directory, return_path=True, clean=clean
+        ioclass=ioclass, filenames=filenames, directory=directory, return_path=True, clean=clean, io_kwargs=io_kwargs
     ):
         res = create_generic_reader(ioobj, target=target, readall=readall)
         if not return_path and not return_ioobj:
@@ -289,6 +302,7 @@ def iter_read_objects(
     clean=False,
     readall=False,
     lazy=False,
+    io_kwargs=None,
 ):
     """
     Iterate over objects read from a list of filenames.
@@ -331,6 +345,7 @@ def iter_read_objects(
         return_ioobj=True,
         clean=clean,
         readall=readall,
+        io_kwargs=io_kwargs,
     ):
         obj = obj_reader(lazy=lazy)
         if not return_path and not return_ioobj and not return_reader:
