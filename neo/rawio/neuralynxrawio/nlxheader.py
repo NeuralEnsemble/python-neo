@@ -1,6 +1,7 @@
 from packaging.version import Version
 import os
 import re
+import warnings
 from collections import OrderedDict
 
 from neo.rawio.neuralynxrawio.ncssections import AcqType
@@ -348,7 +349,10 @@ class NlxHeader(OrderedDict):
         sr = NlxHeader._closeDatetime1_pat.search(txt_header)
         if not sr:
             sr = NlxHeader._closeDatetime2_pat.search(txt_header)
-        if sr:
+        if "File was not closed properly" in txt_header:
+            # Cheetah writes this in place of the close time, see #1901
+            warnings.warn("Text header does not contain recording closed time. File was not closed properly.")
+        elif sr:
             dt2 = sr.groupdict()
             self["recording_closed"] = dateutil.parser.parse(f"{dt2['date']} {dt2['time']}")
 
