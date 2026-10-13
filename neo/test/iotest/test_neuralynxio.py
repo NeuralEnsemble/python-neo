@@ -25,6 +25,9 @@ class CommonNeuralynxIOTest(
     ioclass = NeuralynxIO
     entities_to_download = TestNeuralynxRawIO.entities_to_download
     entities_to_test = TestNeuralynxRawIO.entities_to_test
+    # Some test datasets have real gaps (pause/resume). Pass gap_tolerance_ms
+    # so the test infrastructure can load them without erroring.
+    io_kwargs = {"gap_tolerance_ms": 0.01}
 
 
 class TestCheetah_Neuraview(CommonNeuralynxIOTest, unittest.TestCase):
@@ -46,7 +49,7 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
     def test_read_block(self):
         """Read data in a certain time range into one block"""
         dirname = self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data")
-        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
 
         block = nio.read_block()
 
@@ -76,7 +79,7 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
 
     def test_read_segment(self):
         dirname = self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data")
-        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
 
         # read first segment entirely
         seg = nio.read_segment(seg_index=0, time_slice=None)
@@ -100,7 +103,7 @@ class TestCheetah_v563(CommonNeuralynxIOTest, unittest.TestCase):
     def test_read_block(self):
         """Read data in a certain time range into one block"""
         dirname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data")
-        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
 
         block = nio.read_block()
 
@@ -132,7 +135,7 @@ class TestCheetah_v563(CommonNeuralynxIOTest, unittest.TestCase):
 
     def test_read_segment(self):
         dirname = self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data")
-        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
 
         # read first segment entirely
         seg = nio.read_segment(seg_index=0, time_slice=None)
@@ -155,7 +158,7 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
 
     def test_read_block(self):
         dirname = self.get_local_path("neuralynx/Cheetah_v5.7.4/original_data")
-        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
 
         block = nio.read_block()
 
@@ -182,7 +185,7 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
     def test_include_filenames(self):
         filename = self.get_local_path("neuralynx/Cheetah_v5.7.4/original_data/CSC1.ncs")
         dirname, filename = os.path.split(filename)
-        nio = NeuralynxIO(dirname=dirname, include_filenames=filename, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, include_filenames=filename, use_cache=False, gap_tolerance_ms=0.01)
         block = nio.read_block()
         self.assertTrue(len(block.segments[0].analogsignals) > 0)
         self.assertTrue((len(block.segments[0].spiketrains)) == 0)
@@ -193,7 +196,7 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         dname = self.get_local_path("neuralynx/Cheetah_v5.7.4/original_data/")
 
         # exclude a single file
-        nio = NeuralynxIO(dirname=dname, exclude_filenames="CSC1.ncs", use_cache=False)
+        nio = NeuralynxIO(dirname=dname, exclude_filenames="CSC1.ncs", use_cache=False, gap_tolerance_ms=0.01)
         block = nio.read_block()
         self.assertTrue(len(block.segments[0].analogsignals) > 0)
         self.assertTrue((len(block.segments[0].spiketrains)) >= 0)
@@ -202,7 +205,7 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
 
         # exclude all ncs files from session
         exclude_files = [f"CSC{i}.ncs" for i in range(6)]
-        nio = NeuralynxIO(dirname=dname, exclude_filenames=exclude_files, use_cache=False)
+        nio = NeuralynxIO(dirname=dname, exclude_filenames=exclude_files, use_cache=False, gap_tolerance_ms=0.01)
         block = nio.read_block()
         self.assertTrue(len(block.segments[0].analogsignals) == 0)
         self.assertTrue((len(block.segments[0].spiketrains)) >= 0)
@@ -216,7 +219,7 @@ class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
 
     def test_read_block(self):
         dirname = self.get_local_path("neuralynx/Pegasus_v2.1.1")
-        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
 
         block = nio.read_block()
 
@@ -267,7 +270,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
     def test_ncs(self):
         for session in self.files_to_test:
             dirname = self.get_local_path(session)
-            nio = NeuralynxIO(dirname=dirname, use_cache=False)
+            nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
             block = nio.read_block()
 
             # check that data agrees in first segment first channel only
@@ -297,7 +300,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
     def test_keep_original_spike_times(self):
         for session in self.files_to_test:
             dirname = self.get_local_path(session)
-            nio = NeuralynxIO(dirname=dirname, keep_original_times=True)
+            nio = NeuralynxIO(dirname=dirname, keep_original_times=True, gap_tolerance_ms=0.01)
             block = nio.read_block()
 
             for st in block.segments[0].spiketrains:
@@ -321,7 +324,7 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
 class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
     def test_incomplete_block_handling_v632(self):
         dirname = self.get_local_path("neuralynx/Cheetah_v6.3.2/incomplete_blocks")
-        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
 
         block = nio.read_block()
 
@@ -345,7 +348,7 @@ class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
 class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
     def test_gap_handling_v551(self):
         dirname = self.get_local_path("neuralynx/Cheetah_v5.5.1/original_data")
-        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
 
         block = nio.read_block()
 
@@ -358,7 +361,7 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
 
     def test_gap_handling_v563(self):
         dirname = self.get_local_path("neuralynx/Cheetah_v5.6.3/original_data")
-        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        nio = NeuralynxIO(dirname=dirname, use_cache=False, gap_tolerance_ms=0.01)
         block = nio.read_block()
 
         # known gap values
@@ -372,7 +375,7 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
 class TestMultiSamplingRates(CommonNeuralynxIOTest, unittest.TestCase):
     def test_multi_sampling_rates(self):
         # Test Cheetah 6.4.1, with different sampling rates across ncs files.
-        nio = NeuralynxIO(self.get_local_path("neuralynx/Cheetah_v6.4.1dev/original_data"))
+        nio = NeuralynxIO(self.get_local_path("neuralynx/Cheetah_v6.4.1dev/original_data"), gap_tolerance_ms=0.01)
         block = nio.read_block()
 
         self.assertEqual(len(block.segments), 1)
