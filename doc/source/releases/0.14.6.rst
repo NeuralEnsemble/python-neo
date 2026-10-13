@@ -2,7 +2,7 @@
 Neo 0.14.6 release notes
 ========================
 
-10 October 2026
+15 October 2026
 
 This release of Neo includes many bug fixes in various IOs with an eye to a 1.0 release.
 
@@ -13,10 +13,22 @@ Update NumPy shaping for Neo Objects
 ------------------------------------
 We have updated the reshaping of core Neo Objects to handle updates to NumPy object handling.
 
+
+Gap Tolerance
+-------------
+We have been working toward a concept of gap tolerance within the code base for readers that may drop samples or have gaps during recording. Originally a few readers implemented this
+feature in a reader specific manner (e.g. :code:`BlackrockIO`), but we hope to formalize this process. As another test of incorporating gap tolerance as a core feature of readers
+we have implemented :code:`gap_tolerance_ms` in the :code:`NeuralynxIO` thanks to the work of Heberto Mayorquin. To read and comment on our proposal for gap tolerance please go to `gap API`_.
+
+
+Documentation
+-------------
+We have made minor tweaks to the documentation. Most importantly we have updated the documentation about the differences in :code:`RawIO` between :code:`index`, :code:`id`, and :code:`name` as they relate to channels.
+
+
 Bug fixes and improvements in IO modules
 ----------------------------------------
-
-Bug fixes and/or improvements have been made to :code:`AxonIO`, :code:`NeuroexplorerIO`, :code:`BioCamIO`, :code:`NeoMatlabIO`, :code:`TdtIO`, and :code:`BlackrockIO`
+Bug fixes and/or improvements have been made to :code:`AxonIO`, :code:`NeuroexplorerIO`, :code:`BioCamIO`, :code:`NeoMatlabIO`, :code:`TdtIO`, :code:`BlackrockIO`, and :code:`NeuralynxIO`.
 
 
 Acknowledgements
@@ -24,6 +36,10 @@ Acknowledgements
 
 Thanks to Heberto Mayorquin, Baptiste Grimaud, Axel Coiffard-Donaty, Aditya Singh, Stanley C, Andrew Davison, Alessio Buccino, and Zachary McKenzie.
 
+
+
 .. _`pull requests` : https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+milestone%3A0.14.6
 
 .. _`list of closed issues` : https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue%20state%3Aclosed%20milestone%3A0.14.6
+
+.. _`gap API` : https://github.com/NeuralEnsemble/python-neo/issues/1773
