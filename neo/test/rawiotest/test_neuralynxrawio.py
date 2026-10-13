@@ -563,5 +563,17 @@ class TestNlxHeader(BaseTestRawIO, unittest.TestCase):
         self.assertEqual(r"C:\CheetahData\2000-01-01_00-00-00\CSC5.ncs", hdr["OriginalFileName"])
 
 
+class TestNlxHeaderParsing(unittest.TestCase):
+    def test_unclosed_recording(self):
+        header = NlxHeader.__new__(NlxHeader)
+        with self.assertWarnsRegex(UserWarning, "File was not closed properly"):
+            header._setTimeDate(
+                "## Time Opened: (m/d/y): 1/1/2000 (h:m:s.ms) 18:28:39.821\n"
+                "## Date Closed: (m/d/y): File At Time: was not properly closed"
+            )
+
+        self.assertIsNone(header.get("recording_closed"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -70,7 +70,12 @@ jobs:
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: ephy_testing_data
         run: |
-          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+          set -o pipefail
+          if ! hash="$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" || [ -z "$hash" ]; then
+            echo "::error::could not resolve ephy_testing_data HEAD on gin; refusing to build a degenerate cache key"
+            exit 1
+          fi
+          echo "dataset_hash=$hash" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v3
         # Loading cache of ephys_testing_dataset
@@ -89,7 +94,8 @@ jobs:
           git config --global user.name "neo CI"
           python -m pip install -U pip  # Official recommended way
           pip install datalad-installer
-          datalad-installer --sudo ok git-annex --method datalad/packages
+          # TODO: remove the pin once datalad uploads the git-annex 10.20261006 package (its latest-version points to a missing file)
+          datalad-installer --sudo ok git-annex=10.20260901 --method datalad/packages
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
 
