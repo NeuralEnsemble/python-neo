@@ -1,0 +1,49 @@
+name: Ruff lint
+
+# Ruff runs on every PR and every push to master.
+#
+# Two steps:
+#   * Strict: runs the rule subset for which the codebase is clean today.
+#     Failures block the workflow, so regressions of these rules cannot be
+#     merged.
+#   * Backlog (non-blocking): runs the full configured ruleset (E, F, I) and
+#     surfaces the existing backlog of cleanups (import sorting, unused imports,
+#     long lines, etc.). It is marked `continue-on-error: true`; as the backlog
+#     is cleared the rules can be migrated into the strict step.
+
+on:
+  pull_request:
+    branches: [master]
+    types: [synchronize, opened, reopened, ready_for_review]
+  push:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff-strict:
+    name: Ruff (strict — real-bug rules)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ruff (strict subset)
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check --select F821,F403,F405 ."
+
+  ruff-backlog:
+    name: Ruff (full ruleset — non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ruff (full configured ruleset)
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check ."
