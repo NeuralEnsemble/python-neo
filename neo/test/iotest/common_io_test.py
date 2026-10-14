@@ -80,6 +80,7 @@ class BaseTestIO:
 
     entities_to_test = []  # list of files to test compliance
     entities_to_download = []  # when files are at gin
+    io_kwargs = {}  # extra kwargs passed to ioclass constructor
 
     # when reading then writing produces files with identical hashes
     hash_conserved_when_write_read = False
@@ -190,7 +191,12 @@ class BaseTestIO:
         before creating the io object.  Default is False.
         """
         return create_generic_io_object(
-            ioclass=cls.ioclass, filename=filename, directory=cls.local_test_dir, return_path=return_path, clean=clean
+            ioclass=cls.ioclass,
+            filename=filename,
+            directory=cls.local_test_dir,
+            return_path=return_path,
+            clean=clean,
+            io_kwargs=cls.io_kwargs,
         )
 
     def read_file(self, filename=None, return_path=False, clean=False, target=None, readall=False, lazy=False):
@@ -267,6 +273,7 @@ class BaseTestIO:
             directory=self.local_test_dir,
             return_path=return_path,
             clean=clean,
+            io_kwargs=self.io_kwargs,
         )
 
     def iter_readers(self, target=None, readall=False, return_path=False, return_ioobj=False, clean=False):
@@ -297,6 +304,7 @@ class BaseTestIO:
             target=target,
             clean=clean,
             readall=readall,
+            io_kwargs=self.io_kwargs,
         )
 
     def iter_objects(
@@ -349,6 +357,7 @@ class BaseTestIO:
             clean=clean,
             readall=readall,
             lazy=lazy,
+            io_kwargs=self.io_kwargs,
         )
 
     @classmethod
@@ -510,10 +519,11 @@ class BaseTestIO:
             )
             pathlib_filename = pathlib.Path(filename)
 
+            kwargs = {**self.default_keyword_arguments, **self.io_kwargs}
             if self.ioclass.mode == "file":
-                self.ioclass(filename=pathlib_filename, *self.default_arguments, **self.default_keyword_arguments)
+                self.ioclass(filename=pathlib_filename, *self.default_arguments, **kwargs)
             elif self.ioclass.mode == "dir":
-                self.ioclass(dirname=pathlib_filename, *self.default_arguments, **self.default_keyword_arguments)
+                self.ioclass(dirname=pathlib_filename, *self.default_arguments, **kwargs)
 
     def test_list_candidate_ios(self):
         for entity in self.entities_to_test:

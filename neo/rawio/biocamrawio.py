@@ -304,7 +304,7 @@ def open_biocam_file_header(filename) -> dict:
             min_uv = signal_converter["MinAnalogValueMicroVolt"]
             max_digital = signal_converter["MaxDigitalValue"]
             min_digital = signal_converter["MinDigitalValue"]
-            scale_factor = 1.0 
+            scale_factor = 1.0
             sampling_rate = experiment_info["SignalConverter"]["SampleToTimeConverter"]["FrameRateHertz"]
 
         num_frames = rf["TOC"][-1, -1]

@@ -694,7 +694,7 @@ SlowChannelHeader = [
 DataBlockHeader = [
     ("Type", "uint16"),
     ("UpperByteOf5ByteTimestamp", "uint16"),
-    ("TimeStamp", "int32"),
+    ("TimeStamp", "uint32"),
     ("Channel", "uint16"),
     ("Unit", "uint16"),
     ("NumberOfWaveforms", "uint16"),
