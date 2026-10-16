@@ -79,9 +79,13 @@ class CircularRegionOfInterest(RegionOfInterest):
 
     def pixels_in_region(self):
         """Returns a list of pixels whose *centres* are within the circle"""
+        # `is_inside` tests a closed disc, so a pixel centre exactly `radius` away is
+        # inside. `range` excludes its stop value, so the upper bounds need a `+ 1` for
+        # those extremes to be offered to `is_inside` at all. Without it the region is
+        # not symmetric about its own centre.
         pixel_in_list = []
-        for y in range(int(floor(self.y - self.radius)), int(ceil(self.y + self.radius))):
-            for x in range(int(floor(self.x - self.radius)), int(ceil(self.x + self.radius))):
+        for y in range(int(floor(self.y - self.radius)), int(ceil(self.y + self.radius)) + 1):
+            for x in range(int(floor(self.x - self.radius)), int(ceil(self.x + self.radius)) + 1):
                 if self.is_inside(x, y):
                     pixel_in_list.append([x, y])
 
