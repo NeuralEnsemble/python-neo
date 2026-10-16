@@ -542,6 +542,43 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
             assert_array_equal(result.magnitude, targ.magnitude)
             assert_same_sub_schema(result, targ)
 
+    def test__time_slice__no_explicit_start_measures_from_signal_start(self):
+        # t_start=None means "do not cut the start", so the stop index has to be
+        # counted from the signal's own start. Counting it from 0 s instead
+        # lands in several different ways: too many samples, too few, a negative
+        # index that slices from the end, and an index past the end that raises.
+        # The last row is a sub-sample offset, where the two origins round to
+        # different indices even though the offset is under half a period.
+        cases = [
+            (20, 1.0 * pq.Hz, 5.0 * pq.s, 7.0 * pq.s, 2),
+            (20, 1.0 * pq.Hz, -2.0 * pq.s, 1.0 * pq.s, 3),
+            (20, 1.0 * pq.Hz, -2.0 * pq.s, -1.0 * pq.s, 1),
+            (20, 1.0 * pq.Hz, 30.0 * pq.s, 33.0 * pq.s, 3),
+            (50, 1.0 * pq.kHz, 0.4 * pq.ms, 10.6 * pq.ms, 10),
+        ]
+        for n, rate, t_start, t_stop, n_expected in cases:
+            data = np.arange(float(n)).reshape(n, 1) * pq.mV
+            signal = AnalogSignal(data, sampling_rate=rate, t_start=t_start)
+
+            result = signal.time_slice(None, t_stop)
+
+            self.assertIsInstance(result, AnalogSignal)
+            assert_neo_object_is_compliant(result)
+            self.assertEqual(len(result), n_expected, f"t_start={t_start}, t_stop={t_stop}")
+            self.assertEqual(result.t_start, t_start)
+            assert_array_equal(result.magnitude, signal.magnitude[:n_expected])
+            assert_arrays_almost_equal(result.times, signal.time_slice(t_start, t_stop).times, 1e-12 * pq.ms)
+
+    def test__time_slice__no_explicit_start_refuses_what_explicit_start_refuses(self):
+        # None has to behave as passing the signal's own t_start does, which
+        # includes refusing a t_stop past the end rather than returning a slice
+        # measured from zero. This call returns 1600 samples without the fix.
+        signal = AnalogSignal(
+            np.arange(2000.0).reshape(2000, 1) * pq.mV, sampling_rate=1.0 * pq.kHz, t_start=-0.5 * pq.s
+        )
+        self.assertRaises(ValueError, signal.time_slice, signal.t_start, 1.6 * pq.s)
+        self.assertRaises(ValueError, signal.time_slice, None, 1.6 * pq.s)
+
     def test__time_slice_deepcopy_data(self):
         result = self.signal1.time_slice(None, None)
 
