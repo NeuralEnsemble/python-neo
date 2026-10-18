@@ -600,6 +600,41 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_array_equal(result2.magnitude, self.data1[::2, :1])
         assert_array_equal(result3.magnitude, self.data1[1:7:2, :1])
 
+    def test__slice_timestamps_match_selected_samples(self):
+        signal = AnalogSignal(np.arange(40).reshape(20, 2), units="uV", sampling_rate=4 * pq.Hz, t_start=2 * pq.s)
+        original_times = signal.times.copy()
+        original_period = signal.sampling_period.copy()
+        slices = (
+            slice(None, None, 2),
+            slice(3, 17, 3),
+            slice(-5, None),
+            slice(-12, -2, 2),
+            slice(-100, None, 3),
+            slice(None, None, -1),
+            slice(17, 2, -3),
+            slice(100, None, -2),
+        )
+        for time_slice in slices:
+            for channel_slice in (None, slice(None), 1):
+                with self.subTest(time_slice=time_slice, channel_slice=channel_slice):
+                    if channel_slice is None:
+                        result = signal[time_slice]
+                        expected_data = signal.magnitude[time_slice]
+                    else:
+                        result = signal[time_slice, channel_slice]
+                        expected_data = signal.magnitude[time_slice, channel_slice].reshape(result.shape)
+                    assert_array_equal(result.magnitude, expected_data)
+                    assert_array_equal(result.times, original_times[time_slice])
+                    self.assertEqual(result.sampling_period, original_period * (time_slice.step or 1))
+        assert_array_equal(signal.times, original_times)
+        self.assertEqual(signal.sampling_period, original_period)
+
+    def test__nested_slices_preserve_sample_times(self):
+        signal = AnalogSignal(np.arange(20), units="mV", sampling_rate=4 * pq.Hz, t_start=2 * pq.s)
+        result = signal[1::2][-3:]
+        assert_array_equal(result.magnitude, signal.magnitude[1::2][-3:])
+        assert_array_equal(result.times, signal.times[1::2][-3:])
+
     def test__index_dim1_and_slice_dim0_should_return_single_channel_analogsignal(self):
         result = self.signal1[2:7, 0]
         self.assertIsInstance(result, AnalogSignal)
