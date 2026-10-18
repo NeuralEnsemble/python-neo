@@ -1,10 +1,10 @@
 [project]
 name = "neo"
-version = "0.14.6"
+version = "0.15.0dev"
 authors = [{name = "Neo authors and contributors"}]
 description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats"
 readme = "README.rst"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "BSD-3-Clause"
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -13,7 +13,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Natural Language :: English",
     "Topic :: Scientific/Engineering",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
