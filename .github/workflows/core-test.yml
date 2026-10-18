@@ -7,7 +7,7 @@ on:
     paths:
       - 'neo/core/**'
       - 'pyproject.toml'
-      - '.github/workflows/*.yml'
+      - '.github/workflows/**'
 
   # run checks on any change of master, including merge of PRs
   push:
