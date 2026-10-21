@@ -3,6 +3,7 @@ Tests of neo.rawio.examplerawio
 """
 
 import unittest
+import warnings
 
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -373,6 +374,30 @@ class TestBlackrockRawIO(
         reader_strict.parse_header()
         segments_strict = reader_strict.segment_count(0)
         self.assertEqual(segments_strict, 3)  #
+
+    def test_nev_segments_ignore_order_between_packet_types(self):
+        """
+        Comments are stamped when the user starts writing but written to the file when they finish, so they
+        come after spikes with later timestamps. Only a packet earlier than the previous packet of its own
+        type is a clock reset, and one reset is one segment boundary.
+        """
+        spike, comment = 1, 0xFFFF
+        # The comments are 2 ticks ahead of the spike before them, later than the spike after them.
+        no_reset = [(1000, spike), (1002, comment), (1001, spike), (1010, spike), (1012, comment), (1011, spike)]
+        # A reset sends the clock of every packet type back.
+        reset = [(5, spike), (7, comment), (6, spike)]
+        reader = BlackrockRawIO(filename=self.get_local_path("blackrock/blackrock_3_0/file_spec_3_0"))  # not parsed
+        for packets, expected in ((no_reset, [0] * 6), (no_reset + reset, [0] * 6 + [1] * 3)):
+            raw = np.array(
+                [(*p, b"") for p in packets], dtype=[("timestamp", "uint64"), ("packet_id", "uint16"), ("value", "S2")]
+            )
+            masks = {"Spikes": raw["packet_id"] == spike, "Comments": raw["packet_id"] == comment}
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                segment_ids = reader._get_event_segment_ids(raw, masks, "3.0")
+            assert_equal(segment_ids, expected)
+            self.assertEqual(reader._nb_segment_nev, max(expected) + 1)
+            self.assertEqual(len(caught), max(expected))  # one warning for the reset without a reset comment
 
 
 if __name__ == "__main__":

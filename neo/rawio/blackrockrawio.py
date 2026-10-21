@@ -1772,30 +1772,42 @@ class BlackrockRawIO(BaseRawIO):
             # consistency check for monotone increasing time stamps
             # - Use logical comparator (instead of np.diff) to avoid unsigned dtype issues.
             # - Only consider handled/known event types.
-            mask_handled = np.any([mask for mask in masks.values()], axis=0)
-            jump_ids_handled = (
-                np.where(
-                    raw_event_data["timestamp"][mask_handled][1:] < raw_event_data["timestamp"][mask_handled][:-1]
-                )[0]
-                + 1
-            )
-            jump_ids = np.where(mask_handled)[0][jump_ids_handled]  # jump ids in full set of events (incl. unhandled)
-            overlap = np.isin(jump_ids, reset_ev_ids)
-            if not all(overlap):
+            # - Compare only packets of the same type: the file does not order packets of different
+            #   types (e.g. a comment is stamped when the user starts typing but written when they
+            #   finish, so it can be later than the spikes written after it).
+            # jumps maps the position of a packet earlier than the previous packet of its type to the
+            # position of that previous packet, in the full set of events (incl. unhandled).
+            jumps = {}
+            for mask in masks.values():
+                ids = np.flatnonzero(mask)
+                ts = raw_event_data["timestamp"][ids]
+                earlier = np.flatnonzero(ts[1:] < ts[:-1])
+                jumps.update(zip(ids[earlier + 1].tolist(), ids[earlier].tolist()))
+
+            # A reset sends the clock of every packet type back, so each type jumps at its first packet
+            # after it. Count a jump only if the packet it is compared with is in the current segment,
+            # so that one reset is one boundary.
+            reset_set = set(reset_ev_ids.tolist())
+            boundaries = []
+            segment_start = 0
+            for position in sorted(reset_set | jumps.keys()):
+                if position in reset_set or jumps[position] >= segment_start:
+                    boundaries.append(position)
+                    segment_start = position
+            additional_ids = np.array([b for b in boundaries if b not in reset_set])
+            if len(additional_ids):
                 # additional resets occurred without a reset event being stored
-                additional_ids = jump_ids[np.invert(overlap)]
                 warnings.warn(
                     f"Detected {len(additional_ids)} undocumented segments within "
                     f"nev data after timestamps {additional_ids}."
                     ""
                 )
-                reset_ev_ids = sorted(np.unique(np.concatenate((reset_ev_ids, jump_ids))))
 
             event_segment_ids = np.zeros(len(raw_event_data), dtype=int)
-            for reset_event_id in reset_ev_ids:
-                event_segment_ids[reset_event_id:] += 1
+            event_segment_ids[boundaries] = 1
+            event_segment_ids = np.cumsum(event_segment_ids)
 
-            self._nb_segment_nev = len(reset_ev_ids) + 1
+            self._nb_segment_nev = len(boundaries) + 1
             return event_segment_ids
 
         else:
