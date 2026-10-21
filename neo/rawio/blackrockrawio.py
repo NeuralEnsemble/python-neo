@@ -65,7 +65,6 @@ import mmap
 import os
 import re
 import warnings
-import math
 
 import numpy as np
 import quantities as pq
@@ -130,6 +129,10 @@ class BlackrockRawIO(BaseRawIO):
     2.3, 3.0 and 3.0-ptp. Recording pauses that may occur in file specifications
     2.2 and 2.3 are automatically extracted and the data set is split into different
     segments.
+
+    * The times of spikes and events are compared with `t_start` and `t_stop` as float64 seconds, and
+    `t_stop` is exclusive. To include a spike at `t_stop`, such as the last of a segment, pass
+    `t_stop + 1e-5`.
 
     * The Blackrock data format consists not of a single file, but a set of
     different files. This constructor associates itself with a set of files
@@ -826,18 +829,15 @@ class BlackrockRawIO(BaseRawIO):
     def _spike_count(self, block_index, seg_index, unit_index):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
 
-        all_spikes = self.nev_data["Spikes"][0]
-        mask = (all_spikes["packet_id"] == channel_id) & (all_spikes["unit_class_nb"] == unit_id)
-        if self._nb_segment == 1:
-            # very fast
-            nb = int(np.sum(mask))
-        else:
-            # must clip in time time range
-            timestamp = all_spikes[mask]["timestamp"]
-            sl = self._get_timestamp_slice(timestamp, seg_index, None, None)
-            timestamp = timestamp[sl]
-            nb = timestamp.size
-        return nb
+        all_spikes, event_segment_ids = self.nev_data["Spikes"]
+        # Selected by segment id, as _get_spike_timestamps does, so the count always equals
+        # the number of timestamps it returns.
+        mask = (
+            (all_spikes["packet_id"] == channel_id)
+            & (all_spikes["unit_class_nb"] == unit_id)
+            & (event_segment_ids == seg_index)
+        )
+        return int(np.sum(mask))
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
@@ -859,27 +859,27 @@ class BlackrockRawIO(BaseRawIO):
         return timestamp
 
     def _get_timestamp_slice(self, timestamp, seg_index, t_start, t_stop):
-        if self._nb_segment > 1:
-            # we must clip event in seg time limits
-            if t_start is None:
-                t_start = self._seg_t_starts[seg_index]
-            if t_stop is None:
-                t_stop = self._seg_t_stops[seg_index] + 1 / float(self._nev_basic_header["timestamp_resolution"])
+        """
+        Slice of `timestamp` (one segment's, in file order) within [t_start, t_stop), in seconds.
 
-        if t_start is None:
-            ind_start = None
-        else:
-            ts = math.ceil(t_start * self._nev_basic_header["timestamp_resolution"])
-            ind_start = np.searchsorted(timestamp, ts)
+        The segment itself is already selected by segment id, so None means no limit.
 
-        if t_stop is None:
-            ind_stop = None
-        else:
-            ts = int(t_stop * self._nev_basic_header["timestamp_resolution"])
-            ind_stop = np.searchsorted(timestamp, ts)  # +1
+        The bounds are compared with the times neo reports (the timestamps in float64 seconds), so a
+        time obtained from neo, such as `segment_t_start`, selects the item it came from. Converting the
+        bounds to ticks instead does not work at the 1 ns resolution of PTP files: a float64 number of
+        seconds (about 1.75e9) is only precise to about 240 ns, so the converted bound can fall a few
+        ticks past the item and drop it, and np.searchsorted compares uint64 with a Python int as float64.
 
-        sl = slice(ind_start, ind_stop)
-        return sl
+        `t_stop` is exclusive. To include an item at `t_stop`, such as the last of a segment,
+        pass `t_stop + 1e-5` (10 us, shorter than the interval between samples at 30 kHz and longer
+        than the precision of float64 seconds).
+        """
+        if t_start is None and t_stop is None:
+            return slice(None)
+        times = timestamp.astype("float64") / self._nev_basic_header["timestamp_resolution"]
+        ind_start = None if t_start is None else np.searchsorted(times, t_start, side="left")
+        ind_stop = None if t_stop is None else np.searchsorted(times, t_stop, side="left")
+        return slice(ind_start, ind_stop)
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
@@ -924,17 +924,9 @@ class BlackrockRawIO(BaseRawIO):
         else:
             events_data, event_segment_ids = self.nev_data["NonNeural"]
             ev_dict = self._nonneural_evdicts[self._nev_spec](events_data)[name]
+        # Selected by segment id, as _get_event_timestamps does.
         mask = ev_dict["mask"] & (event_segment_ids == seg_index)
-        if self._nb_segment == 1:
-            # very fast
-            nb = int(np.sum(mask))
-        else:
-            # must clip in time time range
-            timestamp = events_data[ev_dict["mask"]]["timestamp"]
-            sl = self._get_timestamp_slice(timestamp, seg_index, None, None)
-            timestamp = timestamp[sl]
-            nb = timestamp.size
-        return nb
+        return int(np.sum(mask))
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         name = self.header["event_channels"]["name"][event_channel_index]
