@@ -210,17 +210,7 @@ class MaxwellRawIO(BaseRawWithBufferApiIO):
                 offset_uV = 0
                 buffer_id = stream_id
                 sig_channels.append(
-                    (
-                        ch_name,
-                        str(chan_id),
-                        sr,
-                        "uint16",
-                        "uV",
-                        gain_uV,
-                        offset_uV,
-                        stream_id,
-                        buffer_id,
-                    )
+                    (ch_name, str(chan_id), sr, "uint16", "uV", gain_uV, offset_uV, stream_id, buffer_id)
                 )
 
         self._t_stop = max_sig_length / sr
