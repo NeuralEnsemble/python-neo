@@ -74,16 +74,16 @@ class BCI2000RawIO(BaseRawIO):
             gain = param_defs["SourceChGain"]["value"][chan_ix]
 
             if isinstance(gain, str):
-                r = re.findall(r"(\d+)(\D+)", gain)
                 # some files have strange units attached to gain
                 # in that case it is ignored
-                if len(r) == 1:
-                    gain = r[0][0]
-                gain = float(gain)
+                gain = float(re.match(_number_pattern, gain).group(1))
 
             offset = param_defs["SourceChOffset"]["value"][chan_ix]
             if isinstance(offset, str):
-                offset = float(offset)
+                offset = float(re.match(_number_pattern, offset).group(1))
+            # BCI2000 defines uV = (raw - SourceChOffset) * SourceChGain
+            # while neo computes raw * gain + offset
+            offset = -offset * gain
 
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, stream_id, buffer_id))
         self.header["signal_channels"] = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -254,6 +254,10 @@ class BCI2000RawIO(BaseRawIO):
         return self._my_events
 
 
+# a decimal number such as "0.003" or "-1.5e-3" followed by optional units such as "muV"
+_number_pattern = r"([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)(\w*)"
+
+
 def parse_bci2000_header(filename):
     # typically we want parameter values in Hz, seconds, or microvolts.
     scales_dict = {
@@ -280,7 +284,8 @@ def parse_bci2000_header(filename):
         if param_val.lower().startswith("0x"):
             param_val = int(param_val, 16)
         elif data_type in ["int", "float"]:
-            matches = re.match(r"(-*\d+)(\w*)", param_val)
+            pattern = r"(-*\d+)(\w*)" if data_type == "int" else _number_pattern
+            matches = re.match(pattern, param_val)
             if matches is not None:  # Can be None for % in def, min, max vals
                 param_val, unit_str = matches.group(1), matches.group(2)
                 param_val = int(param_val) if data_type == "int" else float(param_val)
@@ -325,7 +330,7 @@ def parse_bci2000_header(filename):
         if temp != "[ State Vector Definition ]":
             raise NeoReadWriteError(f"State definitions not found in header {filename}")
         state_defs = []
-        state_def_dtype = [("name", "a64"), ("length", int), ("startVal", int), ("bytePos", int), ("bitPos", int)]
+        state_def_dtype = [("name", "S64"), ("length", int), ("startVal", int), ("bytePos", int), ("bitPos", int)]
         while True:
             temp = fid.readline().decode("utf8").strip()
             if len(temp) == 0 or temp[0] == "[":
