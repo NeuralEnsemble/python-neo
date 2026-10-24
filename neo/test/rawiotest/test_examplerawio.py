@@ -42,6 +42,13 @@ class TestExampleRawIO(
     # name here instead of the filename.
     entities_to_test = ["fake1"]
 
+    def test_buffer_description_api_check(self):
+        """An ExampleRawIO reader, whose flag is False, must raise ValueError."""
+        reader = ExampleRawIO(filename=self.get_local_path("fake1"))
+        reader.parse_header()
+        with self.assertRaises(ValueError):
+            reader.get_analogsignal_buffer_description(block_index=0, seg_index=0, buffer_id="0")
+
 
 if __name__ == "__main__":
     unittest.main()
