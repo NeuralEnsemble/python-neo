@@ -166,7 +166,8 @@ class BrainVisionRawIO(BaseRawWithBufferApiIO):
         for i in range(len(all_info)):
             ev_type, ev_label, pos, size, channel = all_info[f"Mk{i+1}"].split(",")[:5]
             ev_types.append(ev_type)
-            ev_timestamps.append(int(pos))
+            # marker positions are 1-based: the first data point is position 1
+            ev_timestamps.append(int(pos) - 1)
             ev_labels.append(ev_label)
         ev_types = np.array(ev_types)
         ev_timestamps = np.array(ev_timestamps)
