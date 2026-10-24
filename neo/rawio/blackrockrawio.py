@@ -1683,7 +1683,8 @@ class BlackrockRawIO(BaseRawIO):
             The NEV filename to read from
         """
         packet_size_bytes = self._nev_basic_header["bytes_in_data_packets"]
-        header_size = self._nev_basic_header["bytes_in_headers"]
+        # int(): a uint32 scalar overflows against file sizes > 4 GiB under NumPy 2 (NEP 50)
+        header_size = int(self._nev_basic_header["bytes_in_headers"])
 
         if self._nev_basic_header["ver_major"] >= 3:
             ts_format = "uint64"
@@ -1995,7 +1996,7 @@ class BlackrockRawIO(BaseRawIO):
         filename = ".".join([self._filenames["nev"], "nev"])
 
         dt = [("timestamp", "uint32")]
-        offset = self._get_file_size(filename) - self._nev_params("bytes_in_data_packets")
+        offset = self._get_file_size(filename) - int(self._nev_params("bytes_in_data_packets"))
         last_data_packet = np.memmap(filename, offset=offset, dtype=dt, mode="r")[0]
 
         n_starts = [0 * self._nev_params("event_unit")]
