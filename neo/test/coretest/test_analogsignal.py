@@ -629,6 +629,17 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_array_equal(signal.times, original_times)
         self.assertEqual(signal.sampling_period, original_period)
 
+    def test__slices_preserve_sampling_rate_precision(self):
+        for rate in (25000 * pq.Hz, 25 * pq.kHz, 44100 * pq.Hz):
+            signal = AnalogSignal(np.arange(24).reshape(12, 2), units="mV", sampling_rate=rate)
+            for step in (1, 2, -1):
+                time_slice = slice(None, None, step)
+                for index in (time_slice, (time_slice, slice(None)), (time_slice, 0)):
+                    with self.subTest(rate=rate, step=step, index=index):
+                        result = signal[index]
+                        self.assertEqual(result.sampling_rate, rate / step)
+                        self.assertEqual(signal.sampling_rate, rate)
+
     def test__nested_slices_preserve_sample_times(self):
         signal = AnalogSignal(np.arange(20), units="mV", sampling_rate=4 * pq.Hz, t_start=2 * pq.s)
         result = signal[1::2][-3:]

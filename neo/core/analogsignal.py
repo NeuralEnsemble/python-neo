@@ -313,7 +313,7 @@ class AnalogSignal(BaseSignal):
                 if isinstance(j, slice):
                     start, _, step = j.indices(len(self))
                     obj.t_start = self.t_start + start * self.sampling_period
-                    obj.sampling_period = self.sampling_period * step
+                    obj.sampling_rate = self.sampling_rate / step
                 elif isinstance(j, np.ndarray):
                     raise NotImplementedError("Arrays not yet supported")  # in the general case, would need to return
                     #  IrregularlySampledSignal(Array)
@@ -330,7 +330,7 @@ class AnalogSignal(BaseSignal):
             obj = super().__getitem__(i)
             start, _, step = i.indices(len(self))
             obj.t_start = self.t_start + start * self.sampling_period
-            obj.sampling_period = self.sampling_period * step
+            obj.sampling_rate = self.sampling_rate / step
             obj.array_annotations = deepcopy(self.array_annotations)
         elif isinstance(i, np.ndarray):
             # Indexing of an AnalogSignal is only consistent if the resulting number of
