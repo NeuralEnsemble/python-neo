@@ -3,6 +3,7 @@ Utility functions to retrieve public datasets.
 """
 
 import os
+import warnings
 from pathlib import Path
 
 default_testing_repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
@@ -64,7 +65,10 @@ def download_dataset(repo=default_testing_repo, remote_path=None, local_folder=N
         # make sure git repo is in clean state
         repo = dataset.repo
         repo.call_git(["checkout", "--force", "master"])
-        dataset.update(merge=True)
+        # the remote can be unreachable (gin answers 403 to CI runners at times), so keep the local copy then
+        results = dataset.update(merge=True, on_failure="ignore")
+        if any(result["status"] == "error" for result in results):
+            warnings.warn(f"Could not update {local_folder} from its remote, using the local copy as it is")
     else:
         dataset = datalad.api.install(path=local_folder, source=repo)
 
