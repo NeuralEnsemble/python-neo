@@ -27,6 +27,12 @@ class ObjectList:
         self.parent = parent
 
     def _handle_append(self, obj):
+        self._check_allowed(obj)
+        if self._contains(obj):
+            raise ValueError("Cannot add this object because it is already contained within the list")
+        self._set_parent(obj)
+
+    def _check_allowed(self, obj):
         if not (
             isinstance(obj, self.allowed_contents)
             or (  # also allow proxy objects of the correct type
@@ -35,9 +41,7 @@ class ObjectList:
         ):
             raise TypeError(f"Object is a {type(obj)}. It should be one of {self.allowed_contents}.")
 
-        if self._contains(obj):
-            raise ValueError("Cannot add this object because it is already contained within the list")
-
+    def _set_parent(self, obj):
         # set the child-parent relationship
         if self.parent:
             relationship_name = self.parent.__class__.__name__.lower()
@@ -49,11 +53,8 @@ class ObjectList:
                 setattr(obj, relationship_name, self.parent)
 
     def _contains(self, obj):
-        if self._items is None:
-            obj_ids = []
-        else:
-            obj_ids = [id(item) for item in self._items]
-        return id(obj) in obj_ids
+        # membership is by identity
+        return self._items is not None and any(item is obj for item in self._items)
 
     def __str__(self):
         return str(self._items)
@@ -75,12 +76,10 @@ class ObjectList:
             return objects + self._items
 
     def __contains__(self, key):
-        return key in self._items
+        return self._contains(key)
 
     def __iadd__(self, objects):
-        for obj in objects:
-            self._handle_append(obj)
-        self._items.extend(objects)
+        self.extend(objects)
         return self
 
     def __iter__(self):
@@ -93,25 +92,54 @@ class ObjectList:
         return len(self._items)
 
     def __setitem__(self, key, value):
-        self._items[key] = value
+        if isinstance(key, slice):
+            values = list(value)
+            for obj in values:
+                self._check_allowed(obj)
+            # assign to a copy first, so that nothing changes if the assignment or the checks fail
+            new_items = self._items[:]
+            new_items[key] = values
+            if len({id(obj) for obj in new_items}) != len(new_items):
+                raise ValueError("Cannot add this object because it is already contained within the list")
+            for obj in values:
+                self._set_parent(obj)
+            self._items = new_items
+        else:
+            if value is self._items[key]:
+                return
+            self._handle_append(value)
+            self._items[key] = value
 
     def append(self, obj):
         self._handle_append(obj)
         self._items.append(obj)
 
     def extend(self, objects):
+        # objects may be an iterator that can only be consumed once (e.g., a generator), and we need to iterate twice
+        objects = list(objects)
+        # check everything before changing anything, so that a failure leaves the list unchanged
+        seen = set()
         for obj in objects:
-            self._handle_append(obj)
+            self._check_allowed(obj)
+            if id(obj) in seen or self._contains(obj):
+                raise ValueError("Cannot add this object because it is already contained within the list")
+            seen.add(id(obj))
+        for obj in objects:
+            self._set_parent(obj)
         self._items.extend(objects)
 
     def clear(self):
         self._items = []
 
     def count(self, value):
-        return self._items.count(value)
+        return int(self._contains(value))
 
     def index(self, value, start=0, stop=sys.maxsize):
-        return self._items.index(value, start, stop)
+        items = self._items or []
+        for i in range(*slice(start, stop).indices(len(items))):
+            if items[i] is value:
+                return i
+        raise ValueError("object is not in list")
 
     def insert(self, index, obj):
         self._handle_append(obj)
@@ -121,10 +149,10 @@ class ObjectList:
         return self._items.pop(index)
 
     def remove(self, value):
-        return self._items.remove(value)
+        del self._items[self.index(value)]
 
     def reverse(self):
-        raise self._items.reverse()
+        self._items.reverse()
 
     def sort(self, *args, key=None, reverse=False):
         self._items.sort(*args, key=key, reverse=reverse)

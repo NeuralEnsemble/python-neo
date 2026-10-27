@@ -226,7 +226,7 @@ class Container(BaseNeo):
         elif isinstance(value, ObjectList):  # from __iadd__
             setattr(self, name, value)
         else:
-            TypeError("value must be a list or an ObjectList")
+            raise TypeError("value must be a list or an ObjectList")
 
     @property
     def _child_objects(self):
