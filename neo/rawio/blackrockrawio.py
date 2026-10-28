@@ -2464,6 +2464,12 @@ NEV_EXT_HEADER_TYPES_BY_SPEC = {
 # Used to create masks that filter raw data packets by their packet ID field.
 # Single values indicate equality check, tuples (min, max) indicate range check.
 # According to NEV spec: packet IDs < 32768 identify channels, IDs >= 32768 are system events.
+# Packets whose ID is not listed for a spec are not read. Known cases, ignored on purpose:
+# - 0x8000 + channel (e.g. 32769): preview packets of the live protocol (cbproto's "Preview Data Packet
+#   Definitions"), found in 3.0 files written by Central. They carry no neural data.
+# - 0xFFF9: recording events of 3.0 files written by Central (header type 0 start, 1 stop, 2 pause,
+#   3 resume; Central's CNevFile30::AddRecordingEvent). Not used to split segments, which come from
+#   resets and gaps.
 NEV_PACKET_IDENTIFIERS_BY_SPEC = {
     "2.1": {
         "NonNeural": 0,
@@ -2471,7 +2477,11 @@ NEV_PACKET_IDENTIFIERS_BY_SPEC = {
     },
     "2.2": {
         "NonNeural": 0,
-        "Spikes": (1, 255),  # Packet IDs in this range identify spike events on electrodes
+        # Packet IDs in this range identify spike events on electrodes. Wider than 2.1's range:
+        # Ripple Trellis writes 2.2 files with electrode IDs above 255 (its front-end ports are
+        # numbered 1-128, 129-256, 257-384...), and every spike on them was dropped without a
+        # warning (NeuralEnsemble/python-neo#1918). 2048 is the range of 2.3.
+        "Spikes": (1, 2048),
     },
     "2.3": {
         "NonNeural": 0,
