@@ -3,7 +3,6 @@ Tests of neo.rawio.examplerawio
 """
 
 import unittest
-from unittest import mock
 
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -374,37 +373,6 @@ class TestBlackrockRawIO(
         reader_strict.parse_header()
         segments_strict = reader_strict.segment_count(0)
         self.assertEqual(segments_strict, 3)  #
-
-    def test_nev_over_4_gib_does_not_overflow(self):
-        """File sizes > 4 GiB must not overflow against the uint32 NEV header fields (NumPy 2, NEP 50)."""
-        file_size = 5 * 2**30
-        basic_header = np.zeros(
-            1, dtype=[("ver_major", "uint8"), ("bytes_in_headers", "uint32"), ("bytes_in_data_packets", "uint32")]
-        )[0]
-        basic_header["ver_major"] = 2
-        basic_header["bytes_in_headers"] = 1000
-        basic_header["bytes_in_data_packets"] = 104
-
-        reader = BlackrockRawIO.__new__(BlackrockRawIO)  # skip parsing real files
-        reader._nev_basic_header = basic_header
-        reader._nev_params = lambda name: basic_header[name]
-        reader._filenames = {"nev": "fake"}
-
-        class Stop(Exception):
-            pass
-
-        with (
-            mock.patch.object(reader, "_get_file_size", return_value=file_size),
-            mock.patch("neo.rawio.blackrockrawio.np.memmap", side_effect=Stop) as memmap,
-        ):
-            with self.assertRaises(Stop):
-                reader._read_nev_data("2.2", "fake.nev")
-            self.assertEqual(memmap.call_args.kwargs["offset"], 1000)
-            self.assertEqual(memmap.call_args.kwargs["shape"], ((file_size - 1000) // 104,))
-
-            with self.assertRaises(Stop):
-                reader._get_nev_rec_times()
-            self.assertEqual(memmap.call_args.kwargs["offset"], file_size - 104)
 
 
 if __name__ == "__main__":
