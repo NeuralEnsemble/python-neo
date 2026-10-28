@@ -32,6 +32,7 @@ class TestBlackrockRawIO(
         "blackrock/blackrock_2_1/l101210-001",
         "blackrock/blackrock_3_0/file_spec_3_0",
         "blackrock/blackrock_3_0_ptp/20231027-125608-001",
+        "blackrock/segment/ResetCorrect/reset",
     ]
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
@@ -632,6 +633,21 @@ class TestBlackrockRawIO(
         split_counts = spike_counts(reader_split)
         self.assertEqual(len(split_counts), 4)
         self.assertEqual(spike_counts(reader_merged), [split_counts[0] + split_counts[1]] + split_counts[2:])
+
+    def test_nev_spikes_at_segment_edges_ptp(self):
+        reader = BlackrockRawIO(
+            filename=self.get_local_path(
+                "blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes"
+            ),
+            nsx_to_load=[],
+        )
+        reader.parse_header()
+        returned = 0
+        for block_index in range(reader.block_count()):
+            for seg_index in range(reader.segment_count(block_index)):
+                for unit_index in range(reader.spike_channels_count()):
+                    returned += reader.get_spike_timestamps(block_index, seg_index, unit_index, None, None).size
+        self.assertEqual(returned, 999)
 
 
 if __name__ == "__main__":
