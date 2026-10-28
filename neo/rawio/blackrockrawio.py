@@ -258,7 +258,7 @@ class BlackrockRawIO(BaseRawIO):
 
             # read nev headers
             nev_filename = f"{self._filenames['nev']}.nev"
-            self._nev_basic_header, self._nev_ext_header = self._read_nev_header(self._nev_spec, nev_filename)
+            self._nev_basic_header, self._nev_ext_header = self._read_nev_header(self._nev_spec)
 
             self.nev_data = self._read_nev_data(self._nev_spec, nev_filename)
             spikes, spike_segment_ids = self.nev_data["Spikes"]
@@ -458,7 +458,7 @@ class BlackrockRawIO(BaseRawIO):
                     if "timestamps_memmap_kwargs" in seg_header:
                         # FileSpec 3.0 with PTP -- read first/last timestamps on demand
                         ts_kw = seg_header["timestamps_memmap_kwargs"]
-                        fid = self._get_nsx_fid(nsx_nb)
+                        fid = self._get_nsx_file_handle(nsx_nb)
                         ts_array = self._create_mmap_view(
                             fid=fid,
                             dtype=ts_kw["dtype"],
@@ -724,20 +724,43 @@ class BlackrockRawIO(BaseRawIO):
             strides=strides,
         )
 
-    def _get_nsx_fid(self, nsx_nb):
-        """Open NSX file on demand and cache the file descriptor for reuse."""
-        if not hasattr(self, "_nsx_fids"):
-            self._nsx_fids = {}
-        if nsx_nb not in self._nsx_fids:
+    def _get_nsx_file_handle(self, nsx_nb):
+        """Open NSX file on demand and cache the file handle for reuse."""
+        if not hasattr(self, "_nsx_file_handles_dict"):
+            self._nsx_file_handles_dict = {}
+        if nsx_nb not in self._nsx_file_handles_dict:
             filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-            self._nsx_fids[nsx_nb] = open(filename, "rb")
-        return self._nsx_fids[nsx_nb]
+            self._nsx_file_handles_dict[nsx_nb] = open(filename, "rb")
+        return self._nsx_file_handles_dict[nsx_nb]
+
+    def _get_nev_file_handle(self):
+        """Open NEV file on demand and cache the file handle for reuse."""
+        if not hasattr(self, "_nev_file_handle"):
+            filename = f"{self._filenames['nev']}.nev"
+            self._nev_file_handle = open(filename, "rb")
+        return self._nev_file_handle
+
+    def __del__(self):
+        if hasattr(self, "_nsx_file_handles_dict"):
+            for file_handle in self._nsx_file_handles_dict.values():
+                file_handle.close()
+            del self._nsx_file_handles_dict
+        if hasattr(self, "_nev_file_handle"):
+            self._nev_file_handle.close()
+            del self._nev_file_handle
+
+    def __getstate__(self):
+        # Open files cannot be pickled. The getters above reopen them on the first read after unpickling.
+        state = self.__dict__.copy()
+        state.pop("_nsx_file_handles_dict", None)
+        state.pop("_nev_file_handle", None)
+        return state
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, stream_index, channel_indexes):
         stream_id = self.header["signal_streams"][stream_index]["id"]
         nsx_nb = int(stream_id)
         seg = self._nsx_data_header[nsx_nb][seg_index]
-        fid = self._get_nsx_fid(nsx_nb)
+        fid = self._get_nsx_file_handle(nsx_nb)
         memmap_kwargs = seg["memmap_kwargs"]
         channels = int(self._nsx_basic_header[nsx_nb]["channel_count"])
         data = self._create_mmap_view(
@@ -806,7 +829,7 @@ class BlackrockRawIO(BaseRawIO):
         # PTP format: read timestamps on demand via strided mmap view
         if "timestamps_memmap_kwargs" in seg:
             ts_kw = seg["timestamps_memmap_kwargs"]
-            fid = self._get_nsx_fid(nsx_nb)
+            fid = self._get_nsx_file_handle(nsx_nb)
             timestamps = self._create_mmap_view(
                 fid=fid,
                 dtype=ts_kw["dtype"],
@@ -977,14 +1000,13 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract file specification from an .nsx file.
         """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-
         # Header structure of files specification 2.2 and higher. For files 2.1
         # and lower, the entries ver_major and ver_minor are not supported.
         dt0 = [("file_id", "S8"), ("ver_major", "uint8"), ("ver_minor", "uint8")]
 
-        with open(filename, "rb") as fid:
-            nsx_file_id = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
+        fid = self._get_nsx_file_handle(nsx_nb)
+        fid.seek(0)
+        nsx_file_id = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
         if nsx_file_id["file_id"].decode() == "NEURALSG":
             spec = "2.1"
         elif nsx_file_id["file_id"].decode() in ["NEURALCD", "BRSMPGRP"]:
@@ -998,13 +1020,13 @@ class BlackrockRawIO(BaseRawIO):
         """
         Extract file specification from an .nev file
         """
-        filename = f"{self._filenames['nev']}.nev"
         # Header structure of files specification 2.2 and higher. For files 2.1
         # and lower, the entries ver_major and ver_minor are not supported.
         dt0 = [("file_id", "S8"), ("ver_major", "uint8"), ("ver_minor", "uint8")]
 
-        with open(filename, "rb") as fid:
-            nev_file_id = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
+        fid = self._get_nev_file_handle()
+        fid.seek(0)
+        nev_file_id = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
         if nev_file_id["file_id"].decode() in ["NEURALEV", "BREVENTS"]:
             spec = f"{nev_file_id['ver_major']}.{nev_file_id['ver_minor']}"
         else:
@@ -1030,27 +1052,25 @@ class BlackrockRawIO(BaseRawIO):
         nsx_ext_header : numpy memmap
             Extended header information
         """
-        # Construct filename
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
+        fid = self._get_nsx_file_handle(nsx_nb)
 
         # Get basic header structure for this spec
         basic_header_dtype = NSX_BASIC_HEADER_TYPES[spec]
-        with open(filename, "rb") as fid:
-            nsx_basic_header = np.frombuffer(
-                fid.read(np.dtype(basic_header_dtype).itemsize), dtype=basic_header_dtype, count=1
-            )[0]
+        fid.seek(0)
+        nsx_basic_header = np.frombuffer(
+            fid.read(np.dtype(basic_header_dtype).itemsize), dtype=basic_header_dtype, count=1
+        )[0]
 
         # Get extended header structure for this spec
         ext_header_dtype = NSX_EXT_HEADER_TYPES[spec]
         offset_dt0 = np.dtype(basic_header_dtype).itemsize
         channel_count = int(nsx_basic_header["channel_count"])
-        with open(filename, "rb") as fid:
-            fid.seek(offset_dt0)
-            nsx_ext_header = np.frombuffer(
-                fid.read(channel_count * np.dtype(ext_header_dtype).itemsize),
-                dtype=ext_header_dtype,
-                count=channel_count,
-            )
+        fid.seek(offset_dt0)
+        nsx_ext_header = np.frombuffer(
+            fid.read(channel_count * np.dtype(ext_header_dtype).itemsize),
+            dtype=ext_header_dtype,
+            count=channel_count,
+        )
 
         return nsx_basic_header, nsx_ext_header
 
@@ -1067,18 +1087,16 @@ class BlackrockRawIO(BaseRawIO):
         offset : int
             Offset position in the file
         """
-        filename = f"{self._filenames['nsx']}.ns{nsx_nb}"
-
         # Get data header structure for this spec
         data_header_dtype = NSX_DATA_HEADER_TYPES[spec]
         if data_header_dtype is None:
             return None  # v2.1 has no data headers
 
-        with open(filename, "rb") as fid:
-            fid.seek(offset)
-            nsx_basic_header = np.frombuffer(
-                fid.read(np.dtype(data_header_dtype).itemsize), dtype=data_header_dtype, count=1
-            )[0]
+        fid = self._get_nsx_file_handle(nsx_nb)
+        fid.seek(offset)
+        nsx_basic_header = np.frombuffer(
+            fid.read(np.dtype(data_header_dtype).itemsize), dtype=data_header_dtype, count=1
+        )[0]
 
         return nsx_basic_header
 
@@ -1332,7 +1350,7 @@ class BlackrockRawIO(BaseRawIO):
         # Verify this is truly PTP: the first packet should carry exactly one sample.
         # PTP files are homogeneous (every packet holds a single sample), so the first
         # packet is diagnostic for the whole file and we avoid mapping all of it.
-        fid = self._get_nsx_fid(nsx_nb)
+        fid = self._get_nsx_file_handle(nsx_nb)
         fid.seek(header_size)
         first_packet = np.frombuffer(fid.read(ptp_dtype.itemsize), dtype=ptp_dtype, count=1)[0]
         if first_packet["num_data_points"] != 1:
@@ -1468,7 +1486,7 @@ class BlackrockRawIO(BaseRawIO):
                 samples_kw = block_info["memmap_kwargs"]
 
                 # Read timestamps via strided mmap view for gap detection
-                fid = self._get_nsx_fid(nsx_nb)
+                fid = self._get_nsx_file_handle(nsx_nb)
                 timestamps = self._create_mmap_view(
                     fid=fid,
                     dtype=ts_kw["dtype"],
@@ -1609,7 +1627,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return ext_header
 
-    def _read_nev_header(self, spec, filename):
+    def _read_nev_header(self, spec):
         """
         Extract nev header information for any specification version.
 
@@ -1617,8 +1635,6 @@ class BlackrockRawIO(BaseRawIO):
         ----------
         spec : str
             The specification version (e.g., "2.1", "2.2", "2.3", "3.0")
-        filename : str
-            The NEV filename to read from
 
         Returns
         -------
@@ -1660,8 +1676,9 @@ class BlackrockRawIO(BaseRawIO):
             ("nb_ext_headers", "uint32"),
         ]
 
-        with open(filename, "rb") as fid:
-            nev_basic_header = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
+        fid = self._get_nev_file_handle()
+        fid.seek(0)
+        nev_basic_header = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
 
         shape = nev_basic_header["nb_ext_headers"]
         offset_dt0 = np.dtype(dt0).itemsize
@@ -1669,9 +1686,8 @@ class BlackrockRawIO(BaseRawIO):
         # This is the common structure of the beginning of extended headers
         dt1 = [("packet_id", "S8"), ("info_field", "S24")]
 
-        with open(filename, "rb") as fid:
-            fid.seek(offset_dt0)
-            raw_ext_header = np.frombuffer(fid.read(int(shape) * np.dtype(dt1).itemsize), dtype=dt1, count=int(shape))
+        fid.seek(offset_dt0)
+        raw_ext_header = np.frombuffer(fid.read(int(shape) * np.dtype(dt1).itemsize), dtype=dt1, count=int(shape))
 
         # Get extended header types for this spec
         header_types = NEV_EXT_HEADER_TYPES_BY_SPEC[spec]
