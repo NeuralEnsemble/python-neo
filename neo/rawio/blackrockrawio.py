@@ -1645,6 +1645,10 @@ class BlackrockRawIO(BaseRawIO):
         ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
         sampling_rate = self._nsx_sampling_frequency[nsx_nb]
 
+        # Empty blocks hold no samples and can carry a placeholder timestamp, so they would show up
+        # as gaps and backward jumps. They only ever became empty segments that are deleted later.
+        parsed_data_headers = [header for header in parsed_data_headers if header["memmap_kwargs"]["num_samples"] > 0]
+
         block_t_starts = np.array([float(header["timestamp"]) / ts_res for header in parsed_data_headers])
         block_sizes = np.array([header["memmap_kwargs"]["num_samples"] for header in parsed_data_headers])
 
@@ -2057,10 +2061,12 @@ class BlackrockRawIO(BaseRawIO):
                 # Check all nonempty nsX segments
                 for nonempty_segment_index, seg in enumerate(nonempty_nsx_segments[:]):
 
-                    # Last timestamp in this nsX segment
+                    # Last timestamp in this nsX segment, which ends with its last block when
+                    # gap_tolerance_ms merged several blocks into it
                     # Not subtracting nsX offset from end because spike extraction might continue
                     end_of_current_nsx_seg = (
-                        seg["timestamp"] + seg["nb_data_points"] * self._nsx_basic_header[nsx_nb]["period"]
+                        seg["block_timestamps"][-1]
+                        + seg["memmap_specs"][-1]["num_samples"] * self._nsx_basic_header[nsx_nb]["period"]
                     )
 
                     mask_after_seg = (ev_ids == nonempty_segment_index) & (

@@ -535,6 +535,53 @@ class TestBlackrockRawIO(
         )
         self.assertEqual(empty_merged.shape, empty_split.shape)
 
+    def test_empty_block_takes_no_part_in_gap_detection(self):
+        """
+        An empty block between two data blocks is ignored when looking for gaps.
+
+        The file holds blocks of 100, 0 and 100 samples. The empty block carries a timestamp far
+        beyond the recording, which read as a forward gap followed by a backward jump, so the two
+        data blocks 13.6 ms apart could never merge.
+        """
+        dirname = self.get_local_path(
+            "blackrock/version_2_3/time_structure/empty_block_with_invalid_timestamp/empty_block_with_invalid_timestamp"
+        )
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            reader = BlackrockRawIO(filename=dirname, gap_tolerance_ms=30)
+            reader.parse_header()
+
+        self.assertEqual(reader.segment_count(0), 1)
+        messages = [str(warning.message) for warning in caught]
+        self.assertFalse(any("backward timestamp jump" in message for message in messages))
+
+    def test_gap_tolerance_ms_merged_blocks_keep_their_nev_events(self):
+        """
+        Blocks merged by gap_tolerance_ms keep their spikes when a spec 2.3 nev is matched to them.
+
+        In four_data_blocks the second data block starts 25.3 ms after the first one ends, and the
+        clock restarts before the third and the fourth. Matching the nev to the nsX segments took
+        the end of a merged segment from its first block and its total number of samples, which
+        ignores the gap, and failed with "Some segments in nsX cannot be detected in nev".
+        """
+        dirname = self.get_local_path("blackrock/version_2_3/time_structure/four_data_blocks/four_data_blocks")
+
+        reader_split = BlackrockRawIO(filename=dirname, gap_tolerance_ms=0)
+        reader_split.parse_header()
+        reader_merged = BlackrockRawIO(filename=dirname, gap_tolerance_ms=30)
+        reader_merged.parse_header()
+
+        def spike_counts(reader):
+            return [
+                sum(reader.spike_count(0, seg_index, unit_index) for unit_index in range(reader.spike_channels_count()))
+                for seg_index in range(reader.segment_count(0))
+            ]
+
+        split_counts = spike_counts(reader_split)
+        self.assertEqual(len(split_counts), 4)
+        self.assertEqual(spike_counts(reader_merged), [split_counts[0] + split_counts[1]] + split_counts[2:])
+
 
 if __name__ == "__main__":
     unittest.main()
