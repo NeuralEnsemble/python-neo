@@ -983,7 +983,8 @@ class BlackrockRawIO(BaseRawIO):
         # and lower, the entries ver_major and ver_minor are not supported.
         dt0 = [("file_id", "S8"), ("ver_major", "uint8"), ("ver_minor", "uint8")]
 
-        nsx_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
+        with open(filename, "rb") as fid:
+            nsx_file_id = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
         if nsx_file_id["file_id"].decode() == "NEURALSG":
             spec = "2.1"
         elif nsx_file_id["file_id"].decode() in ["NEURALCD", "BRSMPGRP"]:
@@ -1002,7 +1003,8 @@ class BlackrockRawIO(BaseRawIO):
         # and lower, the entries ver_major and ver_minor are not supported.
         dt0 = [("file_id", "S8"), ("ver_major", "uint8"), ("ver_minor", "uint8")]
 
-        nev_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
+        with open(filename, "rb") as fid:
+            nev_file_id = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
         if nev_file_id["file_id"].decode() in ["NEURALEV", "BREVENTS"]:
             spec = f"{nev_file_id['ver_major']}.{nev_file_id['ver_minor']}"
         else:
@@ -1033,13 +1035,22 @@ class BlackrockRawIO(BaseRawIO):
 
         # Get basic header structure for this spec
         basic_header_dtype = NSX_BASIC_HEADER_TYPES[spec]
-        nsx_basic_header = np.fromfile(filename, count=1, dtype=basic_header_dtype)[0]
+        with open(filename, "rb") as fid:
+            nsx_basic_header = np.frombuffer(
+                fid.read(np.dtype(basic_header_dtype).itemsize), dtype=basic_header_dtype, count=1
+            )[0]
 
         # Get extended header structure for this spec
         ext_header_dtype = NSX_EXT_HEADER_TYPES[spec]
         offset_dt0 = np.dtype(basic_header_dtype).itemsize
         channel_count = int(nsx_basic_header["channel_count"])
-        nsx_ext_header = np.memmap(filename, shape=channel_count, offset=offset_dt0, dtype=ext_header_dtype, mode="r")
+        with open(filename, "rb") as fid:
+            fid.seek(offset_dt0)
+            nsx_ext_header = np.frombuffer(
+                fid.read(channel_count * np.dtype(ext_header_dtype).itemsize),
+                dtype=ext_header_dtype,
+                count=channel_count,
+            )
 
         return nsx_basic_header, nsx_ext_header
 
@@ -1063,7 +1074,11 @@ class BlackrockRawIO(BaseRawIO):
         if data_header_dtype is None:
             return None  # v2.1 has no data headers
 
-        nsx_basic_header = np.memmap(filename, dtype=data_header_dtype, shape=1, offset=offset, mode="r")[0]
+        with open(filename, "rb") as fid:
+            fid.seek(offset)
+            nsx_basic_header = np.frombuffer(
+                fid.read(np.dtype(data_header_dtype).itemsize), dtype=data_header_dtype, count=1
+            )[0]
 
         return nsx_basic_header
 
@@ -1645,7 +1660,8 @@ class BlackrockRawIO(BaseRawIO):
             ("nb_ext_headers", "uint32"),
         ]
 
-        nev_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
+        with open(filename, "rb") as fid:
+            nev_basic_header = np.frombuffer(fid.read(np.dtype(dt0).itemsize), dtype=dt0, count=1)[0]
 
         shape = nev_basic_header["nb_ext_headers"]
         offset_dt0 = np.dtype(dt0).itemsize
@@ -1653,7 +1669,9 @@ class BlackrockRawIO(BaseRawIO):
         # This is the common structure of the beginning of extended headers
         dt1 = [("packet_id", "S8"), ("info_field", "S24")]
 
-        raw_ext_header = np.memmap(filename, offset=offset_dt0, dtype=dt1, shape=shape, mode="r")
+        with open(filename, "rb") as fid:
+            fid.seek(offset_dt0)
+            raw_ext_header = np.frombuffer(fid.read(int(shape) * np.dtype(dt1).itemsize), dtype=dt1, count=int(shape))
 
         # Get extended header types for this spec
         header_types = NEV_EXT_HEADER_TYPES_BY_SPEC[spec]
