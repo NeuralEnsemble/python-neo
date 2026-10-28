@@ -932,8 +932,7 @@ class NeuralynxRawIO(BaseRawIO):
         """
         gap_durations_ms = [abs(gap_size) / 1000.0 for _, gap_size in detected_gaps]
         gap_positions_seconds = [
-            record_index * NcsSection._RECORD_SIZE / sampling_frequency
-            for record_index, _ in detected_gaps
+            record_index * NcsSection._RECORD_SIZE / sampling_frequency for record_index, _ in detected_gaps
         ]
 
         gap_detail_lines = [
@@ -1033,9 +1032,7 @@ class NeuralynxRawIO(BaseRawIO):
 
             verify_sec_struct = NcsSectionsFactory._verifySectionsStructure
             if not chanSectMap or (not verify_sec_struct(data, chan_ncs_sections)):
-                chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(
-                    data, nlxHeader, **factory_kwargs
-                )
+                chan_ncs_sections = NcsSectionsFactory.build_for_ncs_file(data, nlxHeader, **factory_kwargs)
 
                 # Check for gaps and handle according to gap_tolerance_ms
                 if not self._use_legacy_gap_mode and chan_ncs_sections.detected_gaps:
