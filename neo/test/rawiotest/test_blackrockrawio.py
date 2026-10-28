@@ -394,6 +394,8 @@ class TestBlackrockRawIO(
         self.assertEqual(reader.segment_count(0), 2)
         messages = [str(warning.message) for warning in caught]
         self.assertTrue(any("backward timestamp jump" in message for message in messages))
+        # A reset still splits from neo 0.16, so there is no change to warn about
+        self.assertFalse(any(warning.category is FutureWarning for warning in caught))
 
         # No tolerance merges the blocks either side of a reset
         for gap_tolerance_ms in [0, 100.0, 10_000_000]:

@@ -1652,7 +1652,10 @@ class BlackrockRawIO(BaseRawIO):
                         detection_threshold_ms=1000.0 * self._gap_detection_periods / sampling_rate,
                     )
                     message = f"{message}\n{gap_report}"
-                warnings.warn(message, FutureWarning)
+                # A clock reset still splits from neo 0.16, so a file whose only block boundaries are resets
+                # keeps its segments and is not warned. This waits on what neo does with resets, see #1937
+                if len(backward_indices) < len(parsed_data_headers) - 1:
+                    warnings.warn(message, FutureWarning)
                 boundary_indices = np.arange(len(parsed_data_headers) - 1, dtype=np.intp)
             else:
                 # Keep the gaps above the tolerance (no warning - user opted in)
