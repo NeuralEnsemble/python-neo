@@ -1546,8 +1546,8 @@ class BlackrockRawIO(BaseRawIO):
         Forward gaps are detected at 2 sampling periods, above the jitter and rounding
         noise floor of these files, and raise when gap_tolerance_ms is unset because
         merging across one or splitting at it is a choice only the caller can make.
-        Backward jumps have no duration to compare against a tolerance, so they always
-        become boundaries and are warned about rather than raised on.
+        Backward steps are not gaps and are left to the caller: the standard segmenter
+        splits at them, and the PTP segmenter leaves them inside the segment.
 
         Parameters
         ----------
@@ -1573,25 +1573,10 @@ class BlackrockRawIO(BaseRawIO):
         detection_threshold = 2.0 / sampling_rate
 
         forward_mask = time_differences > detection_threshold
-        backward_mask = time_differences < 0
-
-        # Backward jumps always split, so there is nothing to ask about
-        backward_indices = np.flatnonzero(backward_mask)
-        if len(backward_indices) > 0:
-            locations = ", ".join(
-                f"sample {sample_indices[index]:,} at {sample_positions_seconds[index]:.6f} s "
-                f"(back {-time_differences[index] * 1000:.3f} ms)"
-                for index in backward_indices
-            )
-            warnings.warn(
-                f"Detected {len(backward_indices)} backward timestamp jump(s) in ns{nsx_nb}: {locations}. "
-                f"The clock ran backwards, which a recording reset causes. Each one starts a new segment; "
-                f"gap_tolerance_ms does not apply to them because a backward jump has no gap duration."
-            )
 
         forward_indices = np.flatnonzero(forward_mask)
         if len(forward_indices) == 0:
-            return backward_indices
+            return forward_indices
 
         # Error by default on forward gaps - the caller must choose
         if self.gap_tolerance_ms is None:
@@ -1609,11 +1594,10 @@ class BlackrockRawIO(BaseRawIO):
                 f"segment at gaps larger than the specified tolerance."
             )
 
-        # User provided tolerance - keep forward gaps above it, and every backward jump
-        # (no warning - user opted in)
+        # User provided tolerance - keep forward gaps above it (no warning - user opted in)
         gap_tolerance_s = self.gap_tolerance_ms / 1000.0
         significant_forward_mask = forward_mask & (time_differences > gap_tolerance_s)
-        return np.flatnonzero(significant_forward_mask | backward_mask)
+        return np.flatnonzero(significant_forward_mask)
 
     def _segment_nsx_v21(self, parsed_data_headers):
         """
@@ -1663,9 +1647,25 @@ class BlackrockRawIO(BaseRawIO):
             last_sample_indices = np.cumsum(block_sizes)[:-1] - 1
             last_sample_positions = block_last_sample_times[:-1] - block_t_starts[0]
 
-            boundary_indices = self._classify_gaps(
+            # A block that starts before the previous one ends means the clock was reset. It has
+            # no duration to compare against gap_tolerance_ms, so it always starts a new segment
+            backward_indices = np.flatnonzero(inter_block_intervals < 0)
+            if len(backward_indices) > 0:
+                locations = ", ".join(
+                    f"sample {last_sample_indices[index]:,} at {last_sample_positions[index]:.6f} s "
+                    f"(back {-inter_block_intervals[index] * 1000:.3f} ms)"
+                    for index in backward_indices
+                )
+                warnings.warn(
+                    f"Detected {len(backward_indices)} backward timestamp jump(s) in ns{nsx_nb}: {locations}. "
+                    f"The clock ran backwards, which a recording reset causes. Each one starts a new segment; "
+                    f"gap_tolerance_ms does not apply to them because a backward jump has no gap duration."
+                )
+
+            forward_indices = self._classify_gaps(
                 inter_block_intervals, sampling_rate, nsx_nb, last_sample_indices, last_sample_positions
             )
+            boundary_indices = np.union1d(backward_indices, forward_indices).astype(np.intp)
         else:
             boundary_indices = np.array([], dtype=np.intp)
 
