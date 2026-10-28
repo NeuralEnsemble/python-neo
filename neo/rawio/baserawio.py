@@ -1544,7 +1544,7 @@ class BaseRawIO:
     # buffer api zone
     # must be implemented if has_buffer_description_api=True
     def get_analogsignal_buffer_description(self, block_index: int = 0, seg_index: int = 0, buffer_id: str = None):
-        if not self.has_buffer_description_api:
+        if not self.has_buffer_description_api():
             raise ValueError("This reader do not support buffer_description API")
         descr = self._get_analogsignal_buffer_description(block_index, seg_index, buffer_id)
         return descr
