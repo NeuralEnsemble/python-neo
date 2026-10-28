@@ -2,8 +2,11 @@
 Tests of neo.rawio.examplerawio
 """
 
+import shutil
+import tempfile
 import unittest
 import warnings
+from pathlib import Path
 
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -270,58 +273,45 @@ class TestBlackrockRawIO(
 
     def test_get_blackrock_timestamps_ptp_with_gaps(self):
         """Test _get_blackrock_timestamps for PTP format with gaps and multiple segments."""
-        dirname = self.get_local_path("blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes")
+        dirname = self.get_local_path("blackrock/version_3_0/time_structure/pause_and_resume/pause_and_resume")
         gap_tolerance_ms = 0.5
-        reader = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=gap_tolerance_ms)
+        reader = BlackrockRawIO(filename=dirname, nsx_to_load=5, gap_tolerance_ms=gap_tolerance_ms)
         reader.parse_header()
 
         n_segments = reader.segment_count(0)
-        self.assertEqual(n_segments, 3)
+        self.assertEqual(n_segments, 2)
 
         nanoseconds_per_second = 1_000_000_000.0
 
-        # This file has a single stream: ns6 (30 kHz, 1 channel)
+        # This file has a single stream: ns5 (30 kHz), paused once
         stream_index = 0
-        expected_sizes = [632, 58, 310]
+        expected_sizes = [3000, 3000]
 
         # First 5 PTP clock values (nanoseconds since Unix epoch) per segment, read directly from file and hardcoded here for testing
         first_5_ptp_clock_ns_per_segment = [
             np.array(
                 [
-                    1752531864717743037,
-                    1752531864717776237,
-                    1752531864717809677,
-                    1752531864717843077,
-                    1752531864717876277,
+                    1793159872402679842,
+                    1793159872402713162,
+                    1793159872402746522,
+                    1793159872402779922,
+                    1793159872402813162,
                 ],
                 dtype="uint64",
             ),
             np.array(
                 [
-                    1752531864739742985,
-                    1752531864739776305,
-                    1752531864739809665,
-                    1752531864739842945,
-                    1752531864739876385,
-                ],
-                dtype="uint64",
-            ),
-            np.array(
-                [
-                    1752531864740742986,
-                    1752531864740776306,
-                    1752531864740809626,
-                    1752531864740842946,
-                    1752531864740876346,
+                    1793159876121680424,
+                    1793159876121713744,
+                    1793159876121747104,
+                    1793159876121780424,
+                    1793159876121813744,
                 ],
                 dtype="uint64",
             ),
         ]
         # Last PTP clock value (nanoseconds since Unix epoch) of each segment, hardcoded here for testing
-        last_ptp_clock_ns_per_segment = np.array(
-            [1752531864738776304, 1752531864739709625, 1752531864751042999],
-            dtype="uint64",
-        )
+        last_ptp_clock_ns_per_segment = np.array([1793159872502646536, 1793159876221647121], dtype="uint64")
 
         for seg_index in range(n_segments):
             timestamps = reader._get_blackrock_timestamps(0, seg_index, None, None, stream_index)
@@ -350,31 +340,29 @@ class TestBlackrockRawIO(
 
         Tests the error-by-default behavior where files with timestamp gaps raise ValueError
         unless the user explicitly opts in with gap_tolerance_ms parameter.
-
-        See PR #1769 for the gap details on the example file used here.
         """
-        # Use stubbed files with missing samples (timestamp gaps) from SimulatedSpikes data
-        dirname = self.get_local_path("blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes")
+        # A PTP recording paused once, for 3.6 s
+        dirname = self.get_local_path("blackrock/version_3_0/time_structure/pause_and_resume/pause_and_resume")
 
         # Test 1: Default behavior (None) raises ValueError for files with gaps
         # This is the error-by-default behavior to ensure users are aware of data issues
         with self.assertRaises(ValueError) as context:
-            reader = BlackrockRawIO(filename=dirname, nsx_to_load=6)
+            reader = BlackrockRawIO(filename=dirname, nsx_to_load=5)
             reader.parse_header()
 
         # Test 2: Explicit tolerance allows loading files with gaps
         # User opts in by providing gap_tolerance_ms
-        reader_with_tolerance = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=10.0)
+        reader_with_tolerance = BlackrockRawIO(filename=dirname, nsx_to_load=5, gap_tolerance_ms=10_000.0)
         reader_with_tolerance.parse_header()
         segments_with_tolerance = reader_with_tolerance.segment_count(0)
-        self.assertEqual(1, segments_with_tolerance)  # Gaps < 10ms are ignored
+        self.assertEqual(1, segments_with_tolerance)  # Gaps < 10 s are ignored
 
-        # Test 3: Stricter tolerance creates 3 segments
+        # Test 3: Stricter tolerance creates 2 segments
         # With strict tolerance (0.5ms), gaps > 0.5ms will create new segments
-        reader_strict = BlackrockRawIO(filename=dirname, nsx_to_load=6, gap_tolerance_ms=0.5)
+        reader_strict = BlackrockRawIO(filename=dirname, nsx_to_load=5, gap_tolerance_ms=0.5)
         reader_strict.parse_header()
         segments_strict = reader_strict.segment_count(0)
-        self.assertEqual(segments_strict, 3)  #
+        self.assertEqual(segments_strict, 2)
 
     def test_backward_jump_warns_and_splits_without_gap_tolerance_ms(self):
         """
@@ -410,7 +398,9 @@ class TestBlackrockRawIO(
         In this file a few runs of samples were written after the run that follows them, so the
         timestamps step back by about 1.9 ms (twice in the ns4, once in the ns6). These steps are
         packets out of order and not clock resets, so splitting at them gave each stream a different
-        number of segments and the file could not be read at any tolerance.
+        number of segments and the file could not be read at any tolerance. Sorted by timestamp, the
+        samples around each step lie on the sampling grid, so they are read in timestamp order. A step
+        back that does not sort into the grid within 10 ms stays as written.
         """
         dirname = self.get_local_path(
             "blackrock/version_3_0/time_structure/samples_out_of_order_in_ptp_timestamps/"
@@ -425,6 +415,37 @@ class TestBlackrockRawIO(
         self.assertEqual(reader.segment_count(0), 1)
         messages = [str(warning.message) for warning in caught]
         self.assertFalse(any("backward timestamp jump" in message for message in messages))
+
+        self.assertEqual(reader.nsx_reordered_packets, {4: 2, 6: 1})
+        for stream_index, nsx_nb in enumerate((4, 6)):
+            headers, packets = self._ptp_packets(f"{dirname}.ns{nsx_nb}")
+            ticks, samples = packets[:, 1:9].copy().view("<u8").ravel(), packets[:, 13:].copy().view("<i2")
+            order = np.argsort(ticks, kind="stable")
+            moved = np.flatnonzero(order != np.arange(len(order)))
+            # Whole, and in windows that start or end inside a moved run
+            for i_start, i_stop in ((None, None), (moved[0] - 3, moved[0] + 2), (moved[-1] - 1, moved[-1] + 3)):
+                window = order[i_start:i_stop]
+                assert_equal(reader.get_analogsignal_chunk(0, 0, i_start, i_stop, stream_index), samples[window])
+                assert_equal(reader._get_blackrock_timestamps(0, 0, i_start, i_stop, stream_index), ticks[window] / 1e9)
+
+        # The ns6 in timestamp order, with one sample written 400 places (13 ms) early and one written twice
+        packets = packets[order]
+        written = np.r_[0:100, 500, 100:500, 501:700, 698, 700 : len(packets)]
+        folder = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, folder)
+        Path(folder, "rec.ns6").write_bytes(headers + packets[written].tobytes())
+        reader = BlackrockRawIO(filename=str(Path(folder, "rec")), nsx_to_load=6, gap_tolerance_ms=10_000)
+        reader.parse_header()
+        self.assertEqual(reader.nsx_reordered_packets, {6: 0})
+        assert_equal(reader.get_analogsignal_chunk(0, 0, None, None, 0), packets[written, 13:].copy().view("<i2"))
+
+    @staticmethod
+    def _ptp_packets(path):
+        """The header bytes and the packets (one sample each, as rows of bytes) of a PTP .nsX file."""
+        raw = Path(path).read_bytes()
+        header_size = int.from_bytes(raw[10:14], "little")
+        channels = int.from_bytes(raw[310:314], "little")
+        return raw[:header_size], np.frombuffer(raw, np.uint8, offset=header_size).reshape(-1, 13 + 2 * channels)
 
     def test_gap_tolerance_ms_standard_format(self):
         """
@@ -625,8 +646,13 @@ class TestBlackrockRawIO(
         for block_index in range(reader.block_count()):
             for seg_index in range(reader.segment_count(block_index)):
                 for unit_index in range(reader.spike_channels_count()):
-                    returned += reader.get_spike_timestamps(block_index, seg_index, unit_index, None, None).size
+                    timestamps = reader.get_spike_timestamps(block_index, seg_index, unit_index, None, None)
+                    self.assertTrue(np.all(np.diff(timestamps.astype("int64")) >= 0))
+                    returned += timestamps.size
         self.assertEqual(returned, 999)
+        # 3 spikes were written after spikes stamped up to 1.7 ms later, one of them on its own electrode
+        self.assertEqual(reader.nev_reordered_packets, 1)
+        self.assertEqual(reader.segment_count(0), 1)
 
     def test_nev_segments_ignore_order_between_packet_types(self):
         """
@@ -650,6 +676,19 @@ class TestBlackrockRawIO(
                 for unit_index in range(reader.spike_channels_count())
             )
             self.assertEqual(returned, 960)
+
+        # A spike stamped up to 10 ms before the previous spike on its electrode was written late: no reset.
+        # Spikes on other electrodes are not compared (#1755: up to 15 ms out of order between electrodes).
+        window = round(0.010 * float(reader._nev_basic_header["timestamp_resolution"]))
+        # electrode 1 back 10 ms; electrode 2 15 ms behind electrode 1; electrode 1 back 10 ms and one tick
+        spikes = [(10 * window, 1), (9 * window, 1), (20 * window, 1), (37 * window // 2, 2), (21 * window, 1)]
+        spikes += [(20 * window - 1, 1)]
+        raw = np.array([(*p, b"") for p in spikes], dtype=[("timestamp", "u8"), ("packet_id", "u2"), ("value", "S2")])
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            segment_ids = reader._get_event_segment_ids(raw, {"Spikes": raw["packet_id"] > 0}, "3.0")
+        assert_equal(segment_ids, [0, 0, 0, 0, 0, 1])
+        self.assertEqual(reader.nev_reordered_packets, 1)
 
     def test_nev_22_reads_spikes_on_electrodes_above_255(self):
         """
