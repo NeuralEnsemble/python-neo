@@ -107,6 +107,8 @@ class BlackrockRawIO(BaseRawIO):
 
         **Default behavior (None)**: If timestamp gaps are detected, an error is raised
         with a detailed gap report. This ensures users are aware of data discontinuities.
+        Until neo 0.16, standard format files (v2.2/2.3/3.0) are instead split into one
+        segment per data block, as in earlier versions, with a FutureWarning.
 
         **Opt-in segmentation**: Provide a value to automatically segment data at gaps
         larger than this threshold. Gaps smaller than the threshold are ignored (data
@@ -1665,13 +1667,24 @@ class BlackrockRawIO(BaseRawIO):
                     f"gap_tolerance_ms does not apply to them because a backward jump has no gap duration."
                 )
 
-            forward_indices = self._classify_gaps(
-                inter_block_intervals,
-                sampling_rate,
-                nsx_nb,
-                describe_gaps=lambda indices: (last_sample_indices[indices], last_sample_positions[indices]),
-            )
-            boundary_indices = np.union1d(backward_indices, forward_indices).astype(np.intp)
+            if self.gap_tolerance_ms is None:
+                # Until neo 0.16 the default keeps one segment per block, as before gap_tolerance_ms
+                warnings.warn(
+                    f"ns{nsx_nb} has {len(parsed_data_headers)} data blocks, as the recording starts a new one at "
+                    f"every pause. Each block is a segment, as before, but from neo 0.16 a gap between blocks will "
+                    f"raise an error instead. Pass gap_tolerance_ms to choose: 0 splits at every gap and a larger "
+                    f"value merges gaps up to that length into one segment.",
+                    FutureWarning,
+                )
+                boundary_indices = np.arange(len(parsed_data_headers) - 1, dtype=np.intp)
+            else:
+                forward_indices = self._classify_gaps(
+                    inter_block_intervals,
+                    sampling_rate,
+                    nsx_nb,
+                    describe_gaps=lambda indices: (last_sample_indices[indices], last_sample_positions[indices]),
+                )
+                boundary_indices = np.union1d(backward_indices, forward_indices).astype(np.intp)
         else:
             boundary_indices = np.array([], dtype=np.intp)
 

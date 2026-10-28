@@ -434,14 +434,12 @@ class TestBlackrockRawIO(
         """
         dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
 
-        # Default behavior (None) raises, same as for PTP files. The gap follows sample
-        # 3999 at 3.999 s, rather than sitting at the start of the recording
-        with self.assertRaises(ValueError) as context:
+        # Until neo 0.16 the default keeps one segment per block, as before, and warns that
+        # it will raise
+        with self.assertWarns(FutureWarning):
             reader = BlackrockRawIO(filename=dirname, nsx_to_load=2)
             reader.parse_header()
-        self.assertIn("3,999", str(context.exception))
-        self.assertIn("3.999000", str(context.exception))
-        self.assertIn("27009.700", str(context.exception))
+        self.assertEqual(reader.segment_count(0), 2)
 
         # A tolerance below the pause keeps one segment per block
         reader_strict = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=0)
