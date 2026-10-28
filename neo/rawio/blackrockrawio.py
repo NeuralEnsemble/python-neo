@@ -1632,6 +1632,8 @@ class BlackrockRawIO(BaseRawIO):
         # Empty blocks hold no samples and can carry a placeholder timestamp, so they would show up
         # as gaps and backward jumps. They only ever became empty segments that are deleted later.
         parsed_data_headers = [header for header in parsed_data_headers if header["memmap_kwargs"]["num_samples"] > 0]
+        if len(parsed_data_headers) == 0:
+            return []
 
         block_t_starts = np.array([float(header["timestamp"]) / ts_res for header in parsed_data_headers])
         block_sizes = np.array([header["memmap_kwargs"]["num_samples"] for header in parsed_data_headers])

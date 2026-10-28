@@ -2,8 +2,10 @@
 Tests of neo.rawio.examplerawio
 """
 
+import tempfile
 import unittest
 import warnings
+from pathlib import Path
 
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -564,6 +566,30 @@ class TestBlackrockRawIO(
         self.assertEqual(reader.segment_count(0), 1)
         messages = [str(warning.message) for warning in caught]
         self.assertFalse(any("backward timestamp jump" in message for message in messages))
+
+    def test_only_empty_blocks_give_no_segments(self):
+        """
+        An nsX whose data blocks are all empty loads with no segments, as on master.
+
+        Built from the headers of a real file followed by a single data block header that
+        declares 0 samples.
+        """
+        source_path = self.get_local_path(
+            "blackrock/version_2_3/time_structure/two_data_blocks_after_pause/two_data_blocks_after_pause.ns2"
+        )
+        with open(source_path, "rb") as source_file:
+            source = source_file.read()
+        bytes_in_headers = int(np.frombuffer(source, dtype="<u4", count=1, offset=10)[0])
+        # A data block header is 1 byte, a 4-byte timestamp and a 4-byte number of samples
+        empty_data_header = source[bytes_in_headers : bytes_in_headers + 5] + (0).to_bytes(4, "little")
+
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "only_empty_blocks.ns2"
+            path.write_bytes(source[:bytes_in_headers] + empty_data_header)
+            reader = BlackrockRawIO(filename=str(path.with_suffix("")), nsx_to_load=[2])
+            reader.parse_header()
+            self.assertEqual(reader.segment_count(0), 0)
+            del reader
 
     def test_chunk_past_the_end_of_merged_blocks(self):
         """
