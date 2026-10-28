@@ -15,6 +15,9 @@ else:
     # set in home
     local_testing_data_folder = Path.home() / "ephy_testing_data"
 
+# local copies already updated in this process, so each one asks its remote at most once
+_updated_folders = set()
+
 
 def get_local_testing_data_folder():
     global local_testing_data_folder
@@ -65,10 +68,12 @@ def download_dataset(repo=default_testing_repo, remote_path=None, local_folder=N
         # make sure git repo is in clean state
         repo = dataset.repo
         repo.call_git(["checkout", "--force", "master"])
-        # the remote can be unreachable (gin answers 403 to CI runners at times), so keep the local copy then
-        results = dataset.update(merge=True, on_failure="ignore")
-        if any(result["status"] == "error" for result in results):
-            warnings.warn(f"Could not update {local_folder} from its remote, using the local copy as it is")
+        if local_folder not in _updated_folders:
+            _updated_folders.add(local_folder)
+            # the remote can be unreachable (gin answers 403 to CI runners at times), so keep the local copy then
+            results = dataset.update(merge=True, on_failure="ignore")
+            if any(result["status"] in ("impossible", "error") for result in results):
+                warnings.warn(f"Could not update {local_folder} from its remote, using the local copy as it is")
     else:
         dataset = datalad.api.install(path=local_folder, source=repo)
 
