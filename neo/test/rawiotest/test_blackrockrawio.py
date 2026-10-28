@@ -569,7 +569,7 @@ class TestBlackrockRawIO(
         messages = [str(warning.message) for warning in caught]
         self.assertFalse(any("backward timestamp jump" in message for message in messages))
 
-    def test_chunk_past_the_end_of_merged_blocks(self):
+    def test_merged_segment_reads_stay_within_the_segment(self):
         """
         A stop past the end of a segment that merges blocks returns the rows up to the end, as
         for a segment of one block, instead of rows that were never read.
