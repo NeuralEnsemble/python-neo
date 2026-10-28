@@ -2041,10 +2041,15 @@ class BlackrockRawIO(BaseRawIO):
             # - Compare only packets of the same type: the file does not order packets of different
             #   types (e.g. a comment is stamped when the user starts typing but written when they
             #   finish, so it can be later than the spikes written after it).
+            # - Skip comments: they are not in time order among themselves either, so a step back between
+            #   two comments is no reset. A comment gets the segment of the packets around it in the file.
+            #   Reset comments ("critical load restart") still start a segment, above.
             # jumps maps the position of a packet earlier than the previous packet of its type to the
             # position of that previous packet, in the full set of events (incl. unhandled).
             jumps = {}
-            for mask in masks.values():
+            for data_type, mask in masks.items():
+                if data_type == "Comments":
+                    continue
                 ids = np.flatnonzero(mask)
                 ts = raw_event_data["timestamp"][ids]
                 earlier = np.flatnonzero(ts[1:] < ts[:-1])

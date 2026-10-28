@@ -635,7 +635,8 @@ class TestBlackrockRawIO(
         Central writes a comment a few ms after stamping it, so in this file two comments are
         written before 96 spikes stamped 2.1 ms earlier. Comparing packets of different types
         split the nev into two segments, and with the ns5 only the 384 spikes of the first one
-        were returned.
+        were returned. Comments are not in time order among themselves either, so they are not
+        compared at all; a reset still splits.
         """
         filename = self.get_local_path(
             "blackrock/version_3_0/time_structure/comment_written_before_earlier_spikes/"
@@ -650,6 +651,16 @@ class TestBlackrockRawIO(
                 for unit_index in range(reader.spike_channels_count())
             )
             self.assertEqual(returned, 960)
+
+        # The second comment is earlier than the first: no split. Then a reset sends the spikes' clock back.
+        spike, comment, t = 1, 0xFFFF, 10**12  # t: 1000 s at 1 ns per tick
+        packets = [(t, spike), (t + 4, comment), (t + 1, spike), (t + 2, comment), (t + 3, spike)]
+        packets += [(5, spike), (3, comment), (6, spike)]
+        raw = np.array([(*p, b"") for p in packets], dtype=[("timestamp", "u8"), ("packet_id", "u2"), ("value", "S2")])
+        masks = {"Spikes": raw["packet_id"] == spike, "Comments": raw["packet_id"] == comment}
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            assert_equal(reader._get_event_segment_ids(raw, masks, "3.0"), [0] * 5 + [1] * 3)
 
     def test_nev_22_reads_spikes_on_electrodes_above_255(self):
         """
