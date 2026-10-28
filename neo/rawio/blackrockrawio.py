@@ -126,12 +126,18 @@ class BlackrockRawIO(BaseRawIO):
         - PTP format (v3.0-ptp): Gaps in per-sample timestamps
         - Standard format (v2.2/2.3/3.0): Gaps between data blocks
 
+        An interval of up to 2 sampling periods is never a gap, so even 0 merges blocks
+        that close. Above 0, the samples after a merged gap are placed at
+        ``t_start + i / sampling_rate``, earlier than they were recorded by the gaps before
+        them. ``_get_blackrock_timestamps`` returns the recorded times.
+
     Notes
     -----
     * Note: This routine will handle files according to specification 2.1, 2.2,
-    2.3, 3.0 and 3.0-ptp. Recording pauses that may occur in file specifications
-    2.2 and 2.3 are automatically extracted and the data set is split into different
-    segments.
+    2.3, 3.0 and 3.0-ptp. Recording pauses in file specifications 2.2, 2.3 and 3.0
+    start a new data block. Until neo 0.16 each block is a segment by default, with a
+    FutureWarning. From 0.16 a gap between blocks raises an error with a gap report
+    unless ``gap_tolerance_ms`` is set.
 
     * The Blackrock data format consists not of a single file, but a set of
     different files. This constructor associates itself with a set of files
