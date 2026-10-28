@@ -30,6 +30,33 @@ class TestAxonRawIO(
 
         reader.read_raw_protocol()
 
+    def test_empty_channel_name_gets_fallback(self):
+        # Some ABF files store a blank ADC channel name, which collapses to "" after space
+        # stripping and leaves the channel unaddressable by name. A positional fallback (ch{id})
+        # must be used instead so every channel keeps a usable name.
+        path = self.get_local_path("axon/intracellular_data/abf1_episodic_empty_channel_name.abf")
+        reader = AxonRawIO(filename=path)
+        reader.parse_header()
+        names = list(reader.header["signal_channels"]["name"])
+        self.assertNotIn("", names)
+        self.assertEqual(names, ["ch0"])
+
+    def test_channel_name_keeps_interior_space(self):
+        # Channel names are stripped of padding but keep interior spaces (e.g. "IN 1", not "IN1")
+        # and are returned as str.
+        reader = AxonRawIO(filename=self.get_local_path("axon/File_axon_7.abf"))
+        reader.parse_header()
+        names = list(reader.header["signal_channels"]["name"])
+        self.assertEqual(names, ["IN 1"])
+
+    def test_protocol_path_decoded_to_str(self):
+        # String header fields should be decoded to str, not left as raw bytes; otherwise a caller
+        # doing str(value) gets the "b'...'" byte-literal repr baked into the path.
+        for fixture in ["axon/File_axon_1.abf", "axon/File_axon_2.abf"]:  # v2 and v1
+            reader = AxonRawIO(filename=self.get_local_path(fixture))
+            reader.parse_header()
+            self.assertIsInstance(reader._axon_info["sProtocolPath"], str)
+
     def test_integer_overflow_size_raises(self):
         # An ABF header that claims more samples than the file can hold must raise a
         # clear error instead of silently returning an overflowed signal size.

@@ -650,8 +650,7 @@ class BlackrockRawIO(BaseRawIO):
         return self._sigs_t_starts[nsx_nb][seg_index]
 
     @staticmethod
-    def _create_mmap_view(fid, dtype, offset, num_samples, num_channels=None,
-                          packet_size=None, item_offset=0):
+    def _create_mmap_view(fid, dtype, offset, num_samples, num_channels=None, packet_size=None, item_offset=0):
         """
         Create an np.ndarray view over a raw mmap buffer from an open file.
 
@@ -1368,15 +1367,17 @@ class BlackrockRawIO(BaseRawIO):
             data_offset = current_offset + header.dtype.itemsize
             timestamp = header["timestamp"]
 
-            parsed_data_headers.append({
-                "timestamp": timestamp,
-                "memmap_kwargs": {
-                    "filename": filename,
-                    "dtype": "int16",
-                    "offset": data_offset,
-                    "num_samples": num_samples,
-                },
-            })
+            parsed_data_headers.append(
+                {
+                    "timestamp": timestamp,
+                    "memmap_kwargs": {
+                        "filename": filename,
+                        "dtype": "int16",
+                        "offset": data_offset,
+                        "num_samples": num_samples,
+                    },
+                }
+            )
 
             # Jump to next block
             data_size_bytes = num_samples * channels * 2  # int16 = 2 bytes
@@ -1671,14 +1672,16 @@ class BlackrockRawIO(BaseRawIO):
         segments = []
         for start, stop in zip(segment_starts, segment_stops):
             block_infos = parsed_data_headers[start:stop]
-            segments.append({
-                "timestamp": block_infos[0]["timestamp"],
-                "block_timestamps": [block["timestamp"] for block in block_infos],
-                "nb_data_points": int(sum(block["memmap_kwargs"]["num_samples"] for block in block_infos)),
-                "header": 1,  # Standard format has headers
-                "offset_to_data_block": None,  # Not needed
-                "memmap_specs": [block["memmap_kwargs"] for block in block_infos],
-            })
+            segments.append(
+                {
+                    "timestamp": block_infos[0]["timestamp"],
+                    "block_timestamps": [block["timestamp"] for block in block_infos],
+                    "nb_data_points": int(sum(block["memmap_kwargs"]["num_samples"] for block in block_infos)),
+                    "header": 1,  # Standard format has headers
+                    "offset_to_data_block": None,  # Not needed
+                    "memmap_specs": [block["memmap_kwargs"] for block in block_infos],
+                }
+            )
 
         return segments
 
@@ -1735,22 +1738,26 @@ class BlackrockRawIO(BaseRawIO):
             seg_samples_offset = base_samples_offset + int(start) * packet_size
             seg_ts_offset = base_ts_offset + int(start) * packet_size
 
-            segments.append({
-                "timestamp": None,  # PTP timestamps read on demand
-                "nb_data_points": seg_num_samples,
-                "header": None,  # PTP has no headers
-                "offset_to_data_block": None,
-                "memmap_specs": [{
-                    **samples_kw,
-                    "offset": seg_samples_offset,
-                    "num_samples": seg_num_samples,
-                }],
-                "timestamps_memmap_kwargs": {
-                    **ts_kw,
-                    "offset": seg_ts_offset,
-                    "num_samples": seg_num_samples,
-                },
-            })
+            segments.append(
+                {
+                    "timestamp": None,  # PTP timestamps read on demand
+                    "nb_data_points": seg_num_samples,
+                    "header": None,  # PTP has no headers
+                    "offset_to_data_block": None,
+                    "memmap_specs": [
+                        {
+                            **samples_kw,
+                            "offset": seg_samples_offset,
+                            "num_samples": seg_num_samples,
+                        }
+                    ],
+                    "timestamps_memmap_kwargs": {
+                        **ts_kw,
+                        "offset": seg_ts_offset,
+                        "num_samples": seg_num_samples,
+                    },
+                }
+            )
 
         return segments
 
@@ -2035,8 +2042,7 @@ class BlackrockRawIO(BaseRawIO):
             # Nonempty segments are those containing at least 2 samples
             # These have to be able to be mapped to nev
             nonempty_nsx_segment_indices = [
-                seg_index for seg_index, seg in enumerate(self._nsx_data_header[nsx_nb])
-                if seg["nb_data_points"] > 1
+                seg_index for seg_index, seg in enumerate(self._nsx_data_header[nsx_nb]) if seg["nb_data_points"] > 1
             ]
             nonempty_nsx_segments = [
                 self._nsx_data_header[nsx_nb][seg_index] for seg_index in nonempty_nsx_segment_indices

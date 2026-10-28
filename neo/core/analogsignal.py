@@ -211,7 +211,7 @@ class AnalogSignal(BaseSignal):
         obj = pq.Quantity(signal, units=units, dtype=dtype).view(cls)
 
         if obj.ndim == 1:
-            obj.shape = (-1, 1)
+            obj = obj.reshape(-1, 1)
 
         if t_start is None:
             raise ValueError("`t_start` cannot be None")

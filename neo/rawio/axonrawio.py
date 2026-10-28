@@ -232,15 +232,22 @@ class AxonRawIO(BaseRawWithBufferApiIO):
         signal_channels = []
         adc_nums = []
         for chan_index, chan_id in enumerate(channel_ids):
+            # Name fields are fixed-width and right-padded with spaces (v1) or already trimmed (v2).
+            # Strip the padding but keep interior spaces (e.g. "IN 1"); errors="replace" so an odd
+            # byte can never crash the read.
             if version < 2.0:
-                name = info["sADCChannelName"][chan_id].replace(b" ", b"")
+                name = info["sADCChannelName"][chan_id].decode("utf-8", errors="replace").strip()
                 units = safe_decode_units(info["sADCUnits"][chan_id])
                 adc_num = info["nADCPtoLChannelMap"][chan_id]
             elif version >= 2.0:
                 ADCInfo = info["listADCInfo"][chan_id]
-                name = ADCInfo["ADCChNames"].replace(b" ", b"")
+                name = ADCInfo["ADCChNames"].decode("utf-8", errors="replace").strip()
                 units = safe_decode_units(ADCInfo["ADCChUnits"])
                 adc_num = ADCInfo["nADCNum"]
+            if not name:
+                # A blank name leaves the channel unaddressable; fall back to a positional name so
+                # every channel keeps a usable id.
+                name = f"ch{chan_id}"
             adc_nums.append(adc_num)
 
             if info["nDataFormat"] == 0:
@@ -705,9 +712,10 @@ def _parse_abf_v1(f, header_description):
         listTag.append(tag)
     header["listTag"] = listTag
 
-    # protocol name formatting
-    header["sProtocolPath"] = clean_string(header["sProtocolPath"])
-    header["sProtocolPath"] = header["sProtocolPath"].replace(b"\\", b"/")
+    # protocol name formatting. Decode to str (like the channel names) so consumers get a plain
+    # string rather than a bytes value, whose str() would bake the "b'...'" repr into the path.
+    header["sProtocolPath"] = clean_string(header["sProtocolPath"]).decode("utf-8", errors="replace")
+    header["sProtocolPath"] = header["sProtocolPath"].replace("\\", "/")
 
     # date and time
     # A "no date" sentinel means there is no date to build, so fall back to rec_datetime=None. The
@@ -1012,7 +1020,8 @@ def _parse_abf_v2(f, header_description):
         else:
             protocol[key] = np.array(val)
     header["protocol"] = protocol
-    header["sProtocolPath"] = strings[header["uProtocolPathIndex"]]
+    # Decode to str (like the channel names) so consumers get a plain string, not raw bytes.
+    header["sProtocolPath"] = strings[header["uProtocolPathIndex"]].decode("utf-8", errors="replace")
 
     # tags
     listTag = []
