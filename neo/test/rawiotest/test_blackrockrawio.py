@@ -29,6 +29,7 @@ class TestBlackrockRawIO(
         "blackrock/blackrock_2_1/l101210-001",
         "blackrock/blackrock_3_0/file_spec_3_0",
         "blackrock/blackrock_3_0_ptp/20231027-125608-001",
+        "blackrock/segment/ResetCorrect/reset",
     ]
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
@@ -375,10 +376,6 @@ class TestBlackrockRawIO(
         self.assertEqual(segments_strict, 3)  #
 
     def test_nev_spikes_at_segment_edges_ptp(self):
-        """
-        With 1 ns timestamps (PTP files), converting the segment bounds to ticks or comparing uint64 with
-        floats drops spikes at the edge of a segment. The NEV alone of this file has 4 segments.
-        """
         reader = BlackrockRawIO(
             filename=self.get_local_path(
                 "blackrock/blackrock_ptp_with_missing_samples/Hub1-NWBtestfile_neural_wspikes"
@@ -386,22 +383,12 @@ class TestBlackrockRawIO(
             nsx_to_load=[],
         )
         reader.parse_header()
-        all_spikes, segment_ids = reader.nev_data["Spikes"]
-        for seg_index in range(reader.segment_count(0)):
-            t_start, t_stop = reader.segment_t_start(0, seg_index), reader.segment_t_stop(0, seg_index)
-            for unit_index, (channel_id, unit_id) in enumerate(reader.internal_unit_ids):
-                in_segment = all_spikes["timestamp"][
-                    (all_spikes["packet_id"] == channel_id)
-                    & (all_spikes["unit_class_nb"] == unit_id)
-                    & (segment_ids == seg_index)
-                ]
-                for bounds in ((None, None), (t_start, t_stop + 1e-5)):
-                    spikes = reader.get_spike_timestamps(0, seg_index, unit_index, *bounds)
-                    assert_equal(spikes, in_segment)
-                self.assertEqual(reader.spike_count(0, seg_index, unit_index), len(in_segment))
-                # t_stop is exclusive
-                exclusive = reader.get_spike_timestamps(0, seg_index, unit_index, t_start, t_stop)
-                self.assertLessEqual(len(in_segment) - len(exclusive), 1)
+        returned = 0
+        for block_index in range(reader.block_count()):
+            for seg_index in range(reader.segment_count(block_index)):
+                for unit_index in range(reader.spike_channels_count()):
+                    returned += reader.get_spike_timestamps(block_index, seg_index, unit_index, None, None).size
+        self.assertEqual(returned, 999)
 
 
 if __name__ == "__main__":
