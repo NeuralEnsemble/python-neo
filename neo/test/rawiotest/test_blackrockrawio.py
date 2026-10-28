@@ -436,11 +436,14 @@ class TestBlackrockRawIO(
         dirname = self.get_local_path("blackrock/segment/PauseCorrect/pause_correct")
 
         # Until neo 0.16 the default keeps one segment per block, as before, and warns that
-        # it will raise
-        with self.assertWarns(FutureWarning):
+        # it will raise. The warning reports the gap, which follows sample 3999 at 3.999 s
+        with self.assertWarns(FutureWarning) as context:
             reader = BlackrockRawIO(filename=dirname, nsx_to_load=2)
             reader.parse_header()
         self.assertEqual(reader.segment_count(0), 2)
+        self.assertIn("3,999", str(context.warning))
+        self.assertIn("3.999000", str(context.warning))
+        self.assertIn("27009.700", str(context.warning))
 
         # A tolerance below the pause keeps one segment per block
         reader_strict = BlackrockRawIO(filename=dirname, nsx_to_load=2, gap_tolerance_ms=0)

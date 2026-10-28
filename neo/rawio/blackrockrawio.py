@@ -167,6 +167,9 @@ class BlackrockRawIO(BaseRawIO):
     # We need to document the origin of this value
     main_sampling_rate = 30000.0
 
+    # An interval between consecutive samples longer than this many sampling periods is a gap
+    _gap_detection_periods = 2
+
     def __init__(
         self,
         filename=None,
@@ -1536,18 +1539,19 @@ class BlackrockRawIO(BaseRawIO):
         else:
             return self._segment_nsx_v22_v30(parsed_data_headers, nsx_nb)
 
-    def _classify_gaps(self, time_differences, sampling_rate, nsx_nb, describe_gaps):
+    def _detect_timestamp_gaps(self, time_differences, sampling_rate):
         """
-        Classify timestamp discontinuities into segment boundaries.
+        Find the forward gaps between consecutive samples.
 
         Shared by the standard and PTP segmenters, which both pass the interval between
         consecutive samples, one sampling period when the data is contiguous.
 
         Forward gaps are detected at 2 sampling periods, above the jitter and rounding
-        noise floor of these files, and raise when gap_tolerance_ms is unset because
-        merging across one or splitting at it is a choice only the caller can make.
-        Backward steps are not gaps and are left to the caller: the standard segmenter
-        splits at them, and the PTP segmenter leaves them inside the segment.
+        noise floor of these files. This only finds them: raising when gap_tolerance_ms
+        is unset and keeping the gaps above the tolerance are left to the caller, so a
+        segmenter can drop gaps it knows are harmless first. Backward steps are not gaps
+        and are also left to the caller: the standard segmenter splits at them, and the
+        PTP segmenter leaves them inside the segment.
 
         Parameters
         ----------
@@ -1555,50 +1559,14 @@ class BlackrockRawIO(BaseRawIO):
             Intervals in seconds between the timestamps of consecutive samples.
         sampling_rate : float
             Sampling rate in Hz.
-        nsx_nb : int
-            NSX file number (for error reporting).
-        describe_gaps : callable
-            Takes indices into time_differences and returns, for each, the index of the
-            sample that precedes the interval and the time of that sample in seconds since
-            the start of the recording. Only called for the gaps in the error report, so
-            the callers do not build these for every sample.
 
         Returns
         -------
         np.ndarray
-            Indices into time_differences at which a segment boundary falls; a boundary
-            at index i means a new segment starts at i + 1.
+            Indices into time_differences of the gaps; a gap at index i falls between
+            samples i and i + 1.
         """
-        # Detection threshold: use strict 2x sampling period to find ALL gaps
-        detection_threshold = 2.0 / sampling_rate
-
-        forward_mask = time_differences > detection_threshold
-
-        forward_indices = np.flatnonzero(forward_mask)
-        if len(forward_indices) == 0:
-            return forward_indices
-
-        # Error by default on forward gaps - the caller must choose
-        if self.gap_tolerance_ms is None:
-            gap_sample_indices, gap_positions_seconds = describe_gaps(forward_indices)
-            gap_report = self._format_gap_report(
-                gap_sample_indices=gap_sample_indices,
-                gap_positions_seconds=gap_positions_seconds,
-                gap_durations_ms=time_differences[forward_indices] * 1000,
-                stream_label=f"ns{nsx_nb}",
-                detection_threshold_ms=detection_threshold * 1000,
-            )
-            raise ValueError(
-                f"Detected {len(forward_indices)} timestamp gaps in ns{nsx_nb} file.\n"
-                f"{gap_report}\n"
-                f"To load this data, provide gap_tolerance_ms parameter to automatically "
-                f"segment at gaps larger than the specified tolerance."
-            )
-
-        # User provided tolerance - keep forward gaps above it (no warning - user opted in)
-        gap_tolerance_s = self.gap_tolerance_ms / 1000.0
-        significant_forward_mask = forward_mask & (time_differences > gap_tolerance_s)
-        return np.flatnonzero(significant_forward_mask)
+        return np.flatnonzero(time_differences > self._gap_detection_periods / sampling_rate)
 
     def _segment_nsx_v21(self, parsed_data_headers):
         """
@@ -1665,23 +1633,30 @@ class BlackrockRawIO(BaseRawIO):
                     f"gap_tolerance_ms does not apply to them because a backward jump has no gap duration."
                 )
 
+            gap_indices = self._detect_timestamp_gaps(inter_block_intervals, sampling_rate)
             if self.gap_tolerance_ms is None:
                 # Until neo 0.16 the default keeps one segment per block, as before gap_tolerance_ms
-                warnings.warn(
+                message = (
                     f"ns{nsx_nb} has {len(parsed_data_headers)} data blocks, as the recording starts a new one at "
                     f"every pause. Each block is a segment, as before, but from neo 0.16 a gap between blocks will "
                     f"raise an error instead. Pass gap_tolerance_ms to choose: 0 splits at every gap and a larger "
-                    f"value merges gaps up to that length into one segment.",
-                    FutureWarning,
+                    f"value merges gaps up to that length into one segment."
                 )
+                # The gaps that will raise, so the tolerance can be chosen from their sizes
+                if len(gap_indices) > 0:
+                    gap_report = self._format_gap_report(
+                        gap_sample_indices=last_sample_indices[gap_indices],
+                        gap_positions_seconds=last_sample_positions[gap_indices],
+                        gap_durations_ms=inter_block_intervals[gap_indices] * 1000,
+                        stream_label=f"ns{nsx_nb}",
+                        detection_threshold_ms=1000.0 * self._gap_detection_periods / sampling_rate,
+                    )
+                    message = f"{message}\n{gap_report}"
+                warnings.warn(message, FutureWarning)
                 boundary_indices = np.arange(len(parsed_data_headers) - 1, dtype=np.intp)
             else:
-                forward_indices = self._classify_gaps(
-                    inter_block_intervals,
-                    sampling_rate,
-                    nsx_nb,
-                    describe_gaps=lambda indices: (last_sample_indices[indices], last_sample_positions[indices]),
-                )
+                # Keep the gaps above the tolerance (no warning - user opted in)
+                forward_indices = gap_indices[inter_block_intervals[gap_indices] > self.gap_tolerance_ms / 1000.0]
                 boundary_indices = np.union1d(backward_indices, forward_indices).astype(np.intp)
         else:
             boundary_indices = np.array([], dtype=np.intp)
@@ -1734,13 +1709,30 @@ class BlackrockRawIO(BaseRawIO):
         # wraps around in uint64, and viewing the result as int64 gives it back its sign
         time_differences = np.diff(timestamps).view(np.int64) / ts_res
 
-        # Every sample carries its own timestamp, so the gaps in the report are read off the
-        # timestamps at their indices
-        def describe_gaps(indices):
-            positions = (timestamps[indices].astype(np.int64) - np.int64(timestamps[0])) / ts_res
-            return indices, positions
-
-        boundary_indices = self._classify_gaps(time_differences, sampling_rate, nsx_nb, describe_gaps)
+        gap_indices = self._detect_timestamp_gaps(time_differences, sampling_rate)
+        if self.gap_tolerance_ms is None:
+            # Error by default on gaps - the caller must choose
+            if len(gap_indices) > 0:
+                # Every sample carries its own timestamp, so the gaps in the report are read off the
+                # timestamps at their indices
+                gap_positions_seconds = (timestamps[gap_indices].astype(np.int64) - np.int64(timestamps[0])) / ts_res
+                gap_report = self._format_gap_report(
+                    gap_sample_indices=gap_indices,
+                    gap_positions_seconds=gap_positions_seconds,
+                    gap_durations_ms=time_differences[gap_indices] * 1000,
+                    stream_label=f"ns{nsx_nb}",
+                    detection_threshold_ms=1000.0 * self._gap_detection_periods / sampling_rate,
+                )
+                raise ValueError(
+                    f"Detected {len(gap_indices)} timestamp gaps in ns{nsx_nb} file.\n"
+                    f"{gap_report}\n"
+                    f"To load this data, provide gap_tolerance_ms parameter to automatically "
+                    f"segment at gaps larger than the specified tolerance."
+                )
+            boundary_indices = gap_indices
+        else:
+            # Keep the gaps above the tolerance (no warning - user opted in)
+            boundary_indices = gap_indices[time_differences[gap_indices] > self.gap_tolerance_ms / 1000.0]
         del timestamps, time_differences  # release the mmap view and the per-sample differences
 
         num_total_samples = ts_kw["num_samples"]
