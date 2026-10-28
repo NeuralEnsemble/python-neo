@@ -1536,7 +1536,7 @@ class BlackrockRawIO(BaseRawIO):
         else:
             return self._segment_nsx_v22_v30(parsed_data_headers, nsx_nb)
 
-    def _classify_gaps(self, time_differences, sampling_rate, nsx_nb, sample_indices, sample_positions_seconds):
+    def _classify_gaps(self, time_differences, sampling_rate, nsx_nb, describe_gaps):
         """
         Classify timestamp discontinuities into segment boundaries.
 
@@ -1557,11 +1557,11 @@ class BlackrockRawIO(BaseRawIO):
             Sampling rate in Hz.
         nsx_nb : int
             NSX file number (for error reporting).
-        sample_indices : np.ndarray
-            For each interval, the index of the sample that precedes it.
-        sample_positions_seconds : np.ndarray
-            For each interval, the time of that sample in seconds since the start of the
-            recording.
+        describe_gaps : callable
+            Takes indices into time_differences and returns, for each, the index of the
+            sample that precedes the interval and the time of that sample in seconds since
+            the start of the recording. Only called for the gaps in the error report, so
+            the callers do not build these for every sample.
 
         Returns
         -------
@@ -1580,9 +1580,10 @@ class BlackrockRawIO(BaseRawIO):
 
         # Error by default on forward gaps - the caller must choose
         if self.gap_tolerance_ms is None:
+            gap_sample_indices, gap_positions_seconds = describe_gaps(forward_indices)
             gap_report = self._format_gap_report(
-                gap_sample_indices=sample_indices[forward_indices],
-                gap_positions_seconds=sample_positions_seconds[forward_indices],
+                gap_sample_indices=gap_sample_indices,
+                gap_positions_seconds=gap_positions_seconds,
                 gap_durations_ms=time_differences[forward_indices] * 1000,
                 stream_label=f"ns{nsx_nb}",
                 detection_threshold_ms=detection_threshold * 1000,
@@ -1665,7 +1666,10 @@ class BlackrockRawIO(BaseRawIO):
                 )
 
             forward_indices = self._classify_gaps(
-                inter_block_intervals, sampling_rate, nsx_nb, last_sample_indices, last_sample_positions
+                inter_block_intervals,
+                sampling_rate,
+                nsx_nb,
+                describe_gaps=lambda indices: (last_sample_indices[indices], last_sample_positions[indices]),
             )
             boundary_indices = np.union1d(backward_indices, forward_indices).astype(np.intp)
         else:
@@ -1715,18 +1719,18 @@ class BlackrockRawIO(BaseRawIO):
             packet_size=ts_kw.get("packet_size"),
             item_offset=ts_kw.get("item_offset", 0),
         )
-        timestamps_in_seconds = timestamps.astype("float64") / ts_res
-        del timestamps  # release the mmap buffer; timestamps_in_seconds is an independent copy
+        # Differences in clock ticks, so no float copy of every timestamp is made. A backward step
+        # wraps around in uint64, and viewing the result as int64 gives it back its sign
+        time_differences = np.diff(timestamps).view(np.int64) / ts_res
 
-        time_differences = np.diff(timestamps_in_seconds)
+        # Every sample carries its own timestamp, so the gaps in the report are read off the
+        # timestamps at their indices
+        def describe_gaps(indices):
+            positions = (timestamps[indices].astype(np.int64) - np.int64(timestamps[0])) / ts_res
+            return indices, positions
 
-        # Every sample carries its own timestamp, so read these off the array
-        last_sample_indices = np.arange(len(time_differences))
-        last_sample_positions = timestamps_in_seconds[:-1] - timestamps_in_seconds[0]
-
-        boundary_indices = self._classify_gaps(
-            time_differences, sampling_rate, nsx_nb, last_sample_indices, last_sample_positions
-        )
+        boundary_indices = self._classify_gaps(time_differences, sampling_rate, nsx_nb, describe_gaps)
+        del timestamps, time_differences  # release the mmap view and the per-sample differences
 
         num_total_samples = ts_kw["num_samples"]
         segment_starts = np.hstack((0, boundary_indices + 1)).astype(np.intp)
