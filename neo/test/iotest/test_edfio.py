@@ -77,8 +77,8 @@ class TestEDFIO(
             self.assertEqual(len(anasigs), 5)  # all channels have different units, so expecting 5
             for aidx, anasig in enumerate(anasigs):
                 # comparing raw data to original values
-                ana_data = anasig.load(magnitude_mode="raw")
-                np.testing.assert_array_equal(ana_data.magnitude, plain_data[:, aidx : aidx + 1])
+                raw_data = io.get_analogsignal_chunk(channel_indexes=[aidx])
+                np.testing.assert_array_equal(raw_data, plain_data[:, aidx : aidx + 1])
 
                 # Compare calibrated values with pyedflib's physical readout.
                 ana_data = anasig.load(magnitude_mode="rescaled")
