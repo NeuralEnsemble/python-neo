@@ -565,6 +565,24 @@ class TestBlackrockRawIO(
         messages = [str(warning.message) for warning in caught]
         self.assertFalse(any("backward timestamp jump" in message for message in messages))
 
+    def test_chunk_past_the_end_of_merged_blocks(self):
+        """
+        A stop past the end of a segment that merges blocks returns the rows up to the end, as
+        for a segment of one block, instead of rows that were never read.
+        """
+        filename = self.get_local_path(
+            "blackrock/version_2_3/time_structure/two_data_blocks_after_pause/two_data_blocks_after_pause"
+        )
+        reader = BlackrockRawIO(filename=filename, nsx_to_load=[2], load_nev=False, gap_tolerance_ms=1e9)
+        reader.parse_header()
+        size = reader.get_signal_size(block_index=0, seg_index=0, stream_index=0)
+
+        past_end = reader.get_analogsignal_chunk(
+            block_index=0, seg_index=0, i_start=50, i_stop=size + 50, stream_index=0
+        )
+        to_end = reader.get_analogsignal_chunk(block_index=0, seg_index=0, i_start=50, i_stop=None, stream_index=0)
+        assert_equal(past_end, to_end)
+
     def test_gap_tolerance_ms_merged_blocks_keep_their_nev_events(self):
         """
         Blocks merged by gap_tolerance_ms keep their spikes when a spec 2.3 nev is matched to them.

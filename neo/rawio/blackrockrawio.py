@@ -790,8 +790,8 @@ class BlackrockRawIO(BaseRawIO):
         total_samples = sum(spec["num_samples"] for spec in memmap_specs)
         if i_start is None:
             i_start = 0
-        if i_stop is None:
-            i_stop = total_samples
+        # A stop past the end returns fewer rows, as slicing a single block does
+        i_stop = total_samples if i_stop is None else min(i_stop, total_samples)
 
         # Row slicing keeps these as views, so nothing is read until used below
         block_views = []
