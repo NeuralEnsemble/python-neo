@@ -292,6 +292,26 @@ class TestSpikeTrainList(unittest.TestCase):
         self.assertRaises(ValueError, self.stl_from_obj_list.extend, [self.stl_from_obj_list[0]])
         self.assertEqual(len(self.stl_from_obj_list), 4)
 
+    def test_create_with_duplicate(self):
+        """Creating a SpikeTrainList containing the same SpikeTrain twice should fail"""
+        st = SpikeTrain([22.2, 33.3], units="ms", t_start=0 * pq.ms, t_stop=100.0 * pq.ms)
+        self.assertRaises(ValueError, SpikeTrainList, items=[st, st])
+
+    def test_create_from_generator(self):
+        stl = SpikeTrainList(items=(st for st in self.stl_from_obj_list))
+        self.assertEqual(len(stl), 4)
+
+    def test_add_duplicate(self):
+        """Combining SpikeTrainLists that share a SpikeTrain should fail, whichever operator is used"""
+        st = self.stl_from_obj_list[0]
+        self.assertRaises(ValueError, lambda: self.stl_from_obj_list + SpikeTrainList(items=[st]))
+        self.assertRaises(ValueError, lambda: self.stl_from_obj_list + [st])
+        self.assertRaises(ValueError, lambda: [st] + self.stl_from_obj_list)
+        with self.assertRaises(ValueError):
+            self.stl_from_obj_list += SpikeTrainList(items=[st])
+        self.assertEqual(len(self.stl_from_obj_list), 4)
+        self.assertEqual(self.stl_from_obj_list.count(st), 1)
+
     def test_multiplexed(self):
         """The multiplexed property should return a pair of arrays"""
         channel_id_array, spike_time_array = self.stl_from_array.multiplexed
