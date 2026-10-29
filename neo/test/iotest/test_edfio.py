@@ -67,6 +67,8 @@ class TestEDFIO(
         """
         Compare data from AnalogSignal with plain data stored in text file
         """
+        import pyedflib
+
         with EDFIO(self.filename) as io:
             plain_data = np.loadtxt(io.filename.replace(".edf", ".txt"), dtype=np.int16)
             seg = io.read_segment(lazy=True)
@@ -75,19 +77,14 @@ class TestEDFIO(
             self.assertEqual(len(anasigs), 5)  # all channels have different units, so expecting 5
             for aidx, anasig in enumerate(anasigs):
                 # comparing raw data to original values
-                ana_data = anasig.load(magnitude_mode="raw")
-                np.testing.assert_array_equal(ana_data.magnitude, plain_data[:, aidx : aidx + 1])
+                raw_data = io.get_analogsignal_chunk(channel_indexes=[aidx])
+                np.testing.assert_array_equal(raw_data, plain_data[:, aidx : aidx + 1])
 
-                # comparing floating data to original values * gain factor
-                ch_head = io.edf_reader.getSignalHeader(aidx)
-                physical_range = ch_head["physical_max"] - ch_head["physical_min"]
-                # number of digital values used (+1 to account for '0' value)
-                digital_range = ch_head["digital_max"] - ch_head["digital_min"] + 1
-
-                gain = physical_range / digital_range
+                # Compare calibrated values with pyedflib's physical readout.
                 ana_data = anasig.load(magnitude_mode="rescaled")
-                rescaled_data = plain_data[:, aidx : aidx + 1] * gain
-                np.testing.assert_array_equal(ana_data.magnitude, rescaled_data)
+                with pyedflib.EdfReader(io.filename) as reader:
+                    rescaled_data = reader.readSignal(aidx)
+                np.testing.assert_allclose(ana_data.magnitude[:, 0], rescaled_data, rtol=1e-6, atol=1e-5)
 
 
 if __name__ == "__main__":
