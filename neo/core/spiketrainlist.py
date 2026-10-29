@@ -105,10 +105,13 @@ class SpikeTrainList(ObjectList):
         if items is None:
             self._items = items
         else:
+            items = list(items)
             for item in items:
                 if not is_spiketrain_or_proxy(item):
                     raise ValueError("`items` can only contain SpikeTrain objects or proxy objects")
-            self._items = list(items)
+            if len({id(item) for item in items}) != len(items):
+                raise ValueError("`items` contains the same object more than once")
+            self._items = items
         self._spike_time_array = None
         self._channel_id_array = None
         self._all_channel_ids = None
@@ -144,7 +147,7 @@ class SpikeTrainList(ObjectList):
     def __setitem__(self, i, value):
         if self._items is None:
             self._spiketrains_from_array()
-        self._items[i] = value
+        super().__setitem__(i, value)
 
     def __str__(self):
         """Return str(self)"""
@@ -183,7 +186,7 @@ class SpikeTrainList(ObjectList):
             if other._items is None:
                 other._spiketrains_from_array()
             if in_place:
-                self._items.extend(other._items)
+                self.extend(other._items)
                 return self
             else:
                 return self.__class__(items=self._items[:] + other._items)
@@ -232,11 +235,7 @@ class SpikeTrainList(ObjectList):
         if isinstance(other, self.__class__):
             return self._add_spiketrainlists(other, in_place=True)
         elif other and is_spiketrain_or_proxy(other[0]):
-            for obj in other:
-                self._handle_append(obj)
-            if self._items is None:
-                self._spiketrains_from_array()
-            self._items.extend(other)
+            self.extend(other)
             return self
         else:
             raise TypeError("Can only add a SpikeTrainList or a list of SpikeTrains in place")
@@ -246,11 +245,7 @@ class SpikeTrainList(ObjectList):
         if isinstance(other, self.__class__):
             return other._add_spiketrainlists(self)
         elif other and is_spiketrain_or_proxy(other[0]):
-            for obj in other:
-                obj.segment = self.segment
-            if self._items is None:
-                self._spiketrains_from_array()
-            self._items.extend(other)
+            self.extend(other)
             return self
         elif len(other) == 0:
             return self
@@ -281,8 +276,7 @@ class SpikeTrainList(ObjectList):
             raise ValueError("Can only append SpikeTrain objects")
         if self._items is None:
             self._spiketrains_from_array()
-        self._handle_append(obj)
-        self._items.append(obj)
+        super().append(obj)
 
     def extend(self, iterable):
         """Extends the SpikeTrainList with additional SpikeTrain's from an iterable
@@ -306,9 +300,7 @@ class SpikeTrainList(ObjectList):
 
         if self._items is None:
             self._spiketrains_from_array()
-        for obj in iterable:
-            self._handle_append(obj)
-        self._items.extend(iterable)
+        super().extend(iterable)
 
     @classmethod
     def from_spike_time_array(
