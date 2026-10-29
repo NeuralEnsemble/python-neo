@@ -117,11 +117,12 @@ class ObjectList:
     def extend(self, objects):
         # objects may be an iterator that can only be consumed once (e.g., a generator), and we need to iterate twice
         objects = list(objects)
-        # check everything before changing anything, so that a failure leaves the list unchanged
-        seen = set()
+        # check everything before changing anything, so that a failure leaves the list unchanged.
+        # Building the set of ids once, rather than calling _contains() for each object, keeps this O(n + m)
+        seen = {id(item) for item in self._items or ()}
         for obj in objects:
             self._check_allowed(obj)
-            if id(obj) in seen or self._contains(obj):
+            if id(obj) in seen:
                 raise ValueError("Cannot add this object because it is already contained within the list")
             seen.add(id(obj))
         for obj in objects:
