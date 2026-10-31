@@ -531,6 +531,15 @@ class IrregularlySampledSignal(BaseSignal):
                     break
             count += 1
 
+        if id_start is None:
+            # No sample lies inside the window.  ``id_start`` doubles as a
+            # "not found yet" flag inside the loop and as the unbounded ``None``
+            # slice bound, so with no match at all the two meanings collide and
+            # ``self[None:None]`` silently returns the whole signal.  Return an
+            # empty signal instead, which is what :meth:`Event.time_slice` and
+            # :meth:`Epoch.time_slice` do for the same situation.
+            return deepcopy(self[0:0])
+
         # Time slicing should create a deep copy of the object
         new_st = deepcopy(self[id_start:id_stop])
 
