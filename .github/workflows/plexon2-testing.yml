@@ -33,10 +33,11 @@ jobs:
         # the key depend on the last commit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: ephy_testing_data
         run: |
+          # if gin cannot be reached the key matches no cache and the restore-keys below restore the most recent one
           set -o pipefail
           if ! hash="$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" || [ -z "$hash" ]; then
-            echo "::error::could not resolve ephy_testing_data HEAD on gin; refusing to build a degenerate cache key"
-            exit 1
+            echo "::warning::could not resolve ephy_testing_data HEAD on gin; restoring the most recent dataset cache"
+            hash=""
           fi
           echo "dataset_hash=$hash" >> "$GITHUB_OUTPUT"
 
