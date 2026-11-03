@@ -214,6 +214,13 @@ class TdtRawIO(BaseRawIO):
             buffer_id = ""
             signal_streams.append((stream_name, stream_id, buffer_id))
 
+            # The UCF ("use compact format") bit in the TankEvType flags indicates that the
+            # store was configured at recording time to write per-channel SEV files rather
+            # than embedding stream data in the shared TEV file. When this bit is set, the
+            # TEV file does not contain valid stream data for this store, so any missing
+            # SEV file must be surfaced as an error rather than silently falling back.
+            store_requires_sev = bool(info["TankEvType"] & EVTYPE_UCF)
+
             for channel_index in range(info["NumChan"]):
                 global_chan_index = len(signal_channels)
                 chan_id = channel_index + 1
@@ -305,13 +312,20 @@ class TdtRawIO(BaseRawIO):
 
                         # in case non or multiple sev files are found for current stream + channel
                         if len(sev_filename) != 1:
-                            missing_sev_channels.append(chan_id)
+                            if not store_requires_sev:
+                                missing_sev_channels.append(chan_id)
                             sev_filename = None
                         else:
                             sev_filename = sev_filename[0]
 
                     if (sev_filename is not None) and sev_filename.exists():
                         data = np.memmap(sev_filename, mode="r", offset=0, dtype="uint8")
+                    elif store_requires_sev:
+                        raise NeoReadWriteError(
+                            f"Store '{stream_name}' was recorded in SEV (discrete files) mode but no SEV "
+                            f"file was found for channel {chan_id} in segment '{segment_name}'. "
+                            f"TEV does not contain valid stream data for this store, so there is no fallback."
+                        )
                     else:
                         data = self._tev_datas[seg_index]
                     if data is None:
