@@ -716,7 +716,7 @@ channelHeaderDesciption1 = [
     ("next_del_block", "i4"),  # i8
     ("firstblock", "i4"),  # i8
     ("lastblock", "i4"),  # i8
-    ("blocks", "i2"),
+    ("blocks", "u2"),  # unsigned: a channel can have more than 32767 blocks
     ("n_extra", "i2"),
     ("pre_trig", "i2"),
     ("free0", "i2"),
