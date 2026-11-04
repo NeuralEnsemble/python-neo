@@ -37,7 +37,10 @@ from .baserawio import (
 def _get_sonpy_namespace():
     """Return the sonpy namespace exposing SonFile, whatever the installed layout."""
     if importlib.util.find_spec("sonpy") is None:
-        raise ImportError("sonpy is not installed. Install it with `pip install sonpy`.")
+        raise ImportError(
+            "sonpy is not installed. sonpy only publishes wheels for Windows, and for Linux and macOS "
+            "from Python 3.14 onwards; on those platforms install it with `pip install sonpy`."
+        )
 
     sonpy = importlib.import_module("sonpy")
 
@@ -77,10 +80,10 @@ class CedRawIO(BaseRawIO):
 
     * This IO reads smr and smrx files
 
-    * sonpy is installed by the ``ced`` extra, but upstream only publishes wheels for Windows,
-      and for Linux and macOS from Python 3.14 onwards. Elsewhere the extra resolves to nothing
-      installable and this class raises an ImportError naming the constraint on first use; the
-      PyPI source distribution ships a Windows binary and is not usable.
+    * sonpy is installed by the ``ced`` and ``all`` extras, but upstream only publishes wheels for
+      Windows, and for Linux and macOS from Python 3.14 onwards. Elsewhere both extras skip sonpy
+      and this class raises an ImportError naming the constraint on first use; the PyPI source
+      distribution ships a Windows binary and is not usable.
 
     * Old smr files can be read without sonpy using Spike2RawIO. Only smrx requires this class.
 
