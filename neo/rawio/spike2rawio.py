@@ -118,7 +118,7 @@ class Spike2RawIO(BaseRawIO):
                 if chan_info["blocks"] == 0:
                     chan_info["t_start"] = 0.0  # this means empty signals
                 else:
-                    fid.seek(chan_info["firstblock"] * self._diskblock)
+                    fid.seek(int(chan_info["firstblock"]) * self._diskblock)
                     block_info = read_as_dict(fid, blockHeaderDesciption)
                     chan_info["t_start"] = (
                         float(block_info["start_time"]) * float(info["us_per_time"]) * float(info["dtime_base"])
@@ -133,16 +133,16 @@ class Spike2RawIO(BaseRawIO):
         self._by_seg_data_blocks = {}
         for chan_id, chan_info in enumerate(self._channel_infos):
             data_blocks = []
-            ind = chan_info["firstblock"] * self._diskblock
+            ind = int(chan_info["firstblock"]) * self._diskblock
             for b in range(chan_info["blocks"]):
                 block_info = self._memmap[ind : ind + 20].view(blockHeaderDesciption)[0]
                 data_blocks.append((ind, block_info["items"], 0, block_info["start_time"], block_info["end_time"]))
-                ind = block_info["succ_block"] * self._diskblock
+                ind = int(block_info["succ_block"]) * self._diskblock
 
             data_blocks = np.array(
                 data_blocks,
                 dtype=[
-                    ("pos", "int32"),
+                    ("pos", "int64"),
                     ("size", "int32"),
                     ("cumsum", "int32"),
                     ("start_time", "int32"),
