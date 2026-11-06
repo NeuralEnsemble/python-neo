@@ -651,6 +651,23 @@ class TestBlackrockRawIO(
             )
             self.assertEqual(returned, 960)
 
+    def test_nev_22_reads_spikes_on_electrodes_above_255(self):
+        """
+        A FileSpec 2.2 NEV written by Ripple Trellis keeps its spikes on electrodes above 255, as 2.3
+        does (NeuralEnsemble/python-neo#1918). Trellis numbers its front-end ports 1-128, 129-256,
+        257-384..., and this file has one spike on each of 28 electrodes between 257 and 306.
+        """
+        filename = self.get_local_path("blackrock/version_2_2/spikes/electrode_ids_above_255/electrode_ids_above_255")
+        reader = BlackrockRawIO(filename=filename)
+        reader.parse_header()
+        electrodes = [channel for channel, _ in reader.internal_unit_ids]
+        self.assertEqual(len(electrodes), 28)
+        self.assertTrue(all(257 <= electrode <= 306 for electrode in electrodes))
+        spikes = [
+            reader.get_spike_timestamps(0, 0, unit_index, None, None).size for unit_index in range(len(electrodes))
+        ]
+        self.assertEqual(spikes, [1] * 28)
+
 
 if __name__ == "__main__":
     unittest.main()
