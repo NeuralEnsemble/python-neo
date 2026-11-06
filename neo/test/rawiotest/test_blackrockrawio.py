@@ -2,9 +2,7 @@
 Tests of neo.rawio.examplerawio
 """
 
-import tempfile
 import unittest
-from pathlib import Path
 import warnings
 
 from neo.rawio.blackrockrawio import BlackrockRawIO
@@ -655,38 +653,20 @@ class TestBlackrockRawIO(
 
     def test_nev_22_reads_spikes_on_electrodes_above_255(self):
         """
-        A FileSpec 2.2 NEV with spikes on an electrode above 255 (Ripple Trellis numbers its front-end ports
-        1-128, 129-256, 257-384...) keeps them, as 2.3 does (NeuralEnsemble/python-neo#1918). Built from neo's
-        2.3 test NEV: marked 2.2, with electrode 1 renumbered 300 in its NEUEVWAV header and spike packets.
+        A FileSpec 2.2 NEV written by Ripple Trellis keeps its spikes on electrodes above 255, as 2.3
+        does (NeuralEnsemble/python-neo#1918). Trellis numbers its front-end ports 1-128, 129-256,
+        257-384..., and this file has one spike on each of 28 electrodes between 257 and 306.
         """
-        source_base = self.get_local_path("blackrock/FileSpec2.3001")
-        original = BlackrockRawIO(filename=source_base, nsx_to_load=None)
-        original.parse_header()
-        units_on_1 = [i for i, (channel, _) in enumerate(original.internal_unit_ids) if channel == 1]
-        self.assertTrue(units_on_1)  # electrode 1 has spikes to move
-        expected = np.concatenate([original.get_spike_timestamps(0, 0, i, None, None) for i in units_on_1])
-
-        data = bytearray(Path(source_base + ".nev").read_bytes())
-        data[9] = 2  # FileSpec 2.3 -> 2.2
-        header_size, packet_size = np.frombuffer(bytes(data[12:20]), dtype="<u4")
-        for at in range(336, int(header_size), 32):  # extended headers follow the 336-byte basic header
-            if data[at : at + 8] == b"NEUEVWAV" and int.from_bytes(data[at + 8 : at + 10], "little") == 1:
-                data[at + 8 : at + 10] = (300).to_bytes(2, "little")
-        # 2.x packets: a uint32 timestamp, then the uint16 packet id
-        for at in range(int(header_size), len(data) - int(packet_size) + 1, int(packet_size)):
-            if int.from_bytes(data[at + 4 : at + 6], "little") == 1:
-                data[at + 4 : at + 6] = (300).to_bytes(2, "little")
-
-        with tempfile.TemporaryDirectory() as folder:
-            base = str(Path(folder) / "trellis_like")
-            Path(base + ".nev").write_bytes(bytes(data))
-            reader = BlackrockRawIO(filename=base, nsx_to_load=None)
-            reader.parse_header()
-        self.assertEqual(reader._nev_spec, "2.2")
-        units_on_300 = [i for i, (channel, _) in enumerate(reader.internal_unit_ids) if channel == 300]
-        self.assertTrue(units_on_300, "no spike channel on electrode 300")
-        got = np.concatenate([reader.get_spike_timestamps(0, 0, i, None, None) for i in units_on_300])
-        assert_equal(np.sort(got), np.sort(expected))
+        filename = self.get_local_path("blackrock/version_2_2/spikes/electrode_ids_above_255/electrode_ids_above_255")
+        reader = BlackrockRawIO(filename=filename)
+        reader.parse_header()
+        electrodes = [channel for channel, _ in reader.internal_unit_ids]
+        self.assertEqual(len(electrodes), 28)
+        self.assertTrue(all(257 <= electrode <= 306 for electrode in electrodes))
+        spikes = [
+            reader.get_spike_timestamps(0, 0, unit_index, None, None).size for unit_index in range(len(electrodes))
+        ]
+        self.assertEqual(spikes, [1] * 28)
 
 
 if __name__ == "__main__":
