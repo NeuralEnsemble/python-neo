@@ -628,6 +628,29 @@ class TestBlackrockRawIO(
                     returned += reader.get_spike_timestamps(block_index, seg_index, unit_index, None, None).size
         self.assertEqual(returned, 999)
 
+    def test_nev_segments_ignore_order_between_packet_types(self):
+        """
+        Only a packet earlier than the previous packet of its own type is a clock reset.
+
+        Central writes a comment a few ms after stamping it, so in this file two comments are
+        written before 96 spikes stamped 2.1 ms earlier. Comparing packets of different types
+        split the nev into two segments, and with the ns5 only the 384 spikes of the first one
+        were returned.
+        """
+        filename = self.get_local_path(
+            "blackrock/version_3_0/time_structure/comment_written_before_earlier_spikes/"
+            "comment_written_before_earlier_spikes"
+        )
+        for nsx_to_load in ([], [5]):
+            reader = BlackrockRawIO(filename=filename, nsx_to_load=nsx_to_load)
+            reader.parse_header()
+            self.assertEqual(reader.segment_count(0), 1)
+            returned = sum(
+                reader.get_spike_timestamps(0, 0, unit_index, None, None).size
+                for unit_index in range(reader.spike_channels_count())
+            )
+            self.assertEqual(returned, 960)
+
 
 if __name__ == "__main__":
     unittest.main()
