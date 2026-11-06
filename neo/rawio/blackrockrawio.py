@@ -314,6 +314,9 @@ class BlackrockRawIO(BaseRawIO):
             if "Comments" in self.nev_data:
                 comments_data, comments_segment_ids = self.nev_data["Comments"]
                 ev_dict.update(self._comment_evdict[self._nev_spec](comments_data))
+            if "RecordingEvents" in self.nev_data:
+                recording_events_data, recording_events_segment_ids = self.nev_data["RecordingEvents"]
+                ev_dict.update(self._get_recording_evdict(recording_events_data))
             for ev_name in ev_dict:
                 event_channels.append((ev_name, "", "event"))
             # TODO: TrackingEvents
@@ -635,6 +638,8 @@ class BlackrockRawIO(BaseRawIO):
                     ev_dict.update(self._comment_evdict[self._nev_spec](comments_data))
                     color_codes = ["#{:08X}".format(code) for code in comments_data["color"]]
                     color_codes = np.array(color_codes, dtype="S9")
+                if "RecordingEvents" in self.nev_data:
+                    ev_dict.update(self._get_recording_evdict(recording_events_data))
                 for c in range(event_channels.size):
                     # Next line makes ev_ann a reference to seg_ann['events'][c]
                     ev_ann = seg_ann["events"][c]
@@ -1052,6 +1057,9 @@ class BlackrockRawIO(BaseRawIO):
         if name == "comments":
             events_data, event_segment_ids = self.nev_data["Comments"]
             ev_dict = self._comment_evdict[self._nev_spec](events_data)[name]
+        elif name == "recording_events":
+            events_data, event_segment_ids = self.nev_data["RecordingEvents"]
+            ev_dict = self._get_recording_evdict(events_data)[name]
         else:
             events_data, event_segment_ids = self.nev_data["NonNeural"]
             ev_dict = self._nonneural_evdicts[self._nev_spec](events_data)[name]
@@ -1067,6 +1075,12 @@ class BlackrockRawIO(BaseRawIO):
             # If immediate decoding is desired:
             encoding = {0: "latin_1", 1: "utf_16", 255: "latin_1"}
             labels = [data[ev_dict["field"]].decode(encoding[data["char_set"]]) for data in events_data]
+            labels = np.array(labels, dtype="U")
+        elif name == "recording_events":
+            events_data, event_segment_ids = self.nev_data["RecordingEvents"]
+            ev_dict = self._get_recording_evdict(events_data)[name]
+            reasons = {0: "start", 1: "stop", 2: "pause", 3: "resume"}
+            labels = [reasons.get(int(reason), str(reason)) for reason in events_data[ev_dict["field"]]]
             labels = np.array(labels, dtype="U")
         else:
             events_data, event_segment_ids = self.nev_data["NonNeural"]
@@ -2483,6 +2497,16 @@ class BlackrockRawIO(BaseRawIO):
             "comments": {"name": "comments", "field": "comment", "mask": data["packet_id"] == 65535, "desc": "Comments"}
         }
 
+    def _get_recording_evdict(self, data):
+        return {
+            "recording_events": {
+                "name": "recording_events",
+                "field": "event_reason",
+                "mask": data["packet_id"] == 0xFFF9,
+                "desc": "Recording start, stop, pause and resume",
+            }
+        }
+
     def _is_set(self, flag, pos):
         """
         Checks if bit is set at the given position for flag. If flag is an
@@ -2781,6 +2805,8 @@ NEV_PACKET_IDENTIFIERS_BY_SPEC = {
         "TrackingEvents": 0xFFFD,
         "ButtonTrigger": 0xFFFC,
         "ConfigEvent": 0xFFFB,
+        # Recording start, stop, pause and resume. Added with the 64-bit timestamps, so only in 3.0.
+        "RecordingEvents": 0xFFF9,
     },
 }
 
@@ -2933,6 +2959,12 @@ NEV_PACKET_DATA_TYPES_BY_SPEC = {
             ("timestamp", "uint64"),
             ("packet_id", "uint16"),
             ("trigger_type", "uint16"),
+            ("unused", "int8", (packet_size_bytes - 12,)),
+        ],
+        "RecordingEvents": lambda packet_size_bytes: [
+            ("timestamp", "uint64"),
+            ("packet_id", "uint16"),
+            ("event_reason", "uint16"),
             ("unused", "int8", (packet_size_bytes - 12,)),
         ],
         "ConfigEvent": lambda packet_size_bytes: [
