@@ -106,6 +106,7 @@ and may not be the current affiliation of a contributor.
 * Aditya Singh (github)
 * Stanley C.
 * Axel Coiffard-Donaty
+* Anthony Mercer
 * Aaron Kanzer [53]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Université Claude Bernard Lyon 1
