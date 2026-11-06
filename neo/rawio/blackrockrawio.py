@@ -1351,7 +1351,7 @@ class BlackrockRawIO(BaseRawIO):
             self._nsx_basic_header[nsx_nb].dtype.itemsize + self._nsx_ext_header[nsx_nb].dtype.itemsize * channels
         )
         filesize = self._get_file_size(filename)
-        num_samples = int((filesize - bytes_in_headers) / (2 * channels) - 1)
+        num_samples = (filesize - bytes_in_headers) // (2 * channels)
 
         return [
             {
