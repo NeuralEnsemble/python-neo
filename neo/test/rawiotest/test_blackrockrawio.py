@@ -630,27 +630,26 @@ class TestBlackrockRawIO(
 
     def test_nev_segments_ignore_order_between_packet_types(self):
         """
-        Comments are stamped when the user starts writing but written to the file when they finish, so they
-        come after spikes with later timestamps. Only a packet earlier than the previous packet of its own
-        type is a clock reset, and one reset is one segment boundary.
+        Only a packet earlier than the previous packet of its own type is a clock reset.
+
+        Central writes a comment a few ms after stamping it, so in this file two comments are
+        written before 96 spikes stamped 2.1 ms earlier. Comparing packets of different types
+        split the nev into two segments, and with the ns5 only the 384 spikes of the first one
+        were returned.
         """
-        spike, comment = 1, 0xFFFF
-        # The comments are 2 ticks ahead of the spike before them, later than the spike after them.
-        no_reset = [(1000, spike), (1002, comment), (1001, spike), (1010, spike), (1012, comment), (1011, spike)]
-        # A reset sends the clock of every packet type back.
-        reset = [(5, spike), (7, comment), (6, spike)]
-        reader = BlackrockRawIO(filename=self.get_local_path("blackrock/blackrock_3_0/file_spec_3_0"))  # not parsed
-        for packets, expected in ((no_reset, [0] * 6), (no_reset + reset, [0] * 6 + [1] * 3)):
-            raw = np.array(
-                [(*p, b"") for p in packets], dtype=[("timestamp", "uint64"), ("packet_id", "uint16"), ("value", "S2")]
+        filename = self.get_local_path(
+            "blackrock/version_3_0/time_structure/comment_written_before_earlier_spikes/"
+            "comment_written_before_earlier_spikes"
+        )
+        for nsx_to_load in ([], [5]):
+            reader = BlackrockRawIO(filename=filename, nsx_to_load=nsx_to_load)
+            reader.parse_header()
+            self.assertEqual(reader.segment_count(0), 1)
+            returned = sum(
+                reader.get_spike_timestamps(0, 0, unit_index, None, None).size
+                for unit_index in range(reader.spike_channels_count())
             )
-            masks = {"Spikes": raw["packet_id"] == spike, "Comments": raw["packet_id"] == comment}
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always")
-                segment_ids = reader._get_event_segment_ids(raw, masks, "3.0")
-            assert_equal(segment_ids, expected)
-            self.assertEqual(reader._nb_segment_nev, max(expected) + 1)
-            self.assertEqual(len(caught), max(expected))  # one warning for the reset without a reset comment
+            self.assertEqual(returned, 960)
 
 
 if __name__ == "__main__":
