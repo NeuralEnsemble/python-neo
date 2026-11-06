@@ -2760,8 +2760,9 @@ NEV_PACKET_IDENTIFIERS_BY_SPEC = {
         # Packet IDs in this range identify spike events on electrodes. Wider than 2.1's range:
         # Ripple Trellis writes 2.2 files with electrode IDs above 255 (its front-end ports are
         # numbered 1-128, 129-256, 257-384...), and every spike on them was dropped without a
-        # warning (NeuralEnsemble/python-neo#1918). 2048 is the range of 2.3.
-        "Spikes": (1, 2048),
+        # warning (NeuralEnsemble/python-neo#1918). The bound is 5120 because Trellis writes
+        # stimulation packets on 5120 plus the electrode ID.
+        "Spikes": (1, 5120),
     },
     "2.3": {
         "NonNeural": 0,
