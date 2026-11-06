@@ -254,6 +254,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
         # deal with nb_segment and t_start/t_stop per segment
         self._t_starts = {stream_name: {} for stream_name in stream_names}
+        self._segment_t_starts = {seg_index: np.inf for seg_index in range(nb_segment)}
         self._t_stops = {seg_index: 0.0 for seg_index in range(nb_segment)}
 
         for stream_name in stream_names:
@@ -271,6 +272,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                         self._t_starts[sync_stream_name] = {}
                     self._t_starts[sync_stream_name][seg_index] = t_start
 
+                self._segment_t_starts[seg_index] = min(self._segment_t_starts[seg_index], t_start)
                 self._t_stops[seg_index] = max(self._t_stops[seg_index], info["t_stop"])
 
         # fille into header dict
@@ -312,7 +314,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
                             sig_ann["__array_annotations__"][f"channel_location_{ndim}"] = loc[:, ndim]
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.0
+        return self._segment_t_starts[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
         return self._t_stops[seg_index]
@@ -355,7 +357,7 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
         info = self.signals_info_dict[0, "nidq"]  # There are no events that are not in the nidq stream
-        event_times = event_timestamps.astype(dtype) / float(info["sampling_rate"])
+        event_times = event_timestamps.astype(dtype) / float(info["sampling_rate"]) + info["t_start"]
         return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype, event_channel_index):
@@ -404,7 +406,7 @@ def _add_segment_timing(info_list):
     interrupted, and ``.meta`` files modified after acquisition.
 
     Then stores ``info["t_start"] = info["first_sample"] / info["sampling_rate"]``
-    and ``info["t_stop"] = info["sample_length"] / info["sampling_rate"]`` in
+    and ``info["t_stop"] = info["t_start"] + info["sample_length"] / info["sampling_rate"]`` in
     seconds, so downstream code can read both directly without recomputation.
     """
     for info in info_list:
@@ -423,7 +425,7 @@ def _add_segment_timing(info_list):
             )
             info["first_sample"] = 0.0
         info["t_start"] = info["first_sample"] / info["sampling_rate"]
-        info["t_stop"] = info["sample_length"] / info["sampling_rate"]
+        info["t_stop"] = info["t_start"] + info["sample_length"] / info["sampling_rate"]
 
 
 def _build_signals_info_dict(info_list):
