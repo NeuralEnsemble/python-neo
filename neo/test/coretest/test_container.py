@@ -268,6 +268,21 @@ class Test_Container_merge(unittest.TestCase):
         )
 
 
+class Test_Container_set_object_list(unittest.TestCase):
+    def test_set_list(self):
+        seg = neo.core.Segment()
+        sig = neo.core.AnalogSignal([1, 2, 3] * pq.mV, sampling_rate=1 * pq.kHz)
+        seg.analogsignals = [sig]
+        self.assertEqual(len(seg.analogsignals), 1)
+        self.assertIs(sig.segment, seg)
+
+    def test_set_other_type_TypeError(self):
+        seg = neo.core.Segment()
+        sig = neo.core.AnalogSignal([1, 2, 3] * pq.mV, sampling_rate=1 * pq.kHz)
+        with self.assertRaises(TypeError):
+            seg.analogsignals = (sig,)
+
+
 @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
 class Test_pprint(unittest.TestCase):
     def test__pretty(self):

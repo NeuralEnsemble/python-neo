@@ -232,8 +232,7 @@ class NcsSectionsFactory:
             all_gap_inds = np.flatnonzero(np.abs(delta - delta_prediction) > strict_tolerance)
             gap_sizes_us = (delta - delta_prediction)[all_gap_inds]
             ncsSects.detected_gaps = [
-                (int(record_index + 1), int(gap_size))
-                for record_index, gap_size in zip(all_gap_inds, gap_sizes_us)
+                (int(record_index + 1), int(gap_size)) for record_index, gap_size in zip(all_gap_inds, gap_sizes_us)
             ]
 
             # Use user-provided tolerance for actual segmentation
