@@ -24,6 +24,17 @@ from .baserawio import (
 )
 from neo.core import NeoReadWriteError
 
+# A decimal number followed by an optional unit
+# Example: "0.01617", "-1.5e-3", "0.003muV", "256.0Hz"
+# Format:  {number}{unit}
+# Regex tokens:
+#   [-+]?           → optional sign
+#   \d+\.?\d*       → digits with an optional decimal part, e.g. "43", "5.", "0.01617"
+#   \.\d+           → or a number that starts at the decimal point, e.g. ".5"
+#   [eE][-+]?\d+    → optional exponent, e.g. "e-3"
+#   \w*             → the unit, e.g. "muV", possibly empty
+_number_pattern = r"(?P<number>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)(?P<unit>\w*)"
+
 
 class BCI2000RawIO(BaseRawIO):
     """
@@ -76,11 +87,11 @@ class BCI2000RawIO(BaseRawIO):
             if isinstance(gain, str):
                 # some files have strange units attached to gain
                 # in that case it is ignored
-                gain = float(re.match(_number_pattern, gain).group(1))
+                gain = float(re.match(_number_pattern, gain).group("number"))
 
             offset = param_defs["SourceChOffset"]["value"][chan_ix]
             if isinstance(offset, str):
-                offset = float(re.match(_number_pattern, offset).group(1))
+                offset = float(re.match(_number_pattern, offset).group("number"))
             # BCI2000 defines uV = (raw - SourceChOffset) * SourceChGain
             # while neo computes raw * gain + offset
             offset = -offset * gain
@@ -254,10 +265,6 @@ class BCI2000RawIO(BaseRawIO):
         return self._my_events
 
 
-# a decimal number such as "0.003" or "-1.5e-3" followed by optional units such as "muV"
-_number_pattern = r"([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)(\w*)"
-
-
 def parse_bci2000_header(filename):
     # typically we want parameter values in Hz, seconds, or microvolts.
     scales_dict = {
@@ -330,6 +337,8 @@ def parse_bci2000_header(filename):
         if temp != "[ State Vector Definition ]":
             raise NeoReadWriteError(f"State definitions not found in header {filename}")
         state_defs = []
+        # "S64" because NumPy 2.0 deprecated the "a64" alias (https://github.com/numpy/numpy/pull/24854)
+        # and NumPy 2.5 removed it, see https://github.com/NeuralEnsemble/python-neo/pull/1932
         state_def_dtype = [("name", "S64"), ("length", int), ("startVal", int), ("bytePos", int), ("bitPos", int)]
         while True:
             temp = fid.readline().decode("utf8").strip()
