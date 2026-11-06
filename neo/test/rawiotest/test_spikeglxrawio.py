@@ -45,6 +45,8 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         "spikeglx/multi_trigger_multi_gate/CatGT/Supercat-A",
         # One Box"
         "spikeglx/onebox/run_with_only_adc",
+        # nidq with transitions on its digital channels
+        "spikeglx/DigitalChannelTest_g0",
     ]
 
     def test_loading_only_one_probe_in_multi_probe_scenario(self):
