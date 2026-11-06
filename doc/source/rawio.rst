@@ -71,8 +71,11 @@ Basic usage
 
    url_repo = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/'
 
-   for distantfile in ('plexon/File_plexon_2.plx', 'plexon/File_plexon_3.plx', 'blackrock/FileSpec2.3001.nev', 'blackrock/FileSpec2.3001.ns5'):
-       localfile = distantfile.split("/")[1]
+   for distantfile in ['plexon/plx/header_version/version_103/spikes_field_potentials_and_events.plx',
+                       'plexon/plx/header_version/version_107/spikes_continuous_and_events.plx',
+                       'blackrock/version_2_3/events/user_comments/user_comments.nev',
+                       'blackrock/version_2_3/events/user_comments/user_comments.ns5']:
+       localfile = distantfile.split("/")[-1]
        if not os.path.exists(localfile):
           urlretrieve(url_repo + distantfile, localfile)
 
@@ -83,7 +86,7 @@ First create a reader from a class:
 
     In [1]: from neo.rawio import PlexonRawIO
 
-    In [2]: reader = PlexonRawIO(filename='File_plexon_3.plx')
+    In [2]: reader = PlexonRawIO(filename='spikes_continuous_and_events.plx')
 
 Then browse the internal header and display information:
 
@@ -93,12 +96,13 @@ Then browse the internal header and display information:
 
     In [4]: reader
     Out[4]:
-    PlexonRawIO: File_plexon_3.plx
+    PlexonRawIO: spikes_continuous_and_events.plx
     nb_block: 1
     nb_segment:  [1]
-    signal_channels: [V1]
-    spike_channels: [Wspk1u, Wspk2u, Wspk4u, Wspk5u ... Wspk29u Wspk30u Wspk31u Wspk32u]
-    event_channels: []
+    signal_streams: [Memory (chans: 1)]
+    signal_channels: [Memory]
+    spike_channels: [Memory, Memory]
+    event_channels: [StartStop]
 
 You get the number of blocks and segments per block. You have information
 about channels: :attr:`signal_channels`, :attr:`spike_channels`, :attr:`event_channels`.
@@ -110,12 +114,14 @@ All this information is available in the :attr:`header` dict:
     In [5]: for k, v in reader.header.items():
        ...:     print(k, v)
     Out[5]:
-    signal_channels [('V1', 0,  1000., 'int16', '',  2.44140625,  0., 0)]
-    event_channels []
-    nb_segment [1]
     nb_block 1
-    spike_channels [('Wspk1u', 'ch1#0', '',  0.00146484,  0., 0,  30000.)
-    ('Wspk2u', 'ch2#0', '',  0.00146484,  0., 0,  30000.)
+    nb_segment [1]
+    signal_buffers []
+    signal_streams [('Memory', 'Memory', '')]
+    signal_channels [('Memory', '0', 25000., 'int16', '', 0.00015259, 0., 'Memory', '')]
+    spike_channels [('Memory', 'ch1#1', '', 0.00015259, 0., -1, 25000.)
+     ('Memory', 'ch1#2', '', 0.00015259, 0., -1, 25000.)]
+    event_channels [('StartStop', '1', b'event')]
 
 
 Read chunks of signal data and scale them
@@ -144,7 +150,7 @@ Read chunks of signal data and scale them
     Out[13]: ((1024, 1), dtype('float64'))
 
     In [14]: sampling_rate, t_start, units
-    Out[14]: (1000.0, 0.0, '')
+    Out[14]: (25000.0, 0.0, '')
 
 There are 3 ways to select a subset of channels: by index (0-based), by id (IO-specific numbering scheme) or by name (IO-specific naming scheme).
 By index is unambiguous 0 to n-1 (inclusive), ids are unambiguous (though each IO may use a different scheme), by channel name is often unique, but this is not guaranteed.
@@ -159,13 +165,13 @@ Such subsets of channels may be available in specific RawIOs by using the
 :func:`get_group_signal_channel_indexes()` method, if the RawIO has defined separate
 :attr:`group_ids` for each group with those common characteristics.
 
-Example with BlackrockRawIO for the recording `FileSpec2.3001`_:
+Example with BlackrockRawIO for the recording `user_comments`_:
 
 .. ipython::
 
     In [15]: from neo.rawio import BlackrockRawIO
 
-    In [16]: reader = BlackrockRawIO(filename="FileSpec2.3001")
+    In [16]: reader = BlackrockRawIO(filename="user_comments")
 
     In [17]: reader.parse_header()
 
@@ -199,10 +205,10 @@ sorting. So the number of spike channels could be more than the number of physic
     In [25]: for spike_channel_index in range(nb_unit):
        ....:     nb_spike = reader.spike_count(block_index=0, seg_index=0, spike_channel_index=spike_channel_index)
        ....:     print('spike_channel_index', spike_channel_index, 'nb_spike', nb_spike)
-    spike_channel_index 0 nb_spike 259
-    spike_channel_index 1 nb_spike 234
-    spike_channel_index 2 nb_spike 218
-    spike_channel_index 3 nb_spike 253
+    spike_channel_index 0 nb_spike 15
+    spike_channel_index 1 nb_spike 15
+    spike_channel_index 2 nb_spike 14
+    spike_channel_index 3 nb_spike 15
 
 
 Get spike timestamps in a defined time range and convert them to spike times
@@ -211,15 +217,15 @@ Get spike timestamps in a defined time range and convert them to spike times
 .. ipython::
 
     In [26]: spike_timestamps = reader.get_spike_timestamps(block_index=0, seg_index=0, spike_channel_index=0,
-       ....:                                                t_start=0, t_stop=10)
+       ....:                                                t_start=25.8, t_stop=25.9)
 
     In [27]: print(spike_timestamps.shape, spike_timestamps.dtype, spike_timestamps[:5])
-    (86,) uint32 [ 19312  49298  79301 139290 162170]
+    (8,) uint32 [774111 774416 775010 775316 775621]
 
     In [28]: spike_times =  reader.rescale_spike_timestamp( spike_timestamps, dtype='float64')
 
     In [29]: print(spike_times.shape, spike_times.dtype, spike_times[:5])
-    (86,) float64 [0.64373333 1.64326667 2.64336667 4.643      5.40566667]
+    (8,) float64 [25.8037     25.81386667 25.83366667 25.84386667 25.85403333]
 
 
 Get spike waveforms in a defined time range
@@ -228,15 +234,15 @@ Get spike waveforms in a defined time range
 .. ipython::
 
     In [30]: raw_waveforms = reader.get_spike_raw_waveforms(block_index=0, seg_index=0, spike_channel_index=0,
-       ....:                                                t_start=0, t_stop=10)
+       ....:                                                t_start=25.8, t_stop=25.9)
 
     In [31]: print(raw_waveforms.shape, raw_waveforms.dtype, raw_waveforms[0, 0, :4])
-    (86, 1, 48) int16 [-209 -224  -74  205]
+    (8, 1, 48) int16 [-29 -15  20  16]
 
     In [32]: float_waveforms = reader.rescale_waveforms_to_float(raw_waveforms, dtype='float32', spike_channel_index=0)
 
     In [33]: print(float_waveforms.shape, float_waveforms.dtype, float_waveforms[0,0,:4])
-    (86, 1, 48) float32 [-52.25 -56.   -18.5   51.25]
+    (8, 1, 48) float32 [-7.25 -3.75  5.    4.  ]
 
 
 Count events per channel
@@ -244,7 +250,7 @@ Count events per channel
 
 .. ipython::
 
-    In [34]: reader = PlexonRawIO(filename='File_plexon_2.plx')
+    In [34]: reader = PlexonRawIO(filename='spikes_field_potentials_and_events.plx')
 
     In [35]: reader.parse_header()
 
@@ -256,8 +262,8 @@ Count events per channel
     In [38]: for chan_index in range(nb_event_channel):
        ....:     nb_event = reader.event_count(block_index=0, seg_index=0, event_channel_index=chan_index)
        ....:     print('chan_index',chan_index, 'nb_event', nb_event)
-    chan_index 0 nb_event 1
-    chan_index 1 nb_event 0
+    chan_index 0 nb_event 0
+    chan_index 1 nb_event 10
     chan_index 2 nb_event 0
     chan_index 3 nb_event 0
     ...
@@ -270,16 +276,17 @@ Read event timestamps and times
 .. ipython::
 
     In [39]: ev_timestamps, ev_durations, ev_labels = reader.get_event_timestamps(
-       ....:    block_index=0, seg_index=0, event_channel_index=0,
+       ....:    block_index=0, seg_index=0, event_channel_index=1,
        ....:    t_start=None, t_stop=None)
 
     In [40]: print(ev_timestamps, ev_durations, ev_labels)
-    [1268] None ['0']
+    [  1706  24320  46937  69552  92166 114781 137394 160008 182622 205237] None ['0' '0' '0' '0' '0' '0' '0' '0' '0' '0']
 
     In [41]: ev_times = reader.rescale_event_timestamp(ev_timestamps, dtype='float64')
 
     In [42]: print(ev_times)
-    [ 0.0317]
+    [0.04265  0.608    1.173425 1.7388   2.30415  2.869525 3.43485  4.0002
+     4.56555  5.130925]
 
 Signal streams and signal buffers
 ---------------------------------
@@ -317,4 +324,4 @@ See :doc:`rawiolist`.
 
 
 .. _tridesclous: https://github.com/tridesclous/tridesclous
-.. _FileSpec2.3001: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/blackrock
+.. _user_comments: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data/src/master/blackrock/version_2_3/events/user_comments

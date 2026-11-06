@@ -12,13 +12,13 @@ from matplotlib import pyplot
 
 import neo
 
-distantfile = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/plexon/File_plexon_3.plx"
-localfile = "File_plexon_3.plx"
+distantfile = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/plexon/plx/header_version/version_107/spikes_continuous_and_events.plx"
+localfile = "spikes_continuous_and_events.plx"
 
 urllib.request.urlretrieve(distantfile, localfile)
 
 # reader = neo.io.NeuroExplorerIO(filename='File_neuroexplorer_2.nex')
-reader = neo.io.PlexonIO(filename="File_plexon_3.plx")
+reader = neo.io.PlexonIO(filename="spikes_continuous_and_events.plx")
 
 bl = reader.read(lazy=False)[0]
 for seg in bl.segments:

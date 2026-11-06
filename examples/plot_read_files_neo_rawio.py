@@ -22,8 +22,8 @@ from neo.rawio import PlexonRawIO
 # fact.
 
 url_repo = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
-distantfile = url_repo + "plexon/File_plexon_3.plx"
-localfile = "File_plexon_3.plx"
+distantfile = url_repo + "plexon/plx/header_version/version_107/spikes_continuous_and_events.plx"
+localfile = "spikes_continuous_and_events.plx"
 urllib.request.urlretrieve(distantfile, localfile)
 
 ###############################################################
@@ -34,7 +34,7 @@ urllib.request.urlretrieve(distantfile, localfile)
 # `parse_header` function. This collects metadata as well as
 # make all future steps much faster for us
 
-reader = PlexonRawIO(filename="File_plexon_3.plx")
+reader = PlexonRawIO(filename="spikes_continuous_and_events.plx")
 reader.parse_header()
 print(reader)
 # we can view metadata in the header
@@ -112,19 +112,19 @@ float_waveforms = reader.rescale_waveforms_to_float(raw_waveforms, dtype="float3
 print(f"{float_waveforms.shape=}\n{float_waveforms.dtype=}{float_waveforms[0, 0, :4]=}\n")
 
 #########################################################################
-# RawIOs can also read event timestamps. But looks like our luck ran out
-# let's grab a new file to see this feature
+# RawIOs can also read event timestamps. Our file has a single event, so
+# let's grab a new file with more events to see this feature
 
 # Read event timestamps and times (take another file)
-distantfile = url_repo + "plexon/File_plexon_2.plx"
-localfile = "File_plexon_2.plx"
+distantfile = url_repo + "plexon/plx/header_version/version_103/spikes_field_potentials_and_events.plx"
+localfile = "spikes_field_potentials_and_events.plx"
 urllib.request.urlretrieve(distantfile, localfile)
 
 #########################################################################
 # Since this is a new file we need to read initialize our reader as well
 # as parse the header
 
-reader = PlexonRawIO(filename="File_plexon_2.plx")
+reader = PlexonRawIO(filename="spikes_field_potentials_and_events.plx")
 reader.parse_header()
 # if we look at this header we see it is different than the header above
 print(reader.header)
@@ -148,7 +148,7 @@ for chan_index in range(nb_event_channel):
 # and convert to real times with a rescale function.
 
 ev_timestamps, ev_durations, ev_labels = reader.get_event_timestamps(
-    block_index=0, seg_index=0, event_channel_index=0, t_start=None, t_stop=None
+    block_index=0, seg_index=0, event_channel_index=1, t_start=None, t_stop=None
 )
 print(f"{ev_timestamps=}\n{ev_durations=}\n{ev_labels=}\n")
 ev_times = reader.rescale_event_timestamp(ev_timestamps, dtype="float64")
