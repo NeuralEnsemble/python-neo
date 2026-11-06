@@ -1028,22 +1028,32 @@ class BlackrockRawIO(BaseRawIO):
         )
         unit_spikes = all_spikes[mask]
 
+        timestamp = unit_spikes["timestamp"]
+        sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
+        unit_spikes = unit_spikes[sl]
+
+        # Read the waveforms of only these spikes, from the positions of their packets in the file
+        packet_size_bytes = int(self._nev_basic_header["bytes_in_data_packets"])
+        spike_packets = self._create_mmap_view(
+            fid=self._get_nev_file_handle(),
+            dtype=NEV_PACKET_DATA_TYPES_BY_SPEC[self._nev_spec]["Spikes"](packet_size_bytes),
+            offset=int(self._nev_basic_header["bytes_in_headers"]),
+            num_samples=self._nev_packet_count,
+        )
+        raw_waveforms = spike_packets["waveform"][unit_spikes["position"]]
+
         wf_dtype = self._nev_params("waveform_dtypes")[channel_id]
         wf_size = self._nev_params("waveform_size")[channel_id]
         wf_byte_size = np.dtype(wf_dtype).itemsize * wf_size
 
         dt1 = [
-            ("extra", "S{}".format(unit_spikes["waveform"].dtype.itemsize - wf_byte_size)),
+            ("extra", "S{}".format(raw_waveforms.dtype.itemsize - wf_byte_size)),
             ("ch_waveform", "S{}".format(wf_byte_size)),
         ]
 
-        waveforms = unit_spikes["waveform"].view(dt1)["ch_waveform"].flatten().view(wf_dtype)
+        waveforms = raw_waveforms.view(dt1)["ch_waveform"].flatten().view(wf_dtype)
 
         waveforms = waveforms.reshape(int(unit_spikes.size), 1, int(wf_size))
-
-        timestamp = unit_spikes["timestamp"]
-        sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
-        waveforms = waveforms[sl]
 
         return waveforms
 
@@ -1996,15 +2006,34 @@ class BlackrockRawIO(BaseRawIO):
 
         event_segment_ids = self._get_event_segment_ids(raw_data, masks, spec)
 
-        # Extract data for each packet type using view-then-mask pattern
-        # Strategy: reinterpret entire raw_data array with each packet type's structure, then filter
-        # All NEV data packets are fixed-width, so temporarily viewing "Spikes" data as "Comments"
-        # structure is safe - we immediately filter to keep only packets that actually match.
-        # This avoids creating copies of large data arrays during the parsing process.
+        # All NEV data packets are fixed-width, so raw_data is viewed with the structure of each
+        # packet type and the mask copies the packets of that type.
+        # Spike packets are most of the file, so for them only the fields used to select spikes are
+        # copied, with the position of each packet. _get_spike_raw_waveforms reads the waveforms
+        # from those positions.
+        self._nev_packet_count = n_packets
         data = {}
         for data_type in packet_identifiers:
             mask = masks[data_type]
-            data[data_type] = (raw_data.view(types[data_type])[mask], event_segment_ids[mask])
+            packets = raw_data.view(types[data_type])
+            if data_type == "Spikes":
+                positions = np.flatnonzero(mask)
+                position_dtype = "uint32" if n_packets <= 2**32 else "uint64"
+                spikes = np.empty(
+                    positions.size,
+                    dtype=[
+                        ("timestamp", ts_format),
+                        ("packet_id", "uint16"),
+                        ("unit_class_nb", "uint8"),
+                        ("position", position_dtype),
+                    ],
+                )
+                for field in ("timestamp", "packet_id", "unit_class_nb"):
+                    spikes[field] = packets[field][positions]
+                spikes["position"] = positions
+                data[data_type] = (spikes, event_segment_ids[mask])
+            else:
+                data[data_type] = (packets[mask], event_segment_ids[mask])
 
         return data
 
