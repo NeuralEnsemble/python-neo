@@ -1822,38 +1822,48 @@ class BlackrockRawIO(BaseRawIO):
 
         Information from Kian Torab, Blackrock Microsystems.
         """
-        ext_header = []
+        digitization_factors = self._nev_params("digitization_factor") if self._avail_files["nev"] else {}
 
-        for i, elid in enumerate(self._nsx_ext_header[nsx_nb]["electrode_id"]):
+        ext_header = []
+        electrode_ids_missing_from_nev = []
+        for electrode_id in self._nsx_ext_header[nsx_nb]["electrode_id"]:
             # Get digitization factor from NEV
-            if self._avail_files["nev"]:
+            if electrode_id in digitization_factors:
+                digitization_factor = digitization_factors[electrode_id]
                 # Workaround for DigitalFactor overflow in buggy Cerebus systems
                 # Fix from NPMK toolbox (openNEV, line 464, git rev d0a25eac902704a3a29fa5dfd3aed0744f4733ed)
-                dig_factor = self._nev_params("digitization_factor")[elid]
-                if dig_factor == 21516:
-                    dig_factor = 152592.547
+                if digitization_factor == 21516:
+                    digitization_factor = 152592.547
                 units = "uV"
             else:
-                dig_factor = float("nan")
+                digitization_factor = float("nan")
                 units = ""
-                if i == 0:  # Only warn once
-                    warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
+                electrode_ids_missing_from_nev.append(int(electrode_id))
 
             # Generate label
-            if elid < 129:
-                label = f"chan{elid}"
+            if electrode_id < 129:
+                label = f"chan{electrode_id}"
             else:
-                label = f"ainp{(elid - 129 + 1)}"
+                label = f"ainp{electrode_id - 129 + 1}"
 
             ext_header.append(
                 {
                     "labels": label,
                     "units": units,
-                    "min_analog_val": -float(dig_factor),
-                    "max_analog_val": float(dig_factor),
+                    "min_analog_val": -float(digitization_factor),
+                    "max_analog_val": float(digitization_factor),
                     "min_digital_val": -1000,
                     "max_digital_val": 1000,
                 }
+            )
+
+        if not self._avail_files["nev"]:
+            warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
+        elif electrode_ids_missing_from_nev:
+            warnings.warn(
+                f"The ns{nsx_nb} channels with electrode ids {electrode_ids_missing_from_nev} are not in the nev "
+                "file, so they cannot be rescaled to voltage and raw data will be returned for them.",
+                UserWarning,
             )
 
         return ext_header
