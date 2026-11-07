@@ -2,7 +2,6 @@
 Tests of neo.rawio.examplerawio
 """
 
-import os
 import unittest
 import warnings
 
@@ -153,7 +152,7 @@ class TestBlackrockRawIO(
                 raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c])
                 raw_sigs = raw_sigs.flatten()
                 # The Matlab export stops one sample before the end of the file
-                # (see test_nsx21_signal_size_matches_file_size)
+                # (see test_nsx21_reads_the_last_sample)
                 self.assertEqual(raw_sigs.size, lfp_ml.shape[1] + 1)
                 assert_equal(raw_sigs[: lfp_ml.shape[1]], lfp_ml[c, :])
 
@@ -191,23 +190,20 @@ class TestBlackrockRawIO(
                         matlab_digievents = mts_ml[mid_ml == int(label)]
                         assert_equal(python_digievents, matlab_digievents)
 
-    def test_nsx21_signal_size_matches_file_size(self):
-        """
-        NSx 2.1 headers do not store the number of samples, so it has to come from the file size:
-        a 32-byte basic header and 4 bytes per channel, then int16 samples for every channel.
-        """
-        dirname = self.get_local_path("blackrock/blackrock_2_1/l101210-001")
-        for nsx_nb in (2, 5):
-            reader = BlackrockRawIO(dirname, nsx_to_load=nsx_nb)
-            reader.parse_header()
-            num_channels = reader.signal_channels_count(stream_index=0)
-            data_bytes = os.path.getsize(f"{dirname}.ns{nsx_nb}") - (32 + 4 * num_channels)
-            self.assertEqual(data_bytes % (2 * num_channels), 0)
-            expected_num_samples = data_bytes // (2 * num_channels)
-            self.assertEqual(reader.get_signal_size(block_index=0, seg_index=0, stream_index=0), expected_num_samples)
-            # the last sample is readable
-            last = reader.get_analogsignal_chunk(i_start=expected_num_samples - 1, i_stop=expected_num_samples)
-            self.assertEqual(last.shape, (1, num_channels))
+    def test_nsx21_reads_the_last_sample(self):
+        filename = self.get_local_path("blackrock/version_2_1/spikes/offline_sorted_units/online_sorted_units")
+
+        reader = BlackrockRawIO(filename=filename, nsx_to_load=2)
+        reader.parse_header()
+        number_of_samples = reader.get_signal_size(block_index=0, seg_index=0, stream_index=0)
+        expected_number_of_samples = 300  # 0.3 s at 1 kHz
+        self.assertEqual(number_of_samples, expected_number_of_samples)
+
+        reader = BlackrockRawIO(filename=filename, nsx_to_load=5)
+        reader.parse_header()
+        number_of_samples = reader.get_signal_size(block_index=0, seg_index=0, stream_index=0)
+        expected_number_of_samples = 9000  # 0.3 s at 30 kHz
+        self.assertEqual(number_of_samples, expected_number_of_samples)
 
     def test_blackrockrawio_ptp_timestamps(self):
         dirname = self.get_local_path("blackrock/blackrock_3_0_ptp/20231027-125608-001")
