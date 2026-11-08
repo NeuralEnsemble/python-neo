@@ -151,7 +151,10 @@ class TestBlackrockRawIO(
             for c in range(0, param[2]):
                 raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c])
                 raw_sigs = raw_sigs.flatten()
-                assert_equal(raw_sigs[:], lfp_ml[c, :])
+                # The Matlab export stops one sample before the end of the file
+                # (see test_nsx21_reads_the_last_sample)
+                self.assertEqual(raw_sigs.size, lfp_ml.shape[1] + 1)
+                assert_equal(raw_sigs[: lfp_ml.shape[1]], lfp_ml[c, :])
 
             # Check if spikes in channels are equal
             nb_unit = reader.spike_channels_count()
@@ -186,6 +189,21 @@ class TestBlackrockRawIO(
                         python_digievents = all_timestamps[labels == label]
                         matlab_digievents = mts_ml[mid_ml == int(label)]
                         assert_equal(python_digievents, matlab_digievents)
+
+    def test_nsx21_reads_the_last_sample(self):
+        filename = self.get_local_path("blackrock/version_2_1/spikes/offline_sorted_units/online_sorted_units")
+
+        reader = BlackrockRawIO(filename=filename, nsx_to_load=2)
+        reader.parse_header()
+        number_of_samples = reader.get_signal_size(block_index=0, seg_index=0, stream_index=0)
+        expected_number_of_samples = 300  # 0.3 s at 1 kHz
+        self.assertEqual(number_of_samples, expected_number_of_samples)
+
+        reader = BlackrockRawIO(filename=filename, nsx_to_load=5)
+        reader.parse_header()
+        number_of_samples = reader.get_signal_size(block_index=0, seg_index=0, stream_index=0)
+        expected_number_of_samples = 9000  # 0.3 s at 30 kHz
+        self.assertEqual(number_of_samples, expected_number_of_samples)
 
     def test_blackrockrawio_ptp_timestamps(self):
         dirname = self.get_local_path("blackrock/blackrock_3_0_ptp/20231027-125608-001")

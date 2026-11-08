@@ -179,13 +179,13 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         reader = BlackrockIO(filename=filename, nsx_to_load=5)
         seg = reader.read_segment()
         self.assertEqual(len(seg.analogsignals), 1)
-        self.assertEqual(seg.analogsignals[0].shape, (109224, 96))
+        self.assertEqual(seg.analogsignals[0].shape, (109225, 96))
 
         # load only ns2
         reader = BlackrockIO(filename=filename, nsx_to_load=2)
         seg = reader.read_segment()
         self.assertEqual(len(seg.analogsignals), 1)
-        self.assertEqual(seg.analogsignals[0].shape, (3640, 6))
+        self.assertEqual(seg.analogsignals[0].shape, (3641, 6))
 
         # load only ns2
         reader = BlackrockIO(filename=filename, nsx_to_load=[2])
@@ -196,14 +196,14 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         reader = BlackrockIO(filename=filename, nsx_to_load=[2, 5])
         seg = reader.read_segment()
         self.assertEqual(len(seg.analogsignals), 2)
-        self.assertEqual(seg.analogsignals[0].shape, (3640, 6))
-        self.assertEqual(seg.analogsignals[1].shape, (109224, 96))
+        self.assertEqual(seg.analogsignals[0].shape, (3641, 6))
+        self.assertEqual(seg.analogsignals[1].shape, (109225, 96))
 
         # load only ns5
         reader = BlackrockIO(filename=filename, nsx_to_load="max")
         seg = reader.read_segment()
         self.assertEqual(len(seg.analogsignals), 1)
-        self.assertEqual(seg.analogsignals[0].shape, (109224, 96))
+        self.assertEqual(seg.analogsignals[0].shape, (109225, 96))
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_compare_blackrockio_with_matlabloader_v21(self):
