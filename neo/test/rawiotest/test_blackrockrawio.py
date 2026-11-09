@@ -4,6 +4,7 @@ Tests of neo.rawio.examplerawio
 
 import unittest
 import warnings
+from datetime import datetime
 
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
@@ -31,6 +32,7 @@ class TestBlackrockRawIO(
         "blackrock/blackrock_3_0/file_spec_3_0",
         "blackrock/blackrock_3_0_ptp/20231027-125608-001",
         "blackrock/segment/ResetCorrect/reset",
+        "blackrock/version_2_1/continuous_signals/ids_differ_from_nev_electrode_ids/ids_differ_from_nev_electrode_ids",
     ]
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
@@ -685,6 +687,27 @@ class TestBlackrockRawIO(
             reader.get_spike_timestamps(0, 0, unit_index, None, None).size for unit_index in range(len(electrodes))
         ]
         self.assertEqual(spikes, [1] * 28)
+
+    def test_load_nev_false_still_reads_the_nev_headers(self):
+        """
+        Spec 2.1 nsX files take their scaling from the nev headers, and every spec takes its recording
+        date from them, so load_nev=False still reads them. Only the spikes and events are skipped.
+        """
+        filename = self.get_local_path("blackrock/version_2_1/spikes/offline_sorted_units/online_sorted_units")
+        reader = BlackrockRawIO(filename=filename, nsx_to_load=2, load_nev=False)
+        reader.parse_header()
+
+        gains = set(reader.header["signal_channels"]["gain"])
+        expected_gains = {152.592547}
+        self.assertEqual(gains, expected_gains)
+
+        rec_datetime = reader.raw_annotations["blocks"][0]["rec_datetime"]
+        expected_rec_datetime = datetime(2010, 12, 10, 10, 50, 10, 156000)
+        self.assertEqual(rec_datetime, expected_rec_datetime)
+
+        number_of_spike_channels = reader.spike_channels_count()
+        expected_number_of_spike_channels = 0
+        self.assertEqual(number_of_spike_channels, expected_number_of_spike_channels)
 
 
 if __name__ == "__main__":

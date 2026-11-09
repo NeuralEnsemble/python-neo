@@ -100,7 +100,8 @@ class BlackrockRawIO(BaseRawIO):
         If 'all', then all nsX will be loaded. Contrary to previous version of the IO  (<0.7), nsx_to_load
         must be set at the init before parse_header().
     load_nev: bool, default: True
-        Load (or not) events/spikes by ignoring or not the nev file.
+        Load (or not) the events and spikes of the nev file. Its headers are read whenever the file
+        exists, as spec 2.1 nsX files take their scaling from them.
     gap_tolerance_ms : float | None, default: None
         Maximum acceptable gap size in milliseconds for automatic segmentation.
 
@@ -221,10 +222,11 @@ class BlackrockRawIO(BaseRawIO):
                 if ext.startswith("ns"):
                     self._avail_nsx.append(int(ext[-1]))
 
-        if not load_nev:
-            self._avail_files["nev"] = False
+        # The nev headers are read whenever the file exists, as spec 2.1 nsX files take their
+        # scaling from them. load_nev only decides whether its spikes and events are read.
+        self._load_nev_data = load_nev and self._avail_files["nev"]
 
-        if not self._avail_files["nev"] and not self._avail_nsx:
+        if not self._load_nev_data and not self._avail_nsx:
             raise IOError("No Blackrock files found in specified path")
 
         # These dictionaries are used internally to map the file specification
@@ -274,6 +276,7 @@ class BlackrockRawIO(BaseRawIO):
             nev_filename = f"{self._filenames['nev']}.nev"
             self._nev_basic_header, self._nev_ext_header = self._read_nev_header(self._nev_spec)
 
+        if self._load_nev_data:
             self.nev_data = self._read_nev_data(self._nev_spec, nev_filename)
             spikes, spike_segment_ids = self.nev_data["Spikes"]
 
@@ -402,7 +405,7 @@ class BlackrockRawIO(BaseRawIO):
                 self._nsx_data_header[nsx_nb] = self._segment_nsx_data(parsed_data_headers, nsx_nb)
 
                 # Match NSX and NEV segments for v2.3
-                if self._avail_files["nev"]:
+                if self._load_nev_data:
                     self._match_nsx_and_nev_segment_ids(nsx_nb)
 
                 sr = self._nsx_sampling_frequency[nsx_nb]
@@ -493,7 +496,7 @@ class BlackrockRawIO(BaseRawIO):
                         t_stop = max(t_stop, t_start + length / self._nsx_sampling_frequency[nsx_nb])
                     self._sigs_t_starts[nsx_nb].append(t_start)
 
-                if self._avail_files["nev"]:
+                if self._load_nev_data:
                     max_nev_time = 0
                     for k, (data, ev_ids) in self.nev_data.items():
                         segment_mask = ev_ids == data_bl
@@ -629,7 +632,7 @@ class BlackrockRawIO(BaseRawIO):
                 st_ann["description"] = f"SpikeTrain channel_id: {channel_id}, unit_id: {unit_id}"
                 st_ann["file_origin"] = self._filenames["nev"] + ".nev"
 
-            if self._avail_files["nev"]:
+            if self._load_nev_data:
                 ev_dict = self._nonneural_evdicts[self._nev_spec](events_data)
                 if "Comments" in self.nev_data:
                     ev_dict.update(self._comment_evdict[self._nev_spec](comments_data))
@@ -1832,38 +1835,48 @@ class BlackrockRawIO(BaseRawIO):
 
         Information from Kian Torab, Blackrock Microsystems.
         """
-        ext_header = []
+        digitization_factors = self._nev_params("digitization_factor") if self._avail_files["nev"] else {}
 
-        for i, elid in enumerate(self._nsx_ext_header[nsx_nb]["electrode_id"]):
+        ext_header = []
+        electrode_ids_missing_from_nev = []
+        for electrode_id in self._nsx_ext_header[nsx_nb]["electrode_id"]:
             # Get digitization factor from NEV
-            if self._avail_files["nev"]:
+            if electrode_id in digitization_factors:
+                digitization_factor = digitization_factors[electrode_id]
                 # Workaround for DigitalFactor overflow in buggy Cerebus systems
                 # Fix from NPMK toolbox (openNEV, line 464, git rev d0a25eac902704a3a29fa5dfd3aed0744f4733ed)
-                dig_factor = self._nev_params("digitization_factor")[elid]
-                if dig_factor == 21516:
-                    dig_factor = 152592.547
+                if digitization_factor == 21516:
+                    digitization_factor = 152592.547
                 units = "uV"
             else:
-                dig_factor = float("nan")
+                digitization_factor = float("nan")
                 units = ""
-                if i == 0:  # Only warn once
-                    warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
+                electrode_ids_missing_from_nev.append(int(electrode_id))
 
             # Generate label
-            if elid < 129:
-                label = f"chan{elid}"
+            if electrode_id < 129:
+                label = f"chan{electrode_id}"
             else:
-                label = f"ainp{(elid - 129 + 1)}"
+                label = f"ainp{electrode_id - 129 + 1}"
 
             ext_header.append(
                 {
                     "labels": label,
                     "units": units,
-                    "min_analog_val": -float(dig_factor),
-                    "max_analog_val": float(dig_factor),
+                    "min_analog_val": -float(digitization_factor),
+                    "max_analog_val": float(digitization_factor),
                     "min_digital_val": -1000,
                     "max_digital_val": 1000,
                 }
+            )
+
+        if not self._avail_files["nev"]:
+            warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
+        elif electrode_ids_missing_from_nev:
+            warnings.warn(
+                f"The ns{nsx_nb} channels with electrode ids {electrode_ids_missing_from_nev} are not in the nev "
+                "file, so they cannot be rescaled to voltage and raw data will be returned for them.",
+                UserWarning,
             )
 
         return ext_header
@@ -2476,7 +2489,7 @@ class BlackrockRawIO(BaseRawIO):
                 del self._nsx_data_header[nsx_nb][seg_index]
 
             # Remap nev segment ids: shift down all ids above the removed segment
-            if self._avail_files["nev"]:
+            if self._load_nev_data:
                 for _data, ev_ids in self.nev_data.values():
                     ev_ids[ev_ids > seg_index] -= 1
 
