@@ -1695,9 +1695,6 @@ class BaseRawWithBufferApiIO(BaseRawIO):
             else:
                 raise RuntimeError("Should never happen")
 
-            if buffer_slice is not None:
-                raw_sigs = raw_sigs[:, buffer_slice]
-
         else:
             raise NotImplementedError()
 
