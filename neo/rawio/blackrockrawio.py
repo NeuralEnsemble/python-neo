@@ -2021,12 +2021,15 @@ class BlackrockRawIO(BaseRawIO):
                 position_dtype = "uint32" if n_packets <= 2**32 else "uint64"
                 spikes = np.empty(
                     positions.size,
-                    dtype=[
-                        ("timestamp", ts_format),
-                        ("packet_id", "uint16"),
-                        ("unit_class_nb", "uint8"),
-                        ("position", position_dtype),
-                    ],
+                    dtype=np.dtype(
+                        [
+                            ("timestamp", ts_format),
+                            ("packet_id", "uint16"),
+                            ("unit_class_nb", "uint8"),
+                            ("position", position_dtype),
+                        ],
+                        align=True,
+                    ),
                 )
                 for field in ("timestamp", "packet_id", "unit_class_nb"):
                     spikes[field] = packets[field][positions]
