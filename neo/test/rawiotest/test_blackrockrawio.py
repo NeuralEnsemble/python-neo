@@ -31,6 +31,7 @@ class TestBlackrockRawIO(
         "blackrock/blackrock_3_0/file_spec_3_0",
         "blackrock/blackrock_3_0_ptp/20231027-125608-001",
         "blackrock/segment/ResetCorrect/reset",
+        "blackrock/version_2_1/continuous_signals/ids_differ_from_nev_electrode_ids/ids_differ_from_nev_electrode_ids",
     ]
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
