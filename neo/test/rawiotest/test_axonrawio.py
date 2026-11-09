@@ -30,6 +30,85 @@ class TestAxonRawIO(
 
         reader.read_raw_protocol()
 
+    def test_read_raw_protocol_epoch_shapes(self):
+        # One file per epoch shape, on DAC 1. The first holding is 1/64 of the sweep (312 of 20000
+        # samples), then a step to -20 mV, a step to -10 mV and the shape from -10 mV to 25 mV over
+        # samples 5312 to 15312, with trains of period 1000 and width 200. Expected values from the
+        # vendor library (ABF_GetWaveform, ABF File Support Pack 2.03).
+        start = 5312
+        expected = {
+            "step": {0: 25.0, 9999: 25.0},
+            "ramp": {0: -9.99825, 5000: 7.50175, 9999: 24.99825},
+            "pulse_train": {0: 25.0, 199: 25.0, 200: -10.0, 1000: 25.0},
+            "triangle_train": {100: 7.5, 200: 25.0, 600: 7.5},
+            "cosine_train": {0: -10.0, 250: 7.5, 500: 25.0},
+            "biphasic_train": {50: 25.0, 150: -45.0, 250: -10.0},
+        }
+        for shape, values in expected.items():
+            with self.subTest(shape=shape):
+                filename = self.get_local_path(f"axon/intracellular_data/read_raw_protocol/{shape}.abf")
+                reader = AxonRawIO(filename=filename)
+                reader.parse_header()
+                sigs_by_segments, _, _ = reader.read_raw_protocol()
+                waveform = sigs_by_segments[0][1]
+                self.assertEqual(waveform[311], -10.0)
+                self.assertEqual(waveform[312], -20.0)
+                self.assertEqual(waveform[start - 1], -10.0)
+                for offset, value in values.items():
+                    self.assertAlmostEqual(waveform[start + offset], value, places=4)
+                self.assertEqual(waveform[start + 10000], -10.0)
+
+    def test_read_raw_protocol_increments(self):
+        # A level that grows by 10 pA each sweep (DAC 0), and a ramp on DAC 1 whose duration grows
+        # by 20 samples each sweep, so the step after it starts later. Expected values from the
+        # vendor library.
+        reader = AxonRawIO(
+            filename=self.get_local_path("axon/intracellular_data/read_raw_protocol/level_increment.abf")
+        )
+        reader.parse_header()
+        sigs_by_segments, _, _ = reader.read_raw_protocol()
+        self.assertEqual([sigs[0][2937] for sigs in sigs_by_segments], [-50.0, -40.0, -30.0])
+
+        filename = self.get_local_path("axon/intracellular_data/read_raw_protocol/duration_increment.abf")
+        reader = AxonRawIO(filename=filename)
+        reader.parse_header()
+        sigs_by_segments, _, _ = reader.read_raw_protocol()
+        for sweep, sigs in enumerate(sigs_by_segments):
+            step_start = 4170 + 20 * sweep
+            self.assertLess(sigs[1][step_start - 2], 1.0 + sweep)
+            self.assertEqual(sigs[1][step_start], 1.0 + sweep)
+
+    def test_read_raw_protocol_last_epoch_level(self):
+        # A ramp to 50 mV that grows by 20 mV each sweep, with the level between sweeps set to the
+        # last epoch's level, so each sweep starts where the previous one ended.
+        reader = AxonRawIO(
+            filename=self.get_local_path("axon/intracellular_data/read_raw_protocol/last_epoch_level_ramp.abf")
+        )
+        reader.parse_header()
+        sigs_by_segments, _, _ = reader.read_raw_protocol()
+        self.assertEqual([sigs[0][0] for sigs in sigs_by_segments], [0.0, 50.0, 70.0, 90.0])
+        self.assertAlmostEqual(sigs_by_segments[0][0][-1], 50.0, places=4)
+
+    def test_read_raw_protocol_abf1(self):
+        # ABF 1.83, four channels, a step on DAC 1 from 0 to -400 pA growing by 50 pA each sweep.
+        # Expected values from the vendor library.
+        reader = AxonRawIO(filename=self.get_local_path("axon/intracellular_data/tags/episodic_inside_sweep.abf"))
+        reader.parse_header()
+        sigs_by_segments, names, units = reader.read_raw_protocol()
+        self.assertEqual((names[1], units[1]), ("Cmd 1", "pA"))
+        waveform = sigs_by_segments[2][1]
+        self.assertEqual(waveform.size, 20000)
+        self.assertEqual(waveform[1311], 0.0)
+        self.assertEqual(waveform[1312], -300.0)
+        self.assertEqual(waveform[7311], -300.0)
+        self.assertEqual(waveform[7312], 0.0)
+
+    def test_read_raw_protocol_warns_on_unsupported_features(self):
+        reader = AxonRawIO(filename=self.get_local_path("axon/intracellular_data/read_raw_protocol/user_list.abf"))
+        reader.parse_header()
+        with self.assertWarnsRegex(UserWarning, "user lists"):
+            reader.read_raw_protocol()
+
     def test_empty_channel_name_gets_fallback(self):
         # Some ABF files store a blank ADC channel name, which collapses to "" after space
         # stripping and leaves the channel unaddressable by name. A positional fallback (ch{id})
