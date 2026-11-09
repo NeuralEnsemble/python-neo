@@ -49,6 +49,7 @@ reads abf files - would be good to cross-check
 import os
 import struct
 import datetime
+import warnings
 from io import open, BufferedReader
 
 import numpy as np
@@ -383,7 +384,7 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
     def read_raw_protocol(self):
         """
-        Read stimulus waveforms (DAC output protocols) from ABF2 files.
+        Read stimulus waveforms (DAC output protocols) from ABF files.
 
         Purpose
         -------
@@ -404,10 +405,11 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
         Limitations
         -----------
-        - ABF2 files only: ABF1 files don't store protocol sections, though
-          protocols can theoretically be reconstructed from ABF1 headers
+        - ABF1 files need version 1.6 or later when a DAC plays a waveform
         - Waveforms are RECONSTRUCTED from epoch definitions, not recorded data
-        - Some complex protocols may not reconstruct perfectly (see TODO in code)
+        - User lists, alternating outputs, stimulus-file waveforms and conditioning
+          trains are not reconstructed yet: a warning names them and the waveform
+          follows the epoch table only
 
         Returns
         -------
@@ -443,60 +445,230 @@ class AxonRawIO(BaseRawWithBufferApiIO):
 
         Notes
         -----
-        Waveforms are constructed from:
-        - Holding levels (fDACHoldingLevel)
-        - Epoch definitions (EpochPerDACSection) describing step changes
+        Waveforms are constructed the way the vendor library (``ABFH_GetWaveform``
+        in the ABF File Support Pack) does, from:
+        - Holding levels (fDACHoldingLevel), for the first and last 1/64 of the
+          sweep
+        - Epoch definitions (EpochPerDACSection) in their shape: step, ramp, or
+          pulse, triangle, cosine or biphasic train
         - Episode number (waveforms can change across episodes via increment
           parameters)
+        - The "use last epoch level" option (nInterEpisodeLevel), where a sweep
+          starts at the level the previous one ended
+        A DAC with no waveform, and every DAC outside episodic stimulation mode,
+        stays at its holding level.
 
         Author: JS Nowacki
         """
-        info = self._axon_info
+        protocol = _get_protocol(self._axon_info)
+        unsupported = _unsupported_protocol_features(protocol)
+        if unsupported:
+            warnings.warn(
+                f"read_raw_protocol does not reconstruct {', '.join(unsupported)} yet, so the waveforms of "
+                f"{self.filename} follow the epoch table only and can differ from what was played."
+            )
 
-        if info["fFileVersionNumber"] < 2.0:
-            raise IOError("Protocol section is only present in ABF2 files.")
-
-        nADC = info["sections"]["ADCSection"]["llNumEntries"]  # Number of ADC channels
-        nDAC = info["sections"]["DACSection"]["llNumEntries"]  # Number of DAC channels
-        nSam = int(info["protocol"]["lNumSamplesPerEpisode"] / nADC)  # Number of samples per episode
-        nEpi = info["lActualEpisodes"]  # Actual number of episodes
-
-        # Make a list of segments with analog signals with just holding levels
-        # List of segments relates to number of episodes, as for recorded data
+        n_channels = protocol["n_channels"]
         sigs_by_segments = []
-        for epiNum in range(nEpi):
-            # One analog signal for each DAC in segment (episode)
+        for episode in range(1, protocol["n_episodes"] + 1):
             signals = []
-            for DACNum in range(nDAC):
-                sig = np.ones(nSam) * info["listDACInfo"][DACNum]["fDACHoldingLevel"]
-                # If there are epoch infos for this DAC
-                if DACNum in info["dictEpochInfoPerDAC"]:
-                    # Save last sample index
-                    i_last = int(nSam * 15625 / 10**6)
-                    # TODO guess for first holding
-                    # Go over EpochInfoPerDAC and change the analog signal
-                    # according to the epochs
-                    epochInfo = info["dictEpochInfoPerDAC"][DACNum]
-                    for epochNum, epoch in epochInfo.items():
-                        i_begin = i_last
-                        i_end = i_last + epoch["lEpochInitDuration"] + epoch["lEpochDurationInc"] * epiNum
-                        dif = i_end - i_begin
-                        sig[i_begin:i_end] = np.ones(dif) * (
-                            epoch["fEpochInitLevel"] + epoch["fEpochLevelInc"] * epiNum
-                        )
-                        i_last += epoch["lEpochInitDuration"] + epoch["lEpochDurationInc"] * epiNum
-                signals.append(sig)
+            for dac in range(protocol["n_dacs"]):
+                if protocol["operation_mode"] == 5 and protocol["waveform_enable"][dac]:
+                    waveform = _epoch_table_waveform(protocol, dac, episode)
+                else:
+                    waveform = np.full(protocol["samples_per_episode"], protocol["holding_level"][dac])
+                # the waveform is built on the interleaved samples of all channels, keep one per sampling sequence
+                signals.append(waveform[::n_channels])
             sigs_by_segments.append(signals)
 
-        sig_names = []
-        sig_units = []
-        for DACNum in range(nDAC):
-            name = info["listDACInfo"][DACNum]["DACChNames"].decode("utf-8")
-            units = safe_decode_units(info["listDACInfo"][DACNum]["DACChUnits"])
-            sig_names.append(name)
-            sig_units.append(units)
+        return sigs_by_segments, protocol["dac_names"], protocol["dac_units"]
 
-        return sigs_by_segments, sig_names, sig_units
+
+ABF_EPOCH_COUNT = 10
+EPOCH_KEYS = [
+    "nEpochType",
+    "fEpochInitLevel",
+    "fEpochLevelInc",
+    "lEpochInitDuration",
+    "lEpochDurationInc",
+    "lEpochPulsePeriod",
+    "lEpochPulseWidth",
+]
+
+
+def _get_protocol(info):
+    """
+    Collect the fields that define the command waveforms, in one layout for ABF1 and ABF2.
+
+    Per-DAC epoch fields are arrays of shape (n_dacs, ABF_EPOCH_COUNT). Sample counts are in
+    samples of the interleaved data (all channels), as in the header.
+    """
+    version = info["fFileVersionNumber"]
+    if version < 2.0:
+        # ABF1 has four DACs, and the first two can play a waveform
+        n_dacs = 4
+        epochs = {}
+        for key in EPOCH_KEYS:
+            epochs[key] = np.zeros((n_dacs, ABF_EPOCH_COUNT), dtype=np.asarray(info[key]).dtype)
+            epochs[key][:2] = np.reshape(info[key], (2, ABF_EPOCH_COUNT))
+
+        def per_dac(key):
+            values = np.zeros(n_dacs, dtype=np.asarray(info[key]).dtype)
+            values[: len(info[key])] = info[key]
+            return values
+
+        protocol = {
+            "operation_mode": info["nOperationMode"],
+            "n_channels": info["nADCNumChannels"],
+            "samples_per_episode": info["lNumSamplesPerEpisode"],
+            "episodes_per_run": info["lEpisodesPerRun"],
+            "dac_names": [name.decode("utf-8", errors="replace").strip() for name in info["sDACChannelName"]],
+            "dac_units": [safe_decode_units(units) for units in info["sDACChannelUnits"]],
+            "holding_level": per_dac("fDACHoldingLevel"),
+            "waveform_enable": per_dac("nWaveformEnable"),
+            "waveform_source": per_dac("nWaveformSource"),
+            "inter_episode_level": per_dac("nInterEpisodeLevel"),
+            "condit_enable": per_dac("nConditEnable"),
+            "user_lists": bool(np.any(info["nULEnable"])),
+            "alternate_dac_outputs": bool(info["nAlternateDACOutputState"]),
+        }
+        if version < 1.6:
+            # Headers older than 1.6 are 2 KB long and keep a single waveform in other fields, so
+            # the fields after byte 2048 hold unrelated bytes. No file we have uses that waveform.
+            if info["_nWaveformSource"]:
+                raise NeoReadWriteError("Protocol reconstruction needs ABF 1.6 or later when a DAC plays a waveform")
+            protocol["waveform_enable"] = np.zeros(n_dacs, dtype=int)
+    else:
+        dac_infos = info["listDACInfo"]
+        n_dacs = len(dac_infos)
+        epochs = {key: np.zeros((n_dacs, ABF_EPOCH_COUNT)) for key in EPOCH_KEYS}
+        for dac, epochs_of_dac in info["dictEpochInfoPerDAC"].items():
+            for epoch_num, epoch in epochs_of_dac.items():
+                for key in EPOCH_KEYS:
+                    epochs[key][dac, epoch_num] = epoch[key]
+
+        def per_dac(key):
+            return np.array([dac_info[key] for dac_info in dac_infos])
+
+        protocol_section = info["protocol"]
+        protocol = {
+            "operation_mode": protocol_section["nOperationMode"],
+            "n_channels": info["sections"]["ADCSection"]["llNumEntries"],
+            "samples_per_episode": protocol_section["lNumSamplesPerEpisode"],
+            "episodes_per_run": protocol_section["lEpisodesPerRun"],
+            "dac_names": [dac_info["DACChNames"].decode("utf-8") for dac_info in dac_infos],
+            "dac_units": [safe_decode_units(dac_info["DACChUnits"]) for dac_info in dac_infos],
+            "holding_level": per_dac("fDACHoldingLevel"),
+            "waveform_enable": per_dac("nWaveformEnable"),
+            "waveform_source": per_dac("nWaveformSource"),
+            "inter_episode_level": per_dac("nInterEpisodeLevel"),
+            "condit_enable": per_dac("nConditEnable"),
+            # the vendor reader plays every user list in the section, whatever its nULEnable says
+            "user_lists": info["sections"]["UserListSection"]["llNumEntries"] > 0,
+            "alternate_dac_outputs": bool(protocol_section["nAlternateDACOutputState"]),
+        }
+    protocol.update(epochs)
+    protocol["n_dacs"] = n_dacs
+    protocol["n_episodes"] = info["lActualEpisodes"]
+    return protocol
+
+
+def _unsupported_protocol_features(protocol):
+    """The protocol features that change a waveform but are not reconstructed yet."""
+    playing = np.flatnonzero(protocol["waveform_enable"])
+    if protocol["operation_mode"] != 5 or playing.size == 0:
+        return []
+    features = []
+    if protocol["user_lists"]:
+        features.append("user lists")
+    if protocol["alternate_dac_outputs"]:
+        features.append("alternating outputs")
+    if np.any(protocol["waveform_source"][playing] == 2):
+        features.append("stimulus-file waveforms")
+    if np.any(protocol["condit_enable"][playing]):
+        features.append("conditioning trains")
+    return features
+
+
+def _holding_length(protocol):
+    """Samples (interleaved) of the first holding: 1/64 of the sweep, rounded down to whole
+    sampling sequences and at least one."""
+    n_channels = protocol["n_channels"]
+    length = protocol["samples_per_episode"] // 64
+    length -= length % n_channels
+    return max(length, n_channels)
+
+
+def _epoch_level(protocol, dac, episode, epoch):
+    return protocol["fEpochInitLevel"][dac, epoch] + (episode - 1) * protocol["fEpochLevelInc"][dac, epoch]
+
+
+def _holding_level(protocol, dac, episode):
+    """The level before the first epoch: with the "use last epoch level" option, the level of the
+    last epoch of the previous sweep."""
+    if not protocol["inter_episode_level"][dac] or episode < 2:
+        return protocol["holding_level"][dac]
+    enabled = np.flatnonzero(protocol["nEpochType"][dac])
+    if enabled.size == 0:
+        return protocol["holding_level"][dac]
+    return _epoch_level(protocol, dac, episode - 1, enabled[-1])
+
+
+def _epoch_shape(epoch_type, n, start_level, level, period, width):
+    """One epoch's samples, from the previous level (start_level) to this epoch's level."""
+    position = np.arange(n)
+    if epoch_type == 1:  # step
+        return np.full(n, level, dtype="float64")
+    if epoch_type == 2:  # ramp
+        return start_level + (level - start_level) * (position + 1) / n
+    phase = position % period
+    if epoch_type == 3:  # rectangular pulse train
+        return np.where(phase < width, level, start_level)
+    if epoch_type == 4:  # triangle train: up over the width, down over the rest of the period
+        rising = start_level + (level - start_level) * phase / width
+        falling = level - (level - start_level) * (phase - width) / (period - width)
+        return np.where(phase < width, rising, falling)
+    if epoch_type == 5:  # cosine train
+        return start_level + (level - start_level) * (1 - np.cos(2 * np.pi * phase / period)) / 2
+    if epoch_type == 7:  # biphasic train: level for half the width, its mirror for the other half
+        return np.where(phase < width // 2, level, np.where(phase < width, 2 * start_level - level, start_level))
+    raise NeoReadWriteError(f"Epoch type {epoch_type} is not supported")
+
+
+def _epoch_table_waveform(protocol, dac, episode):
+    """Port of GenerateWaveform (ABFHWAVE.CPP): the interleaved waveform of one DAC in one sweep."""
+    n_samples = protocol["samples_per_episode"]
+    n_channels = protocol["n_channels"]
+    holding_level = _holding_level(protocol, dac, episode)
+    waveform = np.full(n_samples, holding_level, dtype="float64")
+    # sweeps added after the protocol ran (off-line) stay at holding
+    if episode > protocol["episodes_per_run"]:
+        return waveform
+
+    position = _holding_length(protocol)
+    start_level = holding_level
+    for epoch in range(ABF_EPOCH_COUNT):
+        epoch_type = protocol["nEpochType"][dac, epoch]
+        if epoch_type == 0:
+            continue
+        duration = (
+            protocol["lEpochInitDuration"][dac, epoch] + (episode - 1) * protocol["lEpochDurationInc"][dac, epoch]
+        )
+        n = int(duration) * n_channels
+        if n <= 0:
+            continue
+        if position + n > n_samples:
+            raise NeoReadWriteError(f"The epochs of DAC {dac} in sweep {episode} are longer than the sweep")
+        level = _epoch_level(protocol, dac, episode, epoch)
+        period = int(protocol["lEpochPulsePeriod"][dac, epoch]) * n_channels
+        width = int(protocol["lEpochPulseWidth"][dac, epoch]) * n_channels
+        waveform[position : position + n] = _epoch_shape(epoch_type, n, start_level, level, period, width)
+        position += n
+        start_level = level
+
+    end_level = start_level if protocol["inter_episode_level"][dac] else protocol["holding_level"][dac]
+    waveform[position:] = end_level
+    return waveform
 
 
 def parse_axon_soup(filename):
@@ -1173,7 +1345,11 @@ headerDescriptionV1 = [
     ("fInstrumentOffset", 986, "16f"),
     ("fSignalGain", 1050, "16f"),
     ("fSignalOffset", 1114, "16f"),
+    ("sDACChannelName", 1306, "10s" * 4),
+    ("sDACChannelUnits", 1346, "8s" * 4),
+    ("fDACHoldingLevel", 1394, "4f"),
     ("nDigitalEnable", 1436, "h"),
+    ("_nWaveformSource", 1438, "h"),
     ("nActiveDACChannel", 1440, "h"),
     ("nDigitalHolding", 1584, "h"),
     ("nDigitalInterEpisode", 1586, "h"),
@@ -1182,6 +1358,8 @@ headerDescriptionV1 = [
     ("lDACFileNumEpisodes", 2056, "2i"),
     ("fDACCalibrationFactor", 2074, "4f"),
     ("fDACCalibrationOffset", 2090, "4f"),
+    ("lEpochPulsePeriod", 2136, "20i"),
+    ("lEpochPulseWidth", 2216, "20i"),
     ("nWaveformEnable", 2296, "2h"),
     ("nWaveformSource", 2300, "2h"),
     ("nInterEpisodeLevel", 2304, "2h"),
@@ -1190,9 +1368,12 @@ headerDescriptionV1 = [
     ("fEpochLevelInc", 2428, "20f"),
     ("lEpochInitDuration", 2508, "20i"),
     ("lEpochDurationInc", 2588, "20i"),
+    ("nConditEnable", 3260, "2h"),
+    ("nULEnable", 3360, "4h"),
     ("nTelegraphEnable", 4512, "16h"),
     ("fTelegraphAdditGain", 4576, "16f"),
     ("sProtocolPath", 4898, "384s"),
+    ("nAlternateDACOutputState", 5876, "h"),
 ]
 
 headerDescriptionV2 = [

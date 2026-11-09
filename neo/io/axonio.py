@@ -45,9 +45,8 @@ class AxonIO(AxonRawIO, BaseFromRaw):
 
     def read_protocol(self):
         """
-        Read the protocol waveform of the file, if present;
-        function works with ABF2 only. Protocols can be reconstructed
-        from the ABF1 header.
+        Read the protocol waveform of the file, if present.
+        See ``AxonRawIO.read_raw_protocol`` for what is reconstructed.
 
         Returns
         -------
