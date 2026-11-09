@@ -85,6 +85,11 @@ class NeuroScopeRawIO(BaseRawWithBufferApiIO):
         nbits = int(acq.find("nBits").text)
         nb_channel = int(acq.find("nChannels").text)
         self._sampling_rate = float(acq.find("samplingRate").text)
+        # .lfp and .eeg files are downsampled and their rate is stored separately
+        if self.data_file_path.suffix in (".lfp", ".eeg"):
+            lfp_sampling_rate = root.find("fieldPotentials/lfpSamplingRate")
+            if lfp_sampling_rate is not None:
+                self._sampling_rate = float(lfp_sampling_rate.text)
         voltage_range = float(acq.find("voltageRange").text)
         # offset = int(acq.find('offset').text)
         amplification = float(acq.find("amplification").text)

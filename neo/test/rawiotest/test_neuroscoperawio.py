@@ -29,6 +29,16 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase):
         # scale is in mV = range of recording in volts * 1000 mV/V /(number of bits * ampification)
         self.assertAlmostEqual(20.0 * 1000 / (2**16 * 1000), gain)
 
+    def test_lfp_sampling_rate(self):
+        local_test_dir = get_local_testing_data_folder()
+        # the xml has samplingRate 20000 for the .dat and lfpSamplingRate 1250 for .eeg/.lfp
+        for suffix in (".eeg", ".lfp"):
+            fname = local_test_dir / f"neuroscope/dataset_1/YutaMouse42-151117{suffix}"
+            reader = NeuroScopeRawIO(filename=fname)
+            reader.parse_header()
+            assert reader.header["signal_channels"]["sampling_rate"][0] == 1250.0
+            assert reader.segment_t_stop(0, 0) == 10 / 1250.0
+
     def test_binary_argument_with_non_canonical_xml_file(self):
 
         local_test_dir = get_local_testing_data_folder()
