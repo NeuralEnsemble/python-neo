@@ -289,21 +289,39 @@ class AxonRawIO(BaseRawWithBufferApiIO):
         signal_buffers = np.array([("Signals", buffer_id)], dtype=_signal_buffer_dtype)
         signal_streams = np.array([("Signals", stream_id, buffer_id)], dtype=_signal_stream_dtype)
 
-        # only one events channel : tag
-        # In ABF timstamps are not attached too any particular segment
-        # so each segment acess all event
-        timestamps = []
-        labels = []
-        comments = []
-        for i, tag in enumerate(info["listTag"]):
-            timestamps.append(tag["lTagTime"])
-            labels.append(str(tag["nTagType"]))
-            comments.append(str(clean_string(tag["sComment"])))
-        self._raw_ev_timestamps = np.array(timestamps)
-        self._ev_labels = np.array(labels, dtype="U")
-        self._ev_comments = np.array(comments, dtype="U")
-        event_channels = [("Tag", "", "event")]
+        # Tags are the only events in an ABF file. Each tag type present in the file gets its own
+        # event channel, and the tag comment is the label. Tags belong to the whole recording, so
+        # each segment gets the tags that fall inside its sweep, and a tag between sweeps goes to
+        # no segment.
+        # lTagTime counts in units of fSynchTimeUnit microseconds, or in samples summed over all
+        # channels when fSynchTimeUnit is 0. Keep the seconds per count to rescale the timestamps.
+        if version < 2.0:
+            fSynchTimeUnit = info["fSynchTimeUnit"]
+        elif version >= 2.0:
+            fSynchTimeUnit = info["protocol"]["fSynchTimeUnit"]
+        if fSynchTimeUnit == 0:
+            self._tag_time_unit = 1.0 / (self._sampling_rate * nbchannel)
+        else:
+            self._tag_time_unit = fSynchTimeUnit * 1e-6
+
+        tags = info["listTag"]
+        tag_times = tags["lTagTime"] * self._tag_time_unit
+        tag_types = [tag_type for tag_type in TAG_TYPE_NAMES if np.any(tags["nTagType"] == tag_type)]
+        event_channels = [(TAG_TYPE_NAMES[tag_type], TAG_TYPE_NAMES[tag_type], "event") for tag_type in tag_types]
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
+
+        self._raw_ev_timestamps = {}
+        self._ev_labels = {}
+        for seg_index in range(nb_segment):
+            seg_t_start = self._t_starts[seg_index]
+            num_samples = self._buffer_descriptions[0][seg_index][buffer_id]["shape"][0]
+            seg_t_stop = seg_t_start + num_samples / self._sampling_rate
+            in_segment = (tag_times >= seg_t_start) & (tag_times < seg_t_stop)
+            for chan_index, tag_type in enumerate(tag_types):
+                seg_tags = tags[in_segment & (tags["nTagType"] == tag_type)]
+                labels = [clean_string(comment).decode("utf-8", errors="replace") for comment in seg_tags["sComment"]]
+                self._raw_ev_timestamps[seg_index, chan_index] = seg_tags["lTagTime"]
+                self._ev_labels[seg_index, chan_index] = np.array(labels, dtype="U")
 
         # No spikes
         spike_channels = []
@@ -334,10 +352,6 @@ class AxonRawIO(BaseRawWithBufferApiIO):
             nADCNum = np.array([adc_nums[c] for c in range(signal_channels.size)])
             signal_an["__array_annotations__"]["nADCNum"] = nADCNum
 
-            for c in range(event_channels.size):
-                ev_ann = seg_annotations["events"][c]
-                ev_ann["comments"] = self._ev_comments
-
     def _source_name(self):
         return self.filename
 
@@ -356,29 +370,27 @@ class AxonRawIO(BaseRawWithBufferApiIO):
         return self._buffer_descriptions[block_index][seg_index][buffer_id]
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        return self._raw_ev_timestamps.size
+        return self._raw_ev_timestamps[seg_index, event_channel_index].size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        # In ABF timestamps are not attached too any particular segment
-        # so each segment accesses all events
-        timestamp = self._raw_ev_timestamps
-        labels = self._ev_labels
+        timestamp = self._raw_ev_timestamps[seg_index, event_channel_index]
+        labels = self._ev_labels[seg_index, event_channel_index]
         durations = None
 
         if t_start is not None:
-            keep = timestamp >= int(t_start * self._sampling_rate)
+            keep = timestamp * self._tag_time_unit >= t_start
             timestamp = timestamp[keep]
             labels = labels[keep]
 
         if t_stop is not None:
-            keep = timestamp <= int(t_stop * self._sampling_rate)
+            keep = timestamp * self._tag_time_unit <= t_stop
             timestamp = timestamp[keep]
             labels = labels[keep]
 
         return timestamp, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype, event_channel_index):
-        event_times = event_timestamps.astype(dtype) / self._sampling_rate
+        event_times = event_timestamps.astype(dtype) * self._tag_time_unit
         return event_times
 
     def read_raw_protocol(self):
@@ -699,18 +711,9 @@ def _parse_abf_v1(f, header_description):
     header["lFileStartTime"] += header["nFileStartMillisecs"] * 0.001
 
     # tags
-    listTag = []
-    for i in range(header["lNumTagEntries"]):
-        f.seek(header["lTagSectionPtr"] + i * 64)
-        tag = {}
-        for key, fmt in TagInfoDescription:
-            val = f.read_f(fmt)
-            if len(val) == 1:
-                tag[key] = val[0]
-            else:
-                tag[key] = np.array(val)
-        listTag.append(tag)
-    header["listTag"] = listTag
+    f.seek(header["lTagSectionPtr"] * BLOCKSIZE)
+    tag_bytes = f.read(header["lNumTagEntries"] * TagInfoDescription.itemsize)
+    header["listTag"] = np.frombuffer(tag_bytes, dtype=TagInfoDescription)
 
     # protocol name formatting. Decode to str (like the channel names) so consumers get a plain
     # string rather than a bytes value, whose str() would bake the "b'...'" repr into the path.
@@ -1024,19 +1027,9 @@ def _parse_abf_v2(f, header_description):
     header["sProtocolPath"] = strings[header["uProtocolPathIndex"]].decode("utf-8", errors="replace")
 
     # tags
-    listTag = []
-    for i in range(sections["TagSection"]["llNumEntries"]):
-        f.seek(sections["TagSection"]["uBlockIndex"] * BLOCKSIZE + sections["TagSection"]["uBytes"] * i)
-        tag = {}
-        for key, fmt in TagInfoDescription:
-            val = f.read_f(fmt)
-            if len(val) == 1:
-                tag[key] = val[0]
-            else:
-                tag[key] = np.array(val)
-        listTag.append(tag)
-
-    header["listTag"] = listTag
+    f.seek(sections["TagSection"]["uBlockIndex"] * BLOCKSIZE)
+    tag_bytes = f.read(sections["TagSection"]["llNumEntries"] * TagInfoDescription.itemsize)
+    header["listTag"] = np.frombuffer(tag_bytes, dtype=TagInfoDescription)
 
     # DAC sections
     header["listDACInfo"] = []
@@ -1341,12 +1334,24 @@ ADCInfoDescription = [
     ("lADCUnitsIndex", "i"),
 ]
 
-TagInfoDescription = [
-    ("lTagTime", "i"),
-    ("sComment", "56s"),
-    ("nTagType", "h"),
-    ("nVoiceTagNumber_or_AnnotationIndex", "h"),
-]
+TagInfoDescription = np.dtype(
+    [
+        ("lTagTime", "<i4"),
+        ("sComment", "S56"),
+        ("nTagType", "<i2"),
+        ("nVoiceTagNumber_or_AnnotationIndex", "<i2"),
+    ]
+)
+
+# Event channel name and id for each tag type (nTagType), after the ABF_*TAG constants in ABFHEADR.H
+TAG_TYPE_NAMES = {
+    0: "time_tag",
+    1: "comment_tag",
+    2: "external_tag",
+    3: "voice_tag",
+    4: "new_file_tag",
+    5: "annotation_tag",
+}
 
 DACInfoDescription = [
     ("nDACNum", "h"),
