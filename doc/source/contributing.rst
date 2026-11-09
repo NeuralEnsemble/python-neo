@@ -18,7 +18,7 @@ open an issue in the `issue tracker`_. Provide details on what you would like to
 Usage of AI
 ===========
 
-You can use AI to help you understand the Neo codebase, support you in developing bug fixes and features implementations. Don't use AI to automatically create merge requests, but first discuss the intended change with the maintainers in an issue. Keep your issues and merge requests concise and for human review, to respect the time maintainers spend on them.
+You can use AI to help you understand the Neo codebase, support you in developing bug fixes and features implementations. Don't use AI to automatically create pull requests, but first discuss the intended change with the maintainers in an issue. Keep your issues and pull requests concise and for human review, to respect the time maintainers spend on them.
 If you are using an AI agent, make sure to respect the `agent configuration`_
 
 
