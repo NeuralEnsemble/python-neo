@@ -459,7 +459,7 @@ Making a release
 
 
 .. _`issue tracker`: https://github.com/NeuralEnsemble/python-neo/issues/
-.. _`agent configuration`: https://github.com/Neuralensemble/python-neo/blob/master/AGENTS.txt
+.. _`agent configuration`: https://github.com/Neuralensemble/python-neo/blob/master/AGENTS.md
 .. _`add an SSH key to your Github account`: https://docs.github.com/en/authentication/connecting-to-github-with-ssh
 .. _`more information on forking`: http://help.github.com/en/articles/fork-a-repo
 .. _`GitHub Docs on git`: https://docs.github.com/en/get-started/quickstart/set-up-git
