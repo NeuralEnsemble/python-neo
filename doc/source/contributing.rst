@@ -12,16 +12,15 @@ If you're new to open source software, `How to Contribute to Open Source`_ is a 
 Discussing with other Neo developers
 ====================================
 
-If you have an idea for improving Neo, the first step is to discuss it with other Neo developers
-on the NeuralEnsemble `mailing list`_.
+If you have an idea for improving Neo, want to discuss a specific problem or report a bug, the first step is to 
+open an issue in the `issue tracker`_. Provide details on what you would like to change, why this change would be usefull and describe a use case if possible.
 
-Discussion of issues specific to a particular ticket in the `issue tracker`_
-should take place on the tracker.
+Usage of AI
+===========
 
-.. note:: Note that the mailing list is shared with other projects in the general domain of computational and systems neuroscience,
-          so please don't be confused if you see posts that don't relate to Neo!
+You can use AI to help you understand the Neo codebase, support you in developing bug fixes and features implementations. Don't use AI to automatically create pull requests, but first discuss the intended change with the maintainers in an issue. Keep your issues and pull requests concise and for human review, to respect the time maintainers spend on them.
+If you are using an AI agent, make sure to respect the `agent configuration`_
 
-.. goodforbeginners label
 
 Setting up a development environment
 ====================================
@@ -459,8 +458,8 @@ Making a release
   If not, you may need to manually activate the new version in the `docs configuration page`_.
 
 
-.. _`mailing list`: http://neuralensemble.org/community
 .. _`issue tracker`: https://github.com/NeuralEnsemble/python-neo/issues/
+.. _`agent configuration`: https://github.com/Neuralensemble/python-neo/blob/master/AGENTS.md
 .. _`add an SSH key to your Github account`: https://docs.github.com/en/authentication/connecting-to-github-with-ssh
 .. _`more information on forking`: http://help.github.com/en/articles/fork-a-repo
 .. _`GitHub Docs on git`: https://docs.github.com/en/get-started/quickstart/set-up-git
