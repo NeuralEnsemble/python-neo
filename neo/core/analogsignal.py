@@ -506,13 +506,16 @@ class AnalogSignal(BaseSignal):
         the nearest sampling bin. The time bin for t_stop will be chosen to
         make the duration of the resultant signal as close as possible to
         t_stop - t_start. This means that for a given duration, the size
-        of the slice will always be the same.
+        of the slice will always be the same. Either parameter can also be
+        None, in which case that end of the signal is not cut.
         """
 
         # checking start time and transforming to start index
         if t_start is None:
             i = 0
-            t_start = 0 * pq.s
+            # index 0 is self.t_start, and the stop index below is an offset
+            # from t_start, so the signal's own start is the origin here
+            t_start = self.t_start
         else:
             i = self.time_index(t_start)
 
