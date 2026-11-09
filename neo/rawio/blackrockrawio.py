@@ -80,6 +80,12 @@ from .baserawio import (
 
 from neo.core import NeoReadWriteError
 
+# Central sends up to 300 samples (10 ms) per UDP datagram, and the recording PC can write datagrams out of
+# order. A packet stamped at most this much earlier than the one written before it is such a packet, not a
+# clock reset: it is read in timestamp order. For a PTP .nsX this only bounds the search; the criterion is
+# that the packets sort into the sampling grid.
+REORDER_WINDOW_S = 0.010
+
 
 class BlackrockRawIO(BaseRawIO):
     """
@@ -138,6 +144,14 @@ class BlackrockRawIO(BaseRawIO):
     FutureWarning. From 0.16 a gap between blocks raises an error with a gap report
     unless ``gap_tolerance_ms`` is set.
 
+    * Packets written out of their timestamp order (as when the recording PC receives Central's datagrams out
+    of order) are read in timestamp order when each is within 10 ms of its place: in a PTP .nsX, a step back
+    whose neighbourhood sorts into an even grid is not a gap; in a .nev, a packet stamped up to 10 ms earlier
+    than the last of its type (for a spike, the last spike on its electrode) is no clock reset, and each unit's
+    spikes are returned in timestamp order. They are counted in `nsx_reordered_packets` and
+    `nev_reordered_packets`, with a warning. Spikes on different electrodes are not compared at all: the file
+    can hold them several ms out of order relative to one another.
+
     * The times of spikes and events are compared with `t_start` and `t_stop` as float64 seconds, and
     `t_stop` is exclusive. To include a spike at `t_stop`, such as the last of a segment, pass
     `t_stop + 1e-5`.
@@ -183,6 +197,10 @@ class BlackrockRawIO(BaseRawIO):
         BaseRawIO.__init__(self)
 
         self.gap_tolerance_ms = gap_tolerance_ms
+        # Packets the file holds out of their timestamp order (within REORDER_WINDOW_S), read in timestamp
+        # order: steps back in the NEV (per packet type), and per nsX number in PTP .nsX files.
+        self.nev_reordered_packets = 0
+        self.nsx_reordered_packets = {}
 
         self.filename = str(filename)
 
@@ -472,17 +490,10 @@ class BlackrockRawIO(BaseRawIO):
                     if "timestamps_memmap_kwargs" in seg_header:
                         # FileSpec 3.0 with PTP -- read first/last timestamps on demand
                         ts_kw = seg_header["timestamps_memmap_kwargs"]
-                        fid = self._get_nsx_file_handle(nsx_nb)
-                        ts_array = self._create_mmap_view(
-                            fid=fid,
-                            dtype=ts_kw["dtype"],
-                            offset=ts_kw["offset"],
-                            num_samples=ts_kw["num_samples"],
-                            packet_size=ts_kw.get("packet_size"),
-                            item_offset=ts_kw.get("item_offset", 0),
-                        )
-                        t_start = float(ts_array[0]) / ts_res
-                        t_stop = max(t_stop, float(ts_array[-1]) / ts_res + sec_per_samp)
+                        first_ts = self._read_ptp_ticks(nsx_nb, ts_kw, 0, 1)[0]
+                        last_ts = self._read_ptp_ticks(nsx_nb, ts_kw, length - 1, length)[0]
+                        t_start = float(first_ts) / ts_res
+                        t_stop = max(t_stop, float(last_ts) / ts_res + sec_per_samp)
                     elif timestamp is None:
                         # V2.1 format has no timestamps
                         t_start = 0.0
@@ -498,7 +509,7 @@ class BlackrockRawIO(BaseRawIO):
                     for k, (data, ev_ids) in self.nev_data.items():
                         segment_mask = ev_ids == data_bl
                         if data[segment_mask].size > 0:
-                            t = data[segment_mask][-1]["timestamp"] / self._nev_basic_header["timestamp_resolution"]
+                            t = data[segment_mask]["timestamp"].max() / self._nev_basic_header["timestamp_resolution"]
 
                             max_nev_time = max(max_nev_time, t)
                     if max_nev_time > t_stop:
@@ -507,7 +518,7 @@ class BlackrockRawIO(BaseRawIO):
                     for k, (data, ev_ids) in self.nev_data.items():
                         segment_mask = ev_ids == data_bl
                         if data[segment_mask].size > 0:
-                            t = data[segment_mask][0]["timestamp"] / self._nev_basic_header["timestamp_resolution"]
+                            t = data[segment_mask]["timestamp"].min() / self._nev_basic_header["timestamp_resolution"]
                             min_nev_time = min(min_nev_time, t)
                     if min_nev_time < t_start:
                         t_start = min_nev_time
@@ -784,7 +795,7 @@ class BlackrockRawIO(BaseRawIO):
             return self._read_multi_block_chunk(fid, memmap_specs, channels, i_start, i_stop, channel_indexes)
 
         memmap_kwargs = memmap_specs[0]
-        data = self._create_mmap_view(
+        rows = self._create_mmap_view(
             fid=fid,
             dtype=memmap_kwargs["dtype"],
             offset=memmap_kwargs["offset"],
@@ -793,7 +804,38 @@ class BlackrockRawIO(BaseRawIO):
             packet_size=memmap_kwargs.get("packet_size"),
             item_offset=memmap_kwargs.get("item_offset", 0),
         )
-        return data[i_start:i_stop, channel_indexes]
+        data = self._in_timestamp_order(rows[i_start:i_stop], memmap_kwargs, i_start, lambda r: rows[r])
+        return data[:, channel_indexes]
+
+    @staticmethod
+    def _in_timestamp_order(rows, kw, i_start, read):
+        """
+        Rows [i_start, i_start + len(rows)) of a PTP segment in timestamp order: `kw["reorder"]`, if
+        present, holds the positions the file has out of order and the rows to read there instead
+        (see _find_reordered_samples). `read(rows)` reads the given rows of the segment.
+        """
+        if "reorder" not in kw:
+            return rows
+        positions, sources = kw["reorder"]
+        i_start = i_start or 0
+        here = (positions >= i_start) & (positions < i_start + len(rows))
+        if not here.any():
+            return rows
+        rows = np.array(rows)  # a copy: memory maps are read only
+        rows[positions[here] - i_start] = read(sources[here])
+        return rows
+
+    def _read_ptp_ticks(self, nsx_nb, ts_kw, i_start, i_stop):
+        """Raw PTP timestamps (uint64 ticks) for samples [i_start, i_stop) of one segment, in timestamp order."""
+        ticks = self._create_mmap_view(
+            fid=self._get_nsx_file_handle(nsx_nb),
+            dtype=ts_kw["dtype"],
+            offset=ts_kw["offset"],
+            num_samples=ts_kw["num_samples"],
+            packet_size=ts_kw.get("packet_size"),
+            item_offset=ts_kw.get("item_offset", 0),
+        )
+        return self._in_timestamp_order(ticks[i_start:i_stop], ts_kw, i_start, lambda r: ticks[r])
 
     def _read_multi_block_chunk(self, fid, memmap_specs, channels, i_start, i_stop, channel_indexes):
         """
@@ -922,17 +964,8 @@ class BlackrockRawIO(BaseRawIO):
         # PTP format: read timestamps on demand via strided mmap view
         if "timestamps_memmap_kwargs" in seg:
             ts_kw = seg["timestamps_memmap_kwargs"]
-            fid = self._get_nsx_file_handle(nsx_nb)
-            timestamps = self._create_mmap_view(
-                fid=fid,
-                dtype=ts_kw["dtype"],
-                offset=ts_kw["offset"],
-                num_samples=ts_kw["num_samples"],
-                packet_size=ts_kw.get("packet_size"),
-                item_offset=ts_kw.get("item_offset", 0),
-            )
             ts_res = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
-            return timestamps[i_start:i_stop].astype("float64") / ts_res
+            return self._read_ptp_ticks(nsx_nb, ts_kw, i_start, i_stop).astype("float64") / ts_res
         else:
             sr = self._nsx_sampling_frequency[nsx_nb]
             block_timestamps = seg.get("block_timestamps")
@@ -981,13 +1014,18 @@ class BlackrockRawIO(BaseRawIO):
             & (all_spikes["unit_class_nb"] == unit_id)
             & (event_segment_ids == seg_index)
         )
-        unit_spikes = all_spikes[mask]
+        unit_spikes = self._in_time_order(all_spikes[mask])
 
         timestamp = unit_spikes["timestamp"]
         sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
         timestamp = timestamp[sl]
 
         return timestamp
+
+    @staticmethod
+    def _in_time_order(spikes):
+        """Spike records in timestamp order (stable): the NEV can hold spikes out of order (REORDER_WINDOW_S)."""
+        return spikes[np.argsort(spikes["timestamp"], kind="stable")]
 
     def _get_timestamp_slice(self, timestamp, seg_index, t_start, t_stop):
         """
@@ -1026,7 +1064,7 @@ class BlackrockRawIO(BaseRawIO):
             & (all_spikes["unit_class_nb"] == unit_id)
             & (event_segment_ids == seg_index)
         )
-        unit_spikes = all_spikes[mask]
+        unit_spikes = self._in_time_order(all_spikes[mask])
 
         timestamp = unit_spikes["timestamp"]
         sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
@@ -1756,6 +1794,15 @@ class BlackrockRawIO(BaseRawIO):
         time_differences = np.diff(timestamps).view(np.int64) / ts_res
 
         gap_indices = self._detect_timestamp_gaps(time_differences, sampling_rate)
+
+        # Packets written out of order are read in timestamp order, and the steps they made in the
+        # timestamps as written are no gaps.
+        steps_back = np.flatnonzero(time_differences < 0)
+        positions, sources, spans = self._find_reordered_samples(nsx_nb, ts_kw, steps_back)
+        if len(spans):
+            span = np.searchsorted(spans[:, 0] - 1, gap_indices, side="right") - 1
+            gap_indices = gap_indices[~((span >= 0) & (gap_indices <= spans[np.maximum(span, 0), 1]))]
+
         if self.gap_tolerance_ms is None:
             # Error by default on gaps - the caller must choose
             if len(gap_indices) > 0:
@@ -1797,6 +1844,10 @@ class BlackrockRawIO(BaseRawIO):
             seg_samples_offset = base_samples_offset + int(start) * packet_size
             seg_ts_offset = base_ts_offset + int(start) * packet_size
 
+            reorder = {}
+            here = (positions >= start) & (positions < stop)
+            if here.any():
+                reorder = {"reorder": (positions[here] - start, sources[here] - start)}
             segments.append(
                 {
                     "timestamp": None,  # PTP timestamps read on demand
@@ -1808,17 +1859,78 @@ class BlackrockRawIO(BaseRawIO):
                             **samples_kw,
                             "offset": seg_samples_offset,
                             "num_samples": seg_num_samples,
+                            **reorder,
                         }
                     ],
                     "timestamps_memmap_kwargs": {
                         **ts_kw,
                         "offset": seg_ts_offset,
                         "num_samples": seg_num_samples,
+                        **reorder,
                     },
                 }
             )
 
         return segments
+
+    def _find_reordered_samples(self, nsx_nb, ts_kw, steps_back):
+        """
+        Packets of a PTP .nsX written out of their timestamp order (REORDER_WINDOW_S).
+
+        For each step back in the timestamps (`steps_back`: the index of the packet before it), the packets
+        around it are sorted by timestamp. If no packet moves by more than REORDER_WINDOW_S and the sorted
+        packets lie on the sampling grid (each half a period to two periods after the one before: no
+        duplicate, overlap or gap), they are read in that order. Any other step back is left as it is.
+        The count of steps back sorted is kept in nsx_reordered_packets, with one warning.
+
+        Returns
+        -------
+        positions, sources : np.ndarray
+            Packet positions (from the start of the file) and the packet to read at each instead.
+        spans : np.ndarray
+            (first, last) position of each sorted run, shape (n, 2).
+        """
+        n = int(ts_kw["num_samples"])
+        fs = self._nsx_sampling_frequency[nsx_nb]
+        resolution = float(self._nsx_basic_header[nsx_nb]["timestamp_resolution"])
+        period = resolution / fs
+        reach = int(np.ceil(REORDER_WINDOW_S * fs)) + 2
+        positions, sources, spans = [], [], []
+        for step in np.asarray(steps_back).tolist():
+            if spans and step < spans[-1][1]:
+                continue  # sorted with an earlier step back
+            lo, hi = max(0, step + 1 - reach), min(n, step + 1 + reach)
+            local = self._read_ptp_ticks(nsx_nb, ts_kw, lo, hi).astype(np.int64)
+            order = np.argsort(local, kind="stable")
+            # The run sorted for this step: between the nearest places, on either side, before which
+            # sorting moves no packet across. Other steps in the window have their own runs.
+            closed = np.flatnonzero(np.maximum.accumulate(order) == np.arange(len(order)))
+            i = step - lo
+            first = int(closed[closed < i][-1]) + 1 if np.any(closed < i) else 0
+            last = int(closed[closed >= i + 1][0])
+            if (first == 0 and lo > 0) or (last == len(order) - 1 and hi < n):
+                continue  # moved further than the window
+            in_order = local[order]
+            step_sizes = np.diff(in_order[max(first - 1, 0) : last + 2])
+            if np.any(step_sizes < period / 2) or np.any(step_sizes > 2 * period):
+                continue
+            if np.max(np.abs(in_order[first : last + 1] - local[first : last + 1])) > REORDER_WINDOW_S * resolution:
+                continue
+            positions.append(lo + np.arange(first, last + 1))
+            sources.append(lo + order[first : last + 1])
+            spans.append((lo + first, lo + last))
+        spans = np.array(spans, dtype=np.int64).reshape(-1, 2)
+        steps = np.asarray(steps_back)
+        count = int(sum(np.sum((steps >= a) & (steps < b)) for a, b in spans))
+        self.nsx_reordered_packets[nsx_nb] = count
+        if count:
+            warnings.warn(
+                f"{count} packets of ns{nsx_nb} were written before packets stamped earlier (within "
+                f"{REORDER_WINDOW_S * 1000:g} ms) and are read in timestamp order. See nsx_reordered_packets."
+            )
+        if not spans.size:
+            return np.empty(0, np.int64), np.empty(0, np.int64), spans
+        return np.concatenate(positions), np.concatenate(sources), spans
 
     def _build_nsx_v21_ext_header(self, nsx_nb):
         """
@@ -2065,19 +2177,40 @@ class BlackrockRawIO(BaseRawIO):
             reset_ev_ids = np.where(reset_ev_mask)[0]
 
             # consistency check for monotone increasing time stamps
-            # - Use logical comparator (instead of np.diff) to avoid unsigned dtype issues.
             # - Only consider handled/known event types.
             # - Compare only packets of the same type: the file does not order packets of different
             #   types (e.g. a comment is stamped when the user starts typing but written when they
             #   finish, so it can be later than the spikes written after it).
-            # jumps maps the position of a packet earlier than the previous packet of its type to the
-            # position of that previous packet, in the full set of events (incl. unhandled).
+            # - Compare a spike only with the previous spike on its electrode: spikes on different
+            #   electrodes can be written up to 15 ms out of order relative to one another (#1755).
+            # - A packet up to REORDER_WINDOW_S earlier than the one it is compared with was written late,
+            #   not after a reset.
+            # A reset found on one electrode lies somewhere after that electrode's previous spike, so it is
+            # placed at the largest step back between consecutive packets of the type in that span: a reset
+            # steps back much further than packets out of order do.
+            # jumps maps the position of the packet that starts a segment to the position of the packet it
+            # was compared with, in the full set of events (incl. unhandled).
+            window = REORDER_WINDOW_S * float(self._nev_basic_header["timestamp_resolution"])
             jumps = {}
-            for mask in masks.values():
+            late = []  # (position, position compared with) of packets written up to the window late
+            for data_type, mask in masks.items():
                 ids = np.flatnonzero(mask)
-                ts = raw_event_data["timestamp"][ids]
-                earlier = np.flatnonzero(ts[1:] < ts[:-1])
-                jumps.update(zip(ids[earlier + 1].tolist(), ids[earlier].tolist()))
+                ts = raw_event_data["timestamp"][ids].astype(np.int64)
+                drops = np.flatnonzero(ts[:-1] - ts[1:] > window) + 1  # step backs over the window, in file order
+                if data_type == "Spikes":
+                    order = np.argsort(raw_event_data["packet_id"][ids], kind="stable")
+                    electrodes, by_electrode = raw_event_data["packet_id"][ids][order], ts[order]
+                    back = np.flatnonzero((by_electrode[1:] < by_electrode[:-1]) & (electrodes[1:] == electrodes[:-1]))
+                    previous, current = order[back], order[back + 1]
+                else:
+                    previous = np.flatnonzero(ts[1:] < ts[:-1])
+                    current = previous + 1
+                is_late = ts[previous] - ts[current] <= window
+                late.append(np.stack((ids[current[is_late]], ids[previous[is_late]])))
+                for before, after in zip(previous[~is_late].tolist(), current[~is_late].tolist()):
+                    inside = drops[(drops > before) & (drops <= after)]
+                    at = int(inside[np.argmax(ts[inside - 1] - ts[inside])]) if len(inside) else after
+                    jumps[int(ids[at])] = max(jumps.get(int(ids[at]), -1), int(ids[before]))
 
             # A reset sends the clock of every packet type back, so each type jumps at its first packet
             # after it. Count a jump only if the packet it is compared with is in the current segment,
@@ -2102,7 +2235,16 @@ class BlackrockRawIO(BaseRawIO):
             event_segment_ids[boundaries] = 1
             event_segment_ids = np.cumsum(event_segment_ids)
 
+            # Late packets are those compared with a packet of their own segment, not across a reset.
+            late = np.concatenate(late, axis=1) if late else np.zeros((2, 0), dtype=np.intp)
+            self.nev_reordered_packets = int(np.sum(event_segment_ids[late[0]] == event_segment_ids[late[1]]))
             self._nb_segment_nev = len(boundaries) + 1
+            if self.nev_reordered_packets:
+                warnings.warn(
+                    f"{self.nev_reordered_packets} NEV packets were written after packets of their type (spikes: on "
+                    f"their electrode) stamped up to {REORDER_WINDOW_S * 1000:g} ms later. They are not clock resets; "
+                    "spikes are returned in timestamp order, events in file order. See nev_reordered_packets."
+                )
             return event_segment_ids
 
         else:
