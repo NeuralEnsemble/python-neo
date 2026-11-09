@@ -15,11 +15,12 @@ class TestAxonIO(BaseTestIO, unittest.TestCase):
     entities_to_test = TestAxonRawIO.entities_to_test
     ioclass = AxonIO
 
-    def test_annotations(self):
+    def test_tag_comment_is_event_label(self):
         reader = AxonIO(filename=self.get_local_path("axon/File_axon_2.abf"))
         bl = reader.read_block()
         ev = bl.segments[0].events[0]
-        assert "comments" in ev.annotations
+        assert ev.name == "comment_tag"
+        assert ev.labels[0] == "Clampex start acquisition"
 
     def test_read_protocol(self):
         for f in self.entities_to_test:
