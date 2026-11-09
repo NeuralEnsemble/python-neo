@@ -184,7 +184,10 @@ class EDFRawIO(BaseRawIO):
             stream_index: self.edf_reader.getNSamples()[chidx][0]
             for stream_index, chidx in self.stream_idx_to_chidx.items()
         }
-        self._number_of_events = len(self.edf_reader.readAnnotations()[0])
+        # pyedflib reports a missing duration as -1, so anything without a positive duration is an event
+        annotation_durations = np.asarray(self._edf_annotations[1])
+        self._number_of_events = int(np.sum(annotation_durations <= 0))
+        self._number_of_epochs = int(np.sum(annotation_durations > 0))
 
         self.close()
 
@@ -258,6 +261,8 @@ class EDFRawIO(BaseRawIO):
         return None
 
     def _event_count(self, block_index, seg_index, event_channel_index):
+        if self.header["event_channels"]["type"][event_channel_index] == b"epoch":
+            return self._number_of_epochs
         return self._number_of_events
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
@@ -269,12 +274,12 @@ class EDFRawIO(BaseRawIO):
             t_stop = self.segment_t_stop(block_index, seg_index)
 
         # only consider events and epochs that overlap with t_start t_stop range
-        time_mask = ((t_start < timestamps) & (timestamps < t_stop)) | (
-            (t_start < (timestamps + durations)) & ((timestamps + durations) < t_stop)
-        )
+        stops = timestamps + np.maximum(durations, 0)
+        time_mask = ((t_start <= timestamps) & (timestamps <= t_stop)) | ((t_start <= stops) & (stops <= t_stop))
 
         # separate event from epoch times
-        event_mask = durations[time_mask] == 0
+        # pyedflib reports a missing duration as -1, so anything without a positive duration is an event
+        event_mask = durations[time_mask] <= 0
         if self.header["event_channels"]["type"][event_channel_index] == b"epoch":
             event_mask = ~event_mask
             durations = durations[time_mask][event_mask]
