@@ -68,7 +68,7 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
 
             # header version
             (header_version,) = f.read_f("b", offset=175)
-            if header_version != 4:
+            if header_version not in (4, 5):
                 raise NotImplementedError(f"`header_version {header_version} is not implemented in neo yet")
 
             # area
@@ -94,7 +94,8 @@ class MicromedRawIO(BaseRawWithBufferApiIO):
             for zname in zone_names:
                 zname2, pos, length = f.read_f("8sII")
                 zones[zname] = zname2, pos, length
-                if zname != zname2.decode("ascii").strip(" "):
+                # zone names are padded with spaces in header version 4 and with NULs in version 5
+                if zname != zname2.decode("ascii").strip(" \x00"):
                     raise NeoReadWriteError("expected the zone name to match")
 
             # "TRONCA" zone define segments

@@ -294,6 +294,21 @@ class TestMicromedSyntheticFiles(unittest.TestCase):
         self.assertEqual([label for label, _ in times], ["A", "B"])
         np.testing.assert_allclose([time for _, time in times], [500 / 256, 4060 / 256])
 
+    def test_header_version_5(self):
+        # the zone names are padded with NULs in version 5
+        reader = self.make_reader(header_version=5, tronca=self.one_cut, notes=[(500, "A")])
+
+        self.assertEqual(self.segment_sizes_and_t_starts(reader)[0], [1000, 2000])
+        np.testing.assert_array_equal(reader.get_analogsignal_chunk(stream_index=0, seg_index=1), self.codes[1000:])
+        self.assertEqual(self.note_times(reader, 0)[0], ["A"])
+
+    def test_other_header_versions_are_refused(self):
+        directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        path = directory / "synthetic.TRC"
+        write_micromed_trc(path, self.codes, self.sampling_rate, header_version=6)
+        with self.assertRaises(NotImplementedError):
+            MicromedRawIO(str(path)).parse_header()
+
     def test_a_zone_that_is_not_named_as_expected_is_refused(self):
         directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
         path = directory / "synthetic.TRC"
