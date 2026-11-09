@@ -686,6 +686,24 @@ class TestBlackrockRawIO(
         ]
         self.assertEqual(spikes, [1] * 28)
 
+    def test_recording_events(self):
+        """
+        Spec 3.0 nev files hold the times at which the recording was started, stopped, paused and
+        resumed (packet 0xFFF9). This file was started, paused, resumed and stopped.
+        """
+        filename = self.get_local_path(
+            "blackrock/version_3_0/events/recording_events_and_button_trigger/recording_events_and_button_trigger"
+        )
+        reader = BlackrockRawIO(filename=filename)
+        reader.parse_header()
+        event_channel_names = reader.header["event_channels"]["name"].tolist()
+        channel_index = event_channel_names.index("recording_events")
+        _, _, labels = reader.get_event_timestamps(event_channel_index=channel_index)
+
+        labels = labels.tolist()
+        expected_labels = ["start", "pause", "resume", "stop"]
+        self.assertEqual(labels, expected_labels)
+
 
 if __name__ == "__main__":
     unittest.main()
