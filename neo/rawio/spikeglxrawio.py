@@ -321,8 +321,8 @@ class SpikeGLXRawIO(BaseRawWithBufferApiIO):
         stream_name = self.header["signal_streams"][stream_index]["name"]
         return self._t_starts[stream_name][seg_index]
 
-    def _event_count(self, event_channel_idx, block_index=None, seg_index=None):
-        timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_idx, None, None)
+    def _event_count(self, block_index, seg_index, event_channel_index):
+        timestamps, _, _ = self._get_event_timestamps(block_index, seg_index, event_channel_index, None, None)
         return timestamps.size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start=None, t_stop=None):
