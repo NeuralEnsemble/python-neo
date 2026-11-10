@@ -113,6 +113,12 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
         atol = 0.001
         assert np.allclose(on_diff, 1, atol=atol)
 
+        # The .meta has firstSample=29752 and niSampRate=2500, and bit 0 of the digital word in the .bin
+        # first goes high at sample 234, so the first XD0 ON is at (29752 + 234) / 2500 = 11.9944 s
+        first_on_time = on_ts_scaled[0]
+        expected_first_on_time = 11.9944
+        assert first_on_time == pytest.approx(expected_first_on_time)
+
     def test_sync_channel_as_separate_stream(self):
         """Sync trace is always exposed as its own -SYNC stream."""
         rawio = SpikeGLXRawIO(self.get_local_path("spikeglx/NP2_with_sync"))
@@ -157,6 +163,37 @@ class TestSpikeGLXRawIO(BaseTestRawIO, unittest.TestCase):
                     atol=1e-9,
                     err_msg=f"Mismatch in t_start for stream '{stream_name}', segment {seg_index}",
                 )
+
+        # Each segment starts at its earliest stream, imec0.lf in all four segments, and stops at its latest
+        # stream, imec1.lf in all four segments, at (firstSample + number of samples) / imSampRate from its
+        # .meta, with the number of samples being fileSizeBytes / (2 * nSavedChans)
+        segment_t_start_0 = rawio.segment_t_start(block_index=0, seg_index=0)
+        expected_segment_t_start_0 = 15.3191688060872
+        assert segment_t_start_0 == pytest.approx(expected_segment_t_start_0, abs=1e-9)
+        segment_t_stop_0 = rawio.segment_t_stop(block_index=0, seg_index=0)
+        expected_segment_t_stop_0 = 15.349721598910294
+        assert segment_t_stop_0 == pytest.approx(expected_segment_t_stop_0, abs=1e-9)
+
+        segment_t_start_1 = rawio.segment_t_start(block_index=0, seg_index=1)
+        expected_segment_t_start_1 = 15.339168765361949
+        assert segment_t_start_1 == pytest.approx(expected_segment_t_start_1, abs=1e-9)
+        segment_t_stop_1 = rawio.segment_t_stop(block_index=0, seg_index=1)
+        expected_segment_t_stop_1 = 15.369721757349486
+        assert segment_t_stop_1 == pytest.approx(expected_segment_t_stop_1, abs=1e-9)
+
+        segment_t_start_2 = rawio.segment_t_start(block_index=0, seg_index=2)
+        expected_segment_t_start_2 = 21.284356659374016
+        assert segment_t_start_2 == pytest.approx(expected_segment_t_start_2, abs=1e-9)
+        segment_t_stop_2 = rawio.segment_t_stop(block_index=0, seg_index=2)
+        expected_segment_t_stop_2 = 21.314968854983398
+        assert segment_t_stop_2 == pytest.approx(expected_segment_t_stop_2, abs=1e-9)
+
+        segment_t_start_3 = rawio.segment_t_start(block_index=0, seg_index=3)
+        expected_segment_t_start_3 = 21.304356618648765
+        assert segment_t_start_3 == pytest.approx(expected_segment_t_start_3, abs=1e-9)
+        segment_t_stop_3 = rawio.segment_t_stop(block_index=0, seg_index=3)
+        expected_segment_t_stop_3 = 21.334969013422587
+        assert segment_t_stop_3 == pytest.approx(expected_segment_t_stop_3, abs=1e-9)
 
 
 def test_build_signals_info_dict_collision_raises_value_error():
