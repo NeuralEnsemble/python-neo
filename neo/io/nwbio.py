@@ -18,7 +18,6 @@ from __future__ import absolute_import, division
 import json
 import logging
 import os
-from collections import defaultdict
 from itertools import chain
 from json.decoder import JSONDecodeError
 
@@ -26,6 +25,8 @@ import numpy as np
 import quantities as pq
 
 from neo.core import Segment, SpikeTrain, Epoch, Event, AnalogSignal, IrregularlySampledSignal, Block, ImageSequence
+from neo.core.baseneo import _check_annotations
+from neo.core.dataobject import ArrayDict
 from neo.io.baseio import BaseIO
 from neo.io.proxyobjects import (
     AnalogSignalProxy as BaseAnalogSignalProxy,
@@ -63,6 +64,10 @@ GLOBAL_ANNOTATIONS = (
 
 POSSIBLE_JSON_FIELDS = ("source_script", "description")
 
+# TimeSeries fields that are handled explicitly when writing, so are not taken from `nwb:` annotations.
+# The scaling fields are applied to the data when reading, and so must not be applied again.
+WRITE_HANDLED_FIELDS = ("conversion", "offset", "channel_conversion", "comments", "description")
+
 prefix_map = {1e9: "giga", 1e6: "mega", 1e3: "kilo", 1: "", 1e-3: "milli", 1e-6: "micro", 1e-9: "nano", 1e-12: "pico"}
 
 
@@ -75,8 +80,170 @@ def try_json_field(content):
     """
     try:
         return json.loads(content)
-    except JSONDecodeError:
+    except (JSONDecodeError, TypeError):
         return content
+
+
+def _parse_json_dict(content):
+    """
+    Return `content` parsed as a JSON object (dict), or None if `content`
+    is not a string containing a JSON object.
+    """
+    parsed = try_json_field(content)
+    if isinstance(parsed, dict):
+        return parsed
+    return None
+
+
+# Hierarchy information stored by Neo in the `comments` field of a TimeSeries
+# always contains these keys
+_HIERARCHY_KEYS = ("block", "segment")
+
+# Maximum number of elements read from a dataset into an annotation
+_MAX_ANNOTATION_SIZE = 10000
+
+
+class _NotAnAnnotation:
+    """Sentinel type marking a value that cannot be stored as a Neo annotation."""
+
+
+NOT_AN_ANNOTATION = _NotAnAnnotation()
+
+
+def _to_annotation_value(value, max_size=_MAX_ANNOTATION_SIZE):
+    """
+    Convert a value read from an NWB file to a value that can be stored as a Neo annotation.
+
+    Datasets (h5py, including hdmf's StrDataset) are read into memory, provided they
+    contain no more than `max_size` elements, and arrays of Python objects
+    (e.g. variable-length strings) are converted to arrays of str.
+
+    Returns `NOT_AN_ANNOTATION` if the value cannot be stored as an annotation,
+    e.g. if it is a link to another NWB object (such as a DynamicTableRegion).
+    """
+    from hdmf.container import AbstractContainer
+
+    if isinstance(value, AbstractContainer):
+        return NOT_AN_ANNOTATION
+    if hasattr(value, "shape") and hasattr(value, "dtype") and not isinstance(value, (np.ndarray, np.generic)):
+        # a dataset that has not yet been read from the file
+        size = int(np.prod(value.shape)) if value.shape else 1
+        if size > max_size:
+            return NOT_AN_ANNOTATION
+        value = value[()]
+    if isinstance(value, np.ndarray) and value.dtype.kind == "O":
+        try:
+            value = value.astype(str)
+        except (TypeError, ValueError):
+            return NOT_AN_ANNOTATION
+    if isinstance(value, (list, tuple)):
+        converted = [_to_annotation_value(item, max_size) for item in value]
+        if any(item is NOT_AN_ANNOTATION for item in converted):
+            return NOT_AN_ANNOTATION
+        value = type(value)(converted)
+    try:
+        _check_annotations(value)
+    except (ValueError, TypeError):
+        return NOT_AN_ANNOTATION
+    return value
+
+
+def _get_hierarchy(timeseries):
+    """
+    Return the Neo hierarchy information (block and segment names, and optionally the
+    original Neo object name and the NWB comments) that Neo stores as JSON in the `comments`
+    field of a TimeSeries, or None if the TimeSeries was not written by Neo.
+    """
+    hierarchy = _parse_json_dict(timeseries.comments)
+    if hierarchy is not None and all(key in hierarchy for key in _HIERARCHY_KEYS):
+        return hierarchy
+    return None
+
+
+def _foreign_comments(timeseries):
+    """
+    Return the `comments` of a TimeSeries, or None if the comments field contains
+    the default value or Neo hierarchy information.
+    """
+    hierarchy = _get_hierarchy(timeseries)
+    if hierarchy is not None:
+        return hierarchy.get("comments", None)
+    if timeseries.comments in (None, "", "no comments"):
+        return None
+    return timeseries.comments
+
+
+def _annotations_equal(a, b):
+    """Compare two annotation values, which may be NumPy arrays."""
+    if isinstance(a, np.ndarray) or isinstance(b, np.ndarray):
+        return np.array_equal(np.asarray(a), np.asarray(b))
+    try:
+        return bool(a == b)
+    except ValueError:  # e.g. lists containing arrays
+        return False
+
+
+def _container_fields(container, exclude=()):
+    """
+    Return a dict containing those fields of an NWB container (e.g. an IntracellularElectrode
+    or a Device) that can be stored as Neo annotations.
+    """
+    fields = {}
+    for field_name in container.__class__.__nwbfields__:
+        if field_name in exclude:
+            continue
+        value = getattr(container, field_name, None)
+        if value is None:
+            continue
+        value = _to_annotation_value(value)
+        if value is NOT_AN_ANNOTATION:
+            logger.debug(f"Unable to store field '{field_name}' of '{container.name}' as an annotation")
+        else:
+            fields[field_name] = value
+    return fields
+
+
+def _ragged_rows(vector_index, rows):
+    """
+    Return the values of the given rows of a ragged column of a DynamicTable,
+    as a list of arrays, given the VectorIndex for the column.
+
+    We read the index and the data directly, since indexing a VectorIndex with an array of
+    row numbers does not give the expected result in all versions of hdmf.
+    """
+    ends = np.asarray(vector_index.data[:], dtype=np.int64)
+    starts = np.concatenate([[0], ends[:-1]])
+    data = vector_index.target.data
+    if len(data) == 0:
+        return [np.array([], dtype=str) for row in rows]
+    data = np.asarray(data[:])
+    if data.dtype.kind in "OS":
+        data = data.astype(str)
+    return [data[starts[row] : ends[row]] for row in rows]
+
+
+def _init_proxy(proxy, name=None, description=None, annotations=None, array_annotations=None, n_channels=None):
+    """
+    Initialise the attributes of an NWB proxy object that would normally be set by
+    `BaseNeo.__init__()` and `BaseProxy.__init__()`, i.e. name, description, annotations,
+    array annotations and the links to parent containers.
+
+    The NWB proxies do not call `BaseProxy.__init__()`, since it expects a RawIO.
+    """
+    annotations = annotations or {}
+    _check_annotations(annotations)
+    proxy.annotations = annotations
+    proxy.name = name
+    proxy.description = description
+    proxy.file_origin = None
+    for parent in proxy._parent_containers:
+        setattr(proxy, parent, None)
+    if n_channels is not None:
+        proxy.array_annotations = ArrayDict(n_channels)
+        if array_annotations:
+            proxy.array_annotations.update(array_annotations)
+    else:
+        proxy.array_annotations = {}
 
 
 def get_class(module, name):
@@ -218,7 +385,7 @@ class NWBIO(BaseIO):
     name = "NeoNWB IO"
     description = "This IO reads/writes experimental data from/to an .nwb dataset"
     extensions = ["nwb"]
-    mode = "one-file"
+    mode = "file"
 
     is_readable = True
     is_writable = True
@@ -253,8 +420,7 @@ class NWBIO(BaseIO):
         try:
             self._file = self._io_nwb.read()
         except ValueError:
-            print("Error: Unable to read this version of NWB file.")
-            print("Please convert to a later NWB format.")
+            self.logger.error("Unable to read this version of NWB file. Please convert to a later NWB format.")
             raise
 
         self.global_block_metadata = {}
@@ -263,6 +429,10 @@ class NWBIO(BaseIO):
             if value is not None:
                 if annotation_name in POSSIBLE_JSON_FIELDS:
                     value = try_json_field(value)
+                value = _to_annotation_value(value)
+                if value is NOT_AN_ANNOTATION:
+                    self.logger.debug(f"Unable to store NWB file attribute '{annotation_name}' as an annotation")
+                    continue
                 self.global_block_metadata[annotation_name] = value
         if "session_description" in self.global_block_metadata:
             self.global_block_metadata["description"] = self.global_block_metadata["session_description"]
@@ -278,6 +448,9 @@ class NWBIO(BaseIO):
         self._read_units(lazy=lazy)
         self._read_epochs_group(lazy)
 
+        if not self._blocks:
+            # No data objects could be read, but we still return the file metadata
+            self._blocks["default"] = Block(name="default", **self.global_block_metadata)
         return list(self._blocks.values())
 
     def read_block(self, lazy=False, block_index=0, **kargs):
@@ -318,6 +491,9 @@ class NWBIO(BaseIO):
                 epoch_names = None
 
             if epoch_names is not None:
+                epoch_names = np.asarray(epoch_names)
+                segment_names = np.asarray(segment_names)
+                block_names = np.asarray(block_names)
                 unique_epoch_names = np.unique(epoch_names)
                 for epoch_name in unique_epoch_names:
                     (index,) = np.where((epoch_names == epoch_name))
@@ -342,14 +518,28 @@ class NWBIO(BaseIO):
 
         group = getattr(self._file, group_name)
         for timeseries in group.values():
-            try:
-                # NWB files created by Neo store the segment and block names in the comments field
-                hierarchy = json.loads(timeseries.comments)
-            except JSONDecodeError:
-                # For NWB files created with other applications, we put everything in a single
-                # segment in a single block
-                # todo: investigate whether there is a reliable way to create multiple segments,
-                #       e.g. using Trial information
+            if not isinstance(timeseries, pynwb.TimeSeries):
+                # todo: handle containers such as LFP, Position, BehavioralEvents,
+                #       and neurodata types from extensions
+                self.logger.info(
+                    f"Skipping '{timeseries.name}' in '{group_name}': "
+                    f"reading {timeseries.__class__.__name__} objects is not yet supported"
+                )
+                continue
+            if isinstance(timeseries, pynwb.image.ImageSeries) or len(timeseries.data.shape) > 2:
+                # todo: read ImageSeries as ImageSequence
+                self.logger.info(
+                    f"Skipping '{timeseries.name}' in '{group_name}': "
+                    f"reading {timeseries.__class__.__name__} objects is not yet supported"
+                )
+                continue
+            # NWB files created by Neo store the segment and block names in the comments field.
+            # For NWB files created with other applications, we put everything in a single
+            # segment in a single block
+            # todo: investigate whether there is a reliable way to create multiple segments,
+            #       e.g. using Trial information
+            hierarchy = _get_hierarchy(timeseries)
+            if hierarchy is None:
                 block_name = "default"
                 segment_name = "default"
             else:
@@ -373,7 +563,18 @@ class NWBIO(BaseIO):
                 segment.irregularlysampledsignals.append(signal)
 
     def _read_units(self, lazy):
-        if self._file.units:
+        if self._file.units is not None and "spike_times" not in self._file.units.colnames:
+            # e.g. units tables in some ophys files, which hold only cell metadata
+            self.logger.info("Skipping the units table, since it does not contain spike times")
+        elif self._file.units:
+            # Used for units without observation intervals: read the flattened spike times
+            # of all units once, rather than once per unit.
+            all_spike_times = self._file.units["spike_times"].target.data[:]
+            if len(all_spike_times) > 0:
+                default_t_start = min(0.0, float(np.min(all_spike_times)))
+                default_t_stop = float(np.max(all_spike_times))
+            else:
+                default_t_start = default_t_stop = 0.0
             for id in range(len(self._file.units)):
                 try:
                     # NWB files created by Neo store the segment and block names as extra columns
@@ -385,7 +586,9 @@ class NWBIO(BaseIO):
                     segment_name = "default"
                     block_name = "default"
                 segment = self._get_segment(block_name, segment_name)
-                spiketrain = SpikeTrainProxy(self._file.units, id)
+                spiketrain = SpikeTrainProxy(
+                    self._file.units, id, default_t_start=default_t_start, default_t_stop=default_t_stop
+                )
                 if not lazy:
                     spiketrain = spiketrain.load()
                 segment.spiketrains.append(spiketrain)
@@ -397,26 +600,24 @@ class NWBIO(BaseIO):
         self._read_timeseries_group("stimulus", lazy)
 
     def _build_global_annotations(self, blocks):
-        annotations = defaultdict(set)
+        annotations = {}
         for annotation_name in GLOBAL_ANNOTATIONS:
             if annotation_name in self.annotations:
                 annotations[annotation_name] = self.annotations[annotation_name]
             else:
+                # values may be unhashable (e.g. arrays of keywords), so we can't use a set
+                values = []
                 for block in blocks:
                     if annotation_name in block.annotations:
-                        try:
-                            annotations[annotation_name].add(block.annotations[annotation_name])
-                        except TypeError:
-                            if annotation_name in POSSIBLE_JSON_FIELDS:
-                                encoded = json.dumps(block.annotations[annotation_name])
-                                annotations[annotation_name].add(encoded)
-                            else:
-                                raise
-                if annotation_name in annotations:
-                    if len(annotations[annotation_name]) > 1:
-                        raise NotImplementedError(f"We don't yet support multiple values for {annotation_name}")
-                    # take single value from set
-                    (annotations[annotation_name],) = annotations[annotation_name]
+                        value = block.annotations[annotation_name]
+                        if annotation_name in POSSIBLE_JSON_FIELDS and isinstance(value, (dict, list)):
+                            value = json.dumps(value)
+                        if not any(_annotations_equal(value, other) for other in values):
+                            values.append(value)
+                if len(values) > 1:
+                    raise NotImplementedError(f"We don't yet support multiple values for {annotation_name}")
+                if values:
+                    annotations[annotation_name] = values[0]
 
         if "identifier" not in annotations:
             annotations["identifier"] = str(self.filename)
@@ -437,6 +638,11 @@ class NWBIO(BaseIO):
         """
         import pynwb
 
+        if len(blocks) == 0:
+            raise ValueError("No blocks to write")
+        # names given to TimeSeries in the NWB file, which must be unique
+        self._nwb_names = set()
+        self._dropped_fields = set()
         global_annotations = self._build_global_annotations(blocks)
         self._nwbfile = pynwb.NWBFile(**global_annotations)
 
@@ -521,55 +727,147 @@ class NWBIO(BaseIO):
 
     def _write_segment(self, nwbfile, segment, electrodes):
         # maybe use NWB trials to store Segment metadata?
+        # Note that we do not modify the names of the Neo objects. Where necessary, a different,
+        # unique name is used in the NWB file, and the original Neo name is stored in the
+        # hierarchy information in the TimeSeries comments field.
         for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
             if signal.segment is not segment:
                 raise TypeError(f"signal.segment must be segment and is {signal.segment}")
-            if hasattr(signal, "name"):
-                signal.name = f"{segment.name} {signal.name} {i}"
-                logging.warning(f"Warning signal name exists. New name: {signal.name}")
-            else:
-                signal.name = f"{segment.name}  analogsignal{signal.name} {i}"
-            self._write_signal(self._nwbfile, signal, electrodes)
+            nwb_name = self._unique_nwb_name(signal.name, f"{segment.name} analogsignal{i}")
+            self._write_signal(self._nwbfile, signal, electrodes, nwb_name)
 
         for i, train in enumerate(segment.spiketrains):
             if train.segment is not segment:
                 raise TypeError(f"train.segment must be segment and is {train.segment}")
-            if not train.name:
-                train.name = f"{segment.name}  spiketrain{i}"
-            self._write_spiketrain(self._nwbfile, train)
+            # an empty string in the _name column represents a SpikeTrain without a name
+            self._write_spiketrain(self._nwbfile, train, train.name or "")
 
         for i, event in enumerate(segment.events):
             if event.segment is not segment:
-                raise TypeError(f"event.segment mst be segment and is {event.segment}")
-            if hasattr(event, "name"):
-                event.name = f"{segment.name}  {event.name} {i}"
-                logging.warning(f"Warning event name exists. New name: {event.name}")
-            else:
-                event.name = f"{segment.name}  event{event.name} {i}"
-            self._write_event(self._nwbfile, event)
+                raise TypeError(f"event.segment must be segment and is {event.segment}")
+            nwb_name = self._unique_nwb_name(event.name, f"{segment.name} event{i}")
+            self._write_event(self._nwbfile, event, nwb_name)
 
         for i, epoch in enumerate(segment.epochs):
-            if not epoch.name:
-                epoch.name = f"{segment.name}  epoch{i}"
-            self._write_epoch(self._nwbfile, epoch)
+            # the _name column is used to group rows of the epochs table into Epochs when reading,
+            # so Epochs without a name need a unique generated name
+            self._write_epoch(self._nwbfile, epoch, epoch.name or f"{segment.name} epoch{i}")
 
-    def _write_signal(self, nwbfile, signal, electrodes):
+    def _unique_nwb_name(self, name, default):
+        """
+        Return a name for a TimeSeries that is unique within the NWB file being written.
+
+        Uses `name` if it is not None and has not already been used,
+        otherwise `default`, followed by a numerical suffix if necessary.
+        """
+        candidate = name or default
+        if candidate in self._nwb_names:
+            base = f"{default} {name}" if name else default
+            candidate = base
+            n = 1
+            while candidate in self._nwb_names:
+                candidate = f"{base} ({n})"
+                n += 1
+        self._nwb_names.add(candidate)
+        return candidate
+
+    @staticmethod
+    def _accepted_args(timeseries_class):
+        """Return the names of the arguments accepted by the constructor of an NWB class."""
+        from hdmf.utils import get_docval
+
+        return {arg["name"] for arg in get_docval(timeseries_class.__init__)}
+
+    @staticmethod
+    def _missing_required_args(timeseries_class, provided):
+        """
+        Return the names of the required arguments of the constructor of an NWB class
+        that are not in `provided`.
+        """
+        from hdmf.utils import get_docval
+
+        return [
+            arg["name"]
+            for arg in get_docval(timeseries_class.__init__)
+            if "default" not in arg and arg["name"] not in provided
+        ]
+
+    def _filter_nwb_kwargs(self, timeseries_class, kwargs):
+        """
+        Remove arguments not accepted by the constructor of `timeseries_class`.
+
+        Values taken from `nwb:` annotations may include fields that cannot be set
+        when constructing the target class (e.g. fields that have fixed values for IZeroClampSeries),
+        or that belong to a different class.
+        """
+        accepted = self._accepted_args(timeseries_class)
+        dropped = sorted(set(kwargs) - accepted)
+        for field_name in dropped:
+            kwargs.pop(field_name)
+            key = (timeseries_class.__name__, field_name)
+            if key not in self._dropped_fields:
+                self._dropped_fields.add(key)
+                self.logger.warning(
+                    f"Annotation 'nwb:{field_name}' cannot be written to a {timeseries_class.__name__}, ignoring it"
+                )
+        return kwargs
+
+    def _hierarchy_json(self, obj, segment, nwb_name):
+        """
+        Return the JSON string that Neo stores in the `comments` field of a TimeSeries,
+        recording the names of the Block and Segment the object belongs to,
+        the Neo name of the object if this differs from the name used in the NWB file,
+        and any NWB comments.
+        """
+        hierarchy = {"block": segment.block.name, "segment": segment.name}
+        if obj.name != nwb_name:
+            hierarchy["name"] = obj.name
+        if "nwb:comments" in obj.annotations:
+            hierarchy["comments"] = obj.annotations["nwb:comments"]
+        return json.dumps(hierarchy)
+
+    def _write_signal(self, nwbfile, signal, electrodes, nwb_name):
         import pynwb
 
-        hierarchy = {"block": signal.segment.block.name, "segment": signal.segment.name}
+        comments = self._hierarchy_json(signal, signal.segment, nwb_name)
+        timeseries_class = pynwb.TimeSeries  # default
         if "nwb_neurodata_type" in signal.annotations:
-            timeseries_class = get_class(*signal.annotations["nwb_neurodata_type"])
-        else:
-            timeseries_class = pynwb.TimeSeries  # default
-        additional_metadata = {name[4:]: value for name, value in signal.annotations.items() if name.startswith("nwb:")}
+            try:
+                timeseries_class = get_class(*signal.annotations["nwb_neurodata_type"])
+            except (ValueError, AttributeError, ImportError) as err:
+                self.logger.warning(
+                    f"Unable to find the NWB class {signal.annotations['nwb_neurodata_type']} ({err}), "
+                    f"writing signal '{nwb_name}' as a TimeSeries"
+                )
+        additional_metadata = {
+            name[4:]: value
+            for name, value in signal.annotations.items()
+            if name.startswith("nwb:") and name[4:] not in WRITE_HANDLED_FIELDS
+        }
         if "nwb_electrode" in signal.annotations:
             electrode_name = signal.annotations["nwb_electrode"]["name"]
             additional_metadata["electrode"] = electrodes[electrode_name]
+        missing = self._missing_required_args(
+            timeseries_class, set(additional_metadata) | {"name", "data", "unit", "rate", "starting_time", "timestamps"}
+        )
+        if missing:
+            # todo: write links to other NWB objects, e.g. the electrodes of an ElectricalSeries
+            self.logger.warning(
+                f"Unable to write signal '{nwb_name}' as a {timeseries_class.__name__}, "
+                f"since the following information is missing: {', '.join(missing)}. Writing it as a TimeSeries."
+            )
+            timeseries_class = pynwb.TimeSeries
         if timeseries_class != pynwb.TimeSeries:
             conversion, units = get_units_conversion(signal, timeseries_class)
             additional_metadata["conversion"] = conversion
         else:
             units = signal.units
+        description = signal.description
+        if description is None and isinstance(signal.annotations.get("notes", None), dict):
+            description = json.dumps(signal.annotations["notes"])
+        if description is not None:
+            additional_metadata["description"] = description
+        additional_metadata = self._filter_nwb_kwargs(timeseries_class, additional_metadata)
         if hasattr(signal, "proxy_for") and signal.proxy_for in [AnalogSignal, IrregularlySampledSignal]:
             signal = signal.load()
         if issubclass(timeseries_class, pynwb.icephys.PatchClampSeries):
@@ -582,31 +880,21 @@ class NWBIO(BaseIO):
             data = signal.ravel()  # convert to 1D
         else:
             data = signal
+        kwargs = dict(name=nwb_name, data=data, unit=units.dimensionality.string, comments=comments)
         if isinstance(signal, AnalogSignal):
-            sampling_rate = signal.sampling_rate.rescale("Hz")
-            tS = timeseries_class(
-                name=signal.name,
-                starting_time=time_in_seconds(signal.t_start),
-                data=data,
-                unit=units.dimensionality.string,
-                rate=float(sampling_rate),
-                comments=json.dumps(hierarchy),
-                **additional_metadata,
-            )
+            kwargs["starting_time"] = time_in_seconds(signal.t_start)
+            kwargs["rate"] = float(signal.sampling_rate.rescale("Hz"))
             # todo: try to add array_annotations via "control" attribute
         elif isinstance(signal, IrregularlySampledSignal):
-            tS = timeseries_class(
-                name=signal.name,
-                data=data,
-                unit=units.dimensionality.string,
-                timestamps=signal.times.rescale("second").magnitude,
-                comments=json.dumps(hierarchy),
-                **additional_metadata,
-            )
+            kwargs["timestamps"] = signal.times.rescale("second").magnitude
         else:
             raise TypeError(
                 f"signal has type { signal.__class__.__name__}, should be AnalogSignal or IrregularlySampledSignal"
             )
+        if "unit" not in self._accepted_args(timeseries_class):
+            # some classes have fixed units, e.g. ElectricalSeries (volts)
+            kwargs.pop("unit")
+        tS = timeseries_class(**kwargs, **additional_metadata)
         nwb_group = signal.annotations.get("nwb_group", "acquisition")
         add_method_map = {"acquisition": self._nwbfile.add_acquisition, "stimulus": self._nwbfile.add_stimulus}
         if nwb_group in add_method_map:
@@ -616,14 +904,18 @@ class NWBIO(BaseIO):
         add_time_series(tS)
         return tS
 
-    def _write_spiketrain(self, nwbfile, spiketrain):
+    def _write_spiketrain(self, nwbfile, spiketrain, name):
         segment = spiketrain.segment
         if hasattr(spiketrain, "proxy_for") and spiketrain.proxy_for is SpikeTrain:
             spiketrain = spiketrain.load()
+        if "nwb:obs_intervals" in spiketrain.annotations:
+            obs_intervals = np.asarray(spiketrain.annotations["nwb:obs_intervals"], dtype=float)
+        else:
+            obs_intervals = [[float(spiketrain.t_start.rescale("s")), float(spiketrain.t_stop.rescale("s"))]]
         self._nwbfile.add_unit(
             spike_times=spiketrain.rescale("s").magnitude,
-            obs_intervals=[[float(spiketrain.t_start.rescale("s")), float(spiketrain.t_stop.rescale("s"))]],
-            _name=spiketrain.name,
+            obs_intervals=obs_intervals,
+            _name=name,
             # _description=spiketrain.description,
             segment=segment.name,
             block=segment.block.name,
@@ -633,36 +925,42 @@ class NWBIO(BaseIO):
         # todo: handle spike waveforms, if any (see SpikeEventSeries)
         return self._nwbfile.units
 
-    def _write_event(self, nwbfile, event):
+    def _write_event(self, nwbfile, event, nwb_name):
         import pynwb
 
         segment = event.segment
+        comments = self._hierarchy_json(event, segment, nwb_name)
         if hasattr(event, "proxy_for") and event.proxy_for == Event:
             event = event.load()
-        hierarchy = {"block": segment.block.name, "segment": segment.name}
+        description = event.description
+        if description is None and isinstance(event.annotations.get("notes", None), dict):
+            description = json.dumps(event.annotations["notes"])
         tS_evt = pynwb.misc.AnnotationSeries(
-            name=event.name,
+            name=nwb_name,
             data=event.labels,
             timestamps=event.times.rescale("second").magnitude,
-            description=event.description or "",
-            comments=json.dumps(hierarchy),
+            description=description or "",
+            comments=comments,
         )
         self._nwbfile.add_acquisition(tS_evt)
         return tS_evt
 
-    def _write_epoch(self, nwbfile, epoch):
+    def _write_epoch(self, nwbfile, epoch, name):
         segment = epoch.segment
         if hasattr(epoch, "proxy_for") and epoch.proxy_for == Epoch:
             epoch = epoch.load()
+        labels = epoch.labels
+        if len(labels) != len(epoch):
+            # Neo allows Epochs without labels
+            labels = [""] * len(epoch)
         for t_start, duration, label in zip(
-            epoch.rescale("s").magnitude, epoch.durations.rescale("s").magnitude, epoch.labels
+            epoch.rescale("s").magnitude, epoch.durations.rescale("s").magnitude, labels
         ):
             self._nwbfile.add_epoch(
-                t_start,
-                t_start + duration,
-                [label],
-                [],
-                _name=epoch.name,
+                start_time=t_start,
+                stop_time=t_start + duration,
+                tags=[label] if label else [],
+                _name=name,
                 segment=segment.name,
                 block=segment.block.name,
             )
@@ -687,13 +985,18 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
         "timestamps_unit",
         "electrode",
         "stream_id",
+        # scaling fields, which are applied to the data when loading
+        "conversion",
+        "offset",
+        "channel_conversion",
     )
 
     def __init__(self, timeseries, nwb_group):
         self._timeseries = timeseries
-        self.units = timeseries.unit
-        if timeseries.conversion:
-            self.units = _recompose_unit(timeseries.unit, timeseries.conversion)
+        self.shape = self._timeseries.data.shape
+        if len(self.shape) == 1:
+            self.shape = (self.shape[0], 1)
+        self._set_scaling(timeseries)
         if timeseries.starting_time is not None:
             self.t_start = timeseries.starting_time * pq.s
         else:
@@ -702,44 +1005,87 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
             self.sampling_rate = timeseries.rate * pq.Hz
         else:
             self.sampling_rate = None
-        self.name = timeseries.name
-        self.annotations = {"nwb_group": nwb_group}
-        self.description = try_json_field(timeseries.description)
-        if isinstance(self.description, dict):
-            self.annotations["notes"] = self.description
-            if "name" in self.annotations:
-                self.annotations.pop("name")
-            self.description = None
-        self.shape = self._timeseries.data.shape
-        if len(self.shape) == 1:
-            self.shape = (self.shape[0], 1)
-        metadata_fields = list(timeseries.__nwbfields__)
-        for field_name in self.__class__.common_metadata_fields:  # already handled
-            try:
-                metadata_fields.remove(field_name)
-            except ValueError:
-                pass
+
+        annotations = {"nwb_group": nwb_group}
+        description = timeseries.description
+        notes = _parse_json_dict(description)
+        if notes is not None:
+            annotations["notes"] = notes
+            description = None
+        comments = _foreign_comments(timeseries)
+        if comments is not None:
+            annotations["nwb:comments"] = comments
+        metadata_fields = [
+            field_name
+            for field_name in timeseries.__nwbfields__
+            if field_name not in self.__class__.common_metadata_fields
+        ]
         for field_name in metadata_fields:
             value = getattr(timeseries, field_name)
             if value is not None:
-                self.annotations[f"nwb:{field_name}"] = value
-        self.annotations["nwb_neurodata_type"] = (timeseries.__class__.__module__, timeseries.__class__.__name__)
-        if hasattr(timeseries, "electrode"):
+                value = _to_annotation_value(value)
+                if value is NOT_AN_ANNOTATION:
+                    logger.debug(f"Unable to store field '{field_name}' of '{timeseries.name}' as an annotation")
+                else:
+                    annotations[f"nwb:{field_name}"] = value
+        annotations["nwb_neurodata_type"] = (timeseries.__class__.__module__, timeseries.__class__.__name__)
+        if getattr(timeseries, "electrode", None) is not None:
             # todo: once the Group class is available, we could add electrode metadata
             #       to a Group containing all signals that share that electrode
             #       This would reduce the amount of redundancy (repeated metadata in every signal)
-            electrode_metadata = {"device": {}}
-            metadata_fields = list(timeseries.electrode.__class__.__nwbfields__) + ["name"]
-            metadata_fields.remove("device")  # needs special handling
-            for field_name in metadata_fields:
-                value = getattr(timeseries.electrode, field_name)
-                if value is not None:
-                    electrode_metadata[field_name] = value
-            for field_name in timeseries.electrode.device.__class__.__nwbfields__:
-                value = getattr(timeseries.electrode.device, field_name)
-                if value is not None:
-                    electrode_metadata["device"][field_name] = value
-            self.annotations["nwb_electrode"] = electrode_metadata
+            electrode = timeseries.electrode
+            electrode_metadata = _container_fields(electrode, exclude=("device",))
+            electrode_metadata["name"] = electrode.name
+            electrode_metadata["device"] = _container_fields(electrode.device)
+            annotations["nwb_electrode"] = electrode_metadata
+
+        name = timeseries.name
+        hierarchy = _get_hierarchy(timeseries)
+        if hierarchy is not None and "name" in hierarchy:
+            name = hierarchy["name"]
+        _init_proxy(self, name=name, description=description, annotations=annotations, n_channels=self.shape[-1])
+
+    def _set_scaling(self, timeseries):
+        """
+        Determine the units of the signal, and the gain and offset to be applied to the data
+        when loading, from the `unit`, `conversion`, `offset` and (for ElectricalSeries)
+        `channel_conversion` fields of the TimeSeries.
+
+        In NWB, the value in `unit` is data * channel_conversion * conversion + offset.
+        Where possible, the conversion factor is folded into the units (e.g. a conversion
+        of 1e-3 with unit "volts" gives units of mV), so that no scaling of the data is needed.
+        """
+        conversion = timeseries.conversion if timeseries.conversion else 1.0
+        offset = getattr(timeseries, "offset", None) or 0.0
+        try:
+            self.units = _recompose_unit(timeseries.unit, conversion)
+            gain = 1.0
+            unit_conversion = conversion
+        except ValueError:
+            # conversion factor is not a power of ten, so we apply it to the data
+            self.units = _recompose_unit(timeseries.unit, 1.0)
+            gain = conversion
+            unit_conversion = 1.0
+        channel_conversion = getattr(timeseries, "channel_conversion", None)
+        if channel_conversion is not None:
+            channel_conversion = np.asarray(channel_conversion[:], dtype=float)
+            if channel_conversion.shape == (self.shape[-1],):
+                gain = gain * channel_conversion
+            else:
+                logger.warning(
+                    f"Ignoring channel_conversion of '{timeseries.name}': it has {channel_conversion.size} values "
+                    f"but the data have {self.shape[-1]} channels"
+                )
+        self._gain = gain
+        self._offset = offset / unit_conversion
+
+    def _scale(self, data):
+        """Apply the gain and offset determined by `_set_scaling()` to the data."""
+        if np.all(np.asarray(self._gain) == 1.0) and self._offset == 0.0:
+            return data
+        if data.ndim == 1:
+            data = data.reshape(-1, 1)
+        return data * self._gain + self._offset
 
     def load(self, time_slice=None, strict_slicing=True):
         """
@@ -756,7 +1102,7 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
                 i_start, i_stop = np.searchsorted(self._timeseries.timestamps, time_slice)
             else:
                 i_start, i_stop, sig_t_start = self._time_slice_indices(time_slice, strict_slicing=strict_slicing)
-        signal = self._timeseries.data[i_start:i_stop]
+        signal = self._scale(self._timeseries.data[i_start:i_stop])
         if self.sampling_rate is None:
             return IrregularlySampledSignal(
                 self._timeseries.timestamps[i_start:i_stop] * pq.s,
@@ -787,13 +1133,21 @@ class EventProxy(BaseEventProxy):
 
     def __init__(self, timeseries, nwb_group):
         self._timeseries = timeseries
-        self.name = timeseries.name
-        self.annotations = {"nwb_group": nwb_group}
-        self.description = try_json_field(timeseries.description)
-        if isinstance(self.description, dict):
-            self.annotations.update(self.description)
-            self.description = None
         self.shape = self._timeseries.data.shape
+        annotations = {"nwb_group": nwb_group}
+        description = timeseries.description
+        notes = _parse_json_dict(description)
+        if notes is not None:
+            annotations["notes"] = notes
+            description = None
+        comments = _foreign_comments(timeseries)
+        if comments is not None:
+            annotations["nwb:comments"] = comments
+        name = timeseries.name
+        hierarchy = _get_hierarchy(timeseries)
+        if hierarchy is not None and "name" in hierarchy:
+            name = hierarchy["name"]
+        _init_proxy(self, name=name, description=description, annotations=annotations, n_channels=self.shape[-1])
 
     def load(self, time_slice=None, strict_slicing=True):
         """
@@ -821,17 +1175,23 @@ class EpochProxy(BaseEpochProxy):
         :param epoch_name: (str)
             Name of the epoch object
         :param index: (np.array, slice)
-            Slice object or array of bool values masking time_intervals to be used. In case of
-            an array it has to have the same shape as `time_intervals`.
+            Array of integer indices or of bool values, or slice object, selecting the rows of
+            time_intervals to be used. In the case of an array of bool values,
+            it has to have the same shape as `time_intervals`.
         """
         self._time_intervals = time_intervals
         if index is not None:
             self._index = index
-            self.shape = (index.sum(),)
+            if isinstance(index, slice):
+                self.shape = (len(range(*index.indices(len(time_intervals)))),)
+            elif np.asarray(index).dtype == bool:
+                self.shape = (int(np.sum(index)),)
+            else:
+                self.shape = (len(index),)
         else:
             self._index = slice(None)
             self.shape = (len(time_intervals),)
-        self.name = epoch_name
+        _init_proxy(self, name=epoch_name, n_channels=self.shape[-1])
 
     def load(self, time_slice=None, strict_slicing=True):
         """
@@ -845,41 +1205,53 @@ class EpochProxy(BaseEpochProxy):
         if time_slice:
             raise NotImplementedError("todo")
         else:
-            start_times = self._time_intervals.start_time[self._index]
-            stop_times = self._time_intervals.stop_time[self._index]
+            start_times = np.asarray(self._time_intervals.start_time[self._index])
+            stop_times = np.asarray(self._time_intervals.stop_time[self._index])
             durations = stop_times - start_times
-            labels = self._time_intervals.tags[self._index]
+            if "tags" in self._time_intervals.colnames:
+                # each row may have zero, one or several tags; Neo has a single label per epoch
+                rows = np.arange(len(self._time_intervals))[self._index]
+                tags = _ragged_rows(self._time_intervals["tags"], rows)
+                labels = np.array([", ".join(str(tag) for tag in row_tags) for row_tags in tags], dtype=str)
+            else:
+                labels = None
 
         return Epoch(times=start_times * pq.s, durations=durations * pq.s, labels=labels, name=self.name)
 
 
 class SpikeTrainProxy(BaseSpikeTrainProxy):
 
-    def __init__(self, units_table, id):
+    def __init__(self, units_table, id, default_t_start=0.0, default_t_stop=0.0):
         """
         :param units_table: A Units table
         (see https://pynwb.readthedocs.io/en/stable/pynwb.misc.html#pynwb.misc.Units)
         :param id: the cell/unit ID (integer)
+        :param default_t_start: start time (in seconds) to use if the unit has no observation intervals
+        :param default_t_stop: stop time (in seconds) to use if the unit has no observation intervals
         """
         self._units_table = units_table
         self.id = id
         self.units = pq.s
-        obs_intervals = units_table.get_unit_obs_intervals(id)
-        if len(obs_intervals) == 0:
-            t_start, t_stop = None, None
-        elif len(obs_intervals) == 1:
-            t_start, t_stop = obs_intervals[0]
+        annotations = {"nwb_group": "acquisition"}
+        if "obs_intervals" in units_table.colnames:
+            obs_intervals = np.asarray(units_table.get_unit_obs_intervals(id), dtype=float)
         else:
-            raise NotImplementedError("Can't yet handle multiple observation intervals")
+            obs_intervals = np.empty((0, 2))
+        if len(obs_intervals) == 0:
+            t_start, t_stop = default_t_start, default_t_stop
+        else:
+            t_start, t_stop = obs_intervals[:, 0].min(), obs_intervals[:, 1].max()
+            if len(obs_intervals) > 1:
+                annotations["nwb:obs_intervals"] = obs_intervals
         self.t_start = t_start * pq.s
         self.t_stop = t_stop * pq.s
-        self.annotations = {"nwb_group": "acquisition"}
-        try:
+        if "_name" in units_table.colnames:
             # NWB files created by Neo store the name as an extra column
-            self.name = units_table._name[id]
-        except AttributeError:
-            self.name = None
+            name = units_table["_name"][id] or None
+        else:
+            name = None
         self.shape = None  # no way to get this without reading the data
+        _init_proxy(self, name=name, annotations=annotations)
 
     def load(self, time_slice=None, strict_slicing=True):
         """
@@ -891,15 +1263,24 @@ class SpikeTrainProxy(BaseSpikeTrainProxy):
                 (t_start or t_stop) is outside the real time range of the segment.
         """
         interval = None
+        t_start, t_stop = self.t_start, self.t_stop
         if time_slice:
-            interval = (float(t) for t in time_slice)  # convert from quantities
-        spike_times = self._units_table.get_unit_spike_times(self.id, in_interval=interval)
+            interval = tuple(float(t.rescale(pq.s)) for t in time_slice)
+            t_start = max(t_start, time_slice[0])
+            t_stop = min(t_stop, time_slice[1])
+        spike_times = np.asarray(self._units_table.get_unit_spike_times(self.id, in_interval=interval))
+        if spike_times.size > 0:
+            # some files contain spikes outside the observation intervals
+            if spike_times.min() < float(t_start.rescale(pq.s)) or spike_times.max() > float(t_stop.rescale(pq.s)):
+                logger.debug(f"Spike times of unit {self.id} extend beyond its observation intervals")
+                t_start = min(t_start, spike_times.min() * pq.s)
+                t_stop = max(t_stop, spike_times.max() * pq.s)
         return SpikeTrain(
             spike_times * self.units,
-            self.t_stop,
+            t_stop,
             units=self.units,
             # sampling_rate=array(1.) * Hz,
-            t_start=self.t_start,
+            t_start=t_start,
             # waveforms=None,
             # left_sweep=None,
             name=self.name,
