@@ -350,6 +350,27 @@ class TestNWBIOInMemory(unittest.TestCase):
             assert_array_equal(original_segment.events[0].load().magnitude, retrieved_segment.events[0].magnitude)
             assert_array_equal(original_segment.epochs[0].load().magnitude, retrieved_segment.epochs[0].magnitude)
 
+    def test_roundtrip_descriptions(self):
+        # see https://github.com/NeuralEnsemble/python-neo/issues/1516
+        block = Block(name="block", session_start_time=datetime.now().astimezone())
+        segment = Segment(name="segment")
+        block.segments.append(segment)
+        segment.analogsignals.append(
+            AnalogSignal(
+                np.random.randn(10, 2) * pq.mV, sampling_rate=1 * pq.kHz, name="signal", description="a signal"
+            )
+        )
+        segment.spiketrains.append(SpikeTrain([1, 2, 3] * pq.s, t_stop=10 * pq.s, description="a spike train"))
+        segment.spiketrains.append(SpikeTrain([4, 5] * pq.s, t_stop=10 * pq.s))
+        test_file_name = self.tmpdir / "test_roundtrip_descriptions.nwb"
+        NWBIO(filename=test_file_name, mode="w").write_all_blocks([block])
+
+        retrieved_segment = NWBIO(filename=test_file_name, mode="r").read_all_blocks()[0].segments[0]
+        self.assertEqual(retrieved_segment.analogsignals[0].description, "a signal")
+        self.assertEqual(retrieved_segment.spiketrains[0].description, "a spike train")
+        self.assertIsNone(retrieved_segment.spiketrains[1].description)
+        self.assertIsNone(retrieved_segment.spiketrains[1].name)
+
 
 def _make_nwbfile():
     """Create a minimal NWBFile, as it might be created by software other than Neo."""

@@ -648,8 +648,7 @@ class NWBIO(BaseIO):
 
         if sum(statistics(block)["SpikeTrain"]["count"] for block in blocks) > 0:
             self._nwbfile.add_unit_column("_name", "the name attribute of the SpikeTrain")
-            # nwbfile.add_unit_column('_description',
-            # 'the description attribute of the SpikeTrain')
+            self._nwbfile.add_unit_column("_description", "the description attribute of the SpikeTrain")
             self._nwbfile.add_unit_column("segment", "the name of the Neo Segment to which the SpikeTrain belongs")
             self._nwbfile.add_unit_column("block", "the name of the Neo Block to which the SpikeTrain belongs")
 
@@ -916,7 +915,8 @@ class NWBIO(BaseIO):
             spike_times=spiketrain.rescale("s").magnitude,
             obs_intervals=obs_intervals,
             _name=name,
-            # _description=spiketrain.description,
+            # an empty string represents a SpikeTrain without a description
+            _description=spiketrain.description or "",
             segment=segment.name,
             block=segment.block.name,
         )
@@ -1250,8 +1250,13 @@ class SpikeTrainProxy(BaseSpikeTrainProxy):
             name = units_table["_name"][id] or None
         else:
             name = None
+        if "_description" in units_table.colnames:
+            # NWB files created by recent versions of Neo also store the description
+            description = units_table["_description"][id] or None
+        else:
+            description = None
         self.shape = None  # no way to get this without reading the data
-        _init_proxy(self, name=name, annotations=annotations)
+        _init_proxy(self, name=name, description=description, annotations=annotations)
 
     def load(self, time_slice=None, strict_slicing=True):
         """
@@ -1285,7 +1290,7 @@ class SpikeTrainProxy(BaseSpikeTrainProxy):
             # left_sweep=None,
             name=self.name,
             # file_origin=None,
-            # description=None,
+            description=self.description,
             # array_annotations=None,
             **self.annotations,
         )
