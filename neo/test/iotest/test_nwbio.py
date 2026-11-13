@@ -421,11 +421,18 @@ class TestNWBIOForeignFiles(unittest.TestCase):
         nwbfile.add_acquisition(
             pynwb.TimeSeries(name="ts", data=np.arange(10.0), unit="volts", rate=1000.0, starting_time=0.0)
         )
+        nwbfile.add_acquisition(
+            pynwb.TimeSeries(name="irregular", data=np.arange(5.0), unit="volts", timestamps=[0.1, 0.2, 0.4, 0.8, 1.6])
+        )
         path = self._write(nwbfile)
         segment = self._read(path, lazy=True)[0].segments[0]
         self.assertEqual(len(segment.analogsignals), 1)
         signal = segment.analogsignals[0].load()
         assert_array_equal(signal.magnitude.ravel(), np.arange(10.0))
+        self.assertEqual(len(segment.irregularlysampledsignals), 1)
+        irregular = segment.irregularlysampledsignals[0].load()
+        self.assertIsInstance(irregular, IrregularlySampledSignal)
+        assert_array_equal(irregular.times.magnitude, [0.1, 0.2, 0.4, 0.8, 1.6])
 
     def test_fields_that_cannot_be_annotations(self):
         # The `electrodes` field of an ElectricalSeries is a link to rows of the electrodes table,

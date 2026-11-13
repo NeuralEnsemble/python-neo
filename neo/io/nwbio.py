@@ -1005,6 +1005,8 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
             self.sampling_rate = timeseries.rate * pq.Hz
         else:
             self.sampling_rate = None
+            # this proxy class is used for both regularly and irregularly sampled signals
+            self.proxy_for = IrregularlySampledSignal
 
         annotations = {"nwb_group": nwb_group}
         description = timeseries.description
