@@ -17,7 +17,7 @@ from neo.rawio.nicoletrawio import NicoletRawIO
 
 
 class NicoletIO(NicoletRawIO, BaseFromRaw):
-    name = "NicoleIO"
+    name = "NicoletIO"
     description = "Class for reading/writing Nicolet files (.e)"
 
     # This is an inportant choice when there are several channels.
