@@ -50,7 +50,7 @@ class TestNicoletIO(
 
             seg = r.read_segment(lazy=False)
             for anasig in seg.analogsignals:
-                assert isinstance(ana, AnalogSignal)
+                assert isinstance(anasig, AnalogSignal)
                 self.assertNotEqual(anasig.size, 0)
 
             # annotations
