@@ -18,7 +18,7 @@ from neo.rawio.nicoletrawio import NicoletRawIO
 
 class NicoletIO(NicoletRawIO, BaseFromRaw):
     name = "NicoletIO"
-    description = "Class for reading/writing Nicolet files (.e)"
+    description = "Class for reading Nicolet files (.e)"
 
     # This is an inportant choice when there are several channels.
     #   'split-all' :  1 AnalogSignal each 1 channel
