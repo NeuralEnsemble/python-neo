@@ -885,7 +885,7 @@ class NicoletRawIO(BaseRawIO):
                     seg_annotations["name"] = self.patient_info["altID"]
                 seg_annotations["date"] = self.segments_properties[i]["date"]
                 seg_annotations["duration"] = self.segments_properties[i]["duration"].total_seconds()
-                seg_annotations["t_start"] = (self.segments_properties[i]["date"] - bl_annotations["date"]).seconds
+                seg_annotations["t_start"] = (self.segments_properties[i]["date"] - bl_annotations["date"]).total_seconds()
 
     def _get_analogsignal_chunk(
         self,
