@@ -1076,8 +1076,6 @@ class NicoletRawIO(BaseRawIO):
         if t_stop is not None:
             keep = timestamp <= t_stop
             timestamp, durations, labels = timestamp[keep], durations[keep], labels[keep]
-        if seg_index == "0":
-            durations = None
         return timestamp, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps: np.ndarray, dtype: np.dtype, event_channel_index: int):
