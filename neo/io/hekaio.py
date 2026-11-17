@@ -129,9 +129,6 @@ class HekaIO(BaseIO):
         units = [ele["units"] for ele in self.series_data]
 
         assert np.sum(is_leak) <= 1, "More than 1 leak channel not currently supported."
-        non_leak = [unit for unit, leak in zip(units, is_leak) if not leak]
-
-        assert len(non_leak) <= 2, "Only 2 non-leak channels are currently supported"
 
         if any(is_leak):
             leak_idx = is_leak.index(True)
