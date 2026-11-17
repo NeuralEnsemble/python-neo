@@ -444,6 +444,27 @@ def read_spike_waveforms(reader):
                 assert raw_waveforms.shape[0] == nb_spike
                 assert raw_waveforms.ndim == 3
 
+                if nb_spike > 3:
+                    # load only one spike's waveform by forcing limits, as in read_spike_times
+                    spike_timestamp = reader.get_spike_timestamps(
+                        block_index=block_index,
+                        seg_index=seg_index,
+                        spike_channel_index=spike_channel_index,
+                        t_start=None,
+                        t_stop=None,
+                    )
+                    spike_times = reader.rescale_spike_timestamp(spike_timestamp, "float64")
+                    raw_waveforms2 = reader.get_spike_raw_waveforms(
+                        block_index=block_index,
+                        seg_index=seg_index,
+                        spike_channel_index=spike_channel_index,
+                        t_start=spike_times[1] - 0.001,
+                        t_stop=spike_times[1] + 0.001,
+                    )
+                    assert raw_waveforms2.shape[0] == 1
+                    assert raw_waveforms2.shape[1:] == raw_waveforms.shape[1:]
+                    np.testing.assert_array_equal(raw_waveforms2[0], raw_waveforms[1])
+
                 for dt in ("float32", "float64"):
                     float_waveforms = reader.rescale_waveforms_to_float(
                         raw_waveforms, dtype=dt, spike_channel_index=spike_channel_index
