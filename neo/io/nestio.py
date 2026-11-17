@@ -128,7 +128,7 @@ class NestIO(BaseIO):
         if len(np.unique(column_list_no_None)) < len(column_list_no_None):
             raise ValueError(
                 "One or more columns have been specified to contain "
-                "the same data. Columns were specified to {column_list_no_None}."
+                f"the same data. Columns were specified to {column_list_no_None}."
                 ""
             )
 
@@ -348,7 +348,7 @@ class NestIO(BaseIO):
             if time_column is not None:
                 data_sampling = np.unique(np.diff(sorted(np.unique(data[:, 1]))))
                 if len(data_sampling) > 1:
-                    raise ValueError(f"Different sampling distances found in " "data set ({data_sampling})")
+                    raise ValueError(f"Different sampling distances found in data set ({data_sampling})")
                 else:
                     dt = data_sampling[0]
             else:
