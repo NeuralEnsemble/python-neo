@@ -57,5 +57,44 @@ class TestPlexonRawIO(
         np.testing.assert_array_equal(around_second_wrap, [8_589_765_078, 8_589_773_845, 8_590_497_111, 8_590_594_911])
 
 
+class TestPlexonAnalogSignalChunk(unittest.TestCase):
+    """Test the reading of signal chunks on synthetic data blocks (no file needed)."""
+
+    def setUp(self):
+        # one channel made of three data blocks of four int16 samples each
+        self.samples = np.arange(1, 13, dtype="int16")
+        data_blocks = np.zeros(3, dtype=[("pos", "int64"), ("size", "int64"), ("cumsum", "int64")])
+        data_blocks["pos"] = [0, 8, 16]
+        data_blocks["size"] = 8
+        data_blocks["cumsum"] = [0, 4, 8]
+
+        class FakePlexonRawIO:
+            _get_analogsignal_chunk = PlexonRawIO._get_analogsignal_chunk
+
+        self.reader = FakePlexonRawIO()
+        self.reader.header = {
+            "signal_channels": np.array(
+                [("ch", "7", "s0")], dtype=[("name", "U8"), ("id", "U8"), ("stream_id", "U8")]
+            ),
+            "signal_streams": np.array([("s", "s0")], dtype=[("name", "U8"), ("id", "U8")]),
+        }
+        self.reader._stream_id_samples = {"s0": self.samples.size}
+        self.reader._data_blocks = {5: {np.int32(7): data_blocks}}
+        self.reader._memmap = self.samples.view("uint8")
+
+    def _read(self, i_start, i_stop):
+        return self.reader._get_analogsignal_chunk(0, 0, i_start, i_stop, 0, None)[:, 0]
+
+    def test_chunk_stopping_at_the_end_of_the_signal(self):
+        """The last data block must not be dropped when the chunk stops at its end."""
+        np.testing.assert_array_equal(self._read(None, None), self.samples)
+        np.testing.assert_array_equal(self._read(2, 12), self.samples[2:12])
+        np.testing.assert_array_equal(self._read(9, 12), self.samples[9:12])
+
+    def test_chunk_stopping_inside_or_between_blocks(self):
+        for i_start, i_stop in [(0, 11), (0, 8), (3, 6), (4, 8), (5, 9)]:
+            np.testing.assert_array_equal(self._read(i_start, i_stop), self.samples[i_start:i_stop])
+
+
 if __name__ == "__main__":
     unittest.main()
