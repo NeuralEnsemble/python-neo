@@ -63,10 +63,6 @@ class TestTdtRawIO(
         )
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestTdtRawIOBlockDirectory(unittest.TestCase):
     def test_block_directory_is_single_block(self):
         # a directory holding the files of one block (no sub-block folders), see issue 1970
@@ -80,3 +76,7 @@ class TestTdtRawIOBlockDirectory(unittest.TestCase):
 
             self.assertEqual(rawio.tdt_block_mode, "single")
             self.assertEqual(rawio.dirname, block / "recording_name")
+
+
+if __name__ == "__main__":
+    unittest.main()
