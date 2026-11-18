@@ -75,7 +75,12 @@ class TdtRawIO(BaseRawIO):
         """
         BaseRawIO.__init__(self)
         dirname = Path(dirname)
-        if dirname.is_dir():
+        tsq_files = [f for f in dirname.iterdir() if f.suffix.lower() == ".tsq"] if dirname.is_dir() else []
+        if dirname.is_dir() and is_tdtblock(dirname) and len(tsq_files) == 1:
+            # the directory is itself a single block, not a tank of blocks
+            self.dirname = tsq_files[0].with_suffix("")
+            self.tdt_block_mode = "single"
+        elif dirname.is_dir():
             self.dirname = Path(dirname)
             self.tdt_block_mode = "multi"
         elif dirname.is_file():
