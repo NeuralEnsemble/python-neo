@@ -321,8 +321,8 @@ class Epoch(DataObject):
         """
         othertimes = other.times.rescale(self.times.units)
         otherdurations = other.durations.rescale(self.durations.units)
-        times = np.hstack([self.times, othertimes]) * self.times.units
-        durations = np.hstack([self.durations, otherdurations]) * self.durations.units
+        times = np.hstack([self.times.magnitude, othertimes.magnitude]) * self.times.units
+        durations = np.hstack([self.durations.magnitude, otherdurations.magnitude]) * self.durations.units
         labels = np.hstack([self.labels, other.labels])
         kwargs = {}
         for name in ("name", "description", "file_origin"):

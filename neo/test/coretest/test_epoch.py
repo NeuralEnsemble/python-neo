@@ -201,6 +201,11 @@ class TestEpoch(unittest.TestCase):
             )
 
         assert_neo_object_is_compliant(epcres)
+        self.assertEqual(epcres.times.units, pq.ms)
+        self.assertEqual(epcres.durations.units, pq.us)
+        np.testing.assert_allclose(epcres.times.magnitude, [1.1, 1.5, 1.7, 0.0021, 0.0025, 0.0027])
+        np.testing.assert_allclose(epcres.durations.magnitude, [20, 40, 60, 3000, 5000, 7000])
+        assert_array_equal(epcres.labels, epctarg.labels)
         assert_same_sub_schema(epctarg, epcres)
         # Remove this, when array_annotations are added to assert_same_sub_schema
         assert_arrays_equal(epcres.array_annotations["index"], np.array([10, 11, 12, 0, 1, 2]))

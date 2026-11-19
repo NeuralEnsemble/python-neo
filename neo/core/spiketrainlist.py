@@ -199,7 +199,16 @@ class SpikeTrainList(ObjectList):
             if self._spiketrain_metadata["t_stop"] != other._spiketrain_metadata["t_stop"]:
                 raise ValueError("Incompatible t_stop")
                 # todo: adjust t_stop of self and other as necessary
-            combined_spike_time_array = np.hstack((self._spike_time_array, other._spike_time_array))
+            reference_units = self._spike_time_array.units
+            combined_spike_time_array = (
+                np.hstack(
+                    (
+                        self._spike_time_array.rescale(reference_units).magnitude,
+                        other._spike_time_array.rescale(reference_units).magnitude,
+                    )
+                )
+                * reference_units
+            )
             combined_channel_id_array = np.hstack((self._channel_id_array, other._channel_id_array))
             combined_channel_ids = set(list(self._all_channel_ids) + other._all_channel_ids)
             if len(combined_channel_ids) != (len(self._all_channel_ids) + len(other._all_channel_ids)):
@@ -386,15 +395,10 @@ class SpikeTrainList(ObjectList):
             else:
                 channel_ids = []
                 spike_times = []
-                dim = self._items[0].units.dimensionality
                 for i, spiketrain in enumerate(self._items):
                     if hasattr(spiketrain, "load"):  # proxy object
                         spiketrain = spiketrain.load()
-                    if spiketrain.times.dimensionality.items() == dim.items():
-                        # no need to rescale
-                        spike_times.append(spiketrain.times)
-                    else:
-                        spike_times.append(spiketrain.times.rescale(dim))
+                    spike_times.append(spiketrain.times.rescale(self._items[0].units).magnitude)
                     if "channel_id" in spiketrain.annotations and isinstance(spiketrain.annotations["channel_id"], int):
                         ch_id = spiketrain.annotations["channel_id"]
                     else:

@@ -414,6 +414,33 @@ class Test_BaseNeo_merge_annotations_merge(unittest.TestCase):
         assert_arrays_equal(ann1, ann1c)
         assert_arrays_equal(ann2, ann2c)
 
+    def test_merge_annotation__func__quantity(self):
+        ann1 = np.array([1, 2]) * pq.s
+        ann2 = np.array([500, 250]) * pq.ms
+
+        result = merge_annotation(ann1, ann2)
+
+        self.assertEqual(result.units, pq.s)
+        np.testing.assert_array_equal(result.magnitude, [1, 2, 0.5, 0.25])
+
+        with self.assertRaises(ValueError):
+            merge_annotation(ann1, np.array([1, 2]) * pq.m)
+
+    def test_merge_annotation__func__uncertain_quantity(self):
+        ann1 = pq.UncertainQuantity([1, 2], units=pq.s, uncertainty=[0.1, 0.2])
+        ann2 = pq.UncertainQuantity([500], units=pq.ms, uncertainty=[25])
+
+        result = merge_annotation(ann1, ann2)
+
+        self.assertIsInstance(result, pq.UncertainQuantity)
+        self.assertEqual(result.units, pq.s)
+        np.testing.assert_array_equal(result.magnitude, [1, 2, 0.5])
+        self.assertEqual(result.uncertainty.units, pq.s)
+        np.testing.assert_array_equal(result.uncertainty.magnitude, [0.1, 0.2, 0.025])
+
+        with self.assertRaises(ValueError):
+            merge_annotation(ann1, pq.UncertainQuantity([1], units=pq.m, uncertainty=[0.1]))
+
     def test_merge_annotation__func__list(self):
         ann1 = [0, 1, 2]
         ann2 = [4, 5, 6]

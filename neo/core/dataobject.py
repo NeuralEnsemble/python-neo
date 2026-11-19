@@ -11,7 +11,7 @@ import warnings
 import quantities as pq
 import numpy as np
 
-from neo.core.baseneo import BaseNeo, _check_annotations
+from neo.core.baseneo import BaseNeo, _check_annotations, _merge_quantity_arrays
 
 
 def _normalize_array_annotations(value, length):
@@ -276,10 +276,9 @@ class DataObject(BaseNeo, pq.Quantity):
                 # Quantities need to be rescaled to common unit
                 if isinstance(value, pq.Quantity):
                     try:
-                        other_value = other_value.rescale(value.units)
+                        merged_array_annotations[key] = _merge_quantity_arrays([value, other_value], axis=None)
                     except ValueError:
                         raise ValueError("Could not merge array annotations " "due to different units")
-                    merged_array_annotations[key] = np.append(value, other_value) * value.units
                 else:
                     merged_array_annotations[key] = np.append(value, other_value)
 

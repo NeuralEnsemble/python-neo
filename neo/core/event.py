@@ -272,7 +272,7 @@ class Event(DataObject):
         compatible, and Exception is raised.
         """
         othertimes = other.times.rescale(self.times.units)
-        times = np.hstack([self.times, othertimes]) * self.times.units
+        times = np.hstack([self.times.magnitude, othertimes.magnitude]) * self.times.units
         labels = np.hstack([self.labels, other.labels])
         kwargs = {}
         for name in ("name", "description", "file_origin"):

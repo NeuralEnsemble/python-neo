@@ -978,6 +978,16 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
                 continue
             self.assertEqual(getattr(signal1, attr[0], None), getattr(result, attr[0], None))
 
+    def test_concatenate_rescales_time_units(self):
+        signal1 = IrregularlySampledSignal(signal=[1, 2] * pq.mV, times=[1, 2] * pq.s)
+        signal2 = IrregularlySampledSignal(signal=[3, 4] * pq.mV, times=[3000, 4000] * pq.ms)
+
+        result = signal1.concatenate(signal2)
+
+        self.assertEqual(result.times.units, pq.s)
+        assert_array_equal(result.times.magnitude, [1, 2, 3, 4])
+        assert_array_equal(result.magnitude, [[1], [2], [3], [4]])
+
     def test_concatenate_no_overlap(self):
         signal1 = IrregularlySampledSignal(signal=[0, 1, 2, 3] * pq.s, times=range(4) * pq.s)
         signal2 = IrregularlySampledSignal(signal=[4, 5, 6] * pq.s, times=range(4, 7) * pq.s)
